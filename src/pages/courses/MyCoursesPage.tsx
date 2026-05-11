@@ -16,7 +16,7 @@ import {
   Divider,
   Tooltip,
 } from '@chakra-ui/react'
-import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock, ShieldCheck } from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock, ShieldCheck, Flag, Award, BookMarked, Wrench, Plus } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
@@ -45,6 +45,8 @@ import {
   getJourneyWeeks,
   isMonthBasedJourney,
 } from '@/utils/journeyType'
+import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
+import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -526,6 +528,91 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
   )
 }
 
+/**
+ * Smooth-scroll to a same-page element by id. Falls back to a hash jump if
+ * scrollIntoView isn't available. Used by the Programme requirements chips
+ * to deep-link into the courses timeline or one of the pillar component
+ * cards lower on the page.
+ */
+const scrollToSection = (elementId: string) => {
+  const el = document.getElementById(elementId)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } else {
+    window.location.hash = elementId
+  }
+}
+
+/**
+ * One "requirement" chip rendered inside the gradient Programme requirements
+ * banner — bigger count, icon, label. Clicking the chip smooth-scrolls to
+ * the matching section/card below (courses timeline or a pillar component).
+ */
+const RequirementChip: React.FC<{
+  icon: React.ElementType
+  count: number
+  label: string
+  targetId: string
+}> = ({ icon, count, label, targetId }) => (
+  <Flex
+    as="button"
+    type="button"
+    onClick={() => scrollToSection(targetId)}
+    bg="whiteAlpha.200"
+    borderWidth="1px"
+    borderColor="whiteAlpha.300"
+    borderRadius="xl"
+    px={4}
+    py={3}
+    direction="row"
+    align="center"
+    gap={3}
+    flex={1}
+    minW={0}
+    cursor="pointer"
+    textAlign="left"
+    _hover={{
+      bg: 'whiteAlpha.400',
+      borderColor: 'whiteAlpha.500',
+      transform: 'translateY(-2px)',
+      boxShadow: 'lg',
+    }}
+    _active={{ transform: 'translateY(0)' }}
+    _focusVisible={{
+      outline: '2px solid white',
+      outlineOffset: '2px',
+    }}
+    transition="all 0.15s"
+    aria-label={`Jump to ${label.toLowerCase()}`}
+  >
+    <Flex
+      bg="whiteAlpha.300"
+      borderRadius="lg"
+      p={2}
+      align="center"
+      justify="center"
+      flexShrink={0}
+    >
+      <Icon as={icon} boxSize={4} color="white" />
+    </Flex>
+    <Stack spacing={0} minW={0}>
+      <Text color="white" fontSize="2xl" fontWeight="bold" lineHeight="1" letterSpacing="tight">
+        {count}
+      </Text>
+      <Text color="whiteAlpha.900" fontSize="xs" fontWeight="medium" textTransform="uppercase" letterSpacing="wide">
+        {label}
+      </Text>
+    </Stack>
+  </Flex>
+)
+
+/** Visual "+" connector between requirement chips. */
+const RequirementPlus: React.FC = () => (
+  <Flex align="center" justify="center" flexShrink={0} display={{ base: 'none', md: 'flex' }}>
+    <Icon as={Plus} boxSize={4} color="whiteAlpha.600" />
+  </Flex>
+)
+
 const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserProfile | null }> = ({
   userId,
   profile,
@@ -736,71 +823,110 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const overallLoading = programLoading || loadingCourses || progressLoading
   const cohortStartDate = program?.cohortStartDate ?? null
 
-  const headerDescription = useMemo(() => {
-    if (!userId) return 'Sign in to view the courses that have been assigned to you.'
-    if (!organizationId)
-      return 'You are not assigned to an organization yet. Contact your administrator to get access.'
-    return 'Welcome to your organization learning journey. Your program courses and milestones appear below.'
-  }, [userId, organizationId])
-
   const hasOrganization = Boolean(organizationId)
   const hasProgram = Boolean(program)
   const hasTimeline = timelineEntries.length > 0
 
   return (
     <Stack spacing={8} py={2} as="section">
-      <Box
-        bgGradient="linear(to-r, purple.50, purple.100)"
-        borderRadius="3xl"
-        border="1px solid"
-        borderColor="purple.100"
-        p={{ base: 5, md: 8 }}
-        boxShadow="md"
-      >
-        <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'flex-start', md: 'center' }} gap={4}>
-          <Flex
-            bg="white"
-            borderRadius="full"
-            p={3}
-            border="1px solid"
-            borderColor="purple.100"
-            boxShadow="sm"
-          >
-            <Icon as={BookOpen} boxSize={7} color="purple.600" />
-          </Flex>
-          <Stack spacing={1} flex={1}>
-            <Heading size="lg" color="purple.900">
-              Continue your learning journey
-            </Heading>
-            <Text color="purple.700" fontSize="md">
-              {headerDescription}
-            </Text>
-            <HStack spacing={3} flexWrap="wrap">
-              {hasOrganization ? (
-                <Badge colorScheme="green" variant="subtle" borderRadius="full">
-                  Organization member
-                </Badge>
-              ) : (
-                <Badge colorScheme="yellow" variant="subtle" borderRadius="full">
-                  Organization required
-                </Badge>
-              )}
-              <Text color={hasOrganization ? 'green.700' : 'yellow.700'} fontSize="sm">
-                {hasOrganization
-                  ? 'Your organization-curated program is shown in real time.'
-                  : 'Contact your administrator to receive organization access.'}
+      {hasOrganization && hasProgram && program?.pillar && (
+        <Box
+          bgGradient="linear(to-r, #350e6f, #8b5a3c)"
+          borderRadius="2xl"
+          p={{ base: 5, md: 7 }}
+          boxShadow="md"
+        >
+          <Stack spacing={5}>
+            <Flex direction={{ base: 'column', md: 'row' }} align={{ base: 'flex-start', md: 'center' }} gap={4}>
+              <Flex
+                bg="whiteAlpha.200"
+                borderRadius="full"
+                p={3}
+                border="1px solid"
+                borderColor="whiteAlpha.300"
+                flexShrink={0}
+              >
+                <Icon as={Flag} boxSize={5} color="white" />
+              </Flex>
+              <Stack spacing={1} flex={1}>
+                <HStack spacing={2} flexWrap="wrap">
+                  <Heading size="md" color="white" letterSpacing="tight">
+                    Programme requirements
+                  </Heading>
+                  <Badge
+                    bg="white"
+                    color="#350e6f"
+                    textTransform="none"
+                    px={2.5}
+                    py={1}
+                    borderRadius="full"
+                    fontWeight="bold"
+                  >
+                    All required
+                  </Badge>
+                </HStack>
+                <Text color="whiteAlpha.900" fontSize="sm">
+                  To complete your transformation programme you must finish{' '}
+                  <Text as="span" fontWeight="bold" color="white">
+                    both
+                  </Text>{' '}
+                  tracks below.
+                </Text>
+              </Stack>
+            </Flex>
+
+            <Flex
+              direction={{ base: 'column', md: 'row' }}
+              align="stretch"
+              gap={{ base: 3, md: 2 }}
+              wrap={{ base: 'nowrap', lg: 'nowrap' }}
+            >
+              <RequirementChip
+                icon={BookOpen}
+                count={assignedCourseCount}
+                label={assignedCourseCount === 1 ? 'Course' : 'Courses'}
+                targetId="programme-courses"
+              />
+              <RequirementPlus />
+              <RequirementChip icon={Award} count={1} label="Capstone" targetId="pillar-component-capstone" />
+              <RequirementPlus />
+              <RequirementChip icon={BookMarked} count={1} label="Case Study" targetId="pillar-component-case_study" />
+              <RequirementPlus />
+              <RequirementChip icon={Wrench} count={1} label="Practical" targetId="pillar-component-practical" />
+            </Flex>
+
+            <HStack
+              spacing={2}
+              align="center"
+              bg="whiteAlpha.100"
+              borderRadius="lg"
+              px={3}
+              py={2}
+              alignSelf="flex-start"
+            >
+              <Icon as={CheckCircle2} boxSize={4} color="whiteAlpha.900" />
+              <Text fontSize="xs" color="whiteAlpha.900" fontWeight="medium">
+                {assignedCourseCount} courses · {PILLAR_PROGRAMME_COMPONENTS[program.pillar].length} pillar components ·{' '}
+                <Text as="span" fontWeight="bold" color="white">
+                  all required to graduate
+                </Text>
               </Text>
             </HStack>
           </Stack>
-        </Flex>
-      </Box>
+        </Box>
+      )}
 
       {hasOrganization && hasProgram && hasTimeline && (
-        <Stack spacing={4} as="section">
-          <HStack justify="space-between" align="center">
-            <Heading size="md" color="gray.800">
-              {timelineHeading}
-            </Heading>
+        <Stack spacing={4} as="section" id="programme-courses" scrollMarginTop="20px">
+          <HStack justify="space-between" align="center" flexWrap="wrap" spacing={3}>
+            <HStack spacing={2} flexWrap="wrap">
+              <Heading size="md" color="gray.800">
+                {timelineHeading}
+              </Heading>
+              <Badge colorScheme="red" textTransform="none">
+                Required
+              </Badge>
+            </HStack>
             <Badge colorScheme="purple" borderRadius="full">
               {shouldShowJourneyLabel ? journeyLabel : timelineCountLabel}
             </Badge>
@@ -1002,6 +1128,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
           </Text>
         </Box>
       )}
+
+      <PillarProgrammeComponentsSection pillar={program?.pillar ?? null} />
 
     </Stack>
   )

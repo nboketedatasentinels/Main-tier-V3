@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 2: The Use Case the Foundation Couldn't Support</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --case-bg: #FFFEF9; --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .case-block { break-inside: avoid; } .case-body { display: block !important; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .case-body { padding: 20px 18px; } .case-header { padding: 16px 20px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 2 · The Use Case the Foundation Couldn't Support</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Innovation and AI for Digital Transformation</div>
+  <div class="case-eyebrow">Case Study 2 · Module 2 · Digital Transformation with Data Foundations</div>
+  <h1 class="header-title">The Use Case the Foundation <em>Couldn't Support</em></h1>
+  <div class="header-meta"><strong>MTN Group's AI Ambition Across 16 African Markets, 2021-2026. The recurring dynamic in enterprise AI deployment, in which use case ambition runs ahead of data foundation reality -- and the practitioner work of catching the gap before a use case fails publicly.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Map AI-era capabilities), LO4 (Evaluate the data foundation), LO5 (Evaluate the adoption curve)</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 2 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that picks a real use case, audits the data foundation honestly, reads the adoption curve, and applies the same discipline to your own scope.</div>
+    <ul class="standard-list">
+      <li>One use case picked from the case (not 'AI in general') and the capability map built with three columns -- claimed, observable, gap. The gap named is the structural one, not the safest one.</li>
+      <li>The data foundation audit names what the use case actually needs -- specific data sources, specific governance permissions across multiple jurisdictions -- and what MTN actually has, with at least one gap MTN is currently downplaying.</li>
+      <li>The adoption curve read distinguishes a publicly cited metric from the underlying signal -- naming a specific masking pattern (pilot artefact, narrow market, supervisor workaround, novelty effect, selective measurement), with a specific shift-signal that would change the read.</li>
+      <li>Application to your own scope with the same discipline -- a real use case where ambition is running ahead of foundation reality, the foundation gap, and a 30-day intervention with operational detail.</li>
+      <li>300-500 words across all four answers. Use specific case elements (16 markets, the 307 million customer milestone, the Sifiso Dabengwa Data Centre, AfricaCom 2024, Ambition 2030 March 2026 framing) to anchor the argument.</li>
+    </ul>
+  </div>
+
+  <!-- CASE READING SECTION -->
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">MTN Group, 2021-2026 -- Ambition 2025 to Ambition 2030</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+      <div class="case-section-label">Background</div>
+      <p>MTN Group is Africa's largest mobile network operator, headquartered in Johannesburg, South Africa. Across 2021 to 2025, MTN executed its 'Ambition 2025' strategy, which positioned the group to evolve from a traditional telecom operator into a digital platform business. By the end of 2025, the group served more than 307 million voice customers, 172 million data customers, and 70 million Mobile Money customers across 16 markets. Group revenue was supported by R38 billion in network and platform investment in 2025 alone.</p>
+      <p>Across the same period, MTN announced a sequence of AI-enabled use cases: predictive network maintenance, AI-driven fraud detection across Mobile Money, intelligent customer service automation, AI-assisted product development through the 'Idea-to-Cash' partnership announced in 2025, and AI-driven credit decisioning across multiple markets. Public statements from CEO Ralph Mupita and Group CTIO Mazen Mroue framed AI as a foundational growth lever across the platform business.</p>
+      <p>In Q1 2025, MTN completed comprehensive market assessments for AI-enabled data centres. By September 2025, MTN had announced commercial talks with US and European partners to build AI-grade data centres across the continent, anchored by the Sifiso Dabengwa Data Centre in Lagos -- a 240 million US dollar facility commissioned in two phases starting July 2025. MTN established an AI Centre of Excellence and a Cloud Centre of Excellence, staffed by more than 300 engineers, to drive responsible AI deployment and standardised practice across markets. In March 2026, MTN unveiled Ambition 2030 -- a refresh of the group strategy organised around three platforms: Connectivity, Fintech, and Digital Infrastructure -- with AI named as foundational across all three.</p>
+      <p>Under the surface, however, the data foundation work to support enterprise-scale AI deployment ran behind the use case ambition through 2024 and into 2025. Public commentary from African telecom industry analysts, statements from MTN executives at AfricaCom 2024 in Cape Town, and MTN's own 2024 and 2025 annual reports all referenced ongoing investment in the data layer -- data sovereignty compliance under different national data protection regimes (Nigeria's Data Protection Act, Kenya's Data Protection Act 2019, South Africa's POPIA), data lineage and quality work across legacy network and Mobile Money systems, and the operational reality that AI-enabled use cases scaled through 2024-2025 against a foundation that was being built in parallel rather than ahead. The Ambition 2030 framing in March 2026 explicitly named Digital Infrastructure (the data centre and data foundation work) as one of three foundational platforms -- a recognition that the foundation work needed its own strategic frame, not just a supporting role.</p>
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not a story about whether MTN's AI ambition was credible. The 2025 financial results -- record dividend, swing from loss to profit, exceeding the 300 million customer milestone -- demonstrate operational and commercial execution across 16 markets. It is a story about the recurring dynamic in enterprise AI deployment, in which use case ambition runs ahead of data foundation reality, and the practitioner work of catching the gap before a use case fails publicly.</p>
+      <p>The questions below ask you to map the capability gap, audit the foundation honestly, and read the adoption curve for an AI-enabled use case where MTN's published metrics do not yet tell the full story.</p>
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+      <li>MTN Group Annual Reports 2022, 2023, 2024, 2025 (mtn.com investor relations).</li>
+      <li>MTN Group Ambition 2030 strategy announcement, March 2026 (mtn.com).</li>
+      <li>AfricaCom 2024 conference proceedings and panel transcripts (Cape Town, November 2024).</li>
+      <li>African Business and TechCabal coverage of MTN's AI strategy, 2023-2026.</li>
+      <li>Engineering News (South Africa) and Ecofin Agency coverage of MTN's data centre push, 2025-2026.</li>
+      <li>MTN public statements on the Sifiso Dabengwa Data Centre commissioning (July 2025) and the Genova programme.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- QUESTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 3 · Capability mapping</div>
+    </div>
+    <h2 class="section-title">Pick one use case and construct the capability map</h2>
+    <div class="section-prompt">Pick one specific MTN AI-enabled use case from the case (Mobile Money fraud detection, intelligent customer service automation, predictive network maintenance, AI-driven credit decisioning, or the Idea-to-Cash product development partnership). Construct the capability map for it -- claimed capability versus observable capability -- as you would have built it in 2024.</div>
+    <div class="section-hint">One use case, not multiple. The map has three columns -- claimed (using public MTN statements), observable (with specific evidence: a named system, a specific market, a specific year), gap (the delta, including at least one structural gap that would not close in 90 days). The test is whether the observable column is filled with concrete artefacts or aspirational language.</div>
+    <textarea name="q1" placeholder="Use case selected: ...
+
+Claimed capability: ...
+Observable capability (with evidence): ...
+Gap (including the structural one): ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 80-130 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 4 · Data foundation</div>
+    </div>
+    <h2 class="section-title">Audit the data foundation for the same use case</h2>
+    <div class="section-prompt">For the same use case, construct the data foundation audit. What does the use case need (data sources, quality, freshness, governance permissions across multiple national jurisdictions)? What does the organisation actually have? Where is the most significant foundation gap, and what is the cost of closing it?</div>
+    <div class="section-hint">The audit names what the use case needs concretely -- not 'good data' but specific sources, specific freshness, specific governance permissions across the actual jurisdictions in play (the case names three: Nigeria, Kenya, South Africa). The gap is one MTN is currently downplaying or framing as 'not yet a problem' -- not the safest one. Cost-to-close is named in operational terms (time, money, governance work, regulatory dependencies).</div>
+    <textarea name="q2" placeholder="What the use case needs (specific): ...
+What MTN actually has: ...
+The most significant foundation gap (and what MTN is currently downplaying): ...
+Cost of closing the gap: ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 5 · Adoption curve</div>
+    </div>
+    <h2 class="section-title">Read the adoption curve -- what is the metric masking?</h2>
+    <div class="section-prompt">Identify a publicly cited adoption metric for the use case (e.g. fraud detection accuracy, M-Pesa transaction volume handled by AI, transactions per second on Fintech 2.0). What underlying signal might that metric be masking -- pilot-stage performance, narrow geographic deployment, supervisor workaround, novelty effect, or selective measurement? What signal would shift your read?</div>
+    <div class="section-hint">A specific metric, named with the figure if available. The masking pattern is named from the five candidates the question lists -- not all five, one specifically. The shift-signal is concrete: a particular user group, a particular market, a particular case type, a particular metric crossing a particular threshold. 'More data would help' is not a shift-signal.</div>
+    <textarea name="q3" placeholder="Cited metric: ...
+What the metric might be masking: ... (because ...)
+Shift-signal that would change the read: ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 60-100 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 3 + 4 + 5 · Application to your own scope</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to a use case in your own scope</h2>
+    <div class="section-prompt">Identify one AI-enabled use case in your own organisational scope where capability ambition is running ahead of data foundation reality. Name the use case, the most significant foundation gap, and the specific intervention you will run in the next 30 days to surface it before it fails publicly.</div>
+    <div class="section-hint">This is the highest-weighted question. The use case is real (specific in your organisation, not transferred). The foundation gap is named with operational specificity -- a specific data source, a specific governance permission, a specific lineage problem. The 30-day intervention is concrete: who runs it, what they do, by when, what success looks like at day 30.</div>
+    <textarea name="q4" placeholder="The use case in my scope: ...
+The foundation gap: ...
+The 30-day intervention:
+  Who: ...
+  What: ...
+  By when: ...
+  What success looks like: ..." oninput="recountWords()" style="min-height: 200px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 90-160 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) { if (!s || !s.trim()) return 0; return s.trim().split(/\s+/).length; }
+function recountWords() {
+  const fields = ['q1','q2','q3','q4'];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="'+name+'"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name+'Count');
+    if (display) display.textContent = c+' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 600, goodMin = 300, goodMax = 500;
+  bandEl.style.left = ((goodMin/max)*100)+'%';
+  bandEl.style.width = (((goodMax-goodMin)/max)*100)+'%';
+  fillEl.style.width = Math.min(100,(total/max)*100)+'%';
+  valEl.textContent = total+' words';
+  valEl.classList.remove('under','good','over');
+  fillEl.classList.remove('good','over');
+  if (total < goodMin) { valEl.classList.add('under'); hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.'; }
+  else if (total <= goodMax) { valEl.classList.add('good'); fillEl.classList.add('good'); hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.'; }
+  else { valEl.classList.add('over'); fillEl.classList.add('over'); hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.'; }
+}
+function collectFormData() {
+  const get = (n) => { const el = document.querySelector('[name="'+n+'"]'); return el ? el.value : ''; };
+  const q1=get('q1'), q2=get('q2'), q3=get('q3'), q4=get('q4');
+  return { case_study: 2, case_study_title: "The Use Case the Foundation Couldn't Support -- MTN Group's AI Ambition Across 16 African Markets, 2021-2026", journey: "Innovation and AI for Digital Transformation", module: "Module 2 -- Digital Transformation with Data Foundations",
+    outcomes_assessed: ["LO3", "LO4", "LO5"], answers: {q1,q2,q3,q4},
+    word_counts: { q1:countWords(q1), q2:countWords(q2), q3:countWords(q3), q4:countWords(q4),
+      total: countWords(q1)+countWords(q2)+countWords(q3)+countWords(q4) } };
+}
+function submitCaseStudy() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 300) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 300-500. Below 300 sits outside the range.';
+  else if (total > 500) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 300-500. Above 500 sits outside the range.';
+  if (!confirm("Submit Case Study 2: The Use Case the Foundation Couldn't Support?\n\nThis closes the Combined Case Studies component for the Innovation and AI for Digital Transformation Journey. Both case studies (GE Predix and MTN Ambition 2030) are marked together as one component, weighted 30% of your competence pass alongside the Transformation Operating Model Capstone (50%) and the Practicals Portfolio (20%)." + warning + '\n\nProceed?')) return;
+  console.log('Case Study payload:', data);
+  alert("Case Study 2 received. The Combined Case Studies component is now ready for assessor review. (In production, this POSTs to /api/case-studies/submit with case_study = 2)");
+}
+recountWords();
+</script>
+</body>
+</html>

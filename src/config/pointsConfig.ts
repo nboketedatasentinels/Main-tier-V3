@@ -33,6 +33,10 @@ export type ActivityId =
   | "ambassador_session"
   | "shameless_circle"
   | "ai_tool_review"
+  // Pillar components (6W only; partner-issued — each pillar has one of each)
+  | "capstone"
+  | "case_study"
+  | "practical"
   // System activities
   | "referral_bonus"
   | "peer_session_confirmation"
@@ -323,11 +327,6 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "lift_module",
     title: "LIFT Course Module Completed",
     description: "Complete a LIFT course module. Points awarded by your partner.",
-    // Canonical LIFT module value (matches 6W). Other journeys explicitly
-    // override down to 3,000 in JOURNEY_ACTIVITY_CONFIG below to preserve
-    // their existing maxPossiblePoints invariants — without those overrides
-    // the validateJourneyPointsConsistency() check throws at module load
-    // for 4W (15,000), 3M (113,000), 6M (226,000) and 9M (339,000).
     points: 7000,
     behaviorType: "window_limited",
     approvalType: "partner_issued",
@@ -425,6 +424,51 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     frequencyNote: "Submit attendance proof. Points are awarded after partner confirmation.",
     visibility: { requiresAmbassador: true },
   },
+
+  // ── Pillar components (6W only) — partner-issued ──
+  // Each pillar has exactly one of each: capstone (project), case study
+  // (analysis), practical (hands-on exercise). Partners award these via the
+  // Issue Activity page once the learner submits the deliverable.
+  // Points are placeholder defaults — adjust per real content.
+  {
+    id: "capstone",
+    baseId: "capstone",
+    title: "Pillar Capstone",
+    description: "Synthesizing project that demonstrates mastery of your pillar.",
+    points: 10000,
+    behaviorType: "one_time",
+    approvalType: "partner_issued",
+    week: 1,
+    category: "Pillar",
+    flexibleWeeks: true,
+    frequencyNote: "One capstone per pillar.",
+  },
+  {
+    id: "case_study",
+    baseId: "case_study",
+    title: "Pillar Case Study",
+    description: "Analysis of a real-world scenario aligned to your pillar.",
+    points: 5000,
+    behaviorType: "one_time",
+    approvalType: "partner_issued",
+    week: 1,
+    category: "Pillar",
+    flexibleWeeks: true,
+    frequencyNote: "One case study per pillar.",
+  },
+  {
+    id: "practical",
+    baseId: "practical",
+    title: "Pillar Practical",
+    description: "Hands-on exercise that puts your pillar learning into practice.",
+    points: 3000,
+    behaviorType: "one_time",
+    approvalType: "partner_issued",
+    week: 1,
+    category: "Pillar",
+    flexibleWeeks: true,
+    frequencyNote: "One practical per pillar.",
+  },
 ];
 
 // Lookup map for base activities
@@ -461,6 +505,10 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "book_club", totalFrequency: 1 },
     { activityId: "peer_matching", totalFrequency: 3 },
     { activityId: "challenger", totalFrequency: 3 },
+    // Pillar components — one of each per 6W journey
+    { activityId: "capstone", totalFrequency: 1 },
+    { activityId: "case_study", totalFrequency: 1 },
+    { activityId: "practical", totalFrequency: 1 },
   ],
   "3M": [
     { activityId: "podcast_workbook", totalFrequency: 9 },
@@ -524,7 +572,10 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 7000,
     windowTarget: 14000,
     passMarkPoints: 40000,
-    maxPossiblePoints: 60000,
+    // Bumped from 60_000 → 78_000 when pillar components (capstone +
+    // case study + practical, 18_000 pts total) were added. Pass mark
+    // unchanged so existing learners' completion logic is unaffected.
+    maxPossiblePoints: 78000,
     mode: "full",
     timelineDisplay: "course-count",
     completionThresholdPct: 67,

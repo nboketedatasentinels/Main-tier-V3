@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Capability Map</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020; --purple: #4A3B8C;
+    --purple-light: #6B5BB5; --cream: #FAF8F3; --border: #E8E3DA;
+    --field-bg: #F9F7F2; --field-border: #D4CEBC; --ai-bg: #0F1F16; --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5; --gap-minor: #16A34A; --gap-minor-bg: #DCFCE7;
+    --gap-significant: #D97706; --gap-significant-bg: #FEF3C7;
+    --gap-structural: #DC2626; --gap-structural-bg: #FEE2E2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+  .content { max-width: 920px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+  textarea { width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6; transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px; }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+  input[type="text"] { width: 100%; background: #fff; border: 1.5px solid var(--field-border); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--plum); }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  .usecase-card { background: rgba(74,59,140,0.06); border: 1.5px solid var(--purple-light); border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
+  .usecase-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .usecase-card-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .usecase-card-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+  .field-block { display: flex; flex-direction: column; gap: 6px; }
+  .field-block label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+  .capmap-card { background: linear-gradient(135deg, rgba(74,59,140,0.04), rgba(245,200,66,0.04)); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .capmap-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .capmap-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .capmap-legend { display: flex; justify-content: center; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid; }
+  .legend-swatch.minor { background: var(--gap-minor-bg); border-color: var(--gap-minor); }
+  .legend-swatch.significant { background: var(--gap-significant-bg); border-color: var(--gap-significant); }
+  .legend-swatch.structural { background: var(--gap-structural-bg); border-color: var(--gap-structural); }
+  .capmap-row { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+  .capmap-row-header { display: grid; grid-template-columns: 56px 1fr 200px; gap: 18px; align-items: center; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--field-border); }
+  @media (max-width: 720px) { .capmap-row-header { grid-template-columns: 1fr; gap: 10px; } }
+  .capmap-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 30px; color: var(--gold-dark); line-height: 1; }
+  .capmap-name-block .capmap-cap-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .gap-rating { display: flex; flex-direction: column; gap: 6px; }
+  .gap-rating-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .gap-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+  .gap-btn { background: #fff; border: 1.5px solid var(--field-border); border-radius: 8px; padding: 8px 0; font-family: 'DM Sans', sans-serif; font-size: 10px; font-weight: 700; color: #555; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
+  .gap-btn:hover { transform: translateY(-1px); }
+  .gap-btn[data-rating="minor"]:hover { border-color: var(--gap-minor); background: rgba(22,163,74,0.06); color: var(--gap-minor); }
+  .gap-btn[data-rating="significant"]:hover { border-color: var(--gap-significant); background: rgba(217,119,6,0.06); color: var(--gap-significant); }
+  .gap-btn[data-rating="structural"]:hover { border-color: var(--gap-structural); background: rgba(220,38,38,0.06); color: var(--gap-structural); }
+  .gap-btn[data-rating="minor"].selected { background: var(--gap-minor-bg); border-color: var(--gap-minor); color: var(--gap-minor); border-width: 2px; }
+  .gap-btn[data-rating="significant"].selected { background: var(--gap-significant-bg); border-color: var(--gap-significant); color: var(--gap-significant); border-width: 2px; }
+  .gap-btn[data-rating="structural"].selected { background: var(--gap-structural-bg); border-color: var(--gap-structural); color: var(--gap-structural); border-width: 2px; }
+  .capmap-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 720px) { .capmap-cols { grid-template-columns: 1fr; } }
+  .capmap-col { display: flex; flex-direction: column; gap: 5px; }
+  .capmap-col label { font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+  .capmap-col.claimed label { color: var(--purple); }
+  .capmap-col.observable label { color: var(--plum); }
+  .capmap-col.gap label { color: var(--gold-dark); }
+  .capmap-col .helper { font-size: 11px; color: #888; font-style: italic; line-height: 1.4; margin-bottom: 2px; }
+  .capmap-col textarea { min-height: 110px; font-size: 12px; padding: 10px 12px; }
+  .capmap-col.gap textarea { background: rgba(245,200,66,0.04); border-color: rgba(245,200,66,0.4); }
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; }
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-family: 'DM Sans', sans-serif; font-style: normal; font-weight: 700; }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 26px; } .content { padding: 20px 14px 40px; } .step-card, .ai-activity { padding: 20px 18px; } .capmap-card { padding: 18px 16px; } }
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">The Capability Map</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Innovation and AI for Digital Transformation</div>
+    <div class="practical-badge">Week 3 · Practical 3 of 6</div>
+  </div>
+  <h1 class="header-title">The Capability <em>Map</em></h1>
+  <p class="header-desc">Three columns. Claimed capability — as it appears in strategy documents, board papers, vendor pitches. Observable capability — what the organisation can actually demonstrate today, with concrete evidence per row. Gap — the specific delta and what would need to be true to close it. The Practical surfaces at least three significant gaps for one specific stated AI use case. Distinguishing the claimed from the observable is the discipline. The map is the artefact.</p>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The use case is specific — not 'AI in operations' but 'AI-driven fraud detection scaled to the South African retail bank by Q3' — because abstract use cases produce abstract capability requirements.</li>
+      <li>The map covers at least five capabilities relevant to this specific use case — not a generic capability framework. Capabilities are picked because the use case depends on them.</li>
+      <li>Observable capability cells are filled with concrete artefacts: a working pilot, a named team, a specific deployed system. If the cell reads 'we have built capability in X', it is aspirational not observable.</li>
+      <li>At least three capabilities are flagged as significant or structural gaps — including at least one structural gap (not closeable in 90 days) and at least one gap the organisation is currently downplaying.</li>
+      <li>An incoming CEO reading the map could state which gaps make the use case undeliverable as currently scoped, without you in the room to defend it.</li>
+    </ul>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>1</span></div><div><div class="step-label">Step 1</div><div class="step-title">Frame the Use Case Specifically</div></div></div>
+    <p class="step-desc">Before the map, the use case. Specific enough to drive capability requirements — the test is whether two different practitioners reading the use case would derive similar capability lists. If the use case is abstract ('AI for customer experience'), the map will be abstract. The capability gap discipline only works when the use case has scope, scale, timeline, and accountability attached.</p>
+    <div class="usecase-card">
+      <div class="usecase-card-label">The Stated Use Case</div>
+      <div class="usecase-card-q">What is the specific AI use case this map is for?</div>
+      <div class="usecase-card-helper">Scope, scale, timeline, accountability. Not the strategic noun — the operational instance.</div>
+      <div class="field-block" style="margin-bottom: 12px;">
+        <label>The Use Case (one sentence)</label>
+        <input type="text" name="use_case_short" placeholder="AI-handling 60% of inbound retail customer service contact across the UK retail bank by FY26 Q4, with conduct-complaint differential inside 1.5x of human-handled baseline.">
+      </div>
+      <textarea name="use_case_full" placeholder="The use case in full. Source (which strategy document, which board paper, which vendor pitch). Owner (named accountable executive). Stated business value. The deployment scope, channels, segments, markets, timeline, conduct constraints. The success measure named in the strategy doc."></textarea>
+    </div>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header"><div class="substep-dot"><span>01</span></div><div class="substep-label">Where the Claims Are Sourced</div></div>
+        <div class="substep-body">Which documents the 'claimed capability' column will draw from.</div>
+        <textarea name="claim_sources" placeholder="Three sources for the claimed column. Each row's claim cell will name which source it is drawn from."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header"><div class="substep-dot"><span>02</span></div><div class="substep-label">Where the Evidence Comes From</div></div>
+        <div class="substep-body">How you will fill the 'observable' column.</div>
+        <textarea name="evidence_sources" placeholder="Observable column will only be filled with: a named system in production with a deployment date, a named team with a named lead, a working pilot with documented results, or an external audit with a date."></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>2</span></div><div><div class="step-label">Step 2</div><div class="step-title">Map Five Capabilities</div></div></div>
+    <p class="step-desc">Five capabilities the use case depends on. For each one: claimed capability (with source), observable capability (with concrete evidence), and the gap (with what would need to be true to close it). Rate each gap minor / significant / structural.</p>
+    <div class="capmap-card">
+      <div class="capmap-card-label">The Capability Map</div>
+      <div class="capmap-card-sub">Five capabilities · three columns · gap rated against closeability and timeline</div>
+      <div class="capmap-legend">
+        <div class="legend-item"><div class="legend-swatch minor"></div>Minor: closeable in 30 days</div>
+        <div class="legend-item"><div class="legend-swatch significant"></div>Significant: closeable in 90 days, costed</div>
+        <div class="legend-item"><div class="legend-swatch structural"></div>Structural: not closeable in the use case timeline</div>
+      </div>
+      <div id="capabilities"></div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>3</span></div><div><div class="step-label">Step 3</div><div class="step-title">Name the Downplayed Gap and the Defensible Call</div></div></div>
+    <p class="step-desc">The map is data. The Practical is what you do with it. Two checks. First: which gap has the organisation been downplaying? Second: based on the map, what is the defensible call to leadership — deliver as scoped, deliver after foundation work, or reframe?</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header"><div class="substep-dot"><span>01</span></div><div class="substep-label">The Downplayed Gap</div></div>
+        <div class="substep-body">The gap framed as 'not yet a problem'. Specific. Honest. Including the political reason.</div>
+        <textarea name="downplayed_gap" placeholder="Name the gap and the political reason it has been downplayed."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header"><div class="substep-dot"><span>02</span></div><div class="substep-label">The Defensible Call</div></div>
+        <div class="substep-body">Deliver as scoped, deliver after foundation work, or reframe?</div>
+        <textarea name="defensible_call" placeholder="What changes for leadership. One sentence."></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Map</h2>
+    <p class="ai-activity-desc">Capability Maps fail in two predictable places — the observable column reads as paraphrased claim, and the practitioner picks a comfortable downplayed gap rather than the politically uncomfortable one. AI as an outside reader catches both.</p>
+    <div class="ai-step">
+      <div class="ai-step-header"><div class="step-badge"><span>1</span></div><div><div class="ai-step-title">Test Whether the Observable Column Is Actually Observable</div></div></div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am submitting a five-row capability map for an AI use case. The 'observable' column for each row is: [paste]. Pressure-test on three criteria. (1) For each row, is the observable cell describing something with a name, a date, or a number that an external party could verify? Or is it describing the work in language that sounds concrete but cannot be verified? (2) Does any observable cell repeat the language of its paired claim cell, with one word changed? (3) Of the five rows, which observable cell would an incoming CEO push back hardest on? Tell me which observable cells are still claims and rewrite the weakest one with verifiable evidence.</div>
+      <textarea class="ai-field" placeholder="Which observable cells are still claims? What is the rewritten version?"></textarea>
+    </div>
+    <div class="ai-step">
+      <div class="ai-step-header"><div class="step-badge"><span>2</span></div><div><div class="ai-step-title">Test Whether the Downplayed Gap Is Honestly the Hardest One</div></div></div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I have mapped five capabilities, three rated significant or structural. I named [Capability X] as the gap the organisation is downplaying. The political reason: [paste]. Pressure-test: (1) Of the three significant/structural gaps, is the one I named the politically hardest to surface — or the one most aligned with my own positioning? (2) For each of the other two, what is the political reason it might also have been downplayed? (3) If a peer asked 'who specifically would be uncomfortable if you surfaced this gap publicly', could I answer with named individuals? Tell me whether the named downplayed gap is the honest one.</div>
+      <textarea class="ai-field" placeholder="Is the named downplayed gap the honest one? What alternative deserves consideration?"></textarea>
+    </div>
+  </div>
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the foundation work has progressed and the rollout has scoped to chat-only by FY26 Q4, which capability that you rated 'minor' today will have aged into a 'significant' gap because the use case definition itself shifted? And what does that prediction say about the temporal stability of capability mapping as a discipline?</div>
+    <textarea placeholder="The capability most likely to age from minor to significant is..."></textarea>
+  </div>
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Capability Maps fall apart at the same place every time — the observable column ends up paraphrasing the claimed column with one word changed, and the gap rated 'structural' is the comfortable one to call structural rather than the politically expensive one.</p>
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the use case definition first. Ask your peer if they could derive a similar capability list from your use case alone. Then read the observable column for each row. Ask your peer to point at any cell that reads as a claim with the verb tense changed. Then read the downplayed gap.</p>
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of your five observable cells, are any of them paraphrased versions of their paired claim cell with one word changed?</li>
+      <li>Your downplayed gap — can you name the specific person or function who would be uncomfortable if it was made public this quarter?</li>
+      <li>Your defensible call — if leadership accepted it tomorrow, what would have to change in the FY26 narrative?</li>
+    </ul>
+  </div>
+</div>
+<script>
+const capabilities = [
+  { num: '01', placeholder: 'Conversational AI Model Capability' },
+  { num: '02', placeholder: 'Data Foundation for Model Training and Audit' },
+  { num: '03', placeholder: 'Model Risk Management and Governance' },
+  { num: '04', placeholder: 'Frontline Operating Model Redesign' },
+  { num: '05', placeholder: 'Post-Deployment Monitoring and Feedback Loop' }
+];
+const root = document.getElementById('capabilities');
+capabilities.forEach((cap, i) => {
+  const n = i + 1;
+  const div = document.createElement('div');
+  div.className = 'capmap-row';
+  div.innerHTML = `
+    <div class="capmap-row-header">
+      <div class="capmap-num">${cap.num}</div>
+      <div class="capmap-name-block">
+        <div class="capmap-cap-label">Capability ${n}</div>
+        <input type="text" name="cap_${n}_name" placeholder="${cap.placeholder}" style="font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); border: none; padding: 4px 0; background: transparent; width: 100%;">
+      </div>
+      <div class="gap-rating">
+        <div class="gap-rating-label">Gap Rating</div>
+        <div class="gap-buttons" data-cap="${n}">
+          <button type="button" class="gap-btn" data-rating="minor">Minor</button>
+          <button type="button" class="gap-btn" data-rating="significant">Sig.</button>
+          <button type="button" class="gap-btn" data-rating="structural">Struct.</button>
+        </div>
+        <input type="hidden" name="cap_${n}_rating" value="">
+      </div>
+    </div>
+    <div class="capmap-cols">
+      <div class="capmap-col claimed"><label>Claimed</label><div class="helper">As it appears in strategy / board / vendor materials.</div><textarea name="cap_${n}_claimed" placeholder="Cite source."></textarea></div>
+      <div class="capmap-col observable"><label>Observable</label><div class="helper">Concrete evidence today. Named system / team / pilot. Date.</div><textarea name="cap_${n}_observable" placeholder="Working pilot, named team, deployed system."></textarea></div>
+      <div class="capmap-col gap"><label>Gap and What Would Close It</label><div class="helper">The specific delta. What has to be true.</div><textarea name="cap_${n}_gap" placeholder="What would have to change."></textarea></div>
+    </div>
+  `;
+  root.appendChild(div);
+});
+document.querySelectorAll('.gap-buttons').forEach(group => {
+  const capNum = group.dataset.cap;
+  group.querySelectorAll('.gap-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.gap-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      const hidden = document.querySelector('[name="cap_' + capNum + '_rating"]');
+      if (hidden) hidden.value = btn.dataset.rating;
+    });
+  });
+});
+function submitPractical() {
+  if (!confirm("Submit Practical 3? Once submitted, you can still edit until end of Week 3.")) return;
+  console.log("Practical 3 submission - capability map");
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W3)");
+}
+</script>
+</body>
+</html>
