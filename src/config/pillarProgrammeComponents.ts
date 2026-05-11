@@ -156,7 +156,50 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
   ],
   transforming_business: placeholderTriple('transforming-business'),
   fostering: placeholderTriple('fostering'),
-  starter_kit: placeholderTriple('starter-kit'),
+  starter_kit: [
+    {
+      id: 'starter-kit-capstone',
+      type: 'capstone',
+      title: 'Combined Capstone (3 parts)',
+      description:
+        'Three parts marked together: One-Page Proposal, Project Scope Document, and Status Report. All required.',
+      status: 'available',
+      parts: [
+        {
+          id: 'starter-kit-capstone-part-a',
+          title: 'Part A · One-Page Proposal',
+          description: 'Closes Think Like an Owner (Week 2). Audience-matched pitch.',
+          href: '/capstones/starter-kit-capstone-part-a.html',
+        },
+        {
+          id: 'starter-kit-capstone-part-b',
+          title: 'Part B · Project Scope Document',
+          description: 'Closes Lead Like a Pro (Week 6). Objectives, methodology, risks.',
+          href: '/capstones/starter-kit-capstone-part-b.html',
+        },
+        {
+          id: 'starter-kit-capstone-part-c',
+          title: 'Part C · Status Report',
+          description: 'Closes Project Leadership Discipline. Risk-led mid-flight report.',
+          href: '/capstones/starter-kit-capstone-part-c.html',
+        },
+      ],
+    },
+    {
+      id: 'starter-kit-case-study',
+      type: 'case_study',
+      title: 'Case Study',
+      description: 'Content coming soon.',
+      status: 'coming_soon',
+    },
+    {
+      id: 'starter-kit-practical',
+      type: 'practical',
+      title: 'Practical',
+      description: 'Content coming soon.',
+      status: 'coming_soon',
+    },
+  ],
 }
 
 export const PROGRAMME_COMPONENT_LABEL: Record<ProgrammeComponentType, string> = {

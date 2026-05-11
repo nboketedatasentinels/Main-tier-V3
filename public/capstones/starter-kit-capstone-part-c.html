@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part C: Status Report</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; --rag-green:#166534; --rag-amber:#B45309; --rag-red:#991B1B; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .wordmark{display:flex;flex-direction:column;gap:1px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+  .header-title{font-family:'DM Serif Display',serif;font-size:36px;color:#fff;line-height:1.15;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-desc{font-size:14px;color:rgba(255,255,255,.7);max-width:680px;line-height:1.7}
+  .capstone-callout{display:inline-block;background:rgba(245,200,66,.2);border:1px solid rgba(245,200,66,.5);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--gold);margin-top:14px}
+  .content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+  .section-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .section-num{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .section-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum);margin-bottom:6px}
+  .section-prompt{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:14px;line-height:1.5}
+  .section-hint{font-size:12px;color:#888;margin-bottom:14px;font-style:italic}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:110px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  input[type=text]{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+  @media(max-width:600px){.two-col{grid-template-columns:1fr}}
+  .sub-q{margin-bottom:16px}
+  .sub-q-label{font-size:13px;font-weight:600;color:var(--plum);margin-bottom:8px}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum);margin-bottom:12px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:6px 0 6px 20px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .section-num-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .outcome-tag{display:inline-block;background:rgba(74,59,140,.1);border:1px solid rgba(74,59,140,.25);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase}
+  .rag-selector{background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:12px;padding:16px 18px;margin-bottom:18px}
+  .rag-selector-label{font-size:12px;font-weight:600;color:var(--plum);margin-bottom:4px}
+  .rag-selector-hint{font-size:11px;color:#888;line-height:1.5;margin-bottom:12px;font-style:italic}
+  .rag-options{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:720px){.rag-options{grid-template-columns:1fr}}
+  .rag-option{background:#fff;border:1.5px solid var(--field-border);border-radius:8px;padding:12px 14px;cursor:pointer}
+  .rag-option input[type=radio]{display:none}
+  .rag-option label{display:block;cursor:pointer}
+  .rag-dot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:8px;vertical-align:middle}
+  .rag-dot-green{background:var(--rag-green)}
+  .rag-dot-amber{background:var(--rag-amber)}
+  .rag-dot-red{background:var(--rag-red)}
+  .rag-option-name{font-size:13px;font-weight:700;color:var(--plum);margin-bottom:4px}
+  .rag-option-desc{font-size:11px;color:#666;line-height:1.5}
+  .rag-option:has(input[value=green]:checked){border-color:var(--rag-green);background:rgba(22,101,52,.05)}
+  .rag-option:has(input[value=amber]:checked){border-color:var(--rag-amber);background:rgba(180,83,9,.05)}
+  .rag-option:has(input[value=red]:checked){border-color:var(--rag-red);background:rgba(153,27,27,.05)}
+  .risk-block{background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:12px;padding:18px 22px;margin-bottom:14px}
+  .risk-num{font-family:'DM Serif Display',serif;font-style:italic;font-size:22px;color:var(--gold-dark);line-height:1;margin-bottom:8px}
+  .risk-row-label{font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+  .risk-row{margin-bottom:12px}
+  .risk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:600px){.risk-grid{grid-template-columns:1fr}}
+  .risk-block textarea,.risk-block input[type=text]{background:#fff;min-height:65px}
+  .risk-block input[type=text]{min-height:auto}
+  .digital-edge-card{background:linear-gradient(135deg,#0F1F16,#14342A);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px;color:#fff}
+  .digital-edge-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .digital-edge-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:8px}
+  .digital-edge-meta{font-size:12px;color:#4ADE80;margin-bottom:16px;font-weight:600}
+  .digital-edge-why{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:18px;line-height:1.7;font-style:italic;padding-left:12px;border-left:2px solid rgba(74,222,128,.4)}
+  .digital-edge-prompt-label{font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+  .digital-edge-prompt-box{background:rgba(0,0,0,.4);border:1px solid rgba(45,122,79,.5);border-radius:8px;padding:14px 16px;font-size:12px;color:#A7F3D0;line-height:1.7;white-space:pre-wrap;margin-bottom:16px}
+  .digital-edge-instructions{font-size:12px;color:rgba(255,255,255,.65);line-height:1.6}
+  .digital-edge-instructions strong{color:#4ADE80}
+  .ai-reflection{background:var(--ai-bg);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .ai-reflection-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .ai-reflection-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:10px}
+  .ai-reflection-desc{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:24px;line-height:1.7}
+  .ai-reflection-q{margin-bottom:18px}
+  .ai-reflection-q-label{font-size:13px;font-weight:600;color:#fff;margin-bottom:8px}
+  .ai-reflection textarea{background:rgba(255,255,255,.06);border-color:rgba(45,122,79,.4);color:#fff;min-height:90px}
+  .assessor-lens{background:#fff;border:1.5px solid var(--gold);border-radius:16px;margin-bottom:24px;overflow:hidden}
+  .assessor-lens-header{padding:18px 24px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .assessor-lens-tag{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .assessor-lens-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum)}
+  .assessor-lens-toggle{font-size:13px;font-weight:700;color:var(--purple)}
+  .assessor-lens-toggle::after{content:" ▼"}
+  .assessor-lens.open .assessor-lens-toggle::after{content:" ▲"}
+  .assessor-lens-body{display:none;padding:0 24px 24px;border-top:1px solid var(--border)}
+  .assessor-lens.open .assessor-lens-body{display:block}
+  .assessor-lens-intro{font-size:13px;color:#666;line-height:1.65;margin:16px 0 18px;font-style:italic}
+  .criterion-block{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .criterion-block:last-child{border-bottom:none}
+  .criterion-name{font-size:12px;font-weight:700;color:var(--purple);margin-bottom:4px}
+  .criterion-outcome{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+  .criterion-desc{font-size:13px;color:#444;line-height:1.65}
+  .peer-prep{background:var(--plum);border-radius:16px;padding:32px;margin-bottom:24px}
+  .peer-prep-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+  .peer-prep-title{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;margin-bottom:8px}
+  .peer-prep-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:18px;line-height:1.65}
+  .peer-questions-label{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .peer-q-list{list-style:none;padding:0;margin:0}
+  .peer-q-list li{font-size:14px;color:rgba(255,255,255,.92);line-height:1.6;padding:12px 0 12px 28px;position:relative;border-top:1px solid rgba(255,255,255,.12);font-family:'DM Serif Display',serif;font-style:italic}
+  .peer-q-list li:first-child{border-top:none}
+  .peer-q-list li::before{content:"→";position:absolute;left:0;top:12px;color:var(--gold);font-family:'DM Sans',sans-serif;font-style:normal;font-weight:700}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div class="wordmark"><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">Status Report</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="lift-badge">The Transformation Practitioner</div>
+  <h1 class="header-title">Status <em>Report</em></h1>
+  <p class="header-desc">The mid-flight report you'd send a steering committee on the project you scoped in Part B. Risk leads. Status follows. Decisions required are named, not buried.</p>
+  <div class="capstone-callout">Capstone Part C · Closes Project Leadership Discipline</div>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Status Report that protects the programme.</div>
+    <ul class="standard-list">
+      <li>Risk leads — structured before being asked. Two named risks with severity, likelihood, mitigation.</li>
+      <li>Overall status confirmed clearly — with rationale, not just a colour.</li>
+      <li>Decisions required are named explicitly — specific asks of the committee.</li>
+      <li>Stakeholder positions distinguish healthy disagreement from political behaviour.</li>
+      <li>The Defensibility Statement is the test — would your position survive cross-examination without compromising?</li>
+    </ul>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 01</div><div class="outcome-tag">Outcome 5 · Reporting context</div></div>
+    <h2 class="section-title">Reporting Context</h2>
+    <div class="section-prompt">Set the scene for the steering committee. What programme, what reporting period, who is reading this.</div>
+    <div class="two-col">
+      <div class="sub-q"><div class="sub-q-label">Programme and reporting period</div><textarea name="section_01_context"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Distribution and authorship</div><textarea name="section_01_distribution"></textarea></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 02</div><div class="outcome-tag">Outcome 5 · Risk leads, before being asked</div></div>
+    <h2 class="section-title">Risk Register</h2>
+    <div class="section-prompt">Lead with risk — before the committee asks. Two risks, each with severity, likelihood, mitigation, and owner.</div>
+    <div class="section-hint">This Section comes before headline status by design. A committee that has to extract risks from a report has already lost trust.</div>
+    <div class="risk-block">
+      <div class="risk-num">01</div>
+      <div class="risk-row"><div class="risk-row-label">Risk description</div><textarea name="risk_1_desc"></textarea></div>
+      <div class="risk-grid">
+        <div class="risk-row"><div class="risk-row-label">Severity</div><input type="text" name="risk_1_severity"></div>
+        <div class="risk-row"><div class="risk-row-label">Likelihood</div><input type="text" name="risk_1_likelihood"></div>
+      </div>
+      <div class="risk-grid">
+        <div class="risk-row"><div class="risk-row-label">Mitigation</div><textarea name="risk_1_mitigation"></textarea></div>
+        <div class="risk-row"><div class="risk-row-label">Owner</div><input type="text" name="risk_1_owner"></div>
+      </div>
+    </div>
+    <div class="risk-block">
+      <div class="risk-num">02</div>
+      <div class="risk-row"><div class="risk-row-label">Risk description</div><textarea name="risk_2_desc"></textarea></div>
+      <div class="risk-grid">
+        <div class="risk-row"><div class="risk-row-label">Severity</div><input type="text" name="risk_2_severity"></div>
+        <div class="risk-row"><div class="risk-row-label">Likelihood</div><input type="text" name="risk_2_likelihood"></div>
+      </div>
+      <div class="risk-grid">
+        <div class="risk-row"><div class="risk-row-label">Mitigation</div><textarea name="risk_2_mitigation"></textarea></div>
+        <div class="risk-row"><div class="risk-row-label">Owner</div><input type="text" name="risk_2_owner"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 03</div><div class="outcome-tag">Outcome 5 · Status with rationale</div></div>
+    <h2 class="section-title">Headline Status</h2>
+    <div class="section-prompt">Confirm the overall RAG status — and explain the rationale. Not just the colour.</div>
+    <div class="rag-selector">
+      <div class="rag-selector-label">Overall programme status</div>
+      <div class="rag-selector-hint">Select one. Defensible against the risks named above.</div>
+      <div class="rag-options">
+        <div class="rag-option"><input type="radio" name="rag_status" id="rag-green" value="green"><label for="rag-green"><div class="rag-option-name"><span class="rag-dot rag-dot-green"></span>Green</div><div class="rag-option-desc">On track. Risks mitigated.</div></label></div>
+        <div class="rag-option"><input type="radio" name="rag_status" id="rag-amber" value="amber"><label for="rag-amber"><div class="rag-option-name"><span class="rag-dot rag-dot-amber"></span>Amber</div><div class="rag-option-desc">Risk that could move the programme.</div></label></div>
+        <div class="rag-option"><input type="radio" name="rag_status" id="rag-red" value="red"><label for="rag-red"><div class="rag-option-name"><span class="rag-dot rag-dot-red"></span>Red</div><div class="rag-option-desc">Delivery at risk. Decision required.</div></label></div>
+      </div>
+    </div>
+    <div class="sub-q"><div class="sub-q-label">Status rationale</div><textarea name="section_03_rationale"></textarea></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 04</div><div class="outcome-tag">Outcome 5 · Specific asks of committee</div></div>
+    <h2 class="section-title">Decisions Required</h2>
+    <div class="section-prompt">What specifically do you need the steering committee to decide, agree, or do? Each ask named, with timing.</div>
+    <div class="section-hint">"Input welcomed" is not a decision. Distinction-level work names the specific ask.</div>
+    <textarea name="section_04_decisions"></textarea>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 05</div><div class="outcome-tag">Outcome 4 · Delivery against scope</div></div>
+    <h2 class="section-title">Progress Against Plan</h2>
+    <div class="section-prompt">What has been completed in this reporting period, what is in flight, and what has slipped against the original plan?</div>
+    <div class="two-col">
+      <div class="sub-q"><div class="sub-q-label">Completed this period</div><textarea name="section_05_completed"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">In flight / slipped</div><textarea name="section_05_in_flight"></textarea></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 06</div><div class="outcome-tag">Outcome 5 · Stakeholder discipline</div></div>
+    <h2 class="section-title">Stakeholder Position</h2>
+    <div class="section-prompt">Where do the key stakeholders sit on the programme? Distinguish healthy disagreement from political behaviour.</div>
+    <textarea name="section_06_stakeholder_position" style="min-height:150px"></textarea>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 07</div><div class="outcome-tag">Outcome 5 · Defends without compromising</div></div>
+    <h2 class="section-title">Defensibility Statement</h2>
+    <div class="section-prompt">If a member of the steering committee challenged this report aggressively, where would your position hold and where might you compromise too quickly?</div>
+    <textarea name="section_07_defensibility" style="min-height:150px"></textarea>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 08</div><div class="outcome-tag">Synthesis · Next reporting period</div></div>
+    <h2 class="section-title">Looking Forward</h2>
+    <div class="section-prompt">What are the three priorities for the next two weeks, and what would change the headline status to Green or Red?</div>
+    <textarea name="section_08_forward"></textarea>
+  </div>
+  <div class="digital-edge-card">
+    <div class="digital-edge-tag">Digital Edge · AI Application</div>
+    <h2 class="digital-edge-title">Trust is Built in Drops</h2>
+    <div class="digital-edge-meta">Week 5 standardised Digital Edge for this Capstone</div>
+    <div class="digital-edge-why">Why this matters: Senior reporting either builds trust or erodes it. The discipline isn't about being optimistic or pessimistic — it's about being structured.</div>
+    <div class="digital-edge-prompt-label">The prompt</div>
+    <div class="digital-edge-prompt-box">You are a steering committee member with 20 years of programme oversight experience. I'm going to paste a Status Report I'm preparing. Audit it: (1) Does risk lead, or is it buried after a status colour? (2) Is the headline status defensible against the risks named? (3) Are the decisions required actually decisions? (4) Where would I push back hardest, and would the report's position hold? (5) Where is the language softer than the situation warrants? Be direct.
+
+Status Report: [paste your full report from Sections 01-08]</div>
+    <div class="digital-edge-instructions"><strong>How to apply:</strong> The four reflection questions below evidence your evaluative judgement.</div>
+  </div>
+  <div class="ai-reflection">
+    <div class="ai-reflection-tag">AI Integration · Outcome 6 evidence</div>
+    <h2 class="ai-reflection-title">Reflect on the Digital Edge Output</h2>
+    <p class="ai-reflection-desc">Distinction-level work shows what you applied AND what you critically rejected.</p>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">01 · What did the AI surface that you hadn't seen?</div><textarea name="ai_surfaced"></textarea></div>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">02 · What did you apply from the AI output to this report?</div><textarea name="ai_applied"></textarea></div>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">03 · What did you critically reject from the AI output?</div><textarea name="ai_rejected"></textarea></div>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">04 · What does this teach you about AI in senior reporting going forward?</div><textarea name="ai_rule"></textarea></div>
+  </div>
+  <div class="assessor-lens" id="assessorLens">
+    <div class="assessor-lens-header" onclick="document.getElementById('assessorLens').classList.toggle('open')">
+      <div><div class="assessor-lens-tag">Before you submit</div><div class="assessor-lens-title">What the assessor is looking for</div></div>
+      <div class="assessor-lens-toggle">View criteria</div>
+    </div>
+    <div class="assessor-lens-body">
+      <p class="assessor-lens-intro">The Status Report evidences two criteria directly (C5 and C6) and reinforces a third (C4).</p>
+      <div class="criterion-block"><div class="criterion-name">C4: Risk and Delivery Discipline</div><div class="criterion-outcome">Outcome 4 · Reinforced</div><div class="criterion-desc">Progress against Plan names slippage honestly. Risks evolve between Parts B and C.</div></div>
+      <div class="criterion-block"><div class="criterion-name">C5: Senior Reporting</div><div class="criterion-outcome">Outcome 5 · Primary evidence</div><div class="criterion-desc">Risk leads. Status with rationale. Specific decisions required. Stakeholder discipline. Defensibility Statement is the distinction test.</div></div>
+      <div class="criterion-block"><div class="criterion-name">C6: AI Integration</div><div class="criterion-outcome">Outcome 6 · Cross-cutting</div><div class="criterion-desc">Evaluative judgement. Not deference, not wholesale acceptance.</div></div>
+    </div>
+  </div>
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Read Section 02 (Risk Register), Section 03 (Headline Status rationale), and Section 07 (Defensibility Statement) aloud, in that order. Don't summarise.</p>
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the two risks you named, is there a third you didn't name because surfacing it would create a difficult conversation?</li>
+      <li>Your status rationale — is the colour you chose the one you actually believe, or the one that's easier to defend?</li>
+      <li>The Defensibility Statement — where in the actual committee meeting are you most likely to compromise?</li>
+    </ul>
+  </div>
+</div>
+<script>
+function submitCapstone() {
+  if (!confirm("Submit Capstone Part C: Status Report?\n\nThis closes the Combined Capstone for The Transformation Practitioner Journey.")) return;
+  alert("Capstone Part C received. Combined Capstone (Parts A + B + C) ready for assessor review. (In production, this POSTs to /api/capstones/submit with submission_type = CAPSTONE_PART_C)");
+}
+</script>
+</body>
+</html>
