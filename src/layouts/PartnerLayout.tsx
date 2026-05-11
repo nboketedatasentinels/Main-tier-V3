@@ -26,7 +26,6 @@ import { LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
-import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
 import { getDisplayName } from '@/utils/displayName'
 
@@ -38,6 +37,8 @@ const MOBILE_NAV_BUTTON_HEIGHT = MOBILE_NAV_HEIGHT - 12
 interface PartnerLayoutProps {
   children: React.ReactNode
   organizations: { id?: string; code: string; name: string }[]
+  selectedOrg: string
+  onSelectOrg: (org: string) => void
   navSections?: NavigationSection[]
   activeItem?: string
   onNavigate?: (key: string) => void
@@ -46,16 +47,12 @@ interface PartnerLayoutProps {
 export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   children,
   organizations,
+  selectedOrg,
+  onSelectOrg,
   navSections,
   activeItem,
   onNavigate,
 }) => {
-  // Single source of truth for the selected company across every partner
-  // page. The hook syncs URL `?org=<id>` with sessionStorage so the chosen
-  // org persists when navigating between Dashboard / Issue Activities /
-  // Course Approvals / Learner Assignments. Empty value means "All
-  // organizations" (aggregated view).
-  const { selectedOrg, setSelectedOrg } = usePartnerSelectedOrg()
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
   const { profile, signOut, signingOut, refreshProfile, profileLoading, lastProfileLoadAt, isAdmin } = useAuth()
@@ -71,12 +68,20 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       overview: 'Overview',
       users: 'Users',
       'partner-assignment': 'Issue',
+      'course-approvals': 'Approvals',
       'organization-management': 'Orgs',
     }),
     [],
   )
 
   const orgOptions = organizations.length ? organizations : []
+  // DIAG: confirm what the layout actually receives. Remove after dropdown bug is fixed.
+  console.log('[PartnerLayout DIAG] organizations prop:', {
+    count: organizations.length,
+    items: organizations.map(o => ({ id: o.id, code: o.code, name: o.name })),
+    selectedOrg,
+    assignedOrganizationIds,
+  })
 
   const formatLastUpdated = (timestamp?: string | null) => {
     if (!timestamp) return 'Not yet loaded'
@@ -264,13 +269,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         w={{ base: 'full', md: '240px' }}
         minW={{ base: 'full', md: '200px' }}
         maxW="280px"
-        value={
-          selectedOrg ||
-          (orgOptions.length > 1
-            ? 'all'
-            : orgOptions[0]?.id || orgOptions[0]?.code || '')
-        }
-        onChange={e => setSelectedOrg(e.target.value)}
+        value={selectedOrg || 'all'}
+        onChange={e => onSelectOrg(e.target.value)}
         bg="white"
         borderColor="brand.border"
         aria-label="Organization filter"

@@ -79,12 +79,17 @@ const writeCanonicalImpactLogAward = async (
     if (ledgerSnap.exists()) return
 
     const [userSnap, profileSnap] = await Promise.all([tx.get(userRef), tx.get(profileRef)])
-    const currentTotal = Math.max(
+    // CRITICAL: never write an absolute totalPoints derived from one mirror
+    // doc — if the two mirrors have drifted, the lower one's value gets
+    // promoted via Math.max but the SET still clobbers whichever mirror is
+    // higher than max+delta in some edge cases. pointsLedger is canonical;
+    // adjust each mirror by the delta with increment() so neither overwrites
+    // the other. Level is computed optimistically; reconcile-on-drift fixes it.
+    const projectedTotal = Math.max(
       Number(userSnap.data()?.totalPoints ?? 0),
       Number(profileSnap.data()?.totalPoints ?? 0),
-    )
-    const newTotal = currentTotal + pointsAwarded
-    const newLevel = calculateLevel(newTotal)
+    ) + pointsAwarded
+    const newLevel = calculateLevel(projectedTotal)
 
     tx.set(ledgerRef, {
       uid: userId,
@@ -99,13 +104,17 @@ const writeCanonicalImpactLogAward = async (
     })
 
     const update = {
-      totalPoints: newTotal,
+      totalPoints: increment(pointsAwarded),
       level: newLevel,
       pointsVersion: increment(1),
       updatedAt: serverTimestamp(),
     }
-    tx.set(userRef, update, { merge: true })
-    tx.set(profileRef, update, { merge: true })
+    if (userSnap.exists()) {
+      tx.set(userRef, update, { merge: true })
+    }
+    if (profileSnap.exists()) {
+      tx.set(profileRef, update, { merge: true })
+    }
   })
 }
 
@@ -226,26 +235,29 @@ export const backfillImpactLogPointsForUser = async (
     await updateUserJourneyPoints(userId, totalAwarded)
 
     // Bump the canonical totalPoints + level on users/profiles (read by leaderboard).
-    // Done in a single transaction after all ledger entries are written so the
-    // total reflects the new entries atomically.
+    // Use increment() so each mirror is adjusted by the delta atomically — never
+    // overwritten with a value derived from the other (which would clobber drift).
     const userRef = doc(db, 'users', userId)
     const profileRef = doc(db, 'profiles', userId)
     await runTransaction(db, async (tx) => {
       const [userSnap, profileSnap] = await Promise.all([tx.get(userRef), tx.get(profileRef)])
-      const currentTotal = Math.max(
+      const projectedTotal = Math.max(
         Number(userSnap.data()?.totalPoints ?? 0),
         Number(profileSnap.data()?.totalPoints ?? 0),
-      )
-      const newTotal = currentTotal + totalAwarded
-      const newLevel = calculateLevel(newTotal)
+      ) + totalAwarded
+      const newLevel = calculateLevel(projectedTotal)
       const update = {
-        totalPoints: newTotal,
+        totalPoints: increment(totalAwarded),
         level: newLevel,
         pointsVersion: increment(1),
         updatedAt: serverTimestamp(),
       }
-      tx.set(userRef, update, { merge: true })
-      tx.set(profileRef, update, { merge: true })
+      if (userSnap.exists()) {
+        tx.set(userRef, update, { merge: true })
+      }
+      if (profileSnap.exists()) {
+        tx.set(profileRef, update, { merge: true })
+      }
     })
   }
 

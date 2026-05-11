@@ -42,6 +42,7 @@ import {
 } from '@/types/admin'
 import { normalizeRole } from '@/utils/role'
 import { buildProfileEngagementDefaults, getMissingEngagementDefaults } from '@/utils/profileDefaults'
+import { dedupeUserDocsByEmail } from '@/services/userManagementService'
 
 type TrendPoint = { label: string; value: number }
 
@@ -1026,7 +1027,11 @@ export const listenToUsers = (
   return onSnapshot(
     usersQuery,
     (snapshot) => {
-      onChange(snapshot.docs.map(mapAdminDoc))
+      // Collapse duplicate-email profile docs so admin counts agree with the
+      // partner view (which dedupes in usePartnerAdminData). Without this,
+      // stub profiles created by past signup bugs inflate the admin total.
+      const deduped = dedupeUserDocsByEmail(snapshot.docs)
+      onChange(deduped.map(mapAdminDoc))
     },
     onError,
   )

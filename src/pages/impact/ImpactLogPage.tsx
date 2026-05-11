@@ -852,7 +852,7 @@ export const ImpactLogPage: React.FC = () => {
           break
         case 'instagram': {
           if (typeof navigator !== 'undefined' && (navigator as any).clipboard) {
-            ;(navigator as any).clipboard
+            (navigator as any).clipboard
               .writeText(url ? `${text} ${url}` : text)
               .catch(() => {
                 // ignore clipboard errors
@@ -1305,7 +1305,7 @@ export const ImpactLogPage: React.FC = () => {
     const categoryGroup = formValues.categoryGroup || 'esg'
 
     // Ensure we always have a concrete ESG category + matching activity when logging ESG impact
-    let effectiveEsgCategory = formValues.esgCategory || defaultEsgCategory
+    const effectiveEsgCategory = formValues.esgCategory || defaultEsgCategory
     let effectiveActivityType = formValues.activityType
 
     if (categoryGroup === 'esg') {
@@ -1454,7 +1454,7 @@ export const ImpactLogPage: React.FC = () => {
         await awardPointsForImpactLog(user.uid, docRef.id)
       } catch (err) {
         if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
+           
           console.warn('[ImpactLog] Failed to record points transaction for impact log entry', err)
         }
       }
@@ -1473,7 +1473,7 @@ export const ImpactLogPage: React.FC = () => {
         profile?.currentWeek && profile.currentWeek !== weekNumber
           ? ` Progress has been applied to Week ${weekNumber} based on the activity date.`
           : ''
-      let toastStatus: 'success' | 'warning' = 'success'
+      const toastStatus: 'success' | 'warning' = 'success'
       let toastTitle = 'Impact logged successfully!'
       let toastDescription = 'Your entry has been saved.'
 

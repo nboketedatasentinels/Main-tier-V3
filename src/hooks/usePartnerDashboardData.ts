@@ -209,7 +209,30 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     })
   }, [assignedOrgKeys, isSuperAdmin, profileStatus, selectedOrg, selectedOrgKeys, user?.uid])
 
-  // Notifications subscription (unread count)
+  // Org-scoping helper: when the partner picks a single org from the dropdown,
+  // notifications without org tagging still pass through (partner-personal).
+  // Notifications WITH org tagging only show if they match the selected org.
+  // Tagging is read flexibly from metadata since notifications across the
+  // codebase use different field names (orgId/companyId/organizationId/companyCode).
+  const matchesSelectedOrg = useCallback(
+    (notification: NotificationRecord): boolean => {
+      if (!selectedOrg || selectedOrg === 'all') return true
+      const meta = (notification.metadata ?? {}) as Record<string, unknown>
+      const tags = [meta.orgId, meta.organizationId, meta.companyId, meta.companyCode]
+        .map((value) => (typeof value === 'string' ? value.toLowerCase() : ''))
+        .filter(Boolean)
+      // Untagged → assume partner-personal, keep visible.
+      if (tags.length === 0) return true
+      const target = selectedOrg.toLowerCase()
+      const targetMapped = organizationLookup.get(target)
+      return tags.some((tag) => tag === target || (typeof targetMapped === 'string' && tag === targetMapped))
+    },
+    [selectedOrg, organizationLookup],
+  )
+
+  // Unread count subscription. We fetch all unread for this partner and
+  // narrow client-side by selectedOrg so the bell badge matches what the
+  // notifications drawer will actually display.
   useEffect(() => {
     if (profileStatus !== 'ready') return
     if (!profile?.id) return
@@ -221,13 +244,18 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     )
 
     const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      setNotificationCount(snapshot.size)
+      const visible = snapshot.docs
+        .map((d) => ({ ...(d.data() as NotificationRecord), id: d.id }))
+        .filter(matchesSelectedOrg)
+      setNotificationCount(visible.length)
     })
 
     return () => unsubscribe()
-  }, [profile?.id, profileStatus])
+  }, [profile?.id, profileStatus, matchesSelectedOrg])
 
-  // Recent notifications for the partner dashboard
+  // Recent notifications for the partner dashboard. We fetch a wider window
+  // (limit 25) so that after the org filter is applied, we still have
+  // enough rows to surface the most recent 5 for the selected org.
   useEffect(() => {
     if (profileStatus !== 'ready' || !profile?.id) {
       setNotifications([])
@@ -242,16 +270,19 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       collection(db, 'notifications'),
       where('user_id', '==', profile.id),
       orderBy('created_at', 'desc'),
-      limit(5),
+      limit(25),
     )
 
     const unsubscribe = onSnapshot(
       notificationsQuery,
       (snapshot) => {
-        const items = snapshot.docs.map((docSnap) => ({
-          ...(docSnap.data() as NotificationRecord),
-          id: docSnap.id,
-        }))
+        const items = snapshot.docs
+          .map((docSnap) => ({
+            ...(docSnap.data() as NotificationRecord),
+            id: docSnap.id,
+          }))
+          .filter(matchesSelectedOrg)
+          .slice(0, 5)
         setNotifications(items)
         setNotificationsLoading(false)
       },
@@ -264,7 +295,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     )
 
     return () => unsubscribe()
-  }, [profile?.id, profileStatus])
+  }, [profile?.id, profileStatus, matchesSelectedOrg])
 
   // ============================================================================
   // FIX #9: updateUserPoints now properly persists to Firestore
