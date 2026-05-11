@@ -15,6 +15,7 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where,
 } from 'firebase/firestore'
@@ -929,4 +930,60 @@ export const listenToAmbassadors = (
     },
     onError,
   )
+}
+
+/**
+ * Real-time listener for ALL users (any role).
+ * Used by the Assign Partner modal so super-admins can grant partner access
+ * to any user, not just users who already have role === 'partner'.
+ */
+export const listenToAllUsers = (
+  onChange: (users: (OrganizationLead & { role?: string })[]) => void,
+  onError?: (error: FirestoreError) => void,
+) => {
+  return onSnapshot(
+    usersCollection,
+    (snapshot) => {
+      onChange(
+        snapshot.docs.map((d) => {
+          const lead = buildLead(d)
+          const role = (d.data() as { role?: string }).role
+          return { ...lead, role }
+        }),
+      )
+    },
+    onError,
+  )
+}
+
+/**
+ * Elevate a user to the partner role. Updates both `users/{uid}.role` and
+ * `profiles/{uid}.role` so AuthContext (users) and the leaderboard (profiles)
+ * see the change consistently. Idempotent — safe to call on existing partners.
+ *
+ * Distinct from `assignPartnerToOrganization`: this only changes the role.
+ * The org assignment (`organizations.{orgId}.transformationPartnerId`) is a
+ * separate write done via assignPartnerToOrganization.
+ */
+export const promoteUserToPartner = async (userId: string): Promise<void> => {
+  if (!userId?.trim()) throw new Error('User id is required.')
+  const actorId = getActorId()
+  const update = {
+    role: 'partner',
+    roleChangedAt: serverTimestamp(),
+    roleChangedBy: actorId,
+    updatedAt: serverTimestamp(),
+  }
+  // setDoc(merge:true) instead of updateDoc so the write succeeds even when
+  // users/{uid} doesn't yet exist (common for users created via the public
+  // signup path that only populates profiles/). Without this, a downstream
+  // partner-org assignment can silently lose its sync to the partner doc.
+  await Promise.all([
+    setDoc(doc(usersCollection, userId), update, { merge: true }).catch((error) => {
+      console.debug(`[promoteUserToPartner] users/${userId} write failed:`, error)
+    }),
+    setDoc(doc(db, 'profiles', userId), update, { merge: true }).catch((error) => {
+      console.debug(`[promoteUserToPartner] profiles/${userId} write failed:`, error)
+    }),
+  ])
 }

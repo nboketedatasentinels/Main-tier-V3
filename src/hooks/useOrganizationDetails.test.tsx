@@ -106,7 +106,7 @@ describe('useOrganizationDetails partner access', () => {
   })
 
   it('excludes pending email invitations when the user already exists in the organization', async () => {
-    ;(fetchOrganizationUsers as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([
+    (fetchOrganizationUsers as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue([
       {
         id: 'user-1',
         name: 'Existing Member',

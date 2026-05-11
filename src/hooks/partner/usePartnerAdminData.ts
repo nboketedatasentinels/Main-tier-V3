@@ -587,9 +587,20 @@ export const usePartnerAdminData = (
           return
         }
 
+        // DIAG: confirm what we ask Firestore to load. Remove after dropdown bug is fixed.
+        console.log('[PartnerAdminData DIAG] listenToOrganizationsByIds INPUT:', {
+          assignedOrganizationIds,
+          count: assignedOrganizationIds.length,
+        })
         unsubscribe = listenToOrganizationsByIds(
           assignedOrganizationIds,
           (assignedOrgs: OrganizationRecord[]) => {
+            // DIAG: confirm what Firestore returns. Remove after dropdown bug is fixed.
+            console.log('[PartnerAdminData DIAG] listenToOrganizationsByIds CALLBACK:', {
+              count: assignedOrgs.length,
+              ids: assignedOrgs.map(o => o.id),
+              names: assignedOrgs.map(o => o.name),
+            })
             logger.debug('[PartnerAdminData] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
@@ -852,9 +863,10 @@ export const usePartnerAdminData = (
           const allDocs = Array.from(accumulatedDocsMap.values())
           const seenUserIds = new Set<string>()
           let rejectedNoMatch = 0
-          // rejectedSelectedOrg is always 0 now (we no longer filter by
-          // selectedOrg at this layer — dashboard owns per-org filtering).
-          // Kept in the debug payload for shape stability.
+          // rejectedSelectedOrg is always 0 now that we no longer filter by
+          // selectedOrg at this layer (dashboard owns per-org filtering).
+          // Kept in the debug payload for shape stability with downstream
+          // consumers of DashboardDebugInfo.
           const rejectedSelectedOrg = 0
           const mismatchSamples: MismatchSample[] = []
 
@@ -918,9 +930,14 @@ export const usePartnerAdminData = (
             // hook returns the full partner-accessible user set (scoped by
             // assignedOrgKeys above); per-selection filtering is the
             // dashboard's responsibility (PartnerDashboard.overviewUsers).
-            // Filtering at this layer made switching the dropdown leave the
-            // user list stale because the user-loading effect's deps don't
-            // include selectedOrg.
+            //
+            // The previous behavior filtered at this layer too, but the
+            // user-loading effect's deps don't include selectedOrg/
+            // selectedOrgKeys — so switching the dropdown left this layer
+            // stale and the dashboard then re-filtered an already-narrow
+            // set, producing empty results when moving Org A → Org X.
+            // Widening here lets the dashboard's useMemo re-derive
+            // instantly on every dropdown change.
 
             return true
           })

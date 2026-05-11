@@ -114,7 +114,7 @@ describe('pointsService', () => {
         source: 'peer_session',
         claimRef: 'session:1',
       }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({ awarded: true })
 
     expect(mockDoc).toHaveBeenCalledWith({}, 'pointsLedger', 'user-1__w2__impact_log__session_1')
     const ledgerSetCall = tx.set.mock.calls.find(

@@ -42,9 +42,11 @@ import {
   assignAmbassadorToOrganization,
   assignMentorToOrganization,
   assignPartnerToOrganization,
+  listenToAllUsers,
   listenToAmbassadors,
   listenToMentors,
   listenToPartners,
+  promoteUserToPartner,
   unassignLeadershipRole,
 } from '@/services/organizationService'
 import {
@@ -85,6 +87,8 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [partnersError, setPartnersError] = useState<string | null>(null)
+  const [allUsers, setAllUsers] = useState<(OrganizationLead & { role?: string })[]>([])
+  const [isLoadingAllUsers, setIsLoadingAllUsers] = useState(false)
   const [mentors, setMentors] = useState<OrganizationLead[]>([])
   const [isLoadingMentors, setIsLoadingMentors] = useState(false)
   const [mentorsError, setMentorsError] = useState<string | null>(null)
@@ -136,6 +140,22 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         setPartnersError('Unable to load partners.')
         toast({ title: 'Unable to load partners', status: 'error' })
         setIsLoadingPartners(false)
+      },
+    )
+    return unsubscribe
+  }, [toast])
+
+  useEffect(() => {
+    setIsLoadingAllUsers(true)
+    const unsubscribe = listenToAllUsers(
+      (userOptions) => {
+        setAllUsers(userOptions)
+        setIsLoadingAllUsers(false)
+      },
+      (error) => {
+        console.error(error)
+        toast({ title: 'Unable to load users', status: 'error' })
+        setIsLoadingAllUsers(false)
       },
     )
     return unsubscribe
@@ -216,10 +236,27 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }
   }
 
-  const handleAssignPartner = async (partnerId: string | null) => {
+  const handleAssignPartner = async (
+    partnerId: string | null,
+    options: { promoteFirst: boolean } = { promoteFirst: false },
+  ) => {
     if (!selectedOrg?.id) return
     try {
       if (partnerId) {
+        if (options.promoteFirst) {
+          // Elevate the user's role to partner BEFORE the org assignment so
+          // assignLeadershipRole's role-check (line 453 in organizationService)
+          // doesn't throw "User role must be partner".
+          await promoteUserToPartner(partnerId)
+          await logAdminAction({
+            action: 'User promoted to partner',
+            organizationName: selectedOrg.name,
+            organizationCode: selectedOrg.code,
+            adminId,
+            adminName,
+            metadata: { userId: partnerId },
+          })
+        }
         await assignPartnerToOrganization(selectedOrg.id, partnerId)
       } else {
         await unassignLeadershipRole(selectedOrg.id, 'partner')
@@ -660,7 +697,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
         organization={selectedOrg || undefined}
         onSubmit={handleAssignPartner}
         partners={partners}
+        allUsers={allUsers}
         isLoadingPartners={isLoadingPartners}
+        isLoadingAllUsers={isLoadingAllUsers}
         partnersError={partnersError}
         partnerAssignmentCounts={partnerAssignmentCounts}
       />

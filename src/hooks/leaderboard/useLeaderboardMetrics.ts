@@ -201,7 +201,7 @@ export const useLeaderboardMetrics = ({
       if (currentIndex >= 0) {
         const windowSize = 12
         let start = Math.max(0, currentIndex - 5)
-        let end = Math.min(sortedRows.length, start + windowSize)
+        const end = Math.min(sortedRows.length, start + windowSize)
         if (end - start < windowSize) {
           start = Math.max(0, end - windowSize)
         }

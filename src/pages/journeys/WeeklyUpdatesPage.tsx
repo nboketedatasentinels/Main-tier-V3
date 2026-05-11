@@ -687,13 +687,21 @@ const WeeklyChecklistPage: React.FC = () => {
       return { weeksAtTarget: 0, pct: 0, totalEarned: 0, totalTarget: 0 };
     }
     const totalTarget = weeklyTarget * journey.programDurationWeeks;
-    const totalEarned = allWeeksProgress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0);
+    // Use the canonical profile total (mirror of pointsLedger sum) instead of
+    // re-summing weeklyProgress, which can drift when ledger entries are
+    // written outside the standard award flow (e.g., recovery scripts). This
+    // keeps Weekly Checklist's headline aligned with Partner Dashboard / users
+    // collection / leaderboard. Per-week aggregates (weeklyProgress) are still
+    // used for "weeks at target" since those are inherently per-week metrics.
+    const ledgerTotal = profile?.totalPoints ?? 0;
+    const aggregateTotal = allWeeksProgress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0);
+    const totalEarned = Math.max(ledgerTotal, aggregateTotal);
     const pct = totalTarget > 0 ? Math.min(100, Math.round((totalEarned / totalTarget) * 100)) : 0;
     const weeksAtTarget = allWeeksProgress.filter(
       week => week.pointsEarned >= (week.weeklyTarget ?? weeklyTarget),
     ).length;
     return { weeksAtTarget, pct, totalEarned, totalTarget };
-  }, [allWeeksProgress, journey, weeklyTarget]);
+  }, [allWeeksProgress, journey, weeklyTarget, profile?.totalPoints]);
 
   const passMarkPoints = useMemo(() => {
     if (!journey) return 0;
