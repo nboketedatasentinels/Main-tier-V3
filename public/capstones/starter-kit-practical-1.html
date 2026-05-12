@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Opportunity Map</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .substep-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .substep-grid, .substep-grid-3 { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"] {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  input[type="text"]::placeholder { color: #aaa; }
+
+  select {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none; appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' stroke='%231A1726' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 16px center; padding-right: 44px;
+  }
+  select:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .commitment { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .commitment-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .commitment-sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 6px; }
+  .countdown-note { font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 24px; }
+  .deliverables-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .deliverables-grid { grid-template-columns: 1fr; } }
+  .deliverable-card { background: rgba(255,255,255,0.06); border: 1px solid rgba(245,200,66,0.25); border-radius: 10px; padding: 14px; }
+  .deliverable-num { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .deliverable-label { font-size: 12px; color: rgba(255,255,255,0.7); margin-bottom: 8px; }
+  .deliverable-card textarea { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.1); color: #fff; min-height: 80px; font-size: 12px; }
+  .deliverable-card textarea:focus { border-color: var(--gold); }
+  .deliverable-card textarea::placeholder { color: rgba(255,255,255,0.3); }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .peer-questions { background: rgba(245,200,66,0.12); border: 1.5px solid rgba(245,200,66,0.4); border-radius: 16px; padding: 24px 28px; margin-bottom: 24px; }
+  .peer-questions-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .peer-questions-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--plum); margin-bottom: 8px; }
+  .peer-questions-intro { font-size: 13px; color: #555; line-height: 1.65; margin-bottom: 16px; }
+  .peer-questions-list { list-style: none; padding: 0; margin: 0; counter-reset: pq; }
+  .peer-questions-list li { font-size: 14px; color: var(--plum); line-height: 1.55; padding: 10px 0 10px 38px; position: relative; border-top: 1px solid rgba(245,200,66,0.3); counter-increment: pq; }
+  .peer-questions-list li:first-of-type { border-top: none; }
+  .peer-questions-list li::before { content: counter(pq, decimal-leading-zero); position: absolute; left: 0; top: 12px; font-family: 'DM Serif Display', serif; font-style: italic; font-size: 16px; color: var(--gold-dark); font-weight: 600; }
+
+  .optional-tag { display: inline-block; background: rgba(107,91,181,0.15); color: var(--purple); font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; margin-left: 8px; vertical-align: middle; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .commitment { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Opportunity Map</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">The Transformation Practitioner</div>
+    <div class="practical-badge">Week 1 · Practical 1 of 6</div>
+  </div>
+  <h1 class="header-title">Opportunity <em>Map</em></h1>
+  <p class="header-desc">You'll identify three specific opportunities for AI or digital transformation in your current scope -- the kind of opportunities that exist in your organisation right now, that nobody has acted on yet, and that you can make a credible case for. The work is to train your eye for what most colleagues walk past.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Specific opportunities -- named to a real system, process, team, or person. Not generic improvement ideas.</li>
+      <li>Cost of inaction estimated, even roughly. A real number beats abstract concern.</li>
+      <li>Honest read on why nobody has acted -- the political, capacity, or ownership dynamics, not just the technical reason.</li>
+      <li>An AI or digital transformation lens on each opportunity. Not a general improvement lens.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Set Your Scope -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Set Your Scope</div>
+      </div>
+    </div>
+    <p class="step-desc">Before mapping opportunities, give your assessor (and your peer in peer-to-peer) the context they need. Two short fields. Don't over-describe.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Your Role and Scope</div>
+        </div>
+        <div class="substep-body">The role you hold and the scope of work you're observing from. One or two sentences.</div>
+        <textarea name="role_context" placeholder="Head of Operations at a 600-person logistics business. My scope covers fleet operations, dispatch, and customer service across three regions in Southern Africa."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Industry or Sector</div>
+        </div>
+        <div class="substep-body">Helps the assessor calibrate the opportunities you'll identify. The same opportunity reads differently in mining vs banking vs healthcare.</div>
+        <textarea name="industry_context" placeholder="Logistics and supply chain. Mid-size private operator. Most clients are mining and FMCG."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Opportunity 1 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Map Opportunity One</div>
+      </div>
+    </div>
+    <p class="step-desc">The first opportunity in your scope. Probably the one that's been sitting there. Probably the one you've been talking about with colleagues for a while without doing anything about it. Three substeps -- what it is, what it costs to leave alone, why nobody has done it yet.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Opportunity</div>
+        </div>
+        <div class="substep-body">In one sentence. No preamble. Name the thing.</div>
+        <textarea name="opportunity_1_statement" placeholder="Our weekly fleet utilisation report takes the operations team 14 hours to produce because vehicle data, driver data, and customer data live in three separate systems."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Cost of Inaction</div>
+        </div>
+        <div class="substep-body">Estimate it. Hours per week, money per year, decisions delayed. Rough numbers beat abstract concern.</div>
+        <textarea name="opportunity_1_cost" placeholder="14 hours x ~$45/hour x 50 weeks = ~$31,500/year of analyst time on assembly rather than analysis. The report also arrives 2 days after the decisions it's meant to inform, so the team is steering using last week's view."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Why Nobody Has Done It</div>
+        </div>
+        <div class="substep-body">The honest answer. Politics, capacity, ownership, fear. This is what shows you understand the real organisation.</div>
+        <textarea name="opportunity_1_blocker" placeholder="Ops, IT, and Customer Service each own one of the three systems. None of them owns the report. Two previous attempts to consolidate failed because the three teams couldn't agree on which platform would be the source of truth -- it's a political problem dressed as a technical one."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Opportunity 2 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Map Opportunity Two</div>
+      </div>
+    </div>
+    <p class="step-desc">Pick something different from Opportunity 1 -- a different team, a different process, or a different kind of value at stake. Same three substeps.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Opportunity</div>
+        </div>
+        <div class="substep-body">In one sentence. Specific.</div>
+        <textarea name="opportunity_2_statement" placeholder="Customer onboarding takes 6 working days because credit checks, contract drafting, and KYC verification happen as serial manual handoffs between three teams."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Cost of Inaction</div>
+        </div>
+        <div class="substep-body">In concrete terms.</div>
+        <textarea name="opportunity_2_cost" placeholder="Industry benchmark for our segment is 24-48 hours. Sales has flagged that 12% of qualified leads drop off during the wait -- on $3.2M average annual contract value, that's ~$380k of lost ARR per year, before reputation cost."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Why Nobody Has Done It</div>
+        </div>
+        <div class="substep-body">The honest answer.</div>
+        <textarea name="opportunity_2_blocker" placeholder="Onboarding is owned by Sales but the bottleneck is Compliance -- and the Compliance lead doesn't see it as their problem because they hit their internal SLA. Nobody has a P&L view of the lost ARR. The cost is real but it's invisible to the people who could fix it."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Opportunity 3 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">Map Opportunity Three</div>
+      </div>
+    </div>
+    <p class="step-desc">Stretch a little. This one should be something you wouldn't normally raise because it's not "your" area. Notice what happens when you let yourself look there anyway.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Opportunity</div>
+        </div>
+        <div class="substep-body">In one sentence. Stretch into territory that's not your remit.</div>
+        <textarea name="opportunity_3_statement"></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Cost of Inaction</div>
+        </div>
+        <div class="substep-body">In concrete terms.</div>
+        <textarea name="opportunity_3_cost"></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Why Nobody Has Done It</div>
+        </div>
+        <div class="substep-body">The honest answer.</div>
+        <textarea name="opportunity_3_blocker"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: The Owner's Pick -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>5</span></div>
+      <div>
+        <div class="step-label">Step 5</div>
+        <div class="step-title">Choose the One You'd Stake Your Reputation On</div>
+      </div>
+    </div>
+    <p class="step-desc">Of the three opportunities you mapped, one stands out to you as the one you'd actually move on. Pick it. You'll carry this choice into Practical 2 (Stakeholder Position Paper) and the Capstone One-Page Proposal. Don't justify all three -- tell us why this one.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Which One</div>
+        </div>
+        <div class="substep-body">Select the opportunity you're taking forward.</div>
+        <select name="chosen_opportunity">
+          <option value="">-- Select --</option>
+          <option value="1">Opportunity 1</option>
+          <option value="2">Opportunity 2</option>
+          <option value="3">Opportunity 3</option>
+        </select>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Why This One</div>
+        </div>
+        <div class="substep-body">In two sentences. The rationale you write here is what you'll use to open conversations with stakeholders.</div>
+        <textarea name="chosen_rationale" placeholder="The fleet utilisation problem is the most quantifiable, the cost is real and felt weekly, and I have working relationships with all three system owners. It's the one I can actually move."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test Your Map</h2>
+    <p class="ai-activity-desc">Practitioners are good at seeing what's broken. We're often less good at seeing what's broken that we've stopped noticing. Use AI as a thinking partner to surface opportunities your scope has gone blind to -- and to test the cost-of-inaction estimates you've made.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Surface What You've Stopped Seeing</div>
+          <div class="ai-step-body">Ask AI to challenge your scope by suggesting opportunities you haven't listed -- the ones that are too familiar to feel like opportunities anymore.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm a [your role] in a [your industry] organisation. The three AI/digital transformation opportunities I've identified in my scope are: [paste your three opportunities from Steps 2-4]. What three additional opportunities should I be considering that practitioners in roles like mine commonly miss? For each, explain why it's typically overlooked and where to find the evidence that it's worth paying attention to.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI surface? Add to your map or note why you're not pursuing it.</div>
+      <textarea class="ai-field" placeholder="AI suggested I consider: (1) Manual reconciliation between our TMS and our finance system at month-end -- I'd stopped seeing this because finance handles it, but I now realise it costs us 3 days of senior finance time monthly. Adding to my list. (2) Driver scheduling done in Excel -- I dismissed this as 'not strategic enough,' but AI pointed out that scheduling is where most fleet inefficiency hides. Reconsidering. (3) Customer self-service tracking portal -- already in flight as a separate project, so noting and not pursuing here."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test Your Cost Estimates</div>
+          <div class="ai-step-body">Ask AI to evaluate your cost-of-inaction estimates for the opportunity you chose in Step 5. The goal is to find out if you're under-estimating or over-claiming before a stakeholder catches it.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">Here is the opportunity I'm taking forward and the cost of inaction I've estimated: [paste your Step 5 choice and the Step 2-4 cost estimate for it]. Pressure-test this estimate. What assumptions am I making that might not hold? What costs am I likely missing? What costs am I likely overstating? Give me three specific questions a sceptical CFO would ask about this estimate.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you adjust?</div>
+      <textarea class="ai-field" placeholder="AI flagged that my $31,500 estimate assumes 100% of the analyst's 14 hours could be reallocated to higher-value work -- in reality, some of those hours absorb other slack. More realistic figure is probably $18-22k of recoverable analyst capacity. AI also flagged a cost I'd missed: management time spent on the 2-day-stale data, which an executive sponsor would care more about than the analyst hours. Updating my estimate to: ~$20k recoverable analyst time + ~$45k of decision-quality cost."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As a transformation practitioner, you'll increasingly use AI to surface, evaluate, and prioritise opportunities like the ones you've mapped here. What do you trust AI to do well in this kind of analysis -- and what specifically do you think you still need to do yourself, with the AI as input rather than output?</div>
+    <textarea placeholder="I trust AI to broaden my scan -- it's faster than me at suggesting categories of opportunity I haven't considered, and it's good at pressure-testing my numbers against industry benchmarks. What I still need to do myself: (1) the political read on why nobody has acted -- AI doesn't know my organisation, so it can describe generic blockers but it can't tell me which specific people will resist. (2) the prioritisation call on which opportunity to take forward -- AI can rank by ROI but it can't see the relationships, the timing, or the political capital I have to spend. The AI broadens. The judgement stays mine."></textarea>
+  </div>
+
+  <!-- PEER QUESTIONS -->
+  <div class="peer-questions">
+    <div class="peer-questions-label">Take This to Peer-to-Peer</div>
+    <h2 class="peer-questions-title">Hand these three questions to your peer.</h2>
+    <p class="peer-questions-intro">Before you submit, talk this through with a peer from your cohort. Read your three opportunities aloud and ask them to put these questions to you. Most practitioners catch what's weak in their own work the moment a peer asks the right question -- which is the point.</p>
+    <ol class="peer-questions-list">
+      <li>Of the three opportunities I named, which one feels least specific to you -- and what's the question I haven't answered yet?</li>
+      <li>Look at the cost-of-inaction estimates. Which one would a sceptical CFO push back on, and what number am I missing?</li>
+      <li>For the opportunity I'm taking forward in Step 5 -- if you were the decision-maker, what's the one thing about my read of the politics that doesn't ring true to you?</li>
+    </ol>
+  </div>
+
+  <!-- COMMITMENT -->
+  <div class="commitment">
+    <h2 class="commitment-title">Submit Practical 1</h2>
+    <p class="commitment-sub">Once you've talked it through with your peer, finalise and submit by end of Week 1.</p>
+    <p class="countdown-note">Practical 1 contributes to your Practicals Portfolio (20% of competence pass).</p>
+    <div class="deliverable-card" style="margin-top: 8px;">
+      <div class="deliverable-num">One reflection<span class="optional-tag">Optional</span></div>
+      <div class="deliverable-label">What shifted in your draft after the peer-to-peer conversation?</div>
+      <textarea placeholder="One or two lines. Did you sharpen a cost estimate? Reframe an opportunity? Drop one and add another? Useful for you to track -- not assessed."></textarea>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    role_context: get('role_context'),
+    industry_context: get('industry_context'),
+    opportunity_1: {
+      statement: get('opportunity_1_statement'),
+      cost: get('opportunity_1_cost'),
+      blocker: get('opportunity_1_blocker'),
+    },
+    opportunity_2: {
+      statement: get('opportunity_2_statement'),
+      cost: get('opportunity_2_cost'),
+      blocker: get('opportunity_2_blocker'),
+    },
+    opportunity_3: {
+      statement: get('opportunity_3_statement'),
+      cost: get('opportunity_3_cost'),
+      blocker: get('opportunity_3_blocker'),
+    },
+    chosen_opportunity: get('chosen_opportunity'),
+    chosen_rationale: get('chosen_rationale'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const filled = Object.values({
+    role: data.role_context,
+    industry: data.industry_context,
+    o1s: data.opportunity_1.statement,
+    o1c: data.opportunity_1.cost,
+    o1b: data.opportunity_1.blocker,
+    o2s: data.opportunity_2.statement,
+    o2c: data.opportunity_2.cost,
+    o2b: data.opportunity_2.blocker,
+    o3s: data.opportunity_3.statement,
+    o3c: data.opportunity_3.cost,
+    o3b: data.opportunity_3.blocker,
+    pick: data.chosen_opportunity,
+    why: data.chosen_rationale,
+  }).filter(v => v && v.trim().length > 0).length;
+
+  if (filled < 13) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of 13 fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 1? Once submitted, you can still edit until end of Week 1. After Week 1 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W1)");
+}
+</script>
+</body>
+</html>
