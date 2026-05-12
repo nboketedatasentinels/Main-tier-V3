@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 2: The Modernisation That Was Dismantled</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --case-bg:#FFFEF9; --counter-under:#B45309; --counter-good:#166534; --counter-over:#991B1B; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .wordmark{display:flex;flex-direction:column;gap:1px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+  .case-eyebrow{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .header-title{font-family:'DM Serif Display',serif;font-size:32px;color:#fff;line-height:1.2;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-meta{font-size:13px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:8px}
+  .header-meta strong{color:rgba(255,255,255,.9)}
+  .case-callout{display:inline-block;background:rgba(245,200,66,.2);border:1px solid rgba(245,200,66,.5);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--gold);margin-top:14px}
+  .content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum);margin-bottom:12px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:6px 0 6px 20px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .case-block{background:var(--case-bg);border:1.5px solid var(--border);border-radius:16px;margin-bottom:24px;overflow:hidden}
+  .case-header{padding:20px 28px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(74,59,140,.04)}
+  .case-header:hover{background:rgba(74,59,140,.08)}
+  .case-header-left{display:flex;flex-direction:column;gap:4px}
+  .case-header-tag{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .case-header-title{font-family:'DM Serif Display',serif;font-size:19px;color:var(--plum)}
+  .case-header-toggle{font-size:12px;font-weight:700;color:var(--purple)}
+  .case-header-toggle::after{content:" ▼"}
+  .case-block.open .case-header-toggle::after{content:" ▲"}
+  .case-body{display:block;padding:28px 32px;border-top:1.5px solid var(--border)}
+  .case-block:not(.open) .case-body{display:none}
+  .case-section-label{font-size:11px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin:24px 0 10px}
+  .case-section-label:first-child{margin-top:0}
+  .case-body p{font-size:14px;color:#2A2438;line-height:1.75;margin-bottom:14px}
+  .case-body p:last-child{margin-bottom:0}
+  .case-body em{font-style:italic;color:var(--purple)}
+  .case-body .pull-quote{font-family:'DM Serif Display',serif;font-style:italic;font-size:17px;color:var(--plum);padding:14px 20px;border-left:3px solid var(--gold);background:rgba(245,200,66,.05);margin:16px 0}
+  .case-body ul.sources{list-style:none;padding:0;margin:0}
+  .case-body ul.sources li{font-size:13px;color:#444;line-height:1.65;padding:6px 0 6px 20px;position:relative}
+  .case-body ul.sources li::before{content:"·";position:absolute;left:6px;color:var(--gold-dark);font-weight:700;font-size:18px;line-height:1}
+  .word-counter{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .word-counter-label{font-size:12px;font-weight:600;color:#555}
+  .word-counter-value{font-family:'DM Serif Display',serif;font-size:22px;line-height:1}
+  .word-counter-value.under{color:var(--counter-under)}
+  .word-counter-value.good{color:var(--counter-good)}
+  .word-counter-value.over{color:var(--counter-over)}
+  .word-counter-hint{font-size:11px;color:#888;font-style:italic;margin-top:2px}
+  .word-counter-meter{flex:1;min-width:140px;max-width:240px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;position:relative}
+  .word-counter-meter-fill{height:100%;background:var(--counter-under)}
+  .word-counter-meter-fill.good{background:var(--counter-good)}
+  .word-counter-meter-fill.over{background:var(--counter-over)}
+  .word-counter-meter-band{position:absolute;top:0;bottom:0;background:rgba(22,101,52,.12);pointer-events:none}
+  .section-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .section-num-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .section-num{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .outcome-tag{display:inline-block;background:rgba(74,59,140,.1);border:1px solid rgba(74,59,140,.25);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase}
+  .section-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum);margin-bottom:6px}
+  .section-prompt{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:12px;line-height:1.55}
+  .section-hint{font-size:12px;color:#888;margin-bottom:14px;font-style:italic;line-height:1.6}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:140px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  .field-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:#888}
+  .field-word-count{font-weight:600}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div class="wordmark"><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">Case Study 2 · The Modernisation That Was Dismantled</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="lift-badge">The Transformation Practitioner</div>
+  <div class="case-eyebrow">Case Study 2 · Course 2 · Delivering Transformation</div>
+  <h1 class="header-title">The Modernisation That <em>Was Dismantled</em></h1>
+  <div class="header-meta"><strong>South African Revenue Service, 2014-2018.</strong> Senior practitioners who watched a working transformation programme being dismantled in real time, were not consulted, and surfaced their objections four years later — to a judicial commission, when the cost was already 1 billion rand.</div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Scope a transformation project), LO4 (Manage delivery), LO5 (Report progress and risk).</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 2 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that uses the case to think about scope discipline, escalation, and senior reporting under pressure.</div>
+    <ul class="standard-list">
+      <li>Scope decisions named in governance language — specific lock-downs, not gestures.</li>
+      <li>Known-risk-vs-managed-risk made structurally — a difference of escalation discipline.</li>
+      <li>The briefing note opening written as actual actionable sentences — risk leading, escalation target named, ask explicit.</li>
+      <li>Healthy disagreement vs political behaviour distinguished with a real boundary.</li>
+      <li>300-500 words. Use specific case figures and dates where they sharpen the argument.</li>
+    </ul>
+  </div>
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left"><div class="case-header-tag">The case · read first</div><div class="case-header-title">SARS Modernisation, 2007-2018 — and the four-year silence</div></div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+      <div class="case-section-label">Background</div>
+      <p>In 2007, the South African Revenue Service (SARS) launched a programme called Modernisation — a multi-year, in-house digitisation effort to move the country's tax collection system from a largely paper-based operation to an automated digital platform. The programme was led by Barry Hore, then SARS Chief Operating Officer. By 2014, Modernisation had transformed SARS into one of the most respected tax authorities on the African continent. Compliance rates had risen, e-filing had become standard, and the programme was on track to complete by 2015.</p>
+      <p>On 27 September 2014, Tom Moyane was appointed Commissioner of SARS. On 12 December 2014 — three months into his tenure — a newsflash appeared on the internal SARS communication system announcing that the Modernisation programme had been scrapped. There was no consultation with the senior IT leadership team. Hore had not been informed. SARS official Linda Burger, testifying later, described the moment in these terms: more than 66 million rand of in-flight projects were placed at immediate risk; over 22 million rand in assets captured in the e-Central system were subsequently never accounted for; and, in her words:</p>
+      <div class="pull-quote">"It was just like the curtain had fallen."</div>
+      <p>In July 2015, Moyane signed a contract worth more than 200 million rand with the global advisory firm Gartner to review and replace the IT strategy. The contract was awarded through a closed, non-competitive tender that did not meet National Treasury procurement regulations. A separate Bain and Company contract for business model restructuring cost a further 164 million rand. Hore resigned from SARS shortly after Moyane's arrival. He was not consulted on the halt of his own programme.</p>
+      <p>In 2018, after Moyane's suspension, retired Judge Robert Nugent was appointed by President Cyril Ramaphosa to head a Commission of Inquiry into Tax Administration and Governance at SARS. Hore returned to give public testimony. So did Andre Rabie, Andre Scheepers, Linda Burger, and other senior IT executives who had remained at SARS through the dismantling. The Nugent final report, delivered in December 2018, found that the cost to SARS to fix what had been dismantled was approximately 1 billion rand. In 2023, the US SEC separately announced a settlement with Gartner under the Foreign Corrupt Practices Act in connection with the SARS contract.</p>
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not about state capture. It is about senior practitioners who watched a working transformation programme being dismantled in real time, were not consulted, and did not surface their objections to the right authority at the right time. They surfaced them four years later, to a judicial commission, when the cost was already 1 billion rand.</p>
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+        <li>Nugent Commission of Inquiry into Tax Administration and Governance by SARS (2018). Final Report, 14 December 2018.</li>
+        <li>Public testimony of Barry Hore, Andre Rabie, Andre Scheepers, and Linda Burger before the Nugent Commission, October 2018.</li>
+        <li>Tshwane, T. (2018). 'SARS headed for a cliff with unmaintained IT system.' <em>Mail and Guardian</em>, 16 October 2018.</li>
+        <li><em>Daily Maverick</em> (2018). 'Nugent Commission final report.' 14 December 2018.</li>
+        <li>US SEC (2023). In the Matter of Gartner, Inc. SEC Administrative Proceeding (FCPA settlement).</li>
+      </ul>
+    </div>
+  </div>
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words.</div>
+    </div>
+    <div class="word-counter-meter"><div class="word-counter-meter-band" id="wordCounterBand"></div><div class="word-counter-meter-fill" id="wordCounterFill" style="width:0%"></div></div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 01</div><div class="outcome-tag">Outcome 3 · Scoping discipline</div></div>
+    <h2 class="section-title">Two scope decisions Hore should have locked down in October 2014</h2>
+    <div class="section-prompt">Imagine you are Barry Hore in October 2014, one month into Moyane's tenure. Name two scope decisions you would have insisted on locking down to protect the work that had been done.</div>
+    <div class="section-hint">Two specific decisions, each named in governance language. The test is whether the decisions you name could have been actioned in October 2014.</div>
+    <textarea name="q1" placeholder="Decision 1: ... — because ...&#10;Decision 2: ... — because ..." oninput="recountWords()"></textarea>
+    <div class="field-meta"><span>Suggested length: 70-110 words</span><span class="field-word-count" id="q1Count">0 words</span></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 02</div><div class="outcome-tag">Outcome 4 · Known risk vs managed risk</div></div>
+    <h2 class="section-title">What does this case show about known risk vs managed risk?</h2>
+    <div class="section-prompt">Burger, Rabie, and Scheepers all testified that they were not consulted before the 12 December 2014 announcement. What does this case tell you about the difference between a risk being known and a risk being managed?</div>
+    <textarea name="q2" placeholder="A risk is known when... A risk is managed when... The case shows..." oninput="recountWords()"></textarea>
+    <div class="field-meta"><span>Suggested length: 60-100 words</span><span class="field-word-count" id="q2Count">0 words</span></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 03</div><div class="outcome-tag">Outcome 5 · Senior reporting language</div></div>
+    <h2 class="section-title">Draft the opening two sentences of the briefing note</h2>
+    <div class="section-prompt">Draft the opening two sentences of the briefing note you would have written — in November 2014, before the announcement — to escalate to the SARS Board, the Auditor-General, or the Minister of Finance. Lead with structured risk. Make the ask explicit.</div>
+    <textarea name="q3" placeholder="Escalation target: ...&#10;&#10;Sentence 1 (risk leads): '...'&#10;Sentence 2 (the ask): '...'" oninput="recountWords()"></textarea>
+    <div class="field-meta"><span>Suggested length: 70-110 words</span><span class="field-word-count" id="q3Count">0 words</span></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 04</div><div class="outcome-tag">Outcome 5 · Healthy disagreement vs political behaviour</div></div>
+    <h2 class="section-title">Healthy disagreement vs political behaviour — with one specific example</h2>
+    <div class="section-prompt">Distinguish 'healthy disagreement' from 'political behaviour' in the context of a senior practitioner watching a working programme being dismantled by a new boss. Use one specific example from a programme you are working on or have worked on.</div>
+    <textarea name="q4" placeholder="The distinction: ...&#10;The example from my work: ...&#10;Which side I was on (and why): ..." oninput="recountWords()" style="min-height:200px"></textarea>
+    <div class="field-meta"><span>Suggested length: 100-180 words</span><span class="field-word-count" id="q4Count">0 words</span></div>
+  </div>
+</div>
+<script>
+function countWords(s){if(!s||!s.trim())return 0;return s.trim().split(/\s+/).length}
+function recountWords(){
+  const fields=['q1','q2','q3','q4'];let total=0;
+  fields.forEach(name=>{const el=document.querySelector('[name="'+name+'"]');const c=countWords(el?el.value:'');total+=c;const d=document.getElementById(name+'Count');if(d)d.textContent=c+' words';});
+  const valEl=document.getElementById('wordCounterValue');const fillEl=document.getElementById('wordCounterFill');const bandEl=document.getElementById('wordCounterBand');const hintEl=document.getElementById('wordCounterHint');
+  const max=600,goodMin=300,goodMax=500;
+  bandEl.style.left=(goodMin/max*100)+'%';bandEl.style.width=((goodMax-goodMin)/max*100)+'%';
+  fillEl.style.width=Math.min(100,total/max*100)+'%';
+  valEl.textContent=total+' words';valEl.classList.remove('under','good','over');fillEl.classList.remove('good','over');
+  if(total<goodMin){valEl.classList.add('under');hintEl.textContent='Below the 300-word threshold.';}
+  else if(total<=goodMax){valEl.classList.add('good');fillEl.classList.add('good');hintEl.textContent='In range.';}
+  else{valEl.classList.add('over');fillEl.classList.add('over');hintEl.textContent='Over 500 words.';}
+}
+function submitCaseStudy(){
+  if(!confirm("Submit Case Study 2: The Modernisation That Was Dismantled?\n\nThis closes the Combined Case Studies component (30% of competence pass).")) return;
+  alert("Case Study 2 received. The Combined Case Studies component is now ready for assessor review. (In production, this POSTs to /api/case-studies/submit with case_study = 2)");
+}
+recountWords();
+</script>
+</body>
+</html>
