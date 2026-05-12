@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Risk Register Draft</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  /* Risk register table */
+  .risk-table-wrapper { overflow-x: auto; margin-top: 12px; }
+  .risk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .risk-table thead th { background: var(--plum); color: #fff; padding: 12px 10px; text-align: left; font-weight: 600; font-size: 12px; }
+  .risk-table thead th:first-child { border-radius: 8px 0 0 0; }
+  .risk-table thead th:last-child { border-radius: 0 8px 0 0; }
+  .risk-table tbody tr { background: #fff; }
+  .risk-table tbody tr:nth-child(even) { background: var(--field-bg); }
+  .risk-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .risk-table input[type="text"], .risk-table textarea, .risk-table select {
+    width: 100%; background: transparent; border: 1px solid transparent;
+    font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--plum);
+    padding: 6px 8px; border-radius: 6px; transition: border-color 0.2s, background 0.2s;
+  }
+  .risk-table input[type="text"]:focus, .risk-table textarea:focus, .risk-table select:focus {
+    outline: none; border-color: var(--purple-light); background: #fff;
+  }
+  .risk-table textarea { min-height: 60px; resize: vertical; line-height: 1.5; }
+  .risk-table select { -webkit-appearance: none; appearance: none; padding-right: 20px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%231A1726' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 6px center;
+  }
+  .risk-row-num { font-family: 'DM Serif Display', serif; font-style: italic; color: var(--gold-dark); font-size: 16px; font-weight: 500; padding-top: 8px !important; text-align: center; width: 40px; }
+  .risk-ai-flag { display: inline-block; background: rgba(74,222,128,0.15); color: #15803D; border: 1px solid rgba(45,122,79,0.4); border-radius: 4px; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+
+  .ai-flag-row { background: rgba(74,222,128,0.06) !important; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Risk Register Draft</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">The Transformation Practitioner</div>
+    <div class="practical-badge">Week 4 · Practical 4 of 6</div>
+  </div>
+  <h1 class="header-title">Risk Register <em>Draft</em></h1>
+  <p class="header-desc">Build a working risk register for your project. Five risks. Each one with severity, likelihood, named owner, and a mitigation that can actually be executed. At least one risk must be specifically AI- or digital-transformation-flavoured -- not the generic project risks that show up on every register.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Five risks specific to this project. Not "scope creep" or "stakeholder resistance" in generic form.</li>
+      <li>At least one AI-specific risk -- model drift, adoption, data quality, regulatory exposure, vendor lock-in, ethical exposure.</li>
+      <li>Every risk has a named owner -- a specific role. Not "the team" or "we." If everyone owns it, no one does.</li>
+      <li>Mitigations are actionable. Something the named owner could start on Monday, not a category of activity.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Project Context -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Carry Forward Your Project</div>
+      </div>
+    </div>
+    <p class="step-desc">Same project as Practicals 1, 2, and 3. Re-state it here in one sentence so the risks you identify are tied to a real piece of work, not a hypothetical.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Project</div>
+        </div>
+        <div class="substep-body">From Practical 3, Step 1. One sentence.</div>
+        <textarea name="project_summary" placeholder="A 90-day pilot to consolidate fleet, driver, and customer data into a unified weekly reporting layer -- using existing platforms, with $25k of contractor support and 0.4 FTE of internal time."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Methodology in Use</div>
+        </div>
+        <div class="substep-body">From Practical 3. The methodology shapes what risks matter most.</div>
+        <textarea name="methodology" placeholder="Hybrid -- Waterfall on data integration, Agile on the reporting layer build."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Risk Register Table -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Build the Register</div>
+      </div>
+    </div>
+    <p class="step-desc">Five risks. Each row is one risk. Use specific language -- "data ownership stalemate between Ops and IT" beats "stakeholder alignment risk." Mark at least one row as AI-specific by selecting "AI" in the Type column. The placeholder text in the first row shows the level of specificity to aim for.</p>
+
+    <div class="risk-table-wrapper">
+      <table class="risk-table">
+        <thead>
+          <tr>
+            <th style="width: 36px;">#</th>
+            <th style="width: 22%;">The Risk</th>
+            <th style="width: 8%;">Type</th>
+            <th style="width: 9%;">Severity</th>
+            <th style="width: 9%;">Likelihood</th>
+            <th style="width: 14%;">Owner (role)</th>
+            <th style="width: 30%;">Mitigation</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="risk-row-num">01</td>
+            <td><textarea name="risk_1_text" placeholder="The three system owners (Ops, IT, Customer Service) cannot agree on which platform is the source of truth for unified data -- the same blocker that killed two previous attempts."></textarea></td>
+            <td>
+              <select name="risk_1_type">
+                <option value="">--</option>
+                <option value="Standard">Standard</option>
+                <option value="AI">AI</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_1_severity">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_1_likelihood">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td><input type="text" name="risk_1_owner" placeholder="COO (sponsor)"></td>
+            <td><textarea name="risk_1_mitigation" placeholder="COO chairs a 30-minute decision meeting in Week 1 with the three system owners. Decision criteria pre-agreed (data volume, latency, existing licence cost). No project work starts until the source-of-truth decision is documented."></textarea></td>
+          </tr>
+          <tr>
+            <td class="risk-row-num">02</td>
+            <td><textarea name="risk_2_text" placeholder="The risk in one sentence -- specific, named to a process, team, or system."></textarea></td>
+            <td>
+              <select name="risk_2_type">
+                <option value="">--</option>
+                <option value="Standard">Standard</option>
+                <option value="AI">AI</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_2_severity">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_2_likelihood">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td><input type="text" name="risk_2_owner" placeholder="Specific role"></td>
+            <td><textarea name="risk_2_mitigation" placeholder="Specific. Actionable. Something the owner could start this week."></textarea></td>
+          </tr>
+          <tr>
+            <td class="risk-row-num">03</td>
+            <td><textarea name="risk_3_text" placeholder="The risk in one sentence."></textarea></td>
+            <td>
+              <select name="risk_3_type">
+                <option value="">--</option>
+                <option value="Standard">Standard</option>
+                <option value="AI">AI</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_3_severity">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_3_likelihood">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td><input type="text" name="risk_3_owner" placeholder="Specific role"></td>
+            <td><textarea name="risk_3_mitigation" placeholder="Specific. Actionable."></textarea></td>
+          </tr>
+          <tr>
+            <td class="risk-row-num">04</td>
+            <td><textarea name="risk_4_text" placeholder="The risk in one sentence."></textarea></td>
+            <td>
+              <select name="risk_4_type">
+                <option value="">--</option>
+                <option value="Standard">Standard</option>
+                <option value="AI">AI</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_4_severity">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_4_likelihood">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td><input type="text" name="risk_4_owner" placeholder="Specific role"></td>
+            <td><textarea name="risk_4_mitigation" placeholder="Specific. Actionable."></textarea></td>
+          </tr>
+          <tr>
+            <td class="risk-row-num">05</td>
+            <td><textarea name="risk_5_text" placeholder="The risk in one sentence."></textarea></td>
+            <td>
+              <select name="risk_5_type">
+                <option value="">--</option>
+                <option value="Standard">Standard</option>
+                <option value="AI">AI</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_5_severity">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td>
+              <select name="risk_5_likelihood">
+                <option value="">--</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </td>
+            <td><input type="text" name="risk_5_owner" placeholder="Specific role"></td>
+            <td><textarea name="risk_5_mitigation" placeholder="Specific. Actionable."></textarea></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- STEP 3: The AI Risk Deep-Dive -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Deep-Dive on Your AI Risk</div>
+      </div>
+    </div>
+    <p class="step-desc">You marked at least one risk as AI in Step 2. AI risks behave differently from standard project risks -- they often look small at the start and scale exponentially as adoption increases. Pick the most important one from your register and go deeper.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Which AI Risk</div>
+        </div>
+        <div class="substep-body">Re-state the risk you're going deeper on. One sentence.</div>
+        <textarea name="ai_risk_focus" placeholder="Data quality drift during the Agile reporting layer phase -- if the underlying integration is partial when reporting goes live, teams see numbers that look right but aren't, and trust erodes faster than we can rebuild it."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Why This is AI-Specific</div>
+        </div>
+        <div class="substep-body">What about this risk wouldn't show up on a non-AI / non-digital project register? Be specific.</div>
+        <textarea name="ai_risk_specificity" placeholder="On a non-data project, you'd have one source of truth and people would know the source. On a unified data project, the system presents numbers as authoritative -- users stop asking where the data came from. So the risk isn't 'wrong numbers' -- it's 'wrong numbers presented with confidence the system shouldn't have.'"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Find What Your Register is Missing</h2>
+    <p class="ai-activity-desc">Risk registers tend to reflect the risks you've already seen -- in your industry, on your previous projects, from your team. AI can surface the categories you're blind to because they haven't bitten you yet.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test Coverage</div>
+          <div class="ai-step-body">Ask AI to look at your five risks and tell you which standard risk categories you've under-covered or missed entirely.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm building a risk register for a [paste Step 1 project summary] using a [paste Step 1 methodology]. Here are the five risks I've identified: [paste your five risks from Step 2]. Look at standard risk categories for AI/digital transformation projects -- governance, data quality, model bias, regulatory, vendor lock-in, change management, security, ethical exposure. Tell me which categories I've covered, which I've under-weighted, and which I've missed. For any I've missed, suggest the specific risk I should add to my register and why.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you update the register?</div>
+      <textarea class="ai-field" placeholder="AI flagged that I've covered data quality and adoption well, but I've missed governance and security entirely. Specifically: (1) Who decides if a unified data view shows information that one department wouldn't normally see about another? Right now my register doesn't address this and the COO will likely raise it. (2) Single sign-on / access control on the new reporting layer -- I've assumed IT will handle it but no one owns it on my register. Adding both as Risks 6 and 7, then dropping the weakest existing risk to keep the register at 5."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Pressure-Test Mitigations</div>
+          <div class="ai-step-body">Ask AI to evaluate whether your mitigations are actually actionable, or whether they're disguised wishful thinking.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">Here are the five risks and mitigations from my register: [paste your five risks and mitigations from Step 2]. For each mitigation, tell me: (1) Is this actually actionable -- could the named owner start on it Monday? (2) Does it address the cause of the risk or just monitor for symptoms? (3) What's the specific failure mode this mitigation has -- where would it stop working? Be honest. If a mitigation is wishful thinking, say so.</div>
+      <div class="prompt-label" style="margin-top:12px">Which mitigations did AI flag as weak? How will you tighten them?</div>
+      <textarea class="ai-field" placeholder="AI flagged Risk 3 mitigation as weak: 'monitor user feedback weekly' is a symptom-monitor, not a cause-addressor. Tightening to: 'IT lead runs a 15-min user check at end of each Agile sprint review with named users -- not survey-based, conversation-based.' Also flagged Risk 4 mitigation as having a clear failure mode: it relies on the contractor adhering to open-standard connectors but there's no contractual penalty if they don't. Adding contract clause + IT director sign-off on connector choice."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As AI tools get better at scanning project plans and surfacing risks, what's the difference between an AI-generated risk register and a transformation practitioner's register? Where does practitioner judgement still sharpen the work?</div>
+    <textarea placeholder="The AI is genuinely better than me at coverage -- it knows risk categories I haven't seen, from industries I don't work in. What it can't do: weight the risks for my specific organisation. It might tell me 'governance ambiguity is a high risk' generically, but my COO has personally absorbed three governance failures in the last two years -- so on my register, governance is the highest-risk item. That weighting comes from knowing the room. The AI gives me the inventory. The practitioner judgement gives me the priority order."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Risk registers are where senior practitioners are most polite to themselves -- we list risks we've already partly mitigated and skip the ones that genuinely scare us. A peer can hear the difference. Bring this Practical to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read each risk aloud, including severity, likelihood, owner, and mitigation. Don't elaborate. Listen to your peer's questions. The most useful feedback usually starts with "and what about..." -- write down whatever follows.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of your five risks, which one keeps you up at night? Is it the one you marked High severity, or a different one you understated?</li>
+      <li>Every owner is named -- have you actually told them they own it, or are they about to find out from your register?</li>
+      <li>What risk should be on this register that isn't, because if you named it you'd have to do something uncomfortable about it?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  const buildRisk = (n) => ({
+    text: get('risk_' + n + '_text'),
+    type: get('risk_' + n + '_type'),
+    severity: get('risk_' + n + '_severity'),
+    likelihood: get('risk_' + n + '_likelihood'),
+    owner: get('risk_' + n + '_owner'),
+    mitigation: get('risk_' + n + '_mitigation'),
+  });
+  return {
+    project_summary: get('project_summary'),
+    methodology: get('methodology'),
+    risks: [buildRisk(1), buildRisk(2), buildRisk(3), buildRisk(4), buildRisk(5)],
+    ai_risk_focus: get('ai_risk_focus'),
+    ai_risk_specificity: get('ai_risk_specificity'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+
+  // Each risk row counts as filled if at least 4 of its 6 fields are filled
+  const risksFilled = data.risks.filter(r => {
+    const filled = [r.text, r.type, r.severity, r.likelihood, r.owner, r.mitigation].filter(v => v && v.trim().length > 0).length;
+    return filled >= 4;
+  }).length;
+
+  const otherFields = [data.project_summary, data.methodology, data.ai_risk_focus, data.ai_risk_specificity];
+  const otherFilled = otherFields.filter(v => v && v.trim().length > 0).length;
+
+  const hasAIRisk = data.risks.some(r => r.type === 'AI');
+
+  if (risksFilled < 5 || otherFilled < 4) {
+    const proceed = confirm("You haven't completed all sections yet. " + risksFilled + " of 5 risks substantially filled, " + otherFilled + " of 4 other fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!hasAIRisk) {
+    const proceed = confirm("None of your risks are marked as AI type. The brief asks for at least one AI-specific risk. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 4? Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W4)");
+}
+</script>
+</body>
+</html>
