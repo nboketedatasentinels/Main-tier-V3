@@ -995,8 +995,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                       : entry.availability === 'locked'
                         ? '#e5e7eb'
                         : '#350e6f'
-                const StatusIcon =
-                  isApproved || entry.availability === 'completed'
+                const StatusIcon = isApproved
+                  ? Award
+                  : entry.availability === 'completed'
                     ? CheckCircle2
                     : entry.availability === 'past'
                       ? Clock
@@ -1008,6 +1009,13 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                   : isCurrent
                     ? '#350e6f'
                     : 'gray.500'
+                const statusDisplay =
+                  isApproved && completion?.points
+                    ? `+${completion.points.toLocaleString()} pts`
+                    : statusLabel
+                const awardedDateLabel = completion?.approvedAt
+                  ? formatCompletionDate(completion.approvedAt)
+                  : null
                 return (
                   <Box
                     key={`${entry.periodLabel}-${entry.periodNumber}`}
@@ -1065,7 +1073,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                               textTransform="uppercase"
                               letterSpacing="0.08em"
                             >
-                              {statusLabel}
+                              {statusDisplay}
                             </Text>
                           </HStack>
                         </HStack>
@@ -1101,14 +1109,34 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
                         {hasCourse &&
                           (isApproved ? (
-                            <HStack spacing={1.5}>
-                              <Icon as={CheckCircle2} color="green.600" boxSize={3.5} />
-                              <Text fontSize="xs" color="green.800" fontWeight="semibold">
-                                Completed
-                                {completion?.points
-                                  ? ` · +${completion.points.toLocaleString()} pts`
-                                  : ''}
-                              </Text>
+                            <HStack
+                              spacing={2}
+                              bg="green.50"
+                              border="1px solid"
+                              borderColor="green.200"
+                              borderRadius="md"
+                              px={3}
+                              py={2}
+                              align="center"
+                            >
+                              <Icon as={Award} color="green.600" boxSize={4} />
+                              <Stack spacing={0} flex="1">
+                                <Text
+                                  fontSize="xs"
+                                  fontWeight="bold"
+                                  color="green.800"
+                                  lineHeight="1.2"
+                                >
+                                  {completion?.points
+                                    ? `+${completion.points.toLocaleString()} points awarded`
+                                    : 'Course completed'}
+                                </Text>
+                                {awardedDateLabel && (
+                                  <Text fontSize="2xs" color="green.700" lineHeight="1.2">
+                                    Verified by partner on {awardedDateLabel}
+                                  </Text>
+                                )}
+                              </Stack>
                             </HStack>
                           ) : isCurrent && !isLocked ? (
                             <HStack spacing={1.5}>
@@ -1175,12 +1203,42 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                                 target={canOpen ? '_blank' : undefined}
                                 rel={canOpen ? 'noopener noreferrer' : undefined}
                                 size="sm"
-                                bg={canOpen ? '#350e6f' : 'transparent'}
-                                color={canOpen ? 'white' : 'gray.600'}
-                                border={canOpen ? 'none' : '1px solid'}
-                                borderColor="gray.300"
-                                _hover={canOpen ? { bg: '#27062e' } : undefined}
-                                _active={canOpen ? { bg: '#27062e' } : undefined}
+                                bg={
+                                  isApproved && canOpen
+                                    ? 'transparent'
+                                    : canOpen
+                                      ? '#350e6f'
+                                      : 'transparent'
+                                }
+                                color={
+                                  isApproved && canOpen
+                                    ? 'green.700'
+                                    : canOpen
+                                      ? 'white'
+                                      : 'gray.600'
+                                }
+                                border={
+                                  isApproved && canOpen
+                                    ? '1px solid'
+                                    : canOpen
+                                      ? 'none'
+                                      : '1px solid'
+                                }
+                                borderColor={isApproved && canOpen ? 'green.300' : 'gray.300'}
+                                _hover={
+                                  isApproved && canOpen
+                                    ? { bg: 'green.50', borderColor: 'green.400' }
+                                    : canOpen
+                                      ? { bg: '#27062e' }
+                                      : undefined
+                                }
+                                _active={
+                                  isApproved && canOpen
+                                    ? { bg: 'green.100' }
+                                    : canOpen
+                                      ? { bg: '#27062e' }
+                                      : undefined
+                                }
                                 borderRadius="md"
                                 fontWeight="semibold"
                                 w="full"
@@ -1196,9 +1254,11 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                                     ? 'Course unavailable'
                                     : !hasLink
                                       ? 'Link unavailable'
-                                      : hasAccess
-                                        ? 'Open course'
-                                        : 'Upgrade to unlock'}
+                                      : !hasAccess
+                                        ? 'Upgrade to unlock'
+                                        : isApproved
+                                          ? 'Revisit course'
+                                          : 'Open course'}
                               </Button>
                             </Tooltip>
                           )}
