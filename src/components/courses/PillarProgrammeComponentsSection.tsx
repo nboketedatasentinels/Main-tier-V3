@@ -1,6 +1,17 @@
-import React from 'react'
-import { Badge, Box, Button, Heading, HStack, Icon, SimpleGrid, Stack, Text } from '@chakra-ui/react'
-import { Award, BookMarked, Wrench, AlertCircle, type LucideIcon } from 'lucide-react'
+import React, { useState } from 'react'
+import {
+  Badge,
+  Box,
+  Button,
+  Heading,
+  HStack,
+  Icon,
+  Select,
+  SimpleGrid,
+  Stack,
+  Text,
+} from '@chakra-ui/react'
+import { Award, BookMarked, Wrench, AlertCircle, ExternalLink, type LucideIcon } from 'lucide-react'
 import {
   PILLAR_PROGRAMME_COMPONENTS,
   PROGRAMME_COMPONENT_LABEL,
@@ -104,6 +115,14 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
   const visual = TYPE_VISUALS[entry.type]
   const status = STATUS_BADGE[entry.status]
   const isDisabled = entry.status !== 'available'
+  const hasParts = !!entry.parts && entry.parts.length > 0
+
+  const [selectedPartId, setSelectedPartId] = useState<string>(
+    hasParts ? entry.parts![0].id : '',
+  )
+  const selectedPart = hasParts
+    ? entry.parts!.find((p) => p.id === selectedPartId) ?? entry.parts![0]
+    : null
 
   return (
     <Box
@@ -154,42 +173,48 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
         </Badge>
       </Stack>
 
-      {entry.parts && entry.parts.length > 0 && !isDisabled ? (
+      {hasParts && !isDisabled && selectedPart ? (
         <Stack spacing={2} mt={1}>
-          {entry.parts.map((part) => (
-            <Box
-              key={part.id}
-              as="a"
-              href={part.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              borderWidth="1px"
-              borderColor={`${visual.accent}.200`}
-              borderRadius="lg"
-              p={3}
-              bg="white"
-              cursor="pointer"
-              _hover={{ borderColor: `${visual.accent}.500`, boxShadow: 'sm', transform: 'translateX(2px)' }}
-              transition="all 0.15s"
-              display="block"
-              textDecoration="none"
-            >
-              <Stack spacing={0.5}>
-                <Text fontWeight="semibold" fontSize="sm" color={`${visual.accent}.700`}>
-                  {part.title}
-                </Text>
-                {part.description && (
-                  <Text fontSize="xs" color="gray.600">
-                    {part.description}
-                  </Text>
-                )}
-              </Stack>
-            </Box>
-          ))}
+          <Text fontSize="xs" color="gray.600" fontWeight="medium">
+            Choose a part to open
+          </Text>
+          <Select
+            size="sm"
+            bg="white"
+            borderColor={`${visual.accent}.200`}
+            focusBorderColor={`${visual.accent}.500`}
+            value={selectedPartId}
+            onChange={(e) => setSelectedPartId(e.target.value)}
+            aria-label={`Select ${PROGRAMME_COMPONENT_LABEL[entry.type]} part`}
+          >
+            {entry.parts!.map((part) => (
+              <option key={part.id} value={part.id}>
+                {part.title}
+              </option>
+            ))}
+          </Select>
+          {selectedPart.description && (
+            <Text fontSize="xs" color="gray.600" lineHeight="1.5">
+              {selectedPart.description}
+            </Text>
+          )}
+          <Button
+            as="a"
+            href={selectedPart.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="sm"
+            colorScheme={visual.accent}
+            rightIcon={<Icon as={ExternalLink} boxSize={3.5} />}
+            alignSelf="flex-start"
+            mt={1}
+          >
+            Open part
+          </Button>
           <Text fontSize="xs" color="gray.500" fontStyle="italic" mt={1}>
-            {entry.parts.length === 2
+            {entry.parts!.length === 2
               ? 'Both parts required.'
-              : `All ${entry.parts.length} parts required.`}
+              : `All ${entry.parts!.length} parts required.`}
           </Text>
         </Stack>
       ) : (
