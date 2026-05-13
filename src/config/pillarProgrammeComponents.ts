@@ -210,9 +210,48 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'starter-kit-practical',
       type: 'practical',
-      title: 'Practical',
-      description: 'Content coming soon.',
-      status: 'coming_soon',
+      title: 'Practicals Portfolio (6 parts)',
+      description:
+        'Six weekly practicals across the Journey. All required; together they form the Practicals Portfolio component.',
+      status: 'available',
+      parts: [
+        {
+          id: 'starter-kit-practical-1',
+          title: 'Practical 1 · Opportunity Map',
+          description: 'Week 1 — three named AI/digital opportunities in your current scope.',
+          href: '/capstones/starter-kit-practical-1.html',
+        },
+        {
+          id: 'starter-kit-practical-2',
+          title: 'Practical 2 · Stakeholder Position Paper',
+          description: 'Week 2 — map and position five key stakeholders.',
+          href: '/capstones/starter-kit-practical-2.html',
+        },
+        {
+          id: 'starter-kit-practical-3',
+          title: 'Practical 3 · Methodology Justification',
+          description: 'Week 3 — defend the delivery approach you would actually run.',
+          href: '/capstones/starter-kit-practical-3.html',
+        },
+        {
+          id: 'starter-kit-practical-4',
+          title: 'Practical 4 · Risk Register Draft',
+          description: 'Week 4 — name the real risks, owners, and mitigations.',
+          href: '/capstones/starter-kit-practical-4.html',
+        },
+        {
+          id: 'starter-kit-practical-5',
+          title: 'Practical 5 · Stakeholder Briefing Script',
+          description: 'Week 5 — the script you would use in the room.',
+          href: '/capstones/starter-kit-practical-5.html',
+        },
+        {
+          id: 'starter-kit-practical-6',
+          title: 'Practical 6 · Lessons Synthesis',
+          description: 'Week 6 — the integrative artefact that closes the Starter Kit.',
+          href: '/capstones/starter-kit-practical-6.html',
+        },
+      ],
     },
   ],
 }
