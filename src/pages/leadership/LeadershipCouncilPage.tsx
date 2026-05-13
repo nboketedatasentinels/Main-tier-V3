@@ -58,7 +58,6 @@ import {
   RefreshCcw,
   Shield,
   Target,
-  Timer,
   User,
   UserCircle2,
 } from 'lucide-react'
@@ -636,13 +635,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                 letterSpacing="-0.02em"
                 fontWeight="bold"
                 lineHeight="1.15"
-                mb={1}
               >
                 Your support team
               </Heading>
-              <Text color="whiteAlpha.800" fontSize="sm" lineHeight="1.6">
-                Mentor, ambassador, and transformation partner — all in one place.
-              </Text>
               {showOrgDebug && (
                 <HStack spacing={3} mt={2} flexWrap="wrap">
                   <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '—'}</Text>
@@ -697,63 +692,49 @@ export const LeadershipCouncilPage: React.FC = () => {
         </HStack>
       )}
 
-      <Box
-        bg="white"
-        border="1px solid"
-        borderColor="gray.200"
-        borderRadius="xl"
-        px={{ base: 4, md: 5 }}
-        py={4}
-      >
-        <Stack spacing={3}>
-          <HStack justify="space-between" align="center" flexWrap="wrap" spacing={3}>
-            <Text
-              fontSize="xs"
-              fontWeight="bold"
-              textTransform="uppercase"
-              letterSpacing="0.14em"
-              color="gray.500"
-            >
-              Readiness
-            </Text>
-            {isLeadershipEligible && !assignmentsLoading && (
-              <Text fontSize="xs" color="gray.600" fontWeight="medium">
-                {gatingSteps.filter((s) => s.status === 'complete').length} of {gatingSteps.length} ready
-              </Text>
-            )}
-          </HStack>
-          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
-            {gatingSteps.map((step) => {
-              const tone =
-                step.status === 'complete'
-                  ? { bg: 'green.50', border: 'green.200', color: 'green.700', icon: 'green.500' }
-                  : step.status === 'pending'
-                    ? { bg: 'yellow.50', border: 'yellow.200', color: 'yellow.800', icon: 'yellow.500' }
-                    : { bg: 'gray.50', border: 'gray.200', color: 'gray.500', icon: 'gray.400' }
-              return (
-                <Tooltip key={step.id} label={step.description} placement="top" hasArrow openDelay={200}>
-                  <HStack
-                    spacing={2}
-                    bg={tone.bg}
-                    border="1px solid"
-                    borderColor={tone.border}
-                    borderRadius="md"
-                    px={3}
-                    py={2}
-                    align="center"
-                    cursor="default"
-                  >
-                    <Icon as={gateStatusIcon(step.status)} color={tone.icon} boxSize={3.5} />
-                    <Text fontSize="xs" fontWeight="semibold" color={tone.color} noOfLines={1}>
-                      {step.title.replace(' ready', '').replace(' linked', '').replace(' checked', '')}
-                    </Text>
-                  </HStack>
-                </Tooltip>
-              )
-            })}
-          </SimpleGrid>
-        </Stack>
-      </Box>
+      {isLeadershipEligible &&
+        !assignmentsLoading &&
+        gatingSteps.some((s) => s.status !== 'complete') && (
+          <Box
+            bg="white"
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="xl"
+            px={{ base: 4, md: 5 }}
+            py={3}
+          >
+            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
+              {gatingSteps.map((step) => {
+                const tone =
+                  step.status === 'complete'
+                    ? { bg: 'green.50', border: 'green.200', color: 'green.700', icon: 'green.500' }
+                    : step.status === 'pending'
+                      ? { bg: 'yellow.50', border: 'yellow.200', color: 'yellow.800', icon: 'yellow.500' }
+                      : { bg: 'gray.50', border: 'gray.200', color: 'gray.500', icon: 'gray.400' }
+                return (
+                  <Tooltip key={step.id} label={step.description} placement="top" hasArrow openDelay={200}>
+                    <HStack
+                      spacing={2}
+                      bg={tone.bg}
+                      border="1px solid"
+                      borderColor={tone.border}
+                      borderRadius="md"
+                      px={3}
+                      py={2}
+                      align="center"
+                      cursor="default"
+                    >
+                      <Icon as={gateStatusIcon(step.status)} color={tone.icon} boxSize={3.5} />
+                      <Text fontSize="xs" fontWeight="semibold" color={tone.color} noOfLines={1}>
+                        {step.title.replace(' ready', '').replace(' linked', '').replace(' checked', '')}
+                      </Text>
+                    </HStack>
+                  </Tooltip>
+                )
+              })}
+            </SimpleGrid>
+          </Box>
+        )}
 
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
@@ -914,7 +895,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                           rounded="lg"
                           bg="gray.50"
                         >
-                          <HStack justify="space-between" align="center" mb={2} flexWrap="wrap" spacing={3}>
+                          <HStack justify="space-between" align="center" mb={3} flexWrap="wrap" spacing={3}>
                             <HStack spacing={2}>
                               <Icon as={Target} color="#350e6f" boxSize={4} />
                               <Text fontWeight="bold" color="#27062e">
@@ -927,9 +908,6 @@ export const LeadershipCouncilPage: React.FC = () => {
                               </Badge>
                             )}
                           </HStack>
-                          <Text fontSize="xs" color="gray.600" mb={3} lineHeight="1.6">
-                            What do you want from this mentorship? Your mentor tailors sessions to this.
-                          </Text>
                           {goalsLoading ? (
                             <Flex
                               align="center"
@@ -1334,37 +1312,25 @@ export const LeadershipCouncilPage: React.FC = () => {
                           </HStack>
                         </HStack>
 
-                        <Text color="gray.700" fontSize="sm" lineHeight="1.65">
-                          {partnerProfile.bio || 'Dedicated programme partner.'}
-                        </Text>
+                        {partnerProfile.bio && (
+                          <Text color="gray.700" fontSize="sm" lineHeight="1.65">
+                            {partnerProfile.bio}
+                          </Text>
+                        )}
 
-                        <Divider />
-
-                        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                          <Box>
-                            <HStack spacing={2}>
-                              <Icon as={Timer} color="text.muted" />
-                              <Text color="text.secondary">Local time: {partnerProfile.timezone || 'Not provided'}</Text>
-                            </HStack>
-                            {partnerProfile.email && (
-                              <HStack spacing={2} mt={2}>
-                                <Icon as={ExternalLink} color="text.muted" />
-                                <Link href={`mailto:${partnerProfile.email}`} color="brand.primary">
-                                  {displayNameForProfile(partnerProfile) === partnerProfile.email ? 'Send email' : partnerProfile.email}
-                                </Link>
-                              </HStack>
-                            )}
-                          </Box>
-                          <Stack spacing={2}>
-                            {partnerProfile.hobbies && partnerProfile.hobbies.length > 0 && (
-                              <Text color="text.secondary">Hobbies: {partnerProfile.hobbies.join(', ')}</Text>
-                            )}
-                            {partnerProfile.funFact && <Text color="text.secondary">Fun fact: {partnerProfile.funFact}</Text>}
-                            {partnerProfile.favoritePillar && (
-                              <Text color="text.secondary">Favorite LIFT pillar: {partnerProfile.favoritePillar}</Text>
-                            )}
-                          </Stack>
-                        </SimpleGrid>
+                        {partnerProfile.email && (
+                          <HStack spacing={2} pt={1}>
+                            <Icon as={ExternalLink} color="gray.500" boxSize={3.5} />
+                            <Link
+                              href={`mailto:${partnerProfile.email}`}
+                              color="#350e6f"
+                              fontSize="sm"
+                              fontWeight="medium"
+                            >
+                              {partnerProfile.email}
+                            </Link>
+                          </HStack>
+                        )}
                       </Stack>
                     )}
                     {!partnerLoading && !partnerProfile && (
