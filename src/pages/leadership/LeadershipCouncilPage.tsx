@@ -74,7 +74,7 @@ import {
 } from '@/services/mentorshipService'
 import { LearnerAmbassadorBookings } from '@/components/learner/LearnerAmbassadorBookings'
 import { getDisplayName } from '@/utils/displayName'
-import { getJourneyLabel, isLeadershipCouncilJourney } from '@/utils/journeyType'
+import { getJourneyLabel, isLeadershipCouncilJourney, isPartnerVisibleJourney } from '@/utils/journeyType'
 import type { UserProfileExtended } from '@/services/userProfileService'
 
 interface LeadershipProfile extends UserProfileExtended {
@@ -183,8 +183,9 @@ export const LeadershipCouncilPage: React.FC = () => {
   const supportAssignmentsReady = supportAssignmentStatus.loaded
   const showOrgDebug = import.meta.env.DEV && (organization.id || supportAssignmentStatus.id)
   const isLeadershipEligible = isLeadershipCouncilJourney(profile?.journeyType)
+  const isPartnerVisible = isPartnerVisibleJourney(profile?.journeyType)
   const journeyLockReason = !isLeadershipEligible
-    ? 'Leadership Council unlocks on 3-month, 6-month, and 9-month journeys.'
+    ? 'Mentor and Ambassador unlock on 3-month, 6-month, and 9-month journeys.'
     : null
   const currentJourneyLabel = profile?.journeyType ? getJourneyLabel(profile.journeyType) : null
   const mentorSourceLabel =
@@ -532,15 +533,15 @@ export const LeadershipCouncilPage: React.FC = () => {
     )
   }
 
-  const renderJourneyLockedTab = (title: string) => (
-    <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+  const renderJourneyLockedTab = (title: string, availableFromLabel = '3-month, 6-month, and 9-month journeys') => (
+    <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
       <CardBody>
-        <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-          <Icon as={Lock} boxSize={10} color="text.muted" />
-          <Heading size="sm">{title} unlocks on longer journeys</Heading>
-          <Text color="text.secondary">
-            Leadership Council pairings are part of the 3-month, 6-month, and 9-month programs.
-            {currentJourneyLabel ? ` You're currently on the ${currentJourneyLabel}.` : ''}
+        <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
+          <Icon as={Lock} boxSize={9} color="gray.400" />
+          <Heading size="sm" color="#27062e">{title} unlocks on longer journeys</Heading>
+          <Text color="gray.600" fontSize="sm">
+            Available on {availableFromLabel}.
+            {currentJourneyLabel ? ` You're on the ${currentJourneyLabel}.` : ''}
           </Text>
         </Flex>
       </CardBody>
@@ -684,9 +685,15 @@ export const LeadershipCouncilPage: React.FC = () => {
           <Icon as={Lock} color="#350e6f" boxSize={4} />
           <Text fontSize="sm" color="gray.700">
             <Text as="span" fontWeight="semibold" color="#27062e">
-              Unlocks on 3M, 6M, and 9M journeys.
+              {isPartnerVisible
+                ? 'Mentor and Ambassador unlock on 3M, 6M, and 9M journeys.'
+                : 'Unlocks on 3M, 6M, and 9M journeys.'}
             </Text>
-            {currentJourneyLabel ? ` You're on the ${currentJourneyLabel}.` : ''}
+            {isPartnerVisible
+              ? ' Your Transformation Partner is available below.'
+              : currentJourneyLabel
+                ? ` You're on the ${currentJourneyLabel}.`
+                : ''}
           </Text>
         </HStack>
       )}
@@ -1263,8 +1270,11 @@ export const LeadershipCouncilPage: React.FC = () => {
               </TabPanel>
 
               <TabPanel px={0} pt={4}>
-                {!isLeadershipEligible ? (
-                  renderJourneyLockedTab('Transformation Partner')
+                {!isPartnerVisible ? (
+                  renderJourneyLockedTab(
+                    'Transformation Partner',
+                    '6-week, 3-month, 6-month, and 9-month journeys',
+                  )
                 ) : (
                 <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={2}>
