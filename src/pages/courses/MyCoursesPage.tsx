@@ -48,6 +48,7 @@ import {
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
+import { getPointsPerCourse } from '@/config/pointsConfig'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -688,6 +689,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const isWeeklyTimeline = journeyType ? !isMonthBasedJourney(journeyType) : false
   const totalWeeks = program?.programDurationWeeks ?? (journeyType ? getJourneyWeeks(journeyType) : null)
   const journeyTimelineDisplay = journeyType ? getJourneyTimelineDisplayMode(journeyType) : 'duration'
+  const pointsPerCourse = getPointsPerCourse(journeyType)
   const fallbackAssignments = useMemo(() => {
     if (!program) return []
     return getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
@@ -1107,45 +1109,77 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                           </Text>
                         )}
 
-                        {hasCourse &&
-                          (isApproved ? (
-                            <HStack
-                              spacing={2}
-                              bg="green.50"
-                              border="1px solid"
-                              borderColor="green.200"
-                              borderRadius="md"
-                              px={3}
-                              py={2}
-                              align="center"
-                            >
-                              <Icon as={Award} color="green.600" boxSize={4} />
-                              <Stack spacing={0} flex="1">
-                                <Text
-                                  fontSize="xs"
-                                  fontWeight="bold"
-                                  color="green.800"
-                                  lineHeight="1.2"
-                                >
-                                  {completion?.points
-                                    ? `+${completion.points.toLocaleString()} points awarded`
-                                    : 'Course completed'}
-                                </Text>
-                                {awardedDateLabel && (
-                                  <Text fontSize="2xs" color="green.700" lineHeight="1.2">
-                                    Verified by partner on {awardedDateLabel}
-                                  </Text>
-                                )}
-                              </Stack>
-                            </HStack>
-                          ) : isCurrent && !isLocked ? (
-                            <HStack spacing={1.5}>
-                              <Icon as={ShieldCheck} color="#350e6f" boxSize={3.5} />
-                              <Text fontSize="xs" color="gray.600">
-                                Points awarded after partner verification
+                        {hasCourse && isApproved ? (
+                          <HStack
+                            spacing={2}
+                            bg="green.50"
+                            border="1px solid"
+                            borderColor="green.200"
+                            borderRadius="md"
+                            px={3}
+                            py={2}
+                            align="center"
+                          >
+                            <Icon as={Award} color="green.600" boxSize={4} />
+                            <Stack spacing={0} flex="1">
+                              <Text
+                                fontSize="xs"
+                                fontWeight="bold"
+                                color="green.800"
+                                lineHeight="1.2"
+                              >
+                                {completion?.points
+                                  ? `+${completion.points.toLocaleString()} points awarded`
+                                  : 'Course completed'}
                               </Text>
-                            </HStack>
-                          ) : null)}
+                              {awardedDateLabel && (
+                                <Text fontSize="2xs" color="green.700" lineHeight="1.2">
+                                  Verified by partner on {awardedDateLabel}
+                                </Text>
+                              )}
+                            </Stack>
+                          </HStack>
+                        ) : hasCourse && pointsPerCourse ? (
+                          <HStack
+                            spacing={2}
+                            bg={isCurrent ? 'purple.50' : 'gray.50'}
+                            border="1px solid"
+                            borderColor={isCurrent ? 'purple.100' : 'gray.200'}
+                            borderRadius="md"
+                            px={3}
+                            py={2}
+                            align="center"
+                          >
+                            <Icon
+                              as={Award}
+                              color={isCurrent ? '#350e6f' : 'gray.500'}
+                              boxSize={4}
+                            />
+                            <Stack spacing={0} flex="1">
+                              <Text
+                                fontSize="xs"
+                                fontWeight="bold"
+                                color={isCurrent ? '#350e6f' : 'gray.700'}
+                                lineHeight="1.2"
+                              >
+                                Worth {pointsPerCourse.toLocaleString()} points
+                              </Text>
+                              <Text
+                                fontSize="2xs"
+                                color={isCurrent ? 'purple.700' : 'gray.500'}
+                                lineHeight="1.2"
+                              >
+                                {isLocked
+                                  ? 'Awarded by partner on completion'
+                                  : isCurrent
+                                    ? 'Awarded by partner once verified'
+                                    : entry.availability === 'past'
+                                      ? 'Awaiting partner verification'
+                                      : 'Awarded by partner on completion'}
+                              </Text>
+                            </Stack>
+                          </HStack>
+                        ) : null}
 
                         {missingCourse && (
                           <Text fontSize="xs" color="red.500">
