@@ -10,7 +10,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { ExternalLink, Headphones, MessageSquare, Youtube } from 'lucide-react'
+import { ArrowUpRight, MessageSquare, Play, Youtube } from 'lucide-react'
 
 const YOUTUBE_EMBED_SRC = 'https://www.youtube.com/embed/Du71f-J9s2A?si=gcMvAtmRINGoIvYU'
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@T4Leaders/podcasts'
@@ -18,77 +18,125 @@ const WHATSAPP_CIRCLE_URL = 'https://chat.whatsapp.com/GU834qw8x6JHYgrzDBUT5i?mo
 
 export const ShamelessTuesdayPodcastPage: React.FC = () => (
   <Stack spacing={6} pb={10}>
-    <Box bg="white" p={6} borderRadius="3xl" borderWidth={1} borderColor="brand.border" boxShadow="sm">
-      <Stack spacing={2}>
-        <HStack spacing={2} color="purple.600">
-          <Icon as={Headphones} boxSize={5} />
-          <Text fontSize="xs" fontWeight="bold" letterSpacing="widest">
-            SHAMELESS TUESDAY
+    <Box
+      bgGradient="linear(to-r, #350e6f, #8b5a3c)"
+      borderRadius="2xl"
+      overflow="hidden"
+      boxShadow="sm"
+    >
+      <Box px={{ base: 5, md: 7 }} py={{ base: 5, md: 6 }}>
+        <Stack spacing={2}>
+          <HStack spacing={2} color="whiteAlpha.900">
+            <Text
+              fontSize="xs"
+              fontWeight="bold"
+              letterSpacing="0.16em"
+              textTransform="uppercase"
+            >
+              Leadership Conversations
+            </Text>
+            <Box boxSize={1} borderRadius="full" bg="whiteAlpha.500" />
+            <Text
+              fontSize="xs"
+              fontWeight="semibold"
+              letterSpacing="0.14em"
+              textTransform="uppercase"
+            >
+              New episode every Tuesday
+            </Text>
+          </HStack>
+          <Heading
+            size="lg"
+            color="white"
+            letterSpacing="-0.02em"
+            fontWeight="bold"
+            lineHeight="1.15"
+          >
+            Shameless Tuesday
+          </Heading>
+          <Text color="whiteAlpha.800" fontSize="sm" lineHeight="1.6" maxW="2xl">
+            Honest conversations with leaders who&apos;ve stopped apologising for their ambition.
           </Text>
-        </HStack>
-        <Heading size="lg" color="brand.text">
-          Shameless Tuesday Podcast
-        </Heading>
-        <Text color="brand.subtleText" fontSize="md">
-          Honest conversations with leaders who've stopped apologising for their ambition. New
-          episodes drop every Tuesday.
-        </Text>
-      </Stack>
+        </Stack>
+      </Box>
     </Box>
 
-    <Box borderWidth={1} borderColor="border.subtle" bg="surface.default" borderRadius="3xl" p={{ base: 4, md: 6 }} boxShadow="sm">
-      <Stack spacing={4}>
-        <Heading size="md" color="text.primary">
-          Latest episode
-        </Heading>
-        <AspectRatio ratio={16 / 9} borderRadius="2xl" overflow="hidden">
+    <Box
+      bg="white"
+      borderRadius="2xl"
+      border="1px solid"
+      borderColor="gray.200"
+      boxShadow="sm"
+      overflow="hidden"
+    >
+      <Box h="3px" bg="#350e6f" />
+      <Stack spacing={5} p={{ base: 5, md: 6 }}>
+        <HStack spacing={2} align="center">
+          <Icon as={Play} color="#350e6f" boxSize={4} fill="#350e6f" strokeWidth={0} />
+          <Text
+            fontSize="xs"
+            fontWeight="bold"
+            letterSpacing="0.14em"
+            textTransform="uppercase"
+            color="#350e6f"
+          >
+            Latest episode
+          </Text>
+        </HStack>
+
+        <AspectRatio
+          ratio={16 / 9}
+          borderRadius="xl"
+          overflow="hidden"
+          border="1px solid"
+          borderColor="gray.200"
+        >
           <chakra.iframe
             src={YOUTUBE_EMBED_SRC}
-            title="Shameless Tuesday Podcast — latest episode"
+            title="Shameless Tuesday — latest episode"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             loading="lazy"
             referrerPolicy="strict-origin-when-cross-origin"
           />
         </AspectRatio>
+
         <HStack spacing={3} flexWrap="wrap">
           <Button
             as={chakra.a}
             href={YOUTUBE_CHANNEL_URL}
             target="_blank"
             rel="noopener noreferrer"
-            colorScheme="red"
+            size="md"
+            bg="#350e6f"
+            color="white"
+            _hover={{ bg: '#27062e' }}
+            _active={{ bg: '#27062e' }}
             leftIcon={<Icon as={Youtube} boxSize={4} />}
-            rightIcon={<Icon as={ExternalLink} boxSize={4} />}
+            rightIcon={<Icon as={ArrowUpRight} boxSize={3.5} />}
+            borderRadius="md"
+            fontWeight="semibold"
           >
-            View more episodes on YouTube
+            More episodes on YouTube
           </Button>
           <Button
             as={chakra.a}
             href={WHATSAPP_CIRCLE_URL}
             target="_blank"
             rel="noopener noreferrer"
+            size="md"
             variant="outline"
-            colorScheme="green"
+            color="gray.700"
+            borderColor="gray.300"
+            _hover={{ bg: 'gray.50', borderColor: '#350e6f', color: '#350e6f' }}
             leftIcon={<Icon as={MessageSquare} boxSize={4} />}
-            rightIcon={<Icon as={ExternalLink} boxSize={4} />}
+            rightIcon={<Icon as={ArrowUpRight} boxSize={3.5} />}
+            borderRadius="md"
+            fontWeight="semibold"
           >
-            Join the Shameless Circle on WhatsApp
+            Join the Shameless Circle
           </Button>
         </HStack>
-      </Stack>
-    </Box>
-
-    <Box borderWidth={1} borderColor="border.subtle" bg="surface.subtle" borderRadius="3xl" p={6}>
-      <Stack spacing={2}>
-        <Heading size="sm" color="text.primary">
-          Why listen?
-        </Heading>
-        <Text color="text.secondary" fontSize="sm">
-          Every episode is a candid, unvarnished conversation about leadership, transformation, and
-          the things no one else is saying out loud. Pair it with the Shameless Circle WhatsApp to
-          dig into episode moments with fellow listeners.
-        </Text>
       </Stack>
     </Box>
   </Stack>
