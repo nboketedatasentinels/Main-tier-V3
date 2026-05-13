@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react'
+import { useMemo } from 'react'
 import {
   Alert,
   AlertIcon,
@@ -7,14 +7,11 @@ import {
   Flex,
   HStack,
   Heading,
-  Icon,
   Progress,
   SimpleGrid,
   Stack,
-  Tag,
   Text,
 } from '@chakra-ui/react'
-import { CheckCircle, Lock } from 'lucide-react'
 import { format, addDays, differenceInDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -28,19 +25,6 @@ import { calculatePassMark } from '@/utils/completion'
 import type { WeeklyProgress } from '@/types'
 import type { JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
 import type { LeadershipAvailability } from '@/utils/leadershipAvailability'
-
-interface MonthMilestone {
-  month: number
-  startWeek: number
-  endWeek: number
-  status: 'completed' | 'current' | 'locked'
-  completionPercent: number
-}
-
-interface WeekMilestone {
-  week: number
-  status: 'completed' | 'current' | 'locked' | 'incomplete'
-}
 
 export const JourneyHeader = ({
   journey,
@@ -59,8 +43,6 @@ export const JourneyHeader = ({
     if (tier.includes('corporate')) return 'Corporate'
     return isFreeUser(profile) ? 'Free Tier' : 'Premium'
   }, [profile])
-
-  const isOrgManagedJourney = useMemo(() => Boolean(profile?.companyId), [profile?.companyId])
 
   const journeyStartDate = useMemo(() => {
     if (!journey) return null
@@ -193,33 +175,6 @@ export const JourneyHeader = ({
     return { level, message, color, deficit, paceRatio, journeyEnded, weeksLeft, weeklyNeeded, pointsNeeded }
   }, [journey, journeyMeta, journeyProgress, journeyStartDate])
 
-  const monthMeta = useCallback(
-    (month: number): MonthMilestone => {
-      if (!journey) {
-        return {
-          month,
-          startWeek: 1,
-          endWeek: 4,
-          status: 'locked',
-          completionPercent: 0,
-        }
-      }
-      const startWeek = (month - 1) * 4 + 1
-      const endWeek = Math.min(journey.programDurationWeeks, startWeek + 3)
-      const isCompleted = endWeek < calculatedCurrentWeek
-      const isCurrent = month === currentMonthNumber
-      const status = isCompleted ? 'completed' : isCurrent ? 'current' : 'locked'
-      const completedWeeks = isCompleted
-        ? 4
-        : isCurrent
-        ? Math.max(0, Math.min(4, calculatedCurrentWeek - startWeek))
-        : 0
-      const completionPercent = Math.min(100, Math.round((completedWeeks / 4) * 100))
-      return { month, startWeek, endWeek, status, completionPercent }
-    },
-    [calculatedCurrentWeek, currentMonthNumber, journey],
-  )
-
   if (!journey) return null
 
   const label = JOURNEY_LABELS[journey.journeyType]
@@ -228,31 +183,6 @@ export const JourneyHeader = ({
   const overviewLabel = isMonthBasedJourney
     ? `Month ${currentMonthNumber} of ${totalMonths} - ${weekDayLabel} of ${journey.programDurationWeeks}`
     : `${weekDayLabel} of ${journey.programDurationWeeks}`
-
-  const monthMilestones: MonthMilestone[] = isMonthBasedJourney
-    ? Array.from({ length: totalMonths }, (_, idx) => monthMeta(idx + 1))
-    : []
-
-  const weekMilestones: WeekMilestone[] = !isMonthBasedJourney
-    ? Array.from({ length: journey.programDurationWeeks }, (_, idx) => {
-        const weekNumber = idx + 1
-        const weekProgress = progress.find((p) => p.weekNumber === weekNumber)
-        const hasPoints = (weekProgress?.pointsEarned ?? 0) > 0
-
-        let status: WeekMilestone['status'] = 'locked'
-        if (hasPoints) {
-          status = 'completed'
-        } else if (weekNumber === calculatedCurrentWeek) {
-          status = 'current'
-        } else if (weekNumber < calculatedCurrentWeek) {
-          status = 'incomplete'
-        } else {
-          status = 'locked'
-        }
-
-        return { week: weekNumber, status }
-      })
-    : []
 
   return (
     <Box
@@ -342,57 +272,6 @@ export const JourneyHeader = ({
             </Alert>
           )}
 
-          {isOrgManagedJourney ? (
-            <Alert status="info" borderRadius="md" variant="subtle" py={2}>
-              <AlertIcon boxSize={4} />
-              <Text fontSize="xs" color="text.secondary">
-                Journey duration is managed by your organization. Your completed activity history remains recorded.
-              </Text>
-            </Alert>
-          ) : null}
-
-          {/* Week/Month Pills */}
-          <HStack spacing={2} wrap="wrap" justify="center">
-            {isMonthBasedJourney
-              ? monthMilestones.map((monthItem) => (
-                  <Tag
-                    key={`month-${monthItem.month}`}
-                    size="sm"
-                    borderRadius="full"
-                    colorScheme={
-                      monthItem.status === 'completed' ? 'green' : monthItem.status === 'current' ? 'teal' : 'gray'
-                    }
-                  >
-                    <HStack spacing={1}>
-                      {monthItem.status === 'completed' && <Icon as={CheckCircle} boxSize={3} />}
-                      {monthItem.status === 'locked' && <Icon as={Lock} boxSize={3} />}
-                      <Text fontSize="xs">Month {monthItem.month}</Text>
-                    </HStack>
-                  </Tag>
-                ))
-              : weekMilestones.map((weekItem) => (
-                  <Tag
-                    key={`week-${weekItem.week}`}
-                    size="sm"
-                    borderRadius="full"
-                    colorScheme={
-                      weekItem.status === 'completed'
-                        ? 'green'
-                        : weekItem.status === 'current'
-                          ? 'teal'
-                          : weekItem.status === 'incomplete'
-                            ? 'yellow'
-                            : 'gray'
-                    }
-                  >
-                    <HStack spacing={1}>
-                      {weekItem.status === 'completed' && <Icon as={CheckCircle} boxSize={3} />}
-                      {weekItem.status === 'locked' && <Icon as={Lock} boxSize={3} />}
-                      <Text fontSize="xs">Week {weekItem.week}</Text>
-                    </HStack>
-                  </Tag>
-                ))}
-          </HStack>
         </Stack>
       </Box>
     </Box>

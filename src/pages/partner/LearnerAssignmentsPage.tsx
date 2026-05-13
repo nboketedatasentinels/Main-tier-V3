@@ -71,7 +71,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
         return
       }
       if (key === 'course-approvals') {
-        navigate('/partner/partner-assignment?tab=course-approvals')
+        navigate('/partner/course-approvals')
         return
       }
       if (key === 'overview') {
@@ -101,20 +101,17 @@ export const LearnerAssignmentsPage: React.FC = () => {
     [organizations],
   )
 
-  // Auto-pick only when the partner has exactly one org. Multi-org partners
-  // who explicitly chose "All organizations" from the header dropdown should
-  // see the "Pick a single organization" prompt below — mentor assignment is
-  // scoped to a specific organization's mentor pool.
+  // Auto-pick first org when options load
   useEffect(() => {
     if (selectedOrgId) return
-    if (orgOptions.length === 1) {
+    if (orgOptions.length > 0) {
       setSelectedOrgId(orgOptions[0].id)
       return
     }
-    if (orgOptions.length === 0 && profile?.companyId) {
+    if (profile?.companyId) {
       setSelectedOrgId(profile.companyId)
     }
-  }, [orgOptions, profile?.companyId, selectedOrgId, setSelectedOrgId])
+  }, [orgOptions, profile?.companyId, selectedOrgId])
 
   const selectedOrg = useMemo(
     () => orgOptions.find((o) => o.id === selectedOrgId),
@@ -246,6 +243,14 @@ export const LearnerAssignmentsPage: React.FC = () => {
     <PartnerLayout
       activeItem="learner-assignments"
       organizations={layoutOrgs}
+      selectedOrg={selectedOrgId || 'all'}
+      onSelectOrg={(orgValue) => {
+        if (orgValue === 'all') {
+          setSelectedOrgId('')
+          return
+        }
+        setSelectedOrgId(orgValue)
+      }}
       onNavigate={handleNavigate}
     >
       <Stack spacing={6}>
@@ -285,11 +290,9 @@ export const LearnerAssignmentsPage: React.FC = () => {
           <Alert status="info" rounded="lg">
             <AlertIcon />
             <Box>
-              <AlertTitle>Pick a single organization to continue</AlertTitle>
+              <AlertTitle>Pick an organization</AlertTitle>
               <AlertDescription>
-                {orgOptions.length > 1
-                  ? "Mentor assignment is scoped to a specific organization's mentor pool, so it can't be shown in aggregate across multiple organizations. Use the organization picker in the header to choose one."
-                  : 'Use the organization selector in the top bar to load its learner roster.'}
+                Use the organization selector in the top bar to load its learner roster.
               </AlertDescription>
             </Box>
           </Alert>

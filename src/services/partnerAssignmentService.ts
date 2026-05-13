@@ -89,14 +89,22 @@ export async function assignActivityToLearner(params: {
     // 3. Award points atomically. awardChecklistPoints is idempotent on
     // (uid, weekNumber, activityId) — the same ledger doc id self-completion
     // would write to — so partner re-issues and learner self-completes can't
-    // double-award. Throws on activity-limit violations.
-    await awardChecklistPoints({
+    // double-award. Throws on activity-limit violations. Returns awarded=false
+    // when an existing ledger entry is found, so we can surface that instead of
+    // silently overwriting checklist metadata and writing a misleading audit row.
+    const awardResult = await awardChecklistPoints({
       uid: learnerId,
       journeyType,
       weekNumber,
       activity,
       source: 'partner_issued',
     });
+
+    if (!awardResult.awarded) {
+      throw new Error(
+        `${activity.title} was already credited to this learner for week ${weekNumber}. No new points awarded.`
+      );
+    }
 
     // 4. Mark the activity completed in the learner's checklist with
     // partner-issued metadata, so the learner can't try to self-claim again

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Data Foundation Audit</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; --ai-lens-bg:#F0FBF5; --call-deploy:#16A34A; --call-deploy-bg:#DCFCE7; --call-after:#D97706; --call-after-bg:#FEF3C7; --call-reframe:#DC2626; --call-reframe-bg:#FEE2E2; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em;display:block}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em;display:block}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+  .practical-badge{display:inline-block;background:rgba(107,91,181,.3);border:1px solid rgba(107,91,181,.5);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:#C4B8FF;letter-spacing:.1em;text-transform:uppercase}
+  .heaviest-badge{display:inline-block;background:rgba(245,200,66,.4);border:1px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:700;color:var(--plum);letter-spacing:.1em;text-transform:uppercase}
+  .header-title{font-family:'DM Serif Display',serif;font-size:36px;color:#fff;line-height:1.15;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-desc{font-size:14px;color:rgba(255,255,255,.7);max-width:680px;line-height:1.7}
+  .content{max-width:920px;margin:0 auto;padding:36px 24px 60px}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--plum);margin-bottom:10px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:4px 0 4px 18px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .step-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .step-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px}
+  .step-num-badge{width:44px;height:44px;background:var(--plum);border:2px solid var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step-num-badge span{font-weight:700;font-size:16px;color:var(--gold);font-family:'DM Serif Display',serif}
+  .step-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .step-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum)}
+  .step-desc{font-size:13px;color:#666;margin-bottom:20px;line-height:1.7}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:88px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  input[type=text]{width:100%;background:#fff;border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum)}
+  input[type=text]:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  .usecase-card{background:rgba(74,59,140,.06);border:1.5px solid var(--purple-light);border-radius:12px;padding:18px 22px;margin-bottom:20px}
+  .usecase-card-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .usecase-card-q{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:6px}
+  .usecase-card-helper{font-size:12px;color:#666;line-height:1.55;margin-bottom:12px;font-style:italic}
+  .field-block{display:flex;flex-direction:column;gap:6px}
+  .field-block label{font-size:11px;font-weight:700;color:var(--plum);letter-spacing:.05em;text-transform:uppercase}
+  .audit-card{background:linear-gradient(135deg,rgba(74,59,140,.04),rgba(245,200,66,.04));border:1.5px solid var(--field-border);border-radius:16px;padding:24px 28px;margin-bottom:16px}
+  .audit-card-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;text-align:center}
+  .audit-card-sub{font-size:12px;color:#666;text-align:center;margin-bottom:22px;font-style:italic}
+  .audit-row{background:#fff;border:1.5px solid var(--field-border);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .audit-row-header{display:grid;grid-template-columns:56px 1fr 64px;gap:16px;align-items:start;margin-bottom:14px;padding-bottom:14px;border-bottom:1px dashed var(--field-border)}
+  @media(max-width:720px){.audit-row-header{grid-template-columns:56px 1fr;gap:10px}}
+  .audit-num{font-family:'DM Serif Display',serif;font-style:italic;font-size:30px;color:var(--gold-dark);line-height:1;padding-top:4px}
+  .audit-name-block .audit-dim-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .audit-name-block .audit-dim-name{font-family:'DM Serif Display',serif;font-size:17px;color:var(--plum);margin-top:2px}
+  .audit-name-block .audit-dim-helper{font-size:12px;color:#666;line-height:1.5;font-style:italic;margin-top:4px}
+  .downplay-flag{display:flex;align-items:flex-start;padding-top:8px}
+  .downplay-checkbox{width:22px;height:22px;border:1.5px solid var(--field-border);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:#fff}
+  .downplay-checkbox:hover{border-color:var(--call-reframe)}
+  .downplay-checkbox.checked{background:var(--call-reframe-bg);border-color:var(--call-reframe)}
+  .downplay-checkbox.checked::after{content:"!";font-weight:700;color:var(--call-reframe);font-size:14px}
+  .downplay-label{font-size:9px;font-weight:700;color:var(--call-reframe);letter-spacing:.06em;text-transform:uppercase;margin-top:4px;text-align:center;line-height:1.2;max-width:64px}
+  .audit-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:600px){.audit-cols{grid-template-columns:1fr}}
+  .audit-col{display:flex;flex-direction:column;gap:5px}
+  .audit-col label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+  .audit-col.needs label{color:var(--purple)}
+  .audit-col.have label{color:var(--plum)}
+  .audit-col textarea{min-height:90px;font-size:12px;padding:10px 12px}
+  .audit-gap-row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  @media(max-width:600px){.audit-gap-row{grid-template-columns:1fr}}
+  .audit-gap-row .audit-col label{color:var(--gold-dark)}
+  .audit-gap-row .audit-col.gap textarea{background:rgba(245,200,66,.04);border-color:rgba(245,200,66,.4)}
+  .audit-gap-row .audit-col.cost textarea{background:rgba(220,38,38,.03);border-color:rgba(220,38,38,.3)}
+  .audit-gap-row .audit-col.cost label{color:var(--call-reframe)}
+  .call-card{background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(74,59,140,.06));border:2px solid var(--gold);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .call-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;text-align:center}
+  .call-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum);text-align:center;margin-bottom:6px}
+  .call-q{font-size:13px;color:var(--purple);text-align:center;margin-bottom:18px;font-style:italic}
+  .call-buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px}
+  @media(max-width:600px){.call-buttons{grid-template-columns:1fr}}
+  .call-btn{background:#fff;border:1.5px solid var(--field-border);border-radius:10px;padding:14px 12px;cursor:pointer;text-align:left;font-family:inherit}
+  .call-btn .call-btn-name{font-size:13px;font-weight:700;color:var(--plum);margin-bottom:4px}
+  .call-btn .call-btn-desc{font-size:11px;color:#666;line-height:1.4;font-style:italic}
+  .call-btn[data-call=deploy]:hover{border-color:var(--call-deploy);background:rgba(22,163,74,.04)}
+  .call-btn[data-call=after]:hover{border-color:var(--call-after);background:rgba(217,119,6,.04)}
+  .call-btn[data-call=reframe]:hover{border-color:var(--call-reframe);background:rgba(220,38,38,.04)}
+  .call-btn.selected{border-width:2px}
+  .call-btn[data-call=deploy].selected{background:var(--call-deploy-bg);border-color:var(--call-deploy)}
+  .call-btn[data-call=deploy].selected .call-btn-name{color:var(--call-deploy)}
+  .call-btn[data-call=after].selected{background:var(--call-after-bg);border-color:var(--call-after)}
+  .call-btn[data-call=after].selected .call-btn-name{color:var(--call-after)}
+  .call-btn[data-call=reframe].selected{background:var(--call-reframe-bg);border-color:var(--call-reframe)}
+  .call-btn[data-call=reframe].selected .call-btn-name{color:var(--call-reframe)}
+  .ai-activity{background:var(--ai-bg);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .ai-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .ai-activity-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:10px}
+  .ai-activity-desc{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:24px;line-height:1.7}
+  .ai-step{background:rgba(255,255,255,.05);border:1px solid rgba(45,122,79,.4);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  .ai-step-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:8px}
+  .prompt-box{background:rgba(0,0,0,.35);border:1px solid rgba(45,122,79,.5);border-radius:8px;padding:12px 14px;margin:10px 0;font-size:12px;color:#A7F3D0;line-height:1.7;white-space:pre-wrap}
+  .prompt-label{font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+  .ai-field{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(45,122,79,.4);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fff;resize:vertical;min-height:80px;line-height:1.6;margin-top:8px}
+  .ai-lens{background:var(--ai-lens-bg);border-left:4px solid var(--ai-border);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .ai-lens-label{font-size:10px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+  .ai-lens-q{font-size:14px;font-weight:600;color:#14532D;margin-bottom:10px}
+  .ai-lens textarea{background:#fff;border-color:#A7F3D0;min-height:80px}
+  .peer-prep{background:var(--plum);border-radius:16px;padding:32px;margin-bottom:24px}
+  .peer-prep-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+  .peer-prep-title{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;margin-bottom:8px}
+  .peer-prep-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:18px;line-height:1.65}
+  .peer-questions-label{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .peer-q-list{list-style:none;padding:0;margin:0}
+  .peer-q-list li{font-size:14px;color:rgba(255,255,255,.92);line-height:1.6;padding:12px 0 12px 28px;position:relative;border-top:1px solid rgba(255,255,255,.12);font-family:'DM Serif Display',serif;font-style:italic}
+  .peer-q-list li:first-child{border-top:none}
+  .peer-q-list li::before{content:"→";position:absolute;left:0;top:12px;color:var(--gold);font-family:'DM Sans',sans-serif;font-style:normal;font-weight:700}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">The Data Foundation Audit</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Innovation and AI for Digital Transformation</div>
+    <div class="practical-badge">Week 4 · Practical 4 of 6</div>
+    <div class="heaviest-badge">Heaviest Week</div>
+  </div>
+  <h1 class="header-title">The Data Foundation <em>Audit</em></h1>
+  <p class="header-desc">For one stated AI use case. Five data dimensions: sources, quality, freshness, governance permissions, lineage. For each dimension: what the use case actually needs versus what the organisation actually has — with concrete evidence. The gap. The cost of closing it. At least one gap the organisation is currently downplaying. Then the recommended call to leadership: deploy now, deploy after foundation work, or do not deploy and reframe.</p>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The use case is the same one mapped in Week 3 — so the audit reads as the next layer down, not a fresh exercise.</li>
+      <li>For each dimension, 'data needed' describes what the use case actually requires — not what the organisation wishes was the requirement.</li>
+      <li>'Data have' cells contain concrete artefacts: a named system, a named data steward, a real lineage diagram, a documented audit.</li>
+      <li>At least one gap is flagged as currently downplayed — including the political reason it has been kept off the public agenda.</li>
+      <li>Cost of closing each gap is named in time, money, and dependency terms — so a CFO can size the trade-off without coming back for clarification.</li>
+      <li>The recommended call (deploy / after foundation / reframe) is defensible to a CFO who is going to ask 'why this call and not the other two'.</li>
+    </ul>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>1</span></div><div><div class="step-label">Step 1</div><div class="step-title">Frame the Use Case (Same as Week 3)</div></div></div>
+    <p class="step-desc">Use the same specific AI use case you mapped in the Week 3 Capability Map. The audit is the data layer underneath the capability layer. If the use case has changed since Week 3, name the change explicitly.</p>
+    <div class="usecase-card">
+      <div class="usecase-card-label">The Use Case</div>
+      <div class="usecase-card-q">The use case from Week 3 (or the revised version)</div>
+      <div class="field-block" style="margin-bottom:12px"><label>The Use Case</label><input type="text" name="use_case_short" placeholder="AI-handling 60% of inbound retail customer service contact across the UK retail bank by FY26 Q4."></div>
+      <div class="field-block"><label>Re-Scope Since Week 3 (if any)</label><textarea name="rescope_note" placeholder="If re-scoped, what changed and why."></textarea></div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>2</span></div><div><div class="step-label">Step 2</div><div class="step-title">Audit the Five Data Dimensions</div></div></div>
+    <p class="step-desc">Five dimensions. For each: what the use case needs, what the organisation actually has, the gap, and the cost of closing it. Mark at least one row as downplayed.</p>
+    <div class="audit-card">
+      <div class="audit-card-label">The Five-Dimension Data Foundation Audit</div>
+      <div class="audit-card-sub">For one specific AI use case · concrete evidence · cost-to-close named in time and money</div>
+      <div id="audit-rows"></div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>3</span></div><div><div class="step-label">Step 3</div><div class="step-title">Make the Defensible Call</div></div></div>
+    <p class="step-desc">The audit is data. The Practical is the call. Three options: deploy now, deploy after foundation work, or do not deploy and reframe. The call must address the audit.</p>
+    <div class="call-card">
+      <div class="call-label">The Recommended Call</div>
+      <div class="call-title">What is the call to leadership?</div>
+      <div class="call-q">Pick one. Then explain why this call is defensible against the audit.</div>
+      <div class="call-buttons">
+        <button type="button" class="call-btn" data-call="deploy"><div class="call-btn-name">Deploy Now</div><div class="call-btn-desc">Use case proceeds as scoped, in parallel with foundation work.</div></button>
+        <button type="button" class="call-btn" data-call="after"><div class="call-btn-name">Deploy After Foundation</div><div class="call-btn-desc">Use case re-sequenced; foundation work first, then deploy.</div></button>
+        <button type="button" class="call-btn" data-call="reframe"><div class="call-btn-name">Do Not Deploy / Reframe</div><div class="call-btn-desc">Use case as scoped is not deliverable; reframe required.</div></button>
+      </div>
+      <input type="hidden" name="recommended_call" value="">
+      <div class="field-block" style="margin-top:8px"><label>Why this call is defensible against the audit</label><textarea name="call_rationale" placeholder="The defensible call is..."></textarea></div>
+      <div class="field-block" style="margin-top:12px"><label>The Sequenced Foundation Workstream (the conditions for deploying)</label><textarea name="foundation_workstream" placeholder="Workstreams that must complete before deploying, with dates and owners."></textarea></div>
+    </div>
+  </div>
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Audit and the Call</h2>
+    <p class="ai-activity-desc">Data Foundation Audits fail in two predictable places — the 'data have' column is scoped to data the practitioner has line-of-sight to (so structural gaps are mistaken for inventory gaps), and the recommended call is the one most palatable to the current sponsor rather than the one the audit actually supports.</p>
+    <div class="ai-step">
+      <div class="ai-step-title">Test Whether the Audit Inventoried the Real Data Estate</div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I have audited five data dimensions for an AI use case. The 'data have' cells are: [paste]. Pressure-test: (1) For each row, am I describing what exists across the organisation — including data held by adjacent functions, legacy systems, third-party processors, and shadow datasets — or what I personally have line-of-sight to? (2) For each row, is there a system, processor, or function I should have asked but did not? Name it. (3) The data I described as 'not present' — is any of it actually present somewhere I have not looked? Tell me which row's inventory is most likely to be incomplete.</div>
+      <textarea class="ai-field" placeholder="Where is the inventory incomplete? Who should I ask before submission?"></textarea>
+    </div>
+    <div class="ai-step">
+      <div class="ai-step-title">Test Whether the Call Is the One the Audit Supports</div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My audit identifies these structural gaps: [paste]. My recommended call is [deploy now / deploy after / reframe]. Rationale: [paste]. Pressure-test: (1) Imagine the audit was identical but the practitioner had no political relationship with the current sponsor. Would the call still be the same? (2) Imagine the audit identified one fewer structural gap. Would the call still be the same? (3) The call I did not pick that would have been more aggressive — what is the one piece of audit evidence that, if 30% worse than written, would force me to that other call? Tell me where the call is sponsor-aware rather than audit-driven.</div>
+      <textarea class="ai-field" placeholder="Where is the call sponsor-aware? What is the audit-only version?"></textarea>
+    </div>
+  </div>
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Twelve months from now, when the foundation workstream has run for nine months and the regulator response has come back — which dimension of this audit will have aged worst, and which gap that you flagged today will be the one the regulator will have asked about that nobody on the executive committee was prepared for?</div>
+    <textarea placeholder="The dimension most likely to age worst..."></textarea>
+  </div>
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Data Foundation Audits fall apart at the same place every time — the 'data have' column ends up describing the practitioner's line-of-sight rather than the organisation's actual inventory, and the recommended call is sponsor-aware rather than audit-driven. This is the heaviest week of the Journey — bring it to your peer-to-peer call with extra time scheduled.</p>
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of your five 'data have' cells, which one is most likely to be your line-of-sight rather than the organisation's actual data estate? Who should you have asked, and have you?</li>
+      <li>The downplayed gap you flagged — can you name the specific person or function who would be uncomfortable if it became a board agenda item this quarter?</li>
+      <li>If one piece of audit evidence got 30% worse, which call would you escalate to? If you cannot answer that, the call is not falsifiable.</li>
+    </ul>
+  </div>
+</div>
+<script>
+const dimensions = [
+  { num: '01', name: 'Sources', helper: 'The data sources the use case requires. Where the data lives, who controls it, what systems hold it.' },
+  { num: '02', name: 'Quality', helper: 'Completeness, accuracy, coverage. Whether the data is fit for the use case, not just present.' },
+  { num: '03', name: 'Freshness & Latency', helper: 'How current the data needs to be to drive the use case. Real-time, near-real-time, daily, weekly.' },
+  { num: '04', name: 'Governance Permissions', helper: 'Legal, regulatory, contractual permissions to use the data for this purpose. GDPR, sector regulators, customer consent.' },
+  { num: '05', name: 'Lineage & Auditability', helper: 'The traceability of the data from source through transformation to use. Required for model audit, regulator response.' }
+];
+const root = document.getElementById('audit-rows');
+dimensions.forEach((d, i) => {
+  const n = i + 1;
+  const div = document.createElement('div');
+  div.className = 'audit-row';
+  div.innerHTML = `
+    <div class="audit-row-header">
+      <div class="audit-num">${d.num}</div>
+      <div class="audit-name-block">
+        <div class="audit-dim-label">Dimension ${n}</div>
+        <div class="audit-dim-name">${d.name}</div>
+        <div class="audit-dim-helper">${d.helper}</div>
+      </div>
+      <div class="downplay-flag">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div class="downplay-checkbox" data-dim="${n}"></div>
+          <div class="downplay-label">Downplayed</div>
+        </div>
+        <input type="hidden" name="dim_${n}_downplayed" value="false">
+      </div>
+    </div>
+    <div class="audit-cols">
+      <div class="audit-col needs"><label>Data the use case needs</label><textarea name="dim_${n}_needs"></textarea></div>
+      <div class="audit-col have"><label>Data the organisation actually has</label><textarea name="dim_${n}_have"></textarea></div>
+    </div>
+    <div class="audit-gap-row">
+      <div class="audit-col gap"><label>Gap</label><textarea name="dim_${n}_gap"></textarea></div>
+      <div class="audit-col cost"><label>Cost to Close</label><textarea name="dim_${n}_cost"></textarea></div>
+    </div>
+  `;
+  root.appendChild(div);
+});
+document.querySelectorAll('.downplay-checkbox').forEach(box => {
+  box.addEventListener('click', () => {
+    const dim = box.dataset.dim;
+    box.classList.toggle('checked');
+    const hidden = document.querySelector('[name="dim_' + dim + '_downplayed"]');
+    if (hidden) hidden.value = box.classList.contains('checked') ? 'true' : 'false';
+  });
+});
+document.querySelectorAll('.call-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.call-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    const hidden = document.querySelector('[name="recommended_call"]');
+    if (hidden) hidden.value = btn.dataset.call;
+  });
+});
+function submitPractical() {
+  if (!confirm("Submit Practical 4? Once submitted, you can still edit until end of Week 4. After Week 4 (the heaviest week) closes, the submission is locked.")) return;
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W4_HEAVIEST)");
+}
+</script>
+</body>
+</html>

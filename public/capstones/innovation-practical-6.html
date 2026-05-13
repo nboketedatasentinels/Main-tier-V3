@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Transformation Operating Model + Lessons Synthesis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; --ai-lens-bg:#F0FBF5; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em;display:block}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em;display:block}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+  .practical-badge{display:inline-block;background:rgba(107,91,181,.3);border:1px solid rgba(107,91,181,.5);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:#C4B8FF;letter-spacing:.1em;text-transform:uppercase}
+  .capstone-badge{display:inline-block;background:rgba(245,200,66,.4);border:1px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:700;color:var(--plum);letter-spacing:.1em;text-transform:uppercase}
+  .header-title{font-family:'DM Serif Display',serif;font-size:36px;color:#fff;line-height:1.15;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-desc{font-size:14px;color:rgba(255,255,255,.7);max-width:680px;line-height:1.7}
+  .content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+  .capstone-callout{background:var(--plum);border-radius:12px;padding:18px 22px;margin-bottom:24px;display:grid;grid-template-columns:44px 1fr;gap:16px;align-items:start}
+  .capstone-icon{width:36px;height:36px;background:var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center}
+  .capstone-callout-text .cc-tag{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .capstone-callout-text .cc-body{font-size:13px;color:rgba(255,255,255,.85);line-height:1.6}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--plum);margin-bottom:10px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:4px 0 4px 18px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .step-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .step-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px}
+  .step-num-badge{width:44px;height:44px;background:var(--plum);border:2px solid var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step-num-badge span{font-weight:700;font-size:16px;color:var(--gold);font-family:'DM Serif Display',serif}
+  .step-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .step-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum)}
+  .step-desc{font-size:13px;color:#666;margin-bottom:20px;line-height:1.7}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:88px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  input[type=text]{width:100%;background:#fff;border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum)}
+  input[type=text]:focus{outline:none;border-color:var(--purple-light)}
+  .audience-card{background:rgba(74,59,140,.06);border:1.5px solid var(--purple-light);border-radius:12px;padding:18px 22px;margin-bottom:20px}
+  .audience-card-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .audience-card-q{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:6px}
+  .audience-card-helper{font-size:12px;color:#666;line-height:1.55;margin-bottom:12px;font-style:italic}
+  .audience-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.audience-grid{grid-template-columns:1fr}}
+  .field-block{display:flex;flex-direction:column;gap:6px}
+  .field-block label{font-size:11px;font-weight:700;color:var(--plum);letter-spacing:.05em;text-transform:uppercase}
+  .om-card{background:linear-gradient(135deg,rgba(74,59,140,.04),rgba(245,200,66,.04));border:1.5px solid var(--field-border);border-radius:16px;padding:24px 28px;margin-bottom:16px}
+  .om-card-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;text-align:center}
+  .om-card-sub{font-size:12px;color:#666;text-align:center;margin-bottom:22px;font-style:italic}
+  .om-section{background:#fff;border:1.5px solid var(--field-border);border-radius:12px;padding:18px 20px 16px;margin-bottom:12px;display:grid;grid-template-columns:56px 1fr;gap:18px;align-items:start}
+  @media(max-width:600px){.om-section{grid-template-columns:1fr}}
+  .om-num{font-family:'DM Serif Display',serif;font-style:italic;font-size:32px;color:var(--gold-dark);line-height:1;padding-top:4px}
+  .om-body{display:flex;flex-direction:column;gap:6px}
+  .om-name{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum)}
+  .om-helper{font-size:12px;color:#666;line-height:1.5;font-style:italic;margin-bottom:8px}
+  .om-section textarea{min-height:130px;font-size:12px;padding:10px 12px}
+  .om-tag{display:inline-block;font-size:10px;font-weight:700;color:var(--gold-dark);background:rgba(245,200,66,.12);border:1px solid rgba(245,200,66,.4);border-radius:12px;padding:3px 10px;letter-spacing:.06em;text-transform:uppercase;align-self:flex-start;margin-bottom:6px}
+  .word-counter{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#888;padding:0 4px;margin-top:4px}
+  .word-counter .count{font-weight:700}
+  .synthesis-card{background:linear-gradient(135deg,rgba(245,200,66,.08),rgba(74,59,140,.06));border:2px solid var(--gold);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .synthesis-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;text-align:center}
+  .synthesis-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum);text-align:center;margin-bottom:6px}
+  .synthesis-q{font-size:13px;font-weight:500;color:var(--purple);text-align:center;margin-bottom:16px;font-style:italic}
+  .synthesis-helper{font-size:12px;color:#555;line-height:1.65;margin-bottom:16px;padding:14px 16px;background:rgba(255,255,255,.5);border-radius:8px;border-left:3px solid var(--gold)}
+  .synthesis-card textarea{min-height:160px;background:#fff;border-color:var(--field-border)}
+  .ai-activity{background:var(--ai-bg);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .ai-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .ai-activity-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:10px}
+  .ai-activity-desc{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:24px;line-height:1.7}
+  .ai-step{background:rgba(255,255,255,.05);border:1px solid rgba(45,122,79,.4);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  .ai-step-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:8px}
+  .prompt-box{background:rgba(0,0,0,.35);border:1px solid rgba(45,122,79,.5);border-radius:8px;padding:12px 14px;margin:10px 0;font-size:12px;color:#A7F3D0;line-height:1.7;white-space:pre-wrap}
+  .prompt-label{font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+  .ai-field{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(45,122,79,.4);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fff;resize:vertical;min-height:80px;line-height:1.6;margin-top:8px}
+  .ai-lens{background:var(--ai-lens-bg);border-left:4px solid var(--ai-border);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .ai-lens-label{font-size:10px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+  .ai-lens-q{font-size:14px;font-weight:600;color:#14532D;margin-bottom:10px}
+  .ai-lens textarea{background:#fff;border-color:#A7F3D0;min-height:80px}
+  .peer-prep{background:var(--plum);border-radius:16px;padding:32px;margin-bottom:24px}
+  .peer-prep-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+  .peer-prep-title{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;margin-bottom:8px}
+  .peer-prep-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:18px;line-height:1.65}
+  .peer-questions-label{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .peer-q-list{list-style:none;padding:0;margin:0}
+  .peer-q-list li{font-size:14px;color:rgba(255,255,255,.92);line-height:1.6;padding:12px 0 12px 28px;position:relative;border-top:1px solid rgba(255,255,255,.12);font-family:'DM Serif Display',serif;font-style:italic}
+  .peer-q-list li:first-child{border-top:none}
+  .peer-q-list li::before{content:"→";position:absolute;left:0;top:12px;color:var(--gold);font-family:'DM Sans',sans-serif;font-style:normal;font-weight:700}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">The Transformation Operating Model + Lessons Synthesis</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Innovation and AI for Digital Transformation</div>
+    <div class="practical-badge">Week 6 · Practical 6 of 6</div>
+    <div class="capstone-badge">Capstone</div>
+  </div>
+  <h1 class="header-title">The Transformation <em>Operating Model</em></h1>
+  <p class="header-desc">A six-section operating model for the AI-era transformation. The AI Operating Hour discipline (Week 1). The Transformation Thesis (Week 2). The Capability Map (Week 3). The Data Foundation Audit (Week 4 — the heaviest week). The Adoption Curve Read (Week 5). The AI Integration section (judgement, not adoption). One running document, 1,500–2,000 words. Plus the Lessons Synthesis paragraph that names what has integrated across the six weeks.</p>
+</div>
+<div class="content">
+  <div class="capstone-callout">
+    <div class="capstone-icon"><svg viewBox="0 0 18 18" width="18" height="18" fill="none"><path d="M9 1L11.5 6.5L17 7.5L13 11.5L14 17L9 14.5L4 17L5 11.5L1 7.5L6.5 6.5L9 1Z" fill="#1A1726" stroke="#1A1726" stroke-width="0.8" stroke-linejoin="round"/></svg></div>
+    <div class="capstone-callout-text">
+      <div class="cc-tag">Capstone · Week 6 · Single Artefact · Closes Module 2</div>
+      <div class="cc-body">Innovation and AI for Digital Transformation is the only LIFT pillar with a single-Capstone structure. The six-section Operating Model is one running document, not two paired plans. 50% of the competence pass weighting sits on this artefact. Submission triggers the 7,000-point Module 2 payout.</div>
+    </div>
+  </div>
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The six sections read as one running document with through-lines between them — not six exercises stapled together.</li>
+      <li>Each section draws on the actual Practical from its corresponding week — same use case, refined and integrated.</li>
+      <li>Total length is 1,500–2,000 words.</li>
+      <li>The Operating Model could be handed to an incoming CEO with no context, and would survive scrutiny without the practitioner in the room.</li>
+      <li>The AI Integration section names what was kept, what was rejected, and why — evaluative judgement, not summary.</li>
+      <li>The Lessons Synthesis names a pattern the practitioner did not see clearly in Week 1.</li>
+    </ul>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>1</span></div><div><div class="step-label">Step 1</div><div class="step-title">Name the Audience for the Operating Model</div></div></div>
+    <p class="step-desc">Before the six sections, name the audience. Same reader frame as the imagined incoming CEO from the Week 2 Transformation Thesis.</p>
+    <div class="audience-card">
+      <div class="audience-card-label">The Audience</div>
+      <div class="audience-card-q">Who is this Operating Model written for?</div>
+      <div class="audience-card-helper">A real or hypothetical senior executive whose accountability is the transformation outcome.</div>
+      <div class="audience-grid">
+        <div class="field-block"><label>Audience — Role and Name</label><input type="text" name="audience_role" placeholder="Group CFO — M. Daniels (current sponsor), written so an externally-appointed CEO arriving in 6 months could read this without the previous-sponsor context."></div>
+        <div class="field-block"><label>What This Audience Will Do With It</label><input type="text" name="audience_use" placeholder="Make capital allocation decisions for FY27; brief the board on the rollout's status against thesis."></div>
+      </div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>2</span></div><div><div class="step-label">Step 2</div><div class="step-title">Write the Six-Section Operating Model</div></div></div>
+    <p class="step-desc">Six sections, one running document. Total target length is 1,500–2,000 words across the six combined.</p>
+    <div class="om-card">
+      <div class="om-card-label">The Transformation Operating Model</div>
+      <div class="om-card-sub">Six sections · one running document · 1,500–2,000 words</div>
+      <div id="sections"></div>
+    </div>
+    <div style="background:rgba(74,59,140,.04);border:1.5px solid var(--purple-light);border-radius:10px;padding:14px 18px;margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+      <div><div style="font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase">Total Operating Model</div><div style="font-size:12px;color:#666;margin-top:2px;font-style:italic">Target: 1,500–2,000 words across the six sections</div></div>
+      <div style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--plum)"><span id="total-words">0</span> words</div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>3</span></div><div><div class="step-label">Step 3</div><div class="step-title">The Lessons Synthesis</div></div></div>
+    <p class="step-desc">One paragraph that names the pattern across the six practicals — something you did not see clearly in Week 1. Not professional-development reflection. Not a summary of each Practical. The pattern.</p>
+    <div class="synthesis-card">
+      <div class="synthesis-label">Lessons Synthesis</div>
+      <div class="synthesis-title">What pattern do you see across the six practicals?</div>
+      <div class="synthesis-q">A pattern you did not see in Week 1 — not a summary, not generic reflection.</div>
+      <div class="synthesis-helper">A peer reading the Synthesis should be able to see the pattern as a real shift. If the paragraph could have been written in Week 1, the pattern is not yet integrated.</div>
+      <textarea name="lessons_synthesis" placeholder="The pattern across the six practicals..."></textarea>
+    </div>
+  </div>
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Capstone Before You Submit</h2>
+    <p class="ai-activity-desc">Operating Models fail in two predictable places — the six sections sit beside each other rather than building on each other, and the Lessons Synthesis is reflection-language rather than pattern-language. The Capstone is 50% of the competence pass; use AI before submission.</p>
+    <div class="ai-step">
+      <div class="ai-step-title">Test Whether the Six Sections Read as One Document</div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">Six-section Operating Model: (1) AI Operating Hour, (2) Thesis, (3) Capability Map, (4) Foundation Audit, (5) Adoption Curve Read, (6) AI Integration. Full Model: [paste]. Pressure-test: (1) Do the sections build on each other or sit beside each other? (2) If the executive read only sections 4 and 5, would they understand the connection to sections 2 and 3? (3) Are there sentences that could have been written in Week 1?</div>
+      <textarea class="ai-field" placeholder="Where does the Model not yet read as one document?"></textarea>
+    </div>
+    <div class="ai-step">
+      <div class="ai-step-title">Test the Lessons Synthesis for Pattern, Not Reflection</div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My Synthesis paragraph: [paste]. Pressure-test: (1) Could this have been written in Week 1 with 'I am about to learn' replacing 'I learned'? (2) Does it reference at least four of the six practicals by their actual content? (3) Is the pattern specific to how the six pieces of work integrated, or a paraphrase of the Journey description? Tell me where the Synthesis is reflection, not pattern.</div>
+      <textarea class="ai-field" placeholder="Where is the Synthesis reflection rather than pattern?"></textarea>
+    </div>
+  </div>
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Twelve months from now, when the foundation work has run for nine of the twelve months it needs and the conduct-complaint multiple has either passed or failed the runnable test — which section of this Operating Model will have aged worst, and which will have held?</div>
+    <textarea placeholder="The section most likely to age worst is..."></textarea>
+  </div>
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Operating Models fall apart at the same place every time — the six sections sit beside each other rather than building on each other, and the Lessons Synthesis is reflection-language rather than pattern-language. This is the single Capstone of the Journey — 50% of the competence pass weighting — bring it with extra time scheduled.</p>
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The six sections — if you covered up the section labels, could your peer still tell which section was which from the language alone?</li>
+      <li>The AI Integration section — is the judgement evaluative (kept, rejected, why) or descriptive (summarises what AI suggested)?</li>
+      <li>The Lessons Synthesis — can your peer state the pattern back to you in one sentence in their own words?</li>
+    </ul>
+  </div>
+</div>
+<script>
+const sections = [
+  { num: '01', tag: 'Drawing on Week 1', name: 'AI Operating Hour Discipline', helper: 'Cadence, what the lens tests, what has shifted in decision-making.', suggested: '150–250 words' },
+  { num: '02', tag: 'Drawing on Week 2', name: 'Transformation Thesis', helper: 'Defensible to an incoming CEO. Stated outcome, dependent claims, runnable test.', suggested: '250–350 words' },
+  { num: '03', tag: 'Drawing on Week 3', name: 'Capability Map', helper: 'Five-row map summarised. Gaps named. The downplayed gap surfaced.', suggested: '200–300 words' },
+  { num: '04', tag: 'Drawing on Week 4', name: 'Data Foundation Audit', helper: 'Five-dimension audit. The downplayed gap. Cost to close. Recommended call.', suggested: '280–380 words' },
+  { num: '05', tag: 'Drawing on Week 5', name: 'Adoption Curve Read', helper: 'Cited metric, what it masks, genuine signal, shift signals, recommended action.', suggested: '250–350 words' },
+  { num: '06', tag: 'The AI Integration Section', name: 'AI Integration — Judgement, Not Adoption', helper: 'One Digital Edge exercise. Kept, rejected, why. Evaluative judgement.', suggested: '250–350 words' }
+];
+const root = document.getElementById('sections');
+sections.forEach((s, i) => {
+  const n = i + 1;
+  const div = document.createElement('div');
+  div.className = 'om-section';
+  div.innerHTML = `
+    <div class="om-num">${s.num}</div>
+    <div class="om-body">
+      <span class="om-tag">${s.tag}</span>
+      <div class="om-name">${s.name}</div>
+      <div class="om-helper">${s.helper}</div>
+      <textarea name="section_${n}" placeholder="Write section ${n}..."></textarea>
+      <div class="word-counter"><span>Suggested: ${s.suggested}</span><span><span class="count" data-section="${n}">0</span> words</span></div>
+    </div>
+  `;
+  root.appendChild(div);
+});
+function countWords(text) { if (!text) return 0; const t = text.trim(); return t ? t.split(/\s+/).length : 0; }
+function updateAllCounts() {
+  let total = 0;
+  for (let i = 1; i <= 6; i++) {
+    const field = document.querySelector('[name="section_' + i + '"]');
+    const counter = document.querySelector('[data-section="' + i + '"]');
+    if (field && counter) {
+      const w = countWords(field.value);
+      counter.textContent = w;
+      total += w;
+    }
+  }
+  const totalEl = document.getElementById('total-words');
+  if (totalEl) {
+    totalEl.textContent = total;
+    totalEl.style.color = (total >= 1500 && total <= 2000) ? '#16A34A' : (total > 0 ? '#D97706' : '#1A1726');
+  }
+}
+for (let i = 1; i <= 6; i++) {
+  const field = document.querySelector('[name="section_' + i + '"]');
+  if (field) field.addEventListener('input', updateAllCounts);
+}
+updateAllCounts();
+function submitPractical() {
+  let total = 0;
+  for (let i = 1; i <= 6; i++) {
+    const el = document.querySelector('[name="section_' + i + '"]');
+    if (el) total += countWords(el.value);
+  }
+  let warnings = [];
+  if (total < 1500) warnings.push("Operating Model is " + total + " words — target is 1,500–2,000.");
+  if (total > 2000) warnings.push("Operating Model is " + total + " words — target is 1,500–2,000.");
+  if (warnings.length > 0 && !confirm(warnings.join("\n") + "\n\nSubmit anyway?")) return;
+  if (!confirm("Submit Practical 6 (the Capstone)? This triggers the 7,000-point Module 2 payout.")) return;
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W6_CAPSTONE_MODULE2_CLOSE)");
+}
+</script>
+</body>
+</html>

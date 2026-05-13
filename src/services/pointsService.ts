@@ -156,7 +156,7 @@ export async function awardChecklistPoints(params: {
   activity: ActivityDef;
   source?: string;
   claimRef?: string;
-}) {
+}): Promise<{ awarded: boolean; reason?: 'already_awarded' }> {
   const { uid, journeyType, weekNumber, activity, source = "weekly_checklist", claimRef } = params;
 
   if (!uid) throw new Error('[PointsService] uid is required')
@@ -243,7 +243,7 @@ export async function awardChecklistPoints(params: {
     // is still preserved by the deterministic ledger doc id below.
     const bypassLimits = source === 'partner_issued';
 
-    await runTransactionWithRetry(async (tx) => {
+    const awarded = await runTransactionWithRetry<boolean>(async (tx) => {
       const [ledgerDoc, progressDoc, userDoc, profileDoc] = await Promise.all([
         tx.get(ledgerRef),
         tx.get(progressRef),
@@ -251,7 +251,7 @@ export async function awardChecklistPoints(params: {
         tx.get(doc(db, "profiles", uid)),
       ]);
 
-      if (ledgerDoc.exists()) return;
+      if (ledgerDoc.exists()) return false;
 
       if (!bypassLimits) {
         if (limits.maxPerWeek && weeklyActivitySnapshot.size >= limits.maxPerWeek) {
@@ -290,9 +290,17 @@ export async function awardChecklistPoints(params: {
         status = "alert";
       }
 
-      const currentTotal = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
-      const totalPoints = Math.max(0, currentTotal + activity.points);
-      const level = calculateLevel(totalPoints);
+      // CRITICAL: never derive an absolute totalPoints from a single mirror doc
+      // and write it back — that clobbers the other mirror if the two have
+      // drifted (e.g., users.totalPoints stale at 0 while profiles.totalPoints
+      // is the reconciled 3500 from the ledger). pointsLedger is canonical;
+      // both mirrors are best-effort projections of the ledger sum. We adjust
+      // each mirror by the delta atomically via increment() so neither can
+      // overwrite the other's value.
+      const userTotalBaseline = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
+      const profileTotalBaseline = profileDoc.exists() ? (profileDoc.data()?.totalPoints ?? 0) : 0;
+      const projectedTotal = Math.max(userTotalBaseline, profileTotalBaseline, 0) + activity.points;
+      const level = calculateLevel(projectedTotal);
 
       if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
         await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
@@ -339,7 +347,7 @@ export async function awardChecklistPoints(params: {
       }, 100);
 
       const profileUpdate = {
-        totalPoints,
+        totalPoints: increment(activity.points),
         level,
         pointsVersion: increment(1),
         updatedAt: serverTimestamp(),
@@ -389,7 +397,13 @@ export async function awardChecklistPoints(params: {
           });
         }
       });
+
+      return true;
     });
+
+    if (!awarded) {
+      return { awarded: false, reason: 'already_awarded' };
+    }
 
     // Post-transaction logic
     // Record user activity for accurate "last active" tracking
@@ -415,6 +429,8 @@ export async function awardChecklistPoints(params: {
         await awardBadge(uid, 'peer-collaborator');
       }
     }
+
+    return { awarded: true };
   } catch (error) {
     console.error("🔴 [Points] Failed to award checklist points", error);
     throw error;
@@ -527,10 +543,11 @@ export async function revokeChecklistPoints(params: {
     const clusterId = profileData?.clusterId || null;
 
     await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc, userDoc] = await Promise.all([
+      const [ledgerDoc, progressDoc, userDoc, profileDoc] = await Promise.all([
         tx.get(ledgerRef),
         tx.get(progressRef),
         tx.get(doc(db, "users", uid)),
+        tx.get(doc(db, "profiles", uid)),
       ]);
 
       if (!ledgerDoc.exists()) return;
@@ -548,9 +565,14 @@ export async function revokeChecklistPoints(params: {
       else if (ratio >= 0.75) status = "warning";
       else status = "alert";
 
-      const currentTotal = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
-      const totalPoints = Math.max(0, currentTotal - ledgerPoints);
-      const level = calculateLevel(totalPoints);
+      // See note in awardChecklistPoints: never overwrite an absolute totalPoints
+      // computed from one mirror doc — it clobbers the other if they have drifted.
+      // Adjust by the delta via increment(); compute level optimistically from the
+      // higher of the two mirrors so it reflects post-revoke best-estimate.
+      const userTotalBaseline = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
+      const profileTotalBaseline = profileDoc.exists() ? (profileDoc.data()?.totalPoints ?? 0) : 0;
+      const projectedTotal = Math.max(0, Math.max(userTotalBaseline, profileTotalBaseline) - ledgerPoints);
+      const level = calculateLevel(projectedTotal);
 
       if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
         await updateWindowOnRevoke(tx, { uid, journeyType, weekNumber, activity });
@@ -586,14 +608,18 @@ export async function revokeChecklistPoints(params: {
       }, 100);
 
       const profileUpdate = {
-        totalPoints,
+        totalPoints: increment(-ledgerPoints),
         level,
         pointsVersion: increment(1),
         updatedAt: serverTimestamp(),
       };
 
-      tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
-      tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+      if (userDoc.exists()) {
+        tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
+      }
+      if (profileDoc.exists()) {
+        tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
+      }
 
       // Record transaction for leaderboard and activity feeds
       tx.set(doc(collection(db, "points_transactions")), {

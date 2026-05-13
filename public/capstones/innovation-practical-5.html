@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Adoption Curve Reading</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; --ai-lens-bg:#F0FBF5; --signal-up:#16A34A; --signal-up-bg:#DCFCE7; --signal-down:#DC2626; --signal-down-bg:#FEE2E2; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em;display:block}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em;display:block}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .badge-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase}
+  .practical-badge{display:inline-block;background:rgba(107,91,181,.3);border:1px solid rgba(107,91,181,.5);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:#C4B8FF;letter-spacing:.1em;text-transform:uppercase}
+  .header-title{font-family:'DM Serif Display',serif;font-size:36px;color:#fff;line-height:1.15;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-desc{font-size:14px;color:rgba(255,255,255,.7);max-width:680px;line-height:1.7}
+  .content{max-width:860px;margin:0 auto;padding:36px 24px 60px}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:18px 22px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:17px;color:var(--plum);margin-bottom:10px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:4px 0 4px 18px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .step-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .step-header{display:flex;align-items:flex-start;gap:16px;margin-bottom:16px}
+  .step-num-badge{width:44px;height:44px;background:var(--plum);border:2px solid var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .step-num-badge span{font-weight:700;font-size:16px;color:var(--gold);font-family:'DM Serif Display',serif}
+  .step-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .step-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum)}
+  .step-desc{font-size:13px;color:#666;margin-bottom:20px;line-height:1.7}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:88px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  input[type=text]{width:100%;background:#fff;border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum)}
+  input[type=text]:focus{outline:none;border-color:var(--purple-light)}
+  .metric-card{background:linear-gradient(135deg,rgba(74,59,140,.06),rgba(245,200,66,.06));border:2px solid var(--gold);border-radius:16px;padding:28px 32px;margin-bottom:16px}
+  .metric-card-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;text-align:center}
+  .metric-card-q{font-size:14px;font-weight:600;color:var(--plum);text-align:center;margin-bottom:14px}
+  .metric-display{background:#fff;border:1.5px solid var(--field-border);border-radius:10px;padding:18px 22px;text-align:center;margin-bottom:12px}
+  .metric-value-input{width:100%;text-align:center;border:1.5px dashed var(--field-border);border-radius:8px;padding:10px;font-family:'DM Serif Display',serif;font-size:28px;color:var(--plum);background:#fff}
+  .metric-value-input:focus{outline:none;border-color:var(--gold)}
+  .metric-context{font-size:12px;color:#666;margin-top:8px}
+  .metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+  @media(max-width:600px){.metric-grid{grid-template-columns:1fr}}
+  .field-block{display:flex;flex-direction:column;gap:6px}
+  .field-block label{font-size:11px;font-weight:700;color:var(--plum);letter-spacing:.05em;text-transform:uppercase}
+  .substep-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  @media(max-width:600px){.substep-grid{grid-template-columns:1fr}}
+  .substep-card{background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:12px;padding:16px 18px}
+  .substep-header{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .substep-dot{width:28px;height:28px;background:var(--purple);border-radius:8px;display:flex;align-items:center;justify-content:center}
+  .substep-dot span{font-size:10px;font-weight:700;color:#fff}
+  .substep-label{font-size:12px;font-weight:600;color:var(--purple)}
+  .substep-body{font-size:12px;color:#666;margin-bottom:10px}
+  .substep-card textarea{background:#fff;min-height:80px}
+  .read-card{background:linear-gradient(135deg,rgba(74,59,140,.04),rgba(245,200,66,.04));border:1.5px solid var(--field-border);border-radius:16px;padding:24px 28px;margin-bottom:16px}
+  .read-card-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px;text-align:center}
+  .read-card-sub{font-size:12px;color:#666;text-align:center;margin-bottom:22px;font-style:italic}
+  .read-section{background:#fff;border:1.5px solid var(--field-border);border-radius:12px;padding:18px 20px 16px;margin-bottom:12px;display:grid;grid-template-columns:56px 1fr;gap:18px;align-items:start}
+  @media(max-width:600px){.read-section{grid-template-columns:1fr}}
+  .read-num{font-family:'DM Serif Display',serif;font-style:italic;font-size:32px;color:var(--gold-dark);line-height:1;padding-top:4px}
+  .read-body{display:flex;flex-direction:column;gap:6px}
+  .read-name{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum)}
+  .read-helper{font-size:12px;color:#666;line-height:1.5;font-style:italic;margin-bottom:8px}
+  .read-section textarea{min-height:100px;font-size:12px;padding:10px 12px}
+  .signals-card{background:rgba(74,59,140,.04);border:1.5px solid var(--field-border);border-radius:12px;padding:20px 22px;margin-bottom:16px}
+  .signals-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px;text-align:center}
+  .signals-q{font-size:14px;font-weight:600;color:var(--plum);text-align:center;margin-bottom:6px}
+  .signals-helper{font-size:12px;color:#666;line-height:1.55;margin-bottom:14px;font-style:italic;text-align:center}
+  .signals-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.signals-grid{grid-template-columns:1fr}}
+  .signal-col{background:#fff;border-radius:10px;padding:16px 18px}
+  .signal-col.up{border:1.5px solid var(--signal-up);background:rgba(22,163,74,.03)}
+  .signal-col.down{border:1.5px solid var(--signal-down);background:rgba(220,38,38,.03)}
+  .signal-col-label{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px}
+  .signal-col.up .signal-col-label{color:var(--signal-up)}
+  .signal-col.down .signal-col-label{color:var(--signal-down)}
+  .signal-col-helper{font-size:11px;color:#666;line-height:1.45;font-style:italic;margin-bottom:10px}
+  .signal-col textarea{min-height:110px;background:#fff}
+  .action-card{background:rgba(245,200,66,.06);border:1.5px solid var(--gold);border-radius:12px;padding:20px 22px;margin-bottom:24px}
+  .action-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .action-q{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:6px}
+  .action-helper{font-size:12px;color:#666;line-height:1.55;margin-bottom:12px;font-style:italic}
+  .ai-activity{background:var(--ai-bg);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .ai-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .ai-activity-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:10px}
+  .ai-activity-desc{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:24px;line-height:1.7}
+  .ai-step{background:rgba(255,255,255,.05);border:1px solid rgba(45,122,79,.4);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+  .ai-step-title{font-size:14px;font-weight:600;color:#fff;margin-bottom:8px}
+  .prompt-box{background:rgba(0,0,0,.35);border:1px solid rgba(45,122,79,.5);border-radius:8px;padding:12px 14px;margin:10px 0;font-size:12px;color:#A7F3D0;line-height:1.7;white-space:pre-wrap}
+  .prompt-label{font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px}
+  .ai-field{width:100%;background:rgba(255,255,255,.06);border:1.5px solid rgba(45,122,79,.4);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fff;resize:vertical;min-height:80px;line-height:1.6;margin-top:8px}
+  .ai-lens{background:var(--ai-lens-bg);border-left:4px solid var(--ai-border);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .ai-lens-label{font-size:10px;font-weight:700;color:#166534;letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+  .ai-lens-q{font-size:14px;font-weight:600;color:#14532D;margin-bottom:10px}
+  .ai-lens textarea{background:#fff;border-color:#A7F3D0;min-height:80px}
+  .peer-prep{background:var(--plum);border-radius:16px;padding:32px;margin-bottom:24px}
+  .peer-prep-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+  .peer-prep-title{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;margin-bottom:8px}
+  .peer-prep-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:18px;line-height:1.65}
+  .peer-questions-label{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .peer-q-list{list-style:none;padding:0;margin:0}
+  .peer-q-list li{font-size:14px;color:rgba(255,255,255,.92);line-height:1.6;padding:12px 0 12px 28px;position:relative;border-top:1px solid rgba(255,255,255,.12);font-family:'DM Serif Display',serif;font-style:italic}
+  .peer-q-list li:first-child{border-top:none}
+  .peer-q-list li::before{content:"→";position:absolute;left:0;top:12px;color:var(--gold);font-family:'DM Sans',sans-serif;font-style:normal;font-weight:700}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">The Adoption Curve Reading</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Innovation and AI for Digital Transformation</div>
+    <div class="practical-badge">Week 5 · Practical 5 of 6</div>
+  </div>
+  <h1 class="header-title">The Adoption <em>Curve Reading</em></h1>
+  <p class="header-desc">One specific AI deployment in your organisation. The publicly cited adoption metric. What that metric is masking — pilot-stage performance, narrow user base, novelty effect, supervisor workaround, selective measurement. The genuine usage signal closer to the truth. The shift signals that would change your read. Then the recommended action.</p>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The cited metric is a specific publicly used figure — not a metric the practitioner thinks should be cited.</li>
+      <li>What the metric is masking is named with operational specificity — a pilot artefact, a workaround pattern, a selective measurement window.</li>
+      <li>The genuine usage signal is closer to the truth, not just more pessimistic. Substituting low numbers for high numbers is not analysis.</li>
+      <li>Shift signals work in both directions — specific things that would make you more confident in the cited number and specific things that would make you less confident.</li>
+      <li>An incoming CEO could verify or challenge the read using the shift signals.</li>
+    </ul>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>1</span></div><div><div class="step-label">Step 1</div><div class="step-title">Pick the AI Deployment and the Cited Metric</div></div></div>
+    <p class="step-desc">One specific AI deployment in your organisation. Continue with the same use case as Weeks 3 and 4 if it is currently deployed. Then pick the cited metric — the one that is actually on the board paper, in the press release, on the executive dashboard.</p>
+    <div class="metric-card">
+      <div class="metric-card-label">The Cited Metric</div>
+      <div class="metric-card-q">The headline number for this AI deployment</div>
+      <div class="metric-display">
+        <input type="text" name="cited_metric_value" class="metric-value-input" placeholder="47% of inbound chat AI-handled">
+        <div class="metric-context">The headline as it appears in the dashboard / paper / press release.</div>
+      </div>
+      <div class="metric-grid">
+        <div class="field-block"><label>Where the Metric Appears</label><textarea name="metric_source" placeholder="Q1 board update; press release; executive dashboard."></textarea></div>
+        <div class="field-block"><label>Who Cited It and When</label><textarea name="metric_citation" placeholder="Group CEO at Q1 board; Group CFO at investor day."></textarea></div>
+      </div>
+    </div>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header"><div class="substep-dot"><span>01</span></div><div class="substep-label">The Deployment</div></div>
+        <div class="substep-body">Two sentences. Channel, scale, when it went live.</div>
+        <textarea name="deployment_context"></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header"><div class="substep-dot"><span>02</span></div><div class="substep-label">What the Cited Metric Is Doing</div></div>
+        <div class="substep-body">The job the metric is doing. What it is being used to argue. The decision it is shaping.</div>
+        <textarea name="metric_job"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>2</span></div><div><div class="step-label">Step 2</div><div class="step-title">Read the Curve in Three Layers</div></div></div>
+    <p class="step-desc">Three sections. What the metric is masking — specific. The genuine usage signal closer to the truth — with reasoning. Why the cited metric has held this long.</p>
+    <div class="read-card">
+      <div class="read-card-label">The Adoption Curve Reading</div>
+      <div class="read-card-sub">Three layers · the cited metric, what it masks, the signal closer to the truth · falsifiable in both directions</div>
+      <div class="read-section"><div class="read-num">01</div><div class="read-body"><div class="read-name">What the Metric Is Masking</div><div class="read-helper">Specific. A pilot artefact, a workaround pattern, a selective measurement window, a denominator change.</div><textarea name="masking"></textarea></div></div>
+      <div class="read-section"><div class="read-num">02</div><div class="read-body"><div class="read-name">The Genuine Usage Signal</div><div class="read-helper">The signal closer to the truth — with reasoning, not just a smaller number.</div><textarea name="genuine_signal"></textarea></div></div>
+      <div class="read-section"><div class="read-num">03</div><div class="read-body"><div class="read-name">Why the Cited Metric Has Held This Long</div><div class="read-helper">A reading that is not also self-aware about why the cited metric has not yet been challenged is incomplete.</div><textarea name="why_held"></textarea></div></div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>3</span></div><div><div class="step-label">Step 3</div><div class="step-title">Name the Shift Signals (Both Directions)</div></div></div>
+    <p class="step-desc">A reading is only credible if it is falsifiable. Specific. A particular user group, a particular case type, a particular metric crossing a particular threshold.</p>
+    <div class="signals-card">
+      <div class="signals-label">Shift Signals</div>
+      <div class="signals-q">What would change your read in either direction?</div>
+      <div class="signals-helper">Specific. Verifiable. Not 'general improvement' or 'continued problems'.</div>
+      <div class="signals-grid">
+        <div class="signal-col up"><div class="signal-col-label">↑ Signals That Would Move My Read Toward the Cited Metric</div><div class="signal-col-helper">If I saw this, I would be more confident the headline is roughly right.</div><textarea name="signal_up"></textarea></div>
+        <div class="signal-col down"><div class="signal-col-label">↓ Signals That Would Move My Read Away From the Cited Metric</div><div class="signal-col-helper">If I saw this, I would be more confident the cited metric is masking, not measuring.</div><textarea name="signal_down"></textarea></div>
+      </div>
+    </div>
+  </div>
+  <div class="step-card">
+    <div class="step-header"><div class="step-num-badge"><span>4</span></div><div><div class="step-label">Step 4</div><div class="step-title">Make the Recommended Action</div></div></div>
+    <p class="step-desc">The reading is data. The Practical is the action. What should change as a result of this reading — in the dashboard, in the press cycle, in the next board paper?</p>
+    <div class="action-card">
+      <div class="action-label">Recommended Action</div>
+      <div class="action-q">What changes as a result of this reading?</div>
+      <div class="action-helper">Specific. Owner. Date. The version of the headline that survives external scrutiny.</div>
+      <textarea name="recommended_action"></textarea>
+    </div>
+  </div>
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Reading</h2>
+    <p class="ai-activity-desc">Adoption Curve Readings fail in two predictable places — the practitioner substitutes pessimism for analysis, and the shift signals are written only in the direction that supports the read.</p>
+    <div class="ai-step">
+      <div class="ai-step-title">Test Whether the Genuine Signal Is Reasoning, Not Pessimism</div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">The cited metric is [paste]. My claimed 'genuine usage signal' is [paste], because [paste]. Pressure-test: (1) Is the 'genuine signal' derived from a specific reframing of measurement (denominator change, definition tightening, opt-out adjustment) — or am I just substituting a smaller number for a larger one and calling that more honest? (2) Would an external auditor reading my methodology compute the number I am claiming? (3) Is my 'genuine signal' framed as a hostile correction or as a measurement frame that survives external audit? Tell me where the reasoning is pessimism in disguise.</div>
+      <textarea class="ai-field" placeholder="Where is the reading pessimism dressed as analysis?"></textarea>
+    </div>
+    <div class="ai-step">
+      <div class="ai-step-title">Test Whether the Shift Signals Are Symmetrical</div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">Up-signals: [paste]. Down-signals: [paste]. Pressure-test: (1) Are both lists equally specific in their named threshold? (2) Could an incoming CEO check both lists and reach the same conclusion the practitioner reaches? (3) Is one direction noticeably easier to reach than the other? Tell me where the signals are asymmetric and rewrite the weaker side.</div>
+      <textarea class="ai-field" placeholder="Where are the signals asymmetric?"></textarea>
+    </div>
+  </div>
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Twelve months from now, when the AI-resolved-within-chat figure has either reached the cited metric (shifting you toward it) or stayed flat (confirming your read) — which of the three reasons you named for why the cited metric has held this long will turn out to have been the most consequential?</div>
+    <textarea placeholder="The most consequential reason will turn out to have been..."></textarea>
+  </div>
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Adoption Curve Readings fall apart at the same place every time — the practitioner substitutes pessimism for analysis, and the shift signals are stronger in one direction than the other.</p>
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The genuine usage signal — is it derived from a specific measurement reframing your peer can follow, or is it just a smaller number?</li>
+      <li>The shift signals in both directions — are they equally specific, or is one direction operational and the other rhetorical?</li>
+      <li>Your recommended action — if the dashboard change happens but the press cycle continues using the headline, has the action actually changed anything?</li>
+    </ul>
+  </div>
+</div>
+<script>
+function submitPractical() {
+  if (!confirm("Submit Practical 5? Once submitted, you can still edit until end of Week 5.")) return;
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W5)");
+}
+</script>
+</body>
+</html>

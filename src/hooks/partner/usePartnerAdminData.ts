@@ -280,20 +280,37 @@ export const usePartnerAdminData = (
       where('partnerId', '==', partnerId)
     )
 
+    // 3. Source-of-truth: organizations where transformationPartnerId == partnerId.
+    // Required because syncOrganizationPartnerChange writes to users/{partnerId}
+    // via safeUpdate, which silently swallows errors when that doc doesn't
+    // exist (common for users promoted from regular accounts). Without this
+    // listener, the dropdown only sees orgs that made it into the partner
+    // doc and misses any whose bidirectional sync failed.
+    const orgSourceOfTruthQuery = query(
+      collection(db, ORG_COLLECTION),
+      where('transformationPartnerId', '==', partnerId),
+      where('status', 'in', ['active', 'watch', 'paused'])
+    )
+
     let partnerDocOrgIds: string[] = []
     let legacyOrgIds: string[] = []
+    let orgSourceOrgIds: string[] = []
     let partnerDocLoaded = false
     let legacyLoaded = false
+    let orgSourceLoaded = false
     let partnerDocErrorOccurred = false
     let legacyErrorOccurred = false
+    let orgSourceErrorOccurred = false
 
     const updateCombinedAssignments = () => {
-      const combined = Array.from(new Set([...partnerDocOrgIds, ...legacyOrgIds]))
+      const combined = Array.from(
+        new Set([...partnerDocOrgIds, ...legacyOrgIds, ...orgSourceOrgIds])
+      )
       setAssignedOrganizationIds(combined)
 
-      // Only stop loading when both listeners have responded at least once
-      if (partnerDocLoaded && legacyLoaded) {
-        if (partnerDocErrorOccurred && legacyErrorOccurred) {
+      // Only stop loading when all listeners have responded at least once
+      if (partnerDocLoaded && legacyLoaded && orgSourceLoaded) {
+        if (partnerDocErrorOccurred && legacyErrorOccurred && orgSourceErrorOccurred) {
           setAssignmentsError('Unable to load partner assignments from any source.')
         } else {
           setAssignmentsError(null)
@@ -305,7 +322,8 @@ export const usePartnerAdminData = (
         totalCount: combined.length,
         fromPartnerDoc: partnerDocOrgIds.length,
         fromLegacy: legacyOrgIds.length,
-        loading: !(partnerDocLoaded && legacyLoaded)
+        fromOrgSource: orgSourceOrgIds.length,
+        loading: !(partnerDocLoaded && legacyLoaded && orgSourceLoaded),
       })
     }
 
@@ -369,9 +387,31 @@ export const usePartnerAdminData = (
       }
     )
 
+    const unsubOrgSource = onSnapshot(
+      orgSourceOfTruthQuery,
+      (snap) => {
+        orgSourceOrgIds = snap.docs.map((docSnap) => docSnap.id.trim()).filter(Boolean)
+        orgSourceLoaded = true
+        orgSourceErrorOccurred = false
+        // Org-source-of-truth shares the "query" loading flag with the legacy
+        // listener — both feed the same combined assignments set, and the
+        // dashboard treats them as a single "non-doc" source for loading UX.
+        setQueryAssignmentsLoading(false)
+        updateCombinedAssignments()
+      },
+      (err) => {
+        console.error('[PartnerAdminData] Org-source-of-truth load failed', err)
+        orgSourceLoaded = true
+        orgSourceErrorOccurred = true
+        setQueryAssignmentsLoading(false)
+        updateCombinedAssignments()
+      }
+    )
+
     return () => {
       unsubPartnerDoc()
       unsubLegacy()
+      unsubOrgSource()
     }
   }, [enabled, isSuperAdmin, partnerId, profileStatus])
 
@@ -547,9 +587,20 @@ export const usePartnerAdminData = (
           return
         }
 
+        // DIAG: confirm what we ask Firestore to load. Remove after dropdown bug is fixed.
+        console.log('[PartnerAdminData DIAG] listenToOrganizationsByIds INPUT:', {
+          assignedOrganizationIds,
+          count: assignedOrganizationIds.length,
+        })
         unsubscribe = listenToOrganizationsByIds(
           assignedOrganizationIds,
           (assignedOrgs: OrganizationRecord[]) => {
+            // DIAG: confirm what Firestore returns. Remove after dropdown bug is fixed.
+            console.log('[PartnerAdminData DIAG] listenToOrganizationsByIds CALLBACK:', {
+              count: assignedOrgs.length,
+              ids: assignedOrgs.map(o => o.id),
+              names: assignedOrgs.map(o => o.name),
+            })
             logger.debug('[PartnerAdminData] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
@@ -812,7 +863,11 @@ export const usePartnerAdminData = (
           const allDocs = Array.from(accumulatedDocsMap.values())
           const seenUserIds = new Set<string>()
           let rejectedNoMatch = 0
-          let rejectedSelectedOrg = 0
+          // rejectedSelectedOrg is always 0 now that we no longer filter by
+          // selectedOrg at this layer (dashboard owns per-org filtering).
+          // Kept in the debug payload for shape stability with downstream
+          // consumers of DashboardDebugInfo.
+          const rejectedSelectedOrg = 0
           const mismatchSamples: MismatchSample[] = []
 
           logger.debug('[PartnerAdminData] Processing accumulated user docs', {
@@ -871,15 +926,18 @@ export const usePartnerAdminData = (
               }
             }
 
-            if (
-              organizationsReady &&
-              latestFilters.selectedOrg !== 'all' &&
-              latestFilters.selectedOrg &&
-              !Array.from(userOrgKeys).some((key) => latestFilters.selectedOrgKeys.has(key))
-            ) {
-              rejectedSelectedOrg++
-              return false
-            }
+            // NOTE: We deliberately do NOT filter by selectedOrg here. This
+            // hook returns the full partner-accessible user set (scoped by
+            // assignedOrgKeys above); per-selection filtering is the
+            // dashboard's responsibility (PartnerDashboard.overviewUsers).
+            //
+            // The previous behavior filtered at this layer too, but the
+            // user-loading effect's deps don't include selectedOrg/
+            // selectedOrgKeys — so switching the dropdown left this layer
+            // stale and the dashboard then re-filtered an already-narrow
+            // set, producing empty results when moving Org A → Org X.
+            // Widening here lets the dashboard's useMemo re-derive
+            // instantly on every dropdown change.
 
             return true
           })

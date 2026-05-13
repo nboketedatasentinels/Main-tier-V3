@@ -6,6 +6,7 @@
  *   - innovation_technology → 1 + 5 weeks
  *   - transforming_business → 2 + 4 weeks
  *   - fostering             → 2 + 4 weeks
+ *   - starter_kit           → 2 + 4 weeks (Digital Transformation Starter Kit)
  *
  * Stored on `organizations.pillar` and (optionally) mirrored to
  * `profiles.pillar` for per-user notification targeting.
@@ -16,6 +17,7 @@ export const PILLAR_OPTIONS = [
   'innovation_technology',
   'transforming_business',
   'fostering',
+  'starter_kit',
 ] as const
 
 export type Pillar = (typeof PILLAR_OPTIONS)[number]
@@ -41,7 +43,7 @@ export const PILLAR_METADATA: Record<Pillar, PillarMeta> = {
     label: 'Innovation & Technology (1 + 5 weeks)',
     shortName: 'Innovation & Technology',
     weekSplit: [1, 5],
-    exampleCourses: 'Think Like an Owner, then Delivering Transformation',
+    exampleCourses: 'AI for Transformation Leaders, then Digital Transformation with Data Sentinels',
   },
   transforming_business: {
     value: 'transforming_business',
@@ -52,10 +54,17 @@ export const PILLAR_METADATA: Record<Pillar, PillarMeta> = {
   },
   fostering: {
     value: 'fostering',
-    label: 'Fostering Collaboration (2 + 4 weeks)',
-    shortName: 'Fostering',
+    label: 'Fostering Teams (2 + 4 weeks)',
+    shortName: 'Fostering Teams',
     weekSplit: [2, 4],
-    exampleCourses: 'Foundations of Collaboration, then Building High-Trust Teams',
+    exampleCourses: 'The Leader Your Transformation Team Actually Needs, then Building Teams That Survive Transformation',
+  },
+  starter_kit: {
+    value: 'starter_kit',
+    label: 'Digital Transformation Starter Kit (2 + 4 weeks)',
+    shortName: 'Digital Transformation Starter Kit',
+    weekSplit: [2, 4],
+    exampleCourses: 'Think Like an Owner, then Delivering Transformation: Project Leadership That Sticks',
   },
 }
 
@@ -133,6 +142,20 @@ export const PILLAR_COURSE_PLAN: Record<Pillar, [PillarCoursePlanEntry, PillarCo
     {
       courseId: 'foundations-of-leadership',
       title: 'Building Teams That Survive Transformation',
+      weeks: 4,
+      weekRange: [3, 6],
+    },
+  ],
+  starter_kit: [
+    {
+      courseId: 'think-like-an-owner',
+      title: 'Think Like an Owner',
+      weeks: 2,
+      weekRange: [1, 2],
+    },
+    {
+      courseId: 'project-management-for-leaders',
+      title: 'Delivering Transformation: Project Leadership That Sticks',
       weeks: 4,
       weekRange: [3, 6],
     },

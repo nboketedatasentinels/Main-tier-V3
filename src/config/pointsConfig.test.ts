@@ -56,7 +56,7 @@ describe('pointsConfig module activities', () => {
   })
 
   it('cross-references each journey activity table with configured maximum points', () => {
-    ;(['4W', '6W', '3M', '6M', '9M'] as const).forEach((journeyType) => {
+    (['4W', '6W', '3M', '6M', '9M'] as const).forEach((journeyType) => {
       const crossRef = getJourneyPointsCrossReference(journeyType)
       expect(crossRef.computedMaxPoints).toBe(JOURNEY_META[journeyType].maxPossiblePoints)
       expect(crossRef.maxPossiblePoints).toBe(JOURNEY_META[journeyType].maxPossiblePoints)
@@ -124,13 +124,11 @@ describe('pointsConfig module activities', () => {
     expect(bookClub?.activityPolicy?.maxPerWindow).toBe(1)
   })
 
-  it('requires partner confirmation for weekly session attendance', () => {
+  it('weekly session attendance is partner-issued (no learner proof flow)', () => {
     const weeklySession = getActivityDefinitionById({ activityId: 'weekly_session', journeyType: '6W' })
 
     expect(weeklySession).toBeTruthy()
-    expect(weeklySession?.approvalType).toBe('partner_approved')
-    expect(weeklySession?.requiresApproval).toBe(true)
-    expect(weeklySession?.verification).toBe('partner_approval')
+    expect(weeklySession?.approvalType).toBe('partner_issued')
   })
 
   it('resolves special activity ids as canonical ids', () => {

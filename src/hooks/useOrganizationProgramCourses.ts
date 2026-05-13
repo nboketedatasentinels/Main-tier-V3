@@ -10,6 +10,7 @@ import {
 import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import { normalizeDurationWeeks, resolveDurationWeeksFromProgramDuration, resolveJourneyType } from '@/utils/journeyType'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
+import { isPillar, type Pillar } from '@/types/pillar'
 
 interface OrganizationProgram {
   monthlyAssignments: MonthlyCourseAssignments
@@ -19,6 +20,7 @@ interface OrganizationProgram {
   courseAssignments: string[]
   journeyType: JourneyType | null
   programDurationWeeks: number | null
+  pillar: Pillar | null
 }
 
 const normalizeDate = (value: unknown): Date | null => {
@@ -124,6 +126,7 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
           courseAssignments,
           journeyType,
           programDurationWeeks: programDurationWeeks ?? (journeyType ? JOURNEY_META[journeyType].weeks : null),
+          pillar: isPillar(data.pillar) ? data.pillar : null,
         })
         setLoading(false)
       },

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Stakeholder Position Paper</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .substep-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .substep-grid, .substep-grid-3 { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"] {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  input[type="text"]::placeholder { color: #aaa; }
+  .substep-card input[type="text"] { background: #fff; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Stakeholder Position Paper</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">The Transformation Practitioner</div>
+    <div class="practical-badge">Week 2 · Practical 2 of 6</div>
+  </div>
+  <h1 class="header-title">Stakeholder <em>Position</em> Paper</h1>
+  <p class="header-desc">Take the opportunity you chose in Practical 1 and analyse the decision-maker who controls action on it. Half a page. Three things you need to know about them before you write the proposal: what they actually care about, what's blocking them, and what you'll need to address to win their support.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Decision-maker named by specific role (not just "my manager"). Real person, real seat.</li>
+      <li>Their priorities sourced from real signals -- their last townhall, recent emails, public commitments. Not imagined.</li>
+      <li>Honest read on what blocks them. AI-readiness concerns, political risk, capacity -- not just "budget."</li>
+      <li>Clear link between the analysis and the proposal you'll write. You're preparing the ground, not just describing it.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Carry forward your chosen opportunity -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Carry Forward Your Chosen Opportunity</div>
+      </div>
+    </div>
+    <p class="step-desc">In Practical 1 you chose one opportunity to take forward. Re-state it here in one sentence. This grounds the rest of the analysis -- you're not picking a new opportunity, you're going deeper on the one you already chose.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Opportunity</div>
+        </div>
+        <div class="substep-body">From Practical 1, Step 5. One sentence.</div>
+        <textarea name="chosen_opportunity_restated" placeholder="Our weekly fleet utilisation report takes the operations team 14 hours to produce because vehicle data, driver data, and customer data live in three separate systems."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What Action You Need</div>
+        </div>
+        <div class="substep-body">In one sentence, what specifically do you need someone to approve, fund, or unblock for this to happen?</div>
+        <textarea name="action_needed" placeholder="Sign-off on a 90-day pilot to consolidate fleet, driver, and customer data into a single reporting layer using existing platforms -- with $25k of contractor support and 0.4 FTE of internal time."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Identify the Decision-Maker -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Identify the Decision-Maker</div>
+      </div>
+    </div>
+    <p class="step-desc">One person controls whether this opportunity moves forward. Name them by role, not name. If you can't identify a single decision-maker, the opportunity is harder to move than you think -- name the most likely one and note the ambiguity.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Role</div>
+        </div>
+        <div class="substep-body">The specific role -- not "leadership" or "the executive team."</div>
+        <input type="text" name="dm_role" placeholder="Chief Operating Officer">
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Why This Person</div>
+        </div>
+        <div class="substep-body">Why they specifically control the decision. Budget? Authority? Political weight?</div>
+        <textarea name="dm_authority" placeholder="Owns the operations P&L. Has direct authority over IT spend up to $50k without exec committee sign-off. Reports to the CEO and is trusted on operational decisions."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Your Relationship</div>
+        </div>
+        <div class="substep-body">Honest read. Strong, weak, neutral, untested? You'll need to know.</div>
+        <textarea name="dm_relationship" placeholder="Worked together for 2 years. We've delivered two operational improvements together (fuel cost reduction, driver retention programme). She trusts my numbers. We disagree productively about technology choices -- she's cautious."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: What They Actually Care About -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">What They Actually Care About Right Now</div>
+      </div>
+    </div>
+    <p class="step-desc">Not what their job description says they care about. What they're actually focused on right now -- the things they've talked about in the last quarter, the metrics on their dashboard, the risks they've raised in their last leadership meeting. Three priorities. Sourced from real signals.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Priority 1</div>
+        </div>
+        <div class="substep-body">What they care about + the signal that tells you it's real.</div>
+        <textarea name="priority_1" placeholder="Reducing operational reporting cycle time. Signal: she's raised this in two of the last three exec meetings, and her direct report's OKR for this quarter includes a 50% reduction in time-to-insight for ops decisions."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Priority 2</div>
+        </div>
+        <div class="substep-body">What they care about + the signal.</div>
+        <textarea name="priority_2" placeholder="Margin protection. Signal: 'doing more with less' has shown up in 4 of her last 6 written communications. The board has flagged operational margin in the last two quarterly reviews."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Priority 3</div>
+        </div>
+        <div class="substep-body">What they care about + the signal.</div>
+        <textarea name="priority_3" placeholder="Avoiding another failed IT project. Signal: she explicitly referenced the 2023 logistics platform migration (cancelled at 60% delivered) when our last technology proposal came up -- she's not against tech, she's against tech that doesn't ship."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: What's Blocking Them -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">What's Blocking Them from Saying Yes</div>
+      </div>
+    </div>
+    <p class="step-desc">Even if your opportunity is good, something is making this person hesitate. Three blockers. Each one is something you'll have to address in your proposal -- if you don't name them now, you'll be surprised when they come up in the meeting.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Blocker 1</div>
+        </div>
+        <div class="substep-body">What's getting in the way. Be specific.</div>
+        <textarea name="blocker_1" placeholder="AI-readiness scepticism. After the 2023 cancellation, she's wary of any proposal that involves new platforms or AI capability. She'll need to see this is built on systems we already own."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Blocker 2</div>
+        </div>
+        <div class="substep-body">Be specific.</div>
+        <textarea name="blocker_2" placeholder="Capacity. The ops team is already running tight on the year-end peak. Any ask that requires their time in November or December is dead on arrival."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Blocker 3</div>
+        </div>
+        <div class="substep-body">Be specific.</div>
+        <textarea name="blocker_3" placeholder="Cross-functional politics. She doesn't own IT, and her last attempt to push a data initiative across IT got pushed back. She'll want to know that I've already had the conversation with the IT director and have at least tacit support."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: What You'll Address in the Proposal -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>5</span></div>
+      <div>
+        <div class="step-label">Step 5</div>
+        <div class="step-title">What You'll Address in the Proposal</div>
+      </div>
+    </div>
+    <p class="step-desc">For each blocker you named, what will you address in the One-Page Proposal (Capstone Part A) to win their support? This is the bridge from analysis to action -- and it's where most practitioners stop short. Don't.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">How You'll Address Each Blocker</div>
+        </div>
+        <div class="substep-body">One sentence per blocker. Be specific about what you'll show them.</div>
+        <textarea name="proposal_response" class="long" placeholder="Blocker 1 (AI-readiness scepticism): I'll show that this is built on systems we already own -- no new platform purchase, just a reporting layer. Blocker 2 (capacity): I'll propose a January start with the contractor doing the heavy lift, ops team time limited to 0.4 FTE for review. Blocker 3 (cross-functional politics): I'll have a 1:1 with the IT director before submitting -- and I'll flag in the proposal that I've done so."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Strongest Argument</div>
+        </div>
+        <div class="substep-body">If you only had one minute with this decision-maker, what would you lead with? One sentence.</div>
+        <textarea name="strongest_argument" placeholder="Operational reporting cycle drops from 14 hours/week to under 30 minutes -- without a new platform purchase, using contractor capacity, and with sign-off from the IT director already secured."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test Your Read</h2>
+    <p class="ai-activity-desc">Stakeholder analysis is where practitioners most often deceive themselves -- we project our own logic onto the decision-maker and miss what they actually care about. AI can challenge that. Here's how.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Decision-Maker's Priorities</div>
+          <div class="ai-step-body">Ask AI to challenge your read on what the decision-maker actually cares about. The goal is to find priorities you've assumed but not evidenced.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm analysing a decision-maker who controls approval for an AI/digital transformation opportunity. Their role is [paste from Step 2]. The three priorities I think they hold right now are: [paste from Step 3]. For each priority, challenge me: what evidence am I relying on, where might I be projecting my own logic, and what alternative priority might actually be more important to them given their role and current organisational context?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI challenge? What will you reconsider?</div>
+      <textarea class="ai-field" placeholder="AI flagged that I assumed 'margin protection' was a top priority because the board mentions it -- but in her actual decisions, she's prioritised retention spend over margin cuts twice in the last six months. So margin is a stated priority but not a revealed one. AI suggested 'team retention through the year-end peak' is probably a stronger latent priority. Updating Step 3 -- swapping margin for retention as Priority 2."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Anticipate the Counter-Arguments</div>
+          <div class="ai-step-body">Ask AI to play your decision-maker and push back on your strongest argument. Find the holes before the meeting does.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm preparing to make a proposal to a [role from Step 2]. My strongest argument is: [paste from Step 5]. Play this decision-maker. They've been burned before by AI/digital transformation projects that overpromised. They're cautious. Push back hard on my argument -- give me three specific counter-arguments they would make, in their voice, and tell me which one is the hardest to answer.</div>
+      <div class="prompt-label" style="margin-top:12px">What's the hardest counter-argument? How will you handle it in the proposal?</div>
+      <textarea class="ai-field" placeholder="The hardest pushback AI surfaced: 'You're showing me a 14-hour reduction, but the last project promised similar gains and didn't deliver. What's specifically different this time?' I don't have a clean answer for this in my current proposal. Adding a section on 'Why this is different from the 2023 cancellation' -- specifically: smaller scope, existing platforms, contractor-delivered, 90-day pilot rather than full programme."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As you build your transformation practitioner muscle, you'll increasingly use AI to pressure-test your stakeholder analyses like the one you just did. What's the risk of relying too much on AI for this kind of work -- and how would you stay grounded in the actual relationship with the actual person?</div>
+    <textarea placeholder="The risk is treating the decision-maker as an archetype rather than a person. AI can give me good general patterns ('cautious COOs after a failed IT project tend to...') but it doesn't know that my specific COO is also dealing with her father's illness right now and is therefore unlikely to take on emotional load this quarter. The AI broadens the analysis. The relationship sharpens it. I stay grounded by always testing AI's read against one specific recent conversation I've had with the person -- if AI's analysis doesn't match what I observed, I trust the observation."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Stakeholder analysis is where you're most at risk of fooling yourself. A peer who doesn't know your decision-maker can hear the gaps in your logic faster than you can. Bring this Practical to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read your Step 2 (Decision-Maker), Step 3 (Priorities), and Step 4 (Blockers) aloud. Pause. Ask your peer to ask the three questions below. Don't defend your answers -- listen for where you sound less certain than you wrote.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>For each priority you named -- what's the actual evidence? Could you point to a specific email, meeting, or comment that backs it up?</li>
+      <li>Are you sure you've identified the real decision-maker? Or is there someone behind them who'll actually decide?</li>
+      <li>Of the three blockers, which one are you secretly hoping won't come up in the meeting? That's the one to address most carefully in the proposal.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    chosen_opportunity_restated: get('chosen_opportunity_restated'),
+    action_needed: get('action_needed'),
+    decision_maker: {
+      role: get('dm_role'),
+      authority: get('dm_authority'),
+      relationship: get('dm_relationship'),
+    },
+    priorities: {
+      priority_1: get('priority_1'),
+      priority_2: get('priority_2'),
+      priority_3: get('priority_3'),
+    },
+    blockers: {
+      blocker_1: get('blocker_1'),
+      blocker_2: get('blocker_2'),
+      blocker_3: get('blocker_3'),
+    },
+    proposal_response: get('proposal_response'),
+    strongest_argument: get('strongest_argument'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const fields = [
+    data.chosen_opportunity_restated,
+    data.action_needed,
+    data.decision_maker.role,
+    data.decision_maker.authority,
+    data.decision_maker.relationship,
+    data.priorities.priority_1,
+    data.priorities.priority_2,
+    data.priorities.priority_3,
+    data.blockers.blocker_1,
+    data.blockers.blocker_2,
+    data.blockers.blocker_3,
+    data.proposal_response,
+    data.strongest_argument,
+  ];
+  const filled = fields.filter(v => v && v.trim().length > 0).length;
+  const total = fields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 2? Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W2)");
+}
+</script>
+</body>
+</html>

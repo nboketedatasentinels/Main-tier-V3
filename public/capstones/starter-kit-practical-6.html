@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Lessons Synthesis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  /* Journey recap card -- distinctive to Practical 6 */
+  .journey-recap { background: linear-gradient(135deg, rgba(74,59,140,0.06) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 24px; }
+  .journey-recap-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; }
+  .journey-recap-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--plum); margin-bottom: 14px; line-height: 1.3; }
+  .journey-recap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .journey-recap-grid { grid-template-columns: 1fr; } }
+  .recap-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .recap-num { width: 24px; height: 24px; background: var(--purple); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 700; color: #fff; font-family: 'DM Serif Display', serif; }
+  .recap-text { font-size: 13px; color: var(--plum); line-height: 1.5; }
+  .recap-text strong { color: var(--purple); font-weight: 600; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  /* Pattern callout -- Practical 6's distinctive synthesis element */
+  .pattern-block { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+  .pattern-tag { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 14px; color: var(--purple); margin-bottom: 4px; }
+  .pattern-helper { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.55; }
+  .pattern-block textarea { background: #fff; min-height: 100px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Lessons Synthesis</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">The Transformation Practitioner</div>
+    <div class="practical-badge">Week 6 · Practical 6 of 6</div>
+  </div>
+  <h1 class="header-title">Lessons <em>Synthesis</em></h1>
+  <p class="header-desc">Look back across the five Practicals you've built over this Journey. Find the patterns -- in your work, in your blind spots, in how you handle pressure. Name the gap that's still real. Commit to one growth edge for your AI / digital transformation work over the next 90 days. This is the Practical that connects everything.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>References the previous five Practicals by name and content -- not generic reflection on "the Journey."</li>
+      <li>Names a real pattern across the work, not a single highlight from one Practical.</li>
+      <li>Identifies a specific gap -- something you actually didn't do well, not a polished "growth area."</li>
+      <li>Commits to one concrete growth edge for AI / digital transformation work, with a 90-day horizon.</li>
+    </ul>
+  </div>
+
+  <!-- JOURNEY RECAP -->
+  <div class="journey-recap">
+    <div class="journey-recap-label">The Five Practicals You're Synthesising</div>
+    <div class="journey-recap-title">Six weeks of work on one opportunity, seen through five different lenses.</div>
+    <div class="journey-recap-grid">
+      <div class="recap-item">
+        <div class="recap-num">01</div>
+        <div class="recap-text"><strong>Opportunity Map</strong> -- you mapped three opportunities and chose one.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">02</div>
+        <div class="recap-text"><strong>Stakeholder Position Paper</strong> -- you analysed the decision-maker.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">03</div>
+        <div class="recap-text"><strong>Methodology Justification</strong> -- you chose and defended an approach.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">04</div>
+        <div class="recap-text"><strong>Risk Register Draft</strong> -- you named what could go wrong.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">05</div>
+        <div class="recap-text"><strong>Stakeholder Briefing Script</strong> -- you scripted a real conversation.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">06</div>
+        <div class="recap-text"><strong>This Practical</strong> -- the synthesis.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Patterns Across the Five -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Find the Patterns Across the Five</div>
+      </div>
+    </div>
+    <p class="step-desc">Read your Practicals 1-5 again before answering. Look for what shows up more than once -- a kind of thinking, a kind of avoidance, a kind of strength. Name two patterns. Don't summarise the work -- find what runs through it.</p>
+
+    <div class="pattern-block">
+      <div class="pattern-tag">Pattern 1</div>
+      <div class="pattern-helper">Something that showed up across at least three of the five Practicals. Could be a strength (you consistently identified the political layer), or a tendency (you consistently softened your asks). Reference the Practicals by name.</div>
+      <textarea name="pattern_1" placeholder="In Practicals 1, 2, and 4 I consistently named the political dynamics behind the technical problem -- the source-of-truth blocker, the COO's caution after 2023, the IT/Ops/CS standoff. The pattern is that I read organisational politics well and weave it into the analysis without pretending it doesn't exist. That's a real strength I want to keep building on."></textarea>
+    </div>
+    <div class="pattern-block">
+      <div class="pattern-tag">Pattern 2</div>
+      <div class="pattern-helper">A second pattern -- ideally a different kind from Pattern 1. If Pattern 1 was a strength, see if you can find a tendency. If Pattern 1 was a tendency, see if you can find a strength. Honesty matters more than balance.</div>
+      <textarea name="pattern_2" placeholder="In Practicals 2, 3, and 5 my AI integration is bolted on rather than woven in. The AI Activities and AI Lens responses are good, but if I removed them from the body of the work, the Practicals would still make sense. That tells me I'm thinking about AI as an add-on rather than as part of how I'd actually build the project. The pattern is that AI is a topic I write about rather than a capability I'm building into the work."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 2: The Practical Where You Worked Hardest -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">The Practical Where You Worked Hardest</div>
+      </div>
+    </div>
+    <p class="step-desc">Of the five, one took disproportionately more effort to make honest -- where the first draft was easy and the third draft was uncomfortable. Name it. Not the one you scored highest on -- the one where the work itself was hardest to do well.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Which Practical</div>
+        </div>
+        <div class="substep-body">By name, in one sentence.</div>
+        <textarea name="hardest_practical" placeholder="Practical 4 (Risk Register Draft) -- specifically the AI risk deep-dive in Step 3."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What Made It Hard</div>
+        </div>
+        <div class="substep-body">The honest reason -- not "I'm not great at risk management."</div>
+        <textarea name="why_hard" placeholder="My first draft of the AI risk was generic -- 'data quality' as a label rather than a specific failure mode. The discomfort was admitting that I'd been treating AI risk as a checklist item across all five Practicals. The third draft forced me to describe what data quality drift would actually look like in this project -- which I hadn't really thought through until I had to write it down."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: The Gap That's Still Real -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Gap That's Still Real</div>
+      </div>
+    </div>
+    <p class="step-desc">Six weeks in, what gap haven't you closed? The one that would still show up if your COO put you in front of an actual transformation problem next week. Be specific -- "I'm still learning AI" is the wrong answer. The right answer names a specific capability with a specific consequence.</p>
+
+    <div class="pattern-block">
+      <div class="pattern-tag">The Gap</div>
+      <div class="pattern-helper">One paragraph. Name the capability gap, give one example of where it would bite, and resist the urge to soften it with "but I'm working on..."</div>
+      <textarea name="real_gap" placeholder="I can write about AI integration as a concept but I haven't actually built or deployed an AI capability in a project I owned. If the COO asked me 'walk me through how you'd build the AI-powered anomaly detection on the new reporting layer' I'd describe a process rather than a system -- I'd be mapping what I'd ask others to do rather than what I'd do myself. That's the gap. It would show up the moment a project moved from analysis to delivery on the AI side."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 4: The Growth Edge -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">Commit to One Growth Edge -- 90 Days</div>
+      </div>
+    </div>
+    <p class="step-desc">One specific commitment for the next 90 days that closes some of the gap from Step 3. Specific enough that someone reading it could ask you in 90 days "did you do it?" and you could answer yes or no. Tied to your AI / digital transformation work, not generic professional development.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Commitment</div>
+        </div>
+        <div class="substep-body">In one sentence. Specific. Doable. Verifiable in 90 days.</div>
+        <textarea name="commitment" placeholder="I will build and deploy a working AI-powered anomaly detection module on the fleet utilisation reporting layer by end of Q1 -- not specified, scoped, or delegated, but built and shipped by me with one engineer's support."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">First Action -- This Week</div>
+        </div>
+        <div class="substep-body">What you'll do in the next 7 days. The first concrete step.</div>
+        <textarea name="first_action" placeholder="Block 4 hours on Friday to work through the prototype anomaly detection on a sample of last quarter's fleet data. Pair with our junior data engineer on it -- not asking him to build, asking him to teach me as I build."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Synthesis</h2>
+    <p class="ai-activity-desc">Synthesis is where practitioners most often write the version of themselves they wish they were rather than the version they are. AI as an outsider voice can hear the difference -- if you're willing to feed it the actual material.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Your Patterns Against the Material</div>
+          <div class="ai-step-body">Ask AI to read your Practicals 1-5 and tell you whether the patterns you named in Step 1 are actually visible in the work -- or whether you wrote what you wished was true.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I've completed five Practicals over a six-week Power Journey on AI / digital transformation practice. The two patterns I've named across them are: [paste your Step 1 patterns]. Here are the five Practicals: [paste a 2-3 line summary of each Practical's content]. For each pattern I named, tell me: (1) is the pattern actually visible in the material, (2) is there a stronger pattern I missed, and (3) did I name a real pattern or a flattering one? Be honest. If I wrote what I wished was true, say so.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you adjust your patterns?</div>
+      <textarea class="ai-field" placeholder="AI confirmed Pattern 1 (political reading) is genuinely visible across Practicals 1, 2, and 4. On Pattern 2 (AI bolted-on), AI agreed but found a stronger version: it noticed I consistently treat the AI Activity sections as separate from the main work, even down to the language I use -- the body of each Practical is in 'practitioner voice,' the AI sections shift to 'project plan voice.' It's the same tendency but the evidence is sharper than what I wrote. Updating Pattern 2 to: 'When I switch to thinking about AI, my voice changes -- the practitioner disappears and the project planner takes over.'"></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Commitment</div>
+          <div class="ai-step-body">Ask AI to evaluate whether your 90-day commitment is actually doable -- or whether you're setting up to quietly fail.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My 90-day commitment from this Journey is: [paste your Step 4 commitment]. My first action this week is: [paste your Step 4 first action]. Pressure-test the commitment. Specifically: (1) Is the scope realistic for a senior practitioner with an existing day job? (2) What's the most likely reason I won't actually do this? (3) What's one thing I should add or change to make it more likely I'll keep the commitment? Be specific.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you adjust?</div>
+      <textarea class="ai-field" placeholder="AI's pushback was useful. It said the scope is realistic but the structure isn't -- if I rely on Friday afternoon blocks to ship something in 90 days, I'll lose the first 4 weeks to Friday meetings I haven't yet pushed back on. It suggested I move the commitment from 'time-based' to 'milestone-based' with three checkpoints (prototype by Day 30, test on real data by Day 60, deployed by Day 90) and tell two people about each milestone. Adjusting -- adding the three milestones plus committing to brief my COO on Day 30 progress, which forces me to actually ship something."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">You've now spent six weeks using AI as a thinking partner across the work. What did you learn about how you want to use AI in your transformation practice from now on -- and what specifically do you not want AI in?</div>
+    <textarea placeholder="What I want AI in: pressure-testing my analyses (Practicals 2 and 3 were sharper because of it), surfacing risk categories I'd missed (Practical 4), and roleplaying difficult conversations (Practical 5). It's a faster, cheaper second opinion than waiting for a peer call. What I don't want AI in: the moment of actually writing in my own voice. When I let AI draft for me, the voice becomes corporate, careful, and forgettable. The practitioner-to-practitioner tone is mine -- it can't be outsourced. So my rule going forward: AI as the sparring partner, never as the ghostwriter."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Synthesis is where senior practitioners are most polite to themselves -- we round off the rough edges and tell ourselves a flattering story about the work. A peer who has done their own Journey can hear the gap between what's on the page and what's actually true. This is the most important conversation of the six weeks.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read your two patterns from Step 1, your Step 3 gap, and your Step 4 commitment aloud. Pause after each. Don't add context. Listen to your peer's reaction. The thing you most want to defend is usually the thing that needs more honesty.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the two patterns you named, which one was easier to write? The easy one is usually the flattering one -- is it actually the truer one?</li>
+      <li>Your gap -- is it the real one, or the one that's safer to admit because it's already on your development plan?</li>
+      <li>Your 90-day commitment -- if I asked you in 30 days whether you've done it, what's the most likely answer? If "I started but..." is on the table, what's missing from the commitment?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    patterns: {
+      pattern_1: get('pattern_1'),
+      pattern_2: get('pattern_2'),
+    },
+    hardest_practical: get('hardest_practical'),
+    why_hard: get('why_hard'),
+    real_gap: get('real_gap'),
+    commitment: get('commitment'),
+    first_action: get('first_action'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const fields = [
+    data.patterns.pattern_1,
+    data.patterns.pattern_2,
+    data.hardest_practical,
+    data.why_hard,
+    data.real_gap,
+    data.commitment,
+    data.first_action,
+  ];
+  const filled = fields.filter(v => v && v.trim().length > 0).length;
+  const total = fields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 6? This is the final Practical of the Transformation Practitioner Journey -- once submitted, your full Practicals Portfolio (all six) is locked for assessor review.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W6)");
+}
+</script>
+</body>
+</html>

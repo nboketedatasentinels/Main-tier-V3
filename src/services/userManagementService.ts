@@ -202,7 +202,7 @@ const scoreUserDocForEmailCanonical = (docSnap: { id: string; data: () => unknow
   return { score, index }
 }
 
-const dedupeUserDocsByEmail = <T extends { id: string; data: () => unknown }>(docs: T[]): T[] => {
+export const dedupeUserDocsByEmail = <T extends { id: string; data: () => unknown }>(docs: T[]): T[] => {
   const bestByEmail = new Map<string, { id: string; score: number; index: number }>()
 
   docs.forEach((docSnap, index) => {

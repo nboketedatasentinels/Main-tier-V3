@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone: The Transformation Operating Model</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  .carry-note { background: rgba(74,59,140,0.06); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #444; line-height: 1.55; }
+  .carry-note strong { color: var(--purple); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 3px; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 160px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  .peer-prep { background: rgba(74,59,140,0.06); border: 1.5px solid rgba(74,59,140,0.2); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: #444; line-height: 1.65; margin-bottom: 16px; }
+  .peer-questions-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 13px; color: #2A2438; line-height: 1.65; padding: 8px 0 8px 24px; position: relative; border-bottom: 1px solid rgba(74,59,140,0.1); }
+  .peer-q-list li:last-child { border-bottom: none; }
+  .peer-q-list li::before { content: "?"; position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--purple); color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .peer-prep { break-inside: avoid; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .peer-prep { padding: 20px 18px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Capstone · The Transformation Operating Model</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Innovation and AI for Digital Transformation</div>
+  <div class="case-eyebrow">Capstone · Module 2 · Week 6 · Digital Transformation with Data Foundations</div>
+  <h1 class="header-title">The <em>Transformation Operating Model</em></h1>
+  <div class="header-meta"><strong>A single integrated operating model for innovation and AI deployment decisions at enterprise scale. Six sections that put together the AI Operating Hour discipline, the transformation thesis, the capability map, the data foundation audit, the adoption curve read, and the AI integration discipline. The Operating Model should be defensible to a CEO or board reviewer who was not in the room when the original decisions were made.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Apply the AI Operating Hour discipline), LO2 (Construct a transformation thesis that survives a CEO change), LO3 (Analyse and map AI-era capabilities), LO4 (Evaluate the data foundation honestly), LO5 (Evaluate the adoption curve), LO6 (Integrate AI tools with judgement)</div>
+  <div class="header-meta"><strong>Word count:</strong> 1500-2000 words total across all sections.</div>
+  <div class="case-callout">Single-artefact Capstone · 50% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">An Operating Model that reads as one running document -- six sections drawing on the Journey practicals, defensible to an incoming CEO or board reviewer without your personal explanation.</div>
+    <ul class="standard-list">
+      <li>The AI Operating Hour in Section 1 is a recurring habit with a specific calendar slot, a substantive question held, a real blind spot surfaced, and an observable decision change -- not a one-off reflection.</li>
+      <li>The Transformation Thesis in Section 2 names underlying business reasoning, not technology fashion -- defensible to a hypothetical incoming CEO who was not in the room.</li>
+      <li>The Capability Map in Section 3 distinguishes claimed from observable capability with concrete evidence per row, including at least one structural gap that is not closeable in 90 days.</li>
+      <li>The Data Foundation Audit in Section 4 -- the heaviest section -- names what the use case actually needs, what the organisation has, the specific gap (including one being downplayed), the cost-to-close, and a defensible recommendation.</li>
+      <li>The Adoption Curve Read in Section 5 distinguishes cited metric from underlying signal, names what the metric is masking, and provides verifiable shift-signals.</li>
+      <li>The AI Integration in Section 6 demonstrates evaluative judgement -- what was kept, what was rejected, why -- including instances where you overrode the AI suggestion with your own judgement.</li>
+      <li>The six sections read as one connected operating model, not six exercises stapled together. An incoming CEO could read it and act on it without your personal explanation.</li>
+    </ul>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all sections</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 1500-2000 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 1500-2000 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 01</div>
+      <div class="outcome-tag">Outcome 1 · AI Operating Hour</div>
+    </div>
+    <h2 class="section-title">AI Operating Hour discipline</h2>
+    <div class="section-prompt">State your AI Operating Hour discipline as a recurring practice. Include the recurring calendar slot (specific day, specific hour), the substantive question you have been holding, what the discipline has surfaced that execution had been hiding, the decisions you are now making differently as a result, and the cadence you are committing to going forward. The Operating Hour is ongoing, not a one-off.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the AI Operating Hour Log (Practical 1). Update against your actual practice over the Journey, not the snapshot from Week 1.</div>
+    <div class="section-hint">Recurring means a calendar slot, not aspirational time. The substantive question is one you have actually been holding, not a hypothetical. What the discipline surfaced is a real blind spot -- something you did not see clearly before. The decision change is observable: a colleague could notice the difference. Anything that depends on you remembering to do it is not a discipline yet.</div>
+    <textarea name="s1" placeholder="Recurring calendar slot: ...
+
+The substantive question I have been holding: ...
+
+What the discipline surfaced: ...
+
+Decisions I am now making differently: ...
+
+Cadence going forward: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 200-260 words</span>
+      <span class="field-word-count" id="s1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 02</div>
+      <div class="outcome-tag">Outcome 2 · Transformation Thesis</div>
+    </div>
+    <h2 class="section-title">Transformation Thesis -- defensible to an incoming CEO</h2>
+    <div class="section-prompt">State the transformation thesis for your current programme in language that does not depend on a specific sponsor's persona. Include the stated outcome the transformation is in service of (the underlying business reason, not the technology fashion), the three to five claims the thesis depends on with one sentence each on why each is defensible, the named risks if any one claim turns out to be false, and the explicit test that would tell an incoming leader whether the thesis is still on track.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the Transformation Thesis Practical (Practical 2). Strengthen against the stress-test of an incoming CEO who was not in the room when the original decisions were made.</div>
+    <div class="section-hint">The test of sponsor-independence: an incoming CEO who has never met the current sponsor reads the thesis and understands the underlying business reasoning. Technology fashion ('we are using AI') does not survive the stress-test; underlying business reasoning ('we are reducing reconciliation cost in retail credit decisioning') does. The dependent claims are named explicitly, not buried in narrative; each claim can be stress-tested individually.</div>
+    <textarea name="s2" placeholder="Stated outcome (underlying business reason, not tech fashion): ...
+
+Claims the thesis depends on:
+  1. ... -- defensible because ...
+  2. ... -- defensible because ...
+  3. ... -- defensible because ...
+  [4. and 5. if applicable]
+
+Named risks if a claim turns out false: ...
+
+The runnable test for an incoming leader: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 280-380 words</span>
+      <span class="field-word-count" id="s2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 03</div>
+      <div class="outcome-tag">Outcome 3 · Capability Map</div>
+    </div>
+    <h2 class="section-title">Capability Map -- claimed versus observable</h2>
+    <div class="section-prompt">Map your organisation's capabilities against the requirements of one specific stated AI use case. Three columns: capability claimed (in strategy documents, board papers, or vendor pitches); capability observable (with one piece of evidence per row -- a working pilot, a named team, a specific deployed system); gap (what would need to be true to close it). Surface at least three capabilities where the gap is significant, including at least one structural gap that is not closeable in 90 days.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the Capability Map Practical (Practical 3). The use case must be specific enough to drive capability requirements (not "AI in operations" but a specific deliverable with a specific scope and a specific date).</div>
+    <div class="section-hint">Observable evidence cells need to point to concrete artefacts -- a system, a team, a deployment -- not aspirational language. The structural gap is the test of honesty: an organisation that has only 90-day-closeable gaps is either small or is not telling the truth. The map should be uncomfortable in places; if it is not, you have written a strategy document, not a map.</div>
+    <textarea name="s3" placeholder="Use case (specific): ...
+
+Capability 1:
+  Claimed: ...
+  Observable (with evidence): ...
+  Gap: ...
+
+Capability 2:
+  Claimed: ...
+  Observable: ...
+  Gap: ...
+
+Capability 3:
+  Claimed: ...
+  Observable: ...
+  Gap: ...
+
+The structural gap (not closeable in 90 days): ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 280-380 words</span>
+      <span class="field-word-count" id="s3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 04</div>
+      <div class="outcome-tag">Outcome 4 · Data Foundation Audit</div>
+    </div>
+    <h2 class="section-title">Data Foundation Audit -- the heaviest discipline of the Journey</h2>
+    <div class="section-prompt">Audit the data foundation against the requirements of the same use case from Section 3. Cover: the data the use case requires (sources, freshness, quality, lineage, governance permissions, latency, completeness); the data the organisation actually has against each requirement, with evidence; the foundation gap; the cost of closing the gap (time, cost, governance work, regulatory dependencies); the recommended call (deploy now, deploy after foundation work, or do not deploy and reframe the use case). Include at least one gap the organisation is currently downplaying or framing as 'not yet a problem'.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the Data Foundation Audit Practical (Practical 4). This is the heaviest discipline in the Journey -- the section where most use cases fail and where most practitioner judgement gets tested.</div>
+    <div class="section-hint">The discipline is in distinguishing the data the use case actually needs from the data the organisation wishes it had. Evidence cells need to point to named systems, named data stewards, real lineage diagrams -- not 'we have customer data'. The downplayed gap is the test: every organisation has one, and the practitioner's job is to surface it before the use case fails publicly. The recommended call is defensible to a CFO who is going to ask about cost.</div>
+    <textarea name="s4" placeholder="Data the use case requires:
+  Sources: ...
+  Freshness: ...
+  Quality: ...
+  Lineage: ...
+  Governance permissions: ...
+  Latency: ...
+  Completeness: ...
+
+Data the organisation actually has (with evidence):
+  ...
+
+The foundation gap: ...
+
+The gap being downplayed: ...
+
+Cost of closing the gap (time, cost, governance, regulatory): ...
+
+Recommended call: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 320-420 words</span>
+      <span class="field-word-count" id="s4Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 05</div>
+      <div class="outcome-tag">Outcome 5 · Adoption Curve Read</div>
+    </div>
+    <h2 class="section-title">Adoption Curve Read -- cited metric versus underlying signal</h2>
+    <div class="section-prompt">Read the adoption curve of one specific AI deployment in your organisation. Include: the publicly cited adoption metric; the underlying signal that metric is masking (pilot-stage performance, narrow use case, opt-in user base, novelty effect, supervisor workaround, selective measurement); the genuine usage signal you believe is closer to the truth; the specific signals that would shift your read in either direction; the recommended action.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the Adoption Curve Reading Practical (Practical 5). The reading must be specific enough that an incoming CEO could verify or challenge it.</div>
+    <div class="section-hint">The cited metric is named with the figure if available. The masking pattern is named from the framework -- one of the five candidates, not all of them. The shift-signals are concrete: a particular user group, a particular case type, a particular metric crossing a particular threshold. 'More data would help' is not a shift-signal. Substituting pessimism for analysis fails the discipline; the read needs to be defensible from evidence.</div>
+    <textarea name="s5" placeholder="AI deployment: ...
+
+Publicly cited adoption metric: ...
+
+The underlying signal that metric is masking: ...
+  Why this masking pattern: ...
+
+The genuine usage signal: ...
+
+Shift-signals:
+  What would make me more confident: ...
+  What would make me less confident: ...
+
+Recommended action: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 240-320 words</span>
+      <span class="field-word-count" id="s5Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 6 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 06</div>
+      <div class="outcome-tag">Outcome 6 · AI Integration</div>
+    </div>
+    <h2 class="section-title">AI Integration -- judgement, not adoption</h2>
+    <div class="section-prompt">Select one Digital Edge exercise output from the Journey (the thesis stress-test prompt, the capability gap prompt, the data foundation audit prompt, the adoption signal prompt, or another). Name what you kept from the AI output, what you rejected, and why -- including any instance where you overrode the AI suggestion with your own judgement.</div>
+    <div class="section-hint">The discipline is evaluative -- not 'AI gave me good ideas'. Name a specific output, what you kept and why, what you rejected and why. If everything was kept, you have summarised, not evaluated. The override case is the strongest evidence: a moment where the AI suggested one move and you chose another, with the reasoning named.</div>
+    <textarea name="s6" placeholder="Digital Edge exercise selected: ...
+
+What I kept: ...
+  Why: ...
+
+What I rejected: ...
+  Why: ...
+
+Where I overrode the AI suggestion: ...
+  My reasoning: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 180-240 words</span>
+      <span class="field-word-count" id="s6Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, walk a peer through the Operating Model.</h2>
+    <p class="peer-prep-sub">The Transformation Operating Model is meant to read as one running document defensible to an incoming CEO or board reviewer. The fastest test is whether a peer can read it and predict what you would do in the next 90 days.</p>
+
+    <div class="peer-questions-label">Questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Do the six sections read as one operating model, or as six exercises stapled together?</li>
+      <li>Does the Operating Model name something you did not see clearly before the Journey, or is it a polished version of Week 1 thinking?</li>
+      <li>In the Data Foundation Audit (Section 4), have you named the gap the organisation is currently downplaying -- or stayed in safer territory?</li>
+      <li>In Section 6 -- did you actually evaluate the AI output, or did you summarise it? Where did you override it?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) { if (!s || !s.trim()) return 0; return s.trim().split(/\s+/).length; }
+function recountWords() {
+  const fields = ["s1", "s2", "s3", "s4", "s5", "s6"];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="'+name+'"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name+'Count');
+    if (display) display.textContent = c+' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 2400, goodMin = 1500, goodMax = 2000;
+  bandEl.style.left = ((goodMin/max)*100)+'%';
+  bandEl.style.width = (((goodMax-goodMin)/max)*100)+'%';
+  fillEl.style.width = Math.min(100,(total/max)*100)+'%';
+  valEl.textContent = total+' words';
+  valEl.classList.remove('under','good','over');
+  fillEl.classList.remove('good','over');
+  if (total < goodMin) { valEl.classList.add('under'); hintEl.textContent = 'Below the 1500-word threshold. The expected range is 1500-2000.'; }
+  else if (total <= goodMax) { valEl.classList.add('good'); fillEl.classList.add('good'); hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.'; }
+  else { valEl.classList.add('over'); fillEl.classList.add('over'); hintEl.textContent = 'Over 2000 words. The response needs to land in the 1500-2000 word range.'; }
+}
+function collectFormData() {
+  const get = (n) => { const el = document.querySelector('[name="'+n+'"]'); return el ? el.value : ''; };
+  const fields = ["s1", "s2", "s3", "s4", "s5", "s6"];
+  const answers = {};
+  const word_counts = {};
+  let total = 0;
+  fields.forEach(name => {
+    const v = get(name);
+    answers[name] = v;
+    const c = countWords(v);
+    word_counts[name] = c;
+    total += c;
+  });
+  word_counts.total = total;
+  return {
+    capstone_part: "Capstone",
+    capstone_id: "innovation_capstone_transformation_operating_model",
+    journey: "Innovation and AI for Digital Transformation",
+    module: "Module 2 -- Digital Transformation with Data Foundations",
+    outcomes_assessed: ["LO1", "LO2", "LO3", "LO4", "LO5", "LO6"],
+    answers, word_counts,
+  };
+}
+function submitCapstone() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 1500) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 1500-2000. Below 1500 sits outside the range.';
+  else if (total > 2000) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 1500-2000. Above 2000 sits outside the range.';
+  if (!confirm("Submit Capstone: The Transformation Operating Model?\n\nThis is the single Capstone artefact for the Innovation and AI for Digital Transformation Journey -- weighted 50% of your competence pass alongside the Combined Case Studies (30%) and the Practicals Portfolio (20%). The Innovation Journey is the only LIFT pillar with a single-artefact Capstone structure." + warning + '\n\nProceed?')) return;
+  console.log('Capstone payload:', data);
+  alert("Transformation Operating Model received. The Capstone is now ready for assessor review. (In production, this POSTs to /api/capstone/submit with capstone_id = innovation_capstone_transformation_operating_model)");
+}
+recountWords();
+</script>
+</body>
+</html>
