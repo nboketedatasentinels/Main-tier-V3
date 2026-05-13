@@ -809,6 +809,21 @@ export function getActivitiesForJourney(journeyType?: JourneyType | null): Activ
   return buildJourneyActivities(journeyType);
 }
 
+/**
+ * Points awarded when a learner completes a single LIFT course module on
+ * the given journey. Used to surface the per-course reward on the
+ * courses timeline before completion.
+ */
+export function getPointsPerCourse(journeyType?: JourneyType | null): number | null {
+  if (!journeyType) return null;
+  const entries = JOURNEY_ACTIVITY_CONFIG[journeyType];
+  if (!entries) return null;
+  const lift = entries.find((e) => e.activityId === "lift_module");
+  if (!lift) return null;
+  if (typeof lift.pointsOverride === "number") return lift.pointsOverride;
+  return 7000;
+}
+
 // ─── Activity Resolution ────────────────────────────────────────────────────
 
 const ACTIVITY_ID_ALIASES: Record<string, ActivityId> = {

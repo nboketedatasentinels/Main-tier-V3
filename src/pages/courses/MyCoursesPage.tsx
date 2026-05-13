@@ -16,7 +16,7 @@ import {
   Divider,
   Tooltip,
 } from '@chakra-ui/react'
-import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock, ShieldCheck, Flag, Award, BookMarked, Wrench, Plus } from 'lucide-react'
+import { BookOpen, Clock, ExternalLink, Sparkles, ArrowUpRight, CheckCircle2, CalendarDays, Lock, ShieldCheck, Flag, Award, BookMarked, Wrench, Plus, type LucideIcon } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
@@ -48,6 +48,7 @@ import {
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
+import { getPointsPerCourse } from '@/config/pointsConfig'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -688,6 +689,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const isWeeklyTimeline = journeyType ? !isMonthBasedJourney(journeyType) : false
   const totalWeeks = program?.programDurationWeeks ?? (journeyType ? getJourneyWeeks(journeyType) : null)
   const journeyTimelineDisplay = journeyType ? getJourneyTimelineDisplayMode(journeyType) : 'duration'
+  const pointsPerCourse = getPointsPerCourse(journeyType)
   const fallbackAssignments = useMemo(() => {
     if (!program) return []
     return getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
@@ -963,26 +965,6 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                   ? resolveCourseCompletion(completionsByKey, entry.course)
                   : undefined
                 const isApproved = Boolean(completion)
-                const statusColor = isApproved
-                  ? 'green'
-                  : entry.availability === 'current'
-                    ? 'green'
-                    : entry.availability === 'completed'
-                      ? 'purple'
-                      : entry.availability === 'past'
-                        ? 'orange'
-                        : 'gray'
-                const statusLabel = isApproved
-                  ? 'Completed'
-                  : entry.availability === 'current'
-                    ? isWeeklyTimeline
-                      ? 'Current week'
-                      : 'Current month'
-                    : entry.availability === 'completed'
-                      ? 'Completed'
-                      : entry.availability === 'past'
-                        ? 'Ended'
-                        : 'Locked'
                 const hasCourse = Boolean(entry.course)
                 const isLoadingCourse = overallLoading && entry.courseId && !entry.course
                 const missingCourse = !overallLoading && entry.courseId && !entry.course
@@ -994,124 +976,361 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                     ? entry.unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
                     : null
                 const canOpen = hasAccess && !isLocked && hasLink
+                const isCurrent = entry.availability === 'current'
+
+                interface CardVisual {
+                  strip: string
+                  icon: LucideIcon
+                  iconBg: string
+                  iconColor: string
+                  eyebrowColor: string
+                  badge: { label: string; bg: string; color: string } | null
+                }
+                const visual: CardVisual = isApproved
+                  ? {
+                      strip: '#16a34a',
+                      icon: Award,
+                      iconBg: 'green.50',
+                      iconColor: 'green.600',
+                      eyebrowColor: 'green.700',
+                      badge: { label: 'Completed', bg: 'green.50', color: 'green.700' },
+                    }
+                  : isCurrent
+                    ? {
+                        strip: '#350e6f',
+                        icon: Sparkles,
+                        iconBg: 'purple.50',
+                        iconColor: '#350e6f',
+                        eyebrowColor: '#350e6f',
+                        badge: null,
+                      }
+                    : entry.availability === 'past'
+                      ? {
+                          strip: '#cbd5e1',
+                          icon: Clock,
+                          iconBg: 'gray.100',
+                          iconColor: 'gray.600',
+                          eyebrowColor: 'gray.600',
+                          badge: { label: 'Ended', bg: 'gray.100', color: 'gray.700' },
+                        }
+                      : isLocked
+                        ? {
+                            strip: '#e5e7eb',
+                            icon: Lock,
+                            iconBg: 'gray.100',
+                            iconColor: 'gray.500',
+                            eyebrowColor: 'gray.500',
+                            badge: { label: 'Locked', bg: 'gray.100', color: 'gray.600' },
+                          }
+                        : {
+                            strip: '#350e6f',
+                            icon: BookOpen,
+                            iconBg: 'purple.50',
+                            iconColor: '#350e6f',
+                            eyebrowColor: '#350e6f',
+                            badge: null,
+                          }
+
+                const periodLabel =
+                  entry.displayLabel ||
+                  (entry.periodLabel === 'week'
+                    ? `Week ${entry.periodNumber}`
+                    : `Month ${entry.periodNumber}`)
+
+                const awardedDateLabel = completion?.approvedAt
+                  ? formatCompletionDate(completion.approvedAt)
+                  : null
+
                 return (
                   <Box
                     key={`${entry.periodLabel}-${entry.periodNumber}`}
-                    borderWidth="1px"
-                    borderRadius="2xl"
-                    p={4}
-                    bg={isApproved ? 'green.50' : entry.availability === 'current' ? 'purple.50' : 'gray.50'}
-                  >
-                    <HStack justify="space-between" mb={2}>
-                      <Badge colorScheme={statusColor} borderRadius="full">
-                        {entry.displayLabel ||
-                          (entry.periodLabel === 'week'
-                            ? `Week ${entry.periodNumber}`
-                            : `Month ${entry.periodNumber}`)}
-                      </Badge>
-                      <HStack spacing={1} color="gray.600">
-                        <Icon
-                          as={
-                            isApproved || entry.availability === 'completed'
-                              ? CheckCircle2
-                              : entry.availability === 'past'
-                                ? Clock
-                                : entry.availability === 'locked'
-                                  ? Lock
-                                  : Sparkles
+                    position="relative"
+                    borderRadius="xl"
+                    bg="white"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    overflow="hidden"
+                    h="full"
+                    display="flex"
+                    flexDirection="column"
+                    transition="all 0.2s ease"
+                    _hover={
+                      canOpen
+                        ? {
+                            borderColor: '#350e6f',
+                            boxShadow: '0 8px 24px -12px rgba(39, 6, 46, 0.2)',
+                            transform: 'translateY(-2px)',
                           }
-                        />
-                        <Text fontSize="xs">{statusLabel}</Text>
-                      </HStack>
-                    </HStack>
-                    <Heading size="sm" color="gray.800" mb={1}>
-                      {entry.course?.title || (entry.courseId ? 'Course assigned' : 'Course not assigned')}
-                    </Heading>
-                    <Text fontSize="sm" color="gray.600" mb={2}>
-                      {entry.course?.description ||
-                        `Your ${entry.periodLabel === 'week' ? 'weekly' : 'monthly'} course assignment.`}
-                    </Text>
-                    {hasCourse && (
-                      <Box mb={2}>
-                        <CourseCompletionStatus completion={completion} showAwaitingHint={!isLocked} />
-                      </Box>
-                    )}
-                    {entry.dateRange && (
-                      <Badge variant="subtle" colorScheme="gray" borderRadius="full">
-                        {entry.dateRange}
-                      </Badge>
-                    )}
-                    {entry.availability === 'locked' && entry.unlockDate && (
-                      <Text fontSize="xs" color="gray.500" mt={2}>
-                        Unlocks on {entry.unlockDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                      </Text>
-                    )}
-                    {missingCourse && (
-                      <Text fontSize="xs" color="red.500" mt={2}>
-                        A course assigned in the program could not be found. Please contact support.
-                      </Text>
-                    )}
-                    {!entry.courseId && (
-                      <Text fontSize="xs" color="gray.500" mt={2}>
-                        No course assigned for this {entry.periodLabel} yet.
-                      </Text>
-                    )}
-                    {entry.courseId && (
-                      <Stack mt={3} spacing={2}>
-                        {isLoadingCourse ? (
-                          <Button size="sm" colorScheme="purple" borderRadius="full" isLoading loadingText="Loading course">
-                            Loading course
-                          </Button>
-                        ) : (
-                          <Tooltip
-                            label={
-                              !hasCourse
-                                ? missingCourse
-                                  ? 'Course details are unavailable.'
-                                  : 'Course details are still loading.'
-                                : !hasLink
-                                  ? 'Course link has not been provided yet.'
-                                  : isLocked && unlockDateLabel
-                                    ? `Unlocks on ${unlockDateLabel}`
-                                    : isLocked
-                                      ? 'Course is locked until its unlock date.'
-                                      : !hasAccess
-                                        ? 'Upgrade your membership to access this course.'
-                                        : ''
-                            }
-                            isDisabled={!isLocked && hasAccess && hasLink && hasCourse}
-                            hasArrow
-                            shouldWrapChildren
-                          >
-                            <Button
-                              as={canOpen ? 'a' : (RouterLink as React.ElementType)}
-                              href={canOpen ? entry.course?.link : undefined}
-                              to={canOpen ? undefined : '/upgrade'}
-                              target={canOpen ? '_blank' : undefined}
-                              rel={canOpen ? 'noopener noreferrer' : undefined}
-                              size="sm"
-                              colorScheme="purple"
-                              variant="solid"
-                              borderRadius="full"
-                              minW="140px"
-                              isDisabled={!hasCourse || !hasLink || isLocked}
-                              leftIcon={isLocked ? <Lock size={14} /> : undefined}
-                              rightIcon={!isLocked ? <ExternalLink size={16} /> : undefined}
+                        : undefined
+                    }
+                    opacity={isLocked ? 0.85 : 1}
+                  >
+                    <Box h="3px" bg={visual.strip} />
+
+                    <Stack
+                      spacing={4}
+                      p={{ base: 4, md: 5 }}
+                      flex="1"
+                      justify="space-between"
+                    >
+                      <Stack spacing={4}>
+                        <HStack justify="space-between" align="center">
+                          <HStack spacing={2.5} align="center">
+                            <Box
+                              p={2}
+                              borderRadius="lg"
+                              bg={visual.iconBg}
+                              color={visual.iconColor}
+                              display="inline-flex"
                             >
-                              {isLocked && unlockDateLabel
-                                ? `Unlocks ${unlockDateLabel}`
-                                : !hasCourse
-                                  ? 'Course unavailable'
-                                  : !hasLink
-                                    ? 'Link unavailable'
-                                    : hasAccess
-                                      ? 'Open course'
-                                      : 'Upgrade to unlock'}
-                            </Button>
-                          </Tooltip>
+                              <Icon as={visual.icon} boxSize={4} />
+                            </Box>
+                            <Text
+                              fontSize="xs"
+                              fontWeight="bold"
+                              letterSpacing="0.14em"
+                              textTransform="uppercase"
+                              color={visual.eyebrowColor}
+                            >
+                              {periodLabel}
+                            </Text>
+                          </HStack>
+                          {visual.badge && (
+                            <Badge
+                              bg={visual.badge.bg}
+                              color={visual.badge.color}
+                              textTransform="none"
+                              fontSize="2xs"
+                              fontWeight="semibold"
+                              px={2}
+                              py={0.5}
+                              borderRadius="full"
+                            >
+                              {visual.badge.label}
+                            </Badge>
+                          )}
+                        </HStack>
+
+                        <Stack spacing={1.5}>
+                          <Heading
+                            as="h3"
+                            size="sm"
+                            color="#27062e"
+                            fontWeight="bold"
+                            letterSpacing="-0.01em"
+                            lineHeight="1.3"
+                          >
+                            {entry.course?.title ||
+                              (entry.courseId ? 'Course assigned' : 'Course not assigned')}
+                          </Heading>
+                          <Text
+                            fontSize="sm"
+                            color="gray.600"
+                            lineHeight="1.55"
+                            noOfLines={2}
+                          >
+                            {entry.course?.description ||
+                              `Your ${entry.periodLabel === 'week' ? 'weekly' : 'monthly'} course assignment.`}
+                          </Text>
+                        </Stack>
+
+                        {entry.dateRange && (
+                          <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                            {entry.dateRange}
+                          </Text>
+                        )}
+
+                        {hasCourse && isApproved ? (
+                          <HStack
+                            spacing={2}
+                            bg="green.50"
+                            border="1px solid"
+                            borderColor="green.200"
+                            borderRadius="md"
+                            px={3}
+                            py={2}
+                            align="center"
+                          >
+                            <Icon as={Award} color="green.600" boxSize={4} />
+                            <Stack spacing={0} flex="1">
+                              <Text
+                                fontSize="xs"
+                                fontWeight="bold"
+                                color="green.800"
+                                lineHeight="1.2"
+                              >
+                                {completion?.points
+                                  ? `+${completion.points.toLocaleString()} points awarded`
+                                  : 'Course completed'}
+                              </Text>
+                              {awardedDateLabel && (
+                                <Text fontSize="2xs" color="green.700" lineHeight="1.2">
+                                  Verified by partner on {awardedDateLabel}
+                                </Text>
+                              )}
+                            </Stack>
+                          </HStack>
+                        ) : hasCourse && pointsPerCourse ? (
+                          <HStack
+                            spacing={2}
+                            bg={isCurrent ? 'purple.50' : 'gray.50'}
+                            border="1px solid"
+                            borderColor={isCurrent ? 'purple.100' : 'gray.200'}
+                            borderRadius="md"
+                            px={3}
+                            py={2}
+                            align="center"
+                          >
+                            <Icon
+                              as={Award}
+                              color={isCurrent ? '#350e6f' : 'gray.500'}
+                              boxSize={4}
+                            />
+                            <Stack spacing={0} flex="1">
+                              <Text
+                                fontSize="xs"
+                                fontWeight="bold"
+                                color={isCurrent ? '#350e6f' : 'gray.700'}
+                                lineHeight="1.2"
+                              >
+                                Worth {pointsPerCourse.toLocaleString()} points
+                              </Text>
+                              <Text
+                                fontSize="2xs"
+                                color={isCurrent ? 'purple.700' : 'gray.500'}
+                                lineHeight="1.2"
+                              >
+                                {isLocked
+                                  ? 'Awarded by partner on completion'
+                                  : isCurrent
+                                    ? 'Awarded by partner once verified'
+                                    : entry.availability === 'past'
+                                      ? 'Awaiting partner verification'
+                                      : 'Awarded by partner on completion'}
+                              </Text>
+                            </Stack>
+                          </HStack>
+                        ) : null}
+
+                        {missingCourse && (
+                          <Text fontSize="xs" color="red.500">
+                            Course details unavailable. Please contact support.
+                          </Text>
+                        )}
+                        {!entry.courseId && (
+                          <Text fontSize="xs" color="gray.500">
+                            No course assigned for this {entry.periodLabel} yet.
+                          </Text>
                         )}
                       </Stack>
-                    )}
+
+                      {entry.courseId && (
+                        <Box pt={1}>
+                          {isLoadingCourse ? (
+                            <Button
+                              size="sm"
+                              bg="#350e6f"
+                              color="white"
+                              borderRadius="md"
+                              fontWeight="semibold"
+                              isLoading
+                              loadingText="Loading"
+                              w="full"
+                            >
+                              Loading
+                            </Button>
+                          ) : (
+                            <Tooltip
+                              label={
+                                !hasCourse
+                                  ? missingCourse
+                                    ? 'Course details are unavailable.'
+                                    : 'Course details are still loading.'
+                                  : !hasLink
+                                    ? 'Course link has not been provided yet.'
+                                    : isLocked && unlockDateLabel
+                                      ? `Unlocks on ${unlockDateLabel}`
+                                      : isLocked
+                                        ? 'Course is locked until its unlock date.'
+                                        : !hasAccess
+                                          ? 'Upgrade your membership to access this course.'
+                                          : ''
+                              }
+                              isDisabled={!isLocked && hasAccess && hasLink && hasCourse}
+                              hasArrow
+                              shouldWrapChildren
+                            >
+                              <Button
+                                as={canOpen ? 'a' : (RouterLink as React.ElementType)}
+                                href={canOpen ? entry.course?.link : undefined}
+                                to={canOpen ? undefined : '/upgrade'}
+                                target={canOpen ? '_blank' : undefined}
+                                rel={canOpen ? 'noopener noreferrer' : undefined}
+                                size="sm"
+                                bg={
+                                  isApproved && canOpen
+                                    ? 'transparent'
+                                    : canOpen
+                                      ? '#350e6f'
+                                      : 'transparent'
+                                }
+                                color={
+                                  isApproved && canOpen
+                                    ? 'green.700'
+                                    : canOpen
+                                      ? 'white'
+                                      : 'gray.600'
+                                }
+                                border={
+                                  isApproved && canOpen
+                                    ? '1px solid'
+                                    : canOpen
+                                      ? 'none'
+                                      : '1px solid'
+                                }
+                                borderColor={
+                                  isApproved && canOpen ? 'green.300' : 'gray.300'
+                                }
+                                _hover={
+                                  isApproved && canOpen
+                                    ? { bg: 'green.50', borderColor: 'green.400' }
+                                    : canOpen
+                                      ? { bg: '#27062e' }
+                                      : undefined
+                                }
+                                _active={
+                                  isApproved && canOpen
+                                    ? { bg: 'green.100' }
+                                    : canOpen
+                                      ? { bg: '#27062e' }
+                                      : undefined
+                                }
+                                borderRadius="md"
+                                fontWeight="semibold"
+                                w="full"
+                                isDisabled={!hasCourse || !hasLink || isLocked}
+                                leftIcon={isLocked ? <Lock size={14} /> : undefined}
+                                rightIcon={
+                                  !isLocked && canOpen ? <ArrowUpRight size={14} /> : undefined
+                                }
+                              >
+                                {isLocked && unlockDateLabel
+                                  ? `Unlocks ${unlockDateLabel}`
+                                  : !hasCourse
+                                    ? 'Course unavailable'
+                                    : !hasLink
+                                      ? 'Link unavailable'
+                                      : !hasAccess
+                                        ? 'Upgrade to unlock'
+                                        : isApproved
+                                          ? 'Revisit course'
+                                          : 'Open course'}
+                              </Button>
+                            </Tooltip>
+                          )}
+                        </Box>
+                      )}
+                    </Stack>
                   </Box>
                 )
               })}
