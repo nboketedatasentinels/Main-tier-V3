@@ -20,20 +20,12 @@ const WHATSAPP_CIRCLE_URL = 'https://chat.whatsapp.com/GU834qw8x6JHYgrzDBUT5i?mo
 export const ShamelessTuesdayPodcastPage: React.FC = () => (
   <Stack spacing={6} pb={10}>
     <Box
-      bgGradient="linear(135deg, #27062e 0%, #350e6f 55%, #8b5a3c 100%)"
+      bgGradient="linear(to-r, #350e6f, #8b5a3c)"
       borderRadius="2xl"
       overflow="hidden"
       boxShadow="sm"
-      position="relative"
     >
-      <Box
-        position="absolute"
-        inset={0}
-        opacity={0.18}
-        pointerEvents="none"
-        bgImage="radial-gradient(circle at 88% 12%, rgba(234,177,48,0.45) 0%, transparent 35%)"
-      />
-      <Box px={{ base: 5, md: 8 }} py={{ base: 6, md: 8 }} position="relative">
+      <Box px={{ base: 5, md: 8 }} py={{ base: 6, md: 8 }}>
         <Stack spacing={3} maxW="2xl">
           <HStack spacing={2} align="center">
             <Box
@@ -46,7 +38,7 @@ export const ShamelessTuesdayPodcastPage: React.FC = () => (
               <Icon as={Mic} boxSize={3.5} color="white" />
             </Box>
             <Text
-              color="whiteAlpha.900"
+              color="white"
               fontSize="xs"
               fontWeight="bold"
               letterSpacing="0.18em"
@@ -64,7 +56,11 @@ export const ShamelessTuesdayPodcastPage: React.FC = () => (
           >
             Shameless Tuesday
           </Heading>
-          <Text color="whiteAlpha.850" fontSize={{ base: 'sm', md: 'md' }} lineHeight="1.6">
+          <Text
+            color="whiteAlpha.900"
+            fontSize={{ base: 'sm', md: 'md' }}
+            lineHeight="1.6"
+          >
             Honest conversations with leaders who&apos;ve stopped apologising for their ambition.
             New episode every Tuesday.
           </Text>
