@@ -317,7 +317,6 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
 
   return (
     <Stack spacing={8} py={2} as="section">
-      <RulesOfEngagementVideo />
       <Box
         bgGradient="linear(to-r, purple.50, purple.100)"
         borderRadius="3xl"
@@ -831,7 +830,6 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
   return (
     <Stack spacing={8} py={2} as="section">
-      <RulesOfEngagementVideo />
       {hasOrganization && hasProgram && program?.pillar && (
         <Box
           bgGradient="linear(to-r, #350e6f, #8b5a3c)"
@@ -918,6 +916,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
           </Stack>
         </Box>
       )}
+
+      <RulesOfEngagementVideo />
 
       {hasOrganization && hasProgram && hasTimeline && (
         <Stack spacing={4} as="section" id="programme-courses" scrollMarginTop="20px">
@@ -1211,7 +1211,6 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
 
   return (
     <Stack spacing={8} py={2} as="section">
-      <RulesOfEngagementVideo />
       <Box
         bgGradient="linear(to-r, purple.50, purple.100)"
         borderRadius="3xl"

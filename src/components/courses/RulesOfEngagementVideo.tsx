@@ -1,16 +1,14 @@
 import React, { useRef, useState } from 'react'
 import {
   AspectRatio,
-  Badge,
   Box,
   Flex,
-  HStack,
   Heading,
   Icon,
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { Play, Sparkles } from 'lucide-react'
+import { Play } from 'lucide-react'
 
 const VIDEO_SRC = '/media/rules-of-engagement.mp4'
 
@@ -26,99 +24,59 @@ export const RulesOfEngagementVideo: React.FC = () => {
 
   return (
     <Box
-      position="relative"
-      borderRadius="3xl"
-      overflow="hidden"
-      bgGradient="linear(135deg, #27062e 0%, #350e6f 55%, #4a1280 100%)"
-      boxShadow="0 24px 60px -28px rgba(39, 6, 46, 0.55)"
-      border="1px solid"
-      borderColor="purple.900"
       as="section"
-      aria-label="Rules of Engagement introduction"
+      aria-label="Rules of Engagement orientation"
+      bg="white"
+      borderRadius="2xl"
+      border="1px solid"
+      borderColor="gray.200"
+      boxShadow="sm"
+      overflow="hidden"
     >
-      <Box
-        position="absolute"
-        inset={0}
-        opacity={0.18}
-        pointerEvents="none"
-        bgImage="radial-gradient(circle at 18% 22%, rgba(244,84,12,0.45) 0%, transparent 38%), radial-gradient(circle at 82% 78%, rgba(249,219,89,0.55) 0%, transparent 42%)"
-      />
-
       <Flex
         direction={{ base: 'column', lg: 'row' }}
-        position="relative"
-        zIndex={1}
-        gap={{ base: 6, lg: 10 }}
-        p={{ base: 6, md: 8, lg: 10 }}
         align="stretch"
+        gap={{ base: 5, lg: 8 }}
+        p={{ base: 5, md: 6, lg: 8 }}
       >
-        <Stack spacing={5} flex="1 1 0" maxW={{ lg: '420px' }} justify="center">
-          <HStack spacing={2}>
-            <Badge
-              variant="subtle"
-              colorScheme="yellow"
-              bg="rgba(249, 219, 89, 0.15)"
-              color="#f9db59"
-              border="1px solid"
-              borderColor="rgba(249, 219, 89, 0.35)"
-              borderRadius="full"
-              px={3}
-              py={1}
-              textTransform="uppercase"
-              letterSpacing="0.12em"
-              fontSize="xs"
-              fontWeight="bold"
-            >
-              <HStack spacing={1.5}>
-                <Icon as={Sparkles} boxSize={3} />
-                <Text>Watch first</Text>
-              </HStack>
-            </Badge>
-            <Badge
-              variant="subtle"
-              bg="rgba(244, 84, 12, 0.15)"
-              color="#ffb88a"
-              border="1px solid"
-              borderColor="rgba(244, 84, 12, 0.35)"
-              borderRadius="full"
-              px={3}
-              py={1}
-              textTransform="uppercase"
-              letterSpacing="0.1em"
-              fontSize="xs"
-              fontWeight="bold"
-            >
-              New
-            </Badge>
-          </HStack>
+        <Stack spacing={4} flex="1 1 0" maxW={{ lg: '380px' }} justify="center">
+          <Text
+            color="purple.700"
+            textTransform="uppercase"
+            letterSpacing="0.16em"
+            fontSize="xs"
+            fontWeight="semibold"
+          >
+            Programme Orientation
+          </Text>
 
-          <Stack spacing={3}>
-            <Heading
-              as="h2"
-              size="lg"
-              color="white"
-              lineHeight="1.15"
-              letterSpacing="-0.01em"
-            >
-              Rules of <Box as="span" color="#f9db59" fontStyle="italic">Engagement</Box>
-            </Heading>
-            <Text color="rgba(255, 255, 255, 0.78)" fontSize="md" lineHeight="1.65">
-              A short orientation from the T4L team. Watch this before you dive
-              into your courses — it sets the tone, the cadence, and the
-              standard we hold each other to throughout the journey.
-            </Text>
-          </Stack>
+          <Heading
+            as="h2"
+            size="lg"
+            color="gray.900"
+            lineHeight="1.2"
+            letterSpacing="-0.01em"
+            fontWeight="semibold"
+          >
+            Rules of Engagement
+          </Heading>
+
+          <Text color="gray.600" fontSize="sm" lineHeight="1.7">
+            A short orientation from the T4L team. Please review before
+            beginning the programme. It outlines the expectations, the
+            cadence, and the professional standards that apply throughout
+            your journey.
+          </Text>
         </Stack>
 
         <Box flex="1 1 0" minW={0}>
           <Box
-            borderRadius="2xl"
+            borderRadius="lg"
             overflow="hidden"
             border="1px solid"
-            borderColor="rgba(249, 219, 89, 0.25)"
-            boxShadow="0 18px 40px -22px rgba(0, 0, 0, 0.55)"
+            borderColor="gray.300"
             position="relative"
-            bg="black"
+            bg="gray.900"
           >
             <AspectRatio ratio={16 / 9}>
               <video
@@ -129,7 +87,7 @@ export const RulesOfEngagementVideo: React.FC = () => {
                 preload="metadata"
                 onPlay={() => setIsPlaying(true)}
                 onPause={() => setIsPlaying(false)}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#000' }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', background: '#111' }}
               />
             </AspectRatio>
 
@@ -139,26 +97,27 @@ export const RulesOfEngagementVideo: React.FC = () => {
                 inset={0}
                 align="center"
                 justify="center"
-                bgGradient="linear(180deg, rgba(39,6,46,0.05) 0%, rgba(39,6,46,0.55) 100%)"
                 pointerEvents="none"
+                bg="blackAlpha.300"
               >
                 <Flex
                   align="center"
                   justify="center"
-                  bg="#f4540c"
+                  bg="blackAlpha.700"
                   color="white"
-                  boxSize={{ base: 14, md: 16 }}
+                  boxSize={{ base: 12, md: 14 }}
                   borderRadius="full"
-                  boxShadow="0 12px 30px -8px rgba(244, 84, 12, 0.65)"
+                  border="1px solid"
+                  borderColor="whiteAlpha.400"
                   cursor="pointer"
                   pointerEvents="auto"
                   onClick={handlePlay}
-                  transition="transform 0.18s ease"
-                  _hover={{ transform: 'scale(1.06)' }}
+                  transition="background 0.18s ease, transform 0.18s ease"
+                  _hover={{ bg: 'blackAlpha.800', transform: 'scale(1.04)' }}
                   aria-label="Play Rules of Engagement video"
                   role="button"
                 >
-                  <Icon as={Play} boxSize={6} fill="white" strokeWidth={0} />
+                  <Icon as={Play} boxSize={5} fill="currentColor" strokeWidth={0} />
                 </Flex>
               </Flex>
             )}
