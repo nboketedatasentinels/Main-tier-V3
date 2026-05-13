@@ -17,7 +17,7 @@ import {
 } from '@chakra-ui/react'
 import { ExternalLink, Hammer, Music2, Wrench } from 'lucide-react'
 
-const TIKTOK_URL = 'https://www.tiktok.com/@t4leaders'
+const TIKTOK_URL = 'https://www.tiktok.com/@t4leader'
 const T4L_TOOLS_URL = 'https://www.t4leader.com/tools'
 
 const ExternalCard: React.FC<{
