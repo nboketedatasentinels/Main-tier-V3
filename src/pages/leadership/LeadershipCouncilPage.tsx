@@ -599,20 +599,18 @@ export const LeadershipCouncilPage: React.FC = () => {
   return (
     <Stack spacing={6}>
       <Card
-        bg="white"
-        border="1px solid"
-        borderColor="gray.200"
+        bgGradient="linear(to-r, #350e6f, #8b5a3c)"
+        border="none"
         boxShadow="sm"
         borderRadius="2xl"
         overflow="hidden"
       >
-        <Box h="3px" bg="#350e6f" />
         <CardBody px={{ base: 5, md: 7 }} py={{ base: 5, md: 6 }}>
           <Flex align={{ base: 'flex-start', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
             <Box flex={1} minW={0}>
               <HStack spacing={2} mb={2} flexWrap="wrap">
                 <Text
-                  color="#350e6f"
+                  color="whiteAlpha.900"
                   textTransform="uppercase"
                   letterSpacing="0.16em"
                   fontSize="xs"
@@ -622,8 +620,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                 </Text>
                 {profile?.companyName && (
                   <>
-                    <Box boxSize={1} borderRadius="full" bg="gray.300" />
-                    <HStack spacing={1} color="gray.500">
+                    <Box boxSize={1} borderRadius="full" bg="whiteAlpha.500" />
+                    <HStack spacing={1} color="whiteAlpha.900">
                       <Icon as={Building2} boxSize={3} />
                       <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.04em">
                         {profile.companyName}
@@ -634,7 +632,7 @@ export const LeadershipCouncilPage: React.FC = () => {
               </HStack>
               <Heading
                 size="lg"
-                color="#27062e"
+                color="white"
                 letterSpacing="-0.02em"
                 fontWeight="bold"
                 lineHeight="1.15"
@@ -642,15 +640,15 @@ export const LeadershipCouncilPage: React.FC = () => {
               >
                 Your support team
               </Heading>
-              <Text color="gray.600" fontSize="sm" lineHeight="1.6">
+              <Text color="whiteAlpha.800" fontSize="sm" lineHeight="1.6">
                 Mentor, ambassador, and transformation partner — all in one place.
               </Text>
               {showOrgDebug && (
                 <HStack spacing={3} mt={2} flexWrap="wrap">
-                  <Text fontSize="xs" color="gray.500">ID: {organization.id ?? '—'}</Text>
-                  <Text fontSize="xs" color="gray.500">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
-                  <Text fontSize="xs" color="gray.500">Mentor: {assignmentSources.mentor ?? '—'}</Text>
-                  <Text fontSize="xs" color="gray.500">Ambassador: {assignmentSources.ambassador ?? '—'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '—'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '—'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">Ambassador: {assignmentSources.ambassador ?? '—'}</Text>
                 </HStack>
               )}
             </Box>
@@ -658,10 +656,11 @@ export const LeadershipCouncilPage: React.FC = () => {
               size="sm"
               flexShrink={0}
               leftIcon={<RefreshCcw size={14} />}
-              variant="outline"
-              borderColor="gray.300"
-              color="gray.700"
-              _hover={{ bg: 'gray.50', borderColor: '#350e6f', color: '#350e6f' }}
+              bg="whiteAlpha.200"
+              color="white"
+              border="1px solid"
+              borderColor="whiteAlpha.300"
+              _hover={{ bg: 'whiteAlpha.300' }}
               onClick={retryAssignments}
               isLoading={assignmentsLoading}
             >
@@ -1289,7 +1288,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                         Transformation Partner
                       </Text>
                       <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                        Programme support
+                        {partnerProfile
+                          ? displayNameForProfile(partnerProfile)
+                          : 'No partner assigned'}
                       </Heading>
                     </Stack>
                   </CardHeader>
@@ -1302,30 +1303,31 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
                     {!partnerLoading && partnerProfile && (
                       <Stack spacing={4}>
-                        <HStack justify="space-between" align="start" spacing={4} flexWrap="wrap">
-                          <HStack spacing={3} align="start">
+                        <HStack justify="space-between" align="center" spacing={4} flexWrap="wrap">
+                          <HStack spacing={3} align="center">
                             <Avatar
                               size="lg"
                               name={displayNameForProfile(partnerProfile)}
                               src={partnerProfile.avatarUrl}
-                              bg="brand.primary"
+                              bg="#350e6f"
                             />
-                            <Box>
-                              <Heading size="sm">{displayNameForProfile(partnerProfile)}</Heading>
-                              <Text color="text.secondary">{partnerProfile.title || 'Transformation Partner'}</Text>
-                              <Text color="text.muted" fontSize="sm">
+                            <Stack spacing={0.5}>
+                              <Text color="gray.700" fontSize="sm" fontWeight="medium">
+                                {partnerProfile.title || 'Transformation Partner'}
+                              </Text>
+                              <Text color="gray.500" fontSize="xs">
                                 {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
                               </Text>
-                            </Box>
+                            </Stack>
                           </HStack>
-                          <HStack spacing={3}>
+                          <HStack spacing={2} flexWrap="wrap">
                             {partnerProfile.rating && (
-                              <Badge colorScheme="secondary" variant="subtle">
+                              <Badge colorScheme="purple" variant="subtle">
                                 Rating {partnerProfile.rating.toFixed(1)} / 5 ({partnerProfile.ratingCount || 0} reviews)
                               </Badge>
                             )}
                             {partnerProfile.xp && (
-                              <Badge colorScheme="primary" variant="subtle">
+                              <Badge colorScheme="purple" variant="subtle">
                                 XP {partnerProfile.xp.toLocaleString()}
                               </Badge>
                             )}
