@@ -12,6 +12,7 @@ import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
 import { upsertChecklistActivity } from "./checklistService";
 import { awardChecklistPoints } from "./pointsService";
+import { createInAppNotification } from "./notificationService";
 
 const chunkList = <T,>(items: T[], size: number): T[][] => {
   const chunks: T[][] = []
@@ -136,6 +137,34 @@ export async function assignActivityToLearner(params: {
       points: activity.points,
       status: 'approved'
     });
+
+    // 6. Push notification for the learner. Surfaces as a pop-up via the
+    // ProgrammePushPopup mounted in MainLayout — same modal design the
+    // scheduled programme-day notifications use. priority: 'push' is the
+    // signal the popup listens for.
+    try {
+      await createInAppNotification({
+        userId: learnerId,
+        type: 'approval',
+        title: `🎉 +${activity.points.toLocaleString()} points awarded`,
+        message: `Your partner awarded you for completing "${activity.title}" (week ${weekNumber}).`,
+        metadata: {
+          priority: 'push',
+          activityId,
+          weekNumber,
+          points: activity.points,
+          partnerId: normalizedPartnerId,
+          source: 'partner_issued',
+        },
+        relatedId: activityId,
+      });
+    } catch (notifyErr) {
+      // Non-fatal: points + checklist already wrote successfully. Log and continue.
+      console.warn(
+        "[PartnerAssignmentService] Failed to write learner pop-up notification",
+        notifyErr,
+      );
+    }
 
     return { success: true };
   } catch (error) {
