@@ -44,7 +44,6 @@ import {
   Tooltip,
   useDisclosure,
   useToast,
-  VStack,
 } from '@chakra-ui/react'
 import {
   AlertTriangle,
@@ -62,7 +61,6 @@ import {
   Timer,
   User,
   UserCircle2,
-  Users,
 } from 'lucide-react'
 import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
@@ -307,12 +305,6 @@ export const LeadershipCouncilPage: React.FC = () => {
           status: ambassadorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
         },
       ]
-
-  const gateStatusColor = (status: 'complete' | 'pending' | 'blocked') => {
-    if (status === 'complete') return 'green'
-    if (status === 'pending') return 'yellow'
-    return 'red'
-  }
 
   const gateStatusIcon = (status: 'complete' | 'pending' | 'blocked') => {
     if (status === 'complete') return CheckCircle2
@@ -605,44 +597,59 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   return (
     <Stack spacing={6}>
-      <Card bgGradient="linear(to-r, #350e6f, #8b5a3c)" border="none" boxShadow="sm" borderRadius="xl" overflow="hidden">
-        <CardBody px={6} py={7}>
-          <Flex align="center" gap={6} direction={{ base: 'column', md: 'row' }}>
+      <Card
+        bg="white"
+        border="1px solid"
+        borderColor="gray.200"
+        boxShadow="sm"
+        borderRadius="2xl"
+        overflow="hidden"
+      >
+        <Box h="3px" bg="#350e6f" />
+        <CardBody px={{ base: 5, md: 7 }} py={{ base: 5, md: 6 }}>
+          <Flex align={{ base: 'flex-start', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
             <Box flex={1} minW={0}>
-              <HStack spacing={2} mb={1}>
-                <Badge
-                  bg="whiteAlpha.300"
-                  color="white"
-                  borderRadius="full"
-                  px={2}
-                  py={0.5}
+              <HStack spacing={2} mb={2} flexWrap="wrap">
+                <Text
+                  color="#350e6f"
+                  textTransform="uppercase"
+                  letterSpacing="0.16em"
                   fontSize="xs"
-                  fontWeight="semibold"
+                  fontWeight="bold"
                 >
                   Leadership Council
-                </Badge>
+                </Text>
                 {profile?.companyName && (
-                  <HStack spacing={1}>
-                    <Icon as={Building2} boxSize={3} color="white" />
-                    <Text fontSize="xs" fontWeight="medium" color="white">
-                      {profile.companyName}
-                      {profile.companyCode && ` (${profile.companyCode})`}
-                    </Text>
-                  </HStack>
+                  <>
+                    <Box boxSize={1} borderRadius="full" bg="gray.300" />
+                    <HStack spacing={1} color="gray.500">
+                      <Icon as={Building2} boxSize={3} />
+                      <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.04em">
+                        {profile.companyName}
+                      </Text>
+                    </HStack>
+                  </>
                 )}
               </HStack>
-              <Text fontWeight="bold" fontSize="lg" color="white">
-                Stay connected with the people supporting your transformation journey.
-              </Text>
-              <Text fontSize="sm" color="white">
-                Your mentor, ambassador, and transformation partner are highlighted below. Schedule sessions, review upcoming meetings, and explore your leadership network.
+              <Heading
+                size="lg"
+                color="#27062e"
+                letterSpacing="-0.02em"
+                fontWeight="bold"
+                lineHeight="1.15"
+                mb={1}
+              >
+                Your support team
+              </Heading>
+              <Text color="gray.600" fontSize="sm" lineHeight="1.6">
+                Mentor, ambassador, and transformation partner — all in one place.
               </Text>
               {showOrgDebug && (
-                <HStack spacing={3} mt={1} flexWrap="wrap">
-                  <Text fontSize="xs" color="white">ID: {organization.id ?? '—'}</Text>
-                  <Text fontSize="xs" color="white">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
-                  <Text fontSize="xs" color="white">Mentor: {assignmentSources.mentor ?? '—'}</Text>
-                  <Text fontSize="xs" color="white">Ambassador: {assignmentSources.ambassador ?? '—'}</Text>
+                <HStack spacing={3} mt={2} flexWrap="wrap">
+                  <Text fontSize="xs" color="gray.500">ID: {organization.id ?? '—'}</Text>
+                  <Text fontSize="xs" color="gray.500">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
+                  <Text fontSize="xs" color="gray.500">Mentor: {assignmentSources.mentor ?? '—'}</Text>
+                  <Text fontSize="xs" color="gray.500">Ambassador: {assignmentSources.ambassador ?? '—'}</Text>
                 </HStack>
               )}
             </Box>
@@ -650,11 +657,10 @@ export const LeadershipCouncilPage: React.FC = () => {
               size="sm"
               flexShrink={0}
               leftIcon={<RefreshCcw size={14} />}
-              bg="whiteAlpha.200"
-              color="white"
-              border="1px solid"
-              borderColor="whiteAlpha.300"
-              _hover={{ bg: 'whiteAlpha.300' }}
+              variant="outline"
+              borderColor="gray.300"
+              color="gray.700"
+              _hover={{ bg: 'gray.50', borderColor: '#350e6f', color: '#350e6f' }}
               onClick={retryAssignments}
               isLoading={assignmentsLoading}
             >
@@ -665,78 +671,83 @@ export const LeadershipCouncilPage: React.FC = () => {
       </Card>
 
       {!isLeadershipEligible && (
-        <Alert
-          status="info"
-          variant="left-accent"
-          borderRadius="lg"
-          bg="surface.default"
-          borderColor="border.subtle"
-          borderWidth="1px"
-          alignItems="flex-start"
+        <HStack
+          spacing={3}
+          bg="gray.50"
+          border="1px solid"
+          borderColor="gray.200"
+          borderRadius="xl"
+          px={4}
+          py={3}
+          align="center"
         >
-          <Icon as={Lock} color="brand.primary" boxSize={5} mr={3} mt={1} />
-          <Box>
-            <AlertTitle>Leadership Council unlocks on longer journeys</AlertTitle>
-            <AlertDescription display="block" color="text.secondary">
-              Mentor and Ambassador pairings are part of the 3-month, 6-month, and 9-month
-              programs. Keep building momentum in
-              {currentJourneyLabel ? ` the ${currentJourneyLabel}` : ' your current journey'} —
-              you&apos;ll unlock the full Council when you step into a longer program.
-            </AlertDescription>
-          </Box>
-        </Alert>
+          <Icon as={Lock} color="#350e6f" boxSize={4} />
+          <Text fontSize="sm" color="gray.700">
+            <Text as="span" fontWeight="semibold" color="#27062e">
+              Unlocks on 3M, 6M, and 9M journeys.
+            </Text>
+            {currentJourneyLabel ? ` You're on the ${currentJourneyLabel}.` : ''}
+          </Text>
+        </HStack>
       )}
 
-      <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
-        <CardBody>
-          <Stack spacing={4}>
-            <HStack justify="space-between" flexWrap="wrap">
-              <Box>
-                <Text fontSize="sm" fontWeight="semibold" color="text.primary">
-                  Assignment readiness
-                </Text>
-                <Text fontSize="sm" color="text.secondary">
-                  {isLeadershipEligible
-                    ? 'Complete each step to unlock mentor and ambassador connections.'
-                    : 'These steps become active on 3-month, 6-month, and 9-month journeys.'}
-                </Text>
-              </Box>
-              <Badge
-                colorScheme={!isLeadershipEligible ? 'gray' : assignmentsLoading ? 'yellow' : 'green'}
-                variant="subtle"
-              >
-                {!isLeadershipEligible
-                  ? 'Locked for this journey'
-                  : assignmentsLoading
-                    ? 'Checking assignments'
-                    : 'Status updated'}
-              </Badge>
-            </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              {gatingSteps.map((step) => (
-                <Box key={step.id} p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                  <HStack justify="space-between" align="start">
-                    <HStack spacing={3}>
-                      <Icon as={gateStatusIcon(step.status)} color={`${gateStatusColor(step.status)}.500`} />
-                      <Box>
-                        <Text fontWeight="semibold" color="text.primary">
-                          {step.title}
-                        </Text>
-                        <Text fontSize="sm" color="text.secondary">
-                          {step.description}
-                        </Text>
-                      </Box>
-                    </HStack>
-                    <Badge colorScheme={gateStatusColor(step.status)} variant="subtle">
-                      {step.status}
-                    </Badge>
+      <Box
+        bg="white"
+        border="1px solid"
+        borderColor="gray.200"
+        borderRadius="xl"
+        px={{ base: 4, md: 5 }}
+        py={4}
+      >
+        <Stack spacing={3}>
+          <HStack justify="space-between" align="center" flexWrap="wrap" spacing={3}>
+            <Text
+              fontSize="xs"
+              fontWeight="bold"
+              textTransform="uppercase"
+              letterSpacing="0.14em"
+              color="gray.500"
+            >
+              Readiness
+            </Text>
+            {isLeadershipEligible && !assignmentsLoading && (
+              <Text fontSize="xs" color="gray.600" fontWeight="medium">
+                {gatingSteps.filter((s) => s.status === 'complete').length} of {gatingSteps.length} ready
+              </Text>
+            )}
+          </HStack>
+          <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
+            {gatingSteps.map((step) => {
+              const tone =
+                step.status === 'complete'
+                  ? { bg: 'green.50', border: 'green.200', color: 'green.700', icon: 'green.500' }
+                  : step.status === 'pending'
+                    ? { bg: 'yellow.50', border: 'yellow.200', color: 'yellow.800', icon: 'yellow.500' }
+                    : { bg: 'gray.50', border: 'gray.200', color: 'gray.500', icon: 'gray.400' }
+              return (
+                <Tooltip key={step.id} label={step.description} placement="top" hasArrow openDelay={200}>
+                  <HStack
+                    spacing={2}
+                    bg={tone.bg}
+                    border="1px solid"
+                    borderColor={tone.border}
+                    borderRadius="md"
+                    px={3}
+                    py={2}
+                    align="center"
+                    cursor="default"
+                  >
+                    <Icon as={gateStatusIcon(step.status)} color={tone.icon} boxSize={3.5} />
+                    <Text fontSize="xs" fontWeight="semibold" color={tone.color} noOfLines={1}>
+                      {step.title.replace(' ready', '').replace(' linked', '').replace(' checked', '')}
+                    </Text>
                   </HStack>
-                </Box>
-              ))}
-            </SimpleGrid>
-          </Stack>
-        </CardBody>
-      </Card>
+                </Tooltip>
+              )
+            })}
+          </SimpleGrid>
+        </Stack>
+      </Box>
 
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
@@ -818,54 +829,41 @@ export const LeadershipCouncilPage: React.FC = () => {
                 {!isLeadershipEligible ? (
                   renderJourneyLockedTab('Mentor Assignment')
                 ) : (
-                <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={0}>
-                    <HStack justify="space-between" align="start">
-                      <Box>
-                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                          {isSamePerson ? 'Mentor & Ambassador Assignment' : 'Mentor Assignment'}
+                    <HStack justify="space-between" align="start" spacing={4}>
+                      <Stack spacing={2} flex="1" minW={0}>
+                        <Text
+                          fontSize="xs"
+                          textTransform="uppercase"
+                          color="#350e6f"
+                          fontWeight="bold"
+                          letterSpacing="0.14em"
+                        >
+                          {isSamePerson ? 'Mentor & Ambassador' : 'Mentor'}
                         </Text>
-                        <Heading size="md" color="text.primary">
+                        <Heading size="md" color="#27062e" letterSpacing="-0.01em">
                           {mentorProfile ? displayNameForProfile(mentorProfile) : 'No mentor assigned'}
                         </Heading>
-                        <HStack spacing={2} color="text.muted" mt={2}>
-                          <Icon as={Building2} />
-                          <Text>Supporting your organization</Text>
+                        <HStack spacing={2} flexWrap="wrap">
+                          {mentorProfile?.availabilityStatus && (
+                            <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
+                              {mentorProfile.availabilityStatus}
+                            </Badge>
+                          )}
+                          {mentorSourceLabel && (
+                            <Badge colorScheme="purple" variant="subtle">
+                              {mentorSourceLabel}
+                            </Badge>
+                          )}
                         </HStack>
-                        {isSamePerson && (
-                          <HStack spacing={2} color="text.muted" mt={1}>
-                            <Icon as={Users} />
-                            <Text>Supporting your organization</Text>
-                          </HStack>
-                        )}
-                        {mentorSourceLabel && (
-                          <Badge mt={3} width="fit-content" colorScheme="purple">
-                            {mentorSourceLabel}
-                          </Badge>
-                        )}
-                      </Box>
-                      <VStack spacing={3} align="end">
-                        <Avatar
-                          size="lg"
-                          name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
-                          src={mentorProfile?.avatarUrl}
-                          bg="brand.primary"
-                        />
-                        {mentorProfile?.availabilityStatus && (
-                          <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
-                            {mentorProfile.availabilityStatus}
-                          </Badge>
-                        )}
-                        <Button
-                          size="xs"
-                          variant="outline"
-                          leftIcon={<RefreshCcw size={14} />}
-                          onClick={retryAssignments}
-                          isLoading={assignmentsLoading}
-                        >
-                          Refresh
-                        </Button>
-                      </VStack>
+                      </Stack>
+                      <Avatar
+                        size="lg"
+                        name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
+                        src={mentorProfile?.avatarUrl}
+                        bg="#350e6f"
+                      />
                     </HStack>
                   </CardHeader>
                   <CardBody pt={4}>
@@ -890,21 +888,14 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
 
                     {!assignmentsLoading && !mentorProfile && !mentorError && (
-                      <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-                        <Icon as={User} boxSize={10} color="text.muted" />
-                        <Heading size="sm">No mentor assigned yet</Heading>
-                        <Text color="text.secondary">
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
+                        <Icon as={User} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">No mentor assigned</Heading>
+                        <Text color="gray.600" fontSize="sm">
                           {hasOrganization
-                            ? supportAssignmentStatus.loaded
-                              ? 'We checked your user assignment and your organization. No mentor is assigned yet.'
-                              : 'Please contact your administrator for support.'
-                            : 'Your account is not linked to an organization yet. Please contact your administrator.'}
+                            ? 'Ask your admin to assign one.'
+                            : 'Link your account to an organisation first.'}
                         </Text>
-                        {hasOrganization && supportAssignmentStatus.loaded && (
-                          <Text color="text.secondary" fontSize="sm">
-                            If you recently received a mentor, ask your administrator to confirm both your user-specific assignment and the organization-wide mentor.
-                          </Text>
-                        )}
                       </Flex>
                     )}
 
@@ -913,15 +904,15 @@ export const LeadershipCouncilPage: React.FC = () => {
                         <Box
                           p={4}
                           border="1px solid"
-                          borderColor="border.subtle"
+                          borderColor="gray.200"
                           rounded="lg"
-                          bg="surface.subtle"
+                          bg="gray.50"
                         >
-                          <HStack justify="space-between" align="start" mb={2} flexWrap="wrap" spacing={3}>
+                          <HStack justify="space-between" align="center" mb={2} flexWrap="wrap" spacing={3}>
                             <HStack spacing={2}>
-                              <Icon as={Target} color="brand.primary" />
-                              <Text fontWeight="bold" color="text.primary">
-                                Your mentorship goals
+                              <Icon as={Target} color="#350e6f" boxSize={4} />
+                              <Text fontWeight="bold" color="#27062e">
+                                Your goals
                               </Text>
                             </HStack>
                             {goalsUpdatedAt && (
@@ -930,10 +921,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                               </Badge>
                             )}
                           </HStack>
-                          <Text fontSize="sm" color="text.secondary" mb={3}>
-                            Share what you want to achieve from this mentorship so{' '}
-                            {displayNameForProfile(mentorProfile)} can tailor your sessions. You can
-                            update this any time.
+                          <Text fontSize="xs" color="gray.600" mb={3} lineHeight="1.6">
+                            What do you want from this mentorship? Your mentor tailors sessions to this.
                           </Text>
                           {goalsLoading ? (
                             <Flex
@@ -1020,12 +1009,12 @@ export const LeadershipCouncilPage: React.FC = () => {
                           )}
                         </HStack>
 
-                        <Box p={4} border="1px solid" borderColor="border.subtle" rounded="lg" bg="surface.subtle">
-                          <HStack justify="space-between" align="start" mb={3} flexWrap="wrap">
-                            <Text fontWeight="bold" color="text.primary">
-                              Your mentor sessions
+                        <Box p={4} border="1px solid" borderColor="gray.200" rounded="lg" bg="gray.50">
+                          <HStack justify="space-between" align="center" mb={3} flexWrap="wrap" spacing={3}>
+                            <Text fontWeight="bold" color="#27062e">
+                              Sessions
                             </Text>
-                            <Text fontSize="sm" color="text.secondary">
+                            <Text fontSize="xs" color="gray.600">
                               {mentorSessionsSummary}
                             </Text>
                           </HStack>
@@ -1063,15 +1052,14 @@ export const LeadershipCouncilPage: React.FC = () => {
                               p={5}
                               gap={2}
                               border="1px dashed"
-                              borderColor="border.subtle"
+                              borderColor="gray.200"
                               rounded="lg"
-                              bg="surface.default"
+                              bg="white"
                             >
-                              <Icon as={Calendar} color="text.muted" />
-                              <Text>No sessions yet.</Text>
-                              <Text fontSize="sm" color="text.secondary">
-                                Leadership initiative is yours — propose a time and topic and your mentor will
-                                confirm.
+                              <Icon as={Calendar} color="gray.400" boxSize={6} />
+                              <Text fontWeight="semibold" color="#27062e">No sessions yet</Text>
+                              <Text fontSize="xs" color="gray.500">
+                                Propose a time. Your mentor confirms.
                               </Text>
                             </Flex>
                           )}
@@ -1184,20 +1172,47 @@ export const LeadershipCouncilPage: React.FC = () => {
                 {!isLeadershipEligible ? (
                   renderJourneyLockedTab('Ambassador Assignment')
                 ) : (
-                <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={0}>
-                    <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                      Ambassador Assignment
-                    </Text>
-                    <Heading size="md" color="text.primary" mt={1}>
-                      {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No ambassador assigned yet'}
-                    </Heading>
+                    <HStack justify="space-between" align="start" spacing={4}>
+                      <Stack spacing={2} flex="1" minW={0}>
+                        <Text
+                          fontSize="xs"
+                          textTransform="uppercase"
+                          color="#350e6f"
+                          fontWeight="bold"
+                          letterSpacing="0.14em"
+                        >
+                          Ambassador
+                        </Text>
+                        <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                          {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No ambassador assigned'}
+                        </Heading>
+                        {ambassadorProfile?.availabilityStatus && (
+                          <Badge
+                            colorScheme={badgeColor(ambassadorProfile.availabilityStatus)}
+                            variant="subtle"
+                            alignSelf="flex-start"
+                          >
+                            {ambassadorProfile.availabilityStatus}
+                          </Badge>
+                        )}
+                      </Stack>
+                      {ambassadorProfile && (
+                        <Avatar
+                          size="lg"
+                          name={displayNameForProfile(ambassadorProfile)}
+                          src={ambassadorProfile.avatarUrl}
+                          bg="#350e6f"
+                        />
+                      )}
+                    </HStack>
                   </CardHeader>
                   <CardBody>
                     {assignmentsLoading && (
-                      <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
-                        <Spinner />
-                        <Text color="text.secondary">Loading your ambassador assignment...</Text>
+                      <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="gray.200" rounded="xl">
+                        <Spinner size="sm" />
+                        <Text color="gray.600" fontSize="sm">Loading ambassador…</Text>
                       </Flex>
                     )}
 
@@ -1205,7 +1220,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       <Alert status="warning" rounded="lg" mb={4}>
                         <AlertIcon />
                         <Box>
-                          <AlertTitle>We couldn't load your ambassador right now.</AlertTitle>
+                          <AlertTitle>Couldn't load ambassador.</AlertTitle>
                           <AlertDescription>{ambassadorError}</AlertDescription>
                         </Box>
                         <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
@@ -1215,44 +1230,21 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
 
                     {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
-                      <Flex direction="column" align="center" textAlign="center" p={6} gap={3}>
-                        <Icon as={User} boxSize={10} color="text.muted" />
-                        <Heading size="sm">No ambassador assigned yet</Heading>
-                        <Text color="text.secondary">
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
+                        <Icon as={User} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">No ambassador assigned</Heading>
+                        <Text color="gray.600" fontSize="sm">
                           {hasOrganization
-                            ? "Your ecosystem hasn't been paired with an ambassador. Please contact your administrator for support."
-                            : 'Your account is not linked to an organization yet. Please contact your administrator.'}
+                            ? 'Ask your admin to assign one.'
+                            : 'Link your account to an organisation first.'}
                         </Text>
                       </Flex>
                     )}
 
-                    {ambassadorProfile && (
-                      <Flex direction={{ base: 'column', md: 'row' }} justify="space-between" gap={4} align="center">
-                        <Box>
-                          <Text color="text.primary">
-                            {isSamePerson
-                              ? 'Your mentor is also serving as your ambassador for this program.'
-                              : 'Your ambassador is here to champion your progress and connect you with new opportunities.'}
-                          </Text>
-                          <HStack spacing={3} mt={3} color="text.secondary">
-                            <Icon as={Users} />
-                            <Text>Supporting your organization</Text>
-                          </HStack>
-                        </Box>
-                        <VStack spacing={3} align="center">
-                          <Avatar
-                            size="lg"
-                            name={displayNameForProfile(ambassadorProfile)}
-                            src={ambassadorProfile.avatarUrl}
-                            bg="brand.primary"
-                          />
-                          {ambassadorProfile.availabilityStatus && (
-                            <Badge colorScheme={badgeColor(ambassadorProfile.availabilityStatus)} variant="subtle">
-                              {ambassadorProfile.availabilityStatus}
-                            </Badge>
-                          )}
-                        </VStack>
-                      </Flex>
+                    {ambassadorProfile && isSamePerson && (
+                      <Text fontSize="sm" color="gray.600" mt={2}>
+                        Your mentor is also your ambassador for this programme.
+                      </Text>
                     )}
 
                     {profile?.id && (
@@ -1274,17 +1266,22 @@ export const LeadershipCouncilPage: React.FC = () => {
                 {!isLeadershipEligible ? (
                   renderJourneyLockedTab('Transformation Partner')
                 ) : (
-                <Card borderColor="border.subtle" borderWidth="1px" bg="surface.default">
+                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={2}>
-                    <HStack spacing={3} align="center">
-                      <Icon as={Shield} color="brand.primary" />
-                      <Box>
-                        <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                          Transformation Partner
-                        </Text>
-                        <Heading size="md">Program support & resources</Heading>
-                      </Box>
-                    </HStack>
+                    <Stack spacing={2}>
+                      <Text
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        color="#350e6f"
+                        fontWeight="bold"
+                        letterSpacing="0.14em"
+                      >
+                        Transformation Partner
+                      </Text>
+                      <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                        Programme support
+                      </Heading>
+                    </Stack>
                   </CardHeader>
                   <CardBody>
                     {partnerLoading && (
@@ -1325,7 +1322,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                           </HStack>
                         </HStack>
 
-                        <Text color="text.primary">{partnerProfile.bio || 'Dedicated program partner supporting your transformation journey.'}</Text>
+                        <Text color="gray.700" fontSize="sm" lineHeight="1.65">
+                          {partnerProfile.bio || 'Dedicated programme partner.'}
+                        </Text>
 
                         <Divider />
 
@@ -1357,13 +1356,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Stack>
                     )}
                     {!partnerLoading && !partnerProfile && (
-                      <Flex direction="column" align="center" gap={3} p={6} textAlign="center">
-                        <Icon as={Shield} boxSize={8} color="text.muted" />
-                        <Heading size="sm">Transformation partner unavailable</Heading>
-                        <Text color="text.secondary">
-                          {partnerError || 'Your transformation partner profile is not set up yet. Please contact your administrator for support.'}
+                      <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
+                        <Icon as={Shield} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">Partner not set up</Heading>
+                        <Text color="gray.600" fontSize="sm">
+                          {partnerError || 'Ask your admin to set up your partner profile.'}
                         </Text>
-                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments}>
+                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments} mt={1}>
                           Try again
                         </Button>
                       </Flex>
@@ -1443,16 +1442,21 @@ export const LeadershipCouncilPage: React.FC = () => {
           <ModalCloseButton color="text.inverse" />
           <ModalBody pt={4}>
             <Stack spacing={4}>
-              <Alert status="info" variant="subtle" rounded="lg">
-                <AlertIcon />
-                <Box>
-                  <AlertTitle>You propose, your mentor confirms</AlertTitle>
-                  <AlertDescription>
-                    Your mentor will see this request and either accept it or suggest another time.
-                    Points are awarded after the session, when your mentor marks it complete.
-                  </AlertDescription>
-                </Box>
-              </Alert>
+              <HStack
+                spacing={3}
+                bg="purple.50"
+                border="1px solid"
+                borderColor="purple.100"
+                borderRadius="md"
+                px={3}
+                py={2}
+                align="center"
+              >
+                <Icon as={Shield} color="#350e6f" boxSize={4} />
+                <Text fontSize="xs" color="gray.700">
+                  Propose a time. Your mentor confirms or suggests another. Points awarded after the session.
+                </Text>
+              </HStack>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <FormControl isRequired>
