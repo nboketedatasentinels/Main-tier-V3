@@ -46,6 +46,7 @@ import {
   isMonthBasedJourney,
 } from '@/utils/journeyType'
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
+import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import type { UserProfile } from '@/types'
 
@@ -316,6 +317,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
 
   return (
     <Stack spacing={8} py={2} as="section">
+      <RulesOfEngagementVideo />
       <Box
         bgGradient="linear(to-r, purple.50, purple.100)"
         borderRadius="3xl"
@@ -829,6 +831,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
   return (
     <Stack spacing={8} py={2} as="section">
+      <RulesOfEngagementVideo />
       {hasOrganization && hasProgram && program?.pillar && (
         <Box
           bgGradient="linear(to-r, #350e6f, #8b5a3c)"
@@ -1208,6 +1211,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
 
   return (
     <Stack spacing={8} py={2} as="section">
+      <RulesOfEngagementVideo />
       <Box
         bgGradient="linear(to-r, purple.50, purple.100)"
         borderRadius="3xl"
