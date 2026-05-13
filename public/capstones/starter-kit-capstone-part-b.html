@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part B: Project Scope Document</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .wordmark{display:flex;flex-direction:column;gap:1px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+  .header-title{font-family:'DM Serif Display',serif;font-size:36px;color:#fff;line-height:1.15;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-desc{font-size:14px;color:rgba(255,255,255,.7);max-width:680px;line-height:1.7}
+  .capstone-callout{display:inline-block;background:rgba(245,200,66,.2);border:1px solid rgba(245,200,66,.5);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--gold);margin-top:14px}
+  .content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+  .section-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .section-num{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .section-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum);margin-bottom:6px}
+  .section-prompt{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:14px;line-height:1.5}
+  .section-hint{font-size:12px;color:#888;margin-bottom:14px;font-style:italic}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:110px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  input[type=text]{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum)}
+  select{width:100%;background:var(--field-bg);border:1px solid var(--field-border);border-radius:6px;padding:8px 10px;font-family:'DM Sans',sans-serif;font-size:12px;color:var(--plum)}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+  @media(max-width:600px){.two-col{grid-template-columns:1fr}}
+  .sub-q{margin-bottom:16px}
+  .sub-q-label{font-size:13px;font-weight:600;color:var(--plum);margin-bottom:8px}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum);margin-bottom:12px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:6px 0 6px 20px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .section-num-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .outcome-tag{display:inline-block;background:rgba(74,59,140,.1);border:1px solid rgba(74,59,140,.25);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase}
+  .methodology-selector{background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:12px;padding:16px 18px;margin-bottom:18px}
+  .methodology-selector-label{font-size:12px;font-weight:600;color:var(--plum);margin-bottom:4px}
+  .methodology-selector-hint{font-size:11px;color:#888;line-height:1.5;margin-bottom:12px;font-style:italic}
+  .methodology-options{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  @media(max-width:720px){.methodology-options{grid-template-columns:1fr}}
+  .methodology-option{background:#fff;border:1.5px solid var(--field-border);border-radius:8px;padding:10px 12px;cursor:pointer}
+  .methodology-option input[type=radio]{display:none}
+  .methodology-option label{display:block;cursor:pointer}
+  .methodology-option-name{font-size:12px;font-weight:700;color:var(--purple);margin-bottom:4px}
+  .methodology-option-desc{font-size:11px;color:#666;line-height:1.5}
+  .methodology-option:has(input:checked){border-color:var(--gold);background:rgba(245,200,66,.08)}
+  .risk-block{background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:12px;padding:18px 22px;margin-bottom:14px}
+  .risk-num{font-family:'DM Serif Display',serif;font-style:italic;font-size:22px;color:var(--gold-dark);line-height:1;margin-bottom:8px}
+  .risk-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px;margin-bottom:12px}
+  @media(max-width:720px){.risk-grid{grid-template-columns:1fr}}
+  .risk-field{background:#fff;border:1px solid var(--field-border);border-radius:8px;padding:10px 12px}
+  .risk-field-label{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase;margin-bottom:4px}
+  .risk-field textarea,.risk-field input[type=text]{background:var(--field-bg);font-size:12px}
+  .digital-edge-card{background:linear-gradient(135deg,#0F1F16,#14342A);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px;color:#fff}
+  .digital-edge-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .digital-edge-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:8px}
+  .digital-edge-meta{font-size:12px;color:#4ADE80;margin-bottom:16px;font-weight:600}
+  .digital-edge-why{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:18px;line-height:1.7;font-style:italic;padding-left:12px;border-left:2px solid rgba(74,222,128,.4)}
+  .digital-edge-prompt-label{font-size:10px;font-weight:700;color:#4ADE80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+  .digital-edge-prompt-box{background:rgba(0,0,0,.4);border:1px solid rgba(45,122,79,.5);border-radius:8px;padding:14px 16px;font-size:12px;color:#A7F3D0;line-height:1.7;white-space:pre-wrap;margin-bottom:16px}
+  .digital-edge-instructions{font-size:12px;color:rgba(255,255,255,.65);line-height:1.6}
+  .digital-edge-instructions strong{color:#4ADE80}
+  .ai-reflection{background:var(--ai-bg);border:1.5px solid var(--ai-border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .ai-reflection-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:#4ADE80;text-transform:uppercase;margin-bottom:6px}
+  .ai-reflection-title{font-family:'DM Serif Display',serif;font-size:22px;color:#fff;margin-bottom:10px}
+  .ai-reflection-desc{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:24px;line-height:1.7}
+  .ai-reflection-q{margin-bottom:18px}
+  .ai-reflection-q-label{font-size:13px;font-weight:600;color:#fff;margin-bottom:8px}
+  .ai-reflection textarea{background:rgba(255,255,255,.06);border-color:rgba(45,122,79,.4);color:#fff;min-height:90px}
+  .assessor-lens{background:#fff;border:1.5px solid var(--gold);border-radius:16px;margin-bottom:24px;overflow:hidden}
+  .assessor-lens-header{padding:18px 24px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .assessor-lens-tag{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+  .assessor-lens-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum)}
+  .assessor-lens-toggle{font-size:13px;font-weight:700;color:var(--purple)}
+  .assessor-lens-toggle::after{content:" ▼"}
+  .assessor-lens.open .assessor-lens-toggle::after{content:" ▲"}
+  .assessor-lens-body{display:none;padding:0 24px 24px;border-top:1px solid var(--border)}
+  .assessor-lens.open .assessor-lens-body{display:block}
+  .assessor-lens-intro{font-size:13px;color:#666;line-height:1.65;margin:16px 0 18px;font-style:italic}
+  .criterion-block{margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+  .criterion-block:last-child{border-bottom:none}
+  .criterion-name{font-size:12px;font-weight:700;color:var(--purple);margin-bottom:4px}
+  .criterion-outcome{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
+  .criterion-desc{font-size:13px;color:#444;line-height:1.65}
+  .peer-prep{background:var(--plum);border-radius:16px;padding:32px;margin-bottom:24px}
+  .peer-prep-tag{font-size:10px;font-weight:700;letter-spacing:.14em;color:var(--gold);text-transform:uppercase;margin-bottom:8px}
+  .peer-prep-title{font-family:'DM Serif Display',serif;font-size:24px;color:#fff;margin-bottom:8px}
+  .peer-prep-sub{font-size:13px;color:rgba(255,255,255,.7);margin-bottom:18px;line-height:1.65}
+  .peer-questions-label{font-size:12px;font-weight:700;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:12px}
+  .peer-q-list{list-style:none;padding:0;margin:0}
+  .peer-q-list li{font-size:14px;color:rgba(255,255,255,.92);line-height:1.6;padding:12px 0 12px 28px;position:relative;border-top:1px solid rgba(255,255,255,.12);font-family:'DM Serif Display',serif;font-style:italic}
+  .peer-q-list li:first-child{border-top:none}
+  .peer-q-list li::before{content:"→";position:absolute;left:0;top:12px;color:var(--gold);font-family:'DM Sans',sans-serif;font-style:normal;font-weight:700}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div class="wordmark"><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">Project Scope Document</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="lift-badge">The Transformation Practitioner</div>
+  <h1 class="header-title">Project <em>Scope</em> Document</h1>
+  <p class="header-desc">Take the opportunity you proposed in Part A and scope it end-to-end. Objectives, outcomes, timelines, budget, dependencies, methodology choice — with the rigour required to defend the plan to a steering committee.</p>
+  <div class="capstone-callout">Capstone Part B · Closes Lead Like a Pro</div>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Project Scope Document defensible to a steering committee.</div>
+    <ul class="standard-list">
+      <li>Objectives and outcomes are distinguished — objectives are what the project does, outcomes are what changes for the organisation.</li>
+      <li>Timeline is realistic and includes the dependencies that could delay it — not a Gantt chart fantasy.</li>
+      <li>Budget is named with confidence level (your best estimate, your contingency, what you don't yet know).</li>
+      <li>Methodology choice (Waterfall / Agile / Hybrid) is justified by the work, not by personal preference.</li>
+      <li>The risk register names two real risks with severity, likelihood, and named mitigation owner — not "risks will be managed."</li>
+    </ul>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 01</div><div class="outcome-tag">Outcome 3 · Project framing</div></div>
+    <h2 class="section-title">Project Reference</h2>
+    <div class="section-prompt">What is this project, in one paragraph that a senior stakeholder could read and immediately know what they're funding?</div>
+    <textarea name="section_01_reference" placeholder="Project: Make Fleet Utilisation Visible to Action..."></textarea>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 02</div><div class="outcome-tag">Outcome 3 · Objectives vs outcomes</div></div>
+    <h2 class="section-title">Objectives and Outcomes</h2>
+    <div class="section-prompt">What does the project DO (objectives) and what changes for the organisation as a result (outcomes)? Distinguish them clearly.</div>
+    <div class="section-hint">Objectives are what the project produces. Outcomes are what shifts in the organisation because the objectives were met.</div>
+    <div class="two-col">
+      <div class="sub-q"><div class="sub-q-label">Objectives (what the project produces)</div><textarea name="section_02_objectives"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Outcomes (what changes for the organisation)</div><textarea name="section_02_outcomes"></textarea></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 03</div><div class="outcome-tag">Outcome 3 · Scope boundaries</div></div>
+    <h2 class="section-title">Scope Boundaries</h2>
+    <div class="section-prompt">What's explicitly in scope, and what's explicitly out of scope?</div>
+    <div class="section-hint">Scope creep kills projects. Naming what's NOT in scope — in writing, before kickoff — protects the plan.</div>
+    <div class="two-col">
+      <div class="sub-q"><div class="sub-q-label">In scope</div><textarea name="section_03_in_scope"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Out of scope (and why)</div><textarea name="section_03_out_of_scope"></textarea></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 04</div><div class="outcome-tag">Outcome 3 · Methodology with rationale</div></div>
+    <h2 class="section-title">Methodology Choice</h2>
+    <div class="section-prompt">Which methodology fits this project, and why?</div>
+    <div class="methodology-selector">
+      <div class="methodology-selector-label">The methodology you're choosing</div>
+      <div class="methodology-selector-hint">Pick the one that fits the work, then defend the choice below.</div>
+      <div class="methodology-options">
+        <div class="methodology-option"><input type="radio" name="methodology" id="waterfall" value="waterfall"><label for="waterfall"><div class="methodology-option-name">Waterfall</div><div class="methodology-option-desc">Sequential phases. Stable, known requirements.</div></label></div>
+        <div class="methodology-option"><input type="radio" name="methodology" id="agile" value="agile"><label for="agile"><div class="methodology-option-name">Agile</div><div class="methodology-option-desc">Iterative cycles. Evolving requirements, continuous feedback.</div></label></div>
+        <div class="methodology-option"><input type="radio" name="methodology" id="hybrid" value="hybrid"><label for="hybrid"><div class="methodology-option-name">Hybrid</div><div class="methodology-option-desc">Waterfall foundation + Agile iteration. Most enterprise work.</div></label></div>
+      </div>
+    </div>
+    <textarea name="section_04_methodology_rationale" placeholder="Hybrid methodology. The data pipeline rebuild is best run as Waterfall... The dashboard design is best run as Agile..."></textarea>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 05</div><div class="outcome-tag">Outcome 3 · Timeline + dependencies</div></div>
+    <h2 class="section-title">Timeline and Dependencies</h2>
+    <div class="section-prompt">What's the timeline, and what are the dependencies that could delay it?</div>
+    <div class="two-col">
+      <div class="sub-q"><div class="sub-q-label">Timeline (key milestones)</div><textarea name="section_05_timeline"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Dependencies (and who owns them)</div><textarea name="section_05_dependencies"></textarea></div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 06</div><div class="outcome-tag">Outcome 3 · Budget + resource</div></div>
+    <h2 class="section-title">Budget and Resource</h2>
+    <div class="section-prompt">What does this cost, in money and in people-time? Include confidence level.</div>
+    <textarea name="section_06_budget" style="min-height:160px" placeholder="Approved budget: ..."></textarea>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 07</div><div class="outcome-tag">Outcome 4 · Risk and delivery discipline</div></div>
+    <h2 class="section-title">Risk Register</h2>
+    <div class="section-prompt">Name the two highest-impact risks to this project, with severity, likelihood, mitigation, and owner.</div>
+    <div class="risk-block">
+      <div class="risk-num">01</div>
+      <div class="risk-grid">
+        <div class="risk-field"><div class="risk-field-label">Risk</div><textarea name="risk_1_description"></textarea></div>
+        <div class="risk-field"><div class="risk-field-label">Severity</div><select name="risk_1_severity"><option value="">Select</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+        <div class="risk-field"><div class="risk-field-label">Likelihood</div><select name="risk_1_likelihood"><option value="">Select</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+      </div>
+      <div class="risk-grid">
+        <div class="risk-field" style="grid-column:1/3"><div class="risk-field-label">Mitigation</div><textarea name="risk_1_mitigation"></textarea></div>
+        <div class="risk-field"><div class="risk-field-label">Owner</div><input type="text" name="risk_1_owner"></div>
+      </div>
+    </div>
+    <div class="risk-block">
+      <div class="risk-num">02</div>
+      <div class="risk-grid">
+        <div class="risk-field"><div class="risk-field-label">Risk</div><textarea name="risk_2_description"></textarea></div>
+        <div class="risk-field"><div class="risk-field-label">Severity</div><select name="risk_2_severity"><option value="">Select</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+        <div class="risk-field"><div class="risk-field-label">Likelihood</div><select name="risk_2_likelihood"><option value="">Select</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select></div>
+      </div>
+      <div class="risk-grid">
+        <div class="risk-field" style="grid-column:1/3"><div class="risk-field-label">Mitigation</div><textarea name="risk_2_mitigation"></textarea></div>
+        <div class="risk-field"><div class="risk-field-label">Owner</div><input type="text" name="risk_2_owner"></div>
+      </div>
+    </div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Section 08</div><div class="outcome-tag">Outcomes 3+4 · Defence of the Plan</div></div>
+    <h2 class="section-title">Steering Committee Defence</h2>
+    <div class="section-prompt">If the steering committee challenged this Plan, what's the most likely challenge — and how would you defend it without compromising the scope?</div>
+    <textarea name="section_08_defence" style="min-height:140px"></textarea>
+  </div>
+  <div class="digital-edge-card">
+    <div class="digital-edge-tag">Digital Edge · AI Application</div>
+    <h2 class="digital-edge-title">I build systems that outlast me</h2>
+    <div class="digital-edge-meta">Week 6 standardised Digital Edge for this Capstone</div>
+    <div class="digital-edge-why">Why this matters: A durable system survives the plan — the dependencies named, the risks anticipated, the methodology choices defensible six months later when you're not in the room.</div>
+    <div class="digital-edge-prompt-label">The prompt</div>
+    <div class="digital-edge-prompt-box">You are a senior project director reviewing a Project Scope Document. I'll paste the Scope. Pressure-test it as if I won't be in the role to defend it. (1) Where are dependencies named in vague terms? (2) Where does the methodology rationale assume context the next person wouldn't have? (3) Which risks would the steering committee challenge as soft? (4) What's missing? One specific suggestion to make this Scope more durable. Don't be polite.
+
+My Scope: [paste your Sections 01-08]</div>
+    <div class="digital-edge-instructions"><strong>How to apply:</strong> The four reflection questions below evidence your evaluative judgement.</div>
+  </div>
+  <div class="ai-reflection">
+    <div class="ai-reflection-tag">AI Integration · Outcome 6 evidence</div>
+    <h2 class="ai-reflection-title">Reflect on the Digital Edge Output</h2>
+    <p class="ai-reflection-desc">Distinction-level work shows what you applied AND what you critically rejected.</p>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">01 · What did the AI surface that you hadn't written down?</div><textarea name="ai_surfaced"></textarea></div>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">02 · What did you apply from the AI output to this Scope?</div><textarea name="ai_applied"></textarea></div>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">03 · What did you critically reject from the AI output?</div><textarea name="ai_rejected"></textarea></div>
+    <div class="ai-reflection-q"><div class="ai-reflection-q-label">04 · What does this teach you about how to use AI in your project work going forward?</div><textarea name="ai_rule"></textarea></div>
+  </div>
+  <div class="assessor-lens" id="assessorLens">
+    <div class="assessor-lens-header" onclick="document.getElementById('assessorLens').classList.toggle('open')">
+      <div><div class="assessor-lens-tag">Before you submit</div><div class="assessor-lens-title">What the assessor is looking for</div></div>
+      <div class="assessor-lens-toggle">View criteria</div>
+    </div>
+    <div class="assessor-lens-body">
+      <p class="assessor-lens-intro">The Combined Capstone is marked against six criteria. The Project Scope Document evidences two of them.</p>
+      <div class="criterion-block"><div class="criterion-name">C3: Project scoping</div><div class="criterion-outcome">Outcome 3 · Sections 01-06, 08</div><div class="criterion-desc">Objectives, outcomes, scope boundaries, methodology with rationale, timeline, dependencies, budget. Defensible to a steering committee.</div></div>
+      <div class="criterion-block"><div class="criterion-name">C4: Risk and delivery discipline</div><div class="criterion-outcome">Outcome 4 · Sections 07, 08</div><div class="criterion-desc">Two specific risks. Real, not generic. Distinction-level work rehearses the steering committee defence.</div></div>
+      <div class="criterion-block"><div class="criterion-name">C6: AI integration</div><div class="criterion-outcome">Outcome 6 · Digital Edge reflection</div><div class="criterion-desc">Evaluative judgement.</div></div>
+    </div>
+  </div>
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Read your methodology rationale, risk register, and steering defence aloud. Have your peer play the toughest steering committee member.</p>
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Your methodology choice — is the rationale specific to this work, or could it be cut-and-pasted onto any project?</li>
+      <li>The two risks in your register — if either materialised tomorrow, is your mitigation strong enough?</li>
+      <li>Your steering defence — when you imagine saying it aloud, do you soften under pressure, or hold the line?</li>
+    </ul>
+  </div>
+</div>
+<script>
+function submitCapstone() {
+  if (!confirm("Submit Capstone Part B: Project Scope Document?\n\nAll three Parts are marked together as your Combined Capstone — weighted 50% of your competence pass.")) return;
+  alert("Capstone Part B received. (In production, this POSTs to /api/capstones/submit with submission_type = CAPSTONE_PART_B)");
+}
+</script>
+</body>
+</html>

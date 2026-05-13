@@ -160,16 +160,52 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'starter-kit-capstone',
       type: 'capstone',
-      title: 'Capstone',
-      description: 'Content coming soon.',
-      status: 'coming_soon',
+      title: 'Combined Capstone (3 parts)',
+      description:
+        'Three parts marked together: One-Page Proposal, Project Scope Document, and Status Report. All required.',
+      status: 'available',
+      parts: [
+        {
+          id: 'starter-kit-capstone-part-a',
+          title: 'Part A · One-Page Proposal',
+          description: 'Closes Think Like an Owner (Week 2). Audience-matched pitch.',
+          href: '/capstones/starter-kit-capstone-part-a.html',
+        },
+        {
+          id: 'starter-kit-capstone-part-b',
+          title: 'Part B · Project Scope Document',
+          description: 'Closes Lead Like a Pro (Week 6). Objectives, methodology, risks.',
+          href: '/capstones/starter-kit-capstone-part-b.html',
+        },
+        {
+          id: 'starter-kit-capstone-part-c',
+          title: 'Part C · Status Report',
+          description: 'Closes Project Leadership Discipline. Risk-led mid-flight report.',
+          href: '/capstones/starter-kit-capstone-part-c.html',
+        },
+      ],
     },
     {
       id: 'starter-kit-case-study',
       type: 'case_study',
-      title: 'Case Study',
-      description: 'Content coming soon.',
-      status: 'coming_soon',
+      title: 'Combined Case Studies (2 parts)',
+      description:
+        'Two case studies marked together: Kodak (the pitch that did not land) and SARS (the modernisation that was dismantled).',
+      status: 'available',
+      parts: [
+        {
+          id: 'starter-kit-case-study-1',
+          title: 'Part 1 · The Pitch That Did Not Land',
+          description: 'Kodak and the Digital Camera, 1975–1996. Closes Think Like an Owner.',
+          href: '/capstones/starter-kit-case-study-1.html',
+        },
+        {
+          id: 'starter-kit-case-study-2',
+          title: 'Part 2 · The Modernisation That Was Dismantled',
+          description: 'South African Revenue Service, 2014–2018. Closes Delivering Transformation.',
+          href: '/capstones/starter-kit-case-study-2.html',
+        },
+      ],
     },
     {
       id: 'starter-kit-practical',

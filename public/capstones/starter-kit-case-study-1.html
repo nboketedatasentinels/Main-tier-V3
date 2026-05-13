@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 1: The Pitch That Did Not Land</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --case-bg:#FFFEF9; --counter-under:#B45309; --counter-good:#166534; --counter-over:#991B1B; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:#1A1726;font-size:15px;line-height:1.6}
+  .print-bar{position:sticky;top:0;z-index:100;background:var(--plum);display:flex;align-items:center;justify-content:space-between;padding:10px 24px;gap:12px}
+  .print-bar .wordmark{display:flex;flex-direction:column;gap:1px}
+  .print-bar .t4l-transform{font-weight:700;font-size:11px;color:var(--gold);letter-spacing:.08em}
+  .print-bar .t4l-leader{font-weight:700;font-size:11px;color:#fff;letter-spacing:.08em}
+  .print-bar .title{font-size:13px;font-weight:600;color:#fff;text-align:center;flex:1}
+  .print-bar-actions{display:flex;gap:8px}
+  .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
+  .print-btn:hover{background:var(--gold-dark)}
+  .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .header-block{background:var(--plum);padding:40px 40px 36px}
+  .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .wordmark-block .brand-top{font-size:13px;font-weight:700;color:var(--gold);letter-spacing:.12em}
+  .wordmark-block .brand-bottom{font-size:13px;font-weight:700;color:#fff;letter-spacing:.12em}
+  .wordmark-block .brand-tag{font-size:10px;color:rgba(255,255,255,.5);letter-spacing:.1em;margin-top:2px}
+  .lift-badge{display:inline-block;background:rgba(245,200,66,.15);border:1px solid rgba(245,200,66,.3);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;color:var(--gold);letter-spacing:.1em;text-transform:uppercase;margin-bottom:16px}
+  .case-eyebrow{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .header-title{font-family:'DM Serif Display',serif;font-size:32px;color:#fff;line-height:1.2;margin-bottom:12px}
+  .header-title em{color:var(--gold);font-style:italic}
+  .header-meta{font-size:13px;color:rgba(255,255,255,.65);line-height:1.7;margin-bottom:8px}
+  .header-meta strong{color:rgba(255,255,255,.9)}
+  .case-callout{display:inline-block;background:rgba(245,200,66,.2);border:1px solid rgba(245,200,66,.5);border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;color:var(--gold);margin-top:14px}
+  .content{max-width:880px;margin:0 auto;padding:36px 24px 60px}
+  .standard-card{background:rgba(245,200,66,.08);border-left:3px solid var(--gold);border-radius:0 12px 12px 0;padding:20px 24px;margin-bottom:24px}
+  .standard-label{font-size:10px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
+  .standard-title{font-family:'DM Serif Display',serif;font-size:18px;color:var(--plum);margin-bottom:12px}
+  .standard-list{list-style:none;padding:0;margin:0}
+  .standard-list li{font-size:13px;color:#444;line-height:1.6;padding:6px 0 6px 20px;position:relative}
+  .standard-list li::before{content:"→";position:absolute;left:0;color:var(--gold-dark);font-weight:700}
+  .case-block{background:var(--case-bg);border:1.5px solid var(--border);border-radius:16px;margin-bottom:24px;overflow:hidden}
+  .case-header{padding:20px 28px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(74,59,140,.04)}
+  .case-header:hover{background:rgba(74,59,140,.08)}
+  .case-header-left{display:flex;flex-direction:column;gap:4px}
+  .case-header-tag{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .case-header-title{font-family:'DM Serif Display',serif;font-size:19px;color:var(--plum)}
+  .case-header-toggle{font-size:12px;font-weight:700;color:var(--purple)}
+  .case-header-toggle::after{content:" ▼"}
+  .case-block.open .case-header-toggle::after{content:" ▲"}
+  .case-body{display:block;padding:28px 32px;border-top:1.5px solid var(--border)}
+  .case-block:not(.open) .case-body{display:none}
+  .case-section-label{font-size:11px;font-weight:700;color:var(--gold-dark);letter-spacing:.14em;text-transform:uppercase;margin:24px 0 10px}
+  .case-section-label:first-child{margin-top:0}
+  .case-body p{font-size:14px;color:#2A2438;line-height:1.75;margin-bottom:14px}
+  .case-body p:last-child{margin-bottom:0}
+  .case-body em{font-style:italic;color:var(--purple)}
+  .case-body .pull-quote{font-family:'DM Serif Display',serif;font-style:italic;font-size:17px;color:var(--plum);padding:14px 20px;border-left:3px solid var(--gold);background:rgba(245,200,66,.05);margin:16px 0}
+  .case-body ul.sources{list-style:none;padding:0;margin:0}
+  .case-body ul.sources li{font-size:13px;color:#444;line-height:1.65;padding:6px 0 6px 20px;position:relative}
+  .case-body ul.sources li::before{content:"·";position:absolute;left:6px;color:var(--gold-dark);font-weight:700;font-size:18px;line-height:1}
+  .word-counter{background:#fff;border:1.5px solid var(--border);border-radius:12px;padding:14px 20px;margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .word-counter-label{font-size:12px;font-weight:600;color:#555}
+  .word-counter-value{font-family:'DM Serif Display',serif;font-size:22px;line-height:1}
+  .word-counter-value.under{color:var(--counter-under)}
+  .word-counter-value.good{color:var(--counter-good)}
+  .word-counter-value.over{color:var(--counter-over)}
+  .word-counter-hint{font-size:11px;color:#888;font-style:italic;margin-top:2px}
+  .word-counter-meter{flex:1;min-width:140px;max-width:240px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;position:relative}
+  .word-counter-meter-fill{height:100%;background:var(--counter-under);transition:width .25s,background .25s}
+  .word-counter-meter-fill.good{background:var(--counter-good)}
+  .word-counter-meter-fill.over{background:var(--counter-over)}
+  .word-counter-meter-band{position:absolute;top:0;bottom:0;background:rgba(22,101,52,.12);pointer-events:none}
+  .section-card{background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:28px 32px;margin-bottom:24px}
+  .section-num-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+  .section-num{font-size:10px;font-weight:700;color:var(--purple);letter-spacing:.14em;text-transform:uppercase}
+  .outcome-tag{display:inline-block;background:rgba(74,59,140,.1);border:1px solid rgba(74,59,140,.25);border-radius:12px;padding:2px 10px;font-size:9px;font-weight:700;color:var(--purple);letter-spacing:.1em;text-transform:uppercase}
+  .section-title{font-family:'DM Serif Display',serif;font-size:22px;color:var(--plum);margin-bottom:6px}
+  .section-prompt{font-size:14px;font-weight:600;color:var(--plum);margin-bottom:12px;line-height:1.55}
+  .section-hint{font-size:12px;color:#888;margin-bottom:14px;font-style:italic;line-height:1.6}
+  textarea{width:100%;background:var(--field-bg);border:1.5px solid var(--field-border);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--plum);resize:vertical;line-height:1.6;min-height:140px}
+  textarea:focus{outline:none;border-color:var(--purple-light);box-shadow:0 0 0 3px rgba(107,91,181,.12)}
+  .field-meta{display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;color:#888}
+  .field-word-count{font-weight:600}
+  .field-word-count.over{color:var(--counter-over)}
+</style>
+</head>
+<body>
+<div class="print-bar">
+  <div class="wordmark"><span class="t4l-transform">TRANSFORMATION</span><span class="t4l-leader">LEADER</span></div>
+  <span class="title">Case Study 1 · The Pitch That Did Not Land</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle"><svg viewBox="0 0 14 14" width="14" height="14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg></div>
+    <div class="wordmark-block"><div class="brand-top">TRANSFORMATION</div><div class="brand-bottom">LEADER</div><div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div></div>
+  </div>
+  <div class="lift-badge">The Transformation Practitioner</div>
+  <div class="case-eyebrow">Case Study 1 · Course 1 · Think Like an Owner</div>
+  <h1 class="header-title">The Pitch That <em>Did Not Land</em></h1>
+  <div class="header-meta"><strong>Kodak and the Digital Camera, 1975-1996.</strong> A senior practitioner who saw an opportunity in his own organisation's scope, built a working prototype, presented it to the people who controlled the decision, and failed to win the room.</div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Identify and analyse opportunities), LO2 (Construct audience-matched proposals).</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 1 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+<div class="content">
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that uses the case to think about your own opportunity recognition and pitch discipline.</div>
+    <ul class="standard-list">
+      <li>The opportunity recognition question answered from the practitioner's scope, not the company's.</li>
+      <li>Cost of inaction estimated in concrete terms — using or extending case figures.</li>
+      <li>The reframe in Question 3 written as a sentence the practitioner could actually have used — testable, not "better communication".</li>
+      <li>Application to your own scope: specific opportunity, named decision-maker by role, one precise change to framing.</li>
+      <li>300-500 words across all four answers. Avoid hindsight bias.</li>
+    </ul>
+  </div>
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left"><div class="case-header-tag">The case · read first</div><div class="case-header-title">Eastman Kodak, December 1975 — and the four decades that followed</div></div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+      <div class="case-section-label">Background</div>
+      <p>Steven Sasson, an electrical engineer at Eastman Kodak, built the first working digital camera prototype in December 1975. The camera weighed 3.6 kilograms, took 23 seconds to capture a 0.01 megapixel black-and-white image, and stored it on cassette tape. Sasson presented the prototype internally to senior Kodak executives in 1976.</p>
+      <p>The reception was polite, but the technology was shelved. Sasson has said publicly, including in a 2008 New York Times interview and a 2015 oral history with the Computer History Museum, that the executives' first response was:</p>
+      <div class="pull-quote">"But it's filmless photography. Why would anyone want to look at their pictures on a television set?"</div>
+      <p>Kodak held the foundational patent on digital photography. The company later licensed the patent to competitors including Canon, Nikon, and Sony, generating an estimated 3 billion US dollars in royalties between 1991 and the patent's expiry in 2007. By the early 2000s, the same competitors had used digital photography to displace Kodak's film business.</p>
+      <p>Kodak filed for Chapter 11 bankruptcy on 19 January 2012. By that point, the company's photographic film business had collapsed from its 1996 peak revenue of approximately 16 billion US dollars to under 1 billion. Sasson left Kodak in 2009. He was awarded the United States National Medal of Technology and Innovation in 2009 by President Obama for inventing the digital camera.</p>
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not a story about a missed technology bet. It is a story about a senior practitioner who saw an opportunity in his own organisation's scope, built a working prototype to demonstrate it, presented it to the people who controlled the decision, and failed to win the room.</p>
+      <p>The questions below ask you to examine why the pitch did not land, and what an audience-matched proposal would have looked like.</p>
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+        <li>Deutsch, C.H. (2008). 'At Kodak, some old things are new again.' <em>New York Times</em>, 2 May 2008.</li>
+        <li>Sasson, S. (2015). Oral History interview, Computer History Museum, Mountain View CA. CHM Reference number X7299.2015.</li>
+        <li>Lucas, H.C. and Goh, J.M. (2009). 'Disruptive technology: How Kodak missed the digital photography revolution.' <em>Journal of Strategic Information Systems</em>, 18(1), pp. 46-55.</li>
+        <li>Mui, C. (2012). 'How Kodak failed.' <em>Forbes</em>, 18 January 2012.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width:0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 01</div><div class="outcome-tag">Outcome 1 · Opportunity recognition</div></div>
+    <h2 class="section-title">Was Sasson's the right opportunity to identify, given his scope?</h2>
+    <div class="section-prompt">Sasson identified an opportunity. Was it the right opportunity for him to identify, given his scope as an engineer at Kodak in 1975? Justify your answer in 2-3 sentences.</div>
+    <div class="section-hint">The question is about scope, not about the technology. The opportunity Sasson saw and the opportunity Kodak missed are not necessarily the same thing.</div>
+    <textarea name="q1" placeholder="Sasson's scope as an engineer was... The opportunity he identified was..." oninput="recountWords()"></textarea>
+    <div class="field-meta"><span>Suggested length: 60-90 words</span><span class="field-word-count" id="q1Count">0 words</span></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 02</div><div class="outcome-tag">Outcome 1 · Cost of inaction</div></div>
+    <h2 class="section-title">Estimate the cost of inaction in concrete terms</h2>
+    <div class="section-prompt">Estimate the cost of inaction to Kodak in concrete terms. Use figures from the case where useful.</div>
+    <textarea name="q2" placeholder="The cost of inaction can be estimated by..." oninput="recountWords()"></textarea>
+    <div class="field-meta"><span>Suggested length: 60-100 words</span><span class="field-word-count" id="q2Count">0 words</span></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 03</div><div class="outcome-tag">Outcome 2 · Audience-matched framing</div></div>
+    <h2 class="section-title">If you had been Sasson, what would you have done differently?</h2>
+    <div class="section-prompt">Name the decision-maker, their priority at that moment, and the specific reframe you would have used to win their support.</div>
+    <div class="section-hint">Three things to name. The reframe needs to be testable — a specific sentence with a specific priority embedded in it.</div>
+    <textarea name="q3" placeholder="The decision-maker: ... Their priority: ... The reframe: '...'" oninput="recountWords()"></textarea>
+    <div class="field-meta"><span>Suggested length: 80-130 words</span><span class="field-word-count" id="q3Count">0 words</span></div>
+  </div>
+  <div class="section-card">
+    <div class="section-num-row"><div class="section-num">Question 04</div><div class="outcome-tag">Outcomes 1 + 2 · Application to your own scope</div></div>
+    <h2 class="section-title">Apply the same discipline to an opportunity in your own scope</h2>
+    <div class="section-prompt">Identify one opportunity in your own current organisational scope where you risk being the practitioner who saw it but could not get traction on it.</div>
+    <textarea name="q4" placeholder="The opportunity in my scope: ...&#10;The decision-maker (by role): ...&#10;The one thing I will change about my framing: ..." oninput="recountWords()" style="min-height:180px"></textarea>
+    <div class="field-meta"><span>Suggested length: 100-180 words</span><span class="field-word-count" id="q4Count">0 words</span></div>
+  </div>
+</div>
+<script>
+function countWords(s){if(!s||!s.trim())return 0;return s.trim().split(/\s+/).length}
+function recountWords(){
+  const fields=['q1','q2','q3','q4'];let total=0;
+  fields.forEach(name=>{const el=document.querySelector('[name="'+name+'"]');const c=countWords(el?el.value:'');total+=c;const d=document.getElementById(name+'Count');if(d)d.textContent=c+' words';});
+  const valEl=document.getElementById('wordCounterValue');const fillEl=document.getElementById('wordCounterFill');const bandEl=document.getElementById('wordCounterBand');const hintEl=document.getElementById('wordCounterHint');
+  const max=600,goodMin=300,goodMax=500;
+  bandEl.style.left=(goodMin/max*100)+'%';bandEl.style.width=((goodMax-goodMin)/max*100)+'%';
+  fillEl.style.width=Math.min(100,total/max*100)+'%';
+  valEl.textContent=total+' words';valEl.classList.remove('under','good','over');fillEl.classList.remove('good','over');
+  if(total<goodMin){valEl.classList.add('under');hintEl.textContent='Below the 300-word threshold.';}
+  else if(total<=goodMax){valEl.classList.add('good');fillEl.classList.add('good');hintEl.textContent='In range. Quality matters more than length.';}
+  else{valEl.classList.add('over');fillEl.classList.add('over');hintEl.textContent='Over 500 words.';}
+}
+function submitCaseStudy(){
+  if(!confirm("Submit Case Study 1: The Pitch That Did Not Land?\n\nCase Study 2 (SARS) closes the Combined Case Studies component at end of Week 6.")) return;
+  alert("Case Study 1 received. (In production, this POSTs to /api/case-studies/submit with case_study = 1)");
+}
+recountWords();
+</script>
+</body>
+</html>
