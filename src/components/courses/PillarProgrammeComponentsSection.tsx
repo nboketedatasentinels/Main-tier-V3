@@ -11,7 +11,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { Award, BookMarked, Wrench, AlertCircle, ExternalLink, type LucideIcon } from 'lucide-react'
+import { Award, BookMarked, Wrench, ArrowUpRight, type LucideIcon } from 'lucide-react'
 import {
   PILLAR_PROGRAMME_COMPONENTS,
   PROGRAMME_COMPONENT_LABEL,
@@ -24,18 +24,6 @@ interface Props {
   pillar: Pillar | null
 }
 
-/**
- * Renders the three pillar-scoped programme components (Capstone, Case
- * Study, Practical) on the user's courses page. Returns null when the org
- * has no pillar set so the section is hidden rather than showing an empty
- * state.
- *
- * Visual weight matches the courses timeline above it: these are NOT
- * optional — they're a parallel completion track learners must finish
- * alongside their pillar courses. Each component type has its own color +
- * icon so a learner sees three distinct deliverables, not three of the
- * same thing.
- */
 export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) => {
   if (!pillar) return null
   const entries = PILLAR_PROGRAMME_COMPONENTS[pillar] ?? []
@@ -44,49 +32,47 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
 
   return (
     <Box
-      borderWidth="2px"
-      borderColor="purple.200"
       borderRadius="2xl"
-      p={{ base: 5, md: 6 }}
+      p={{ base: 5, md: 7 }}
       bg="white"
-      boxShadow="md"
+      border="1px solid"
+      borderColor="gray.200"
+      boxShadow="sm"
     >
-      <Stack spacing={5}>
-        <Stack spacing={3}>
-          <HStack spacing={3} align="center" wrap="wrap">
-            <Heading size="md" color="gray.900">
-              Programme components
-            </Heading>
-            <Badge colorScheme="red" textTransform="none" px={2} py={1}>
-              Required
-            </Badge>
-            <Badge colorScheme="purple" textTransform="none" px={2} py={1}>
+      <Stack spacing={6}>
+        <Stack spacing={2}>
+          <HStack spacing={2} align="center" wrap="wrap">
+            <Text
+              color="#350e6f"
+              textTransform="uppercase"
+              letterSpacing="0.16em"
+              fontSize="xs"
+              fontWeight="bold"
+            >
               {pillarLabel}
-            </Badge>
-          </HStack>
-          <Text color="gray.700" fontSize="sm">
-            Three applied deliverables to demonstrate mastery of your pillar.{' '}
-            <Text as="span" fontWeight="semibold" color="gray.900">
-              All three must be completed
-            </Text>{' '}
-            alongside your courses to finish the programme.
-          </Text>
-          <HStack
-            spacing={2}
-            align="center"
-            bg="orange.50"
-            borderWidth="1px"
-            borderColor="orange.200"
-            borderRadius="md"
-            px={3}
-            py={2}
-          >
-            <Icon as={AlertCircle} boxSize={4} color="orange.600" />
-            <Text fontSize="xs" color="orange.800" fontWeight="medium">
-              Courses + Capstone + Case Study + Practical are all required.
-              Finishing only the courses won&apos;t complete your programme.
+            </Text>
+            <Box boxSize={1} borderRadius="full" bg="gray.300" />
+            <Text
+              color="gray.500"
+              textTransform="uppercase"
+              letterSpacing="0.16em"
+              fontSize="xs"
+              fontWeight="semibold"
+            >
+              Required to complete the programme
             </Text>
           </HStack>
+          <Heading
+            size="lg"
+            color="#27062e"
+            letterSpacing="-0.02em"
+            fontWeight="bold"
+          >
+            Programme components
+          </Heading>
+          <Text color="gray.700" fontSize="sm" maxW="2xl" lineHeight="1.65">
+            Three applied deliverables that, alongside your courses, complete the programme.
+          </Text>
         </Stack>
 
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
@@ -99,23 +85,60 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
   )
 }
 
-const TYPE_VISUALS: Record<ProgrammeComponentType, { icon: LucideIcon; accent: string; iconBg: string; iconColor: string }> = {
-  capstone: { icon: Award, accent: 'purple', iconBg: 'purple.50', iconColor: 'purple.600' },
-  case_study: { icon: BookMarked, accent: 'blue', iconBg: 'blue.50', iconColor: 'blue.600' },
-  practical: { icon: Wrench, accent: 'teal', iconBg: 'teal.50', iconColor: 'teal.600' },
+interface TypeVisual {
+  icon: LucideIcon
+  brand: string
+  brandHover: string
+  iconBg: string
+  iconColor: string
+  eyebrowColor: string
+  focusBorder: string
 }
 
-const STATUS_BADGE: Record<ProgrammeComponentEntry['status'], { label: string; colorScheme: string }> = {
-  available: { label: 'Available', colorScheme: 'green' },
-  coming_soon: { label: 'Coming soon', colorScheme: 'gray' },
-  locked: { label: 'Locked', colorScheme: 'orange' },
+const TYPE_VISUALS: Record<ProgrammeComponentType, TypeVisual> = {
+  capstone: {
+    icon: Award,
+    brand: '#350e6f',
+    brandHover: '#27062e',
+    iconBg: '#f4f0fb',
+    iconColor: '#350e6f',
+    eyebrowColor: '#350e6f',
+    focusBorder: '#350e6f',
+  },
+  case_study: {
+    icon: BookMarked,
+    brand: '#eab130',
+    brandHover: '#b58721',
+    iconBg: '#fdf6e3',
+    iconColor: '#8a6310',
+    eyebrowColor: '#8a6310',
+    focusBorder: '#eab130',
+  },
+  practical: {
+    icon: Wrench,
+    brand: '#f4540c',
+    brandHover: '#c4400a',
+    iconBg: '#fdece1',
+    iconColor: '#c4400a',
+    eyebrowColor: '#c4400a',
+    focusBorder: '#f4540c',
+  },
 }
+
+const STATUS_BADGE: Record<ProgrammeComponentEntry['status'], { label: string; bg: string; color: string }> = {
+  available: { label: 'Available', bg: 'gray.100', color: 'gray.700' },
+  coming_soon: { label: 'Coming soon', bg: 'gray.100', color: 'gray.600' },
+  locked: { label: 'Locked', bg: 'orange.50', color: 'orange.700' },
+}
+
+const cleanTitle = (raw: string): string => raw.replace(/\s*\(.*?\)\s*$/, '').trim()
 
 const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ entry }) => {
   const visual = TYPE_VISUALS[entry.type]
   const status = STATUS_BADGE[entry.status]
   const isDisabled = entry.status !== 'available'
   const hasParts = !!entry.parts && entry.parts.length > 0
+  const partCount = entry.parts?.length ?? 0
 
   const [selectedPartId, setSelectedPartId] = useState<string>(
     hasParts ? entry.parts![0].id : '',
@@ -124,114 +147,170 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
     ? entry.parts!.find((p) => p.id === selectedPartId) ?? entry.parts![0]
     : null
 
+  const title = cleanTitle(entry.title)
+
   return (
     <Box
       id={`pillar-component-${entry.type}`}
       scrollMarginTop="20px"
-      borderWidth="1px"
-      borderColor={`${visual.accent}.100`}
+      position="relative"
       borderRadius="xl"
-      p={4}
-      bg="gray.50"
+      bg="white"
+      border="1px solid"
+      borderColor="gray.200"
+      overflow="hidden"
       h="full"
       display="flex"
       flexDirection="column"
-      justifyContent="space-between"
-      _hover={isDisabled ? undefined : { borderColor: `${visual.accent}.400`, bg: 'white', boxShadow: 'sm' }}
-      transition="all 0.15s"
+      transition="all 0.2s ease"
+      _hover={
+        isDisabled
+          ? undefined
+          : {
+              borderColor: visual.brand,
+              boxShadow: '0 8px 24px -12px rgba(39, 6, 46, 0.18)',
+              transform: 'translateY(-2px)',
+            }
+      }
     >
-      <Stack spacing={3} mb={3}>
-        <HStack justify="space-between" align="flex-start">
-          <HStack spacing={2}>
-            <Box p={2} borderRadius="lg" bg={visual.iconBg} color={visual.iconColor}>
-              <Icon as={visual.icon} boxSize={4} />
-            </Box>
-            <Badge colorScheme={visual.accent} textTransform="none">
-              {PROGRAMME_COMPONENT_LABEL[entry.type]}
-            </Badge>
-          </HStack>
-          <Badge colorScheme={status.colorScheme} textTransform="none">
-            {status.label}
-          </Badge>
-        </HStack>
-        <Stack spacing={1}>
-          <Text fontWeight="bold" color="gray.900" fontSize="md">
-            {entry.title}
-          </Text>
-          <Text color="gray.600" fontSize="sm">
-            {entry.description}
-          </Text>
-        </Stack>
-        <Badge
-          colorScheme="red"
-          variant="subtle"
-          textTransform="none"
-          alignSelf="flex-start"
-          fontSize="2xs"
-        >
-          Required
-        </Badge>
-      </Stack>
+      <Box h="3px" bg={visual.brand} />
 
-      {hasParts && !isDisabled && selectedPart ? (
-        <Stack spacing={2} mt={1}>
-          <Text fontSize="xs" color="gray.600" fontWeight="medium">
-            Choose a part to open
-          </Text>
-          <Select
-            size="sm"
-            bg="white"
-            borderColor={`${visual.accent}.200`}
-            focusBorderColor={`${visual.accent}.500`}
-            value={selectedPartId}
-            onChange={(e) => setSelectedPartId(e.target.value)}
-            aria-label={`Select ${PROGRAMME_COMPONENT_LABEL[entry.type]} part`}
-          >
-            {entry.parts!.map((part) => (
-              <option key={part.id} value={part.id}>
-                {part.title}
-              </option>
-            ))}
-          </Select>
-          {selectedPart.description && (
-            <Text fontSize="xs" color="gray.600" lineHeight="1.5">
-              {selectedPart.description}
-            </Text>
-          )}
-          <Button
-            as="a"
-            href={selectedPart.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            size="sm"
-            colorScheme={visual.accent}
-            rightIcon={<Icon as={ExternalLink} boxSize={3.5} />}
-            alignSelf="flex-start"
-            mt={1}
-          >
-            Open part
-          </Button>
-          <Text fontSize="xs" color="gray.500" fontStyle="italic" mt={1}>
-            {entry.parts!.length === 2
-              ? 'Both parts required.'
-              : `All ${entry.parts!.length} parts required.`}
-          </Text>
+      <Stack
+        spacing={4}
+        p={{ base: 4, md: 5 }}
+        flex="1"
+        justify="space-between"
+      >
+        <Stack spacing={4}>
+          <HStack justify="space-between" align="center">
+            <HStack spacing={2.5} align="center">
+              <Box
+                p={2}
+                borderRadius="lg"
+                bg={visual.iconBg}
+                color={visual.iconColor}
+                display="inline-flex"
+              >
+                <Icon as={visual.icon} boxSize={4} />
+              </Box>
+              <Text
+                fontSize="xs"
+                fontWeight="bold"
+                letterSpacing="0.14em"
+                textTransform="uppercase"
+                color={visual.eyebrowColor}
+              >
+                {PROGRAMME_COMPONENT_LABEL[entry.type]}
+              </Text>
+            </HStack>
+            {isDisabled && (
+              <Badge
+                bg={status.bg}
+                color={status.color}
+                textTransform="none"
+                fontSize="2xs"
+                fontWeight="semibold"
+                px={2}
+                py={0.5}
+                borderRadius="full"
+              >
+                {status.label}
+              </Badge>
+            )}
+          </HStack>
+
+          <Stack spacing={1.5}>
+            <Heading
+              as="h3"
+              size="md"
+              color="#27062e"
+              fontWeight="bold"
+              letterSpacing="-0.01em"
+              lineHeight="1.25"
+            >
+              {title}
+            </Heading>
+            {hasParts ? (
+              <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                {partCount} parts &middot; all required
+              </Text>
+            ) : (
+              entry.description && (
+                <Text fontSize="sm" color="gray.600" lineHeight="1.55">
+                  {entry.description}
+                </Text>
+              )
+            )}
+          </Stack>
         </Stack>
-      ) : (
-        <Button
-          as={entry.href && !isDisabled ? 'a' : undefined}
-          href={entry.href && !isDisabled ? entry.href : undefined}
-          target={entry.href && !isDisabled ? '_blank' : undefined}
-          rel={entry.href && !isDisabled ? 'noopener noreferrer' : undefined}
-          size="sm"
-          colorScheme={visual.accent}
-          variant={isDisabled ? 'outline' : 'solid'}
-          isDisabled={isDisabled}
-          alignSelf="flex-start"
-        >
-          {isDisabled ? status.label : `Start ${PROGRAMME_COMPONENT_LABEL[entry.type].toLowerCase()}`}
-        </Button>
-      )}
+
+        {hasParts && !isDisabled && selectedPart ? (
+          <Stack spacing={3}>
+            <Select
+              size="sm"
+              bg="gray.50"
+              borderColor="gray.200"
+              borderRadius="md"
+              fontWeight="medium"
+              fontSize="sm"
+              _focusVisible={{ borderColor: visual.focusBorder, boxShadow: `0 0 0 1px ${visual.focusBorder}` }}
+              value={selectedPartId}
+              onChange={(e) => setSelectedPartId(e.target.value)}
+              aria-label={`Select ${PROGRAMME_COMPONENT_LABEL[entry.type]} part`}
+            >
+              {entry.parts!.map((part) => (
+                <option key={part.id} value={part.id}>
+                  {part.title}
+                </option>
+              ))}
+            </Select>
+            {selectedPart.description && (
+              <Text fontSize="xs" color="gray.500" lineHeight="1.55" minH="2.5em">
+                {selectedPart.description}
+              </Text>
+            )}
+            <Button
+              as="a"
+              href={selectedPart.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="sm"
+              bg={visual.brand}
+              color="white"
+              _hover={{ bg: visual.brandHover }}
+              _active={{ bg: visual.brandHover }}
+              rightIcon={<Icon as={ArrowUpRight} boxSize={3.5} />}
+              borderRadius="md"
+              fontWeight="semibold"
+              letterSpacing="0.01em"
+            >
+              Begin part
+            </Button>
+          </Stack>
+        ) : (
+          <Button
+            as={entry.href && !isDisabled ? 'a' : undefined}
+            href={entry.href && !isDisabled ? entry.href : undefined}
+            target={entry.href && !isDisabled ? '_blank' : undefined}
+            rel={entry.href && !isDisabled ? 'noopener noreferrer' : undefined}
+            size="sm"
+            bg={isDisabled ? 'transparent' : visual.brand}
+            color={isDisabled ? 'gray.600' : 'white'}
+            border={isDisabled ? '1px solid' : 'none'}
+            borderColor="gray.300"
+            _hover={isDisabled ? undefined : { bg: visual.brandHover }}
+            _active={isDisabled ? undefined : { bg: visual.brandHover }}
+            isDisabled={isDisabled}
+            rightIcon={!isDisabled ? <Icon as={ArrowUpRight} boxSize={3.5} /> : undefined}
+            borderRadius="md"
+            fontWeight="semibold"
+            letterSpacing="0.01em"
+            alignSelf="flex-start"
+          >
+            {isDisabled ? status.label : `Begin ${PROGRAMME_COMPONENT_LABEL[entry.type].toLowerCase()}`}
+          </Button>
+        )}
+      </Stack>
     </Box>
   )
 }
