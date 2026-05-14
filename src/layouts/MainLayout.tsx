@@ -294,7 +294,7 @@ export const MainLayout: React.FC = () => {
         items: [
           { label: 'Announcement', path: '/app/announcements', icon: Megaphone },
           { label: 'Event', path: '/app/events', icon: CalendarDays },
-          { label: 'Shameless Tuesday Podcast', path: '/app/shameless-tuesday', icon: Headphones },
+          { label: 'Shameless Tuesday', path: '/app/shameless-tuesday', icon: Headphones },
           { label: 'WhatsApp Access', path: '/app/whatsapp-access', icon: MessageCircle },
           { label: 'Tools', path: '/app/tools', icon: Wrench },
           { label: 'Feedback', path: '/app/feedback', icon: MessageSquare },

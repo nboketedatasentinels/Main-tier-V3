@@ -13,7 +13,6 @@ import {
   Grid,
   HStack,
   Icon,
-  IconButton,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -47,12 +46,9 @@ import {
 } from '@chakra-ui/react'
 import {
   AlertCircle,
-  ArrowDownAZ,
-  ArrowUpAZ,
   CheckCircle,
   ChevronDown,
   ChevronUp,
-  ChevronRight,
   Crown,
   Medal,
   Sparkles,
@@ -171,7 +167,6 @@ export const LeadershipBoardPage: React.FC = () => {
   const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
-  const [breakdownPage, setBreakdownPage] = useState(1)
   const [, setFeaturedBadges] = useState<FeaturedBadge[]>([])
   const [, setBadgesLoading] = useState(false)
   const [, setBadgesError] = useState<string | null>(null)
@@ -185,7 +180,6 @@ export const LeadershipBoardPage: React.FC = () => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
   })
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set())
   const [organizationsMap, setOrganizationsMap] = useState<Record<string, OrganizationRecord>>({})
   const [villageNames, setVillageNames] = useState<Record<string, string>>({})
   const villageNamesRef = useRef<Record<string, string>>({})
@@ -275,17 +269,6 @@ export const LeadershipBoardPage: React.FC = () => {
     return map
   }, [activityHistoryByCategory])
 
-  const toggleCategory = useCallback((categoryName: string) => {
-    setExpandedCategories((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(categoryName)) {
-        newSet.delete(categoryName)
-      } else {
-        newSet.add(categoryName)
-      }
-      return newSet
-    })
-  }, [])
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
 
@@ -648,13 +631,6 @@ export const LeadershipBoardPage: React.FC = () => {
       paddingBottom: Math.max(0, (leaderboardRows.length - end) * rowHeight),
     }
   }, [leaderboardRows, paginatedRows, virtualOffset])
-
-  useEffect(() => {
-    const maxPage = Math.max(1, Math.ceil(userBreakdown.length / 4))
-    if (breakdownPage > maxPage) {
-      setBreakdownPage(maxPage)
-    }
-  }, [userBreakdown.length, breakdownPage])
 
   useEffect(() => {
     if (location.hash !== '#points-breakdown') return
@@ -1107,22 +1083,6 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Text color="gray.500" fontSize="sm">Points earned per activity</Text>
                         </Box>
                       </Grid>
-                      <HStack spacing={3} ml={4}>
-                        <IconButton
-                          aria-label="Previous page"
-                          icon={<ArrowUpAZ />}
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setBreakdownPage((prev) => Math.max(1, prev - 1))}
-                        />
-                        <IconButton
-                          aria-label="Next page"
-                          icon={<ArrowDownAZ />}
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setBreakdownPage((prev) => prev + 1)}
-                        />
-                      </HStack>
                     </HStack>
                   </CardHeader>
                   <CardBody>
@@ -1165,8 +1125,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           </HStack>
                         </Box>
                         <Box id="points-breakdown" scrollMarginTop="120px">
-                          <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} alignItems="center">
-                            <Box h="260px">
+                          <Box h="320px">
                               {activityHistoryLoading ? (
                                 <Flex h="full" align="center" justify="center">
                                   <Spinner size="lg" color="#350e6f" thickness="3px" />
@@ -1233,109 +1192,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                   </PieChart>
                                 </ResponsiveContainer>
                               )}
-                            </Box>
-                            <Stack spacing={3}>
-                              {activityHistoryLoading ? (
-                                <Stack spacing={3}>
-                                  <Skeleton height="48px" borderRadius="md" />
-                                  <Skeleton height="48px" borderRadius="md" />
-                                  <Skeleton height="48px" borderRadius="md" />
-                                </Stack>
-                              ) : userBreakdown.length === 0 ? (
-                                <Box py={6} textAlign="center">
-                                  <Text fontSize="sm" color="gray.500">
-                                    Each activity you complete will appear here with its earned points.
-                                  </Text>
-                                </Box>
-                              ) : (
-                                <>
-                              {userBreakdown.slice((breakdownPage - 1) * 4, (breakdownPage - 1) * 4 + 4).map((activity, idx) => {
-                                const entries = activityHistoryByTitle[activity.name] || []
-                                return (
-                                <Box key={activity.name}>
-                                  <Tooltip
-                                    hasArrow
-                                    placement="top"
-                                    borderRadius="md"
-                                    bg="white"
-                                    p={3}
-                                    label={
-                                      activityHistoryLoading ? (
-                                        <Text fontSize="xs">Loading...</Text>
-                                      ) : entries.length ? (
-                                        <Stack spacing={2}>
-                                          {entries.map((entry) => (
-                                            <Flex key={entry.id} justify="space-between" align="center" gap={4} fontSize="xs">
-                                              <HStack spacing={2}>
-                                                <Icon as={CheckCircle} color="green.500" boxSize={3} />
-                                                <Text color="gray.800">{format(entry.createdAt, 'MMM d, yyyy')}</Text>
-                                              </HStack>
-                                              <Text color="green.500" fontWeight="medium">+{formatNumber(entry.points)}</Text>
-                                            </Flex>
-                                          ))}
-                                        </Stack>
-                                      ) : (
-                                        <Text fontSize="xs">No detail available</Text>
-                                      )
-                                    }
-                                  >
-                                  <Flex
-                                    align="center"
-                                    gap={3}
-                                    cursor="pointer"
-                                    onClick={() => toggleCategory(activity.name)}
-                                    _hover={{ bg: 'surface.subtle' }}
-                                    borderRadius="md"
-                                    p={1}
-                                    mx={-1}
-                                  >
-                                    <Box w={2} h={12} borderRadius="full" bg={pointsColors[idx % pointsColors.length]} />
-                                    <Box flex="1">
-                                      <Flex justify="space-between" align="center">
-                                        <HStack>
-                                          <Text fontWeight="bold" noOfLines={1}>{activity.name}</Text>
-                                          <Icon
-                                            as={expandedCategories.has(activity.name) ? ChevronDown : ChevronRight}
-                                            boxSize={4}
-                                            color="text.secondary"
-                                          />
-                                        </HStack>
-                                        <Text>{formatNumber(activity.value)} pts</Text>
-                                      </Flex>
-                                      <Progress value={activity.percent} colorScheme="primary" borderRadius="full" />
-                                      <Text fontSize="xs" color="text.secondary">{activity.percent}% of active points · {activity.category}</Text>
-                                    </Box>
-                                  </Flex>
-                                  </Tooltip>
-                                  <Collapse in={expandedCategories.has(activity.name)} animateOpacity>
-                                    <Stack pl={6} spacing={2} mt={2} mb={2}>
-                                      {activityHistoryLoading ? (
-                                        <Skeleton height="20px" />
-                                      ) : entries.length ? (
-                                        entries.map((entry) => (
-                                          <Flex key={entry.id} justify="space-between" align="center" fontSize="sm">
-                                            <HStack spacing={2}>
-                                              <Icon as={CheckCircle} color="success.500" boxSize={3} />
-                                              <Text color="text.secondary" fontSize="xs">
-                                                {format(entry.createdAt, 'MMM d, yyyy')}
-                                              </Text>
-                                            </HStack>
-                                            <Text fontWeight="medium" color="success.600">+{formatNumber(entry.points)}</Text>
-                                          </Flex>
-                                        ))
-                                      ) : (
-                                        <Text fontSize="sm" color="text.secondary">No detail available</Text>
-                                      )}
-                                    </Stack>
-                                  </Collapse>
-                                </Box>
-                                )
-                              })}
-                              <Text fontSize="sm" color="text.secondary">Page {breakdownPage} of {Math.max(1, Math.ceil(userBreakdown.length / 4))}</Text>
-                                </>
-                              )}
-                            </Stack>
-                          </Grid>
+                          </Box>
                         </Box>
                       </Grid>
                       <SimpleGrid columns={{ base: 2, md: 2, lg: 4 }} spacing={4}>

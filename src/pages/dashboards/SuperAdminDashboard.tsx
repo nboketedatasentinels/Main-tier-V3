@@ -9,6 +9,7 @@ import { ReportsAnalyticsPage } from '@/pages/super-admin/ReportsAnalyticsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
 import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
+import { FeedbackInboxPage } from '@/pages/super-admin/FeedbackInboxPage'
 import {
   listenToDashboardMetrics,
   listenToEngagementRiskAggregates,
@@ -456,6 +457,8 @@ export const SuperAdminDashboard: React.FC = () => {
         return <ApprovalCenterPage />
       case 'admin-oversight':
         return <AdminOversightPage adminName={adminName} adminId={profile?.id} />
+      case 'feedback':
+        return <FeedbackInboxPage />
       case 'reports':
         return <ReportsAnalyticsPage metrics={metrics} registrationTrend={registrationTrend} userGrowthTrend={userGrowthTrend} />
       case 'overview':

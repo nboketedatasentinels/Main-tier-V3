@@ -26,7 +26,6 @@ const isPendingPush = (
   n: NotificationRecord,
   dismissed: Set<string>,
 ): boolean => {
-  if (n.type !== 'programme_day') return false
   if (n.is_read || n.read) return false
   if (dismissed.has(n.id)) return false
   const md = (n.metadata ?? {}) as { priority?: string }

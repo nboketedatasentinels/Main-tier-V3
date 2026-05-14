@@ -1274,40 +1274,177 @@ export const PeerConnectPage: React.FC = () => {
 
   return (
     <Stack spacing={6} pb={12}>
-      <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
-        <Stack spacing={2}>
-          <Heading size="lg" color="gray.800">
-            Peer Connect
-          </Heading>
-          <Text color="gray.500">
-            Automated weekly matching pairs you one-on-one, while peer-to-peer sessions are partner-supervised group experiences, all anchored in Firebase so
-            your connections stay in sync.
-          </Text>
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} pt={1}>
-            <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="gray.50">
-              <HStack spacing={2} mb={1}>
-                <Badge colorScheme="purple">
-                  Peer Matching
-                </Badge>
-                <Icon as={MessageSquare} w={4} h={4} color="purple.500" />
-              </HStack>
+      <Box
+        bg="white"
+        p={6}
+        borderRadius="xl"
+        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+        position="relative"
+        overflow="hidden"
+      >
+        <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="purple.50" borderRadius="0 0 0 100%" />
+        <Stack spacing={4} position="relative" zIndex={1}>
+          <HStack spacing={3} align="center">
+            <Flex
+              w={10}
+              h={10}
+              bg="#350e6f"
+              borderRadius="xl"
+              align="center"
+              justify="center"
+              boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+              flexShrink={0}
+            >
+              <Icon as={MessageSquare} w={5} h={5} color="white" />
+            </Flex>
+            <Stack spacing={0}>
+              <Heading size="md" color="gray.800">
+                Peer Connect
+              </Heading>
               <Text fontSize="sm" color="gray.500">
-                System-automated, one-on-one pairing so you can connect directly with a matched peer each week.
+                Pick one to get started.
               </Text>
+            </Stack>
+          </HStack>
+
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+            <Box
+              p={4}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="purple.100"
+              bg="purple.50"
+              cursor="pointer"
+              onClick={() => setTabIndex(0)}
+              _hover={{ borderColor: 'purple.300', transform: 'translateY(-1px)' }}
+              transition="all 0.2s"
+            >
+              <HStack spacing={3}>
+                <Flex
+                  w={9}
+                  h={9}
+                  bg="purple.500"
+                  borderRadius="lg"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon as={MessageSquare} w={4} h={4} color="white" />
+                </Flex>
+                <Stack spacing={0}>
+                  <Text fontWeight="bold" color="gray.800">
+                    1-on-1 match
+                  </Text>
+                  <Text fontSize="xs" color="gray.600">
+                    Get paired with a peer this week
+                  </Text>
+                </Stack>
+              </HStack>
             </Box>
-            <Box p={3} borderRadius="lg" border="1px solid" borderColor="brand.border" bg="gray.50">
-              <HStack spacing={2} mb={1}>
-                <Badge colorScheme="blue" variant="subtle">
-                  Peer to Peer
-                </Badge>
-                <Icon as={Users} w={4} h={4} color="blue.500" />
+            <Box
+              p={4}
+              borderRadius="lg"
+              border="1px solid"
+              borderColor="blue.100"
+              bg="blue.50"
+              cursor="pointer"
+              onClick={() => setTabIndex(1)}
+              _hover={{ borderColor: 'blue.300', transform: 'translateY(-1px)' }}
+              transition="all 0.2s"
+            >
+              <HStack spacing={3}>
+                <Flex
+                  w={9}
+                  h={9}
+                  bg="blue.500"
+                  borderRadius="lg"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon as={Users} w={4} h={4} color="white" />
+                </Flex>
+                <Stack spacing={0}>
+                  <Text fontWeight="bold" color="gray.800">
+                    Group session
+                  </Text>
+                  <Text fontSize="xs" color="gray.600">
+                    Join a peer-to-peer session
+                  </Text>
+                </Stack>
               </HStack>
-              <Text fontSize="sm" color="gray.500">
-                Group-oriented activities with partner oversight to keep sessions structured, monitored, and collaborative.
-              </Text>
             </Box>
           </SimpleGrid>
         </Stack>
+      </Box>
+
+      <Box
+        bg="white"
+        p={{ base: 5, md: 6 }}
+        borderRadius="xl"
+        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+        _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(244, 84, 12, 0.15)' }}
+        transition="all 0.3s ease"
+        position="relative"
+        overflow="hidden"
+      >
+        <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="orange.50" borderRadius="0 0 0 100%" />
+        <Flex
+          direction={{ base: 'column', md: 'row' }}
+          gap={{ base: 5, md: 8 }}
+          align={{ base: 'stretch', md: 'center' }}
+          position="relative"
+          zIndex={1}
+        >
+          <Stack spacing={3} flex={2} minW={0}>
+            <HStack spacing={3} align="center">
+              <Flex
+                w={10}
+                h={10}
+                bg="linear-gradient(135deg, #f4540c 0%, #c2410c 100%)"
+                borderRadius="xl"
+                align="center"
+                justify="center"
+                boxShadow="0 4px 12px rgba(244, 84, 12, 0.3)"
+                flexShrink={0}
+              >
+                <Icon as={Video} w={5} h={5} color="white" />
+              </Flex>
+              <Stack spacing={0}>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                  color="gray.500"
+                >
+                  Before you begin
+                </Text>
+                <Heading size="sm" color="gray.800">
+                  Rules of engagement
+                </Heading>
+              </Stack>
+            </HStack>
+            <Text fontSize="sm" color="gray.600" lineHeight="1.6">
+              A short walkthrough on how peer matching works and how to make the most of every session. We recommend watching before your first pairing.
+            </Text>
+          </Stack>
+
+          <Box flex={3} w={{ base: '100%', md: 'auto' }} maxW={{ base: 'none', md: '560px' }}>
+            <Box
+              as="video"
+              controls
+              preload="metadata"
+              playsInline
+              src="/media/rules-of-engagement.mp4"
+              w="100%"
+              borderRadius="lg"
+              bg="black"
+              sx={{ aspectRatio: '16 / 9' }}
+              boxShadow="0 4px 16px rgba(0,0,0,0.08)"
+            />
+          </Box>
+        </Flex>
       </Box>
 
       <Tabs variant="soft-rounded" colorScheme="primary" index={tabIndex} onChange={setTabIndex} isFitted>
