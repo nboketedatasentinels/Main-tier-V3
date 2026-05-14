@@ -742,7 +742,7 @@ export const LeadershipCouncilPage: React.FC = () => {
             variant="unstyled"
             colorScheme="primary"
             isLazy
-            defaultIndex={isLeadershipEligible ? 0 : 2}
+            defaultIndex={isLeadershipEligible ? 2 : 0}
           >
             <TabList
               border="1px solid"
@@ -753,30 +753,14 @@ export const LeadershipCouncilPage: React.FC = () => {
               gap={1}
               overflowX="auto"
             >
-              <Tooltip
-                label={journeyLockReason ?? ''}
-                placement="top"
-                isDisabled={isLeadershipEligible}
+              <Tab
+                whiteSpace="nowrap"
+                fontWeight="semibold"
+                rounded="md"
+                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
               >
-                <Tab
-                  whiteSpace="nowrap"
-                  fontWeight="semibold"
-                  rounded="md"
-                  isDisabled={!isLeadershipEligible}
-                  _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
-                  _disabled={{
-                    color: 'text.muted',
-                    bg: 'surface.subtle',
-                    cursor: 'not-allowed',
-                    opacity: 0.6,
-                  }}
-                >
-                  <HStack spacing={2}>
-                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
-                    <Text as="span">Mentor</Text>
-                  </HStack>
-                </Tab>
-              </Tooltip>
+                Transformation Partner
+              </Tab>
               <Tooltip
                 label={journeyLockReason ?? ''}
                 placement="top"
@@ -801,17 +785,231 @@ export const LeadershipCouncilPage: React.FC = () => {
                   </HStack>
                 </Tab>
               </Tooltip>
-              <Tab
-                whiteSpace="nowrap"
-                fontWeight="semibold"
-                rounded="md"
-                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+              <Tooltip
+                label={journeyLockReason ?? ''}
+                placement="top"
+                isDisabled={isLeadershipEligible}
               >
-                Transformation Partner
-              </Tab>
+                <Tab
+                  whiteSpace="nowrap"
+                  fontWeight="semibold"
+                  rounded="md"
+                  isDisabled={!isLeadershipEligible}
+                  _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                  _disabled={{
+                    color: 'text.muted',
+                    bg: 'surface.subtle',
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
+                  }}
+                >
+                  <HStack spacing={2}>
+                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
+                    <Text as="span">Mentor</Text>
+                  </HStack>
+                </Tab>
+              </Tooltip>
             </TabList>
 
             <TabPanels>
+              <TabPanel px={0} pt={4}>
+                {!isPartnerVisible ? (
+                  renderJourneyLockedTab(
+                    'Transformation Partner',
+                    '6-week, 3-month, 6-month, and 9-month journeys',
+                  )
+                ) : (
+                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
+                  <CardHeader pb={2}>
+                    <Stack spacing={2}>
+                      <Text
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        color="#350e6f"
+                        fontWeight="bold"
+                        letterSpacing="0.14em"
+                      >
+                        Transformation Partner
+                      </Text>
+                      <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                        {partnerProfile
+                          ? displayNameForProfile(partnerProfile)
+                          : 'No partner assigned'}
+                      </Heading>
+                    </Stack>
+                  </CardHeader>
+                  <CardBody>
+                    {partnerLoading && (
+                      <Flex direction="column" align="center" gap={3} p={6}>
+                        <Spinner />
+                        <Text color="text.secondary">Loading transformation partner...</Text>
+                      </Flex>
+                    )}
+                    {!partnerLoading && partnerProfile && (
+                      <Stack spacing={4}>
+                        <HStack justify="space-between" align="center" spacing={4} flexWrap="wrap">
+                          <HStack spacing={3} align="center">
+                            <Avatar
+                              size="lg"
+                              name={displayNameForProfile(partnerProfile)}
+                              src={partnerProfile.avatarUrl}
+                              bg="#350e6f"
+                            />
+                            <Stack spacing={0.5}>
+                              <Text color="gray.700" fontSize="sm" fontWeight="medium">
+                                {partnerProfile.title || 'Transformation Partner'}
+                              </Text>
+                              <Text color="gray.500" fontSize="xs">
+                                {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
+                              </Text>
+                            </Stack>
+                          </HStack>
+                          <HStack spacing={2} flexWrap="wrap">
+                            {partnerProfile.rating && (
+                              <Badge colorScheme="purple" variant="subtle">
+                                Rating {partnerProfile.rating.toFixed(1)} / 5 ({partnerProfile.ratingCount || 0} reviews)
+                              </Badge>
+                            )}
+                            {partnerProfile.xp && (
+                              <Badge colorScheme="purple" variant="subtle">
+                                XP {partnerProfile.xp.toLocaleString()}
+                              </Badge>
+                            )}
+                          </HStack>
+                        </HStack>
+
+                        {partnerProfile.bio && (
+                          <Text color="gray.700" fontSize="sm" lineHeight="1.65">
+                            {partnerProfile.bio}
+                          </Text>
+                        )}
+
+                        {partnerProfile.email && (
+                          <HStack spacing={2} pt={1}>
+                            <Icon as={ExternalLink} color="gray.500" boxSize={3.5} />
+                            <Link
+                              href={`mailto:${partnerProfile.email}`}
+                              color="#350e6f"
+                              fontSize="sm"
+                              fontWeight="medium"
+                            >
+                              {partnerProfile.email}
+                            </Link>
+                          </HStack>
+                        )}
+                      </Stack>
+                    )}
+                    {!partnerLoading && !partnerProfile && (
+                      <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
+                        <Icon as={Shield} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">Partner not set up</Heading>
+                        <Text color="gray.600" fontSize="sm">
+                          {partnerError || 'Ask your admin to set up your partner profile.'}
+                        </Text>
+                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments} mt={1}>
+                          Try again
+                        </Button>
+                      </Flex>
+                    )}
+                  </CardBody>
+                </Card>
+                )}
+              </TabPanel>
+
+              <TabPanel px={0} pt={4}>
+                {!isLeadershipEligible ? (
+                  renderJourneyLockedTab('Ambassador Assignment')
+                ) : (
+                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
+                  <CardHeader pb={0}>
+                    <HStack justify="space-between" align="start" spacing={4}>
+                      <Stack spacing={2} flex="1" minW={0}>
+                        <Text
+                          fontSize="xs"
+                          textTransform="uppercase"
+                          color="#350e6f"
+                          fontWeight="bold"
+                          letterSpacing="0.14em"
+                        >
+                          Ambassador
+                        </Text>
+                        <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                          {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No ambassador assigned'}
+                        </Heading>
+                        {ambassadorProfile?.availabilityStatus && (
+                          <Badge
+                            colorScheme={badgeColor(ambassadorProfile.availabilityStatus)}
+                            variant="subtle"
+                            alignSelf="flex-start"
+                          >
+                            {ambassadorProfile.availabilityStatus}
+                          </Badge>
+                        )}
+                      </Stack>
+                      {ambassadorProfile && (
+                        <Avatar
+                          size="lg"
+                          name={displayNameForProfile(ambassadorProfile)}
+                          src={ambassadorProfile.avatarUrl}
+                          bg="#350e6f"
+                        />
+                      )}
+                    </HStack>
+                  </CardHeader>
+                  <CardBody>
+                    {assignmentsLoading && (
+                      <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="gray.200" rounded="xl">
+                        <Spinner size="sm" />
+                        <Text color="gray.600" fontSize="sm">Loading ambassador…</Text>
+                      </Flex>
+                    )}
+
+                    {ambassadorError && (
+                      <Alert status="warning" rounded="lg" mb={4}>
+                        <AlertIcon />
+                        <Box>
+                          <AlertTitle>Couldn't load ambassador.</AlertTitle>
+                          <AlertDescription>{ambassadorError}</AlertDescription>
+                        </Box>
+                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
+                          Try again
+                        </Button>
+                      </Alert>
+                    )}
+
+                    {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
+                        <Icon as={User} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">No ambassador assigned</Heading>
+                        <Text color="gray.600" fontSize="sm">
+                          {hasOrganization
+                            ? 'Ask your admin to assign one.'
+                            : 'Link your account to an organisation first.'}
+                        </Text>
+                      </Flex>
+                    )}
+
+                    {ambassadorProfile && isSamePerson && (
+                      <Text fontSize="sm" color="gray.600" mt={2}>
+                        Your mentor is also your ambassador for this programme.
+                      </Text>
+                    )}
+
+                    {profile?.id && (
+                      <>
+                        <Divider my={5} />
+                        <LearnerAmbassadorBookings
+                          learnerId={profile.id}
+                          learnerName={displayNameForProfile(profile)}
+                          companyId={profile.companyId ?? null}
+                        />
+                      </>
+                    )}
+                  </CardBody>
+                </Card>
+                )}
+              </TabPanel>
+
               <TabPanel px={0} pt={4}>
                 {!isLeadershipEligible ? (
                   renderJourneyLockedTab('Mentor Assignment')
@@ -1146,204 +1344,6 @@ export const LeadershipCouncilPage: React.FC = () => {
                           )}
                         </Box>
                       </Stack>
-                    )}
-                  </CardBody>
-                </Card>
-                )}
-              </TabPanel>
-
-              <TabPanel px={0} pt={4}>
-                {!isLeadershipEligible ? (
-                  renderJourneyLockedTab('Ambassador Assignment')
-                ) : (
-                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
-                  <CardHeader pb={0}>
-                    <HStack justify="space-between" align="start" spacing={4}>
-                      <Stack spacing={2} flex="1" minW={0}>
-                        <Text
-                          fontSize="xs"
-                          textTransform="uppercase"
-                          color="#350e6f"
-                          fontWeight="bold"
-                          letterSpacing="0.14em"
-                        >
-                          Ambassador
-                        </Text>
-                        <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                          {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No ambassador assigned'}
-                        </Heading>
-                        {ambassadorProfile?.availabilityStatus && (
-                          <Badge
-                            colorScheme={badgeColor(ambassadorProfile.availabilityStatus)}
-                            variant="subtle"
-                            alignSelf="flex-start"
-                          >
-                            {ambassadorProfile.availabilityStatus}
-                          </Badge>
-                        )}
-                      </Stack>
-                      {ambassadorProfile && (
-                        <Avatar
-                          size="lg"
-                          name={displayNameForProfile(ambassadorProfile)}
-                          src={ambassadorProfile.avatarUrl}
-                          bg="#350e6f"
-                        />
-                      )}
-                    </HStack>
-                  </CardHeader>
-                  <CardBody>
-                    {assignmentsLoading && (
-                      <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="gray.200" rounded="xl">
-                        <Spinner size="sm" />
-                        <Text color="gray.600" fontSize="sm">Loading ambassador…</Text>
-                      </Flex>
-                    )}
-
-                    {ambassadorError && (
-                      <Alert status="warning" rounded="lg" mb={4}>
-                        <AlertIcon />
-                        <Box>
-                          <AlertTitle>Couldn't load ambassador.</AlertTitle>
-                          <AlertDescription>{ambassadorError}</AlertDescription>
-                        </Box>
-                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
-                          Try again
-                        </Button>
-                      </Alert>
-                    )}
-
-                    {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
-                      <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
-                        <Icon as={User} boxSize={9} color="gray.400" />
-                        <Heading size="sm" color="#27062e">No ambassador assigned</Heading>
-                        <Text color="gray.600" fontSize="sm">
-                          {hasOrganization
-                            ? 'Ask your admin to assign one.'
-                            : 'Link your account to an organisation first.'}
-                        </Text>
-                      </Flex>
-                    )}
-
-                    {ambassadorProfile && isSamePerson && (
-                      <Text fontSize="sm" color="gray.600" mt={2}>
-                        Your mentor is also your ambassador for this programme.
-                      </Text>
-                    )}
-
-                    {profile?.id && (
-                      <>
-                        <Divider my={5} />
-                        <LearnerAmbassadorBookings
-                          learnerId={profile.id}
-                          learnerName={displayNameForProfile(profile)}
-                          companyId={profile.companyId ?? null}
-                        />
-                      </>
-                    )}
-                  </CardBody>
-                </Card>
-                )}
-              </TabPanel>
-
-              <TabPanel px={0} pt={4}>
-                {!isPartnerVisible ? (
-                  renderJourneyLockedTab(
-                    'Transformation Partner',
-                    '6-week, 3-month, 6-month, and 9-month journeys',
-                  )
-                ) : (
-                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
-                  <CardHeader pb={2}>
-                    <Stack spacing={2}>
-                      <Text
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        color="#350e6f"
-                        fontWeight="bold"
-                        letterSpacing="0.14em"
-                      >
-                        Transformation Partner
-                      </Text>
-                      <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                        {partnerProfile
-                          ? displayNameForProfile(partnerProfile)
-                          : 'No partner assigned'}
-                      </Heading>
-                    </Stack>
-                  </CardHeader>
-                  <CardBody>
-                    {partnerLoading && (
-                      <Flex direction="column" align="center" gap={3} p={6}>
-                        <Spinner />
-                        <Text color="text.secondary">Loading transformation partner...</Text>
-                      </Flex>
-                    )}
-                    {!partnerLoading && partnerProfile && (
-                      <Stack spacing={4}>
-                        <HStack justify="space-between" align="center" spacing={4} flexWrap="wrap">
-                          <HStack spacing={3} align="center">
-                            <Avatar
-                              size="lg"
-                              name={displayNameForProfile(partnerProfile)}
-                              src={partnerProfile.avatarUrl}
-                              bg="#350e6f"
-                            />
-                            <Stack spacing={0.5}>
-                              <Text color="gray.700" fontSize="sm" fontWeight="medium">
-                                {partnerProfile.title || 'Transformation Partner'}
-                              </Text>
-                              <Text color="gray.500" fontSize="xs">
-                                {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
-                              </Text>
-                            </Stack>
-                          </HStack>
-                          <HStack spacing={2} flexWrap="wrap">
-                            {partnerProfile.rating && (
-                              <Badge colorScheme="purple" variant="subtle">
-                                Rating {partnerProfile.rating.toFixed(1)} / 5 ({partnerProfile.ratingCount || 0} reviews)
-                              </Badge>
-                            )}
-                            {partnerProfile.xp && (
-                              <Badge colorScheme="purple" variant="subtle">
-                                XP {partnerProfile.xp.toLocaleString()}
-                              </Badge>
-                            )}
-                          </HStack>
-                        </HStack>
-
-                        {partnerProfile.bio && (
-                          <Text color="gray.700" fontSize="sm" lineHeight="1.65">
-                            {partnerProfile.bio}
-                          </Text>
-                        )}
-
-                        {partnerProfile.email && (
-                          <HStack spacing={2} pt={1}>
-                            <Icon as={ExternalLink} color="gray.500" boxSize={3.5} />
-                            <Link
-                              href={`mailto:${partnerProfile.email}`}
-                              color="#350e6f"
-                              fontSize="sm"
-                              fontWeight="medium"
-                            >
-                              {partnerProfile.email}
-                            </Link>
-                          </HStack>
-                        )}
-                      </Stack>
-                    )}
-                    {!partnerLoading && !partnerProfile && (
-                      <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
-                        <Icon as={Shield} boxSize={9} color="gray.400" />
-                        <Heading size="sm" color="#27062e">Partner not set up</Heading>
-                        <Text color="gray.600" fontSize="sm">
-                          {partnerError || 'Ask your admin to set up your partner profile.'}
-                        </Text>
-                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments} mt={1}>
-                          Try again
-                        </Button>
-                      </Flex>
                     )}
                   </CardBody>
                 </Card>
