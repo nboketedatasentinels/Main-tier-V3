@@ -72,7 +72,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts'
+import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from 'recharts'
 import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole } from '@/types'
 import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
@@ -537,11 +537,7 @@ export const LeadershipBoardPage: React.FC = () => {
     let totalPoints = 0
 
     Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
-      const filteredEntries = timeframeStart
-        ? entries.filter((e) => e.createdAt >= timeframeStart)
-        : entries
-
-      filteredEntries.forEach((entry) => {
+      entries.forEach((entry) => {
         if (entry.points <= 0) return
         const title = entry.activityTitle || 'Activity'
         const existing = activityTotals.get(title)
@@ -554,7 +550,7 @@ export const LeadershipBoardPage: React.FC = () => {
       })
     })
 
-    if (!timeframeStart && displayTotalPoints > totalPoints) {
+    if (displayTotalPoints > totalPoints) {
       const unaccounted = displayTotalPoints - totalPoints
       activityTotals.set('Other activities', {
         points: unaccounted,
@@ -571,7 +567,7 @@ export const LeadershipBoardPage: React.FC = () => {
         percent: totalPoints > 0 ? Math.round((data.points / totalPoints) * 100) : 0,
       }))
       .sort((a, b) => b.value - a.value)
-  }, [activityHistoryByCategory, timeframeStart, displayTotalPoints])
+  }, [activityHistoryByCategory, displayTotalPoints])
 
   const percentileValue = leaderboardRows.length
     ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
@@ -1153,21 +1149,94 @@ export const LeadershipBoardPage: React.FC = () => {
                                 </Flex>
                               ) : (
                                 <ResponsiveContainer width="100%" height="100%">
-                                  <PieChart>
-                                    <Pie dataKey="value" data={userBreakdown} innerRadius={60} outerRadius={90} label>
-                                      {userBreakdown.map((entry, index) => (
-                                        <Cell key={`cell-${entry.name}`} fill={pointsColors[index % pointsColors.length]} />
-                                      ))}
-                                    </Pie>
+                                  <Treemap
+                                    data={userBreakdown.map((entry, index) => ({
+                                      name: entry.name,
+                                      size: entry.value,
+                                      percent: entry.percent,
+                                      fill: pointsColors[index % pointsColors.length],
+                                    }))}
+                                    dataKey="size"
+                                    stroke="#fff"
+                                    isAnimationActive
+                                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                                    content={((props: any) => {
+                                      const { x = 0, y = 0, width = 0, height = 0, name = '', payload } = props ?? {}
+                                      const fill = payload?.fill ?? props?.fill ?? '#350e6f'
+                                      const value = payload?.size ?? props?.size ?? 0
+                                      const percent = payload?.percent ?? props?.percent ?? 0
+                                      const showLabel = width > 70 && height > 40
+                                      const showValue = width > 90 && height > 60
+                                      const truncated =
+                                        name.length > 22 ? name.slice(0, 20) + '…' : name
+                                      return (
+                                        <g>
+                                          <rect
+                                            x={x}
+                                            y={y}
+                                            width={width}
+                                            height={height}
+                                            fill={fill}
+                                            stroke="#fff"
+                                            strokeWidth={2}
+                                            rx={6}
+                                            ry={6}
+                                          />
+                                          {showLabel && (
+                                            <text
+                                              x={x + 12}
+                                              y={y + 22}
+                                              fill="#fff"
+                                              fontSize={13}
+                                              fontWeight={600}
+                                              style={{ pointerEvents: 'none' }}
+                                            >
+                                              {truncated}
+                                            </text>
+                                          )}
+                                          {showValue && (
+                                            <>
+                                              <text
+                                                x={x + 12}
+                                                y={y + 44}
+                                                fill="rgba(255,255,255,0.85)"
+                                                fontSize={18}
+                                                fontWeight={700}
+                                                style={{ pointerEvents: 'none' }}
+                                              >
+                                                {formatNumber(value)}
+                                              </text>
+                                              <text
+                                                x={x + 12}
+                                                y={y + 62}
+                                                fill="rgba(255,255,255,0.7)"
+                                                fontSize={11}
+                                                fontWeight={500}
+                                                style={{ pointerEvents: 'none' }}
+                                              >
+                                                {percent}% · pts
+                                              </text>
+                                            </>
+                                          )}
+                                        </g>
+                                      )
+                                    }) as never}
+                                  >
                                     <RechartsTooltip
                                       content={({ active, payload }) => {
                                         if (!active || !payload?.length) return null
-                                        const name = payload[0].name as string
-                                        const value = payload[0].value as number
-                                        const entries = activityHistoryByTitle[name] || []
+                                        const node = payload[0].payload as {
+                                          name: string
+                                          size: number
+                                          percent: number
+                                        }
+                                        const entries = activityHistoryByTitle[node.name] || []
                                         return (
                                           <Box bg="white" color="gray.800" p={3} borderRadius="md" fontSize="xs" maxW="260px" boxShadow="lg" border="1px solid" borderColor="gray.100">
-                                            <Text fontWeight="bold" mb={2} color="gray.800">{name} — {formatNumber(value)} pts</Text>
+                                            <Text fontWeight="bold" mb={1} color="gray.800">{node.name}</Text>
+                                            <Text color="gray.500" mb={2}>
+                                              {formatNumber(node.size)} pts · {node.percent}% of active
+                                            </Text>
                                             {activityHistoryLoading ? (
                                               <Text color="gray.500">Loading...</Text>
                                             ) : entries.length ? (
@@ -1189,7 +1258,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                         )
                                       }}
                                     />
-                                  </PieChart>
+                                  </Treemap>
                                 </ResponsiveContainer>
                               )}
                           </Box>

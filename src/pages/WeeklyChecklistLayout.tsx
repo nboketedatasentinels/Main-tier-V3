@@ -2,7 +2,6 @@ import { Stack } from '@chakra-ui/react'
 import { useWeeklyChecklistViewModel } from '@/hooks/useWeeklyChecklistViewModel'
 import { ActivityList } from './components/ActivityList'
 import { ProofModal } from './components/ProofModal'
-import { WeeklySummary } from './components/WeeklySummary'
 import { JourneyHeader } from './components/JourneyHeader'
 
 type VM = ReturnType<typeof useWeeklyChecklistViewModel>
@@ -14,16 +13,6 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         journey={vm.journey}
         progress={vm.allWeeksProgress}
         leadershipAvailability={vm.leadershipAvailability}
-      />
-
-      <WeeklySummary
-        week={vm.selectedWeek}
-        completed={vm.completedCount}
-        cyclePoints={vm.cyclePoints}
-        cycleTarget={vm.cycleTarget}
-        accumulatedPoints={vm.accumulatedPoints}
-        passMarkPoints={vm.passMarkPoints}
-        journeyUrgency={vm.journeyUrgency}
       />
 
       <ActivityList

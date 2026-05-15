@@ -1308,72 +1308,102 @@ export const PeerConnectPage: React.FC = () => {
           </HStack>
 
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-            <Box
-              p={4}
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="purple.100"
-              bg="purple.50"
-              cursor="pointer"
-              onClick={() => setTabIndex(0)}
-              _hover={{ borderColor: 'purple.300', transform: 'translateY(-1px)' }}
-              transition="all 0.2s"
+            <Link
+              href="#peer-tracks"
+              onClick={(e) => {
+                e.preventDefault()
+                setTabIndex(0)
+                window.requestAnimationFrame(() => {
+                  document.getElementById('peer-tracks')?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                })
+              }}
+              _hover={{ textDecoration: 'none' }}
+              display="block"
             >
-              <HStack spacing={3}>
-                <Flex
-                  w={9}
-                  h={9}
-                  bg="purple.500"
-                  borderRadius="lg"
-                  align="center"
-                  justify="center"
-                  flexShrink={0}
-                >
-                  <Icon as={MessageSquare} w={4} h={4} color="white" />
-                </Flex>
-                <Stack spacing={0}>
-                  <Text fontWeight="bold" color="gray.800">
-                    1-on-1 match
-                  </Text>
-                  <Text fontSize="xs" color="gray.600">
-                    Get paired with a peer this week
-                  </Text>
-                </Stack>
-              </HStack>
-            </Box>
-            <Box
-              p={4}
-              borderRadius="lg"
-              border="1px solid"
-              borderColor="blue.100"
-              bg="blue.50"
-              cursor="pointer"
-              onClick={() => setTabIndex(1)}
-              _hover={{ borderColor: 'blue.300', transform: 'translateY(-1px)' }}
-              transition="all 0.2s"
+              <Box
+                p={4}
+                borderRadius="lg"
+                border="1px solid"
+                borderColor="purple.100"
+                bg="purple.50"
+                cursor="pointer"
+                _hover={{ borderColor: 'purple.300', transform: 'translateY(-1px)' }}
+                transition="all 0.2s"
+              >
+                <HStack spacing={3}>
+                  <Flex
+                    w={9}
+                    h={9}
+                    bg="purple.500"
+                    borderRadius="lg"
+                    align="center"
+                    justify="center"
+                    flexShrink={0}
+                  >
+                    <Icon as={MessageSquare} w={4} h={4} color="white" />
+                  </Flex>
+                  <Stack spacing={0}>
+                    <Text fontWeight="bold" color="gray.800">
+                      1-on-1 match
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      Get paired with a peer this week
+                    </Text>
+                  </Stack>
+                </HStack>
+              </Box>
+            </Link>
+            <Link
+              href="#peer-tracks"
+              onClick={(e) => {
+                e.preventDefault()
+                setTabIndex(1)
+                window.requestAnimationFrame(() => {
+                  document.getElementById('peer-tracks')?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                  })
+                })
+              }}
+              _hover={{ textDecoration: 'none' }}
+              display="block"
             >
-              <HStack spacing={3}>
-                <Flex
-                  w={9}
-                  h={9}
-                  bg="blue.500"
-                  borderRadius="lg"
-                  align="center"
-                  justify="center"
-                  flexShrink={0}
-                >
-                  <Icon as={Users} w={4} h={4} color="white" />
-                </Flex>
-                <Stack spacing={0}>
-                  <Text fontWeight="bold" color="gray.800">
-                    Group session
-                  </Text>
-                  <Text fontSize="xs" color="gray.600">
-                    Join a peer-to-peer session
-                  </Text>
-                </Stack>
-              </HStack>
-            </Box>
+              <Box
+                p={4}
+                borderRadius="lg"
+                border="1px solid"
+                borderColor="blue.100"
+                bg="blue.50"
+                cursor="pointer"
+                _hover={{ borderColor: 'blue.300', transform: 'translateY(-1px)' }}
+                transition="all 0.2s"
+              >
+                <HStack spacing={3}>
+                  <Flex
+                    w={9}
+                    h={9}
+                    bg="blue.500"
+                    borderRadius="lg"
+                    align="center"
+                    justify="center"
+                    flexShrink={0}
+                  >
+                    <Icon as={Users} w={4} h={4} color="white" />
+                  </Flex>
+                  <Stack spacing={0}>
+                    <Text fontWeight="bold" color="gray.800">
+                      Group session
+                    </Text>
+                    <Text fontSize="xs" color="gray.600">
+                      Join a peer-to-peer session
+                    </Text>
+                  </Stack>
+                </HStack>
+              </Box>
+            </Link>
           </SimpleGrid>
         </Stack>
       </Box>
@@ -1418,15 +1448,15 @@ export const PeerConnectPage: React.FC = () => {
                   letterSpacing="wide"
                   color="gray.500"
                 >
-                  Before you begin
+                  Peer Learning
                 </Text>
                 <Heading size="sm" color="gray.800">
-                  Rules of engagement
+                  Peer to Peer
                 </Heading>
               </Stack>
             </HStack>
             <Text fontSize="sm" color="gray.600" lineHeight="1.6">
-              A short walkthrough on how peer matching works and how to make the most of every session. We recommend watching before your first pairing.
+              How peer learning works on the platform. Watch this walkthrough to understand weekly 1-on-1 matches, partner-supervised group sessions, and how to make every connection count toward your growth.
             </Text>
           </Stack>
 
@@ -1436,7 +1466,7 @@ export const PeerConnectPage: React.FC = () => {
               controls
               preload="metadata"
               playsInline
-              src="/media/rules-of-engagement.mp4"
+              src="/media/peer-to-peer.mp4"
               w="100%"
               borderRadius="lg"
               bg="black"
@@ -1447,6 +1477,7 @@ export const PeerConnectPage: React.FC = () => {
         </Flex>
       </Box>
 
+      <Box id="peer-tracks" sx={{ scrollMarginTop: '24px' }}>
       <Tabs variant="soft-rounded" colorScheme="primary" index={tabIndex} onChange={setTabIndex} isFitted>
         <TabList bg="white" p={2} borderRadius="full" border="1px solid" borderColor="gray.100">
           <Tab>
@@ -1464,7 +1495,7 @@ export const PeerConnectPage: React.FC = () => {
         </TabList>
 
         <TabPanels pt={4}>
-          <TabPanel px={0}>
+          <TabPanel px={0} id="peer-matching" scrollMarginTop="80px">
             <SimpleGrid columns={{ base: 1, xl: 3 }} spacing={4} alignItems="start">
               <GridItem colSpan={{ base: 1, xl: 2 }}>
                 <Stack spacing={4}>
@@ -1907,7 +1938,7 @@ export const PeerConnectPage: React.FC = () => {
             </SimpleGrid>
           </TabPanel>
 
-          <TabPanel px={0}>
+          <TabPanel px={0} id="peer-sessions" scrollMarginTop="80px">
             <Stack spacing={4}>
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Stack spacing={1}>
@@ -2055,6 +2086,7 @@ export const PeerConnectPage: React.FC = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
+      </Box>
 
       <Modal isOpen={sessionModal.isOpen} onClose={sessionModal.onClose} size="5xl" isCentered>
         <ModalOverlay />

@@ -1,8 +1,22 @@
 import { useMemo } from 'react'
-import { Center, Heading, Stack, Text } from '@chakra-ui/react'
+import {
+  Box,
+  Center,
+  Flex,
+  HStack,
+  Heading,
+  Icon,
+  Stack,
+  Text,
+} from '@chakra-ui/react'
+import { PartyPopper, Sparkles } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getVisibleActivities } from '@/utils/activityStateManager'
 import { WeeklyActivityCard } from './WeeklyActivityCard'
+
+const isCompleted = (activity: ActivityState): boolean =>
+  activity.status === 'completed' ||
+  activity.availability.state === 'permanently_exhausted'
 
 export const ActivityList = ({
   activities,
@@ -28,16 +42,24 @@ export const ActivityList = ({
   isActivityBusy?: (activityId: string) => boolean
 }) => {
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
-  const firstActionableActivityId = useMemo(
-    () =>
-      visibleActivities.find(
-        (activity) =>
-          activity.availability.state === 'available' &&
-          (activity.status === 'not_started' || activity.status === 'rejected') &&
-          !(activity.approvalType === 'partner_issued' && !activity.issuedByPartner),
-      )?.id ?? null,
+
+  const ordered = useMemo(
+    () => visibleActivities.filter((activity) => activity?.id),
     [visibleActivities],
   )
+
+  const firstActionableActivityId =
+    ordered.find(
+      (a) =>
+        a.availability.state === 'available' &&
+        (a.status === 'not_started' || a.status === 'rejected') &&
+        !(a.approvalType === 'partner_issued' && !a.issuedByPartner),
+    )?.id ?? null
+
+  const todoCount = ordered.filter((a) => !isCompleted(a)).length
+  const todoPointsTotal = ordered
+    .filter((a) => !isCompleted(a))
+    .reduce((sum, a) => sum + (a.points ?? 0), 0)
 
   const focusFirstActionableActivity = () => {
     if (!firstActionableActivityId) return
@@ -46,17 +68,89 @@ export const ActivityList = ({
     target.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
-  return (
-    <Stack spacing={4}>
-      <Heading size="sm">Current activities</Heading>
-
-      {!visibleActivities?.length ? (
-        <Center py={8}>
-          <Text color="text.muted">You are caught up for now. New activities unlock as each journey week opens.</Text>
+  if (!visibleActivities?.length) {
+    return (
+      <Box
+        bg="white"
+        p={8}
+        borderRadius="xl"
+        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+        position="relative"
+        overflow="hidden"
+      >
+        <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="green.50" borderRadius="0 0 0 100%" />
+        <Center flexDirection="column" gap={3} position="relative" zIndex={1}>
+          <Flex
+            w={12}
+            h={12}
+            borderRadius="xl"
+            bg="linear-gradient(135deg, #047857 0%, #065f46 100%)"
+            align="center"
+            justify="center"
+            boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)"
+          >
+            <Icon as={PartyPopper} boxSize={6} color="white" />
+          </Flex>
+          <Heading size="sm" color="gray.800">You're all caught up</Heading>
+          <Text color="gray.500" fontSize="sm" textAlign="center">
+            New activities will unlock as each week opens. Come back soon.
+          </Text>
         </Center>
-      ) : (
+      </Box>
+    )
+  }
+
+  return (
+    <Stack spacing={6}>
+      {/* Activities in their curated journey order */}
+      <Stack spacing={3}>
+        <Flex justify="space-between" align="center">
+          <HStack spacing={3} align="center">
+            <Flex
+              w={9}
+              h={9}
+              borderRadius="lg"
+              bg="linear-gradient(135deg, #047857 0%, #065f46 100%)"
+              align="center"
+              justify="center"
+              boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)"
+            >
+              <Icon as={Sparkles} boxSize={4} color="white" />
+            </Flex>
+            <Stack spacing={0}>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                textTransform="uppercase"
+                letterSpacing="wide"
+                color="gray.500"
+              >
+                Your activities
+              </Text>
+              <Heading size="sm" color="gray.800">
+                {todoCount} of {ordered.length} to complete
+              </Heading>
+            </Stack>
+          </HStack>
+          {todoCount > 0 && (
+            <Box
+              px={3}
+              py={1}
+              bg="green.50"
+              border="1px solid"
+              borderColor="green.200"
+              borderRadius="full"
+              fontSize="xs"
+              fontWeight="semibold"
+              color="green.700"
+            >
+              +{todoPointsTotal.toLocaleString()} pts available
+            </Box>
+          )}
+        </Flex>
+
         <Stack spacing={3}>
-          {visibleActivities.filter(a => a?.id).map(activity => (
+          {ordered.map((activity) => (
             <WeeklyActivityCard
               key={activity.id}
               activity={activity}
@@ -74,7 +168,8 @@ export const ActivityList = ({
             />
           ))}
         </Stack>
-      )}
+      </Stack>
+
     </Stack>
   )
 }
