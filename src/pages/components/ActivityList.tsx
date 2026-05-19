@@ -280,7 +280,7 @@ export const ActivityList = ({
               {groups.todo.length} to complete
             </Heading>
             <Text fontSize="sm" color="gray.500">
-              · {groups.done.length} done · {groups.locked.length} locked
+              · {groups.locked.length} coming up · {groups.done.length} done
             </Text>
           </HStack>
         </Stack>
@@ -295,8 +295,8 @@ export const ActivityList = ({
         boxShadow="0 1px 3px rgba(0,0,0,0.03)"
       >
         {renderSection('todo')}
-        {renderSection('done')}
         {renderSection('locked')}
+        {renderSection('done')}
       </Box>
     </Stack>
   )
