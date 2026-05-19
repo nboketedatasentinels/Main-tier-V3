@@ -107,7 +107,7 @@ export const SendQuickNudgeModal: React.FC<SendQuickNudgeModalProps> = ({
       )
     } else {
       parts.push(
-        `You've earned ${totalPoints.toLocaleString()} points so far on your ${journey.label} journey — ` +
+        `You've earned ${totalPoints.toLocaleString()} points so far on your ${journey.label} journey - ` +
         `that's ${progressPercent}% of the ${journey.passMark.toLocaleString()}-point pass mark.`
       )
     }
@@ -183,7 +183,7 @@ export const SendQuickNudgeModal: React.FC<SendQuickNudgeModalProps> = ({
           await sendNudgeEmailFn({
             to: user.email,
             recipientName: displayName,
-            subject: `Journey Progress Reminder — ${journey.label}`,
+            subject: `Journey Progress Reminder - ${journey.label}`,
             journeyLabel: journey.label,
             totalPoints,
             passMark: journey.passMark,

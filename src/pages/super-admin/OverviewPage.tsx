@@ -269,13 +269,13 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         </Stack>
       ) : (
         <>
-          {/* ZONE 1 — CRITICAL ATTENTION */}
+          {/* ZONE 1 - CRITICAL ATTENTION */}
           <CriticalActionInbox items={criticalActionItems} />
 
-          {/* ZONE 2 — SYSTEM HEALTH SNAPSHOT */}
+          {/* ZONE 2 - SYSTEM HEALTH SNAPSHOT */}
           <SystemHealthStrip kpis={healthKPIs} />
 
-          {/* ZONE 6 — SYSTEM METRICS (Collapsible) */}
+          {/* ZONE 6 - SYSTEM METRICS (Collapsible) */}
           <CollapsibleMetrics>
             <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
               <Card bg="white" border="1px solid" borderColor="border.control" borderRadius="2xl" shadow="sm">

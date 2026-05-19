@@ -507,7 +507,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({ mentor
                   <FormControl>
                     <FormLabel>Reason (optional)</FormLabel>
                     <Textarea
-                      placeholder="Let the learner know why — and suggest another time."
+                      placeholder="Let the learner know why - and suggest another time."
                       value={declineReason}
                       onChange={(e) => setDeclineReason(e.target.value)}
                       rows={4}

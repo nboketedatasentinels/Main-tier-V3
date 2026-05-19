@@ -7,7 +7,7 @@
  *   - updatedAt        = serverTimestamp()
  *
  * Writes to BOTH `profiles` and `users` collections (the mirror pattern used
- * across the app — see AuthContext dual-write and superAdminService's
+ * across the app - see AuthContext dual-write and superAdminService's
  * cascadeCohortStartDateToProfiles for precedent).
  *
  * Usage:

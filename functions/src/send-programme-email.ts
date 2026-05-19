@@ -152,7 +152,7 @@ export const sendProgrammeEmail = functions
     const fromAddress =
       process.env.SMTP_FROM || process.env.SMTP_USER || "info@t4leader.com";
     const html = wrapEmailHtml(data);
-    const text = `${data.bodyText}\n\n— Open the app: https://app.t4leader.com/`;
+    const text = `${data.bodyText}\n\n- Open the app: https://app.t4leader.com/`;
 
     try {
       const transport = getTransporter();

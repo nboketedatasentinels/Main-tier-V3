@@ -959,7 +959,7 @@ export const listenToAllUsers = (
 /**
  * Elevate a user to the partner role. Updates both `users/{uid}.role` and
  * `profiles/{uid}.role` so AuthContext (users) and the leaderboard (profiles)
- * see the change consistently. Idempotent — safe to call on existing partners.
+ * see the change consistently. Idempotent - safe to call on existing partners.
  *
  * Distinct from `assignPartnerToOrganization`: this only changes the role.
  * The org assignment (`organizations.{orgId}.transformationPartnerId`) is a

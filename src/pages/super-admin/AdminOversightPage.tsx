@@ -401,7 +401,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           <Text fontWeight="semibold">{getDisplayName(admin, 'User')}</Text>
         </Td>
         <Td>
-          <Text color="gray.600" fontSize="sm">{admin.email || '—'}</Text>
+          <Text color="gray.600" fontSize="sm">{admin.email || '-'}</Text>
         </Td>
         <Td>
           <Badge colorScheme={roleColorMap[admin.role] || 'gray'}>{roleLabel(admin.role)}</Badge>
@@ -428,7 +428,7 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
         </Td>
         <Td>
           <Text color="gray.600" fontSize="sm">
-            {admin.lastActive ? new Date(getMillis(admin.lastActive)).toLocaleDateString() : '—'}
+            {admin.lastActive ? new Date(getMillis(admin.lastActive)).toLocaleDateString() : '-'}
           </Text>
         </Td>
         <Td>

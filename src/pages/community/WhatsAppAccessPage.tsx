@@ -23,7 +23,7 @@ const ShamelessCircleTab = () => (
   <Stack spacing={4}>
     <WhatsAppCommunityCard
       title="Join the Shameless Circle WhatsApp community"
-      description="An exclusive hub for Shameless Tuesday podcast enthusiasts — go deeper on episodes, share 'aha!' moments, and connect with fellow listeners worldwide."
+      description="An exclusive hub for Shameless Tuesday podcast enthusiasts - go deeper on episodes, share 'aha!' moments, and connect with fellow listeners worldwide."
       highlights={[
         'Exclusive discussions about each episode',
         'Network with like-minded listeners around the globe',
@@ -65,7 +65,7 @@ export const WhatsAppAccessPage: React.FC = () => {
             WhatsApp Access
           </Heading>
           <Text color="brand.subtleText" fontSize="md">
-            Jump into the WhatsApp communities where T4L conversations happen in real time — reading
+            Jump into the WhatsApp communities where T4L conversations happen in real time - reading
             circles, podcast discussions, jobs, and grants.
           </Text>
         </Stack>

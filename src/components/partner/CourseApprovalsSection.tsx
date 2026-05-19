@@ -111,7 +111,7 @@ export const CourseApprovalsSection: React.FC = () => {
 
   // Auto-pick only when the partner has exactly one org. Multi-org partners
   // who explicitly chose "All organizations" from the header dropdown should
-  // see the "Pick a single organization" prompt below — course approvals are
+  // see the "Pick a single organization" prompt below - course approvals are
   // scoped to a specific org's program (journey + pillar) so they can't be
   // aggregated across orgs.
   useEffect(() => {

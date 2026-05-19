@@ -118,7 +118,7 @@ export const WeeklySummary = ({
             <Icon as={AlertTriangle} color={journeyUrgency.level === 'critical' ? 'red.600' : 'orange.600'} boxSize={4} />
             <Text fontSize="xs" color={journeyUrgency.level === 'critical' ? 'red.800' : 'orange.800'} fontWeight="medium">
               {journeyUrgency.deficit.toLocaleString()} points behind expected pace
-              {journeyUrgency.weeksLeft > 0 && ` — need ~${journeyUrgency.weeklyNeeded.toLocaleString()} pts/week across ${journeyUrgency.weeksLeft} remaining week${journeyUrgency.weeksLeft === 1 ? '' : 's'}`}
+              {journeyUrgency.weeksLeft > 0 && ` - need ~${journeyUrgency.weeklyNeeded.toLocaleString()} pts/week across ${journeyUrgency.weeksLeft} remaining week${journeyUrgency.weeksLeft === 1 ? '' : 's'}`}
             </Text>
           </HStack>
         )}
@@ -126,7 +126,7 @@ export const WeeklySummary = ({
           <HStack spacing={2} bg="red.100" px={3} py={2} borderRadius="md">
             <Icon as={AlertTriangle} color="red.600" boxSize={4} />
             <Text fontSize="xs" color="red.800" fontWeight="medium">
-              Journey has ended — {journeyUrgency.pointsNeeded.toLocaleString()} points short of the pass mark
+              Journey has ended - {journeyUrgency.pointsNeeded.toLocaleString()} points short of the pass mark
             </Text>
           </HStack>
         )}

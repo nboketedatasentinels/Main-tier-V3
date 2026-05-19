@@ -272,7 +272,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
         <HStack justify="space-between" mb={2} flexWrap="wrap">
           <Heading size="sm">Available coaching sessions</Heading>
           <Text fontSize="sm" color="text.secondary">
-            Book a slot — your ambassador will confirm attendance and award points.
+            Book a slot - your ambassador will confirm attendance and award points.
           </Text>
         </HStack>
         {loading && (
@@ -304,7 +304,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
             <Icon as={Calendar} color="text.muted" />
             <Text fontWeight="semibold">No sessions open for booking</Text>
             <Text fontSize="sm" color="text.secondary">
-              Check back soon — your ambassador will post new slots regularly.
+              Check back soon - your ambassador will post new slots regularly.
             </Text>
           </Flex>
         )}

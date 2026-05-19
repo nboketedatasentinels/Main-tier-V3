@@ -4,14 +4,14 @@ export const badges: Badge[] = [
   {
     id: '4w-starter',
     name: 'Starter',
-    description: "You've taken the first step — foundation built, momentum started.",
+    description: "You've taken the first step - foundation built, momentum started.",
     image: '/badges/4w-starter.png',
     journeyType: '4W',
   },
   {
     id: '6w-powerful',
     name: 'Powerful',
-    description: "You've proven momentum and discipline — quick wins, strong start.",
+    description: "You've proven momentum and discipline - quick wins, strong start.",
     image: '/badges/6w-powerful.png',
     journeyType: '6W',
   },
@@ -25,14 +25,14 @@ export const badges: Badge[] = [
   {
     id: '6m-pioneer',
     name: 'Pioneer',
-    description: "You're breaking new ground — combining leadership, learning, and measurable impact.",
+    description: "You're breaking new ground - combining leadership, learning, and measurable impact.",
     image: '/badges/6m-pioneer.png',
     journeyType: '6M',
   },
   {
     id: '9m-conqueror',
     name: 'Conqueror',
-    description: "You've sustained transformation, inspired teams, and modelled growth across borders. You've mastered the LIFT pillars — a leader who builds, scales, and transforms with purpose.",
+    description: "You've sustained transformation, inspired teams, and modelled growth across borders. You've mastered the LIFT pillars - a leader who builds, scales, and transforms with purpose.",
     image: '/badges/9m-conqueror.png',
     journeyType: '9M',
   },

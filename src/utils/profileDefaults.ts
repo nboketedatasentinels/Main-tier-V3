@@ -9,7 +9,7 @@
  *   - notifications & journey gating (require journeyType / journeyStartDate)
  *   - partner dashboards (read totalPoints / level for progress %)
  *
- * Without these, profiles are "stubs" — they pass org membership checks but
+ * Without these, profiles are "stubs" - they pass org membership checks but
  * are invisible to peers and break partner reporting.
  */
 
@@ -50,7 +50,7 @@ export const buildProfileEngagementDefaults = (
   if (org?.journeyStartDate) {
     defaults.journeyStartDate = org.journeyStartDate
   } else if (org?.journeyType) {
-    // Org has a journey but no start date set yet — anchor to today so weekly
+    // Org has a journey but no start date set yet - anchor to today so weekly
     // gating (currentWeek, fortnight windows) has something to compute from.
     defaults.journeyStartDate = todayIso()
   }

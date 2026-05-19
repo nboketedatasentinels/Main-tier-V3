@@ -57,7 +57,7 @@ export const FeedbackPage: React.FC = () => {
       setSubmittedAt(new Date())
       setMessage('')
       setCategory('general')
-      toast({ title: 'Thanks — feedback received', status: 'success' })
+      toast({ title: 'Thanks - feedback received', status: 'success' })
     } catch (err) {
       console.error('[FeedbackPage] submit failed', err)
       toast({
@@ -84,7 +84,7 @@ export const FeedbackPage: React.FC = () => {
             Tell us what you think
           </Heading>
           <Text color="brand.subtleText" fontSize="md">
-            Every note helps us shape the platform. Bugs, wishlist items, or kind words — all
+            Every note helps us shape the platform. Bugs, wishlist items, or kind words - all
             welcome.
           </Text>
         </Stack>
@@ -120,7 +120,7 @@ export const FeedbackPage: React.FC = () => {
             <Textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Tell us what's on your mind — what worked, what didn't, what you'd love to see next."
+              placeholder="Tell us what's on your mind - what worked, what didn't, what you'd love to see next."
               rows={6}
               resize="vertical"
             />

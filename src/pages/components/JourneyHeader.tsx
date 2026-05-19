@@ -142,7 +142,7 @@ export const JourneyHeader = ({
       color = 'red'
     } else if (paceRatio < 0.4) {
       level = 'critical'
-      message = `You're significantly behind — ${deficit.toLocaleString()} points below where you should be. You need ~${weeklyNeeded.toLocaleString()} pts/week to pass.`
+      message = `You're significantly behind - ${deficit.toLocaleString()} points below where you should be. You need ~${weeklyNeeded.toLocaleString()} pts/week to pass.`
       color = 'red'
     } else if (paceRatio < 0.65) {
       level = 'behind'
@@ -150,7 +150,7 @@ export const JourneyHeader = ({
       color = 'orange'
     } else if (paceRatio < 0.85) {
       level = 'warning'
-      message = `You're slightly behind — ${deficit.toLocaleString()} points off target. Stay consistent to close the gap.`
+      message = `You're slightly behind - ${deficit.toLocaleString()} points off target. Stay consistent to close the gap.`
       color = 'yellow'
     }
 

@@ -392,11 +392,11 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                             </Box>
                           </HStack>
                           <Text flex="1" color="gray.700">
-                            {member.email || '—'}
+                            {member.email || '-'}
                           </Text>
                           <Tooltip label={member.companyCode ? `Code: ${member.companyCode}` : ''} placement="top">
                             <Text flex="1" fontWeight="medium" color="gray.800">
-                              {member.companyName || '—'}
+                              {member.companyName || '-'}
                             </Text>
                           </Tooltip>
                           <Box w="120px">
@@ -406,12 +406,12 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                           </Box>
                           {showLastActiveColumn && (
                             <Text w="120px" color="gray.500">
-                              {member.lastActive ? formatDistanceToNow(member.lastActive, { addSuffix: true }) : '—'}
+                              {member.lastActive ? formatDistanceToNow(member.lastActive, { addSuffix: true }) : '-'}
                             </Text>
                           )}
                           {showJoinedColumn && (
                             <Text w="120px" color="gray.500">
-                              {member.createdAt ? formatDistanceToNow(member.createdAt, { addSuffix: true }) : '—'}
+                              {member.createdAt ? formatDistanceToNow(member.createdAt, { addSuffix: true }) : '-'}
                             </Text>
                           )}
                           <Box w="140px" textAlign="right">
@@ -471,7 +471,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                 >
                   {availableMembers.map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.name} — {user.email} ({user.role})
+                      {user.name} - {user.email} ({user.role})
                     </option>
                   ))}
                 </Select>

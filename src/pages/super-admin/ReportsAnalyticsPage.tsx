@@ -360,22 +360,22 @@ export const ReportsAnalyticsPage: React.FC<ReportsAnalyticsPageProps> = ({ metr
                     <SimpleGrid columns={{ base: 1, md: 2, xl: 4 }} spacing={4}>
                       <InsightCard
                         title="Top organization"
-                        value={insights.topEngagement?.name || '—'}
+                        value={insights.topEngagement?.name || '-'}
                         helper={insights.topEngagement ? `${insights.topEngagement.averageEngagementRate ?? 0}% avg engagement` : 'No org stats yet'}
                       />
                       <InsightCard
                         title="Fastest growth"
-                        value={insights.fastestGrowth?.name || '—'}
+                        value={insights.fastestGrowth?.name || '-'}
                         helper={insights.fastestGrowth ? `${insights.fastestGrowth.newThisWeek ?? 0} new this week` : 'No org stats yet'}
                       />
                       <InsightCard
                         title="Most engaged role"
-                        value={insights.topRole?.role ? insights.topRole.role.replace(/_/g, ' ') : '—'}
+                        value={insights.topRole?.role ? insights.topRole.role.replace(/_/g, ' ') : '-'}
                         helper={insights.topRole ? `Avg score ${insights.topRole.avg} (${insights.topRole.count} users)` : 'No engagement scores yet'}
                       />
                       <InsightCard
                         title="Churn risk"
-                        value={insights.churnRisk?.org?.name || '—'}
+                        value={insights.churnRisk?.org?.name || '-'}
                         helper={insights.churnRisk ? `${insights.churnRisk.org.averageEngagementRate ?? 0}% engagement · ${insights.churnRisk.inactiveDays}d inactive` : 'No org stats yet'}
                       />
                     </SimpleGrid>
@@ -515,7 +515,7 @@ export const ReportsAnalyticsPage: React.FC<ReportsAnalyticsPageProps> = ({ metr
                                     <Text fontSize="sm">{formatDistanceToNow(lastActive, { addSuffix: true })}</Text>
                                   ) : (
                                     <Text fontSize="sm" color="brand.subtleText">
-                                      —
+                                      -
                                     </Text>
                                   )}
                                 </Td>

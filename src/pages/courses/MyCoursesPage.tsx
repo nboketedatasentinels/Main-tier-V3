@@ -548,7 +548,7 @@ const scrollToSection = (elementId: string) => {
 
 /**
  * One "requirement" chip rendered inside the gradient Programme requirements
- * banner — bigger count, icon, label. Clicking the chip smooth-scrolls to
+ * banner - bigger count, icon, label. Clicking the chip smooth-scrolls to
  * the matching section/card below (courses timeline or a pillar component).
  */
 const RequirementChip: React.FC<{

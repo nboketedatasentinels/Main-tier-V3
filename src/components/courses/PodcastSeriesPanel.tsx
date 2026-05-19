@@ -18,7 +18,11 @@ import {
   Play,
   RotateCcw,
 } from 'lucide-react'
-import { getPodcastsForWeek, getModuleForWeek, type Podcast } from '@/config/podcasts'
+import {
+  getPodcastsForPillarAndWeek,
+  getModuleForPillarAndWeek,
+  type Podcast,
+} from '@/config/podcasts'
 import { usePodcastProgress } from '@/hooks/usePodcastProgress'
 import {
   markPodcastWatched,
@@ -26,6 +30,7 @@ import {
   getPodcastState,
 } from '@/services/podcastProgressService'
 import { useAuth } from '@/hooks/useAuth'
+import { useUserPillar } from '@/hooks/useUserPillar'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { PodcastAssessmentModal } from './PodcastAssessmentModal'
 
@@ -51,9 +56,16 @@ export function PodcastSeriesPanel({
   const uid = profile?.id ?? null
   const toast = useToast()
   const { progress, loading } = usePodcastProgress(uid)
+  const { pillar, loading: pillarLoading } = useUserPillar()
 
-  const podcasts = useMemo(() => getPodcastsForWeek(currentWeek), [currentWeek])
-  const module = useMemo(() => getModuleForWeek(currentWeek), [currentWeek])
+  const podcasts = useMemo(
+    () => getPodcastsForPillarAndWeek(pillar, currentWeek),
+    [pillar, currentWeek],
+  )
+  const module = useMemo(
+    () => getModuleForPillarAndWeek(pillar, currentWeek),
+    [pillar, currentWeek],
+  )
 
   const [quizPodcast, setQuizPodcast] = useState<Podcast | null>(null)
   const [submittingId, setSubmittingId] = useState<string | null>(null)
@@ -119,12 +131,33 @@ export function PodcastSeriesPanel({
     }
   }
 
+  if (pillarLoading) {
+    return (
+      <Box p={4} bg="gray.50" rounded="md" border="1px solid" borderColor="gray.200">
+        <Text fontSize="sm" color="gray.600">
+          Loading your podcast series…
+        </Text>
+      </Box>
+    )
+  }
+
+  if (!pillar) {
+    return (
+      <Box p={4} bg="gray.50" rounded="md" border="1px solid" borderColor="gray.200">
+        <Text fontSize="sm" color="gray.600">
+          Your podcast series will appear once your organisation is set up with a pillar. Reach
+          out to your partner if this stays empty.
+        </Text>
+      </Box>
+    )
+  }
+
   if (podcasts.length === 0) {
     return (
       <Box p={4} bg="gray.50" rounded="md" border="1px solid" borderColor="gray.200">
         <Text fontSize="sm" color="gray.600">
-          No podcasts are mapped to your current week ({currentWeek}). New ones unlock when you reach
-          the next module.
+          No podcasts are mapped to your current week ({currentWeek}). New ones unlock when you
+          reach the next module.
         </Text>
       </Box>
     )
@@ -246,13 +279,13 @@ export function PodcastSeriesPanel({
                   {!hasUrl && !isPassed && (
                     <HStack spacing={1} color="gray.500" fontSize="xs">
                       <Icon as={Lock} boxSize={3} />
-                      <Text>Episode coming soon — quiz available now</Text>
+                      <Text>Episode coming soon - quiz available now</Text>
                     </HStack>
                   )}
                 </Stack>
 
                 <HStack spacing={2} flexShrink={0}>
-                  {/* Watch podcast — always shown; disabled until the episode URL is live */}
+                  {/* Watch podcast - always shown; disabled until the episode URL is live */}
                   <Button
                     size="sm"
                     variant="outline"

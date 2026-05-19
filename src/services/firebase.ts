@@ -77,6 +77,17 @@ const firebaseConfig = {
 // Initialize Firebase
 export const app: FirebaseApp = initializeApp(firebaseConfig)
 
+// Bridge the (public) Firebase config to same-origin static HTML pages
+// like /capstones/*.html, so they can re-use the learner's auth session
+// without each page hard-coding the keys.
+try {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    window.localStorage.setItem('t4l_fb_config', JSON.stringify(firebaseConfig))
+  }
+} catch {
+  // localStorage may be unavailable (private browsing); non-fatal.
+}
+
 // Initialize Firebase services
 export const auth: Auth = getAuth(app)
 const enableLongPolling = import.meta.env.VITE_FIRESTORE_FORCE_LONG_POLLING === 'true'

@@ -115,14 +115,14 @@ export const AssignMentorModal: React.FC<Props> = ({
                 placeholder="Select mentor"
                 isDisabled={isLoadingMentors}
               >
-                <option value="">— No mentor —</option>
+                <option value="">- No mentor -</option>
                 {missingMentor ? (
                   <option value={missingMentor.id}>{missingMentor.name}</option>
                 ) : null}
                 {filteredMentors.map((mentorOption) => (
                   <option key={mentorOption.id} value={mentorOption.id}>
                     {mentorOption.name}
-                    {mentorOption.email ? ` — ${mentorOption.email}` : ''}
+                    {mentorOption.email ? ` - ${mentorOption.email}` : ''}
                   </option>
                 ))}
               </Select>

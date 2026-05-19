@@ -110,7 +110,7 @@ const parseDate = (value?: string) => {
 
 const formatDate = (value?: string) => {
   const date = parseDate(value)
-  if (!date) return '—'
+  if (!date) return '-'
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
@@ -1060,7 +1060,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                             {(user.totalPoints ?? 0).toLocaleString()}
                           </Text>
                         </Td>
-                        <Td>{inactiveDays ?? '—'}</Td>
+                        <Td>{inactiveDays ?? '-'}</Td>
                         <Td>{formatDate(user.lastActiveAt || user.lastActive)}</Td>
                         <Td>
                           <HStack spacing={2}>
@@ -1210,7 +1210,7 @@ export const AtRiskCommandPanel: React.FC<AtRiskCommandPanelProps> = ({
                           <Td>
                             <Badge colorScheme={riskScoreColor(buildRiskScore(user))}>{user.riskStatus}</Badge>
                           </Td>
-                          <Td>{daysSince(user.lastActiveAt || user.lastActive) ?? '—'}</Td>
+                          <Td>{daysSince(user.lastActiveAt || user.lastActive) ?? '-'}</Td>
                           <Td>
                             <Checkbox
                               isChecked={campaignRecipientIds.includes(user.id)}

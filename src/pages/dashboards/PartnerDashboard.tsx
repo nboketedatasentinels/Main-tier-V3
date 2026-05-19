@@ -203,7 +203,7 @@ export const PartnerDashboard: React.FC = () => {
   // Journey progress for the currently selected org. Computes day-level
   // precision so a cohort that started today shows "1 day done · 5 weeks 6
   // days left" on a 6W journey, etc. Returns a config-missing shape if the
-  // org has no journey type or no usable start date — so the UI can prompt
+  // org has no journey type or no usable start date - so the UI can prompt
   // the partner instead of silently hiding the bar.
   const journeyProgress = useMemo(() => {
     if (!scopedOrgKey || overviewOrganizations.length !== 1) return null
@@ -563,7 +563,7 @@ export const PartnerDashboard: React.FC = () => {
       readinessTotal === 0 ? 0 : Math.round((n / readinessTotal) * 100)
 
     // Current week derived from journeyProgress.daysElapsed (only meaningful
-    // when one org is in scope — different orgs may have different cohorts).
+    // when one org is in scope - different orgs may have different cohorts).
     const journeyWeekNumber =
       journeyProgress && !journeyProgress.unconfigured
         ? Math.min(
@@ -1938,6 +1938,10 @@ export const PartnerDashboard: React.FC = () => {
     }
     if (key === 'course-approvals') {
       navigate('/partner/course-approvals')
+      return
+    }
+    if (key === 'programme-submissions') {
+      navigate('/partner/programme-submissions')
       return
     }
 

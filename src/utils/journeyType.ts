@@ -40,7 +40,7 @@ export const isLeadershipCouncilJourney = (journeyType?: JourneyType | null): bo
   journeyType ? isMonthBasedJourney(journeyType) : false
 
 // The Transformation Partner is the org-level support contact. They're visible
-// from 6W onwards (6W learners see partner details only — mentor and ambassador
+// from 6W onwards (6W learners see partner details only - mentor and ambassador
 // still gated to 3M/6M/9M). 4W learners don't see any leadership-council content.
 export const isPartnerVisibleJourney = (journeyType?: JourneyType | null): boolean => {
   if (!journeyType) return false

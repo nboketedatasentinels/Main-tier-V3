@@ -33,19 +33,19 @@ type Props = {
 }
 
 const formatDateTime = (value?: OrganizationRecord['createdAt']) => {
-  if (!value) return '—'
+  if (!value) return '-'
   if (typeof value === 'string') return value
   if (value instanceof Date) return value.toLocaleString()
   const asDate = value?.toDate?.()
-  return asDate ? asDate.toLocaleString() : '—'
+  return asDate ? asDate.toLocaleString() : '-'
 }
 
 const formatDate = (value?: OrganizationRecord['createdAt']) => {
-  if (!value) return '—'
+  if (!value) return '-'
   if (typeof value === 'string') return value
   if (value instanceof Date) return value.toLocaleDateString()
   const asDate = value?.toDate?.()
-  return asDate ? asDate.toLocaleDateString() : '—'
+  return asDate ? asDate.toLocaleDateString() : '-'
 }
 
 const statusColors: Record<string, BadgeProps['colorScheme']> = {
@@ -78,14 +78,14 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
   if (!organization) return null
 
   const statusColor = statusColors[organization.status] || 'gray'
-  const memberCountContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.totalMembers ?? '—'
-  const activeMemberContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.activeMembers ?? '—'
-  const paidMemberContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.paidMembers ?? '—'
+  const memberCountContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.totalMembers ?? '-'
+  const activeMemberContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.activeMembers ?? '-'
+  const paidMemberContent = isLoadingStats ? <Spinner size="xs" /> : memberStats?.paidMembers ?? '-'
   const courseAssignments = organization.courseAssignments || []
   const monthlyAssignments = organization.monthlyCourseAssignments || {}
   const programStartDate = organization.cohortStartDate || organization.programStart
   const programCadence = resolveProgramCadence(organization.programDuration)
-  const programDurationLabel = getProgramDurationLabel(organization.programDuration) || '—'
+  const programDurationLabel = getProgramDurationLabel(organization.programDuration) || '-'
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="3xl">
@@ -102,7 +102,7 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                     {organization.name || 'Unnamed organization'}
                   </Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    Code: {organization.code || '—'}
+                    Code: {organization.code || '-'}
                   </Text>
                 </Box>
                 <Badge colorScheme={statusColor} textTransform="capitalize">
@@ -118,11 +118,11 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                     Organization details
                   </Text>
                   <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                    <InfoItem label="Organization name" value={organization.name || '—'} />
-                    <InfoItem label="Organization code" value={organization.code || '—'} />
-                    <InfoItem label="Status" value={organization.status || '—'} />
-                    <InfoItem label="Village" value={organization.village || '—'} />
-                    <InfoItem label="Cluster" value={organization.cluster || '—'} />
+                    <InfoItem label="Organization name" value={organization.name || '-'} />
+                    <InfoItem label="Organization code" value={organization.code || '-'} />
+                    <InfoItem label="Status" value={organization.status || '-'} />
+                    <InfoItem label="Village" value={organization.village || '-'} />
+                    <InfoItem label="Cluster" value={organization.cluster || '-'} />
                   </SimpleGrid>
                 </Stack>
               </Box>
@@ -133,7 +133,7 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                     Program information
                   </Text>
                   <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-                    <InfoItem label="Cohort size" value={organization.teamSize ?? '—'} />
+                    <InfoItem label="Cohort size" value={organization.teamSize ?? '-'} />
                     <InfoItem
                       label="Program duration"
                       value={programDurationLabel}
@@ -141,7 +141,7 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                     <InfoItem label="Program start" value={formatDate(programStartDate)} />
                     <InfoItem
                       label="Course assignments"
-                      value={Object.keys(monthlyAssignments).length || courseAssignments.length || '—'}
+                      value={Object.keys(monthlyAssignments).length || courseAssignments.length || '-'}
                     />
                     <InfoItem
                       label="Assignment structure"
@@ -184,15 +184,15 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                   <Text fontWeight="bold" color="brand.text">
                     Leadership team
                   </Text>
-                  <InfoItem label="Transformation partner" value={organization.assignedPartnerName || '—'} />
-                  <InfoItem label="Partner email" value={organization.assignedPartnerEmail || '—'} />
-                  <InfoItem label="Mentor" value={organization.assignedMentorName || organization.assignedMentorEmail || '—'} />
-                  <InfoItem label="Mentor email" value={organization.assignedMentorEmail || '—'} />
+                  <InfoItem label="Transformation partner" value={organization.assignedPartnerName || '-'} />
+                  <InfoItem label="Partner email" value={organization.assignedPartnerEmail || '-'} />
+                  <InfoItem label="Mentor" value={organization.assignedMentorName || organization.assignedMentorEmail || '-'} />
+                  <InfoItem label="Mentor email" value={organization.assignedMentorEmail || '-'} />
                   <InfoItem
                     label="Ambassador"
-                    value={organization.assignedAmbassadorName || organization.assignedAmbassadorEmail || '—'}
+                    value={organization.assignedAmbassadorName || organization.assignedAmbassadorEmail || '-'}
                   />
-                  <InfoItem label="Ambassador email" value={organization.assignedAmbassadorEmail || '—'} />
+                  <InfoItem label="Ambassador email" value={organization.assignedAmbassadorEmail || '-'} />
                 </Stack>
               </Box>
 

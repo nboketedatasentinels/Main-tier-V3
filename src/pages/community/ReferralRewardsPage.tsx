@@ -554,7 +554,7 @@ const ReferralRewardsPage: React.FC = () => {
             </Text>
             <Text color="brand.subtleText">
               {nextTier
-                ? `You have ${milestoneReferralCount} activated referrals — ${referralsNeeded} more to unlock your next reward!`
+                ? `You have ${milestoneReferralCount} activated referrals - ${referralsNeeded} more to unlock your next reward!`
                 : 'Amazing! You have unlocked every reward tier.'}
             </Text>
           </Flex>

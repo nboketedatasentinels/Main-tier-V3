@@ -38,7 +38,7 @@ export const useSixWeekProgrammeNotificationSync = (): void => {
           )
         } else {
           console.info(
-            `%c[6w-scheduler] nothing fired — ${result.reason ?? 'unknown'}`,
+            `%c[6w-scheduler] nothing fired - ${result.reason ?? 'unknown'}`,
             'color:#888',
             result,
           )

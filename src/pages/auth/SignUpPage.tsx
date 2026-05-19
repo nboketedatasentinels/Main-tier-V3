@@ -334,7 +334,7 @@ export const SignUpPage: React.FC = () => {
       }
 
       if (isNewUser) {
-        // Don't remove pending_ref here — fetchOrCreateUserDoc reads it
+        // Don't remove pending_ref here - fetchOrCreateUserDoc reads it
         // asynchronously and removes it after processing the referral.
         setShowCompanyCodeModal(true)
         setPendingGoogleNavigation(true)

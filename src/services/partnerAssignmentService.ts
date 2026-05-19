@@ -88,8 +88,8 @@ export async function assignActivityToLearner(params: {
     }
 
     // 3. Award points atomically. awardChecklistPoints is idempotent on
-    // (uid, weekNumber, activityId) — the same ledger doc id self-completion
-    // would write to — so partner re-issues and learner self-completes can't
+    // (uid, weekNumber, activityId) - the same ledger doc id self-completion
+    // would write to - so partner re-issues and learner self-completes can't
     // double-award. Throws on activity-limit violations. Returns awarded=false
     // when an existing ledger entry is found, so we can surface that instead of
     // silently overwriting checklist metadata and writing a misleading audit row.
@@ -139,7 +139,7 @@ export async function assignActivityToLearner(params: {
     });
 
     // 6. Push notification for the learner. Surfaces as a pop-up via the
-    // ProgrammePushPopup mounted in MainLayout — same modal design the
+    // ProgrammePushPopup mounted in MainLayout - same modal design the
     // scheduled programme-day notifications use. priority: 'push' is the
     // signal the popup listens for.
     try {

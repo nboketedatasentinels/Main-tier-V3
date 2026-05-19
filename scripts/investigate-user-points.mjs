@@ -6,13 +6,13 @@
  * `users/{uid}.totalPoints` or `profiles/{uid}.totalPoints` currently say.
  *
  * Sources consulted (in order of authority):
- *   1. pointsLedger        — canonical per-event ledger (sum = truth)
- *   2. points_transactions — secondary log; cross-check
- *   3. weeklyProgress      — per-week aggregate; cross-check
- *   4. points_verification_requests (status='approved') — should have hit ledger
- *   5. points_verification_requests (status='pending')  — claimed but not yet awarded
- *   6. impact_logs                                      — activity that should award points
- *   7. userBadges                                       — earned badges (context only)
+ *   1. pointsLedger        - canonical per-event ledger (sum = truth)
+ *   2. points_transactions - secondary log; cross-check
+ *   3. weeklyProgress      - per-week aggregate; cross-check
+ *   4. points_verification_requests (status='approved') - should have hit ledger
+ *   5. points_verification_requests (status='pending')  - claimed but not yet awarded
+ *   6. impact_logs                                      - activity that should award points
+ *   7. userBadges                                       - earned badges (context only)
  *
  * This script DOES NOT WRITE anything. It only reads.
  *
@@ -171,7 +171,7 @@ const sumCollection = async (collectionName, uidFields, pointsField = 'points') 
 
 let user
 const main = async () => {
-  sep('STEP 1 — Locate user')
+  sep('STEP 1 - Locate user')
   user = await findUser()
   if (!user) {
     console.error('User not found.')
@@ -194,7 +194,7 @@ const main = async () => {
   console.log(`profiles.level:       ${num(user.profile?.level)}`)
   console.log(`users.level:          ${num(user.user?.level)}`)
 
-  sep('STEP 2 — Sum pointsLedger (canonical truth)')
+  sep('STEP 2 - Sum pointsLedger (canonical truth)')
   const ledger = await sumCollection('pointsLedger', ['uid', 'userId'])
   console.log(`Ledger entries:  ${ledger.count}`)
   console.log(`Ledger sum:      ${fmt(ledger.points)} points`)
@@ -216,7 +216,7 @@ const main = async () => {
     }
   }
 
-  sep('STEP 3 — Sum points_transactions (secondary log)')
+  sep('STEP 3 - Sum points_transactions (secondary log)')
   const tx = await sumCollection('points_transactions', ['userId', 'uid'])
   console.log(`Transaction entries: ${tx.count}`)
   console.log(`Transaction sum:     ${fmt(tx.points)} points`)
@@ -227,12 +227,12 @@ const main = async () => {
     }
   }
 
-  sep('STEP 4 — Sum weeklyProgress (per-week aggregate)')
+  sep('STEP 4 - Sum weeklyProgress (per-week aggregate)')
   const wp = await sumCollection('weeklyProgress', ['uid', 'userId'], 'pointsEarned')
   console.log(`weeklyProgress docs: ${wp.count}`)
   console.log(`weeklyProgress sum:  ${fmt(wp.points)} points`)
 
-  sep('STEP 5 — Verification requests (manual claim audit)')
+  sep('STEP 5 - Verification requests (manual claim audit)')
   const vrApproved = await db
     .collection('points_verification_requests')
     .where('user_id', '==', user.uid)
@@ -258,11 +258,11 @@ const main = async () => {
     }
   }
 
-  sep('STEP 6 — Impact logs')
+  sep('STEP 6 - Impact logs')
   const impactSnap = await db.collection('impact_logs').where('userId', '==', user.uid).get()
   console.log(`impact_logs entries: ${impactSnap.size}`)
 
-  sep('STEP 7 — Badges (context)')
+  sep('STEP 7 - Badges (context)')
   const badgeSnap = await db.collection('userBadges').where('userId', '==', user.uid).get()
   console.log(`userBadges:          ${badgeSnap.size}`)
   if (badgeSnap.size > 0) {

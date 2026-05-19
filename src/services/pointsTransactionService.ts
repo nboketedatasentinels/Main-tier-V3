@@ -60,7 +60,7 @@ const countImpactLogEntriesInJourney = async (userId: string): Promise<number> =
 
 // Writes a pointsLedger entry and bumps users/{uid}.totalPoints + profiles/{uid}.totalPoints
 // so the leaderboard and AuthContext see impact-log points. Idempotent via deterministic
-// ledger doc id `impact_log__{entryId}` — re-running for the same entry is a no-op.
+// ledger doc id `impact_log__{entryId}` - re-running for the same entry is a no-op.
 const writeCanonicalImpactLogAward = async (
   userId: string,
   impactLogEntryId: string,
@@ -80,7 +80,7 @@ const writeCanonicalImpactLogAward = async (
 
     const [userSnap, profileSnap] = await Promise.all([tx.get(userRef), tx.get(profileRef)])
     // CRITICAL: never write an absolute totalPoints derived from one mirror
-    // doc — if the two mirrors have drifted, the lower one's value gets
+    // doc - if the two mirrors have drifted, the lower one's value gets
     // promoted via Math.max but the SET still clobbers whichever mirror is
     // higher than max+delta in some edge cases. pointsLedger is canonical;
     // adjust each mirror by the delta with increment() so neither overwrites
@@ -235,7 +235,7 @@ export const backfillImpactLogPointsForUser = async (
     await updateUserJourneyPoints(userId, totalAwarded)
 
     // Bump the canonical totalPoints + level on users/profiles (read by leaderboard).
-    // Use increment() so each mirror is adjusted by the delta atomically — never
+    // Use increment() so each mirror is adjusted by the delta atomically - never
     // overwritten with a value derived from the other (which would clobber drift).
     const userRef = doc(db, 'users', userId)
     const profileRef = doc(db, 'profiles', userId)

@@ -189,10 +189,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   )
 
   // Login self-heal: any profile that ended up with missing engagement markers
-  // (totalPoints / level / accountStatus / journeyType — the fields the leaderboard
+  // (totalPoints / level / accountStatus / journeyType - the fields the leaderboard
   // and notification scheduler require) gets repaired the next time the user
   // signs in. Runs at most once per session per user. Never overwrites real
-  // progress — only fills fields that are currently undefined.
+  // progress - only fills fields that are currently undefined.
   const maybeBackfillEngagementMarkers = useCallback(
     async (loadedProfile: UserProfile, userId: string) => {
       if (engagementBackfillRef.current.userId === userId && engagementBackfillRef.current.attempted) {
@@ -1083,7 +1083,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const rawRole = updatedData.role ?? UserRole.USER
           const normalizedRole = normalizeRole(rawRole)
           // Points fields (totalPoints / level) MUST come from profiles/{uid}
-          // so the user sees the same value partner & admin dashboards do —
+          // so the user sees the same value partner & admin dashboards do -
           // they read profiles directly. The users mirror can drift if a
           // partner-issued award updates only one mirror, so we prefer the
           // profiles snapshot below and only fall back to users on first

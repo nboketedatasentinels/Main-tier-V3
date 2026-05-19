@@ -394,7 +394,7 @@ export const usePartnerAdminData = (
         orgSourceLoaded = true
         orgSourceErrorOccurred = false
         // Org-source-of-truth shares the "query" loading flag with the legacy
-        // listener — both feed the same combined assignments set, and the
+        // listener - both feed the same combined assignments set, and the
         // dashboard treats them as a single "non-doc" source for loading UX.
         setQueryAssignmentsLoading(false)
         updateCombinedAssignments()
@@ -933,7 +933,7 @@ export const usePartnerAdminData = (
             //
             // The previous behavior filtered at this layer too, but the
             // user-loading effect's deps don't include selectedOrg/
-            // selectedOrgKeys — so switching the dropdown left this layer
+            // selectedOrgKeys - so switching the dropdown left this layer
             // stale and the dashboard then re-filtered an already-narrow
             // set, producing empty results when moving Org A → Org X.
             // Widening here lets the dashboard's useMemo re-derive
@@ -1147,7 +1147,7 @@ export const usePartnerAdminData = (
                 onboardingSkipped: data.onboardingSkipped === true,
                 hasCompletedPersonalityTest: data.hasCompletedPersonalityTest === true,
                 hasCompletedValuesTest: data.hasCompletedValuesTest === true,
-                // Raw profile role can be 'free_user' / 'paid_member' / etc. —
+                // Raw profile role can be 'free_user' / 'paid_member' / etc. -
                 // wider than the narrow PartnerUser.role enum on the type.
                 membershipTier: (data.role as string | undefined) === 'free_user' ? 'free' : 'paid',
               })

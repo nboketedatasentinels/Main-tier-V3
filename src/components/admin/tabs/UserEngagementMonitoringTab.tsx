@@ -75,7 +75,7 @@ const riskColors: Record<RiskLevel, { badge: string; border: string }> = {
 }
 
 const formatDate = (date?: Date | null) => {
-  if (!date) return '—'
+  if (!date) return '-'
   return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
@@ -329,7 +329,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                       {entry.name}
                     </Text>
                     <Text fontSize="sm" color="gray.500">
-                      {entry.email || '—'}
+                      {entry.email || '-'}
                     </Text>
                   </Stack>
                 </Td>
@@ -339,17 +339,17 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                       {entry.organizationName || 'Independent'}
                     </Text>
                     <Text fontSize="xs" color="gray.500">
-                      {entry.organizationCode || '—'}
+                      {entry.organizationCode || '-'}
                     </Text>
                   </Stack>
                 </Td>
-                <Td>{entry.mentorName || '—'}</Td>
+                <Td>{entry.mentorName || '-'}</Td>
                 <Td>
                   <Badge colorScheme={riskColors[entry.riskLevel]?.badge || 'gray'}>{riskLabel(entry.riskLevel)}</Badge>
                 </Td>
                 <Td>{entry.engagementScore.toFixed(1)}</Td>
                 <Td color={entry.trend30d && entry.trend30d >= 0 ? 'green.600' : 'red.500'}>
-                  {entry.trend30d ? `${entry.trend30d > 0 ? '+' : ''}${entry.trend30d.toFixed(1)}%` : '—'}
+                  {entry.trend30d ? `${entry.trend30d > 0 ? '+' : ''}${entry.trend30d.toFixed(1)}%` : '-'}
                 </Td>
                 <Td>{formatDate(entry.lastActive)}</Td>
                 <Td>
@@ -388,7 +388,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     )
   }
 
-  // Feature not enabled — show activation card
+  // Feature not enabled - show activation card
   if (!engagementEnabled) {
     return (
       <Box maxW="600px" mx="auto" py={12}>
@@ -439,7 +439,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
     )
   }
 
-  // Feature enabled — render full dashboard
+  // Feature enabled - render full dashboard
   return (
     <Stack spacing={6}>
       <Stack spacing={1}>
@@ -657,7 +657,7 @@ export const UserEngagementMonitoringTab = ({ users: propUsers, organizations: p
                       Time in risk level
                     </Text>
                     <Text fontWeight="bold" fontSize="xl">
-                      {selectedEntry.trend30d ? `${Math.abs(Math.round(selectedEntry.trend30d))} days` : '—'}
+                      {selectedEntry.trend30d ? `${Math.abs(Math.round(selectedEntry.trend30d))} days` : '-'}
                     </Text>
                   </Box>
                 </SimpleGrid>

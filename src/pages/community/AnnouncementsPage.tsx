@@ -122,7 +122,7 @@ const AnnouncementsHeader = () => (
         Ecosystem Hub
       </Heading>
       <Text color="brand.subtleText" fontSize="md">
-        Platform announcements, events, and ecosystem spaces — all in one place.
+        Platform announcements, events, and ecosystem spaces - all in one place.
       </Text>
     </Stack>
   </Box>
@@ -649,7 +649,7 @@ const AnnouncementComposer: React.FC<{
           >
             {TIER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
-                {option.label} — {option.description}
+                {option.label} - {option.description}
               </option>
             ))}
           </Select>
@@ -1268,7 +1268,7 @@ export const JobsTab = () => (
         'Note seniority level and required skills so members can self-select',
         'Tag posts with #hiring, #referral, or #remote for quick scanning',
         'Keep follow-up conversations in-thread so everyone benefits',
-        'Avoid duplicate posts—refresh previous listings with updates instead',
+        'Avoid duplicate posts-refresh previous listings with updates instead',
       ]}
       link="https://chat.whatsapp.com/ImFRIflsS7pGOoHtpTOJy9"
       ctaLabel="Open WhatsApp job board"
@@ -1300,7 +1300,7 @@ export const GrantsTab = () => (
         'Share application links plus any templates or tips you found helpful',
         'Use tags like #grant, #funding, and #deadline to keep threads searchable',
         'Keep discussions respectful and consolidate updates in the original thread',
-        'Do not share sensitive personal data—link to official forms instead',
+        'Do not share sensitive personal data-link to official forms instead',
       ]}
       link="https://chat.whatsapp.com/FAmTJ4AX7fk3CvrWWteDx8"
       ctaLabel="Open WhatsApp grants space"

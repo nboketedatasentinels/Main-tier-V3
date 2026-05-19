@@ -238,7 +238,7 @@ const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
   if (!hasRecords) {
     return (
       <Text fontSize="sm" color="brand.subtleText">
-        No payment history — upgrade to start your subscription.
+        No payment history - upgrade to start your subscription.
       </Text>
     )
   }
@@ -959,8 +959,8 @@ export const ProfilePage: React.FC = () => {
       setOrganizationMessage({
         type: 'success',
         text: companyOrganization?.name
-          ? `Connected to ${companyOrganization.name}. Your membership is now paid—check your dashboard for new features.`
-          : 'Company code saved successfully. Your membership is now paid—check your dashboard for new features.',
+          ? `Connected to ${companyOrganization.name}. Your membership is now paid-check your dashboard for new features.`
+          : 'Company code saved successfully. Your membership is now paid-check your dashboard for new features.',
       })
 
       toast({

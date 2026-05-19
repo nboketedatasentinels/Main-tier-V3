@@ -163,7 +163,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
         <VStack align="flex-start" spacing={0}>
           <HStack spacing={2}>
             <Text color="red.600" fontWeight="extrabold" fontSize="sm" letterSpacing="wider">
-              🔴 CRITICAL RISK — ACTION REQUIRED
+              🔴 CRITICAL RISK - ACTION REQUIRED
             </Text>
           </HStack>
           <Text fontWeight="bold" fontSize="lg">Learner: {intervention.target}</Text>
@@ -265,7 +265,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
               )}
               <VStack align="flex-start" spacing={3}>
                 <VStack align="flex-start" spacing={0}>
-                  <Text fontWeight="bold" fontSize="md">Option A — Start Intervention</Text>
+                  <Text fontWeight="bold" fontSize="md">Option A - Start Intervention</Text>
                   <Text fontSize="xs" color="green.600" fontWeight="bold">Recommended by system</Text>
                 </VStack>
                 <Divider />
@@ -297,7 +297,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
               )}
               <VStack align="flex-start" spacing={3}>
                 <VStack align="flex-start" spacing={0}>
-                  <Text fontWeight="bold" fontSize="md">Option B — Escalate to Admin</Text>
+                  <Text fontWeight="bold" fontSize="md">Option B - Escalate to Admin</Text>
                   <Text fontSize="xs" color="brand.subtleText">Use if blocked or unavailable</Text>
                 </VStack>
                 <Divider />
@@ -329,7 +329,7 @@ export const AtRiskInterventionFlow: React.FC<AtRiskInterventionFlowProps> = ({
               )}
               <VStack align="flex-start" spacing={3}>
                 <VStack align="flex-start" spacing={0}>
-                  <Text fontWeight="bold" fontSize="md">Option C — Request Extension</Text>
+                  <Text fontWeight="bold" fontSize="md">Option C - Request Extension</Text>
                   <Text fontSize="xs" color="brand.subtleText">Controlled, logged request</Text>
                 </VStack>
                 <Divider />

@@ -291,7 +291,7 @@ export async function awardChecklistPoints(params: {
       }
 
       // CRITICAL: never derive an absolute totalPoints from a single mirror doc
-      // and write it back — that clobbers the other mirror if the two have
+      // and write it back - that clobbers the other mirror if the two have
       // drifted (e.g., users.totalPoints stale at 0 while profiles.totalPoints
       // is the reconciled 3500 from the ledger). pointsLedger is canonical;
       // both mirrors are best-effort projections of the ledger sum. We adjust
@@ -566,7 +566,7 @@ export async function revokeChecklistPoints(params: {
       else status = "alert";
 
       // See note in awardChecklistPoints: never overwrite an absolute totalPoints
-      // computed from one mirror doc — it clobbers the other if they have drifted.
+      // computed from one mirror doc - it clobbers the other if they have drifted.
       // Adjust by the delta via increment(); compute level optimistically from the
       // higher of the two mirrors so it reflects post-revoke best-estimate.
       const userTotalBaseline = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;

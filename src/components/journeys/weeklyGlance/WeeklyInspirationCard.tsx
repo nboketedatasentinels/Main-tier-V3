@@ -30,7 +30,7 @@ export const WeeklyInspirationCard = ({ data, loading }: WeeklyInspirationCardPr
               </Text>
             </Skeleton>
             <Text fontSize="sm" color="whiteAlpha.800" fontFamily="body" fontStyle="italic">
-              — {data?.author || 'T4L Community'}
+              - {data?.author || 'T4L Community'}
             </Text>
           </Stack>
         </Stack>

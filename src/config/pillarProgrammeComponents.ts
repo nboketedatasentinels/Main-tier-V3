@@ -5,14 +5,14 @@ import type { Pillar } from '@/types/pillar'
  *
  * Every pillar has three deliverables learners must complete alongside
  * their courses:
- *   - Capstone     — a synthesizing project
- *   - Case Study   — analysis of a real-world scenario
- *   - Practical    — hands-on exercise
+ *   - Capstone     - a synthesizing project
+ *   - Case Study   - analysis of a real-world scenario
+ *   - Practical    - hands-on exercise
  *
  * All three render on the courses page (OrganizationCoursesPage), scoped
  * to the pillar the learner's org is on. They're shown as distinct,
  * type-aware cards so a learner sees "capstone + case study + practical"
- * — not three of the same thing.
+ * - not three of the same thing.
  *
  * The catalog starts as placeholders (status: 'coming_soon'). To activate
  * a component, replace its title/description with real content and set
@@ -41,7 +41,7 @@ export interface ProgrammeComponentEntry {
   title: string
   /** Short description shown under the title. */
   description: string
-  /** Lifecycle state — drives the card's CTA and visual treatment. */
+  /** Lifecycle state - drives the card's CTA and visual treatment. */
   status: 'available' | 'coming_soon' | 'locked'
   /** Optional URL the card launches to (single-deliverable components). */
   href?: string
@@ -118,37 +118,37 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         {
           id: 'innovation-practical-1',
           title: 'Practical 1 · The AI Operating Hour Log',
-          description: 'Week 1 — establishing the recurring discipline.',
+          description: 'Week 1 - establishing the recurring discipline.',
           href: '/capstones/innovation-practical-1.html',
         },
         {
           id: 'innovation-practical-2',
           title: 'Practical 2 · The Transformation Thesis',
-          description: 'Week 2 — a thesis defensible to an incoming CEO.',
+          description: 'Week 2 - a thesis defensible to an incoming CEO.',
           href: '/capstones/innovation-practical-2.html',
         },
         {
           id: 'innovation-practical-3',
           title: 'Practical 3 · The Capability Map',
-          description: 'Week 3 — claimed vs observable capability for one AI use case.',
+          description: 'Week 3 - claimed vs observable capability for one AI use case.',
           href: '/capstones/innovation-practical-3.html',
         },
         {
           id: 'innovation-practical-4',
           title: 'Practical 4 · The Data Foundation Audit',
-          description: 'Week 4 — the heaviest week. Five data dimensions, the recommended call.',
+          description: 'Week 4 - the heaviest week. Five data dimensions, the recommended call.',
           href: '/capstones/innovation-practical-4.html',
         },
         {
           id: 'innovation-practical-5',
           title: 'Practical 5 · The Adoption Curve Reading',
-          description: 'Week 5 — cited metric vs underlying signal, shift signals.',
+          description: 'Week 5 - cited metric vs underlying signal, shift signals.',
           href: '/capstones/innovation-practical-5.html',
         },
         {
           id: 'innovation-practical-6',
           title: 'Practical 6 · Operating Model + Lessons Synthesis',
-          description: 'Week 6 — the integrative artefact that closes Module 2.',
+          description: 'Week 6 - the integrative artefact that closes Module 2.',
           href: '/capstones/innovation-practical-6.html',
         },
       ],
@@ -218,37 +218,37 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         {
           id: 'starter-kit-practical-1',
           title: 'Practical 1 · Opportunity Map',
-          description: 'Week 1 — three named AI/digital opportunities in your current scope.',
+          description: 'Week 1 - three named AI/digital opportunities in your current scope.',
           href: '/capstones/starter-kit-practical-1.html',
         },
         {
           id: 'starter-kit-practical-2',
           title: 'Practical 2 · Stakeholder Position Paper',
-          description: 'Week 2 — map and position five key stakeholders.',
+          description: 'Week 2 - map and position five key stakeholders.',
           href: '/capstones/starter-kit-practical-2.html',
         },
         {
           id: 'starter-kit-practical-3',
           title: 'Practical 3 · Methodology Justification',
-          description: 'Week 3 — defend the delivery approach you would actually run.',
+          description: 'Week 3 - defend the delivery approach you would actually run.',
           href: '/capstones/starter-kit-practical-3.html',
         },
         {
           id: 'starter-kit-practical-4',
           title: 'Practical 4 · Risk Register Draft',
-          description: 'Week 4 — name the real risks, owners, and mitigations.',
+          description: 'Week 4 - name the real risks, owners, and mitigations.',
           href: '/capstones/starter-kit-practical-4.html',
         },
         {
           id: 'starter-kit-practical-5',
           title: 'Practical 5 · Stakeholder Briefing Script',
-          description: 'Week 5 — the script you would use in the room.',
+          description: 'Week 5 - the script you would use in the room.',
           href: '/capstones/starter-kit-practical-5.html',
         },
         {
           id: 'starter-kit-practical-6',
           title: 'Practical 6 · Lessons Synthesis',
-          description: 'Week 6 — the integrative artefact that closes the Starter Kit.',
+          description: 'Week 6 - the integrative artefact that closes the Starter Kit.',
           href: '/capstones/starter-kit-practical-6.html',
         },
       ],

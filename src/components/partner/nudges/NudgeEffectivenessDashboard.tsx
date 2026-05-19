@@ -146,7 +146,7 @@ export const NudgeEffectivenessDashboard: React.FC = () => {
                   campaigns.map((campaign) => (
                     <Tr key={campaign.id}>
                       <Td>{campaign.name}</Td>
-                      <Td>{campaign.target_risk_levels?.join(', ') || '—'}</Td>
+                      <Td>{campaign.target_risk_levels?.join(', ') || '-'}</Td>
                       <Td>
                         <Badge colorScheme={campaign.status === 'active' ? 'green' : campaign.status === 'paused' ? 'yellow' : 'gray'}>
                           {campaign.status}

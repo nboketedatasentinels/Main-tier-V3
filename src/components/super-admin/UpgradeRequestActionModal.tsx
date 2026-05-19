@@ -220,7 +220,7 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                       <Box borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
                         <Text fontWeight="semibold">{selectedOrg.name}</Text>
                         <Text fontSize="sm" color="gray.600">
-                          Code: {selectedOrg.code || '—'}
+                          Code: {selectedOrg.code || '-'}
                         </Text>
                       </Box>
                     )}
@@ -259,7 +259,7 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                         Preview
                       </Text>
                       <Text fontSize="sm" color="gray.600">
-                        After creating the organisation, it will be selected automatically—then click “Assign & Approve”.
+                        After creating the organisation, it will be selected automatically-then click “Assign & Approve”.
                       </Text>
                     </Box>
                   </Stack>

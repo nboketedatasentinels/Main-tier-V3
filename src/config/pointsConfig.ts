@@ -33,7 +33,7 @@ export type ActivityId =
   | "ambassador_session"
   | "shameless_circle"
   | "ai_tool_review"
-  // Pillar components (6W only; partner-issued — each pillar has one of each)
+  // Pillar components (6W only; partner-issued - each pillar has one of each)
   | "capstone"
   | "case_study"
   | "practical"
@@ -425,11 +425,11 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     visibility: { requiresAmbassador: true },
   },
 
-  // ── Pillar components (6W only) — partner-issued ──
+  // ── Pillar components (6W only) - partner-issued ──
   // Each pillar has exactly one of each: capstone (project), case study
   // (analysis), practical (hands-on exercise). Partners award these via the
   // Issue Activity page once the learner submits the deliverable.
-  // Points are placeholder defaults — adjust per real content.
+  // Points are placeholder defaults - adjust per real content.
   {
     id: "capstone",
     baseId: "capstone",
@@ -505,7 +505,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "book_club", totalFrequency: 1 },
     { activityId: "peer_matching", totalFrequency: 3 },
     { activityId: "challenger", totalFrequency: 3 },
-    // Pillar components — one of each per 6W journey
+    // Pillar components - one of each per 6W journey
     { activityId: "capstone", totalFrequency: 1 },
     { activityId: "case_study", totalFrequency: 1 },
     { activityId: "practical", totalFrequency: 1 },

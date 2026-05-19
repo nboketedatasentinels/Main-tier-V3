@@ -182,7 +182,7 @@ export const useWeeklyGlanceData = () => {
   } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
 
   // Derive the true current week from journey start date so it stays in sync
-  // with journeyTiming used by the page — avoids stale profile.currentWeek mismatches.
+  // with journeyTiming used by the page - avoids stale profile.currentWeek mismatches.
   const weekNumber = useMemo(() => {
     const timing = getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6)
     return timing?.currentWeek ?? profile?.currentWeek ?? 1
