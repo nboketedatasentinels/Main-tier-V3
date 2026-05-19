@@ -69,7 +69,7 @@ export const usePartnerMetrics = (options: UsePartnerMetricsOptions) => {
 
   const atRiskUsers = useMemo(() => {
     // Only include users genuinely behind pace (critical or at_risk).
-    // Users who are 'watch' or 'concern' are positively evolving — not at risk.
+    // Users who are 'watch' or 'concern' are positively evolving - not at risk.
     return users.filter((user) =>
       ['critical', 'at_risk'].includes(user.riskStatus)
     )

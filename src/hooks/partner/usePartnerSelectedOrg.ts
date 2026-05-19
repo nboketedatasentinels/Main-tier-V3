@@ -17,7 +17,7 @@ const writeStorage = (value: string) => {
     if (value) sessionStorage.setItem(STORAGE_KEY, value)
     else sessionStorage.removeItem(STORAGE_KEY)
   } catch {
-    /* sessionStorage unavailable — non-fatal */
+    /* sessionStorage unavailable - non-fatal */
   }
 }
 
@@ -26,9 +26,9 @@ const writeStorage = (value: string) => {
  * persists when navigating between Dashboard, Learner Assignments, Course
  * Approvals, etc., via two cooperating layers:
  *
- *  1. URL `?org=<id>` — primary source of truth. Shareable, reload-safe,
+ *  1. URL `?org=<id>` - primary source of truth. Shareable, reload-safe,
  *     visible in browser history.
- *  2. `sessionStorage` mirror — picked up when a navigate() call drops the
+ *  2. `sessionStorage` mirror - picked up when a navigate() call drops the
  *     query string. Avoids forcing every navigation in the app to carry
  *     `?org=` through manually.
  *

@@ -214,7 +214,7 @@ export const fetchOrgMembers = async (
   console.log('[OrgMembers] Running queries with scope', orgScope, 'queryCount:', queries.length)
 
   // Run profile + user-mirror queries in parallel. Same scope on both
-  // collections — the users/{uid} mirror is what AuthContext reads to display
+  // collections - the users/{uid} mirror is what AuthContext reads to display
   // each user's profile points, so reconciling against it guarantees the
   // leaderboard matches what every user sees on their own profile.
   const usersRef = collection(db, 'users')
@@ -246,7 +246,7 @@ export const fetchOrgMembers = async (
       })
   })
 
-  // Surface user-mirror records that have no matching profiles/{uid} doc — this
+  // Surface user-mirror records that have no matching profiles/{uid} doc - this
   // happens for legacy users created before the dual-write existed. Without
   // this, those users would be invisible on the leaderboard despite having
   // valid points in users/.
@@ -476,7 +476,7 @@ export const listenToOrgMembers = (
       },
       (error) => {
         console.warn(`[OrgMembers] User-mirror query ${queryIndex} error`, error)
-        // Don't fail the whole listener — profiles/ data alone still works.
+        // Don't fail the whole listener - profiles/ data alone still works.
       },
     )
     unsubscribers.push(unsub)

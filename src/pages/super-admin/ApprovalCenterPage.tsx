@@ -634,7 +634,7 @@ const ApprovalCenterPage: React.FC = () => {
     if (!selectedReject) return
     setActionId(selectedReject.id)
     try {
-      const reason = [rejectCategory, rejectReason].filter(Boolean).join(' — ')
+      const reason = [rejectCategory, rejectReason].filter(Boolean).join(' - ')
       await rejectRecord(selectedReject, reason)
       toast({ title: 'Rejection saved', status: 'info', duration: 3000, isClosable: true })
       rejectModal.onClose()
@@ -660,7 +660,7 @@ const ApprovalCenterPage: React.FC = () => {
     if (!bulkAction) return
     setBulkLoading(true)
     try {
-      const reason = [bulkRejectCategory, bulkRejectReason].filter(Boolean).join(' — ')
+      const reason = [bulkRejectCategory, bulkRejectReason].filter(Boolean).join(' - ')
       const actionableRecords =
         bulkAction === 'approve'
           ? selectedRecords.filter((record) => record.type === 'points_verification')
@@ -1060,7 +1060,7 @@ const ApprovalCenterPage: React.FC = () => {
                           <Td>
                             <Stack spacing={1}>
                               <Text fontWeight="semibold" color={isHighValue ? 'orange.600' : 'gray.700'}>
-                                {record.points?.toLocaleString() ?? '—'}
+                                {record.points?.toLocaleString() ?? '-'}
                               </Text>
                               {isHighValue && (
                                 <Badge colorScheme="orange" variant="subtle" alignSelf="flex-start">
@@ -1132,7 +1132,7 @@ const ApprovalCenterPage: React.FC = () => {
                                         {getUserEmail(record)}
                                       </Text>
                                       <Text fontSize="sm" color="gray.600">
-                                        Role: {(record.source as UpgradeRequest).userDetails?.role || '—'}
+                                        Role: {(record.source as UpgradeRequest).userDetails?.role || '-'}
                                       </Text>
                                     </Box>
                                     <Box>
@@ -1154,7 +1154,7 @@ const ApprovalCenterPage: React.FC = () => {
                                         {(record.source as UpgradeRequest).message || 'No message provided.'}
                                       </Text>
                                       <Text fontSize="sm" color="gray.600">
-                                        Contact: {(record.source as UpgradeRequest).contact_preference || '—'}{' '}
+                                        Contact: {(record.source as UpgradeRequest).contact_preference || '-'}{' '}
                                         {(record.source as UpgradeRequest).contact_details || ''}
                                       </Text>
                                       <Text fontSize="sm" color="gray.600">
@@ -1276,7 +1276,7 @@ const ApprovalCenterPage: React.FC = () => {
                           Points
                         </Text>
                         <Text fontWeight="semibold" color={isHighValue ? 'orange.600' : 'gray.700'}>
-                          {record.points?.toLocaleString() ?? '—'}
+                          {record.points?.toLocaleString() ?? '-'}
                         </Text>
                       </Box>
                       <Box textAlign="right">

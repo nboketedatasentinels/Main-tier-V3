@@ -2099,7 +2099,7 @@ export const ImpactLogPage: React.FC = () => {
             <HStack mb={1} justify="space-between">
               <Box>
                 <Text fontWeight="bold" fontSize="md">ESG Impact Efficiency</Text>
-                <Text fontSize="xs" color="text.muted" mt={0.5}>Average hours &amp; USD value per logged activity — shows which ESG pillar delivers the highest impact per effort</Text>
+                <Text fontSize="xs" color="text.muted" mt={0.5}>Average hours &amp; USD value per logged activity - shows which ESG pillar delivers the highest impact per effort</Text>
               </Box>
               <Badge colorScheme="green" variant="subtle">Per Activity Average</Badge>
             </HStack>

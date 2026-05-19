@@ -117,7 +117,7 @@ export const OrganizationFormModal: React.FC<Props> = ({
   const selectedPartnerId = form.transformationPartnerId || ''
 
   const buildPartnerLabel = (item: OrganizationLead) => {
-    const emailSuffix = item.email ? ` — ${item.email}` : ''
+    const emailSuffix = item.email ? ` - ${item.email}` : ''
     return `${item.name}${emailSuffix}`
   }
 
@@ -230,7 +230,7 @@ export const OrganizationFormModal: React.FC<Props> = ({
                 placeholder="Select partner"
                 isDisabled={isLoadingPartners}
               >
-                <option value="">— No partner —</option>
+                <option value="">- No partner -</option>
                 {filteredPartners.map((partner) => (
                   <option key={partner.id} value={partner.id}>
                     {buildPartnerLabel(partner)}

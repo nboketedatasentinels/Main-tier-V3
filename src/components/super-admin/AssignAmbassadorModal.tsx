@@ -115,14 +115,14 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
                 placeholder="Select ambassador"
                 isDisabled={isLoadingAmbassadors}
               >
-                <option value="">— No ambassador —</option>
+                <option value="">- No ambassador -</option>
                 {missingAmbassador ? (
                   <option value={missingAmbassador.id}>{missingAmbassador.name}</option>
                 ) : null}
                 {filteredAmbassadors.map((ambassadorOption) => (
                   <option key={ambassadorOption.id} value={ambassadorOption.id}>
                     {ambassadorOption.name}
-                    {ambassadorOption.email ? ` — ${ambassadorOption.email}` : ''}
+                    {ambassadorOption.email ? ` - ${ambassadorOption.email}` : ''}
                   </option>
                 ))}
               </Select>

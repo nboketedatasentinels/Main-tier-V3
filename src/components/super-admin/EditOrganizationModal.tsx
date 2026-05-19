@@ -392,7 +392,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         )
         cascadeMessage = `Program start date reset for ${affectedCount} member${
           affectedCount === 1 ? '' : 's'
-        } — journey reset to Week 1. Existing points and history preserved.`
+        } - journey reset to Week 1. Existing points and history preserved.`
       }
 
       toast({

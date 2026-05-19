@@ -938,7 +938,7 @@ export const generateImpactPdfReport = async (
             <Text style={styles.coverTitle}>Business & ESG</Text>
             <Text style={styles.coverTitleAccent}>Impact Report</Text>
             <Text style={styles.coverSub}>
-              A comprehensive record of operational business outcomes and ESG social impact — structured for board reporting, ESG disclosures, and stakeholder communication.
+              A comprehensive record of operational business outcomes and ESG social impact - structured for board reporting, ESG disclosures, and stakeholder communication.
             </Text>
           </View>
 
@@ -976,7 +976,7 @@ export const generateImpactPdfReport = async (
 
           <View style={styles.narrative}>
             <Text style={styles.narrativeText}>
-              In {reportPeriod}, {orgName} delivered {fmtUsd(totalCombined)} in total impact value — comprising {fmtUsd(totalBusinessValue)} in verified business outcomes and {fmtUsd(totalEsgValue)} in ESG social value across {filteredEntries.length} logged activities.
+              In {reportPeriod}, {orgName} delivered {fmtUsd(totalCombined)} in total impact value - comprising {fmtUsd(totalBusinessValue)} in verified business outcomes and {fmtUsd(totalEsgValue)} in ESG social value across {filteredEntries.length} logged activities.
             </Text>
             <Text style={styles.narrativeSub}>
               {tier3} externally audited (Level 3) · {tier2} manager verified (Level 2) · {tier1} self-reported (Level 1).
@@ -1071,7 +1071,7 @@ export const generateImpactPdfReport = async (
           <View style={styles.darkHeader}>
             <Text style={styles.darkHeaderLabel}>Business Outcomes</Text>
             <Text style={styles.darkHeaderTitle}>8 Wastes Elimination · Operational Value Created</Text>
-            <Text style={styles.darkHeaderSub}>Verified operational savings and revenue outcomes — {reportPeriod}</Text>
+            <Text style={styles.darkHeaderSub}>Verified operational savings and revenue outcomes - {reportPeriod}</Text>
           </View>
 
           <View style={styles.section}>

@@ -159,7 +159,7 @@ export const fetchLearnerSessionStats = async (
     }
   }
 
-  // Run per-learner queries in parallel — each learner gets 4 counts (pending/completed mentor, attended/booked ambassador)
+  // Run per-learner queries in parallel - each learner gets 4 counts (pending/completed mentor, attended/booked ambassador)
   await Promise.all(
     learnerIds.map(async (learnerId) => {
       try {

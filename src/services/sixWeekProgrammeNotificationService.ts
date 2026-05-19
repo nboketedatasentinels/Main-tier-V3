@@ -119,7 +119,7 @@ export const checkSixWeekEligibility = (
   if (!context.pillar) {
     return {
       eligible: false,
-      reason: 'No pillar set on user organization — cannot select notification copy',
+      reason: 'No pillar set on user organization - cannot select notification copy',
     }
   }
   if (context.pillar !== SUPPORTED_PILLAR) {

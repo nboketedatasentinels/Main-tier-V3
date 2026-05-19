@@ -209,7 +209,7 @@ export const syncSixWeekNotificationsForUser = async (
       skipped: 0,
       emailsSent: 0,
       pushesBuzzed: 0,
-      reason: `programme not active — journeyStartDate=${parsedStart}, now=${new Date().toISOString()}`,
+      reason: `programme not active - journeyStartDate=${parsedStart}, now=${new Date().toISOString()}`,
       diagnostics,
     }
   }

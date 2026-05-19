@@ -227,7 +227,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   )
 
   const journeyBlockedDescription = currentJourneyLabel
-    ? `Available on 3-month, 6-month, and 9-month journeys — you're on the ${currentJourneyLabel}.`
+    ? `Available on 3-month, 6-month, and 9-month journeys - you're on the ${currentJourneyLabel}.`
     : 'Available on 3-month, 6-month, and 9-month journeys.'
   const gatingSteps: ReadonlyArray<{
     id: 'organization' | 'support' | 'mentor' | 'ambassador'
@@ -276,7 +276,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           description: supportAssignmentsReady
             ? supportAssignmentStatus.exists
               ? 'Your mentor and ambassador assignments are in place.'
-              : 'Checked — your admin hasn’t recorded assignments yet.'
+              : 'Checked - your admin hasn’t recorded assignments yet.'
             : 'Checking your support assignments.',
           status: supportAssignmentsReady
             ? supportAssignmentStatus.exists
@@ -288,7 +288,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           id: 'mentor',
           title: 'Mentor ready',
           description: mentorProfile
-            ? 'Mentor assigned — you can share goals and request a session.'
+            ? 'Mentor assigned - you can share goals and request a session.'
             : assignmentsLoading
               ? 'Loading your mentor assignment.'
               : 'Your admin hasn’t assigned a mentor yet.',
@@ -298,7 +298,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           id: 'ambassador',
           title: 'Ambassador ready',
           description: ambassadorProfile
-            ? 'Ambassador ready — coaching sessions will appear here when scheduled.'
+            ? 'Ambassador ready - coaching sessions will appear here when scheduled.'
             : assignmentsLoading
               ? 'Loading your ambassador assignment.'
               : 'Ambassador coaching hasn’t been set up for your organization yet.',
@@ -640,10 +640,10 @@ export const LeadershipCouncilPage: React.FC = () => {
               </Heading>
               {showOrgDebug && (
                 <HStack spacing={3} mt={2} flexWrap="wrap">
-                  <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '—'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '-'}</Text>
                   <Text fontSize="xs" color="whiteAlpha.700">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
-                  <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '—'}</Text>
-                  <Text fontSize="xs" color="whiteAlpha.700">Ambassador: {assignmentSources.ambassador ?? '—'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '-'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">Ambassador: {assignmentSources.ambassador ?? '-'}</Text>
                 </HStack>
               )}
             </Box>
@@ -1140,7 +1140,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                                 />
                                 <FormHelperText>
                                   {goalsDraft.length}/{MENTORSHIP_GOALS_MAX_LENGTH} characters
-                                  {goalsTooLong ? ' — please shorten your goals to save.' : ''}
+                                  {goalsTooLong ? ' - please shorten your goals to save.' : ''}
                                 </FormHelperText>
                               </FormControl>
                               <HStack justify="flex-end" mt={3} spacing={2}>
@@ -1468,7 +1468,7 @@ export const LeadershipCouncilPage: React.FC = () => {
               <FormControl>
                 <FormLabel>Message to mentor (optional)</FormLabel>
                 <Textarea
-                  placeholder="Share any context — what you&apos;re working through, what you&apos;d like to get out of the session, anything they should review beforehand."
+                  placeholder="Share any context - what you&apos;re working through, what you&apos;d like to get out of the session, anything they should review beforehand."
                   value={scheduleMessage}
                   onChange={(e) => setScheduleMessage(e.target.value)}
                   rows={4}

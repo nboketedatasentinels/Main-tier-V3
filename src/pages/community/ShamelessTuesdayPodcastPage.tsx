@@ -85,7 +85,7 @@ export const ShamelessTuesdayPodcastPage: React.FC = () => (
           <AspectRatio ratio={16 / 9}>
             <chakra.iframe
               src={YOUTUBE_EMBED_SRC}
-              title="Shameless Tuesday — latest episode"
+              title="Shameless Tuesday - latest episode"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
               allowFullScreen
               loading="lazy"

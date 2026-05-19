@@ -845,7 +845,7 @@ export const CompanyDashboard: React.FC = () => {
             <HStack justify="space-between" mb={2}>
               <Text fontWeight="bold">Weekly Tasks</Text>
               <Badge colorScheme={statusColor}>
-                {checklistProgress.completed}/{checklistProgress.total} activities completed — {taskStatusLabel}
+                {checklistProgress.completed}/{checklistProgress.total} activities completed - {taskStatusLabel}
               </Badge>
             </HStack>
           <Progress value={checklistProgress.percent} colorScheme={statusColor} mb={3} />

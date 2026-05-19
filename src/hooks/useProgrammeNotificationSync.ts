@@ -38,7 +38,7 @@ export const useProgrammeNotificationSync = (): void => {
           )
         } else {
           console.info(
-            `%c[programmeScheduler] nothing fired — ${result.reason ?? 'unknown'}`,
+            `%c[programmeScheduler] nothing fired - ${result.reason ?? 'unknown'}`,
             'color:#888',
             result,
           )

@@ -90,7 +90,7 @@ export function PreCourseSurveyModal({
           <Stack spacing={5}>
             <Text color="gray.700" fontSize="sm" lineHeight="1.7">
               We&apos;ll ask a few quick questions so your partner can tailor the programme to you.
-              You only need to do this once — after you submit, you&apos;ll go straight into your
+              You only need to do this once - after you submit, you&apos;ll go straight into your
               courses every time.
             </Text>
 

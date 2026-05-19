@@ -208,7 +208,7 @@ export const syncProgrammeNotificationsForUser = async (
       attempted: 0,
       fired: 0,
       skipped: 0,
-      reason: `programme not active — journeyStartDate=${parsedStart}, now=${new Date().toISOString()}`,
+      reason: `programme not active - journeyStartDate=${parsedStart}, now=${new Date().toISOString()}`,
       diagnostics,
     }
   }

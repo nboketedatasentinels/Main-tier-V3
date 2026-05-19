@@ -121,7 +121,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
   const { rows, loading, learnersError, statsError, refreshStats } =
     useLearnerOverview(selectedOrgId || null)
 
-  // Load the selected org's journeyType — this is the source of truth
+  // Load the selected org's journeyType - this is the source of truth
   // for whether to show mentor/ambassador columns. Reading it from
   // learner rows is unreliable because stub profiles can have
   // journeyType = undefined.
@@ -417,7 +417,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
                             <Stack spacing={0}>
                               <Text fontWeight="semibold">{getDisplayName(row.learner, 'Learner')}</Text>
                               <Text fontSize="xs" color="text.muted">
-                                {row.learner.email || '—'}
+                                {row.learner.email || '-'}
                               </Text>
                             </Stack>
                           </Td>
@@ -428,7 +428,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
                               </Badge>
                             ) : (
                               <Text fontSize="xs" color="text.muted">
-                                —
+                                -
                               </Text>
                             )}
                           </Td>

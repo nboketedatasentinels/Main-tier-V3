@@ -74,7 +74,7 @@ export interface RiskResult {
  *   Journey ended + not passed → critical
  *   paceRatio < 0.40           → critical (at_risk)
  *   paceRatio < 0.65           → behind   (at_risk)
- *   paceRatio < 0.85           → warning  (on_track — not at risk, just a heads up)
+ *   paceRatio < 0.85           → warning  (on_track - not at risk, just a heads up)
  *   paceRatio >= 0.85          → on_track
  *
  * Grace period: first 20% of the journey (or first 2 weeks) → always on_track.
@@ -100,7 +100,7 @@ export const calculateUserRiskStatus = (
     return { status: 'on_track', level: 'on_track' }
   }
 
-  // Already passed — never at risk
+  // Already passed - never at risk
   if (totalEarned >= passMarkPoints) {
     return {
       status: 'on_track',
@@ -114,7 +114,7 @@ export const calculateUserRiskStatus = (
   const timeProgress = elapsedWeeks / totalWeeks
   const journeyEnded = currentWeek > totalWeeks
 
-  // Grace period: first 20% of the journey or first 2 weeks — don't flag anyone
+  // Grace period: first 20% of the journey or first 2 weeks - don't flag anyone
   const gracePeriodWeeks = Math.max(2, Math.ceil(totalWeeks * 0.2))
   if (currentWeek <= gracePeriodWeeks && !journeyEnded) {
     return {
@@ -140,7 +140,7 @@ export const calculateUserRiskStatus = (
     }
   }
 
-  // Significantly behind — critical
+  // Significantly behind - critical
   if (paceRatio < 0.4) {
     return {
       status: 'at_risk',
@@ -151,7 +151,7 @@ export const calculateUserRiskStatus = (
     }
   }
 
-  // Falling behind — at risk
+  // Falling behind - at risk
   if (paceRatio < 0.65) {
     return {
       status: 'at_risk',
@@ -162,7 +162,7 @@ export const calculateUserRiskStatus = (
     }
   }
 
-  // Slightly off pace — warning, but NOT at_risk (positively evolving)
+  // Slightly off pace - warning, but NOT at_risk (positively evolving)
   if (paceRatio < 0.85) {
     return {
       status: 'on_track',

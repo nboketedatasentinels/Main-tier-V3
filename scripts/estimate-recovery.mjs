@@ -54,7 +54,7 @@ const main = async () => {
     const scp = num(data.scp)
 
     if (points > 0 && scp === 0) {
-      // points without scp — keep as-is, count as already correct
+      // points without scp - keep as-is, count as already correct
       alreadyCorrect += points
     } else if (points > 0 && scp > 0 && Math.abs(points - scp) < 0.01) {
       alreadyCorrect += points
@@ -104,7 +104,7 @@ const main = async () => {
     totalHours += num(data.hours)
     totalPeople += num(data.peopleImpacted)
   }
-  console.log('\nImpact totals (across all 34 entries — already correct on entries):')
+  console.log('\nImpact totals (across all 34 entries - already correct on entries):')
   console.log(`  USD value:        $${fmt(totalUsd)}`)
   console.log(`  Hours invested:   ${fmt(totalHours)}`)
   console.log(`  People impacted:  ${fmt(totalPeople)}`)

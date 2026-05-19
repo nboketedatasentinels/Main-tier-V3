@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * RECOVERY SCRIPT — rebuild users.assignedOrganizations and
+ * RECOVERY SCRIPT - rebuild users.assignedOrganizations and
  * profiles.assignedOrganizations from the canonical org-side field
  * (organizations.transformationPartnerId).
  *
@@ -24,7 +24,7 @@
  *      and status in {active, watch, paused}.
  *   2. Read users/{uid}.assignedOrganizations and
  *      profiles/{uid}.assignedOrganizations.
- *   3. Compute the union (no destructive removal — if some other code path
+ *   3. Compute the union (no destructive removal - if some other code path
  *      legitimately added an org we don't know about, we keep it).
  *   4. Upsert both docs via setDoc(merge:true) with the union.
  *
@@ -36,7 +36,7 @@
  *   node scripts/recover-partner-org-assignments.mjs --all
  *   node scripts/recover-partner-org-assignments.mjs --all --apply
  *
- * Dry-run by default — pass --apply to write.
+ * Dry-run by default - pass --apply to write.
  */
 
 import { initializeApp, cert } from 'firebase-admin/app'

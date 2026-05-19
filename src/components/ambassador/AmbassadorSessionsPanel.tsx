@@ -450,7 +450,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
             <Icon as={Calendar} color="text.muted" boxSize={6} />
             <Text fontWeight="semibold">No coaching sessions yet</Text>
             <Text fontSize="sm" color="text.secondary">
-              Create your first session — learners will be able to self-book.
+              Create your first session - learners will be able to self-book.
             </Text>
           </Flex>
         )}
@@ -481,7 +481,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
                   fontWeight="semibold"
                   mb={2}
                 >
-                  Past — attendance to review ({pastToReview.length})
+                  Past - attendance to review ({pastToReview.length})
                 </Text>
                 <Stack spacing={3}>{pastToReview.map((slot) => renderSlot(slot, 'past'))}</Stack>
               </Box>

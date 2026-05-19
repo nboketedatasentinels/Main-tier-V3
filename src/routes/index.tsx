@@ -24,7 +24,7 @@ import { UpgradePage } from '@/pages/upgrade/UpgradePage'
 // Onboarding imports
 import { WelcomePage } from '@/pages/onboarding/WelcomePage'
 
-// Dashboard imports — heavy role dashboards are code-split so navigating
+// Dashboard imports - heavy role dashboards are code-split so navigating
 // between sidebar items doesn't synchronously unmount/mount one giant
 // component (which felt like a freeze). Suspense fallback shows a spinner
 // during the transition instead.
@@ -67,6 +67,7 @@ const ApprovalQueuePage = lazy(() => import('@/pages/admin/ApprovalQueuePage'))
 const PartnerAssignmentPage = lazy(() => import('@/pages/admin/PartnerAssignmentPage'))
 const LearnerAssignmentsPage = lazy(() => import('@/pages/partner/LearnerAssignmentsPage'))
 const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPage'))
+const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -200,6 +201,7 @@ export const AppRoutes = () => {
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
+          <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
 

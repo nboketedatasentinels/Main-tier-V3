@@ -82,7 +82,7 @@ export const deriveFallbackRisk = (signals: EngagementSignals): EngagementRisk =
   if (daysSinceLastActive <= 14) {
     return {
       level: 'watch',
-      summary: 'Slight slowdown — check in soon.',
+      summary: 'Slight slowdown - check in soon.',
       daysSinceLastActive,
       weeklyActivity,
     }

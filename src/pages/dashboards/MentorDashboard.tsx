@@ -155,7 +155,7 @@ const ensureValidDateString = (input?: string | number | Date): string => {
 }
 
 const formatPercentageChange = (current: number, previous: number) => {
-  if (previous === 0) return '—'
+  if (previous === 0) return '-'
   const delta = current - previous
   const percent = Math.round((delta / previous) * 100)
   if (percent === 0) return '0%'
@@ -272,7 +272,7 @@ export const MentorDashboard: React.FC = () => {
         const name = getDisplayName(mentee, 'Mentee')
         const company = mentee.companyName || mentee.companyCode || mentee.assignedOrganizations?.[0] || 'Independent'
         const program = mentee.transformationTier?.toString().replace(/_/g, ' ') || 'Mentorship'
-        const programDuration = mentee.cohortIdentifier || mentee.dashboardPreferences?.defaultRoute || '—'
+        const programDuration = mentee.cohortIdentifier || mentee.dashboardPreferences?.defaultRoute || '-'
         const timezone = mentee.timezone || 'Not set'
         const weeklyActivity = Number(mentee.weeklyActivity ?? 0)
         const goalsCompleted = mentee.goalsCompleted ?? 0

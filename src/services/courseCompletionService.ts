@@ -22,7 +22,7 @@ import { removeUndefinedFields } from '@/utils/firestore'
  * `approvals` collection (which already has rules permitting partner writes).
  * We discriminate them with `approvalType === 'course_completion'`.
  *
- * Doc id: `${learnerId}__course__${courseId}` — deterministic for idempotency.
+ * Doc id: `${learnerId}__course__${courseId}` - deterministic for idempotency.
  */
 
 export const APPROVALS_COLLECTION = 'approvals'
@@ -309,7 +309,7 @@ export const markCourseCompleted = async (
 /**
  * Subscribes to course completion records (filtered approvals docs) for a
  * single learner. Listeners pull all approvals for that user and filter
- * client-side for course completions — avoids needing a composite index.
+ * client-side for course completions - avoids needing a composite index.
  */
 export const listenToUserCourseCompletions = (
   userId: string,

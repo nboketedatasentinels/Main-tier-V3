@@ -30,7 +30,7 @@ const templates = [
     name: 'Follow-up: Gentle Reminder',
     subject: 'Checking in from {{organizationName}}',
     message_body:
-      'Hi {{userName}}, just a quick reminder to jump back in. Your engagement score is {{engagementScore}}—we can help boost it.',
+      'Hi {{userName}}, just a quick reminder to jump back in. Your engagement score is {{engagementScore}}-we can help boost it.',
     template_type: 'Follow-up',
     target_audience: 'Users awaiting response',
     is_active: true,

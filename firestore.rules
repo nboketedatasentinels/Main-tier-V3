@@ -417,6 +417,26 @@ service cloud.firestore {
       allow write: if isAuthenticated() && isOwner(userId);
     }
 
+    // Programme component submissions (Capstone / Case Study / Practical answers).
+    // Doc ID format: {uid}__{componentId}. Owner writes from /capstones/*.html
+    // via _capstone-runtime.js; partner + super_admin read all and can update
+    // review fields (status, partnerNotes, reviewedBy, reviewedAt).
+    match /programmeComponentSubmissions/{submissionId} {
+      allow read: if isAuthenticated() && (
+        submissionId.matches(request.auth.uid + '__.*') ||
+        isPartnerOrAdmin()
+      );
+      allow create: if isAuthenticated()
+        && submissionId.matches(request.auth.uid + '__.*')
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && (
+        (submissionId.matches(request.auth.uid + '__.*')
+          && request.resource.data.uid == request.auth.uid)
+        || isPartnerOrAdmin()
+      );
+      allow delete: if isPartnerOrAdmin();
+    }
+
     match /weeklyProgress/{progressId} {
       allow get: if isAuthenticated() && (
         progressId.matches(request.auth.uid + '__.*') ||

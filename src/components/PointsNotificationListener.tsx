@@ -27,7 +27,7 @@ export const PointsNotificationListener = () => {
       const { points, reason, engagementPoints, impactPoints } = custom.detail || {}
       toast({
         title: `+${points} points earned`,
-        description: `${engagementPoints || 0} engagement · ${impactPoints || 0} impact — ${reason}`,
+        description: `${engagementPoints || 0} engagement · ${impactPoints || 0} impact - ${reason}`,
         status: 'success',
       })
     }

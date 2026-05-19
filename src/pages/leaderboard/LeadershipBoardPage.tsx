@@ -1109,7 +1109,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           <HStack spacing={3}>
                             <Box fontSize="2xl">{getRankIcon(userRow?.rank || leaderboardRows.length || 1)}</Box>
                             <Text fontSize="4xl" fontWeight="bold" color="gray.800">
-                              {userRow?.rank || '—'}
+                              {userRow?.rank || '-'}
                             </Text>
                           </HStack>
                           <Text color="gray.600" mt={2} fontSize="sm">

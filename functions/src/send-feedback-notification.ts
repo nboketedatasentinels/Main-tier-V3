@@ -156,7 +156,7 @@ export const onFeedbackCreated = functions
 
     const fromAddress = process.env.SMTP_FROM || process.env.SMTP_USER || "info@t4leader.com";
     const categoryLabel = CATEGORY_LABELS[data.category] || data.category;
-    const subject = `[T4L Feedback] ${categoryLabel} — ${data.userName || data.userEmail || "Anonymous"}`;
+    const subject = `[T4L Feedback] ${categoryLabel} - ${data.userName || data.userEmail || "Anonymous"}`;
     const html = buildEmailHtml(data, feedbackId);
 
     try {

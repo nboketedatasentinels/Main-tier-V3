@@ -22,7 +22,7 @@ import { ORG_COLLECTION } from '@/constants/organizations'
 /**
  * Upsert a document with merge semantics so the write succeeds even when the
  * target doc doesn't yet exist (otherwise updateDoc throws and the partner-side
- * sync silently disappears — historic source of the dropdown showing only the
+ * sync silently disappears - historic source of the dropdown showing only the
  * URL-current org instead of every assigned org).
  */
 const safeUpdate = async (

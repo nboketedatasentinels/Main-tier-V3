@@ -40,7 +40,7 @@ interface Props {
   ) => Promise<void>
   /** Existing partners (kept for the "Current partner" fallback display). */
   partners: OrganizationLead[]
-  /** All users — admins can grant partner access to any of them. */
+  /** All users - admins can grant partner access to any of them. */
   allUsers: CandidateUser[]
   isLoadingPartners?: boolean
   isLoadingAllUsers?: boolean
@@ -110,7 +110,7 @@ export const AssignPartnerModal: React.FC<Props> = ({
     selectedCandidate && !isPartnerRole(selectedCandidate.role),
   )
 
-  // Reset the consent checkbox when selection changes — admin must re-confirm.
+  // Reset the consent checkbox when selection changes - admin must re-confirm.
   useEffect(() => {
     setGrantPartnerAccess(false)
   }, [partner])
@@ -121,7 +121,7 @@ export const AssignPartnerModal: React.FC<Props> = ({
       : null
 
   const buildCandidateLabel = (item: CandidateUser) => {
-    const emailSuffix = item.email ? ` — ${item.email}` : ''
+    const emailSuffix = item.email ? ` - ${item.email}` : ''
     const assignmentCount = partnerAssignmentCounts?.[item.id] ?? 0
     const countSuffix = assignmentCount > 1 ? ` • ${assignmentCount} orgs` : ''
     const rolePrefix = isPartnerRole(item.role) ? '' : `[${item.role || 'user'}] `
@@ -174,7 +174,7 @@ export const AssignPartnerModal: React.FC<Props> = ({
                 placeholder="Select user"
                 isDisabled={isLoadingAllUsers}
               >
-                <option value="">— No partner —</option>
+                <option value="">- No partner -</option>
                 {missingPartner ? (
                   <option value={missingPartner.id}>{missingPartner.name}</option>
                 ) : null}

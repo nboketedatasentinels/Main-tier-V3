@@ -588,7 +588,7 @@ export const WeeklyGlancePage = () => {
           </Skeleton>
         </SimpleGrid>
 
-        {/* Hero — Cycle progress */}
+        {/* Hero - Cycle progress */}
         <Box
           bg="white"
           p={{ base: 5, md: 7 }}

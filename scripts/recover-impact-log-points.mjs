@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * RECOVERY SCRIPT — fix the architectural split for impact-log points.
+ * RECOVERY SCRIPT - fix the architectural split for impact-log points.
  *
  * Background:
  *   awardPointsForImpactLog() (src/services/pointsTransactionService.ts)
  *   wrote impact-log awards into points_transactions and user_journeys.
- *   It NEVER wrote to pointsLedger or users/{uid}.totalPoints —
+ *   It NEVER wrote to pointsLedger or users/{uid}.totalPoints -
  *   so the leaderboard (which reads profiles/{uid}.totalPoints) shows 0
  *   for users whose points came entirely through impact logs.
  *
@@ -78,7 +78,7 @@ const num = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 const fmt = (n) => num(n).toLocaleString('en-US')
 
 // Per-journey impact_log totalFrequency caps from src/config/pointsConfig.ts
-// JOURNEY_ACTIVITY_CONFIG. Source of truth — keep in sync if the catalog changes.
+// JOURNEY_ACTIVITY_CONFIG. Source of truth - keep in sync if the catalog changes.
 // Recovery MUST honor these or we re-create the 2026-05-07 over-credit incident
 // where transactions written under looser legacy caps got replayed verbatim.
 const IMPACT_LOG_CAP_BY_JOURNEY = {
@@ -126,7 +126,7 @@ const recoverOne = async (uid) => {
   // already exists for the same impact_log_entry (matched by claimRef =
   // points_transactions.sourceId), or we will double-count. This is the case
   // for entries that went through pointsService normally on or after the fix
-  // in commit 61f674f8 — they have source like 'impact_log_submission' or
+  // in commit 61f674f8 - they have source like 'impact_log_submission' or
   // 'auto', not 'impact_log_recovery', so the dedupe set above misses them.
   const allImpactLogLedgerSnap = await db
     .collection('pointsLedger')
@@ -170,7 +170,7 @@ const recoverOne = async (uid) => {
   // user's current journeyStartDate. Without this, the script credits the
   // user's CURRENT journey with activity from a previous cohort/iteration,
   // inflating their total. This is the bug that gave syntiche musawu 6,000
-  // phantom pts on 2026-05-08 — three impact-log entries dated 2026-04-08/09/14
+  // phantom pts on 2026-05-08 - three impact-log entries dated 2026-04-08/09/14
   // were ledgered against her 6W journey that started 2026-04-15.
   const journeyStartIsoForFilter = profileSnap.data()?.journeyStartDate
     ?? userSnap.data()?.journeyStartDate
@@ -206,7 +206,7 @@ const recoverOne = async (uid) => {
     // for it). Match by tx.sourceId === ledger.claimRef.
     if (tx.sourceId && ledgeredImpactLogClaimRefs.has(tx.sourceId)) continue
 
-    // Pre-journey filter — apply to BOTH tx.awardedAt AND the underlying
+    // Pre-journey filter - apply to BOTH tx.awardedAt AND the underlying
     // impact_logs.date. The latter catches the case where a tx was awarded
     // post-journey but the impact_logs entry it points to is dated before
     // the journey started (often the case for test data or backfills). See
@@ -285,11 +285,11 @@ const recoverOne = async (uid) => {
   // For single-user / single-org runs, print everyone for full visibility.
   if (!isAll || hasDrift || skippedOverCap > 0 || skippedPreJourney > 0) {
     const capLine = journeyCap == null
-      ? `\n  cap: unknown journey (${currentJourney ?? 'null'}) — no enforcement`
+      ? `\n  cap: unknown journey (${currentJourney ?? 'null'}) - no enforcement`
       : `\n  cap: ${currentJourney} allows ${journeyCap} impact-log entries; existing=${existingImpactLogCount}, slots=${Number.isFinite(slotsAvailable) ? slotsAvailable : '∞'}`
     const journeyStartLine = journeyStart
       ? `\n  journey start: ${journeyStartIsoForFilter} (txs awarded before this are skipped)`
-      : `\n  journey start: unknown — pre-journey filter NOT enforced`
+      : `\n  journey start: unknown - pre-journey filter NOT enforced`
     const overCapLine = skippedOverCap > 0
       ? `\n  SKIPPED OVER-CAP: ${skippedOverCap} tx rows worth ${fmt(skippedOverCapPoints)} pts (would exceed catalog)`
       : ''
@@ -311,7 +311,7 @@ const recoverOne = async (uid) => {
 
   if (!isApply) return { uid, toCreate, recoverPoints, proposedTotal, hasDrift }
 
-  // Always reconcile weeklyProgress in apply mode — even when totals match,
+  // Always reconcile weeklyProgress in apply mode - even when totals match,
   // weeklyProgress can still be stale (e.g., a previous recovery run wrote
   // ledger but not weeklyProgress, or a manual ledger fix bypassed
   // pointsService). This is the field the Weekly Checklist UI reads, so

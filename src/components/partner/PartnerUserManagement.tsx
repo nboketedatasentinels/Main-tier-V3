@@ -575,7 +575,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               </Text>
             </VStack>
           </Td>
-          <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '—'}</Td>
+          <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '-'}</Td>
           <Td px={2}>
             <Text fontSize="sm" fontWeight="semibold" color="brand.text">
               {(user.totalPoints ?? 0).toLocaleString()}
@@ -868,7 +868,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                       <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{user.email}</Text>
                     </VStack>
                   </Td>
-                  <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '—'}</Td>
+                  <Td px={2} fontSize="sm" textTransform="capitalize">{user.companyCode || '-'}</Td>
                   <Td px={2}>
                     <Text fontSize="sm" fontWeight="semibold" color="brand.text">
                       {(user.totalPoints ?? 0).toLocaleString()}
