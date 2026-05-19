@@ -21,7 +21,10 @@ import {
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
-import { Link as RouterLink } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
+
+const PROGRAMME_COMPONENTS_HREF = '/app/courses#programme-components'
+import { PodcastSeriesPanel } from '@/components/courses/PodcastSeriesPanel'
 
 type VisualState = 'available' | 'completed' | 'pending_review' | 'rejected' | 'locked' | 'next_window'
 
@@ -42,21 +45,21 @@ const stateStyles: Record<
   available: {
     borderColor: 'gray.200',
     bg: 'white',
-    accent: 'green.500',
+    accent: '#350e6f',
     statusLabel: 'Ready',
-    statusColor: 'green',
+    statusColor: 'purple',
   },
   completed: {
-    borderColor: 'green.200',
-    bg: 'green.50',
-    accent: 'green.600',
+    borderColor: 'yellow.200',
+    bg: 'yellow.50',
+    accent: '#b45309',
     statusLabel: 'Completed',
-    statusColor: 'green',
+    statusColor: 'yellow',
   },
   pending_review: {
-    borderColor: 'purple.200',
+    borderColor: '#27062e',
     bg: 'purple.50',
-    accent: 'purple.600',
+    accent: '#27062e',
     statusLabel: 'Awaiting review',
     statusColor: 'purple',
   },
@@ -116,6 +119,9 @@ export const WeeklyActivityCard = ({
   const isExternalAiToolSubmission =
     activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
+  const navigate = useNavigate()
+  const awaitingPartnerIssue =
+    isPartnerIssued && !activity.issuedByPartner && !isAdmin && activity.status !== 'completed'
   // All activities are unlocked for the learner — week/availability/partner-issue
   // gates are informational hints only. Only block double-submission within
   // the same session and already-completed work.
@@ -136,11 +142,10 @@ export const WeeklyActivityCard = ({
   const visualState = getVisualState(activity)
   const styles = stateStyles[visualState]
 
-  // Frequency / remaining uses
+  // Frequency / remaining uses — shown as visual dot tracker (no words needed)
   const totalFrequency = activity.activityPolicy?.maxTotal ?? 1
   const completedCount = activity.completedCount ?? 0
-  const remainingUses = Math.max(0, totalFrequency - completedCount)
-  const showFrequency = totalFrequency > 1 && visualState === 'available'
+  const showFrequencyDots = totalFrequency > 1
 
   // Human-readable lock reason
   const lockReason = (() => {
@@ -238,10 +243,34 @@ export const WeeklyActivityCard = ({
       p={5}
       boxShadow="0 2px 8px rgba(0,0,0,0.04)"
       transition="all 0.2s"
-      _hover={
-        visualState === 'available'
-          ? { transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(0,0,0,0.06)' }
+      cursor={awaitingPartnerIssue ? 'pointer' : undefined}
+      role={awaitingPartnerIssue ? 'link' : undefined}
+      tabIndex={awaitingPartnerIssue ? 0 : undefined}
+      onClick={
+        awaitingPartnerIssue
+          ? (e) => {
+              const target = e.target as HTMLElement
+              if (target.closest('button, a')) return
+              navigate(PROGRAMME_COMPONENTS_HREF)
+            }
           : undefined
+      }
+      onKeyDown={
+        awaitingPartnerIssue
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                navigate(PROGRAMME_COMPONENTS_HREF)
+              }
+            }
+          : undefined
+      }
+      _hover={
+        awaitingPartnerIssue
+          ? { transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(53,14,111,0.12)' }
+          : visualState === 'available'
+            ? { transform: 'translateY(-1px)', boxShadow: '0 6px 20px rgba(53,14,111,0.12)' }
+            : undefined
       }
       position="relative"
     >
@@ -269,10 +298,23 @@ export const WeeklyActivityCard = ({
                 <Text>{styles.statusLabel}</Text>
               </HStack>
             </Badge>
-            {showFrequency && (
-              <Text fontSize="xs" color="gray.500">
-                {remainingUses} of {totalFrequency} left this cycle
-              </Text>
+            {showFrequencyDots && (
+              <HStack
+                spacing={1}
+                aria-label={`${completedCount} of ${totalFrequency} completed`}
+              >
+                {Array.from({ length: totalFrequency }).map((_, i) => (
+                  <Box
+                    key={i}
+                    w={2}
+                    h={2}
+                    rounded="full"
+                    bg={i < completedCount ? 'yellow.500' : 'transparent'}
+                    border="1.5px solid"
+                    borderColor={i < completedCount ? 'yellow.500' : 'gray.300'}
+                  />
+                ))}
+              </HStack>
             )}
             {isAdmin && (
               <Badge colorScheme="red" variant="subtle" fontSize="xs">
@@ -314,7 +356,7 @@ export const WeeklyActivityCard = ({
         {(lockReason || activity.freeTierNotice || activity.status === 'rejected') && (
           <Stack spacing={1.5}>
             {activity.freeTierNotice && (
-              <HStack spacing={2} color="green.700" fontSize="sm">
+              <HStack spacing={2} color="#350e6f" fontSize="sm">
                 <Icon as={CheckCircle2} boxSize={3.5} />
                 <Text>{activity.freeTierNotice}</Text>
               </HStack>
@@ -338,7 +380,17 @@ export const WeeklyActivityCard = ({
           </Stack>
         )}
 
-        {/* CTAs */}
+        {/* Podcast series — inline experience for the podcast_workbook activity */}
+        {activity.id === 'podcast_workbook' && (
+          <PodcastSeriesPanel
+            activity={activity}
+            currentWeek={currentWeek}
+            onAwardPoints={() => onMarkCompleted(activity)}
+          />
+        )}
+
+        {/* CTAs (hidden for the podcast activity — the panel above drives the flow) */}
+        {activity.id !== 'podcast_workbook' && (
         <Flex
           direction={{ base: 'column', sm: 'row' }}
           gap={2}
@@ -347,21 +399,43 @@ export const WeeklyActivityCard = ({
         >
           <HStack spacing={2} flexWrap="wrap">
             {/* Primary CTA */}
-            {!isExternalAiToolSubmission && (
+            {!isExternalAiToolSubmission && awaitingPartnerIssue && (
+              <Button
+                as={RouterLink}
+                to={PROGRAMME_COMPONENTS_HREF}
+                size="md"
+                bg="#350e6f"
+                color="white"
+                _hover={{ bg: '#27062e' }}
+                rightIcon={<Icon as={ExternalLink} boxSize={3.5} />}
+                fontWeight="semibold"
+              >
+                View programme components
+              </Button>
+            )}
+            {!isExternalAiToolSubmission && !awaitingPartnerIssue && (
               <Button
                 size="md"
-                colorScheme={
+                bg={
                   visualState === 'completed'
-                    ? 'green'
-                    : requiresPartnerApproval
-                      ? 'purple'
-                      : 'green'
+                    ? 'yellow.500'
+                    : '#350e6f'
                 }
-                variant={
-                  visualState === 'completed' || visualState === 'pending_review'
-                    ? 'solid'
-                    : 'solid'
-                }
+                color="white"
+                _hover={{
+                  bg: visualState === 'completed' ? 'yellow.600' : '#27062e',
+                }}
+                _disabled={{
+                  bg:
+                    visualState === 'completed'
+                      ? 'yellow.500'
+                      : visualState === 'pending_review'
+                        ? '#27062e'
+                        : 'gray.300',
+                  color: 'white',
+                  cursor: 'not-allowed',
+                  opacity: visualState === 'completed' || visualState === 'pending_review' ? 1 : 0.6,
+                }}
                 isDisabled={primaryActionDisabled}
                 isLoading={isActionInFlight}
                 onClick={handlePrimaryClick}
@@ -412,6 +486,7 @@ export const WeeklyActivityCard = ({
 
           {exitAction}
         </Flex>
+        )}
       </Stack>
 
       {/* Celebratory checkmark for fully completed */}
@@ -421,11 +496,11 @@ export const WeeklyActivityCard = ({
             w={8}
             h={8}
             borderRadius="full"
-            bg="green.500"
+            bg="yellow.500"
             color="white"
             align="center"
             justify="center"
-            boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)"
+            boxShadow="0 4px 12px rgba(180, 83, 9, 0.3)"
           >
             <Icon as={CheckCircle2} boxSize={5} />
           </Flex>

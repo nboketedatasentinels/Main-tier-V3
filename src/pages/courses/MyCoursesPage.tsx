@@ -47,6 +47,7 @@ import {
 } from '@/utils/journeyType'
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
+import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import { getPointsPerCourse } from '@/config/pointsConfig'
 import type { UserProfile } from '@/types'
@@ -624,6 +625,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
   const { loading: progressLoading } = useUserCourseProgress(userId)
   const { completionsByKey } = useUserCourseCompletions(userId)
+  const { requestOpenCourse, surveyModal } = useCourseOpenGate()
 
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
   const [loadingCourses, setLoadingCourses] = useState(true)
@@ -1261,11 +1263,16 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                               shouldWrapChildren
                             >
                               <Button
-                                as={canOpen ? 'a' : (RouterLink as React.ElementType)}
-                                href={canOpen ? entry.course?.link : undefined}
+                                as={canOpen ? 'button' : (RouterLink as React.ElementType)}
                                 to={canOpen ? undefined : '/upgrade'}
-                                target={canOpen ? '_blank' : undefined}
-                                rel={canOpen ? 'noopener noreferrer' : undefined}
+                                onClick={
+                                  canOpen && entry.course?.link
+                                    ? (e: React.MouseEvent) => {
+                                        e.preventDefault()
+                                        requestOpenCourse(entry.course!.link!)
+                                      }
+                                    : undefined
+                                }
                                 size="sm"
                                 bg={
                                   isApproved && canOpen
@@ -1353,6 +1360,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
       <PillarProgrammeComponentsSection pillar={program?.pillar ?? null} />
 
+      {surveyModal}
     </Stack>
   )
 }
@@ -1363,6 +1371,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
 }) => {
   const { progressMap, loading: progressLoading } = useUserCourseProgress(userId)
   const { completionsByKey } = useUserCourseCompletions(userId)
+  const { requestOpenCourse, surveyModal } = useCourseOpenGate()
   const [courses, setCourses] = useState<NormalizedCourse[]>([])
   const [loadingCourses, setLoadingCourses] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -1549,11 +1558,16 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
                     )}
 
                     <Button
-                      as={canOpen ? 'a' : (RouterLink as React.ElementType)}
-                      href={canOpen ? course.link : undefined}
+                      as={canOpen ? 'button' : (RouterLink as React.ElementType)}
                       to={canOpen ? undefined : '/upgrade'}
-                      target={canOpen ? '_blank' : undefined}
-                      rel={canOpen ? 'noopener noreferrer' : undefined}
+                      onClick={
+                        canOpen && course.link
+                          ? (e: React.MouseEvent) => {
+                              e.preventDefault()
+                              requestOpenCourse(course.link!)
+                            }
+                          : undefined
+                      }
                       size="sm"
                       colorScheme="purple"
                       variant="solid"
@@ -1571,6 +1585,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
           </SimpleGrid>
         </Box>
       )}
+      {surveyModal}
     </Stack>
   )
 }

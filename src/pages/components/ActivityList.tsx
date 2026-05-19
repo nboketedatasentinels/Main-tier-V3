@@ -78,16 +78,16 @@ export const ActivityList = ({
         position="relative"
         overflow="hidden"
       >
-        <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="green.50" borderRadius="0 0 0 100%" />
+        <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="yellow.50" borderRadius="0 0 0 100%" />
         <Center flexDirection="column" gap={3} position="relative" zIndex={1}>
           <Flex
             w={12}
             h={12}
             borderRadius="xl"
-            bg="linear-gradient(135deg, #047857 0%, #065f46 100%)"
+            bg="linear-gradient(135deg, #350e6f 0%, #27062e 100%)"
             align="center"
             justify="center"
-            boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)"
+            boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
           >
             <Icon as={PartyPopper} boxSize={6} color="white" />
           </Flex>
@@ -110,10 +110,10 @@ export const ActivityList = ({
               w={9}
               h={9}
               borderRadius="lg"
-              bg="linear-gradient(135deg, #047857 0%, #065f46 100%)"
+              bg="linear-gradient(135deg, #350e6f 0%, #27062e 100%)"
               align="center"
               justify="center"
-              boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)"
+              boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
             >
               <Icon as={Sparkles} boxSize={4} color="white" />
             </Flex>
@@ -136,13 +136,13 @@ export const ActivityList = ({
             <Box
               px={3}
               py={1}
-              bg="green.50"
+              bg="yellow.50"
               border="1px solid"
-              borderColor="green.200"
+              borderColor="yellow.200"
               borderRadius="full"
               fontSize="xs"
               fontWeight="semibold"
-              color="green.700"
+              color="#b45309"
             >
               +{todoPointsTotal.toLocaleString()} pts available
             </Box>

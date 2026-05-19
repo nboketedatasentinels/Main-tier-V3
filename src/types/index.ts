@@ -106,7 +106,7 @@ export interface UserProfile {
   onboardingComplete?: boolean
   onboardingSkipped?: boolean
   hasSeenDashboardTour?: boolean
-  
+
   // Role-Based Features
   transformationTier?: TransformationTier | string
   assignedOrganizations?: string[]

@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   Badge,
   Box,
@@ -25,6 +26,20 @@ interface Props {
 }
 
 export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) => {
+  const location = useLocation()
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (location.hash !== '#programme-components') return
+    const node = containerRef.current
+    if (!node) return
+    // Defer to next frame so layout is settled before we scroll.
+    const id = window.requestAnimationFrame(() => {
+      node.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [location.hash, pillar])
+
   if (!pillar) return null
   const entries = PILLAR_PROGRAMME_COMPONENTS[pillar] ?? []
   if (entries.length === 0) return null
@@ -32,6 +47,9 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
 
   return (
     <Box
+      ref={containerRef}
+      id="programme-components"
+      scrollMarginTop="80px"
       borderRadius="2xl"
       p={{ base: 5, md: 7 }}
       bg="white"
