@@ -405,6 +405,18 @@ service cloud.firestore {
     }
 
     // Weekly progress collection
+    // Podcast learning progress (per-user document with map of podcast states)
+    match /podcastProgress/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isPartnerOrAdmin());
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Pre-course survey completion (one-time gate before opening external courses)
+    match /preCourseSurvey/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isPartnerOrAdmin());
+      allow write: if isAuthenticated() && isOwner(userId);
+    }
+
     match /weeklyProgress/{progressId} {
       allow get: if isAuthenticated() && (
         progressId.matches(request.auth.uid + '__.*') ||
