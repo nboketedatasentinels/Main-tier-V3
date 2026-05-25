@@ -298,12 +298,26 @@ export const WeeklyGlancePage = () => {
   const cycleNumber = Math.ceil(currentWeek / 2)
   const totalCycles = Math.max(1, Math.ceil(totalWeeks / 2))
 
-  const earnedPoints = data.weeklyPoints?.points_earned ?? 0
   const targetPoints = data.weeklyPoints?.target_points ?? 0
   const cycleTarget = profile?.journeyType
     ? JOURNEY_META[profile.journeyType]?.windowTarget ?? targetPoints * 2
     : targetPoints * 2
-  const cycleEarned = profile?.totalPoints ?? earnedPoints
+
+  // Sum points from the canonical ledger for the two weeks in this cycle.
+  // profile.totalPoints can be stale (initialized to 0 at signup) so the
+  // ledger is the source of truth - see docs/points-system.md.
+  const cycleStartWeek = cycleNumber * 2 - 1
+  const cycleEndWeek = cycleNumber * 2
+  const cycleEarned = useMemo(
+    () =>
+      (data.ledgerEntries ?? []).reduce((sum, entry) => {
+        if (entry.weekNumber >= cycleStartWeek && entry.weekNumber <= cycleEndWeek) {
+          return sum + (entry.points ?? 0)
+        }
+        return sum
+      }, 0),
+    [data.ledgerEntries, cycleStartWeek, cycleEndWeek],
+  )
   const cycleProgress = cycleTarget > 0 ? Math.min(100, Math.round((cycleEarned / cycleTarget) * 100)) : 0
   const remainingPoints = Math.max(cycleTarget - cycleEarned, 0)
   const pace = computePace(cycleEarned, cycleTarget, daysRemaining)
