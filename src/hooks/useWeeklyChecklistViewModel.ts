@@ -203,10 +203,10 @@ export function useWeeklyChecklistViewModel() {
   const isAdmin = useMemo(() => isAdminProfile(profile), [profile])
   const isFreeTierMember = useMemo(() => isFreeUser(profile), [profile])
 
-  const isWeekLocked = useMemo(() => {
-    if (!journey) return false
-    return selectedWeek > (journey.currentWeek ?? 1)
-  }, [journey, selectedWeek])
+  // Week-based lock disabled - learners can browse and claim activities in any
+  // week of their journey. Cooldowns, frequency caps, completion, partner-issued
+  // gating and availability conditions still apply.
+  const isWeekLocked = false
 
   useEffect(() => {
     if (!profile?.companyId) {

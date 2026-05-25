@@ -142,14 +142,14 @@ export const calculateActivityAvailability = (
   }
 
   // 4. Scheduling Checks
-  // Flexible activities unlock on their configured week and stay available afterward.
+  // Per-week scheduling lock removed - all activities are reachable regardless
+  // of which week they were originally scheduled for. isScheduledForWeek is
+  // kept on the result for downstream consumers (analytics / UI hints) but no
+  // longer gates availability.
   const isScheduledForWeek =
     behavior.schedule === 'flexible'
       ? windowWeek >= activity.week
       : activity.week === windowWeek
-  if (!isScheduledForWeek) {
-    return { state: 'locked', reason: 'scheduled', isScheduledForWeek }
-  }
 
   // 5. Cooldown Checks
   if (behavior.cooldownWeeks > 0 && typeof lastCompletedWeek === 'number') {
