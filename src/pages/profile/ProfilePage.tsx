@@ -17,7 +17,6 @@ import {
   Collapse,
   Alert,
   AlertIcon,
-  Checkbox,
   Divider,
   Flex,
   FormControl,
@@ -30,6 +29,7 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  InputRightElement,
   Link,
   Radio,
   RadioGroup,
@@ -101,7 +101,7 @@ import { incrementOrganizationMemberCount, validateCompanyCode } from '@/service
 import { fetchVillageById, VillageSummary } from '@/services/villageService'
 import { listVillageInvitations } from '@/services/villageInvitationService'
 import { formatVillageInviteLink } from '@/config/app'
-import { CORE_VALUES } from '@/config/personality-data'
+import { CORE_VALUES, TEST_RESULT_URL_RULES, validateTestResultUrl } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
 interface ProfileData {
@@ -116,6 +116,8 @@ interface ProfileData {
   coreValues: string[]
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
+  personalityTestResultUrl?: string
+  valuesTestResultUrl?: string
   bio?: string
   timezone?: string
   matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
@@ -360,6 +362,10 @@ export const ProfilePage: React.FC = () => {
         (typeof docData.hasCompletedValuesTest === 'boolean'
           ? docData.hasCompletedValuesTest
           : profile?.hasCompletedValuesTest) || false,
+      personalityTestResultUrl:
+        (typeof docData.personalityTestResultUrl === 'string' ? docData.personalityTestResultUrl : '') || '',
+      valuesTestResultUrl:
+        (typeof docData.valuesTestResultUrl === 'string' ? docData.valuesTestResultUrl : '') || '',
       bio: (typeof docData.bio === 'string' && docData.bio) || '',
       timezone: (docData.timezone as string) || profile?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       matchRefreshPreference: (docData.matchRefreshPreference as ProfileData['matchRefreshPreference']) || 'weekly',
@@ -648,14 +654,15 @@ export const ProfilePage: React.FC = () => {
     setValuesTestError(null)
     setPersonalityFormError(null)
 
-    if (!editedData.hasCompletedPersonalityTest || !editedData.hasCompletedValuesTest) {
-      if (!editedData.hasCompletedPersonalityTest) {
-        setPersonalityTestError('Please confirm you have taken the 16 Personalities test.')
+    const personalityUrlCheck = validateTestResultUrl('personality', editedData.personalityTestResultUrl)
+    const valuesUrlCheck = validateTestResultUrl('values', editedData.valuesTestResultUrl)
+    if (!personalityUrlCheck.valid || !valuesUrlCheck.valid) {
+      if (!personalityUrlCheck.valid) {
+        setPersonalityTestError(personalityUrlCheck.error ?? 'Paste your 16Personalities results link.')
       }
-      if (!editedData.hasCompletedValuesTest) {
-        setValuesTestError('Please confirm you have taken the Personal Values test.')
+      if (!valuesUrlCheck.valid) {
+        setValuesTestError(valuesUrlCheck.error ?? 'Paste your Personal Values results link.')
       }
-      window.alert('Please confirm you have completed the required tests before saving.')
       setIsSaving(false)
       return
     }
@@ -680,6 +687,8 @@ export const ProfilePage: React.FC = () => {
         coreValues: editedData.coreValues,
         hasCompletedPersonalityTest: editedData.hasCompletedPersonalityTest ?? false,
         hasCompletedValuesTest: editedData.hasCompletedValuesTest ?? false,
+        personalityTestResultUrl: (editedData.personalityTestResultUrl ?? '').trim(),
+        valuesTestResultUrl: (editedData.valuesTestResultUrl ?? '').trim(),
         profilePictureUrl: uploadedUrl || editedData.profilePictureUrl || null,
         bio: editedData.bio || '',
         socialLinks: editedData.socialLinks,
@@ -694,6 +703,8 @@ export const ProfilePage: React.FC = () => {
           coreValues: payload.coreValues,
           hasCompletedPersonalityTest: payload.hasCompletedPersonalityTest,
           hasCompletedValuesTest: payload.hasCompletedValuesTest,
+          personalityTestResultUrl: payload.personalityTestResultUrl,
+          valuesTestResultUrl: payload.valuesTestResultUrl,
           leaderboardVisibility: payload.leaderboardVisibility,
           'privacySettings.showOnLeaderboard': payload['privacySettings.showOnLeaderboard'],
           updatedAt: serverTimestamp(),
@@ -1369,10 +1380,23 @@ export const ProfilePage: React.FC = () => {
                         <Box>
                           <Text fontSize="xs" color="brand.subtleText" mb={1}>Personality Type</Text>
                           {profileData.personalityType ? (
-                            <HStack spacing={2}>
-                              <Icon as={Brain} size={16} color="brand.primary" />
-                              <Text fontWeight="medium">{profileData.personalityType}</Text>
-                            </HStack>
+                            <VStack align="start" spacing={1}>
+                              <HStack spacing={2}>
+                                <Icon as={Brain} size={16} color="brand.primary" />
+                                <Text fontWeight="medium">{profileData.personalityType}</Text>
+                              </HStack>
+                              {profileData.personalityTestResultUrl && (
+                                <Link
+                                  href={profileData.personalityTestResultUrl}
+                                  isExternal
+                                  fontSize="xs"
+                                  color="brand.primary"
+                                  _hover={{ textDecoration: 'underline' }}
+                                >
+                                  View results <ExternalLink size={10} style={{ display: 'inline' }} />
+                                </Link>
+                              )}
+                            </VStack>
                           ) : (
                             <Box>
                               <Text fontSize="sm" color="brand.subtleText" mb={1}>Find your type</Text>
@@ -1400,13 +1424,26 @@ export const ProfilePage: React.FC = () => {
                         <Box>
                           <Text fontSize="xs" color="brand.subtleText" mb={2}>Core Values</Text>
                           {profileData.coreValues.length > 0 ? (
-                            <HStack spacing={2} flexWrap="wrap">
-                              {profileData.coreValues.map((value) => (
-                                <Tag key={value} size="sm" colorScheme="yellow" borderRadius="full">
-                                  {value}
-                                </Tag>
-                              ))}
-                            </HStack>
+                            <VStack align="start" spacing={2}>
+                              <HStack spacing={2} flexWrap="wrap">
+                                {profileData.coreValues.map((value) => (
+                                  <Tag key={value} size="sm" colorScheme="yellow" borderRadius="full">
+                                    {value}
+                                  </Tag>
+                                ))}
+                              </HStack>
+                              {profileData.valuesTestResultUrl && (
+                                <Link
+                                  href={profileData.valuesTestResultUrl}
+                                  isExternal
+                                  fontSize="xs"
+                                  color="brand.primary"
+                                  _hover={{ textDecoration: 'underline' }}
+                                >
+                                  View results <ExternalLink size={10} style={{ display: 'inline' }} />
+                                </Link>
+                              )}
+                            </VStack>
                           ) : (
                             <Box>
                               <Text fontSize="sm" color="brand.subtleText" mb={1}>Discover your values</Text>
@@ -1435,32 +1472,64 @@ export const ProfilePage: React.FC = () => {
                             <Box>
                               <Alert status="info" borderRadius="md" size="sm" bg="blue.50" border="1px solid" borderColor="blue.200">
                                 <AlertIcon color="blue.500" />
-                                <VStack align="start" spacing={1} flex={1}>
-                                  <Text fontSize="xs" fontWeight="medium">Update your personality profile</Text>
-                                  <HStack spacing={2}>
-                                    <Checkbox
-                                      size="sm"
-                                      isChecked={Boolean(editedData.hasCompletedPersonalityTest)}
-                                      onChange={(e) => {
-                                        handleInputChange('hasCompletedPersonalityTest', e.target.checked)
-                                        setPersonalityTestError(null)
-                                      }}
-                                    >
-                                      <Text fontSize="xs">I completed the personality test</Text>
-                                    </Checkbox>
-                                  </HStack>
-                                  <HStack spacing={2}>
-                                    <Checkbox
-                                      size="sm"
-                                      isChecked={Boolean(editedData.hasCompletedValuesTest)}
-                                      onChange={(e) => {
-                                        handleInputChange('hasCompletedValuesTest', e.target.checked)
-                                        setValuesTestError(null)
-                                      }}
-                                    >
-                                      <Text fontSize="xs">I completed the values test</Text>
-                                    </Checkbox>
-                                  </HStack>
+                                <VStack align="start" spacing={3} flex={1}>
+                                  <Text fontSize="xs" fontWeight="medium">
+                                    Paste your results links to verify your tests
+                                  </Text>
+                                  <FormControl>
+                                    <FormLabel fontSize="xs" mb={1}>
+                                      {TEST_RESULT_URL_RULES.personality.label}
+                                    </FormLabel>
+                                    <InputGroup size="sm">
+                                      <Input
+                                        type="url"
+                                        placeholder={TEST_RESULT_URL_RULES.personality.placeholder}
+                                        bg="white"
+                                        value={editedData.personalityTestResultUrl || ''}
+                                        onChange={(e) => {
+                                          const url = e.target.value
+                                          handleInputChange('personalityTestResultUrl', url)
+                                          handleInputChange(
+                                            'hasCompletedPersonalityTest',
+                                            validateTestResultUrl('personality', url).valid,
+                                          )
+                                          setPersonalityTestError(null)
+                                        }}
+                                      />
+                                      {validateTestResultUrl('personality', editedData.personalityTestResultUrl).valid && (
+                                        <InputRightElement>
+                                          <CheckCircle size={16} color="#047857" />
+                                        </InputRightElement>
+                                      )}
+                                    </InputGroup>
+                                  </FormControl>
+                                  <FormControl>
+                                    <FormLabel fontSize="xs" mb={1}>
+                                      {TEST_RESULT_URL_RULES.values.label}
+                                    </FormLabel>
+                                    <InputGroup size="sm">
+                                      <Input
+                                        type="url"
+                                        placeholder={TEST_RESULT_URL_RULES.values.placeholder}
+                                        bg="white"
+                                        value={editedData.valuesTestResultUrl || ''}
+                                        onChange={(e) => {
+                                          const url = e.target.value
+                                          handleInputChange('valuesTestResultUrl', url)
+                                          handleInputChange(
+                                            'hasCompletedValuesTest',
+                                            validateTestResultUrl('values', url).valid,
+                                          )
+                                          setValuesTestError(null)
+                                        }}
+                                      />
+                                      {validateTestResultUrl('values', editedData.valuesTestResultUrl).valid && (
+                                        <InputRightElement>
+                                          <CheckCircle size={16} color="#047857" />
+                                        </InputRightElement>
+                                      )}
+                                    </InputGroup>
+                                  </FormControl>
                                 </VStack>
                               </Alert>
                               {editedData.hasCompletedPersonalityTest && (

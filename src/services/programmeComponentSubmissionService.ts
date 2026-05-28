@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  getDoc,
   onSnapshot,
   query,
   serverTimestamp,
@@ -11,8 +12,17 @@ import {
   type QuerySnapshot,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
+import { awardChecklistPoints } from './pointsService'
+import { createInAppNotification } from './notificationService'
 
 export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical'
+
+// Pillar components are one-off, journey-long deliverables (not week-bound), so
+// we attribute the award to a fixed week. This keeps the ledger doc id stable
+// across re-approvals - combined with claimRef below it makes awarding fully
+// idempotent. See docs/points-system.md.
+const PILLAR_AWARD_WEEK = 1
 
 export type ProgrammeSubmissionStatus =
   | 'submitted'
@@ -181,4 +191,116 @@ export async function updateSubmissionReview(
     reviewedAt: serverTimestamp(),
     lastUpdatedAt: serverTimestamp(),
   })
+}
+
+/**
+ * Points a pillar component is worth, for display before approving. Pillar
+ * points live on the 6W journey config (capstone/case_study/practical).
+ */
+export function getComponentPoints(componentType: ProgrammeComponentType | null): number {
+  if (!componentType) return 0
+  return getActivityDefinitionById({ activityId: componentType, journeyType: '6W' })?.points ?? 0
+}
+
+export interface ApproveAndAwardResult {
+  awarded: boolean
+  /** Points the component is worth. */
+  points: number
+  /** True when an award already existed (idempotent re-approval, no new points). */
+  alreadyAwarded: boolean
+  /** False for components that are reviewed but don't award points (e.g. practical). */
+  pointsEligible: boolean
+}
+
+/**
+ * Mark a submission approved AND award the learner the component's points.
+ *
+ * Reuses the canonical partner-issued points path (awardChecklistPoints) so the
+ * ledger stays the single source of truth. `claimRef` is the componentId, which:
+ *  - keeps awarding idempotent per submission (re-approving never double-awards), and
+ *  - lets the two case studies (which share activityId "case_study") each award.
+ */
+export async function approveSubmissionAndAward(params: {
+  submission: ProgrammeComponentSubmission
+  reviewerId: string
+  reviewerName: string
+  partnerNotes: string | null
+  score: number | null
+}): Promise<ApproveAndAwardResult> {
+  const { submission, reviewerId, reviewerName, partnerNotes, score } = params
+
+  if (!submission.uid) throw new Error('Submission is missing the learner id.')
+  if (!submission.componentType) throw new Error('Submission is missing its component type.')
+
+  // Resolve the learner's journey so progress is attributed correctly; pillar
+  // components only exist on 6W, so fall back to 6W to resolve the points.
+  const profileSnap = await getDoc(doc(db, 'profiles', submission.uid))
+  const journeyType = ((profileSnap.exists()
+    ? (profileSnap.data() as { journeyType?: string }).journeyType
+    : null) || '6W') as JourneyType
+
+  const activity =
+    getActivityDefinitionById({ activityId: submission.componentType, journeyType }) ??
+    getActivityDefinitionById({ activityId: submission.componentType, journeyType: '6W' })
+
+  // Some pillar components are reviewed but don't award checklist points
+  // (e.g. practical). Record the partner's decision without awarding.
+  if (!activity) {
+    await updateSubmissionReview(submission.id, {
+      status: 'approved',
+      partnerNotes,
+      score,
+      reviewerId,
+      reviewerName,
+    })
+    return { awarded: false, points: 0, alreadyAwarded: false, pointsEligible: false }
+  }
+
+  const awardResult = await awardChecklistPoints({
+    uid: submission.uid,
+    journeyType,
+    weekNumber: PILLAR_AWARD_WEEK,
+    activity,
+    source: 'partner_issued',
+    claimRef: submission.componentId,
+  })
+
+  // Record the partner's decision either way (status/notes/score/reviewer).
+  await updateSubmissionReview(submission.id, {
+    status: 'approved',
+    partnerNotes,
+    score,
+    reviewerId,
+    reviewerName,
+  })
+
+  // Only notify the learner when points were actually new.
+  if (awardResult.awarded) {
+    try {
+      await createInAppNotification({
+        userId: submission.uid,
+        type: 'approval',
+        title: `🎉 +${activity.points.toLocaleString()} points awarded`,
+        message: `Your partner approved "${submission.componentTitle || activity.title}" and awarded you ${activity.points.toLocaleString()} points.`,
+        metadata: {
+          priority: 'push',
+          activityId: activity.id,
+          componentId: submission.componentId,
+          points: activity.points,
+          source: 'partner_issued',
+        },
+        relatedId: activity.id,
+      })
+    } catch (notifyErr) {
+      // Non-fatal: points + review already wrote successfully.
+      console.warn('[programmeComponentSubmissionService] learner notify failed', notifyErr)
+    }
+  }
+
+  return {
+    awarded: awardResult.awarded,
+    points: activity.points,
+    alreadyAwarded: !awardResult.awarded,
+    pointsEligible: true,
+  }
 }

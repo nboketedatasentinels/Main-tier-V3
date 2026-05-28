@@ -418,6 +418,43 @@ export const ActivityRow = ({
                 pt={1}
               >
                 <HStack spacing={2} flexWrap="wrap">
+                  {/* Quick action (e.g. "Register for webinar", "Find peer match")
+                      renders first - it's the preparatory step the learner takes
+                      before they can claim the primary action. */}
+                  {activity.quickActionLink &&
+                    (activity.quickActionLink.external ? (
+                      <Button
+                        as="a"
+                        href={activity.quickActionLink.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="sm"
+                        variant="outline"
+                        color="#350e6f"
+                        borderColor="#350e6f"
+                        _hover={{ bg: '#f7f3fb', color: '#350e6f', textDecoration: 'none' }}
+                        rightIcon={<Icon as={ExternalLink} boxSize={3.5} />}
+                        fontWeight="semibold"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {activity.quickActionLink.label}
+                      </Button>
+                    ) : (
+                      <Button
+                        as={RouterLink}
+                        to={activity.quickActionLink.href}
+                        size="sm"
+                        variant="outline"
+                        color="#350e6f"
+                        borderColor="#350e6f"
+                        _hover={{ bg: '#f7f3fb', color: '#350e6f', textDecoration: 'none' }}
+                        fontWeight="semibold"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {activity.quickActionLink.label}
+                      </Button>
+                    ))}
+
                   {!isExternalAiToolSubmission && awaitingPartnerIssue && (
                     <Button
                       as={RouterLink}
@@ -425,7 +462,7 @@ export const ActivityRow = ({
                       size="sm"
                       bg="#350e6f"
                       color="white"
-                      _hover={{ bg: '#27062e' }}
+                      _hover={{ bg: '#27062e', color: 'white', textDecoration: 'none' }}
                       rightIcon={<Icon as={ExternalLink} boxSize={3.5} />}
                       fontWeight="semibold"
                     >
@@ -472,36 +509,6 @@ export const ActivityRow = ({
                       {ctaLabel}
                     </Button>
                   )}
-
-                  {activity.quickActionLink &&
-                    (activity.quickActionLink.external ? (
-                      <Button
-                        as="a"
-                        href={activity.quickActionLink.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        size="sm"
-                        variant="ghost"
-                        color="#350e6f"
-                        rightIcon={<Icon as={ExternalLink} boxSize={3.5} />}
-                        fontWeight="semibold"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {activity.quickActionLink.label}
-                      </Button>
-                    ) : (
-                      <Button
-                        as={RouterLink}
-                        to={activity.quickActionLink.href}
-                        size="sm"
-                        variant="ghost"
-                        color="#350e6f"
-                        fontWeight="semibold"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {activity.quickActionLink.label}
-                      </Button>
-                    ))}
 
                   {awaitingPartnerIssue && (
                     <Button

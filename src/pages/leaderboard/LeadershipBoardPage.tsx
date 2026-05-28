@@ -87,7 +87,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
-import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
+import { useUserActivityHistory, type ActivityHistoryEntry } from '@/hooks/leaderboard/useUserActivityHistory'
+import { getActivityDefinitionById, resolveCanonicalActivityId, type JourneyType } from '@/config/pointsConfig'
 import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
@@ -135,6 +136,40 @@ const toDateFromTimeframe = (timeframe: LeaderboardTimeframe): Date | null => {
 const formatNumber = (value?: number | null) => {
   const safeValue = typeof value === 'number' && !Number.isNaN(value) ? value : 0
   return safeValue.toLocaleString(undefined, { maximumFractionDigits: 0 })
+}
+
+/**
+ * Word-wrap a label into lines that fit a given character budget, so treemap
+ * tiles show the full activity name across multiple lines instead of cutting
+ * it off with an ellipsis. Long single words are hard-broken as a last resort.
+ */
+const wrapLabel = (text: string, maxChars: number, maxLines: number): string[] => {
+  if (maxChars < 1 || maxLines < 1) return []
+  const lines: string[] = []
+  let current = ''
+  const flush = () => {
+    if (current) {
+      lines.push(current)
+      current = ''
+    }
+  }
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (lines.length >= maxLines) break
+    const candidate = current ? `${current} ${word}` : word
+    if (candidate.length <= maxChars) {
+      current = candidate
+      continue
+    }
+    flush()
+    let rest = word
+    while (rest.length > maxChars && lines.length < maxLines) {
+      lines.push(rest.slice(0, maxChars))
+      rest = rest.slice(maxChars)
+    }
+    current = rest
+  }
+  if (lines.length < maxLines) flush()
+  return lines.slice(0, maxLines)
 }
 
 export const LeadershipBoardPage: React.FC = () => {
@@ -257,17 +292,32 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
 
+  // Label each breakdown tile by the canonical activity type (e.g. "Impact Log
+  // Entry", "Attend Webinar", "Pillar Capstone") instead of the learner's
+  // free-text entry, which is often noise like "rfrffr". Falls back to the
+  // category so a tile is never an unlabeled string.
+  const journeyType = (profile?.journeyType ?? '6W') as JourneyType
+  const labelForEntry = useCallback(
+    (entry: ActivityHistoryEntry): string => {
+      if (entry.activityId?.startsWith('impact_')) return 'Impact Log Entry'
+      const canonical = resolveCanonicalActivityId(entry.activityId) ?? entry.activityId
+      const def = getActivityDefinitionById({ activityId: canonical, journeyType })
+      return def?.title || entry.category || 'Other activities'
+    },
+    [journeyType],
+  )
+
   const activityHistoryByTitle = useMemo(() => {
     const map: Record<string, typeof activityHistoryByCategory[string]> = {}
     Object.values(activityHistoryByCategory).forEach((entries) => {
       entries.forEach((entry) => {
-        const title = entry.activityTitle || 'Activity'
+        const title = labelForEntry(entry)
         if (!map[title]) map[title] = []
         map[title].push(entry)
       })
     })
     return map
-  }, [activityHistoryByCategory])
+  }, [activityHistoryByCategory, labelForEntry])
 
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
@@ -539,7 +589,7 @@ export const LeadershipBoardPage: React.FC = () => {
     Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
       entries.forEach((entry) => {
         if (entry.points <= 0) return
-        const title = entry.activityTitle || 'Activity'
+        const title = labelForEntry(entry)
         const existing = activityTotals.get(title)
         if (existing) {
           existing.points += entry.points
@@ -567,7 +617,7 @@ export const LeadershipBoardPage: React.FC = () => {
         percent: totalPoints > 0 ? Math.round((data.points / totalPoints) * 100) : 0,
       }))
       .sort((a, b) => b.value - a.value)
-  }, [activityHistoryByCategory, displayTotalPoints])
+  }, [activityHistoryByCategory, displayTotalPoints, labelForEntry])
 
   const percentileValue = leaderboardRows.length
     ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
@@ -1167,8 +1217,20 @@ export const LeadershipBoardPage: React.FC = () => {
                                       const percent = payload?.percent ?? props?.percent ?? 0
                                       const showLabel = width > 70 && height > 40
                                       const showValue = width > 90 && height > 60
-                                      const truncated =
-                                        name.length > 22 ? name.slice(0, 20) + '…' : name
+                                      const padding = 12
+                                      const labelFontSize = 13
+                                      const labelLineHeight = 16
+                                      // ~0.58em per char is a safe average for this weight/size.
+                                      const maxChars = Math.max(4, Math.floor((width - padding * 2) / (labelFontSize * 0.58)))
+                                      // Reserve room for value + percent when they're shown.
+                                      const reservedForValue = showValue ? 46 : 0
+                                      const maxTitleLines = Math.max(
+                                        1,
+                                        Math.floor((height - padding - reservedForValue) / labelLineHeight),
+                                      )
+                                      const labelLines = showLabel ? wrapLabel(name, maxChars, maxTitleLines) : []
+                                      const labelTop = y + 20
+                                      const valueY = labelTop + (labelLines.length - 1) * labelLineHeight + 24
                                       return (
                                         <g>
                                           <rect
@@ -1182,23 +1244,27 @@ export const LeadershipBoardPage: React.FC = () => {
                                             rx={6}
                                             ry={6}
                                           />
-                                          {showLabel && (
+                                          {labelLines.length > 0 && (
                                             <text
-                                              x={x + 12}
-                                              y={y + 22}
+                                              x={x + padding}
+                                              y={labelTop}
                                               fill="#fff"
-                                              fontSize={13}
+                                              fontSize={labelFontSize}
                                               fontWeight={600}
                                               style={{ pointerEvents: 'none' }}
                                             >
-                                              {truncated}
+                                              {labelLines.map((line, i) => (
+                                                <tspan key={i} x={x + padding} dy={i === 0 ? 0 : labelLineHeight}>
+                                                  {line}
+                                                </tspan>
+                                              ))}
                                             </text>
                                           )}
-                                          {showValue && (
+                                          {showValue && valueY + 18 <= y + height - 4 && (
                                             <>
                                               <text
-                                                x={x + 12}
-                                                y={y + 44}
+                                                x={x + padding}
+                                                y={valueY}
                                                 fill="rgba(255,255,255,0.85)"
                                                 fontSize={18}
                                                 fontWeight={700}
@@ -1207,8 +1273,8 @@ export const LeadershipBoardPage: React.FC = () => {
                                                 {formatNumber(value)}
                                               </text>
                                               <text
-                                                x={x + 12}
-                                                y={y + 62}
+                                                x={x + padding}
+                                                y={valueY + 18}
                                                 fill="rgba(255,255,255,0.7)"
                                                 fontSize={11}
                                                 fontWeight={500}

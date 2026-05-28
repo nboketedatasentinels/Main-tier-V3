@@ -205,11 +205,15 @@ const components = {
         color: 'white',
         _hover: {
           bg: 'brand.dark',
+          color: 'white',
+          textDecoration: 'none',
           transform: 'translateY(-1px)',
           boxShadow: 'lg',
         },
         _active: {
           bg: 'brand.dark',
+          color: 'white',
+          textDecoration: 'none',
           transform: 'translateY(0)',
         },
       },
@@ -584,7 +588,11 @@ const styles = {
       color: 'text.primary',
       fontFamily: 'heading',
     },
-    a: {
+    // Plain-text anchors get the link-style hover. Buttons rendered as anchors
+    // (`<Button as={RouterLink}>` / `as="a"`) carry the .chakra-button class and
+    // must keep their own color on hover - otherwise white button text turns
+    // brand.dark and becomes invisible against the dark purple background.
+    'a:not(.chakra-button)': {
       color: 'brand.primary',
       _hover: {
         color: 'brand.dark',

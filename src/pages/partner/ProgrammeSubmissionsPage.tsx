@@ -56,6 +56,8 @@ import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import {
   subscribeToSubmissionsByOrgIds,
   updateSubmissionReview,
+  approveSubmissionAndAward,
+  getComponentPoints,
   type ProgrammeComponentSubmission,
   type ProgrammeComponentType,
   type ProgrammeSubmissionStatus,
@@ -545,18 +547,45 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     setSaving(true)
     try {
       const scoreNum = score.trim() === '' ? null : Number(score)
-      await updateSubmissionReview(submission.id, {
-        status,
-        partnerNotes: notes.trim() === '' ? null : notes.trim(),
-        score: Number.isFinite(scoreNum as number) ? (scoreNum as number) : null,
-        reviewerId,
-        reviewerName,
-      })
-      onSaved({
-        status: 'success',
-        title: 'Review saved',
-        description: 'The learner will see your decision and feedback.',
-      })
+      const cleanScore = Number.isFinite(scoreNum as number) ? (scoreNum as number) : null
+      const cleanNotes = notes.trim() === '' ? null : notes.trim()
+
+      if (status === 'approved') {
+        // Approving awards the component's points to the learner (idempotent).
+        const result = await approveSubmissionAndAward({
+          submission,
+          reviewerId,
+          reviewerName,
+          partnerNotes: cleanNotes,
+          score: cleanScore,
+        })
+        onSaved({
+          status: 'success',
+          title: !result.pointsEligible
+            ? 'Approved'
+            : result.alreadyAwarded
+              ? 'Already awarded'
+              : `Approved · +${result.points.toLocaleString()} pts`,
+          description: !result.pointsEligible
+            ? 'Your review and feedback were saved. This component is reviewed but does not award points.'
+            : result.alreadyAwarded
+              ? 'This submission was already credited, so no new points were added. Your feedback was saved.'
+              : `${result.points.toLocaleString()} points were awarded to the learner and they have been notified.`,
+        })
+      } else {
+        await updateSubmissionReview(submission.id, {
+          status,
+          partnerNotes: cleanNotes,
+          score: cleanScore,
+          reviewerId,
+          reviewerName,
+        })
+        onSaved({
+          status: 'success',
+          title: 'Review saved',
+          description: 'The learner will see your decision and feedback.',
+        })
+      }
       onClose()
     } catch (err) {
       console.error('[ProgrammeSubmissions] save failed', err)
@@ -673,6 +702,40 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 <Text fontSize="sm" fontWeight="bold" color={PLUM}>
                   Your review
                 </Text>
+                {submission.componentType && (
+                  <HStack
+                    spacing={2}
+                    align="flex-start"
+                    p={2.5}
+                    bg="white"
+                    border="1px solid"
+                    borderColor="#e6dbef"
+                    rounded="md"
+                  >
+                    <Icon as={Award} boxSize={4} color={ROYAL} mt="1px" />
+                    {getComponentPoints(submission.componentType) > 0 ? (
+                      <Text fontSize="xs" color="gray.700">
+                        Setting status to{' '}
+                        <Text as="span" fontWeight="semibold">
+                          Approved
+                        </Text>{' '}
+                        awards{' '}
+                        <Text as="span" fontWeight="bold" color={PLUM}>
+                          {getComponentPoints(submission.componentType).toLocaleString()} pts
+                        </Text>{' '}
+                        to the learner. Re-approving won't award twice.
+                      </Text>
+                    ) : (
+                      <Text fontSize="xs" color="gray.700">
+                        This component is reviewed but{' '}
+                        <Text as="span" fontWeight="semibold">
+                          does not award points
+                        </Text>
+                        . Your status and feedback are saved for the learner.
+                      </Text>
+                    )}
+                  </HStack>
+                )}
                 <FormControl>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
                     Status

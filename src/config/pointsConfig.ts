@@ -36,7 +36,6 @@ export type ActivityId =
   // Pillar components (6W only; partner-issued - each pillar has one of each)
   | "capstone"
   | "case_study"
-  | "practical"
   // System activities
   | "referral_bonus"
   | "peer_session_confirmation"
@@ -283,17 +282,15 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "webinar_workbook",
     baseId: "webinar_workbook",
-    title: "Attend Webinar + Workbook",
-    description: "Attend a live webinar session and submit completed workbook.",
-    points: 4000,
+    title: "Attend Webinar",
+    description: "Attend a live webinar session.",
+    points: 2000,
     behaviorType: "window_limited",
-    approvalType: "partner_approved",
-    requiresApproval: true,
-    verification: "partner_approval",
+    approvalType: "partner_issued",
     week: 2,
     category: "Learning",
     flexibleWeeks: true,
-    frequencyNote: "Attend webinar and submit workbook for partner approval.",
+    frequencyNote: "Points are awarded by your partner after attendance is confirmed.",
   },
   {
     id: "peer_to_peer",
@@ -303,7 +300,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     points: 1000,
     behaviorType: "window_limited",
     approvalType: "self",
-    week: 4,
+    week: 1,
     category: "Networking",
     flexibleWeeks: true,
     frequencyNote: "One session per window.",
@@ -355,7 +352,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "book_club",
     title: "Attend Book Club Session",
     description: "Participate in a book club discussion session.",
-    points: 2500,
+    points: 1000,
     behaviorType: "window_limited",
     approvalType: "partner_issued",
     week: 4,
@@ -426,16 +423,16 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   },
 
   // ── Pillar components (6W only) - partner-issued ──
-  // Each pillar has exactly one of each: capstone (project), case study
-  // (analysis), practical (hands-on exercise). Partners award these via the
-  // Issue Activity page once the learner submits the deliverable.
-  // Points are placeholder defaults - adjust per real content.
+  // Each pillar has a capstone (project) and case studies (analysis). Partners
+  // award these via the Issue Activity page / submission review once the
+  // learner submits the deliverable. (Practical is a pillar deliverable that is
+  // reviewed but no longer awards checklist points - it's not defined here.)
   {
     id: "capstone",
     baseId: "capstone",
     title: "Pillar Capstone",
     description: "Synthesizing project that demonstrates mastery of your pillar.",
-    points: 10000,
+    points: 1500,
     behaviorType: "one_time",
     approvalType: "partner_issued",
     week: 1,
@@ -448,26 +445,13 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "case_study",
     title: "Pillar Case Study",
     description: "Analysis of a real-world scenario aligned to your pillar.",
-    points: 5000,
+    points: 1000,
     behaviorType: "one_time",
     approvalType: "partner_issued",
     week: 1,
     category: "Pillar",
     flexibleWeeks: true,
-    frequencyNote: "One case study per pillar.",
-  },
-  {
-    id: "practical",
-    baseId: "practical",
-    title: "Pillar Practical",
-    description: "Hands-on exercise that puts your pillar learning into practice.",
-    points: 3000,
-    behaviorType: "one_time",
-    approvalType: "partner_issued",
-    week: 1,
-    category: "Pillar",
-    flexibleWeeks: true,
-    frequencyNote: "One practical per pillar.",
+    frequencyNote: "Two case studies per pillar.",
   },
 ];
 
@@ -482,33 +466,35 @@ interface JourneyActivityEntry {
   activityId: ActivityId;
   totalFrequency: number;
   pointsOverride?: number;
+  /** Per-journey display name override (the base activity is unchanged elsewhere). */
+  titleOverride?: string;
+  /** Per-journey week placement; defaults to the base activity's week. */
+  weekOverride?: number;
 }
 
 const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[]>> = {
   "4W": [
     { activityId: "watch_podcast", totalFrequency: 3 },
-    { activityId: "webinar_workbook", totalFrequency: 1, pointsOverride: 3000 },
+    { activityId: "webinar_workbook", totalFrequency: 1 },
     { activityId: "impact_log", totalFrequency: 2 },
     { activityId: "lift_module", totalFrequency: 1, pointsOverride: 3000 },
-    { activityId: "book_club", totalFrequency: 1, pointsOverride: 1500 },
+    { activityId: "book_club", totalFrequency: 1 },
     { activityId: "shameless_circle", totalFrequency: 1, pointsOverride: 1500 },
     { activityId: "ai_tool_review", totalFrequency: 1 },
   ],
   "6W": [
-    { activityId: "podcast_workbook", totalFrequency: 6 },
-    { activityId: "weekly_session", totalFrequency: 6 },
-    { activityId: "webinar_workbook", totalFrequency: 1 },
-    { activityId: "peer_to_peer", totalFrequency: 3 },
+    { activityId: "podcast_workbook", totalFrequency: 3, pointsOverride: 1000 },
+    { activityId: "weekly_session", totalFrequency: 6, pointsOverride: 3000 },
+    { activityId: "webinar_workbook", totalFrequency: 1, pointsOverride: 4500 },
+    { activityId: "peer_to_peer", totalFrequency: 3, weekOverride: 1 },
     { activityId: "impact_log", totalFrequency: 4, pointsOverride: 2000 },
     { activityId: "lift_module", totalFrequency: 2, pointsOverride: 7000 },
     { activityId: "linkedin", totalFrequency: 3 },
-    { activityId: "book_club", totalFrequency: 1 },
-    { activityId: "peer_matching", totalFrequency: 3 },
-    { activityId: "challenger", totalFrequency: 3 },
-    // Pillar components - one of each per 6W journey
-    { activityId: "capstone", totalFrequency: 1 },
-    { activityId: "case_study", totalFrequency: 1 },
-    { activityId: "practical", totalFrequency: 1 },
+    { activityId: "peer_matching", totalFrequency: 3, pointsOverride: 500 },
+    { activityId: "challenger", totalFrequency: 3, pointsOverride: 500 },
+    // Pillar components - two capstones, two case studies per 6W journey.
+    { activityId: "capstone", totalFrequency: 2 },
+    { activityId: "case_study", totalFrequency: 2 },
   ],
   "3M": [
     { activityId: "podcast_workbook", totalFrequency: 9 },
@@ -562,7 +548,8 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 3750,
     windowTarget: 7500,
     passMarkPoints: 9000,
-    maxPossiblePoints: 15000,
+    // Recalculated after the webinar / book_club point reductions.
+    maxPossiblePoints: 13500,
     mode: "intro",
     timelineDisplay: "duration",
     completionThresholdPct: 60,
@@ -572,10 +559,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 7000,
     windowTarget: 14000,
     passMarkPoints: 40000,
-    // Bumped from 60_000 → 78_000 when pillar components (capstone +
-    // case study + practical, 18_000 pts total) were added. Pass mark
-    // unchanged so existing learners' completion logic is unaffected.
-    maxPossiblePoints: 78000,
+    // Sum of the 6W activity table (per-activity points x frequency):
+    // podcast 3x1000, weekly_session 6x3000, webinar 1x4500, peer_to_peer
+    // 3x1000, impact_log 4x2000, lift_module 2x7000, linkedin 3x500,
+    // peer_matching 3x500, challenger 3x500, capstone 2x1500, case_study
+    // 2x1000. Pass mark stays the same so existing learners' completion
+    // logic is unaffected.
+    maxPossiblePoints: 60000,
     mode: "full",
     timelineDisplay: "course-count",
     completionThresholdPct: 67,
@@ -585,7 +575,8 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 6250,
     windowTarget: 12500,
     passMarkPoints: 75000,
-    maxPossiblePoints: 113000,
+    // Recalculated after webinar (4000→2000) + book_club (2500→1000) cut.
+    maxPossiblePoints: 102500,
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 66,
@@ -593,13 +584,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
       {
         key: "without_mentor_and_ambassador",
         label: "No mentor + ambassador assigned",
-        maxPossiblePoints: 101000,
+        maxPossiblePoints: 90500,
         passMarkPoints: 67000,
       },
       {
         key: "without_mentor_or_ambassador",
         label: "No mentor or ambassador assigned",
-        maxPossiblePoints: 107000,
+        maxPossiblePoints: 96500,
         passMarkPoints: 71000,
       },
     ],
@@ -609,7 +600,8 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 6250,
     windowTarget: 12500,
     passMarkPoints: 150000,
-    maxPossiblePoints: 226000,
+    // Recalculated after webinar (4000→2000) + book_club (2500→1000) cut.
+    maxPossiblePoints: 205000,
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 66,
@@ -617,13 +609,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
       {
         key: "without_mentor_and_ambassador",
         label: "No mentor + ambassador assigned",
-        maxPossiblePoints: 202000,
+        maxPossiblePoints: 181000,
         passMarkPoints: 135000,
       },
       {
         key: "without_mentor_or_ambassador",
         label: "No mentor or ambassador assigned",
-        maxPossiblePoints: 214000,
+        maxPossiblePoints: 193000,
         passMarkPoints: 143000,
       },
     ],
@@ -633,7 +625,8 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 6300,
     windowTarget: 12600,
     passMarkPoints: 227000,
-    maxPossiblePoints: 339000,
+    // Recalculated after webinar (4000→2000) + book_club (2500→1000) cut.
+    maxPossiblePoints: 307500,
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 67,
@@ -641,13 +634,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
       {
         key: "without_mentor_and_ambassador",
         label: "No mentor + ambassador assigned",
-        maxPossiblePoints: 303000,
+        maxPossiblePoints: 271500,
         passMarkPoints: 203000,
       },
       {
         key: "without_mentor_or_ambassador",
         label: "No mentor or ambassador assigned",
-        maxPossiblePoints: 321000,
+        maxPossiblePoints: 289500,
         passMarkPoints: 215000,
       },
     ],
@@ -683,7 +676,7 @@ function buildActivityDef(
   return {
     id: base.id,
     baseId: base.baseId,
-    title: base.title,
+    title: entry.titleOverride ?? base.title,
     description: base.description,
     points,
     maxPerMonth: maxPerMonthApprox,
@@ -695,7 +688,7 @@ function buildActivityDef(
     approvalType: base.approvalType,
     requiresApproval: base.requiresApproval,
     isFreeTier: base.isFreeTier,
-    week: base.week,
+    week: entry.weekOverride ?? base.week,
     category: base.category,
     tags: base.tags,
     verification: base.verification,

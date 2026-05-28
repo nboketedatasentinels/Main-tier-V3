@@ -26,7 +26,6 @@ import {
   CheckCircle2,
   Clock,
   Fingerprint,
-  Sparkles,
   Star,
   Target,
   TrendingUp,
@@ -42,8 +41,6 @@ import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
-
-const CYCLE_LENGTH_DAYS = 14
 
 function isCorporateUser(profile: UserProfile | null | undefined) {
   const tier = profile?.transformationTier
@@ -69,14 +66,35 @@ interface PaceInfo {
   tone: 'green' | 'yellow' | 'red'
 }
 
-function computePace(earned: number, target: number, daysRemaining: number): PaceInfo {
-  if (target <= 0) {
-    return { label: 'Just starting', detail: 'Set a target to track pace', tone: 'yellow' }
+/**
+ * Pace measures the learner against their OWN journey timeline (not other
+ * learners): how much of the journey they've completed vs how far through the
+ * journey's weeks they are. It uses the SAME currentWeek/totalWeeks the page
+ * displays ("Week X of Y"), so pace can never contradict what's on screen.
+ *
+ *   timeProgress       = currentWeek / totalWeeks            (e.g. month 6 of 6 -> ~1.0)
+ *   expectedPointsNow  = timeProgress * journey max points
+ *   delta%             = earned / expectedPointsNow - 1
+ *
+ * Example: 25% of the max earned while 100% of the time has elapsed gives
+ * delta = 0.25 / 1.0 - 1 = -75% -> "Behind pace", as it should be.
+ */
+function computeJourneyPace(params: {
+  totalEarned: number
+  journeyMax: number
+  currentWeek: number
+  totalWeeks: number
+}): PaceInfo {
+  const { totalEarned, journeyMax, currentWeek, totalWeeks } = params
+
+  if (journeyMax <= 0 || totalWeeks <= 0 || currentWeek <= 0) {
+    return { label: 'Just starting', detail: 'Tracking begins once your journey starts', tone: 'yellow' }
   }
-  const daysElapsed = Math.max(1, CYCLE_LENGTH_DAYS - daysRemaining)
-  const expected = target * (daysElapsed / CYCLE_LENGTH_DAYS)
-  const delta = earned - expected
-  const deltaPct = expected > 0 ? Math.round((delta / expected) * 100) : 0
+
+  // Clamp to 1: being past the final week shouldn't inflate the expectation.
+  const timeProgress = Math.min(1, currentWeek / totalWeeks)
+  const expectedPointsNow = timeProgress * journeyMax
+  const deltaPct = expectedPointsNow > 0 ? Math.round((totalEarned / expectedPointsNow - 1) * 100) : 0
 
   if (deltaPct >= 5) {
     return { label: 'Ahead of pace', detail: `${Math.abs(deltaPct)}% above expected`, tone: 'green' }
@@ -84,7 +102,7 @@ function computePace(earned: number, target: number, daysRemaining: number): Pac
   if (deltaPct <= -10) {
     return { label: 'Behind pace', detail: `${Math.abs(deltaPct)}% below expected`, tone: 'red' }
   }
-  return { label: 'On track', detail: 'Pace matches plan', tone: 'green' }
+  return { label: 'On track', detail: 'Pace matches your journey timeline', tone: 'green' }
 }
 
 type KpiTheme = 'purple' | 'orange' | 'green' | 'yellow' | 'red' | 'blue'
@@ -318,13 +336,25 @@ export const WeeklyGlancePage = () => {
       }, 0),
     [data.ledgerEntries, cycleStartWeek, cycleEndWeek],
   )
-  const cycleProgress = cycleTarget > 0 ? Math.min(100, Math.round((cycleEarned / cycleTarget) * 100)) : 0
-  const remainingPoints = Math.max(cycleTarget - cycleEarned, 0)
-  const pace = computePace(cycleEarned, cycleTarget, daysRemaining)
-
-  const focusAreas = useMemo(
-    () => (data.focusAreas ?? []).slice(0, 4).map((focusArea) => focusArea.title),
-    [data.focusAreas]
+  // Progress is measured against the whole journey max (not the cycle target),
+  // summing all ledger points earned so far. See docs/points-system.md.
+  const journeyMax = profile?.journeyType
+    ? JOURNEY_META[profile.journeyType]?.maxPossiblePoints ?? 0
+    : 0
+  const totalEarned = useMemo(
+    () => (data.ledgerEntries ?? []).reduce((sum, entry) => sum + (entry.points ?? 0), 0),
+    [data.ledgerEntries],
+  )
+  const journeyProgress = journeyMax > 0 ? Math.min(100, Math.round((totalEarned / journeyMax) * 100)) : 0
+  const pace = useMemo(
+    () =>
+      computeJourneyPace({
+        totalEarned,
+        journeyMax,
+        currentWeek,
+        totalWeeks,
+      }),
+    [totalEarned, journeyMax, currentWeek, totalWeeks],
   )
 
   const recentActivity = useMemo(
@@ -653,7 +683,7 @@ export const WeeklyGlancePage = () => {
                     letterSpacing="wide"
                     color="gray.500"
                   >
-                    Cycle {cycleNumber} progress
+                    Journey progress
                   </Text>
                   <Text fontSize="sm" color="gray.500">
                     {journeyTiming?.weekLabel ?? 'Current cycle'}
@@ -686,7 +716,7 @@ export const WeeklyGlancePage = () => {
                       letterSpacing="-0.03em"
                       color="gray.900"
                     >
-                      {cycleProgress}%
+                      {journeyProgress}%
                     </Text>
                     <Text fontSize="md" color="gray.500" fontWeight="medium">
                       complete
@@ -694,152 +724,19 @@ export const WeeklyGlancePage = () => {
                   </Flex>
 
                   <Progress
-                    value={cycleProgress}
+                    value={journeyProgress}
                     size="sm"
                     rounded="full"
-                    colorScheme={cycleProgress >= 100 ? 'green' : 'purple'}
+                    colorScheme={journeyProgress >= 100 ? 'green' : 'purple'}
                     bg="gray.100"
                   />
-
-                  <Flex justify="space-between" fontSize="sm" color="gray.600">
-                    <Text>
-                      <Text as="span" fontWeight="semibold" color="gray.900">
-                        {cycleEarned.toLocaleString()}
-                      </Text>
-                      {' '}of {cycleTarget.toLocaleString()} pts
-                    </Text>
-                    <Text>
-                      {remainingPoints > 0 ? (
-                        <>
-                          <Text as="span" fontWeight="semibold" color="orange.600">
-                            {remainingPoints.toLocaleString()}
-                          </Text>
-                          {' '}to go
-                        </>
-                      ) : (
-                        <Text as="span" fontWeight="semibold" color="green.600">
-                          Cycle target reached
-                        </Text>
-                      )}
-                    </Text>
-                  </Flex>
                 </Stack>
               </Skeleton>
             </Stack>
         </Box>
 
-        {/* Two-column: Focus + Activity */}
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
-          <Box
-            bg="white"
-            p={6}
-            borderRadius="xl"
-            border="1px solid"
-            borderColor="gray.100"
-            boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-            _hover={{
-              transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(217, 119, 6, 0.15)',
-              borderColor: 'yellow.200',
-            }}
-            transition="all 0.3s ease"
-            position="relative"
-            overflow="hidden"
-            h="100%"
-          >
-            <Box
-              position="absolute"
-              top={0}
-              right={0}
-              w="60px"
-              h="60px"
-              bg="yellow.50"
-              borderRadius="0 0 0 100%"
-            />
-            <Stack spacing={5} h="100%">
-              <HStack spacing={3} align="center">
-                <Flex
-                  w={10}
-                  h={10}
-                  bg="linear-gradient(135deg, #d97706 0%, #b45309 100%)"
-                  borderRadius="xl"
-                  align="center"
-                  justify="center"
-                  boxShadow="0 4px 12px rgba(217, 119, 6, 0.3)"
-                  flexShrink={0}
-                >
-                  <Box as={Sparkles} w={5} h={5} color="white" />
-                </Flex>
-                <Text
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                  letterSpacing="wide"
-                  color="gray.500"
-                >
-                  Focus this cycle
-                </Text>
-              </HStack>
-
-                {data.loading.focus ? (
-                  <Skeleton h="120px" rounded="md" />
-                ) : focusAreas.length > 0 ? (
-                  <Stack spacing={2}>
-                    {focusAreas.map((area, idx) => (
-                      <Flex
-                        key={area}
-                        align="center"
-                        gap={3}
-                        p={3}
-                        bg="gray.50"
-                        rounded="md"
-                        borderWidth="1px"
-                        borderColor="gray.100"
-                      >
-                        <Box
-                          w={6}
-                          h={6}
-                          rounded="full"
-                          bg="brand.gold"
-                          color="brand.deepPlum"
-                          fontSize="xs"
-                          fontWeight="bold"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                          flexShrink={0}
-                        >
-                          {idx + 1}
-                        </Box>
-                        <Text fontSize="sm" fontWeight="medium" color="gray.800">
-                          {area}
-                        </Text>
-                      </Flex>
-                    ))}
-                  </Stack>
-                ) : (
-                  <Text fontSize="sm" color="gray.500">
-                    No focus areas set for this cycle yet.
-                  </Text>
-                )}
-
-                <Box flex={1} />
-
-                <Button
-                  variant="ghost"
-                  color="brand.primary"
-                  size="sm"
-                  alignSelf="flex-start"
-                  rightIcon={<Box as={ArrowUpRight} w={3.5} h={3.5} />}
-                  onClick={handleNavigateChecklist}
-                  px={0}
-                  _hover={{ bg: 'transparent', color: 'brand.dark' }}
-                >
-                  View this week's activities
-                </Button>
-            </Stack>
-          </Box>
-
+        {/* Recent activity */}
+        <SimpleGrid columns={1} spacing={6}>
           <Box
             bg="white"
             p={6}

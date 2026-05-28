@@ -28,6 +28,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  collection,
+  addDoc,
   serverTimestamp,
 } from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'
 
@@ -260,6 +262,40 @@ async function submit() {
       'success',
       isResubmission ? 'Resubmitted. Your partner will see the updated answers.' : 'Submitted. Your partner can now review.',
     )
+
+    // Notify the learner's partner so the submission lands in their review
+    // queue / notifications. admin_notifications is readable by partners +
+    // admins of the org (target_roles), and rules allow any signed-in user to
+    // create one. Non-fatal: the submission already saved if this fails.
+    if (organizationId) {
+      try {
+        const verb = isResubmission ? 'resubmitted' : 'submitted'
+        await addDoc(collection(firestore, 'admin_notifications'), {
+          type: 'system_event',
+          category: 'action_required',
+          title: 'New programme submission to review',
+          message: `${user.displayName || user.email || 'A learner'} ${verb} "${META.componentTitle || META.componentId}" for review.`,
+          severity: 'info',
+          target_roles: ['partner', 'super_admin'],
+          related_id: organizationId,
+          is_read: false,
+          metadata: {
+            kind: 'programme_submission',
+            submissionId,
+            uid: user.uid,
+            organizationId,
+            componentId: META.componentId,
+            componentType: META.componentType ?? null,
+            componentTitle: META.componentTitle ?? null,
+            pillar: META.pillar ?? null,
+            resubmission: isResubmission,
+          },
+          created_at: serverTimestamp(),
+        })
+      } catch (notifyErr) {
+        console.warn('[capstone-runtime] partner notification failed', notifyErr)
+      }
+    }
   } catch (err) {
     console.error('[capstone-runtime] save failed', err)
     showBanner('error', "We couldn't save your submission. Check your connection and try again.")

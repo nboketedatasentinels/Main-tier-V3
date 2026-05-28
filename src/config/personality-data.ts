@@ -64,6 +64,66 @@ export const COUNTRY_TIMEZONE_SUGGESTIONS: Record<string, string> = {
 
 export const COMMUNITY_REDIRECT_LINK = 'https://www.16personalities.com/personality-types';
 
+// ─── Test result link verification ──────────────────────────────────────────
+// We can't integrate with these third-party tests directly, so instead of a
+// "trust me" checkbox we require the learner to paste the shareable results
+// link from their completed test. The link is format-validated here and a
+// partner/admin can open it to confirm it matches the entered type/values.
+export type TestResultKind = 'personality' | 'values';
+
+export const TEST_RESULT_URL_RULES: Record<
+  TestResultKind,
+  { label: string; placeholder: string; hosts: string[]; help: string }
+> = {
+  personality: {
+    label: '16Personalities results link',
+    placeholder: 'https://www.16personalities.com/profiles/...',
+    hosts: ['16personalities.com'],
+    help: 'On your results page, use "Share" / "Copy link" and paste it here.',
+  },
+  values: {
+    label: 'Personal Values results link',
+    placeholder: 'https://personalvalu.es/...',
+    hosts: ['personalvalu.es'],
+    help: 'After ranking your values, copy the results link and paste it here.',
+  },
+};
+
+export const validateTestResultUrl = (
+  kind: TestResultKind,
+  rawUrl: string | undefined | null
+): { valid: boolean; error?: string } => {
+  const value = (rawUrl ?? '').trim();
+  if (!value) return { valid: false, error: 'Paste your results link to continue.' };
+
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    return { valid: false, error: 'Enter a full link starting with https://' };
+  }
+
+  if (parsed.protocol !== 'https:') {
+    return { valid: false, error: 'Link must start with https://' };
+  }
+
+  const host = parsed.hostname.replace(/^www\./, '');
+  const rule = TEST_RESULT_URL_RULES[kind];
+  const hostMatches = rule.hosts.some((h) => host === h || host.endsWith(`.${h}`));
+  if (!hostMatches) {
+    return { valid: false, error: `Link must be from ${rule.hosts.join(' or ')}.` };
+  }
+
+  // Reject a bare homepage URL so people can't paste the site root as "proof".
+  const path = parsed.pathname.replace(/\/+$/, '');
+  const hasResultDetail = path.length > 0 || parsed.search.length > 1 || parsed.hash.length > 1;
+  if (!hasResultDetail) {
+    return { valid: false, error: 'Paste the link to your results page, not the homepage.' };
+  }
+
+  return { valid: true };
+};
+
 export const getPersonalityDescription = (type: PersonalityType): string => {
   const descriptions: Record<PersonalityType, string> = {
     INTJ: "Strategic thinkers with a talent for planning and implementing complex solutions. You excel at seeing the big picture and creating systems.",

@@ -34,7 +34,7 @@ describe('pointsConfig module activities', () => {
 
     expect(JOURNEY_META['4W'].windowTarget).toBe(7500)
     expect(JOURNEY_META['4W'].passMarkPoints).toBe(9000)
-    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(15000)
+    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(13500)
 
     expect(byId.get('watch_podcast')?.points).toBe(1000)
     expect(byId.get('watch_podcast')?.activityPolicy?.maxTotal).toBe(3)
@@ -42,9 +42,9 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('impact_log')?.points).toBe(1000)
     expect(byId.get('impact_log')?.activityPolicy?.maxTotal).toBe(2)
 
-    expect(byId.get('webinar_workbook')?.points).toBe(3000)
+    expect(byId.get('webinar_workbook')?.points).toBe(2000)
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
-    expect(byId.get('book_club')?.points).toBe(1500)
+    expect(byId.get('book_club')?.points).toBe(1000)
     expect(byId.get('shameless_circle')?.points).toBe(1500)
     expect(byId.get('ai_tool_review')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('shameless_circle')?.activityPolicy?.maxTotal).toBe(1)
@@ -72,12 +72,12 @@ describe('pointsConfig module activities', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'without_mentor_and_ambassador',
-          maxPossiblePoints: 101000,
+          maxPossiblePoints: 90500,
           passMarkPoints: 67000,
         }),
         expect.objectContaining({
           key: 'without_mentor_or_ambassador',
-          maxPossiblePoints: 107000,
+          maxPossiblePoints: 96500,
           passMarkPoints: 71000,
         }),
       ]),
@@ -87,12 +87,12 @@ describe('pointsConfig module activities', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'without_mentor_and_ambassador',
-          maxPossiblePoints: 202000,
+          maxPossiblePoints: 181000,
           passMarkPoints: 135000,
         }),
         expect.objectContaining({
           key: 'without_mentor_or_ambassador',
-          maxPossiblePoints: 214000,
+          maxPossiblePoints: 193000,
           passMarkPoints: 143000,
         }),
       ]),
@@ -102,26 +102,25 @@ describe('pointsConfig module activities', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'without_mentor_and_ambassador',
-          maxPossiblePoints: 303000,
+          maxPossiblePoints: 271500,
           passMarkPoints: 203000,
         }),
         expect.objectContaining({
           key: 'without_mentor_or_ambassador',
-          maxPossiblePoints: 321000,
+          maxPossiblePoints: 289500,
           passMarkPoints: 215000,
         }),
       ]),
     )
   })
 
-  it('enforces single-claim book club rules for 6-week journey config', () => {
+  it('replaces book club with the 4500-point webinar in the 6-week journey config', () => {
     const activities = getActivitiesForJourney('6W')
-    const bookClub = activities.find((activity) => activity.id === 'book_club')
+    const byId = new Map(activities.map((activity) => [activity.id, activity]))
 
-    expect(bookClub).toBeTruthy()
-    expect(bookClub?.activityPolicy?.type).toBe('one_time')
-    expect(bookClub?.activityPolicy?.maxTotal).toBe(1)
-    expect(bookClub?.activityPolicy?.maxPerWindow).toBe(1)
+    expect(byId.get('book_club')).toBeUndefined()
+    expect(byId.get('webinar_workbook')?.points).toBe(4500)
+    expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
   })
 
   it('weekly session attendance is partner-issued (no learner proof flow)', () => {

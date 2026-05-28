@@ -30,6 +30,7 @@ import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { normalizeRole } from '@/utils/role'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
+import { getJourneyTiming } from '@/utils/weekCalculations'
 import { revokeChecklistPoints } from '@/services/pointsService'
 import { handleActivityCompletion } from '@/utils/activityRouter'
 import { triggerHaptic } from '@/utils/haptics'
@@ -116,6 +117,10 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
   challenger: {
     label: 'Challenge a Friend',
     href: '/app/peer-connect?tab=sessions',
+  },
+  webinar_workbook: {
+    label: 'Register for webinar',
+    href: '/app/events',
   },
 }
 
@@ -309,9 +314,18 @@ export function useWeeklyChecklistViewModel() {
         const meta = JOURNEY_META[journeyType]
         const journeyStartDate = orgCohortStartDate || profile.journeyStartDate || null
 
+        // Derive currentWeek from the journey start date (calendar-day-precise,
+        // clamped to programDurationWeeks). The legacy `profile.currentWeek`
+        // field can drift if the nightly job hasn't run; the start-date math
+        // is the single source of truth - if you joined today you're on
+        // Week 1, 7 days later Week 2, etc.
+        const timing = getJourneyTiming(journeyStartDate, meta.weeks)
+        const computedCurrentWeek =
+          timing?.currentWeek ?? profile.currentWeek ?? 1
+
         setJourney({
           journeyType,
-          currentWeek: profile.currentWeek || 1,
+          currentWeek: computedCurrentWeek,
           programDurationWeeks: meta.weeks,
           isPaid: !isFreeUser(profile),
           journeyStartDate,
@@ -319,7 +333,7 @@ export function useWeeklyChecklistViewModel() {
 
         const desiredWeek = deepLink.week
           ? Math.min(Math.max(1, deepLink.week), meta.weeks)
-          : (profile.currentWeek || 1)
+          : computedCurrentWeek
         setSelectedWeek(desiredWeek)
       } catch (e) {
         console.error(e)
@@ -347,6 +361,7 @@ export function useWeeklyChecklistViewModel() {
     totalCompletedAllTime: Record<string, number>
     lastCompletedWeekByActivity: Record<string, number>
     lastCompletedTimestamp: Record<string, number>
+    completedWeeksByActivity: Record<string, Set<number>>
   }>({
     weekCompleted: new Set(),
     weekCounts: {},
@@ -354,7 +369,16 @@ export function useWeeklyChecklistViewModel() {
     totalCompletedAllTime: {},
     lastCompletedWeekByActivity: {},
     lastCompletedTimestamp: {},
+    completedWeeksByActivity: {},
   })
+
+  // Per-week tracking of submissions awaiting partner approval. Built from a
+  // live listener on `points_verification_requests` (status='pending') so the
+  // checklist can show an "Awaiting approval" bucket and prevent double-submits
+  // for a week where a request is already in review.
+  const [pendingWeeksByActivity, setPendingWeeksByActivity] = useState<
+    Record<string, Set<number>>
+  >({})
   const [ledgerLoaded, setLedgerLoaded] = useState(false)
 
   useEffect(() => {
@@ -427,6 +451,7 @@ export function useWeeklyChecklistViewModel() {
     const unsubGlobal = onSnapshot(globalQ, snap => {
       const totalCompletedAllTime: Record<string, number> = {}
       const lastCompletedTimestamp: Record<string, number> = {}
+      const completedWeeksByActivity: Record<string, Set<number>> = {}
       snap.docs.forEach(d => {
         const row = d.data() as LedgerRow
         if (!row.activityId) return
@@ -437,11 +462,18 @@ export function useWeeklyChecklistViewModel() {
         if (ts > 0) {
           lastCompletedTimestamp[activityId] = Math.max(lastCompletedTimestamp[activityId] ?? 0, ts)
         }
+        const wk = Number(row.weekNumber ?? 0)
+        if (wk > 0) {
+          const set = completedWeeksByActivity[activityId] ?? new Set<number>()
+          set.add(wk)
+          completedWeeksByActivity[activityId] = set
+        }
       })
       setLedgerCache(prev => ({
         ...prev,
         totalCompletedAllTime,
         lastCompletedTimestamp,
+        completedWeeksByActivity,
       }))
     }, (e) => console.error('[ledgerCache] global listener failed', e))
 
@@ -451,6 +483,39 @@ export function useWeeklyChecklistViewModel() {
       unsubGlobal()
     }
   }, [selectedWeek, user])
+
+  // Live listener for all pending verification requests (across weeks).
+  // Used by the UI to surface the "Awaiting approval" bucket and to keep the
+  // To-do view from offering a re-submit on a week that already has one in
+  // review.
+  useEffect(() => {
+    if (!user) return
+    const q = query(
+      collection(db, 'points_verification_requests'),
+      where('user_id', '==', user.uid),
+      where('status', '==', 'pending'),
+    )
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const next: Record<string, Set<number>> = {}
+        snap.docs.forEach((d) => {
+          const row = d.data() as { activity_id?: string; week?: number }
+          if (!row.activity_id) return
+          const activityId =
+            resolveCanonicalActivityId(row.activity_id) ?? row.activity_id
+          const wk = Number(row.week ?? 0)
+          if (wk <= 0) return
+          const set = next[activityId] ?? new Set<number>()
+          set.add(wk)
+          next[activityId] = set
+        })
+        setPendingWeeksByActivity(next)
+      },
+      (e) => console.error('[pendingWeeks] listener failed', e),
+    )
+    return unsub
+  }, [user])
 
   /* ------------------------------------------------------------------ */
   /* Build activity state (fast, cached)                                  */
@@ -918,7 +983,7 @@ export function useWeeklyChecklistViewModel() {
   ])
 
   const markCompleted = useCallback(
-    async (activity: ActivityState | undefined) => {
+    async (activity: ActivityState | undefined, weekOverride?: number) => {
       if (!user || !journey) return
 
       if (!activity?.id) {
@@ -948,11 +1013,14 @@ export function useWeeklyChecklistViewModel() {
       activityMutationsRef.current.add(activity.id)
       setActivityMutationInFlight(activity.id, true)
 
+      const targetWeek =
+        typeof weekOverride === 'number' && weekOverride > 0 ? weekOverride : selectedWeek
+
       try {
         await handleActivityCompletion({
           uid: user.uid,
           journeyType: journey.journeyType,
-          weekNumber: selectedWeek,
+          weekNumber: targetWeek,
           activity,
           onProofRequired: (act) => openProofModal(act),
           onSuccess: async (status) => {
@@ -1238,6 +1306,8 @@ export function useWeeklyChecklistViewModel() {
     weeklyProgress,
     allWeeksProgress,
     leadershipAvailability,
+    completedWeeksByActivity: ledgerCache.completedWeeksByActivity,
+    pendingWeeksByActivity,
 
     // derived
     completedCount,

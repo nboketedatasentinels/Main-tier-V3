@@ -21,6 +21,9 @@ import {
   Checkbox,
   Flex,
   Icon,
+  Input,
+  InputGroup,
+  InputRightElement,
   Tooltip,
   useToast,
 } from '@chakra-ui/react';
@@ -36,6 +39,8 @@ import {
   COMMUNITY_REDIRECT_LINK,
   getPersonalityDescription,
   PersonalityType,
+  TEST_RESULT_URL_RULES,
+  validateTestResultUrl,
 } from '@/config/personality-data';
 import { COUNTRIES_DATA } from '@/constants/countries';
 
@@ -54,6 +59,8 @@ interface ExistingData {
   region?: string;
   hasCompletedPersonalityTest?: boolean;
   hasCompletedValuesTest?: boolean;
+  personalityTestResultUrl?: string;
+  valuesTestResultUrl?: string;
 }
 
 // --- HELPER COMPONENTS ---
@@ -86,8 +93,15 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
   const [region, setRegion] = useState('');
   const [hasCompletedPersonalityTest, setHasCompletedPersonalityTest] = useState(false);
   const [hasCompletedValuesTest, setHasCompletedValuesTest] = useState(false);
+  const [personalityResultUrl, setPersonalityResultUrl] = useState('');
+  const [valuesResultUrl, setValuesResultUrl] = useState('');
   const [personalityTestError, setPersonalityTestError] = useState<string | null>(null);
   const [valuesTestError, setValuesTestError] = useState<string | null>(null);
+
+  // Validity of the pasted results links. A valid link is what unlocks each
+  // section - it replaces the old "I completed this test" honor checkbox.
+  const personalityUrlCheck = validateTestResultUrl('personality', personalityResultUrl);
+  const valuesUrlCheck = validateTestResultUrl('values', valuesResultUrl);
 
   // UI state
   const [suggestedTimezone, setSuggestedTimezone] = useState('');
@@ -112,6 +126,8 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
     setRegion('');
     setHasCompletedPersonalityTest(false);
     setHasCompletedValuesTest(false);
+    setPersonalityResultUrl('');
+    setValuesResultUrl('');
     setPersonalityTestError(null);
     setValuesTestError(null);
     setError(null);
@@ -136,13 +152,15 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
           region: data.region || '',
           hasCompletedPersonalityTest: Boolean(data.hasCompletedPersonalityTest),
           hasCompletedValuesTest: Boolean(data.hasCompletedValuesTest),
+          personalityTestResultUrl: data.personalityTestResultUrl || '',
+          valuesTestResultUrl: data.valuesTestResultUrl || '',
         };
         setPersonalityType(currentData.personalityType);
         setCoreValues(currentData.coreValues);
         setCountry(currentData.country);
         setRegion(currentData.region);
-        setHasCompletedPersonalityTest(currentData.hasCompletedPersonalityTest);
-        setHasCompletedValuesTest(currentData.hasCompletedValuesTest);
+        setPersonalityResultUrl(currentData.personalityTestResultUrl);
+        setValuesResultUrl(currentData.valuesTestResultUrl);
         setExistingData(currentData);
       }
     } catch (err) {
@@ -213,6 +231,15 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
     }
   }, [hasCompletedValuesTest]);
 
+  // A valid results link is the gate that unlocks each section.
+  useEffect(() => {
+    setHasCompletedPersonalityTest(personalityUrlCheck.valid);
+  }, [personalityUrlCheck.valid]);
+
+  useEffect(() => {
+    setHasCompletedValuesTest(valuesUrlCheck.valid);
+  }, [valuesUrlCheck.valid]);
+
 
   const handleSubmit = async () => {
     setError(null);
@@ -223,14 +250,13 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
       setError("You must be logged in to save your profile.");
       return;
     }
-    if (!hasCompletedPersonalityTest || !hasCompletedValuesTest) {
-      if (!hasCompletedPersonalityTest) {
-        setPersonalityTestError("Please confirm you have taken the 16 Personalities test.");
+    if (!personalityUrlCheck.valid || !valuesUrlCheck.valid) {
+      if (!personalityUrlCheck.valid) {
+        setPersonalityTestError(personalityUrlCheck.error ?? 'Paste your 16Personalities results link.');
       }
-      if (!hasCompletedValuesTest) {
-        setValuesTestError("Please confirm you have taken the Personal Values test.");
+      if (!valuesUrlCheck.valid) {
+        setValuesTestError(valuesUrlCheck.error ?? 'Paste your Personal Values results link.');
       }
-      window.alert('Please confirm you have completed the required tests before saving.');
       return;
     }
     if (!personalityType) {
@@ -254,6 +280,8 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         region,
         hasCompletedPersonalityTest,
         hasCompletedValuesTest,
+        personalityTestResultUrl: personalityResultUrl.trim(),
+        valuesTestResultUrl: valuesResultUrl.trim(),
         updatedAt: Timestamp.now(),
       };
       await Promise.all([
@@ -349,15 +377,34 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
                         >
                           Take the test
                         </Button>
-                        <Checkbox
-                          isChecked={hasCompletedPersonalityTest}
-                          onChange={(e) => {
-                            setHasCompletedPersonalityTest(e.target.checked);
-                            setPersonalityTestError(null);
-                          }}
-                        >
-                          I have completed this test
-                        </Checkbox>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="medium" color="neutral-800" mb={1}>
+                            Paste your results link
+                          </Text>
+                          <InputGroup>
+                            <Input
+                              type="url"
+                              placeholder={TEST_RESULT_URL_RULES.personality.placeholder}
+                              value={personalityResultUrl}
+                              onChange={(e) => {
+                                setPersonalityResultUrl(e.target.value);
+                                setPersonalityTestError(null);
+                              }}
+                              borderColor={
+                                personalityResultUrl && !personalityUrlCheck.valid ? 'red.300' : 'blue.200'
+                              }
+                              focusBorderColor="blue.500"
+                            />
+                            {personalityUrlCheck.valid && (
+                              <InputRightElement>
+                                <Icon as={CheckCircle} color="success-600" />
+                              </InputRightElement>
+                            )}
+                          </InputGroup>
+                          <Text fontSize="xs" color="neutral-500" mt={1}>
+                            {TEST_RESULT_URL_RULES.personality.help}
+                          </Text>
+                        </Box>
                         {personalityTestError && (
                           <Text fontSize="sm" color="red.500">
                             {personalityTestError}
@@ -382,15 +429,34 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
                         >
                           Take the test
                         </Button>
-                        <Checkbox
-                          isChecked={hasCompletedValuesTest}
-                          onChange={(e) => {
-                            setHasCompletedValuesTest(e.target.checked);
-                            setValuesTestError(null);
-                          }}
-                        >
-                          I have completed this test
-                        </Checkbox>
+                        <Box>
+                          <Text fontSize="sm" fontWeight="medium" color="neutral-800" mb={1}>
+                            Paste your results link
+                          </Text>
+                          <InputGroup>
+                            <Input
+                              type="url"
+                              placeholder={TEST_RESULT_URL_RULES.values.placeholder}
+                              value={valuesResultUrl}
+                              onChange={(e) => {
+                                setValuesResultUrl(e.target.value);
+                                setValuesTestError(null);
+                              }}
+                              borderColor={
+                                valuesResultUrl && !valuesUrlCheck.valid ? 'red.300' : 'blue.200'
+                              }
+                              focusBorderColor="blue.500"
+                            />
+                            {valuesUrlCheck.valid && (
+                              <InputRightElement>
+                                <Icon as={CheckCircle} color="success-600" />
+                              </InputRightElement>
+                            )}
+                          </InputGroup>
+                          <Text fontSize="xs" color="neutral-500" mt={1}>
+                            {TEST_RESULT_URL_RULES.values.help}
+                          </Text>
+                        </Box>
                         {valuesTestError && (
                           <Text fontSize="sm" color="red.500">
                             {valuesTestError}
