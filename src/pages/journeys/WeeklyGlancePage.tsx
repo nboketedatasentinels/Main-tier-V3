@@ -9,6 +9,7 @@ import {
   Flex,
   Heading,
   HStack,
+  Input,
   Progress,
   SimpleGrid,
   Skeleton,
@@ -16,10 +17,14 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
-import { FirestoreError } from 'firebase/firestore'
+import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc, FirestoreError } from 'firebase/firestore'
+import { db } from '@/services/firebase'
+import { ORG_COLLECTION } from '@/constants/organizations'
+import { resolveJourneyType } from '@/utils/journeyType'
+import type { JourneyType } from '@/config/pointsConfig'
 import {
   ArrowUpRight,
   Calendar,
@@ -29,6 +34,7 @@ import {
   Star,
   Target,
   TrendingUp,
+  Upload,
   Users,
   type LucideIcon,
 } from 'lucide-react'
@@ -67,32 +73,38 @@ interface PaceInfo {
 }
 
 /**
- * Pace measures the learner against their OWN journey timeline (not other
- * learners): how much of the journey they've completed vs how far through the
- * journey's weeks they are. It uses the SAME currentWeek/totalWeeks the page
- * displays ("Week X of Y"), so pace can never contradict what's on screen.
+ * Pace measures the learner against a per-day linear target.
  *
- *   timeProgress       = currentWeek / totalWeeks            (e.g. month 6 of 6 -> ~1.0)
+ *   timeProgress       = daysElapsed / (totalWeeks * 7)
  *   expectedPointsNow  = timeProgress * journey max points
  *   delta%             = earned / expectedPointsNow - 1
  *
- * Example: 25% of the max earned while 100% of the time has elapsed gives
- * delta = 0.25 / 1.0 - 1 = -75% -> "Behind pace", as it should be.
+ * For a 6-week / 60,000-point journey the per-week ramp is:
+ *   end of week 1 -> 10,000   week 4 -> 40,000
+ *   end of week 2 -> 20,000   week 5 -> 50,000
+ *   end of week 3 -> 30,000   week 6 -> 60,000
+ *
+ * Days 0-1 fall back to a "Just starting" label so a brand-new learner is not
+ * flagged as 100% below pace on their first morning.
  */
 function computeJourneyPace(params: {
   totalEarned: number
   journeyMax: number
-  currentWeek: number
+  daysElapsed: number
   totalWeeks: number
 }): PaceInfo {
-  const { totalEarned, journeyMax, currentWeek, totalWeeks } = params
+  const { totalEarned, journeyMax, daysElapsed, totalWeeks } = params
+  const totalDays = totalWeeks * 7
 
-  if (journeyMax <= 0 || totalWeeks <= 0 || currentWeek <= 0) {
+  if (journeyMax <= 0 || totalDays <= 0) {
     return { label: 'Just starting', detail: 'Tracking begins once your journey starts', tone: 'yellow' }
   }
 
-  // Clamp to 1: being past the final week shouldn't inflate the expectation.
-  const timeProgress = Math.min(1, currentWeek / totalWeeks)
+  if (daysElapsed < 1) {
+    return { label: 'Just starting', detail: 'Pace tracking starts after day 1', tone: 'yellow' }
+  }
+
+  const timeProgress = Math.min(1, daysElapsed / totalDays)
   const expectedPointsNow = timeProgress * journeyMax
   const deltaPct = expectedPointsNow > 0 ? Math.round((totalEarned / expectedPointsNow - 1) * 100) : 0
 
@@ -293,6 +305,93 @@ const ActivityRow = ({ entry }: ActivityRowProps) => {
   )
 }
 
+interface ProofUploadSlotProps {
+  label: string
+  helper: string
+  resultsUrl?: string
+  urlPlaceholder: string
+  isSubmitting: boolean
+  onUrlSave: (url: string) => void
+}
+
+const ProofUploadSlot = ({
+  label,
+  helper,
+  resultsUrl,
+  urlPlaceholder,
+  isSubmitting,
+  onUrlSave,
+}: ProofUploadSlotProps) => {
+  const hasProof = Boolean(resultsUrl)
+  const [linkInput, setLinkInput] = useState(resultsUrl ?? '')
+  useEffect(() => {
+    setLinkInput(resultsUrl ?? '')
+  }, [resultsUrl])
+  return (
+    <Box
+      borderWidth="1px"
+      borderStyle="dashed"
+      borderColor={hasProof ? 'green.300' : 'gray.300'}
+      bg={hasProof ? 'green.50' : 'gray.50'}
+      borderRadius="md"
+      p={2}
+    >
+      <Stack spacing={1.5}>
+        <HStack spacing={2} align="center">
+          <Flex
+            w={6}
+            h={6}
+            borderRadius="sm"
+            bg={hasProof ? 'green.100' : 'white'}
+            borderWidth="1px"
+            borderColor={hasProof ? 'green.300' : 'gray.200'}
+            align="center"
+            justify="center"
+            flexShrink={0}
+          >
+            <Box
+              as={hasProof ? CheckCircle2 : Upload}
+              w={3}
+              h={3}
+              color={hasProof ? 'green.600' : 'gray.500'}
+            />
+          </Flex>
+          <Stack spacing={0} flex={1} minW={0}>
+            <Text fontSize="xs" fontWeight="semibold" color="gray.800" noOfLines={1}>
+              {label}
+            </Text>
+            <Text fontSize="2xs" color="gray.500" noOfLines={1}>
+              {hasProof ? 'Saved - update below' : helper}
+            </Text>
+          </Stack>
+        </HStack>
+        <HStack spacing={1.5}>
+          <Input
+            size="xs"
+            bg="white"
+            placeholder={urlPlaceholder}
+            value={linkInput}
+            onChange={(event) => setLinkInput(event.target.value)}
+            fontSize="2xs"
+          />
+          <Button
+            size="xs"
+            variant={hasProof ? 'outline' : 'solid'}
+            colorScheme={hasProof ? 'green' : 'purple'}
+            onClick={() => onUrlSave(linkInput)}
+            isLoading={isSubmitting}
+            isDisabled={isSubmitting || linkInput.trim() === (resultsUrl ?? '').trim()}
+            flexShrink={0}
+            fontSize="2xs"
+          >
+            {hasProof ? 'Update' : 'Save'}
+          </Button>
+        </HStack>
+      </Stack>
+    </Box>
+  )
+}
+
 export const WeeklyGlancePage = () => {
   const navigate = useNavigate()
   const toast = useToast()
@@ -305,56 +404,149 @@ export const WeeklyGlancePage = () => {
   const [isCreatingVillage, setIsCreatingVillage] = useState(false)
   const [villageError, setVillageError] = useState<string | undefined>()
 
+  const [orgCohortStartDate, setOrgCohortStartDate] = useState<string | null>(null)
+  const [orgJourneyType, setOrgJourneyType] = useState<JourneyType | null>(null)
+
+  const [submittingProof, setSubmittingProof] = useState<'personality' | 'values' | null>(null)
+  const [proofError, setProofError] = useState<string | null>(null)
+
+  const handleProofUrlSubmit = useCallback(
+    async (kind: 'personality' | 'values', rawUrl: string) => {
+      if (!profile?.id) {
+        setProofError('You need to be signed in to save a link.')
+        return
+      }
+      const trimmed = rawUrl.trim()
+      if (!trimmed) {
+        setProofError('Paste a link to save.')
+        return
+      }
+      let parsed: URL
+      try {
+        parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
+      } catch {
+        setProofError('That does not look like a valid link.')
+        return
+      }
+      const expectedHost = kind === 'personality' ? '16personalities.com' : 'personalvalu.es'
+      if (!parsed.host.endsWith(expectedHost)) {
+        setProofError(`Link should be from ${expectedHost}.`)
+        return
+      }
+      setProofError(null)
+      setSubmittingProof(kind)
+      const urlField = kind === 'personality' ? 'personalityTestResultUrl' : 'valuesTestResultUrl'
+      const completedFlag = kind === 'personality' ? 'hasCompletedPersonalityTest' : 'hasCompletedValuesTest'
+      try {
+        await updateDoc(doc(db, 'profiles', profile.id), {
+          [urlField]: parsed.toString(),
+          [completedFlag]: true,
+          updatedAt: new Date().toISOString(),
+        })
+      } catch (error) {
+        console.error('[WeeklyGlance] profile update on url save failed', error)
+        setProofError('Could not save the link. Please try again.')
+        setSubmittingProof(null)
+        return
+      }
+      void (async () => {
+        try {
+          if (!profile.companyId) return
+          const orgSnapshot = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
+          if (!orgSnapshot.exists()) return
+          const orgData = orgSnapshot.data() as Record<string, unknown>
+          const partnerId =
+            (orgData.transformation_partner_id as string | null | undefined) ||
+            (orgData.partnerId as string | null | undefined) ||
+            null
+          if (!partnerId) return
+          const learnerName = profile.firstName || profile.fullName || profile.email || 'A learner'
+          const testLabel = kind === 'personality' ? '16Personalities' : 'Personal Values'
+          await addDoc(collection(db, 'notifications'), {
+            user_id: partnerId,
+            type: 'engagement_alert',
+            title: `${learnerName} shared ${testLabel} results`,
+            message: `${learnerName} shared their ${testLabel} results link. Open it from their profile to verify.`,
+            metadata: {
+              learnerId: profile.id,
+              learnerName,
+              kind,
+              resultsUrl: parsed.toString(),
+            },
+            read: false,
+            created_at: serverTimestamp(),
+          })
+        } catch (notifyError) {
+          console.warn('[WeeklyGlance] partner notification failed (non-fatal)', notifyError)
+        }
+      })()
+      toast({
+        title: 'Link saved',
+        description: 'Your partner has been notified to verify your results.',
+        status: 'success',
+        duration: 3500,
+      })
+      setSubmittingProof(null)
+    },
+    [profile?.id, profile?.companyId, profile?.firstName, profile?.fullName, profile?.email, toast],
+  )
+
+  useEffect(() => {
+    if (!profile?.companyId) {
+      setOrgCohortStartDate(null)
+      setOrgJourneyType(null)
+      return
+    }
+    let cancelled = false
+    void getDoc(doc(db, ORG_COLLECTION, profile.companyId)).then((snap) => {
+      if (cancelled || !snap.exists()) return
+      const orgData = snap.data() as Record<string, unknown>
+      const raw = orgData.cohortStartDate
+      if (typeof raw === 'string') {
+        setOrgCohortStartDate(raw)
+      } else if (raw && typeof raw === 'object' && 'toDate' in raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
+        setOrgCohortStartDate((raw as { toDate: () => Date }).toDate().toISOString())
+      }
+      const resolved = resolveJourneyType(orgData) as JourneyType | undefined
+      if (resolved) setOrgJourneyType(resolved)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [profile?.companyId])
+
+  const effectiveJourneyType = (orgJourneyType ?? profile?.journeyType ?? '6W') as JourneyType
+  const effectiveStartDate = orgCohortStartDate ?? profile?.journeyStartDate ?? null
+  const effectiveDurationWeeks = JOURNEY_META[effectiveJourneyType]?.weeks ?? profile?.programDurationWeeks ?? 6
+
   const journeyTiming = useMemo(
-    () => getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6),
-    [profile?.journeyStartDate, profile?.programDurationWeeks]
+    () => getJourneyTiming(effectiveStartDate, effectiveDurationWeeks),
+    [effectiveStartDate, effectiveDurationWeeks]
   )
 
   const currentWeek = journeyTiming?.currentWeek ?? data.weekNumber
-  const totalWeeks = profile?.programDurationWeeks ?? 6
+  const totalWeeks = effectiveDurationWeeks
   const daysRemaining = journeyTiming?.daysRemaining ?? 0
   const cycleNumber = Math.ceil(currentWeek / 2)
   const totalCycles = Math.max(1, Math.ceil(totalWeeks / 2))
 
-  const targetPoints = data.weeklyPoints?.target_points ?? 0
-  const cycleTarget = profile?.journeyType
-    ? JOURNEY_META[profile.journeyType]?.windowTarget ?? targetPoints * 2
-    : targetPoints * 2
-
-  // Sum points from the canonical ledger for the two weeks in this cycle.
-  // profile.totalPoints can be stale (initialized to 0 at signup) so the
-  // ledger is the source of truth - see docs/points-system.md.
-  const cycleStartWeek = cycleNumber * 2 - 1
-  const cycleEndWeek = cycleNumber * 2
-  const cycleEarned = useMemo(
-    () =>
-      (data.ledgerEntries ?? []).reduce((sum, entry) => {
-        if (entry.weekNumber >= cycleStartWeek && entry.weekNumber <= cycleEndWeek) {
-          return sum + (entry.points ?? 0)
-        }
-        return sum
-      }, 0),
-    [data.ledgerEntries, cycleStartWeek, cycleEndWeek],
-  )
-  // Progress is measured against the whole journey max (not the cycle target),
-  // summing all ledger points earned so far. See docs/points-system.md.
-  const journeyMax = profile?.journeyType
-    ? JOURNEY_META[profile.journeyType]?.maxPossiblePoints ?? 0
-    : 0
+  const journeyMax = JOURNEY_META[effectiveJourneyType]?.maxPossiblePoints ?? 0
+  const passMark = JOURNEY_META[effectiveJourneyType]?.passMarkPoints ?? 0
   const totalEarned = useMemo(
     () => (data.ledgerEntries ?? []).reduce((sum, entry) => sum + (entry.points ?? 0), 0),
     [data.ledgerEntries],
   )
   const journeyProgress = journeyMax > 0 ? Math.min(100, Math.round((totalEarned / journeyMax) * 100)) : 0
+  const daysElapsed = journeyTiming?.totalDaysElapsed ?? 0
   const pace = useMemo(
     () =>
       computeJourneyPace({
         totalEarned,
         journeyMax,
-        currentWeek,
+        daysElapsed,
         totalWeeks,
       }),
-    [totalEarned, journeyMax, currentWeek, totalWeeks],
+    [totalEarned, journeyMax, daysElapsed, totalWeeks],
   )
 
   const recentActivity = useMemo(
@@ -549,57 +741,82 @@ export const WeeklyGlancePage = () => {
             borderLeftColor="brand.primary"
           >
             <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="purple.50" borderRadius="0 0 0 100%" />
-            <Flex
-              justify="space-between"
-              align={{ base: 'flex-start', md: 'center' }}
-              direction={{ base: 'column', md: 'row' }}
-              gap={4}
-              position="relative"
-              zIndex={1}
-            >
-              <HStack spacing={3} align="center">
-                <Flex
-                  w={10}
-                  h={10}
-                  bg="#350e6f"
-                  borderRadius="xl"
-                  align="center"
-                  justify="center"
-                  boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+            <Stack spacing={4} position="relative" zIndex={1}>
+              <Flex
+                justify="space-between"
+                align={{ base: 'flex-start', md: 'center' }}
+                direction={{ base: 'column', md: 'row' }}
+                gap={4}
+              >
+                <HStack spacing={3} align="center">
+                  <Flex
+                    w={10}
+                    h={10}
+                    bg="#350e6f"
+                    borderRadius="xl"
+                    align="center"
+                    justify="center"
+                    boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+                    flexShrink={0}
+                  >
+                    <Box as={Fingerprint} w={5} h={5} color="white" />
+                  </Flex>
+                  <Stack spacing={0}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      textTransform="uppercase"
+                      letterSpacing="wide"
+                      color="orange.600"
+                    >
+                      Action required
+                    </Text>
+                    <Heading size="sm" color="gray.900">
+                      Complete your personality profile
+                    </Heading>
+                    <Text fontSize="sm" color="gray.600" mt={0.5}>
+                      Upload proof of each test below, then click "Complete now" to fill in your results.
+                    </Text>
+                  </Stack>
+                </HStack>
+                <Button
+                  onClick={handleNavigateProfile}
+                  bg="brand.primary"
+                  color="white"
+                  _hover={{ bg: 'brand.dark' }}
+                  rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+                  size="md"
                   flexShrink={0}
                 >
-                  <Box as={Fingerprint} w={5} h={5} color="white" />
-                </Flex>
-                <Stack spacing={0}>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="semibold"
-                    textTransform="uppercase"
-                    letterSpacing="wide"
-                    color="orange.600"
-                  >
-                    Action required
-                  </Text>
-                  <Heading size="sm" color="gray.900">
-                    Complete your personality profile
-                  </Heading>
-                  <Text fontSize="sm" color="gray.600" mt={0.5}>
-                    Takes 12 minutes. Unlocks personalised matches and recommendations.
-                  </Text>
-                </Stack>
-              </HStack>
-              <Button
-                onClick={handleNavigateProfile}
-                bg="brand.primary"
-                color="white"
-                _hover={{ bg: 'brand.dark' }}
-                rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-                size="md"
-                flexShrink={0}
-              >
-                Complete now
-              </Button>
-            </Flex>
+                  Complete now
+                </Button>
+              </Flex>
+
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                <ProofUploadSlot
+                  label="16Personalities result"
+                  helper="Paste your shareable results link"
+                  resultsUrl={profile?.personalityTestResultUrl}
+                  urlPlaceholder="https://www.16personalities.com/profiles/..."
+                  isSubmitting={submittingProof === 'personality'}
+                  onUrlSave={(url) => void handleProofUrlSubmit('personality', url)}
+                />
+                <ProofUploadSlot
+                  label="Personal Values result"
+                  helper="Paste your shareable results link"
+                  resultsUrl={profile?.valuesTestResultUrl}
+                  urlPlaceholder="https://personalvalu.es/..."
+                  isSubmitting={submittingProof === 'values'}
+                  onUrlSave={(url) => void handleProofUrlSubmit('values', url)}
+                />
+              </SimpleGrid>
+
+              {proofError && (
+                <Text fontSize="xs" color="red.500">
+                  {proofError}
+                </Text>
+              )}
+            </Stack>
           </Box>
         )}
 
@@ -608,8 +825,8 @@ export const WeeklyGlancePage = () => {
           <Skeleton isLoaded={!data.loading.points} rounded="xl">
             <KpiTile
               label="Points earned"
-              value={cycleEarned.toLocaleString()}
-              sub={`of ${cycleTarget.toLocaleString()} cycle target`}
+              value={totalEarned.toLocaleString()}
+              sub={`of ${passMark.toLocaleString()} pass mark`}
               icon={Star}
               theme="purple"
             />
@@ -686,7 +903,7 @@ export const WeeklyGlancePage = () => {
                     Journey progress
                   </Text>
                   <Text fontSize="sm" color="gray.500">
-                    {journeyTiming?.weekLabel ?? 'Current cycle'}
+                    Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}
                   </Text>
                 </Stack>
               </HStack>

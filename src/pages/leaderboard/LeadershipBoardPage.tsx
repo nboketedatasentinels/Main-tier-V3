@@ -87,8 +87,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { useLeaderboardMetrics } from '@/hooks/leaderboard/useLeaderboardMetrics'
-import { useUserActivityHistory, type ActivityHistoryEntry } from '@/hooks/leaderboard/useUserActivityHistory'
-import { getActivityDefinitionById, resolveCanonicalActivityId, type JourneyType } from '@/config/pointsConfig'
+import { useUserActivityHistory } from '@/hooks/leaderboard/useUserActivityHistory'
 import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
@@ -292,32 +291,27 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
 
-  // Label each breakdown tile by the canonical activity type (e.g. "Impact Log
-  // Entry", "Attend Webinar", "Pillar Capstone") instead of the learner's
-  // free-text entry, which is often noise like "rfrffr". Falls back to the
-  // category so a tile is never an unlabeled string.
-  const journeyType = (profile?.journeyType ?? '6W') as JourneyType
-  const labelForEntry = useCallback(
-    (entry: ActivityHistoryEntry): string => {
-      if (entry.activityId?.startsWith('impact_')) return 'Impact Log Entry'
-      const canonical = resolveCanonicalActivityId(entry.activityId) ?? entry.activityId
-      const def = getActivityDefinitionById({ activityId: canonical, journeyType })
-      return def?.title || entry.category || 'Other activities'
-    },
-    [journeyType],
-  )
-
   const activityHistoryByTitle = useMemo(() => {
+    const normalizeCategory = (raw: string): string => {
+      const v = (raw || '').trim()
+      if (!v) return 'Other'
+      const lower = v.toLowerCase()
+      if (lower === 'esg impact' || lower === 'business impact' || lower === 'impact') return 'Impact Logs'
+      if (lower === 'networking') return 'Peer Sessions'
+      if (lower === 'learning') return 'Courses & Podcasts'
+      if (lower === 'community') return 'Group Sessions'
+      return v
+    }
     const map: Record<string, typeof activityHistoryByCategory[string]> = {}
-    Object.values(activityHistoryByCategory).forEach((entries) => {
+    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
       entries.forEach((entry) => {
-        const title = labelForEntry(entry)
-        if (!map[title]) map[title] = []
-        map[title].push(entry)
+        const key = normalizeCategory(entry.category || category)
+        if (!map[key]) map[key] = []
+        map[key].push(entry)
       })
     })
     return map
-  }, [activityHistoryByCategory, labelForEntry])
+  }, [activityHistoryByCategory])
 
 
   const pointsPulseStyle = pointsPulse ? 'pointsPulse 1.2s ease-in-out' : 'none'
@@ -563,7 +557,6 @@ export const LeadershipBoardPage: React.FC = () => {
   const {
     leaderboardRows,
     userRow,
-    percentile,
     segmentSize,
     cohortStats,
     segmentStats,
@@ -583,46 +576,45 @@ export const LeadershipBoardPage: React.FC = () => {
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
 
   const userBreakdown = useMemo(() => {
-    const activityTotals = new Map<string, { points: number; category: string }>()
+    const normalizeCategory = (raw: string): string => {
+      const v = (raw || '').trim()
+      if (!v) return 'Other'
+      const lower = v.toLowerCase()
+      if (lower === 'esg impact' || lower === 'business impact' || lower === 'impact') return 'Impact Logs'
+      if (lower === 'networking') return 'Peer Sessions'
+      if (lower === 'learning') return 'Courses & Podcasts'
+      if (lower === 'community') return 'Group Sessions'
+      return v
+    }
+
+    const categoryTotals = new Map<string, number>()
     let totalPoints = 0
 
     Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
       entries.forEach((entry) => {
         if (entry.points <= 0) return
-        const title = labelForEntry(entry)
-        const existing = activityTotals.get(title)
-        if (existing) {
-          existing.points += entry.points
-        } else {
-          activityTotals.set(title, { points: entry.points, category })
-        }
+        const name = normalizeCategory(entry.category || category)
+        categoryTotals.set(name, (categoryTotals.get(name) ?? 0) + entry.points)
         totalPoints += entry.points
       })
     })
 
     if (displayTotalPoints > totalPoints) {
       const unaccounted = displayTotalPoints - totalPoints
-      activityTotals.set('Other activities', {
-        points: unaccounted,
-        category: 'Uncategorized',
-      })
+      categoryTotals.set('Other', (categoryTotals.get('Other') ?? 0) + unaccounted)
       totalPoints = displayTotalPoints
     }
 
-    return Array.from(activityTotals.entries())
-      .map(([name, data]) => ({
+    return Array.from(categoryTotals.entries())
+      .map(([name, points]) => ({
         name,
-        value: data.points,
-        category: data.category,
-        percent: totalPoints > 0 ? Math.round((data.points / totalPoints) * 100) : 0,
+        value: points,
+        category: name,
+        percent: totalPoints > 0 ? Math.round((points / totalPoints) * 100) : 0,
       }))
       .sort((a, b) => b.value - a.value)
-  }, [activityHistoryByCategory, displayTotalPoints, labelForEntry])
+  }, [activityHistoryByCategory, displayTotalPoints])
 
-  const percentileValue = leaderboardRows.length
-    ? Math.round(((userRow?.rank ?? leaderboardRows.length) / leaderboardRows.length) * 100)
-    : 100
-  const aheadPercent = Math.max(0, 100 - percentileValue)
   const profileRouteBase = profile?.role === UserRole.SUPER_ADMIN
     ? '/admin/user'
     : profile?.role === UserRole.PARTNER
@@ -1156,17 +1148,10 @@ export const LeadershipBoardPage: React.FC = () => {
                           <Text fontSize="lg" fontWeight="bold" color="gray.800" mb={3}>
                             Your Rank Right Now
                           </Text>
-                          <HStack spacing={3}>
-                            <Box fontSize="2xl">{getRankIcon(userRow?.rank || leaderboardRows.length || 1)}</Box>
-                            <Text fontSize="4xl" fontWeight="bold" color="gray.800">
-                              {userRow?.rank || '-'}
-                            </Text>
-                          </HStack>
-                          <Text color="gray.600" mt={2} fontSize="sm">
-                            You're ahead of {aheadPercent}% of {(segmentLabel ?? 'segment').toLowerCase()} members.
+                          <Text fontSize="4xl" fontWeight="bold" color="gray.800">
+                            #{userRow?.rank || '-'} out of {leaderboardRows.length || '-'}
                           </Text>
                           <HStack spacing={2} mt={3} flexWrap="wrap">
-                            <Badge bg="purple.100" color="purple.700" borderRadius="full">{percentile}</Badge>
                             <Badge bg="gray.100" color="gray.600" borderRadius="full">{segmentScopeText}</Badge>
                           </HStack>
                         </Box>
@@ -1202,7 +1187,11 @@ export const LeadershipBoardPage: React.FC = () => {
                                   <Treemap
                                     data={userBreakdown.map((entry, index) => ({
                                       name: entry.name,
-                                      size: entry.value,
+                                      // Compress size so small categories aren't squished. The
+                                      // value/percent shown inside each tile still uses the real
+                                      // number, so the data is accurate even if the area is softened.
+                                      size: Math.sqrt(Math.max(1, entry.value)),
+                                      displayValue: entry.value,
                                       percent: entry.percent,
                                       fill: pointsColors[index % pointsColors.length],
                                     }))}
@@ -1213,24 +1202,27 @@ export const LeadershipBoardPage: React.FC = () => {
                                     content={((props: any) => {
                                       const { x = 0, y = 0, width = 0, height = 0, name = '', payload } = props ?? {}
                                       const fill = payload?.fill ?? props?.fill ?? '#350e6f'
-                                      const value = payload?.size ?? props?.size ?? 0
+                                      const value = payload?.displayValue ?? props?.displayValue ?? 0
                                       const percent = payload?.percent ?? props?.percent ?? 0
-                                      const showLabel = width > 70 && height > 40
-                                      const showValue = width > 90 && height > 60
-                                      const padding = 12
-                                      const labelFontSize = 13
-                                      const labelLineHeight = 16
+                                      const isNarrow = width < 90
+                                      const padding = isNarrow ? 8 : 12
+                                      const labelFontSize = isNarrow ? 11 : 13
+                                      const labelLineHeight = isNarrow ? 13 : 16
+                                      const valueFontSize = isNarrow ? 14 : 18
+                                      const percentFontSize = isNarrow ? 10 : 11
+                                      const showLabel = width > 36 && height > 28
+                                      const showValue = width > 44 && height > 60
                                       // ~0.58em per char is a safe average for this weight/size.
                                       const maxChars = Math.max(4, Math.floor((width - padding * 2) / (labelFontSize * 0.58)))
                                       // Reserve room for value + percent when they're shown.
-                                      const reservedForValue = showValue ? 46 : 0
+                                      const reservedForValue = showValue ? valueFontSize + percentFontSize + 12 : 0
                                       const maxTitleLines = Math.max(
                                         1,
                                         Math.floor((height - padding - reservedForValue) / labelLineHeight),
                                       )
                                       const labelLines = showLabel ? wrapLabel(name, maxChars, maxTitleLines) : []
-                                      const labelTop = y + 20
-                                      const valueY = labelTop + (labelLines.length - 1) * labelLineHeight + 24
+                                      const labelTop = y + padding + labelFontSize
+                                      const valueY = labelTop + (labelLines.length - 1) * labelLineHeight + valueFontSize + 6
                                       return (
                                         <g>
                                           <rect
@@ -1260,13 +1252,13 @@ export const LeadershipBoardPage: React.FC = () => {
                                               ))}
                                             </text>
                                           )}
-                                          {showValue && valueY + 18 <= y + height - 4 && (
+                                          {showValue && valueY + valueFontSize <= y + height - 4 && (
                                             <>
                                               <text
                                                 x={x + padding}
                                                 y={valueY}
                                                 fill="rgba(255,255,255,0.85)"
-                                                fontSize={18}
+                                                fontSize={valueFontSize}
                                                 fontWeight={700}
                                                 style={{ pointerEvents: 'none' }}
                                               >
@@ -1274,9 +1266,9 @@ export const LeadershipBoardPage: React.FC = () => {
                                               </text>
                                               <text
                                                 x={x + padding}
-                                                y={valueY + 18}
+                                                y={valueY + valueFontSize + 2}
                                                 fill="rgba(255,255,255,0.7)"
-                                                fontSize={11}
+                                                fontSize={percentFontSize}
                                                 fontWeight={500}
                                                 style={{ pointerEvents: 'none' }}
                                               >
@@ -1293,7 +1285,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                         if (!active || !payload?.length) return null
                                         const node = payload[0].payload as {
                                           name: string
-                                          size: number
+                                          displayValue: number
                                           percent: number
                                         }
                                         const entries = activityHistoryByTitle[node.name] || []
@@ -1301,7 +1293,7 @@ export const LeadershipBoardPage: React.FC = () => {
                                           <Box bg="white" color="gray.800" p={3} borderRadius="md" fontSize="xs" maxW="260px" boxShadow="lg" border="1px solid" borderColor="gray.100">
                                             <Text fontWeight="bold" mb={1} color="gray.800">{node.name}</Text>
                                             <Text color="gray.500" mb={2}>
-                                              {formatNumber(node.size)} pts · {node.percent}% of active
+                                              {formatNumber(node.displayValue)} pts · {node.percent}% of active
                                             </Text>
                                             {activityHistoryLoading ? (
                                               <Text color="gray.500">Loading...</Text>

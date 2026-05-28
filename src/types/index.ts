@@ -123,6 +123,10 @@ export interface UserProfile {
   coreValues?: string[]
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
+  personalityTestResultUrl?: string
+  valuesTestResultUrl?: string
+  personalityTestProofUrl?: string
+  valuesTestProofUrl?: string
   privacySettings?: PrivacySettings
   leaderboardVisibility?: 'public' | 'company' | 'private'
 

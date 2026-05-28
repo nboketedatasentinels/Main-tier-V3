@@ -138,18 +138,19 @@ export const useLeaderboardMetrics = ({
         context,
       }))
       .map((user) => {
+        // Rank from the live transaction sum so the cached profile.totalPoints
+        // can never poison the order. Fall back to the cached field only when
+        // no transactions have been observed yet.
+        const ledgerTotal = aggregatedPoints[user.id] ?? user.totalPoints ?? 0
         const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME
-          ? user.totalPoints
+          ? ledgerTotal
           : aggregatedPoints[user.id] || 0
-        const badgeCount = Math.max(
-          1,
-          Math.round((timeframe === LeaderboardTimeframe.ALL_TIME ? user.totalPoints : activePoints) / 500),
-        )
+        const badgeCount = Math.max(1, Math.round(activePoints / 500))
 
         return {
           user,
           activePoints,
-          totalPoints: user.totalPoints || 0,
+          totalPoints: ledgerTotal,
           badgeCount,
           rank: 0,
         }

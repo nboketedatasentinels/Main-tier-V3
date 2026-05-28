@@ -430,7 +430,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "capstone",
     baseId: "capstone",
-    title: "Pillar Capstone",
+    title: "Capstone",
     description: "Synthesizing project that demonstrates mastery of your pillar.",
     points: 1500,
     behaviorType: "one_time",
@@ -443,7 +443,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "case_study",
     baseId: "case_study",
-    title: "Pillar Case Study",
+    title: "Case Study",
     description: "Analysis of a real-world scenario aligned to your pillar.",
     points: 1000,
     behaviorType: "one_time",
@@ -481,6 +481,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "book_club", totalFrequency: 1 },
     { activityId: "shameless_circle", totalFrequency: 1, pointsOverride: 1500 },
     { activityId: "ai_tool_review", totalFrequency: 1 },
+    { activityId: "peer_to_peer", totalFrequency: 3, weekOverride: 1 },
   ],
   "6W": [
     { activityId: "podcast_workbook", totalFrequency: 3, pointsOverride: 1000 },
@@ -548,8 +549,7 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 3750,
     windowTarget: 7500,
     passMarkPoints: 9000,
-    // Recalculated after the webinar / book_club point reductions.
-    maxPossiblePoints: 13500,
+    maxPossiblePoints: 16500,
     mode: "intro",
     timelineDisplay: "duration",
     completionThresholdPct: 60,

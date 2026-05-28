@@ -205,7 +205,7 @@ export const ActivityList = ({
 
       if (!isRecurring) {
         // One-time activities (policy type 'one_time'). Cap is usually 1, but
-        // some - like Pillar Case Study - allow a small number of claims
+        // some - like Case Study - allow a small number of claims
         // (maxTotal > 1). Use the ledger count vs the cap to decide "fully
         // done", NOT the per-selectedWeek `status === 'completed'` flag (which
         // would prematurely move a half-done multi-claim activity to Done).

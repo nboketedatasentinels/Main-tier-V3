@@ -34,7 +34,7 @@ describe('pointsConfig module activities', () => {
 
     expect(JOURNEY_META['4W'].windowTarget).toBe(7500)
     expect(JOURNEY_META['4W'].passMarkPoints).toBe(9000)
-    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(13500)
+    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(16500)
 
     expect(byId.get('watch_podcast')?.points).toBe(1000)
     expect(byId.get('watch_podcast')?.activityPolicy?.maxTotal).toBe(3)

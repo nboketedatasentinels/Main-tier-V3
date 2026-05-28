@@ -10,11 +10,7 @@ import {
 } from '@chakra-ui/react'
 import { addDays, differenceInDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
-import {
-  MONTH_BASED_JOURNEYS,
-  JOURNEY_MONTH_COUNTS,
-} from '@/utils/journeyType'
-import { JOURNEY_META, getMonthNumber } from '@/config/pointsConfig'
+import { JOURNEY_META } from '@/config/pointsConfig'
 import { calculatePassMark } from '@/utils/completion'
 import type { WeeklyProgress } from '@/types'
 import type { JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
@@ -45,49 +41,12 @@ export const JourneyHeader = ({
     return addDays(new Date(), -(offsetWeeks * 7))
   }, [journey, profile])
 
-  // Dynamically calculate current week and day from journeyStartDate
-  // 37 days = 5 weeks + 2 days (not Week 6, Day 3)
-  const { calculatedCurrentWeek, weekDayLabel } = useMemo(() => {
-    if (!journeyStartDate || !journey) {
-      const fallbackWeek = journey?.currentWeek ?? 1
-      return { calculatedCurrentWeek: fallbackWeek, weekDayLabel: `Week ${fallbackWeek}` }
-    }
+  const calculatedCurrentWeek = useMemo(() => {
+    if (!journeyStartDate || !journey) return journey?.currentWeek ?? 1
     const daysSinceStart = differenceInDays(new Date(), journeyStartDate)
     const weeks = Math.floor(daysSinceStart / 7)
-    const days = daysSinceStart % 7
-
-    // For internal week tracking, use weeks + 1 (we're "in" the next week)
-    const currentWeekForTracking = Math.max(1, Math.min(journey.programDurationWeeks, weeks + 1))
-
-    // For display: "X weeks, Y days" format
-    let label: string
-    if (daysSinceStart >= journey.programDurationWeeks * 7) {
-      label = `${journey.programDurationWeeks} weeks`
-    } else if (weeks === 0) {
-      label = `${days} day${days === 1 ? '' : 's'}`
-    } else if (days === 0) {
-      label = `${weeks} week${weeks === 1 ? '' : 's'}`
-    } else {
-      label = `${weeks} week${weeks === 1 ? '' : 's'}, ${days} day${days === 1 ? '' : 's'}`
-    }
-
-    return { calculatedCurrentWeek: currentWeekForTracking, weekDayLabel: label }
+    return Math.max(1, Math.min(journey.programDurationWeeks, weeks + 1))
   }, [journeyStartDate, journey])
-
-  const isMonthBasedJourney = useMemo(() => {
-    return journey ? MONTH_BASED_JOURNEYS.includes(journey.journeyType) : false
-  }, [journey])
-
-  const currentMonthNumber = useMemo(() => {
-    if (!journey) return 1
-    return getMonthNumber(calculatedCurrentWeek)
-  }, [journey, calculatedCurrentWeek])
-
-  const totalMonths = useMemo(() => {
-    if (!journey) return 1
-    if (!isMonthBasedJourney) return 1
-    return JOURNEY_MONTH_COUNTS[journey.journeyType]
-  }, [journey, isMonthBasedJourney])
 
   const journeyMeta = useMemo(() => {
     if (!journey) return null
@@ -105,14 +64,14 @@ export const JourneyHeader = ({
 
   const journeyProgress = useMemo(() => {
     if (!journey || !journeyMeta) {
-      return { activeWeeks: 0, passPct: 0, totalEarned: 0, passMarkPoints: 0, maxPossiblePoints: 0 }
+      return { activeWeeks: 0, completePct: 0, totalEarned: 0, passMarkPoints: 0, maxPossiblePoints: 0 }
     }
     const totalEarned = progress.reduce((sum, week) => sum + (week.pointsEarned ?? 0), 0)
     const activeWeeks = progress.filter((week) => (week.pointsEarned ?? 0) > 0).length
     const passMarkPoints = passMarkResult?.adjustedThreshold ?? journeyMeta.passMarkPoints
     const maxPossiblePoints = passMarkResult?.totalTarget ?? journeyMeta.maxPossiblePoints
-    const passPct = passMarkPoints > 0 ? Math.min(100, Math.round((totalEarned / passMarkPoints) * 100)) : 0
-    return { activeWeeks, passPct, totalEarned, passMarkPoints, maxPossiblePoints }
+    const completePct = maxPossiblePoints > 0 ? Math.min(100, Math.round((totalEarned / maxPossiblePoints) * 100)) : 0
+    return { activeWeeks, completePct, totalEarned, passMarkPoints, maxPossiblePoints }
   }, [journeyMeta, passMarkResult?.adjustedThreshold, passMarkResult?.totalTarget, progress, journey])
 
   // ── Urgency: compare actual points vs expected at this point in time ──
@@ -159,9 +118,9 @@ export const JourneyHeader = ({
 
   if (!journey) return null
 
-  const overviewLabel = isMonthBasedJourney
-    ? `Month ${currentMonthNumber} of ${totalMonths} - ${weekDayLabel} of ${journey.programDurationWeeks}`
-    : `${weekDayLabel} of ${journey.programDurationWeeks}`
+  const totalCycles = Math.max(1, Math.ceil(journey.programDurationWeeks / 2))
+  const cycleNumber = Math.min(totalCycles, Math.max(1, Math.ceil(calculatedCurrentWeek / 2)))
+  const overviewLabel = `Week ${calculatedCurrentWeek} of ${journey.programDurationWeeks} · Cycle ${cycleNumber} of ${totalCycles}`
 
   return (
     <Box
@@ -181,12 +140,12 @@ export const JourneyHeader = ({
               <Text color="text.secondary" fontSize="sm">{overviewLabel}</Text>
             </HStack>
             <HStack spacing={1}>
-              <Text fontSize="lg" fontWeight="bold" color={urgency?.level === 'critical' ? 'red.600' : urgency?.level === 'behind' ? 'orange.600' : urgency?.level === 'warning' ? 'yellow.700' : 'teal.600'}>{journeyProgress.passPct}%</Text>
-              <Text fontSize="xs" color="text.muted">pass</Text>
+              <Text fontSize="lg" fontWeight="bold" color={urgency?.level === 'critical' ? 'red.600' : urgency?.level === 'behind' ? 'orange.600' : urgency?.level === 'warning' ? 'yellow.700' : 'teal.600'}>{journeyProgress.completePct}%</Text>
+              <Text fontSize="xs" color="text.muted">complete</Text>
             </HStack>
           </Flex>
 
-          <Progress value={journeyProgress.passPct} colorScheme={urgency?.level === 'critical' ? 'red' : urgency?.level === 'behind' ? 'orange' : urgency?.level === 'warning' ? 'yellow' : 'teal'} borderRadius="full" size="sm" />
+          <Progress value={journeyProgress.completePct} colorScheme={urgency?.level === 'critical' ? 'red' : urgency?.level === 'behind' ? 'orange' : urgency?.level === 'warning' ? 'yellow' : 'teal'} borderRadius="full" size="sm" />
         </Stack>
       </Box>
     </Box>
