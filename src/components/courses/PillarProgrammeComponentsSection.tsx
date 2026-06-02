@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
   Badge,
@@ -7,19 +7,19 @@ import {
   Heading,
   HStack,
   Icon,
-  Select,
   SimpleGrid,
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { Award, BookMarked, Wrench, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import {
   PILLAR_PROGRAMME_COMPONENTS,
   PROGRAMME_COMPONENT_LABEL,
   type ProgrammeComponentEntry,
-  type ProgrammeComponentType,
 } from '@/config/pillarProgrammeComponents'
 import { PILLAR_METADATA, type Pillar } from '@/types/pillar'
+import { ProgrammeComponentPartsPicker } from '@/components/courses/ProgrammeComponentPartsPicker'
+import { TYPE_VISUALS } from '@/components/courses/programmeComponentVisuals'
 
 interface Props {
   pillar: Pillar | null
@@ -103,46 +103,6 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
   )
 }
 
-interface TypeVisual {
-  icon: LucideIcon
-  brand: string
-  brandHover: string
-  iconBg: string
-  iconColor: string
-  eyebrowColor: string
-  focusBorder: string
-}
-
-const TYPE_VISUALS: Record<ProgrammeComponentType, TypeVisual> = {
-  capstone: {
-    icon: Award,
-    brand: '#350e6f',
-    brandHover: '#27062e',
-    iconBg: '#f4f0fb',
-    iconColor: '#350e6f',
-    eyebrowColor: '#350e6f',
-    focusBorder: '#350e6f',
-  },
-  case_study: {
-    icon: BookMarked,
-    brand: '#eab130',
-    brandHover: '#b58721',
-    iconBg: '#fdf6e3',
-    iconColor: '#8a6310',
-    eyebrowColor: '#8a6310',
-    focusBorder: '#eab130',
-  },
-  practical: {
-    icon: Wrench,
-    brand: '#f4540c',
-    brandHover: '#c4400a',
-    iconBg: '#fdece1',
-    iconColor: '#c4400a',
-    eyebrowColor: '#c4400a',
-    focusBorder: '#f4540c',
-  },
-}
-
 const STATUS_BADGE: Record<ProgrammeComponentEntry['status'], { label: string; bg: string; color: string }> = {
   available: { label: 'Available', bg: 'gray.100', color: 'gray.700' },
   coming_soon: { label: 'Coming soon', bg: 'gray.100', color: 'gray.600' },
@@ -157,13 +117,6 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
   const isDisabled = entry.status !== 'available'
   const hasParts = !!entry.parts && entry.parts.length > 0
   const partCount = entry.parts?.length ?? 0
-
-  const [selectedPartId, setSelectedPartId] = useState<string>(
-    hasParts ? entry.parts![0].id : '',
-  )
-  const selectedPart = hasParts
-    ? entry.parts!.find((p) => p.id === selectedPartId) ?? entry.parts![0]
-    : null
 
   const title = cleanTitle(entry.title)
 
@@ -262,49 +215,8 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
           </Stack>
         </Stack>
 
-        {hasParts && !isDisabled && selectedPart ? (
-          <Stack spacing={3}>
-            <Select
-              size="sm"
-              bg="gray.50"
-              borderColor="gray.200"
-              borderRadius="md"
-              fontWeight="medium"
-              fontSize="sm"
-              _focusVisible={{ borderColor: visual.focusBorder, boxShadow: `0 0 0 1px ${visual.focusBorder}` }}
-              value={selectedPartId}
-              onChange={(e) => setSelectedPartId(e.target.value)}
-              aria-label={`Select ${PROGRAMME_COMPONENT_LABEL[entry.type]} part`}
-            >
-              {entry.parts!.map((part) => (
-                <option key={part.id} value={part.id}>
-                  {part.title}
-                </option>
-              ))}
-            </Select>
-            {selectedPart.description && (
-              <Text fontSize="xs" color="gray.500" lineHeight="1.55" minH="2.5em">
-                {selectedPart.description}
-              </Text>
-            )}
-            <Button
-              as="a"
-              href={selectedPart.href}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="sm"
-              bg={visual.brand}
-              color="white"
-              _hover={{ bg: visual.brandHover }}
-              _active={{ bg: visual.brandHover }}
-              rightIcon={<Icon as={ArrowUpRight} boxSize={3.5} />}
-              borderRadius="md"
-              fontWeight="semibold"
-              letterSpacing="0.01em"
-            >
-              Begin part
-            </Button>
-          </Stack>
+        {hasParts && !isDisabled ? (
+          <ProgrammeComponentPartsPicker parts={entry.parts!} type={entry.type} />
         ) : (
           <Button
             as={entry.href && !isDisabled ? 'a' : undefined}

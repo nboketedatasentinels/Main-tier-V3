@@ -15,6 +15,12 @@ import { ChevronDown, ChevronRight, PartyPopper } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getVisibleActivities } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
+import { useUserPillar } from '@/hooks/useUserPillar'
+import {
+  PILLAR_PROGRAMME_COMPONENTS,
+  type ProgrammeComponentPart,
+  type ProgrammeComponentType,
+} from '@/config/pillarProgrammeComponents'
 import { ActivityRow } from './ActivityRow'
 
 type TodoRow = { activity: ActivityState; weekOverride: number }
@@ -53,6 +59,19 @@ const isRecurringActivity = (activity: ActivityState): boolean => {
   return t === 'window_limited' || t === 'ongoing'
 }
 
+/**
+ * Full points still claimable for an activity = per-claim points x remaining
+ * claims. With one row per activity we surface this aggregate (e.g. a 6x3,000
+ * weekly session = "up to 18,000 pts") so the section totals still add up to
+ * the journey max instead of just one claim each.
+ */
+const remainingValue = (activity: ActivityState): number => {
+  const cap = activity.activityPolicy?.maxTotal
+  const total = typeof cap === 'number' && Number.isFinite(cap) ? cap : 1
+  const remaining = Math.max(0, total - (activity.completedCount ?? 0))
+  return (activity.points ?? 0) * remaining
+}
+
 const SECTION_TITLES: Record<Bucket, string> = {
   todo: 'To do',
   pending: 'In review',
@@ -78,7 +97,7 @@ interface ActivityListProps {
 
 const ColumnHeader = () => (
   <Grid
-    templateColumns="20px minmax(0,1fr) 70px 130px 90px 16px"
+    templateColumns="20px minmax(0,1fr) 70px 130px 116px 16px"
     gap={4}
     alignItems="center"
     px={4}
@@ -144,6 +163,23 @@ export const ActivityList = ({
   onOpenProof,
   isActivityBusy,
 }: ActivityListProps) => {
+  // Resolved once here (one org-doc listener) and threaded to every row, so the
+  // Peer to Peer / Capstone / Case Study rows can show their parts inline on the
+  // weekly checklist. Keyed by the matching checklist activity id.
+  const { pillar } = useUserPillar()
+  const programmePartsByActivity = useMemo<Record<string, ProgrammeComponentPart[] | null>>(() => {
+    const entries = pillar ? PILLAR_PROGRAMME_COMPONENTS[pillar] ?? [] : []
+    const byType: Partial<Record<ProgrammeComponentType, ProgrammeComponentPart[]>> = {}
+    entries.forEach((e) => {
+      if (e.parts && e.parts.length > 0) byType[e.type] = e.parts
+    })
+    return {
+      peer_to_peer: byType.practical ?? null,
+      capstone: byType.capstone ?? null,
+      case_study: byType.case_study ?? null,
+    }
+  }, [pillar])
+
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
 
   const ordered = useMemo(
@@ -239,7 +275,7 @@ export const ActivityList = ({
           list.push({ activity, weekOverride: startWeek })
           todoByWeek.set(startWeek, list)
           todoTotalCount += 1
-          todoPointsTotal += activity.points ?? 0
+          todoPointsTotal += remainingValue(activity)
           return
         }
         locked.push(activity)
@@ -309,7 +345,10 @@ export const ActivityList = ({
         list.push({ activity, weekOverride: w })
         todoByWeek.set(w, list)
         todoTotalCount += 1
-        todoPointsTotal += activity.points ?? 0
+        todoPointsTotal += remainingValue(activity)
+        // One row per activity: surface only the next claimable instance, not a
+        // duplicate row for every remaining week.
+        break
       }
     })
 
@@ -433,6 +472,7 @@ export const ActivityList = ({
     <ActivityRow
       key={activity.id}
       activity={activity}
+      programmeParts={programmePartsByActivity[activity.id] ?? null}
       selectedWeek={selectedWeek}
       currentWeek={currentWeek}
       isWeekLocked={isWeekLocked}
@@ -503,7 +543,7 @@ export const ActivityList = ({
             if (weekRows.length === 0) return null
             const isWeekCollapsed = Boolean(collapsedTodoWeeks[week])
             const weekPoints = weekRows.reduce(
-              (sum, r) => sum + (r.activity.points ?? 0),
+              (sum, r) => sum + remainingValue(r.activity),
               0,
             )
             const isCurrent = week === currentWeek
@@ -582,6 +622,7 @@ export const ActivityList = ({
                       <ActivityRow
                         key={rowKey}
                         activity={rowActivity}
+                        programmeParts={programmePartsByActivity[rowActivity.id] ?? null}
                         selectedWeek={selectedWeek}
                         currentWeek={currentWeek}
                         isWeekLocked={isWeekLocked}
@@ -789,6 +830,7 @@ export const ActivityList = ({
                       <ActivityRow
                         key={rowKey}
                         activity={rowActivity}
+                        programmeParts={programmePartsByActivity[rowActivity.id] ?? null}
                         selectedWeek={selectedWeek}
                         currentWeek={currentWeek}
                         isWeekLocked={isWeekLocked}
@@ -949,6 +991,7 @@ export const ActivityList = ({
                       <ActivityRow
                         key={rowKey}
                         activity={rowActivity}
+                        programmeParts={programmePartsByActivity[rowActivity.id] ?? null}
                         selectedWeek={selectedWeek}
                         currentWeek={currentWeek}
                         isWeekLocked={isWeekLocked}

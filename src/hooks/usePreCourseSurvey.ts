@@ -14,13 +14,14 @@ export function usePreCourseSurvey(uid: string | null | undefined): Result {
   const [state, setState] = useState<PreCourseSurveyState>({
     completed: false,
     completedAt: null,
+    answers: null,
   })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
     if (!uid) {
-      setState({ completed: false, completedAt: null })
+      setState({ completed: false, completedAt: null, answers: null })
       setLoading(false)
       return
     }

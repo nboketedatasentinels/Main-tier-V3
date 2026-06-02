@@ -99,6 +99,10 @@ const CourseApprovalsPage: React.FC = () => {
         navigate('/partner/learner-assignments')
         return
       }
+      if (key === 'pre-course-surveys') {
+        navigate('/partner/pre-course-surveys')
+        return
+      }
       // State-based dashboard pages (overview, users, at-risk, etc.) - pass via
       // ?page= so the dashboard opens directly on the requested page.
       if (key === 'overview') {

@@ -133,6 +133,10 @@ const ProgrammeSubmissionsPage: React.FC = () => {
         navigate('/partner/course-approvals')
         return
       }
+      if (key === 'pre-course-surveys') {
+        navigate('/partner/pre-course-surveys')
+        return
+      }
       if (key === 'overview') {
         navigate('/partner/dashboard')
         return

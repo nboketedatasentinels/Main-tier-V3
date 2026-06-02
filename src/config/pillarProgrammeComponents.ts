@@ -22,7 +22,7 @@ export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical'
 
 /**
  * One sub-part of a multi-part component (e.g. Case Study 1 and Case Study
- * 2 of the Combined Case Studies). When an entry sets `parts`, the card
+ * 2 of the Case Studies). When an entry sets `parts`, the card
  * renders a list of part-launch buttons instead of a single CTA.
  */
 export interface ProgrammeComponentPart {
@@ -88,7 +88,7 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'innovation-technology-case-study',
       type: 'case_study',
-      title: 'Combined Case Studies (2 parts)',
+      title: 'Case Studies (2 parts)',
       description:
         'Two case studies marked together. Both required: GE Predix (thesis fragility) and MTN Ambition 2030 (foundation gap).',
       status: 'available',
@@ -110,9 +110,9 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'innovation-technology-practical',
       type: 'practical',
-      title: 'Practicals Portfolio (6 parts)',
+      title: 'Peer to Peer Session (6 parts)',
       description:
-        'Six weekly practicals across the Journey. All required; together they form the Practicals Portfolio component.',
+        'Six weekly practicals across the Journey. All required; together they form the Peer to Peer Session component.',
       status: 'available',
       parts: [
         {
@@ -160,7 +160,7 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'starter-kit-capstone',
       type: 'capstone',
-      title: 'Combined Capstone (3 parts)',
+      title: 'Capstone (3 parts)',
       description:
         'Three parts marked together: One-Page Proposal, Project Scope Document, and Status Report. All required.',
       status: 'available',
@@ -188,7 +188,7 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'starter-kit-case-study',
       type: 'case_study',
-      title: 'Combined Case Studies (2 parts)',
+      title: 'Case Studies (2 parts)',
       description:
         'Two case studies marked together: Kodak (the pitch that did not land) and SARS (the modernisation that was dismantled).',
       status: 'available',
@@ -210,9 +210,9 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'starter-kit-practical',
       type: 'practical',
-      title: 'Practicals Portfolio (6 parts)',
+      title: 'Peer to Peer Session (6 parts)',
       description:
-        'Six weekly practicals across the Journey. All required; together they form the Practicals Portfolio component.',
+        'Six weekly practicals across the Journey. All required; together they form the Peer to Peer Session component.',
       status: 'available',
       parts: [
         {

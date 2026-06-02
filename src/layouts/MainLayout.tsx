@@ -283,7 +283,7 @@ export const MainLayout: React.FC = () => {
           { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays, isPrimary: true },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, isPrimary: true },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
-          { label: 'My Courses', path: '/app/courses', icon: BookOpen, badge: { label: '1 new' }, isPrimary: true },
+          { label: 'My Courses', path: '/app/courses', icon: BookOpen, isPrimary: true },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },

@@ -25,6 +25,11 @@ import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { PodcastSeriesPanel } from '@/components/courses/PodcastSeriesPanel'
+import { ProgrammeComponentPartsPicker } from '@/components/courses/ProgrammeComponentPartsPicker'
+import type {
+  ProgrammeComponentPart,
+  ProgrammeComponentType,
+} from '@/config/pillarProgrammeComponents'
 
 const PROGRAMME_COMPONENTS_HREF = '/app/courses#programme-components'
 
@@ -84,6 +89,9 @@ const StatusIcon = ({ state }: { state: VisualState }) => {
 
 interface ActivityRowProps {
   activity: ActivityState
+  /** Parts of the practical pillar component, shown inline when the
+   *  "Peer to Peer Session" row is expanded. */
+  programmeParts?: ProgrammeComponentPart[] | null
   selectedWeek: number
   currentWeek: number
   isWeekLocked: boolean
@@ -100,6 +108,7 @@ interface ActivityRowProps {
 
 export const ActivityRow = ({
   activity,
+  programmeParts,
   selectedWeek,
   currentWeek,
   isWeekLocked,
@@ -127,6 +136,30 @@ export const ActivityRow = ({
     !isAdmin &&
     activity.status !== 'completed'
 
+  // Activities that should navigate straight to the relevant page on row click
+  // (no expand, no inline action buttons - the destination page is where the
+  // user actually does the work).
+  // Programme components (Peer to Peer = practical, plus Capstone & Case Study)
+  // expand inline to show their parts. We only fall back to navigating to the
+  // courses page when the parts can't be resolved (pillar unknown, or a
+  // single-deliverable component with no parts).
+  const programmeComponentType: ProgrammeComponentType | null =
+    activity.id === 'peer_to_peer'
+      ? 'practical'
+      : activity.id === 'capstone'
+        ? 'capstone'
+        : activity.id === 'case_study'
+          ? 'case_study'
+          : null
+  const hasProgrammeParts =
+    programmeComponentType !== null && Boolean(programmeParts && programmeParts.length > 0)
+  const directNavHref = (() => {
+    if (hasProgrammeParts) return null
+    if (activity.id === 'peer_to_peer') return '/app/courses#pillar-component-practical'
+    if (activity.id === 'capstone' || activity.id === 'case_study') return PROGRAMME_COMPONENTS_HREF
+    return null
+  })()
+
   const lockedByInteraction =
     Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin
   const lockedByWeek = isWeekLocked && !isAdmin
@@ -142,6 +175,13 @@ export const ActivityRow = ({
   const totalFrequency = activity.activityPolicy?.maxTotal ?? 1
   const completedCount = activity.completedCount ?? 0
   const hasFrequency = totalFrequency > 1
+  // With one row per activity, show the full value still claimable (per-claim
+  // points x remaining claims) rather than a single claim.
+  const hasFiniteFrequency = Number.isFinite(totalFrequency) && totalFrequency > 1
+  const remainingClaims = Math.max(0, totalFrequency - completedCount)
+  const pointsLabel = hasFiniteFrequency
+    ? `up to ${(activity.points * remainingClaims).toLocaleString()} pts`
+    : `+${activity.points.toLocaleString()} pts`
 
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
@@ -245,7 +285,13 @@ export const ActivityRow = ({
       <Box
         as="button"
         type="button"
-        onClick={onToggleExpand}
+        onClick={() => {
+          if (directNavHref) {
+            navigate(directNavHref)
+            return
+          }
+          onToggleExpand()
+        }}
         w="100%"
         textAlign="left"
         px={{ base: 3, md: 4 }}
@@ -256,7 +302,7 @@ export const ActivityRow = ({
         <Grid
           templateColumns={{
             base: '20px 1fr auto 16px',
-            md: '20px minmax(0,1fr) 70px 130px 90px 16px',
+            md: '20px minmax(0,1fr) 70px 130px 116px 16px',
           }}
           gap={{ base: 3, md: 4 }}
           alignItems="center"
@@ -282,7 +328,7 @@ export const ActivityRow = ({
               <Text>{approvalLabel}</Text>
               <Text>·</Text>
               <Text color="#350e6f" fontWeight="semibold">
-                +{activity.points.toLocaleString()} pts
+                {pointsLabel}
               </Text>
               {hasFrequency && (
                 <>
@@ -329,7 +375,7 @@ export const ActivityRow = ({
             display={{ base: 'none', md: 'block' }}
             textAlign="right"
           >
-            +{activity.points.toLocaleString()} pts
+            {pointsLabel}
           </Text>
 
           <Icon
@@ -409,7 +455,13 @@ export const ActivityRow = ({
               />
             )}
 
-            {activity.id !== 'podcast_workbook' && (
+            {hasProgrammeParts && programmeParts && programmeComponentType && (
+              <ProgrammeComponentPartsPicker parts={programmeParts} type={programmeComponentType} />
+            )}
+
+            {activity.id !== 'podcast_workbook' &&
+              programmeComponentType === null &&
+              !directNavHref && (
               <Flex
                 direction={{ base: 'column', sm: 'row' }}
                 gap={2}

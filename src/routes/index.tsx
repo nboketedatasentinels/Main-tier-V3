@@ -68,6 +68,7 @@ const PartnerAssignmentPage = lazy(() => import('@/pages/admin/PartnerAssignment
 const LearnerAssignmentsPage = lazy(() => import('@/pages/partner/LearnerAssignmentsPage'))
 const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPage'))
 const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
+const PreCourseSurveysPage = lazy(() => import('@/pages/partner/PreCourseSurveysPage'))
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -202,6 +203,7 @@ export const AppRoutes = () => {
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
+          <Route path="pre-course-surveys" element={<PreCourseSurveysPage />} />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
 

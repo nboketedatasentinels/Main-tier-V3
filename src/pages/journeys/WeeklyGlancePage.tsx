@@ -6,18 +6,29 @@ import {
   Badge,
   Box,
   Button,
+  Checkbox,
   Flex,
   Heading,
   HStack,
   Input,
+  Popover,
+  PopoverAnchor,
+  PopoverBody,
+  PopoverContent,
+  Portal,
   Progress,
   SimpleGrid,
   Skeleton,
   Stack,
+  Tag,
+  TagCloseButton,
+  TagLabel,
   Text,
   useToast,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc, FirestoreError } from 'firebase/firestore'
@@ -27,10 +38,13 @@ import { resolveJourneyType } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
 import {
   ArrowUpRight,
+  BookOpen,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   Clock,
   Fingerprint,
+  Lock,
   Star,
   Target,
   TrendingUp,
@@ -41,6 +55,13 @@ import {
 
 import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import { PreCourseSurveyScreen } from '@/components/survey/PreCourseSurveyScreen'
+import { PERSONALITY_TYPES, CORE_VALUES, type PersonalityType } from '@/config/personality-data'
+import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
+import {
+  completePreCourseSurvey,
+  type PreCourseSurveyAnswers,
+} from '@/services/preCourseSurveyService'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
 import { updateUserVillageId } from '@/services/userProfileService'
@@ -117,58 +138,77 @@ function computeJourneyPace(params: {
   return { label: 'On track', detail: 'Pace matches your journey timeline', tone: 'green' }
 }
 
-type KpiTheme = 'purple' | 'orange' | 'green' | 'yellow' | 'red' | 'blue'
+type KpiTheme = 'purple' | 'orange' | 'green' | 'yellow' | 'red' | 'blue' | 'slate'
 
 interface KpiThemeStyles {
   iconBg: string
   iconShadow: string
+  /** Soft pastel for the clean top-right corner quarter-circle ornament. */
   ornamentBg: string
   hoverShadow: string
   hoverBorder: string
+  /** Soft accent color reused for badges / accents within the card. */
+  accent: string
 }
 
 const kpiThemes: Record<KpiTheme, KpiThemeStyles> = {
   purple: {
-    iconBg: '#350e6f',
-    iconShadow: '0 4px 12px rgba(53, 14, 111, 0.3)',
+    iconBg: 'linear-gradient(135deg, #4c1d95 0%, #27062e 100%)',
+    iconShadow: '0 10px 24px rgba(53, 14, 111, 0.35)',
     ornamentBg: 'purple.50',
-    hoverShadow: '0 8px 25px rgba(139, 92, 246, 0.15)',
-    hoverBorder: 'purple.200',
+    hoverShadow: '0 18px 40px rgba(53, 14, 111, 0.18), 0 4px 12px rgba(53, 14, 111, 0.08)',
+    hoverBorder: '#c4b5fd',
+    accent: '#7c3aed',
   },
   orange: {
-    iconBg: 'linear-gradient(135deg, #f4540c 0%, #c2410c 100%)',
-    iconShadow: '0 4px 12px rgba(244, 84, 12, 0.3)',
+    iconBg: 'linear-gradient(135deg, #f4540c 0%, #9a3412 100%)',
+    iconShadow: '0 10px 24px rgba(244, 84, 12, 0.35)',
     ornamentBg: 'orange.50',
-    hoverShadow: '0 8px 25px rgba(244, 84, 12, 0.15)',
-    hoverBorder: 'orange.200',
+    hoverShadow: '0 18px 40px rgba(244, 84, 12, 0.2), 0 4px 12px rgba(244, 84, 12, 0.08)',
+    hoverBorder: '#fdba74',
+    accent: '#c2410c',
   },
   green: {
-    iconBg: 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
-    iconShadow: '0 4px 12px rgba(4, 120, 87, 0.3)',
+    iconBg: 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
+    iconShadow: '0 10px 24px rgba(4, 120, 87, 0.35)',
     ornamentBg: 'green.50',
-    hoverShadow: '0 8px 25px rgba(16, 185, 129, 0.15)',
-    hoverBorder: 'green.200',
+    hoverShadow: '0 18px 40px rgba(4, 120, 87, 0.18), 0 4px 12px rgba(4, 120, 87, 0.08)',
+    hoverBorder: '#86efac',
+    accent: '#047857',
   },
   yellow: {
-    iconBg: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-    iconShadow: '0 4px 12px rgba(217, 119, 6, 0.3)',
+    iconBg: 'linear-gradient(135deg, #eab130 0%, #b45309 100%)',
+    iconShadow: '0 10px 24px rgba(217, 119, 6, 0.35)',
     ornamentBg: 'yellow.50',
-    hoverShadow: '0 8px 25px rgba(217, 119, 6, 0.15)',
-    hoverBorder: 'yellow.200',
+    hoverShadow: '0 18px 40px rgba(217, 119, 6, 0.18), 0 4px 12px rgba(217, 119, 6, 0.08)',
+    hoverBorder: '#fcd34d',
+    accent: '#b45309',
   },
   red: {
-    iconBg: 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)',
-    iconShadow: '0 4px 12px rgba(220, 38, 38, 0.3)',
+    iconBg: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+    iconShadow: '0 10px 24px rgba(220, 38, 38, 0.35)',
     ornamentBg: 'red.50',
-    hoverShadow: '0 8px 25px rgba(220, 38, 38, 0.15)',
-    hoverBorder: 'red.200',
+    hoverShadow: '0 18px 40px rgba(220, 38, 38, 0.18), 0 4px 12px rgba(220, 38, 38, 0.08)',
+    hoverBorder: '#fca5a5',
+    accent: '#b91c1c',
   },
   blue: {
-    iconBg: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
-    iconShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+    iconBg: 'linear-gradient(135deg, #2563eb 0%, #1e3a8a 100%)',
+    iconShadow: '0 10px 24px rgba(37, 99, 235, 0.35)',
     ornamentBg: 'blue.50',
-    hoverShadow: '0 8px 25px rgba(37, 99, 235, 0.15)',
-    hoverBorder: 'blue.200',
+    hoverShadow: '0 18px 40px rgba(37, 99, 235, 0.18), 0 4px 12px rgba(37, 99, 235, 0.08)',
+    hoverBorder: '#93c5fd',
+    accent: '#1d4ed8',
+  },
+  // Restrained, executive-grade slate. Used for "action needed" without the
+  // alarm of red/orange.
+  slate: {
+    iconBg: 'linear-gradient(135deg, #334155 0%, #0f172a 100%)',
+    iconShadow: '0 10px 24px rgba(15, 23, 42, 0.35)',
+    ornamentBg: 'slate.50',
+    hoverShadow: '0 18px 40px rgba(15, 23, 42, 0.16), 0 4px 12px rgba(15, 23, 42, 0.08)',
+    hoverBorder: '#cbd5e1',
+    accent: '#1e293b',
   },
 }
 
@@ -191,66 +231,75 @@ const KpiTile = ({ label, value, sub, icon, theme }: KpiTileProps) => {
   const styles = kpiThemes[theme]
   return (
     <Box
-      p={5}
+      p={6}
       bg="white"
-      borderRadius="xl"
+      borderRadius="2xl"
       border="1px solid"
       borderColor="gray.100"
-      boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+      boxShadow="0 1px 2px rgba(15,23,42,0.04), 0 4px 16px rgba(15,23,42,0.04)"
       _hover={{
-        transform: 'translateY(-2px)',
+        transform: 'translateY(-3px)',
         boxShadow: styles.hoverShadow,
         borderColor: styles.hoverBorder,
       }}
-      transition="all 0.3s ease"
+      transition="transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s ease, border-color 0.35s ease"
       position="relative"
       overflow="hidden"
+      h="100%"
+      minH="190px"
     >
+      {/* Clean solid quarter-circle ornament in the top-right corner */}
       <Box
         position="absolute"
         top={0}
         right={0}
-        w="60px"
-        h="60px"
+        w="80px"
+        h="80px"
         bg={styles.ornamentBg}
         borderRadius="0 0 0 100%"
+        pointerEvents="none"
       />
-      <Flex
-        w={10}
-        h={10}
-        bg={styles.iconBg}
-        borderRadius="xl"
-        align="center"
-        justify="center"
-        mb={3}
-        boxShadow={styles.iconShadow}
-      >
-        <Box as={icon} w={5} h={5} color="white" />
-      </Flex>
-      <Text
-        fontSize="xs"
-        color="gray.500"
-        fontWeight="semibold"
-        textTransform="uppercase"
-        letterSpacing="wide"
-        mb={1}
-      >
-        {label}
-      </Text>
-      <Text
-        fontWeight="bold"
-        fontSize="3xl"
-        color="gray.800"
-        lineHeight="1.1"
-        letterSpacing="-0.02em"
-      >
-        {value}
-      </Text>
-      {sub && (
-        <Text fontSize="xs" color="gray.500" mt={1}>
-          {sub}
-        </Text>
-      )}
+
+      <Stack spacing={4} position="relative" zIndex={1} h="100%">
+        <Flex
+          w={12}
+          h={12}
+          bg={styles.iconBg}
+          borderRadius="2xl"
+          align="center"
+          justify="center"
+          boxShadow={styles.iconShadow}
+        >
+          <Box as={icon} w={5} h={5} color="white" strokeWidth={2.25} />
+        </Flex>
+
+        <Stack spacing={1.5} flex={1}>
+          <Text
+            fontSize="xs"
+            color="gray.500"
+            fontWeight="bold"
+            textTransform="uppercase"
+            letterSpacing="0.12em"
+          >
+            {label}
+          </Text>
+          <Text
+            fontWeight="extrabold"
+            fontSize={{ base: '3xl', lg: '4xl' }}
+            color="gray.900"
+            lineHeight="1"
+            letterSpacing="-0.025em"
+            sx={{ fontVariantNumeric: 'tabular-nums' }}
+          >
+            {value}
+          </Text>
+          {sub && (
+            <Text fontSize="sm" color="gray.500" fontWeight="medium" mt={1}>
+              {sub}
+            </Text>
+          )}
+        </Stack>
+      </Stack>
     </Box>
   )
 }
@@ -305,90 +354,409 @@ const ActivityRow = ({ entry }: ActivityRowProps) => {
   )
 }
 
-interface ProofUploadSlotProps {
+interface SlotShellProps {
   label: string
   helper: string
-  resultsUrl?: string
-  urlPlaceholder: string
-  isSubmitting: boolean
-  onUrlSave: (url: string) => void
+  saved: boolean
+  children: React.ReactNode
 }
 
-const ProofUploadSlot = ({
-  label,
-  helper,
-  resultsUrl,
-  urlPlaceholder,
-  isSubmitting,
-  onUrlSave,
-}: ProofUploadSlotProps) => {
-  const hasProof = Boolean(resultsUrl)
-  const [linkInput, setLinkInput] = useState(resultsUrl ?? '')
-  useEffect(() => {
-    setLinkInput(resultsUrl ?? '')
-  }, [resultsUrl])
-  return (
-    <Box
-      borderWidth="1px"
-      borderStyle="dashed"
-      borderColor={hasProof ? 'green.300' : 'gray.300'}
-      bg={hasProof ? 'green.50' : 'gray.50'}
-      borderRadius="md"
-      p={2}
-    >
-      <Stack spacing={1.5}>
-        <HStack spacing={2} align="center">
-          <Flex
-            w={6}
-            h={6}
-            borderRadius="sm"
-            bg={hasProof ? 'green.100' : 'white'}
-            borderWidth="1px"
-            borderColor={hasProof ? 'green.300' : 'gray.200'}
-            align="center"
-            justify="center"
-            flexShrink={0}
-          >
-            <Box
-              as={hasProof ? CheckCircle2 : Upload}
-              w={3}
-              h={3}
-              color={hasProof ? 'green.600' : 'gray.500'}
-            />
-          </Flex>
-          <Stack spacing={0} flex={1} minW={0}>
-            <Text fontSize="xs" fontWeight="semibold" color="gray.800" noOfLines={1}>
-              {label}
-            </Text>
-            <Text fontSize="2xs" color="gray.500" noOfLines={1}>
-              {hasProof ? 'Saved - update below' : helper}
-            </Text>
-          </Stack>
-        </HStack>
-        <HStack spacing={1.5}>
-          <Input
-            size="xs"
-            bg="white"
-            placeholder={urlPlaceholder}
-            value={linkInput}
-            onChange={(event) => setLinkInput(event.target.value)}
-            fontSize="2xs"
+const SlotShell = ({ label, helper, saved, children }: SlotShellProps) => (
+  <Box
+    borderWidth="1px"
+    borderStyle="dashed"
+    borderColor={saved ? 'slate.300' : 'gray.300'}
+    bg={saved ? 'slate.50' : 'gray.50'}
+    borderRadius="md"
+    p={2}
+  >
+    <Stack spacing={1.5}>
+      <HStack spacing={2} align="center">
+        <Flex
+          w={6}
+          h={6}
+          borderRadius="sm"
+          bg={saved ? 'slate.100' : 'white'}
+          borderWidth="1px"
+          borderColor={saved ? 'slate.300' : 'gray.200'}
+          align="center"
+          justify="center"
+          flexShrink={0}
+        >
+          <Box
+            as={saved ? CheckCircle2 : Upload}
+            w={3}
+            h={3}
+            color={saved ? 'slate.600' : 'gray.500'}
           />
+        </Flex>
+        <Stack spacing={0} flex={1} minW={0}>
+          <Text fontSize="xs" fontWeight="semibold" color="gray.800" noOfLines={1}>
+            {label}
+          </Text>
+          <Text fontSize="2xs" color="gray.500" noOfLines={1}>
+            {saved ? 'Saved - change below' : helper}
+          </Text>
+        </Stack>
+      </HStack>
+      {children}
+    </Stack>
+  </Box>
+)
+
+interface PersonalityTypeSlotProps {
+  label: string
+  savedType: PersonalityType | undefined
+  isSubmitting: boolean
+  onSave: (next: PersonalityType) => void
+}
+
+const labelForType = (type: PersonalityType | '') => {
+  const found = PERSONALITY_TYPES.find((pt) => pt.type === type)
+  return found ? `${found.type} · ${found.name}` : ''
+}
+
+const PersonalityTypeSlot = ({ label, savedType, isSubmitting, onSave }: PersonalityTypeSlotProps) => {
+  const [selected, setSelected] = useState<PersonalityType | ''>(savedType ?? '')
+  const [inputText, setInputText] = useState(() => labelForType(savedType ?? ''))
+  const [open, setOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+
+  useEffect(() => {
+    setSelected(savedType ?? '')
+    setInputText(labelForType(savedType ?? ''))
+  }, [savedType])
+
+  const selectedLabel = labelForType(selected)
+  const dirty = selected !== '' && selected !== savedType
+
+  // Type to filter by either the 4-letter code (e.g. "intj") or the name
+  // (e.g. "architect"). When the field still shows the committed selection,
+  // list everything so reopening reveals the full set.
+  const matches = useMemo(() => {
+    const query = inputText.trim().toLowerCase()
+    if (!query || inputText === selectedLabel) return PERSONALITY_TYPES
+    return PERSONALITY_TYPES.filter(
+      (pt) => pt.type.toLowerCase().includes(query) || pt.name.toLowerCase().includes(query),
+    )
+  }, [inputText, selectedLabel])
+
+  const activeIndex = matches.length === 0 ? -1 : Math.min(highlight, matches.length - 1)
+
+  const choose = (type: PersonalityType) => {
+    setSelected(type)
+    setInputText(labelForType(type))
+    setOpen(false)
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (!open) setOpen(true)
+      setHighlight((h) => Math.min(h + 1, matches.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlight((h) => Math.max(h - 1, 0))
+    } else if (event.key === 'Enter') {
+      if (open && activeIndex >= 0) {
+        event.preventDefault()
+        choose(matches[activeIndex].type)
+      }
+    } else if (event.key === 'Escape') {
+      setOpen(false)
+      setInputText(selectedLabel)
+    }
+  }
+
+  return (
+    <SlotShell label={label} helper="Type or pick your 4-letter type" saved={Boolean(savedType)}>
+      <HStack spacing={1.5} align="center">
+        <Popover
+          isOpen={open && matches.length > 0}
+          onClose={() => setOpen(false)}
+          placement="bottom-start"
+          autoFocus={false}
+          closeOnBlur={false}
+          isLazy
+        >
+          <PopoverAnchor>
+            <Box position="relative" flex={1} minW={0}>
+              <Input
+                size="xs"
+                bg="white"
+                fontSize="2xs"
+                pr={5}
+                placeholder="Type or select your type"
+                value={inputText}
+                role="combobox"
+                aria-expanded={open}
+                aria-autocomplete="list"
+                onFocus={() => {
+                  setOpen(true)
+                  setHighlight(0)
+                }}
+                onChange={(event) => {
+                  setInputText(event.target.value)
+                  setOpen(true)
+                  setHighlight(0)
+                }}
+                onKeyDown={handleKeyDown}
+                onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+              />
+              <Box
+                as={ChevronDown}
+                position="absolute"
+                right="6px"
+                top="50%"
+                transform="translateY(-50%)"
+                w={3}
+                h={3}
+                color="text.muted"
+                pointerEvents="none"
+              />
+            </Box>
+          </PopoverAnchor>
+          <Portal>
+            <PopoverContent w="240px" maxH="200px" overflowY="auto" boxShadow="lg" borderColor="brand.border">
+              <PopoverBody p={1}>
+                <Stack spacing={0} role="listbox">
+                  {matches.map((pt, index) => {
+                    const isActive = index === activeIndex
+                    const isCurrent = pt.type === selected
+                    return (
+                      <Box
+                        key={pt.type}
+                        role="option"
+                        aria-selected={isActive}
+                        px={2}
+                        py={1.5}
+                        borderRadius="sm"
+                        cursor="pointer"
+                        fontSize="2xs"
+                        bg={isActive ? 'slate.100' : isCurrent ? 'slate.50' : 'white'}
+                        _hover={{ bg: 'slate.100' }}
+                        onMouseEnter={() => setHighlight(index)}
+                        onMouseDown={(event) => {
+                          event.preventDefault()
+                          choose(pt.type)
+                        }}
+                      >
+                        <Text as="span" fontWeight="semibold">
+                          {pt.type}
+                        </Text>{' '}
+                        · {pt.name}
+                      </Box>
+                    )
+                  })}
+                </Stack>
+              </PopoverBody>
+            </PopoverContent>
+          </Portal>
+        </Popover>
+        <Button
+          size="xs"
+          bg="slate.700"
+          color="white"
+          _hover={{ bg: 'slate.800' }}
+          onClick={() => selected && onSave(selected as PersonalityType)}
+          isLoading={isSubmitting}
+          isDisabled={isSubmitting || !dirty}
+          flexShrink={0}
+          fontSize="2xs"
+        >
+          {savedType ? 'Update' : 'Save'}
+        </Button>
+      </HStack>
+    </SlotShell>
+  )
+}
+
+interface CoreValuesSlotProps {
+  label: string
+  savedValues: string[]
+  isSubmitting: boolean
+  onSave: (next: string[]) => void
+}
+
+const CoreValuesSlot = ({ label, savedValues, isSubmitting, onSave }: CoreValuesSlotProps) => {
+  const [selected, setSelected] = useState<string[]>(savedValues)
+  const [search, setSearch] = useState('')
+  const [open, setOpen] = useState(false)
+  const [highlight, setHighlight] = useState(0)
+
+  useEffect(() => {
+    setSelected(savedValues)
+  }, [savedValues])
+
+  const sameAsSaved =
+    selected.length === savedValues.length &&
+    selected.every((v) => savedValues.includes(v))
+  const dirty = selected.length === 5 && !sameAsSaved
+  const atLimit = selected.length >= 5
+
+  const filteredValues = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    return query ? CORE_VALUES.filter((value) => value.toLowerCase().includes(query)) : CORE_VALUES
+  }, [search])
+
+  const activeIndex = filteredValues.length === 0 ? -1 : Math.min(highlight, filteredValues.length - 1)
+
+  const toggle = (value: string) =>
+    setSelected((prev) => {
+      if (prev.includes(value)) return prev.filter((v) => v !== value)
+      if (prev.length >= 5) return prev
+      return [...prev, value]
+    })
+
+  const pickFromList = (value: string) => {
+    toggle(value)
+    setSearch('')
+    setHighlight(0)
+  }
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      if (!open) setOpen(true)
+      setHighlight((h) => Math.min(h + 1, filteredValues.length - 1))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlight((h) => Math.max(h - 1, 0))
+    } else if (event.key === 'Enter') {
+      if (open && activeIndex >= 0) {
+        event.preventDefault()
+        const value = filteredValues[activeIndex]
+        if (selected.includes(value) || !atLimit) pickFromList(value)
+      }
+    } else if (event.key === 'Backspace') {
+      if (search === '' && selected.length > 0) setSelected((prev) => prev.slice(0, -1))
+    } else if (event.key === 'Escape') {
+      setOpen(false)
+    }
+  }
+
+  const placeholder =
+    selected.length === 0
+      ? 'Type to pick 5 values'
+      : selected.length < 5
+        ? `Type to add (${selected.length}/5)`
+        : 'All 5 picked - type to change'
+
+  return (
+    <SlotShell label={label} helper="Type to pick exactly 5" saved={savedValues.length === 5}>
+      <Stack spacing={1.5}>
+        <HStack spacing={1.5} align="center">
+          <Popover
+            isOpen={open && filteredValues.length > 0}
+            onClose={() => setOpen(false)}
+            placement="bottom-start"
+            autoFocus={false}
+            closeOnBlur={false}
+            isLazy
+          >
+            <PopoverAnchor>
+              <Box position="relative" flex={1} minW={0}>
+                <Input
+                  size="xs"
+                  bg="white"
+                  fontSize="2xs"
+                  pr={5}
+                  placeholder={placeholder}
+                  value={search}
+                  role="combobox"
+                  aria-expanded={open}
+                  aria-autocomplete="list"
+                  onFocus={() => {
+                    setOpen(true)
+                    setHighlight(0)
+                  }}
+                  onChange={(event) => {
+                    setSearch(event.target.value)
+                    setOpen(true)
+                    setHighlight(0)
+                  }}
+                  onKeyDown={handleKeyDown}
+                  onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+                />
+                <Box
+                  as={ChevronDown}
+                  position="absolute"
+                  right="6px"
+                  top="50%"
+                  transform="translateY(-50%)"
+                  w={3}
+                  h={3}
+                  color="text.muted"
+                  pointerEvents="none"
+                />
+              </Box>
+            </PopoverAnchor>
+            <Portal>
+              <PopoverContent w="240px" maxH="220px" overflowY="auto" boxShadow="lg" borderColor="brand.border">
+                <PopoverBody p={1}>
+                  <Stack spacing={0} role="listbox">
+                    {filteredValues.map((value, index) => {
+                      const isActive = index === activeIndex
+                      const isChecked = selected.includes(value)
+                      const isDisabled = !isChecked && atLimit
+                      return (
+                        <HStack
+                          key={value}
+                          role="option"
+                          aria-selected={isChecked}
+                          spacing={2}
+                          px={2}
+                          py={1.5}
+                          borderRadius="sm"
+                          cursor={isDisabled ? 'not-allowed' : 'pointer'}
+                          opacity={isDisabled ? 0.45 : 1}
+                          bg={isActive ? 'slate.100' : isChecked ? 'slate.50' : 'white'}
+                          _hover={isDisabled ? undefined : { bg: 'slate.100' }}
+                          onMouseEnter={() => setHighlight(index)}
+                          onMouseDown={(event) => {
+                            event.preventDefault()
+                            if (!isDisabled) pickFromList(value)
+                          }}
+                        >
+                          <Checkbox size="sm" isChecked={isChecked} isDisabled={isDisabled} pointerEvents="none" />
+                          <Text fontSize="2xs">{value}</Text>
+                        </HStack>
+                      )
+                    })}
+                  </Stack>
+                </PopoverBody>
+              </PopoverContent>
+            </Portal>
+          </Popover>
           <Button
             size="xs"
-            variant={hasProof ? 'outline' : 'solid'}
-            colorScheme={hasProof ? 'green' : 'purple'}
-            onClick={() => onUrlSave(linkInput)}
+            bg="slate.700"
+            color="white"
+            _hover={{ bg: 'slate.800' }}
+            onClick={() => onSave(selected)}
             isLoading={isSubmitting}
-            isDisabled={isSubmitting || linkInput.trim() === (resultsUrl ?? '').trim()}
+            isDisabled={isSubmitting || !dirty}
             flexShrink={0}
             fontSize="2xs"
           >
-            {hasProof ? 'Update' : 'Save'}
+            {savedValues.length === 5 ? 'Update' : 'Save'}
           </Button>
         </HStack>
+
+        {selected.length > 0 && (
+          <Wrap spacing={1}>
+            {selected.map((value) => (
+              <WrapItem key={value}>
+                <Tag size="sm" variant="subtle" colorScheme="purple" borderRadius="full">
+                  <TagLabel fontSize="2xs">{value}</TagLabel>
+                  <TagCloseButton onClick={() => toggle(value)} />
+                </Tag>
+              </WrapItem>
+            ))}
+          </Wrap>
+        )}
       </Stack>
-    </Box>
+    </SlotShell>
   )
 }
 
@@ -410,42 +778,71 @@ export const WeeklyGlancePage = () => {
   const [submittingProof, setSubmittingProof] = useState<'personality' | 'values' | null>(null)
   const [proofError, setProofError] = useState<string | null>(null)
 
-  const handleProofUrlSubmit = useCallback(
-    async (kind: 'personality' | 'values', rawUrl: string) => {
-      if (!profile?.id) {
-        setProofError('You need to be signed in to save a link.')
-        return
-      }
-      const trimmed = rawUrl.trim()
-      if (!trimmed) {
-        setProofError('Paste a link to save.')
-        return
-      }
-      let parsed: URL
+  // Pre-course survey gating for the "Courses" KPI tile. Clicking the button
+  // opens the in-app survey; submitting saves the answers and marks the survey
+  // complete so the courses step unlocks immediately.
+  const { state: preCourseSurveyState, loading: preCourseSurveyLoading } = usePreCourseSurvey(profile?.id ?? null)
+  const [isSurveyOpen, setIsSurveyOpen] = useState(false)
+  const [isSurveySubmitting, setIsSurveySubmitting] = useState(false)
+  const handleTakeSurvey = useCallback(() => {
+    setIsSurveyOpen(true)
+  }, [])
+  const handleSurveySubmit = useCallback(
+    async (answers: PreCourseSurveyAnswers) => {
+      if (!profile?.id) return
+      setIsSurveySubmitting(true)
       try {
-        parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
-      } catch {
-        setProofError('That does not look like a valid link.')
+        await completePreCourseSurvey(profile.id, answers, {
+          organizationId: profile.organizationId ?? profile.companyId ?? null,
+          companyId: profile.companyId ?? null,
+          displayName: profile.fullName ?? null,
+        })
+        setIsSurveyOpen(false)
+      } catch (err) {
+        console.error('[WeeklyGlance] survey completion failed', err)
+        toast({
+          status: 'error',
+          title: 'Could not save your progress',
+          description: 'Please try again in a moment.',
+        })
+      } finally {
+        setIsSurveySubmitting(false)
+      }
+    },
+    [profile?.id, profile?.organizationId, profile?.companyId, profile?.fullName, toast],
+  )
+
+  const handleProofSelectionSubmit = useCallback(
+    async (
+      kind: 'personality' | 'values',
+      value: PersonalityType | string[],
+    ) => {
+      if (!profile?.id) {
+        setProofError('You need to be signed in to save your results.')
         return
       }
-      const expectedHost = kind === 'personality' ? '16personalities.com' : 'personalvalu.es'
-      if (!parsed.host.endsWith(expectedHost)) {
-        setProofError(`Link should be from ${expectedHost}.`)
+      if (kind === 'values' && (!Array.isArray(value) || value.length !== 5)) {
+        setProofError('Pick exactly 5 core values.')
+        return
+      }
+      if (kind === 'personality' && typeof value !== 'string') {
+        setProofError('Select your personality type.')
         return
       }
       setProofError(null)
       setSubmittingProof(kind)
-      const urlField = kind === 'personality' ? 'personalityTestResultUrl' : 'valuesTestResultUrl'
       const completedFlag = kind === 'personality' ? 'hasCompletedPersonalityTest' : 'hasCompletedValuesTest'
+      const payload: Record<string, unknown> = {
+        [completedFlag]: true,
+        updatedAt: new Date().toISOString(),
+      }
+      if (kind === 'personality') payload.personalityType = value
+      else payload.coreValues = value
       try {
-        await updateDoc(doc(db, 'profiles', profile.id), {
-          [urlField]: parsed.toString(),
-          [completedFlag]: true,
-          updatedAt: new Date().toISOString(),
-        })
+        await updateDoc(doc(db, 'profiles', profile.id), payload)
       } catch (error) {
-        console.error('[WeeklyGlance] profile update on url save failed', error)
-        setProofError('Could not save the link. Please try again.')
+        console.error('[WeeklyGlance] profile update on result save failed', error)
+        setProofError('Could not save your results. Please try again.')
         setSubmittingProof(null)
         return
       }
@@ -462,16 +859,17 @@ export const WeeklyGlancePage = () => {
           if (!partnerId) return
           const learnerName = profile.firstName || profile.fullName || profile.email || 'A learner'
           const testLabel = kind === 'personality' ? '16Personalities' : 'Personal Values'
+          const summary = kind === 'personality' ? String(value) : (value as string[]).join(', ')
           await addDoc(collection(db, 'notifications'), {
             user_id: partnerId,
             type: 'engagement_alert',
             title: `${learnerName} shared ${testLabel} results`,
-            message: `${learnerName} shared their ${testLabel} results link. Open it from their profile to verify.`,
+            message: `${learnerName} selected: ${summary}.`,
             metadata: {
               learnerId: profile.id,
               learnerName,
               kind,
-              resultsUrl: parsed.toString(),
+              result: value,
             },
             read: false,
             created_at: serverTimestamp(),
@@ -481,8 +879,8 @@ export const WeeklyGlancePage = () => {
         }
       })()
       toast({
-        title: 'Link saved',
-        description: 'Your partner has been notified to verify your results.',
+        title: 'Results saved',
+        description: 'Your partner has been notified.',
         status: 'success',
         duration: 3500,
       })
@@ -775,7 +1173,7 @@ export const WeeklyGlancePage = () => {
                       Complete your personality profile
                     </Heading>
                     <Text fontSize="sm" color="gray.600" mt={0.5}>
-                      Upload proof of each test below, then click "Complete now" to fill in your results.
+                      Select your results below so your partner can tailor your programme.
                     </Text>
                   </Stack>
                 </HStack>
@@ -793,21 +1191,17 @@ export const WeeklyGlancePage = () => {
               </Flex>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <ProofUploadSlot
+                <PersonalityTypeSlot
                   label="16Personalities result"
-                  helper="Paste your shareable results link"
-                  resultsUrl={profile?.personalityTestResultUrl}
-                  urlPlaceholder="https://www.16personalities.com/profiles/..."
+                  savedType={profile?.personalityType as PersonalityType | undefined}
                   isSubmitting={submittingProof === 'personality'}
-                  onUrlSave={(url) => void handleProofUrlSubmit('personality', url)}
+                  onSave={(next) => void handleProofSelectionSubmit('personality', next)}
                 />
-                <ProofUploadSlot
+                <CoreValuesSlot
                   label="Personal Values result"
-                  helper="Paste your shareable results link"
-                  resultsUrl={profile?.valuesTestResultUrl}
-                  urlPlaceholder="https://personalvalu.es/..."
+                  savedValues={(profile?.coreValues as string[] | undefined) ?? []}
                   isSubmitting={submittingProof === 'values'}
-                  onUrlSave={(url) => void handleProofUrlSubmit('values', url)}
+                  onSave={(next) => void handleProofSelectionSubmit('values', next)}
                 />
               </SimpleGrid>
 
@@ -821,7 +1215,7 @@ export const WeeklyGlancePage = () => {
         )}
 
         {/* KPI Strip */}
-        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={4}>
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} spacing={4}>
           <Skeleton isLoaded={!data.loading.points} rounded="xl">
             <KpiTile
               label="Points earned"
@@ -846,6 +1240,213 @@ export const WeeklyGlancePage = () => {
               icon={TrendingUp}
               theme={toneToTheme(pace.tone)}
             />
+          </Skeleton>
+
+          {/* Courses tile - two clearly numbered steps so the user can't miss
+              that the survey has to happen before they can open their courses.
+              Matches the premium KpiTile language for a consistent strip. */}
+          <Skeleton isLoaded={!preCourseSurveyLoading} rounded="2xl">
+            {(() => {
+              const courseTheme = preCourseSurveyState.completed
+                ? kpiThemes.purple
+                : kpiThemes.slate
+              return (
+                <Box
+                  p={5}
+                  bg="white"
+                  borderRadius="2xl"
+                  border="1px solid"
+                  borderColor={preCourseSurveyState.completed ? 'gray.100' : 'slate.200'}
+                  boxShadow="0 1px 2px rgba(15,23,42,0.04), 0 4px 16px rgba(15,23,42,0.04)"
+                  _hover={{
+                    transform: 'translateY(-3px)',
+                    boxShadow: courseTheme.hoverShadow,
+                    borderColor: courseTheme.hoverBorder,
+                  }}
+                  transition="transform 0.35s cubic-bezier(0.4,0,0.2,1), box-shadow 0.35s ease, border-color 0.35s ease"
+                  position="relative"
+                  overflow="hidden"
+                  h="100%"
+                >
+                  {/* Clean solid quarter-circle ornament in the top-right corner */}
+                  <Box
+                    position="absolute"
+                    top={0}
+                    right={0}
+                    w="80px"
+                    h="80px"
+                    bg={courseTheme.ornamentBg}
+                    borderRadius="0 0 0 100%"
+                    pointerEvents="none"
+                  />
+
+                  <Stack spacing={3.5} position="relative" zIndex={1} h="100%">
+                    <Flex justify="space-between" align="flex-start">
+                      <Flex
+                        w={12}
+                        h={12}
+                        bg={courseTheme.iconBg}
+                        borderRadius="2xl"
+                        align="center"
+                        justify="center"
+                        boxShadow={courseTheme.iconShadow}
+                      >
+                        <Box as={BookOpen} w={5} h={5} color="white" strokeWidth={2.25} />
+                      </Flex>
+                      <Badge
+                        variant="subtle"
+                        fontSize="2xs"
+                        px={2.5}
+                        py={1}
+                        rounded="full"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
+                        fontWeight="bold"
+                        bg="slate.50"
+                        color="#1e293b"
+                        border="1px solid"
+                        borderColor="slate.200"
+                      >
+                        {preCourseSurveyState.completed ? 'Unlocked' : 'Action needed'}
+                      </Badge>
+                    </Flex>
+
+                    <Text
+                      fontSize="xs"
+                      color="gray.500"
+                      fontWeight="bold"
+                      textTransform="uppercase"
+                      letterSpacing="0.12em"
+                    >
+                      Your courses
+                    </Text>
+
+                    {/* Stepper with a thin connector line between the two steps */}
+                    <Stack spacing={2.5} position="relative">
+                      {/* connector line behind the step circles */}
+                      <Box
+                        position="absolute"
+                        left="13px"
+                        top="22px"
+                        bottom="22px"
+                        w="2px"
+                        bg="gray.200"
+                        opacity={0.6}
+                        borderRadius="full"
+                      />
+
+                      {/* STEP 1 - Pre-course survey */}
+                      <HStack spacing={3} align="center" position="relative">
+                        <Flex
+                          w={7}
+                          h={7}
+                          bg="linear-gradient(135deg, #334155 0%, #0f172a 100%)"
+                          color="white"
+                          borderRadius="full"
+                          align="center"
+                          justify="center"
+                          flexShrink={0}
+                          boxShadow="0 4px 10px rgba(15, 23, 42, 0.25), 0 0 0 4px rgba(15, 23, 42, 0.06)"
+                        >
+                          {preCourseSurveyState.completed ? (
+                            <Box as={CheckCircle2} w={3.5} h={3.5} strokeWidth={2.75} />
+                          ) : (
+                            <Text fontSize="xs" fontWeight="bold" lineHeight="1">
+                              1
+                            </Text>
+                          )}
+                        </Flex>
+                        {preCourseSurveyState.completed ? (
+                          <Text fontSize="sm" fontWeight="semibold" color="gray.700" flex={1}>
+                            Pre-course survey
+                          </Text>
+                        ) : (
+                          <Button
+                            size="sm"
+                            h={8}
+                            bg="linear-gradient(135deg, #334155 0%, #0f172a 100%)"
+                            color="white"
+                            fontWeight="semibold"
+                            flex={1}
+                            _hover={{
+                              bg: 'linear-gradient(135deg, #475569 0%, #1e293b 100%)',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 6px 14px rgba(15, 23, 42, 0.35)',
+                            }}
+                            _active={{ transform: 'translateY(0)' }}
+                            transition="all 0.2s ease"
+                            boxShadow="0 4px 10px rgba(15, 23, 42, 0.22)"
+                            rightIcon={<Box as={ArrowUpRight} w={3.5} h={3.5} />}
+                            onClick={handleTakeSurvey}
+                            borderRadius="lg"
+                          >
+                            Take survey · 2 min
+                          </Button>
+                        )}
+                      </HStack>
+
+                      {/* STEP 2 - Open courses */}
+                      <HStack spacing={3} align="center" position="relative">
+                        <Flex
+                          w={7}
+                          h={7}
+                          bg={
+                            preCourseSurveyState.completed
+                              ? 'linear-gradient(135deg, #64748b 0%, #475569 100%)'
+                              : 'gray.200'
+                          }
+                          color={preCourseSurveyState.completed ? 'white' : 'gray.500'}
+                          borderRadius="full"
+                          align="center"
+                          justify="center"
+                          flexShrink={0}
+                          boxShadow={
+                            preCourseSurveyState.completed
+                              ? '0 4px 10px rgba(71, 85, 105, 0.25), 0 0 0 4px rgba(100, 116, 139, 0.08)'
+                              : 'inset 0 0 0 1px rgba(0,0,0,0.04)'
+                          }
+                        >
+                          {preCourseSurveyState.completed ? (
+                            <Text fontSize="xs" fontWeight="bold" lineHeight="1">
+                              2
+                            </Text>
+                          ) : (
+                            <Box as={Lock} w={3.5} h={3.5} strokeWidth={2.5} />
+                          )}
+                        </Flex>
+                        {preCourseSurveyState.completed ? (
+                          <Button
+                            size="sm"
+                            h={8}
+                            bg="linear-gradient(135deg, #64748b 0%, #475569 100%)"
+                            color="white"
+                            fontWeight="semibold"
+                            flex={1}
+                            _hover={{
+                              bg: 'linear-gradient(135deg, #94a3b8 0%, #334155 100%)',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 6px 14px rgba(71, 85, 105, 0.3)',
+                            }}
+                            _active={{ transform: 'translateY(0)' }}
+                            transition="all 0.2s ease"
+                            boxShadow="0 4px 10px rgba(71, 85, 105, 0.22)"
+                            rightIcon={<Box as={ArrowUpRight} w={3.5} h={3.5} />}
+                            onClick={() => navigate('/app/courses')}
+                            borderRadius="lg"
+                          >
+                            Open courses
+                          </Button>
+                        ) : (
+                          <Text fontSize="sm" fontWeight="medium" color="gray.400" flex={1}>
+                            Courses · locked
+                          </Text>
+                        )}
+                      </HStack>
+                    </Stack>
+                  </Stack>
+                </Box>
+              )
+            })()}
           </Skeleton>
         </SimpleGrid>
 
@@ -1126,6 +1727,20 @@ export const WeeklyGlancePage = () => {
         isLoading={isCreatingVillage}
         error={villageError}
       />
+
+      <PreCourseSurveyScreen
+        isOpen={isSurveyOpen}
+        isSubmitting={isSurveySubmitting}
+        initialValues={{
+          email: profile?.email ?? '',
+          firstName: profile?.firstName ?? '',
+          lastName: profile?.lastName ?? '',
+          organization: profile?.companyName ?? '',
+        }}
+        onClose={() => setIsSurveyOpen(false)}
+        onSubmit={handleSurveySubmit}
+      />
+
     </Box>
   )
 }

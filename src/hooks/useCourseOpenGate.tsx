@@ -1,8 +1,11 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
-import { markPreCourseSurveyCompleted } from '@/services/preCourseSurveyService'
-import { PreCourseSurveyModal } from '@/components/modals/PreCourseSurveyModal'
+import {
+  completePreCourseSurvey,
+  type PreCourseSurveyAnswers,
+} from '@/services/preCourseSurveyService'
+import { PreCourseSurveyScreen } from '@/components/survey/PreCourseSurveyScreen'
 
 interface UseCourseOpenGateResult {
   /** Call this from an onClick handler with the destination URL. */
@@ -19,6 +22,16 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
   const { state, loading } = usePreCourseSurvey(uid)
   const [pendingUrl, setPendingUrl] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  const initialValues = useMemo<Partial<PreCourseSurveyAnswers>>(
+    () => ({
+      email: profile?.email ?? '',
+      firstName: profile?.firstName ?? '',
+      lastName: profile?.lastName ?? '',
+      organization: profile?.companyName ?? '',
+    }),
+    [profile?.email, profile?.firstName, profile?.lastName, profile?.companyName],
+  )
 
   const openInNewTab = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -41,25 +54,35 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
     [loading, state.completed],
   )
 
-  const handleCompleted = useCallback(async () => {
-    if (!uid) return
-    setSubmitting(true)
-    try {
-      await markPreCourseSurveyCompleted(uid)
-      const target = pendingUrl
-      setPendingUrl(null)
-      if (target) openInNewTab(target)
-    } finally {
-      setSubmitting(false)
-    }
-  }, [uid, pendingUrl])
+  const handleSubmit = useCallback(
+    async (answers: PreCourseSurveyAnswers) => {
+      if (!uid) return
+      setSubmitting(true)
+      try {
+        await completePreCourseSurvey(uid, answers, {
+          // Mirror the capstone runtime's org precedence so the submission
+          // lands under the same id the learner's partner already queries.
+          organizationId: profile?.organizationId ?? profile?.companyId ?? null,
+          companyId: profile?.companyId ?? null,
+          displayName: profile?.fullName ?? null,
+        })
+        const target = pendingUrl
+        setPendingUrl(null)
+        if (target) openInNewTab(target)
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [uid, pendingUrl, profile?.organizationId, profile?.companyId, profile?.fullName],
+  )
 
   const surveyModal = (
-    <PreCourseSurveyModal
+    <PreCourseSurveyScreen
       isOpen={pendingUrl !== null}
       isSubmitting={submitting}
+      initialValues={initialValues}
       onClose={() => setPendingUrl(null)}
-      onCompleted={handleCompleted}
+      onSubmit={handleSubmit}
     />
   )
 

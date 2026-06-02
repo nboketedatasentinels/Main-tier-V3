@@ -48,7 +48,6 @@ import {
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
-import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import { getPointsPerCourse } from '@/config/pointsConfig'
 import type { UserProfile } from '@/types'
@@ -206,104 +205,6 @@ const CourseCompletionStatus: React.FC<CourseCompletionBadgeProps> = ({ completi
         Points awarded after partner verifies completion
       </Text>
     </HStack>
-  )
-}
-
-type CourseProgressStage = 'done' | 'current' | 'locked'
-
-const stageColors: Record<CourseProgressStage, { dot: string; ring: string; label: string }> = {
-  done: { dot: '#350e6f', ring: '#350e6f', label: '#350e6f' },
-  current: { dot: 'white', ring: '#350e6f', label: '#350e6f' },
-  locked: { dot: 'white', ring: '#cbd5e1', label: 'gray.500' },
-}
-
-const CourseProgressTimeline: React.FC<{
-  preDone: boolean
-  courseDone: boolean
-  postDone: boolean
-}> = ({ preDone, courseDone, postDone }) => {
-  const preStage: CourseProgressStage = preDone ? 'done' : 'current'
-  const courseStage: CourseProgressStage = courseDone
-    ? 'done'
-    : preDone
-      ? 'current'
-      : 'locked'
-  const postStage: CourseProgressStage = postDone
-    ? 'done'
-    : courseDone
-      ? 'current'
-      : 'locked'
-
-  const stages: Array<{ label: string; stage: CourseProgressStage }> = [
-    { label: 'Pre-assessment', stage: preStage },
-    { label: 'Course', stage: courseStage },
-    { label: 'Post-assessment', stage: postStage },
-  ]
-
-  return (
-    <Box
-      bg="white"
-      border="1px solid"
-      borderColor="gray.200"
-      borderRadius="md"
-      px={3}
-      py={2.5}
-    >
-      <Text
-        fontSize="2xs"
-        fontWeight="bold"
-        color="gray.500"
-        textTransform="uppercase"
-        letterSpacing="0.06em"
-        mb={2}
-      >
-        Progress
-      </Text>
-      <HStack spacing={0} align="center" w="full">
-        {stages.map((step, idx) => {
-          const colors = stageColors[step.stage]
-          const isLast = idx === stages.length - 1
-          const nextColors = !isLast ? stageColors[stages[idx + 1].stage] : null
-          const connectorColor =
-            nextColors && step.stage === 'done' && nextColors.label === '#350e6f'
-              ? '#350e6f'
-              : '#e2e8f0'
-          return (
-            <React.Fragment key={step.label}>
-              <Stack spacing={1} align="center" minW="0" flexShrink={0}>
-                <Flex
-                  w={5}
-                  h={5}
-                  borderRadius="full"
-                  bg={colors.dot}
-                  border="2px solid"
-                  borderColor={colors.ring}
-                  align="center"
-                  justify="center"
-                  boxShadow={step.stage === 'current' ? '0 0 0 3px rgba(53, 14, 111, 0.12)' : 'none'}
-                >
-                  {step.stage === 'done' && (
-                    <Icon as={CheckCircle2} boxSize={2.5} color="white" />
-                  )}
-                </Flex>
-                <Text
-                  fontSize="2xs"
-                  fontWeight={step.stage === 'locked' ? 'medium' : 'semibold'}
-                  color={colors.label}
-                  whiteSpace="nowrap"
-                  textTransform="none"
-                >
-                  {step.label}
-                </Text>
-              </Stack>
-              {!isLast && (
-                <Box flex="1" h="2px" bg={connectorColor} mx={2} mt={-3} />
-              )}
-            </React.Fragment>
-          )
-        })}
-      </HStack>
-    </Box>
   )
 }
 
@@ -725,7 +626,6 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const { loading: progressLoading } = useUserCourseProgress(userId)
   const { completionsByKey } = useUserCourseCompletions(userId)
   const { requestOpenCourse, surveyModal } = useCourseOpenGate()
-  const { state: preCourseSurveyState } = usePreCourseSurvey(userId ?? null)
 
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
   const [loadingCourses, setLoadingCourses] = useState(true)
@@ -1337,14 +1237,6 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                           </Text>
                         )}
                       </Stack>
-
-                      {entry.courseId && hasCourse && (
-                        <CourseProgressTimeline
-                          preDone={preCourseSurveyState.completed}
-                          courseDone={isApproved}
-                          postDone={false}
-                        />
-                      )}
 
                       {entry.courseId && (
                         <Box pt={1}>
