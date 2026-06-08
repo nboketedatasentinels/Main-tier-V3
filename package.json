@@ -33,6 +33,7 @@
     "@lottiefiles/dotlottie-react": "^0.17.13",
     "@react-pdf/renderer": "^4.3.2",
     "@stripe/stripe-js": "^2.4.0",
+    "@supabase/supabase-js": "^2.107.0",
     "@yudiel/react-qr-scanner": "^2.5.1",
     "canvas-confetti": "^1.9.2",
     "cors": "^2.8.6",

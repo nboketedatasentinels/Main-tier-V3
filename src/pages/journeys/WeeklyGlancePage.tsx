@@ -1,8 +1,4 @@
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
   Badge,
   Box,
   Button,
@@ -559,7 +555,6 @@ export const WeeklyGlancePage = () => {
   )
 
   const shouldShowBuildVillageCard = canCreateVillage(profile)
-  const hasError = Object.values(data.errors ?? {}).some(Boolean)
 
   const personalityIncomplete = useMemo(() => {
     if (data.loading.profile) return false
@@ -718,16 +713,6 @@ export const WeeklyGlancePage = () => {
             Open weekly checklist
           </Button>
         </Flex>
-
-        {hasError && (
-          <Alert status="warning" rounded="md" borderWidth="1px" borderColor="yellow.200">
-            <AlertIcon />
-            <Box>
-              <AlertTitle>Some sections failed to load</AlertTitle>
-              <AlertDescription>Data may be incomplete. Try refreshing the page.</AlertDescription>
-            </Box>
-          </Alert>
-        )}
 
         {personalityIncomplete && (
           <Box

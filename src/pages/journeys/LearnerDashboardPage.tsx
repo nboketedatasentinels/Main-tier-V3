@@ -1,8 +1,4 @@
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
   Box,
   Button,
   Card,
@@ -61,7 +57,6 @@ export const LearnerDashboardPage = () => {
     !isPaidMember &&
     !isCorporateTier
 
-  const hasError = Object.values(data.errors).some(Boolean)
   const isParallelTrackingEnabled = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true'
 
   if (isParallelTrackingEnabled) {
@@ -242,16 +237,6 @@ export const LearnerDashboardPage = () => {
           <Heading size="lg" color="text.primary">Current Progress at a Glance</Heading>
           <Text color="text.primary">Your personalized dashboard for points accumulated, habits, and support.</Text>
         </Stack>
-
-        {hasError && (
-          <Alert status="warning" rounded="md">
-            <AlertIcon />
-            <Box>
-              <AlertTitle>Some sections failed to load</AlertTitle>
-              <AlertDescription>Data may be incomplete. Try refreshing the page.</AlertDescription>
-            </Box>
-          </Alert>
-        )}
 
         <WeeklyInspirationCard data={data.inspirationQuote} loading={data.loading.inspiration} />
 
