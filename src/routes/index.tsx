@@ -68,6 +68,8 @@ const PartnerAssignmentPage = lazy(() => import('@/pages/admin/PartnerAssignment
 const LearnerAssignmentsPage = lazy(() => import('@/pages/partner/LearnerAssignmentsPage'))
 const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPage'))
 const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
+const LiftResultsPage = lazy(() => import('@/pages/journeys/LiftResultsPage'))
+const LiftAssessmentsAdminPage = lazy(() => import('@/pages/super-admin/LiftAssessmentsAdminPage'))
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -221,6 +223,7 @@ export const AppRoutes = () => {
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
+          <Route path="lift-assessments" element={<LiftAssessmentsAdminPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
@@ -243,6 +246,7 @@ export const AppRoutes = () => {
           <Route path="journeys" element={<JourneysPage />} />
           <Route path="weekly-glance" element={<WeeklyGlancePage />} />
           <Route path="learner-dashboard" element={<LearnerDashboardPage />} />
+          <Route path="lift-results" element={<LiftResultsPage />} />
           
           {/* Learner-specific routes with mentor restriction */}
           <Route 
