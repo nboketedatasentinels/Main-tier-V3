@@ -61,6 +61,7 @@ import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import PointsNotificationListener from '@/components/PointsNotificationListener'
 import { MandatoryAnnouncementGate } from '@/components/announcements/MandatoryAnnouncementGate'
 import { NewAnnouncementPopup } from '@/components/announcements/NewAnnouncementPopup'
+import { MandatoryLiftAssessmentGate } from '@/components/lift/MandatoryLiftAssessmentGate'
 
 interface NavItem {
   label: string
@@ -937,6 +938,8 @@ export const MainLayout: React.FC = () => {
       <PointsNotificationListener />
 
       <MandatoryAnnouncementGate />
+
+      <MandatoryLiftAssessmentGate />
 
       <NewAnnouncementPopup />
 
