@@ -16,11 +16,8 @@ import {
   Alert,
   AlertIcon,
 } from '@chakra-ui/react'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { normalizePhoneNumber, isValidPhoneNumber } from '@/utils/phoneNumber'
-import { checkPhoneAvailability, claimPhoneNumber } from '@/services/phoneRegistryService'
 
 interface PhoneNumberPromptModalProps {
   isOpen: boolean
@@ -32,7 +29,7 @@ export const PhoneNumberPromptModal: React.FC<PhoneNumberPromptModalProps> = ({
   onComplete,
 }) => {
   const toast = useToast()
-  const { user, refreshProfile } = useAuth()
+  const { user, updateProfile } = useAuth()
 
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
@@ -58,30 +55,14 @@ export const PhoneNumberPromptModal: React.FC<PhoneNumberPromptModalProps> = ({
     setLoading(true)
 
     try {
-      const { available, ownerUid } = await checkPhoneAvailability(phone)
-      if (!available && ownerUid !== user.uid) {
-        setError('This phone number is already registered to another account.')
+      // Persist via the auth layer (Supabase profiles row). updateProfile also
+      // updates local profile state, so the login redirect proceeds.
+      const { error: saveError } = await updateProfile({ phoneNumber: normalized })
+      if (saveError) {
+        setError(saveError.message || 'Something went wrong. Please try again.')
         setLoading(false)
         return
       }
-
-      const now = serverTimestamp()
-
-      // 1) Required writes: users + profiles must succeed
-      await Promise.all([
-        setDoc(doc(db, 'users', user.uid), { phoneNumber: normalized, updatedAt: now }, { merge: true }),
-        setDoc(doc(db, 'profiles', user.uid), { phoneNumber: normalized, updatedAt: now }, { merge: true }),
-      ])
-
-      // 2) Best-effort: claim phone in registry. If this fails because of rules or race,
-      //    we still consider the phone saved and let the user proceed.
-      try {
-        await claimPhoneNumber(phone, user.uid, user.email)
-      } catch (claimErr) {
-        console.warn('⚠️ [PhonePrompt] claimPhoneNumber failed (non-blocking):', claimErr)
-      }
-
-      await refreshProfile({ reason: 'phone-number-added', isManual: true })
 
       toast({
         title: 'Phone number saved',

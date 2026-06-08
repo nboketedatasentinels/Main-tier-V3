@@ -1,29 +1,12 @@
-import { useEffect, useMemo, useState } from 'react'
-import {
-  Timestamp,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import type { Timestamp } from 'firebase/firestore'
+import { supabase } from '@/services/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
-import { ORG_COLLECTION } from '@/constants/organizations'
 import { getWeekKey, getCurrentWeekNumber, getJourneyTiming } from '@/utils/weekCalculations'
-import { JOURNEY_META, getMonthNumber, getActivityDefinitionById } from '@/config/pointsConfig'
+import { JOURNEY_META, getActivityDefinitionById } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { UserProfileExtended } from '@/services/userProfileService'
-import type { WeeklyProgress } from '@/types'
 
 export interface WeeklyPoints {
   id: string
@@ -79,8 +62,8 @@ export interface WeeklyHabit {
 }
 
 export interface FocusArea {
-  id: string;
-  title: string;
+  id: string
+  title: string
 }
 
 export interface LedgerEntry {
@@ -92,16 +75,12 @@ export interface LedgerEntry {
   weekNumber: number
 }
 
-const toDateValue = (value: unknown): Date | undefined => {
+type Row = Record<string, unknown>
+
+const toDate = (value: unknown): Date | undefined => {
   if (!value) return undefined
-  if (value instanceof Date) return value
-  if (typeof value === 'object' && value !== null) {
-    const candidate = value as { toDate?: () => Date }
-    if (typeof candidate.toDate === 'function') {
-      return candidate.toDate()
-    }
-  }
-  return undefined
+  const date = new Date(value as string)
+  return Number.isNaN(date.getTime()) ? undefined : date
 }
 
 const PEER_MATCH_STATUS_VALUES: PeerMatchStatus[] = ['new', 'viewed', 'contacted', 'completed', 'expired']
@@ -122,6 +101,23 @@ const toStringArray = (value: unknown): string[] => {
   return value
     .map((item) => (typeof item === 'string' ? item.trim() : ''))
     .filter((item) => item.length > 0)
+}
+
+// Minimal Supabase profiles row -> UserProfileExtended (mentor/ambassador cards
+// only render firstName/avatar). Long tail lives in the `data` jsonb column.
+const mapProfileRow = (row: Row | null): UserProfileExtended | null => {
+  if (!row) return null
+  const data = (row.data as Record<string, unknown>) || {}
+  return {
+    ...data,
+    id: row.id as string,
+    email: (row.email as string) ?? '',
+    firstName: (row.first_name as string) ?? (data.firstName as string),
+    lastName: (row.last_name as string) ?? (data.lastName as string),
+    fullName: (row.full_name as string) ?? (data.fullName as string),
+    role: row.role,
+    avatarUrl: (data.avatarUrl as string) ?? (data.photoURL as string),
+  } as unknown as UserProfileExtended
 }
 
 interface WeeklyGlanceLoadingState {
@@ -148,9 +144,9 @@ interface WeeklyGlanceErrorState {
   ledger?: Error
 }
 
-// NOTE: Weekly naming is intentional for now because Firestore collections/doc ids are week-based.
-// TODO(periods): add a period abstraction before renaming `weekly*` fields to generic period terms.
-
+// Auth runs on Supabase; all learner data here reads from Supabase tables
+// (RLS scopes every row to uid = auth.uid()). One-time fetches keep the
+// dashboard fast - no hanging realtime listeners.
 export const useWeeklyGlanceData = () => {
   const { profile } = useAuth()
   const [weeklyPoints, setWeeklyPoints] = useState<WeeklyPoints | null>(null)
@@ -174,15 +170,9 @@ export const useWeeklyGlanceData = () => {
     ledger: true,
   })
   const [errors, setErrors] = useState<WeeklyGlanceErrorState>({})
-  const {
-    assignments: leadershipAssignments,
-    profiles: leadershipProfiles,
-    errors: leadershipErrors,
-    loading: leadershipLoading,
-  } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
 
   // Derive the true current week from journey start date so it stays in sync
-  // with journeyTiming used by the page - avoids stale profile.currentWeek mismatches.
+  // with journeyTiming used by the page.
   const weekNumber = useMemo(() => {
     const timing = getJourneyTiming(profile?.journeyStartDate, profile?.programDurationWeeks ?? 6)
     return timing?.currentWeek ?? profile?.currentWeek ?? 1
@@ -190,109 +180,64 @@ export const useWeeklyGlanceData = () => {
   const weekKey = useMemo(() => getWeekKey(), [])
   const calendarWeekNumber = useMemo(() => getCurrentWeekNumber(), [])
 
+  const profileId = profile?.id
+  const journeyType = profile?.journeyType
+  const companyId = profile?.companyId
+  const mentorId = profile?.mentorId ?? null
+  const ambassadorId = profile?.ambassadorId ?? null
+
+  /* ---- weekly points (weekly_progress) + engagement backfill from ledger ---- */
   useEffect(() => {
-    if (!profile?.id) return
+    if (!profileId) return
+    let isActive = true
+    const defaultTarget = journeyType ? JOURNEY_META[journeyType].weeklyTarget : 0
 
-    const initializeWeeklyProgress = async () => {
-      const journeyType = profile.journeyType
-      const weeklyTarget = journeyType ? JOURNEY_META[journeyType].weeklyTarget : 0
-      const progressRef = doc(db, 'weeklyProgress', `${profile.id}__${weekNumber}`)
-      const monthNumber = getMonthNumber(weekNumber)
-      const payload = {
-        uid: profile.id,
-        weekNumber,
-        monthNumber,
-        weeklyTarget,
-        pointsEarned: 0,
-        engagementCount: 0,
-        status: 'alert',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }
-
-      const maxAttempts = 2
-      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-        try {
-          const existing = await getDoc(progressRef)
-          if (!existing.exists()) {
-            await setDoc(progressRef, payload, { merge: true })
-          }
-          return
-        } catch (error) {
-          if (attempt === maxAttempts) {
-            console.warn('Unable to initialize weekly progress document.', error)
-          } else {
-            await new Promise(resolve => setTimeout(resolve, 150 * attempt))
-          }
-        }
-      }
-    }
-
-    initializeWeeklyProgress()
-  }, [profile?.id, profile?.journeyType, weekNumber])
-
-  useEffect(() => {
-    if (!profile?.id) return
-
-    const progressRef = doc(db, 'weeklyProgress', `${profile.id}__${weekNumber}`)
-    const defaultTarget = profile?.journeyType ? JOURNEY_META[profile.journeyType].weeklyTarget : 0
-    const mapStatus = (status?: WeeklyProgress['status']): WeeklyPoints['status'] => {
+    const mapStatus = (status?: string): WeeklyPoints['status'] => {
       switch (status) {
         case 'on_track':
+        case 'recovery':
           return 'on_track'
         case 'warning':
           return 'warning'
-        case 'alert':
-          return 'at_risk'
-        case 'recovery':
-          return 'on_track'
         default:
           return 'at_risk'
       }
     }
-    const toWeeklyPoints = (data: WeeklyProgress, id: string): WeeklyPoints => ({
-      id,
-      points_earned: data.pointsEarned ?? 0,
-      target_points: data.weeklyTarget ?? defaultTarget,
-      status: mapStatus(data.status),
-      engagement_count: data.engagementCount ?? 0,
-      week_number: data.weekNumber ?? weekNumber,
-    })
-    const backfillEngagementCount = async () => {
-      const ledgerQuery = query(
-        collection(db, 'pointsLedger'),
-        where('uid', '==', profile.id),
-        where('weekNumber', '==', weekNumber),
-      )
-      const ledgerSnapshot = await getDocs(ledgerQuery)
-      return ledgerSnapshot.size
-    }
 
-    const unsubscribe = onSnapshot(
-      progressRef,
-      snapshot => {
-        if (snapshot.exists()) {
-          const data = snapshot.data() as WeeklyProgress
-          setWeeklyPoints(toWeeklyPoints(data, snapshot.id))
-          if (data.engagementCount == null) {
-            void (async () => {
-              try {
-                const engagementCount = await backfillEngagementCount()
-                await updateDoc(progressRef, {
-                  engagementCount,
-                  updatedAt: serverTimestamp(),
-                })
-                setWeeklyPoints(prev =>
-                  prev ? { ...prev, engagement_count: engagementCount } : prev,
-                )
-              } catch (error) {
-                console.warn('Unable to backfill engagement count.', error)
-              }
-            })()
+    const run = async () => {
+      setLoading(prev => ({ ...prev, points: true }))
+      try {
+        const { data: row, error } = await supabase
+          .from('weekly_progress')
+          .select('*')
+          .eq('uid', profileId)
+          .eq('week_number', weekNumber)
+          .maybeSingle()
+        if (error) throw new Error(error.message)
+        if (!isActive) return
+
+        if (row) {
+          let engagementCount = (row.engagement_count as number) ?? null
+          if (engagementCount == null) {
+            const { count } = await supabase
+              .from('points_ledger')
+              .select('id', { count: 'exact', head: true })
+              .eq('uid', profileId)
+              .eq('week_number', weekNumber)
+            engagementCount = count ?? 0
           }
+          if (!isActive) return
+          setWeeklyPoints({
+            id: (row.id as string) ?? `${profileId}__${weekNumber}`,
+            points_earned: (row.points_earned as number) ?? 0,
+            target_points: (row.weekly_target as number) ?? defaultTarget,
+            status: mapStatus(row.status as string),
+            engagement_count: engagementCount,
+            week_number: (row.week_number as number) ?? weekNumber,
+          })
         } else {
           setWeeklyPoints({
-            id: progressRef.id,
+            id: `${profileId}__${weekNumber}`,
             points_earned: 0,
             target_points: defaultTarget,
             status: 'at_risk',
@@ -300,348 +245,359 @@ export const useWeeklyGlanceData = () => {
             week_number: weekNumber,
           })
         }
-        setLoading(prev => ({ ...prev, points: false }))
-      },
-      error => {
-        setErrors(prev => ({ ...prev, points: error as Error }))
-        setLoading(prev => ({ ...prev, points: false }))
-      },
-    )
-
-    return () => unsubscribe()
-  }, [profile?.id, profile?.journeyType, weekNumber])
-
-  useEffect(() => {
-    setLoading(prev => ({ ...prev, support: leadershipLoading }))
-  }, [leadershipLoading])
-
-  useEffect(() => {
-    setErrors(prev => ({
-      ...prev,
-      support: leadershipErrors.organization ? new Error(leadershipErrors.organization) : undefined,
-    }))
-  }, [leadershipErrors.organization])
-
-  useEffect(() => {
-    if (!profile?.id) {
-      setSupportAssignment(null)
-      return
-    }
-
-    setSupportAssignment({
-      id: profile.id,
-      user_id: profile.id,
-      mentor_id: leadershipAssignments.mentorId,
-      ambassador_id: leadershipAssignments.ambassadorId,
-      mentorProfile: leadershipProfiles.mentor,
-      mentorProfileError: leadershipErrors.mentor,
-      ambassadorProfile: leadershipProfiles.ambassador,
-      ambassadorProfileError: leadershipErrors.ambassador,
-    })
-  }, [
-    leadershipAssignments.ambassadorId,
-    leadershipAssignments.mentorId,
-    leadershipErrors.ambassador,
-    leadershipErrors.mentor,
-    leadershipProfiles.ambassador,
-    leadershipProfiles.mentor,
-    profile?.id,
-  ])
-
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!profile?.id) return
-      setLoading(prev => ({ ...prev, profile: true }))
-      try {
-        const profileDoc = await getDoc(doc(db, 'profiles', profile.id))
-        if (profileDoc.exists()) {
-          const data = profileDoc.data()
-          const personalityStrengths = toStringArray(data.personalityStrengths)
-          const legacyPersonalityStrengths = toStringArray(data.personality_strengths)
-          const coreValues = toStringArray(data.coreValues)
-          const legacyCoreValues = toStringArray(data.core_values)
-          const resolvedPersonalityType =
-            (typeof data.personalityType === 'string' ? data.personalityType.trim() : '') ||
-            (typeof data.personality_type === 'string' ? data.personality_type.trim() : '') ||
-            (typeof profile.personalityType === 'string' ? profile.personalityType.trim() : '')
-          const resolvedStrengths =
-            personalityStrengths.length > 0 ? personalityStrengths : legacyPersonalityStrengths
-          const resolvedCoreValues =
-            coreValues.length > 0 ? coreValues : legacyCoreValues
-          const resolvedDescription =
-            (typeof data.personalityDescription === 'string' ? data.personalityDescription : undefined) ||
-            (typeof data.personality_description === 'string' ? data.personality_description : undefined)
-
-          setPersonality({
-            personalityType: resolvedPersonalityType || undefined,
-            personalityStrengths: resolvedStrengths,
-            personalityDescription: resolvedDescription,
-            coreValues: resolvedCoreValues.length > 0 ? resolvedCoreValues : (profile.coreValues ?? []),
-          })
-        } else {
-          setPersonality(
-            profile.personalityType || (profile.coreValues && profile.coreValues.length > 0)
-              ? {
-                  personalityType: profile.personalityType,
-                  personalityStrengths: [],
-                  personalityDescription: undefined,
-                  coreValues: profile.coreValues ?? [],
-                }
-              : null,
-          )
-        }
       } catch (error) {
-        setErrors(prev => ({ ...prev, profile: error as Error }))
+        if (isActive) setErrors(prev => ({ ...prev, points: error as Error }))
       } finally {
-        setLoading(prev => ({ ...prev, profile: false }))
+        if (isActive) setLoading(prev => ({ ...prev, points: false }))
       }
     }
 
-    fetchProfile()
-  }, [profile?.id])
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId, journeyType, weekNumber])
 
+  /* ---- support assignment (mentor / ambassador) from profile ---- */
   useEffect(() => {
-    const fetchMatches = async () => {
-      if (!profile?.id) return
-      setLoading(prev => ({ ...prev, matches: true }))
-      try {
-        const matchesCollection = collection(db, 'peer_weekly_matches')
-        const primarySnapshot = await getDocs(
-          query(matchesCollection, where('user_id', '==', profile.id)),
-        )
-        let matchDocs = primarySnapshot.docs
+    if (!profileId) {
+      setSupportAssignment(null)
+      setLoading(prev => ({ ...prev, support: false }))
+      return
+    }
+    let isActive = true
 
-        if (!matchDocs.length) {
-          const fallbackSnapshot = await getDocs(
-            query(matchesCollection, where('userId', '==', profile.id)),
-          )
-          matchDocs = fallbackSnapshot.docs
+    const run = async () => {
+      setLoading(prev => ({ ...prev, support: true }))
+      try {
+        const ids = [mentorId, ambassadorId].filter((id): id is string => Boolean(id))
+        let mentorProfile: UserProfileExtended | null = null
+        let ambassadorProfile: UserProfileExtended | null = null
+
+        if (ids.length) {
+          const { data: rows, error } = await supabase
+            .from('profiles')
+            .select('id, email, first_name, last_name, full_name, role, data')
+            .in('id', ids)
+          if (error) throw new Error(error.message)
+          const byId = new Map((rows ?? []).map(r => [(r as Row).id as string, r as Row]))
+          mentorProfile = mentorId ? mapProfileRow(byId.get(mentorId) ?? null) : null
+          ambassadorProfile = ambassadorId ? mapProfileRow(byId.get(ambassadorId) ?? null) : null
         }
 
-        const matchesData: PeerMatch[] = matchDocs
-          .map(docItem => {
-            const record = docItem.data() as Record<string, unknown>
-            const rawStatus =
-              (record.matchStatus as string | undefined) || (record.status as string | undefined)
+        if (!isActive) return
+        setSupportAssignment({
+          id: profileId,
+          user_id: profileId,
+          mentor_id: mentorId,
+          ambassador_id: ambassadorId,
+          mentorProfile,
+          ambassadorProfile,
+        })
+      } catch (error) {
+        if (isActive) setErrors(prev => ({ ...prev, support: error as Error }))
+      } finally {
+        if (isActive) setLoading(prev => ({ ...prev, support: false }))
+      }
+    }
+
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId, mentorId, ambassadorId])
+
+  /* ---- personality (derived from the already-loaded profile) ---- */
+  useEffect(() => {
+    if (!profile?.id) return
+    setLoading(prev => ({ ...prev, profile: true }))
+    const record = profile as unknown as Record<string, unknown>
+    const personalityType =
+      typeof profile.personalityType === 'string' ? profile.personalityType.trim() : ''
+    const coreValues = toStringArray(profile.coreValues)
+    const strengths = toStringArray(record.personalityStrengths)
+    const description =
+      typeof record.personalityDescription === 'string'
+        ? (record.personalityDescription as string)
+        : undefined
+
+    setPersonality(
+      personalityType || coreValues.length > 0 || strengths.length > 0
+        ? {
+            personalityType: personalityType || undefined,
+            personalityStrengths: strengths,
+            personalityDescription: description,
+            coreValues,
+          }
+        : null,
+    )
+    setLoading(prev => ({ ...prev, profile: false }))
+  }, [profile])
+
+  /* ---- peer matches ---- */
+  useEffect(() => {
+    if (!profileId) return
+    let isActive = true
+
+    const run = async () => {
+      setLoading(prev => ({ ...prev, matches: true }))
+      try {
+        const { data: rows, error } = await supabase
+          .from('peer_weekly_matches')
+          .select('*')
+          .eq('uid', profileId)
+        if (error) throw new Error(error.message)
+        if (!isActive) return
+
+        const matches: PeerMatch[] = (rows ?? [])
+          .map((r) => {
+            const row = r as Row
             return {
-              id: docItem.id,
-              peerId:
-                (record.peerId as string | undefined) ||
-                (record.peer_id as string | undefined),
-              matchReason: typeof record.matchReason === 'string' ? record.matchReason : undefined,
-              matchStatus: normalizePeerMatchStatus(rawStatus),
-              matchKey: typeof record.matchKey === 'string' ? record.matchKey : undefined,
+              id: row.id as string,
+              peerId: (row.peer_uid as string) ?? undefined,
+              matchReason: typeof row.match_reason === 'string' ? row.match_reason : undefined,
+              matchStatus: normalizePeerMatchStatus(row.match_status as string),
+              matchKey: typeof row.match_key === 'string' ? row.match_key : undefined,
               matchRefreshPreference:
-                typeof record.matchRefreshPreference === 'string'
-                  ? record.matchRefreshPreference
-                  : undefined,
+                typeof row.match_refresh_preference === 'string' ? row.match_refresh_preference : undefined,
               preferredMatchDay:
-                typeof record.preferredMatchDay === 'number' ? record.preferredMatchDay : undefined,
-              refreshCount:
-                typeof record.refreshCount === 'number' ? record.refreshCount : undefined,
-              automatedMatch:
-                typeof record.automatedMatch === 'boolean' ? record.automatedMatch : undefined,
-              createdAt: toDateValue(record.createdAt),
-              lastRefreshAt: toDateValue(record.lastRefreshAt),
-              lastManualRefreshAt: toDateValue(record.lastManualRefreshAt),
+                typeof row.preferred_match_day === 'number' ? row.preferred_match_day : undefined,
+              refreshCount: typeof row.refresh_count === 'number' ? row.refresh_count : undefined,
+              automatedMatch: typeof row.automated_match === 'boolean' ? row.automated_match : undefined,
+              createdAt: toDate(row.created_at),
+              lastRefreshAt: toDate(row.last_refresh_at),
             }
           })
           .filter(match => match.matchStatus !== 'expired')
           .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
-        setPeerMatches(matchesData)
+        setPeerMatches(matches)
       } catch (error) {
-        setErrors(prev => ({ ...prev, matches: error as Error }))
+        if (isActive) setErrors(prev => ({ ...prev, matches: error as Error }))
       } finally {
-        setLoading(prev => ({ ...prev, matches: false }))
+        if (isActive) setLoading(prev => ({ ...prev, matches: false }))
       }
     }
 
-    fetchMatches()
-  }, [profile?.id])
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId])
 
+  /* ---- weekly habits ---- */
   useEffect(() => {
-    if (!profile?.id) return
-    setLoading(prev => ({ ...prev, habits: true }))
-    const habitsQuery = query(
-      collection(db, 'weekly_habits'),
-      where('user_id', '==', profile.id),
-      where('week_key', '==', weekKey),
-    )
+    if (!profileId) return
+    let isActive = true
 
-    const unsubscribe = onSnapshot(
-      habitsQuery,
-      snapshot => {
-        const habits = snapshot.docs.map(docItem => ({
-          ...(docItem.data() as WeeklyHabit),
-          id: docItem.id,
-        }))
-        setWeeklyHabits(habits)
-        setLoading(prev => ({ ...prev, habits: false }))
-      },
-      error => {
-        setErrors(prev => ({ ...prev, habits: error as Error }))
-        setLoading(prev => ({ ...prev, habits: false }))
-      },
-    )
+    const run = async () => {
+      setLoading(prev => ({ ...prev, habits: true }))
+      try {
+        const { data: rows, error } = await supabase
+          .from('weekly_habits')
+          .select('*')
+          .eq('uid', profileId)
+          .eq('week_key', weekKey)
+        if (error) throw new Error(error.message)
+        if (!isActive) return
 
-    return () => unsubscribe()
-  }, [profile?.id, weekKey])
-
-  useEffect(() => {
-    const fetchQuote = () => {
-      setLoading(prev => ({ ...prev, inspiration: true }))
-      const quoteCount = leadershipQuotes.length
-      const quoteIndex = quoteCount > 0 ? (calendarWeekNumber - 1) % quoteCount : 0
-      const fallbackQuote =
-        leadershipQuotes[quoteIndex] ?? {
-          week_number: calendarWeekNumber,
-          quote_text: 'Join the movement. Take one small step today toward your goal.',
-          author: 'T4L Community',
-          category: 'Inspiration',
-        }
-
-      setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
-      setLoading(prev => ({ ...prev, inspiration: false }))
+        setWeeklyHabits(
+          (rows ?? []).map((r) => {
+            const row = r as Row
+            return {
+              id: row.id as string,
+              habit_id: (row.habit_id as string) ?? undefined,
+              title: (row.title as string) ?? '',
+              completed: Boolean(row.completed),
+              completed_at: (row.completed_at as unknown as Timestamp) ?? null,
+            }
+          }),
+        )
+      } catch (error) {
+        if (isActive) setErrors(prev => ({ ...prev, habits: error as Error }))
+      } finally {
+        if (isActive) setLoading(prev => ({ ...prev, habits: false }))
+      }
     }
 
-    fetchQuote()
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId, weekKey])
+
+  /* ---- inspiration quote (local rotation) ---- */
+  useEffect(() => {
+    setLoading(prev => ({ ...prev, inspiration: true }))
+    const quoteCount = leadershipQuotes.length
+    const quoteIndex = quoteCount > 0 ? (calendarWeekNumber - 1) % quoteCount : 0
+    const fallbackQuote =
+      leadershipQuotes[quoteIndex] ?? {
+        week_number: calendarWeekNumber,
+        quote_text: 'Join the movement. Take one small step today toward your goal.',
+        author: 'T4L Community',
+        category: 'Inspiration',
+      }
+    setInspirationQuote({ ...fallbackQuote, id: `fallback-${calendarWeekNumber}` })
+    setLoading(prev => ({ ...prev, inspiration: false }))
   }, [calendarWeekNumber])
 
+  /* ---- impact count (sum people_impacted) ---- */
   useEffect(() => {
-    if (!profile?.id) {
-      setLoading(prev => ({ ...prev, impact: false }));
-      setImpactCount(0);
-      return;
+    if (!profileId) {
+      setImpactCount(0)
+      setLoading(prev => ({ ...prev, impact: false }))
+      return
     }
+    let isActive = true
 
-    setLoading(prev => ({ ...prev, impact: true }));
-    const impactQuery = query(collection(db, 'impact_logs'), where('userId', '==', profile.id));
-
-    const unsubscribe = onSnapshot(
-      impactQuery,
-      snapshot => {
-        const total = snapshot.docs.reduce((sum, docItem) => {
-          const data = docItem.data() as { peopleImpacted?: number };
-          return sum + (data.peopleImpacted || 0);
-        }, 0);
-        setImpactCount(total);
-        setLoading(prev => ({ ...prev, impact: false }));
-      },
-      error => {
-        setErrors(prev => ({ ...prev, impact: error as Error }));
-        setLoading(prev => ({ ...prev, impact: false }));
+    const run = async () => {
+      setLoading(prev => ({ ...prev, impact: true }))
+      try {
+        const { data: rows, error } = await supabase
+          .from('impact_logs')
+          .select('people_impacted')
+          .eq('uid', profileId)
+        if (error) throw new Error(error.message)
+        if (!isActive) return
+        const total = (rows ?? []).reduce(
+          (sum, r) => sum + (((r as Row).people_impacted as number) || 0),
+          0,
+        )
+        setImpactCount(total)
+      } catch (error) {
+        if (isActive) setErrors(prev => ({ ...prev, impact: error as Error }))
+      } finally {
+        if (isActive) setLoading(prev => ({ ...prev, impact: false }))
       }
-    );
-
-    return () => unsubscribe();
-  }, [profile?.id])
-
-  const handleHabitToggle = async (habit: WeeklyHabit) => {
-    const nextState = !habit.completed
-    setWeeklyHabits(prev => prev.map(item => (item.id === habit.id ? { ...item, completed: nextState } : item)))
-    try {
-      await updateDoc(doc(db, 'weekly_habits', habit.id), {
-        completed: nextState,
-        completed_at: nextState ? Timestamp.now() : null,
-      })
-    } catch (error) {
-      setErrors(prev => ({ ...prev, habits: error as Error }))
-      setWeeklyHabits(prev =>
-        prev.map(item => (item.id === habit.id ? { ...item, completed: habit.completed, completed_at: habit.completed_at } : item)),
-      )
     }
-  }
 
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId])
+
+  /* ---- recent ledger entries ---- */
   useEffect(() => {
-    if (!profile?.id) {
+    if (!profileId) {
       setLoading(prev => ({ ...prev, ledger: false }))
       return
     }
+    let isActive = true
 
-    const ledgerQuery = query(
-      collection(db, 'pointsLedger'),
-      where('uid', '==', profile.id),
-      orderBy('createdAt', 'desc'),
-      limit(100)
-    )
-
-    const unsubscribe = onSnapshot(
-      ledgerQuery,
-      snapshot => {
-        const entries = snapshot.docs.map(docSnapshot => {
-          const data = docSnapshot.data()
-          const activityDef = getActivityDefinitionById({ activityId: data.activityId, journeyType: profile.journeyType })
-          return {
-            id: docSnapshot.id,
-            activityId: data.activityId,
-            activityTitle: activityDef?.title || data.activityId,
-            points: data.points,
-            createdAt: data.createdAt?.toDate() || new Date(),
-            weekNumber: data.weekNumber,
-          }
-        })
-        setLedgerEntries(entries)
-        setLoading(prev => ({ ...prev, ledger: false }))
-      },
-      error => {
-        console.error('Error fetching ledger entries:', error)
-        setErrors(prev => ({ ...prev, ledger: error as Error }))
-        setLoading(prev => ({ ...prev, ledger: false }))
-      }
-    )
-
-    return () => unsubscribe()
-  }, [profile?.id])
-
-  useEffect(() => {
-    const fetchFocusAreas = async () => {
-      if (!profile?.id) {
-        setFocusAreas([])
-        setLoading(prev => ({ ...prev, focus: false }))
-        return
-      }
-      setLoading(prev => ({ ...prev, focus: true }))
+    const run = async () => {
+      setLoading(prev => ({ ...prev, ledger: true }))
       try {
-        const resolvedFocusAreas = new Set<string>()
+        const { data: rows, error } = await supabase
+          .from('points_ledger')
+          .select('*')
+          .eq('uid', profileId)
+          .order('created_at', { ascending: false })
+          .limit(100)
+        if (error) throw new Error(error.message)
+        if (!isActive) return
 
-        if (profile.companyId) {
-          const organizationSnapshot = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
-          if (organizationSnapshot.exists()) {
-            const organizationData = organizationSnapshot.data() as Record<string, unknown>
-            const leadership =
-              organizationData.leadership && typeof organizationData.leadership === 'object'
-                ? (organizationData.leadership as Record<string, unknown>)
-                : null
-
-            const focusCandidates = [
-              ...toStringArray(organizationData.focusAreas),
-              ...toStringArray(organizationData.ambassadorFocusAreas),
-              ...toStringArray(organizationData.partnerProgramFocus),
-              ...toStringArray(leadership?.ambassadorFocusAreas),
-              ...toStringArray(leadership?.partnerProgramFocus),
-            ]
-
-            for (const focusArea of focusCandidates) {
-              resolvedFocusAreas.add(focusArea)
+        setLedgerEntries(
+          (rows ?? []).map((r) => {
+            const row = r as Row
+            const activityDef = getActivityDefinitionById({
+              activityId: row.activity_id as string,
+              journeyType,
+            })
+            return {
+              id: row.id as string,
+              activityId: (row.activity_id as string) ?? '',
+              activityTitle: activityDef?.title || (row.activity_id as string) || '',
+              points: (row.points as number) ?? 0,
+              createdAt: toDate(row.created_at) ?? new Date(),
+              weekNumber: (row.week_number as number) ?? 0,
             }
-          }
-        }
-
-        setFocusAreas(
-          Array.from(resolvedFocusAreas).map((title, index) => ({
-            id: `focus-${index + 1}`,
-            title,
-          })),
+          }),
         )
       } catch (error) {
-        setErrors(prev => ({ ...prev, focus: error as Error }))
+        if (isActive) setErrors(prev => ({ ...prev, ledger: error as Error }))
       } finally {
-        setLoading(prev => ({ ...prev, focus: false }))
+        if (isActive) setLoading(prev => ({ ...prev, ledger: false }))
       }
     }
 
-    void fetchFocusAreas()
-  }, [profile?.companyId, profile?.id])
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId, journeyType])
+
+  /* ---- focus areas (from organization settings) ---- */
+  useEffect(() => {
+    if (!profileId || !companyId) {
+      setFocusAreas([])
+      setLoading(prev => ({ ...prev, focus: false }))
+      return
+    }
+    let isActive = true
+
+    const run = async () => {
+      setLoading(prev => ({ ...prev, focus: true }))
+      try {
+        const { data: row, error } = await supabase
+          .from('organizations')
+          .select('settings')
+          .eq('id', companyId)
+          .maybeSingle()
+        if (error) throw new Error(error.message)
+        if (!isActive) return
+
+        const settings = ((row as Row | null)?.settings as Record<string, unknown>) || {}
+        const leadership =
+          settings.leadership && typeof settings.leadership === 'object'
+            ? (settings.leadership as Record<string, unknown>)
+            : null
+        const resolved = new Set<string>([
+          ...toStringArray(settings.focusAreas),
+          ...toStringArray(settings.ambassadorFocusAreas),
+          ...toStringArray(settings.partnerProgramFocus),
+          ...toStringArray(leadership?.ambassadorFocusAreas),
+          ...toStringArray(leadership?.partnerProgramFocus),
+        ])
+        setFocusAreas(
+          Array.from(resolved).map((title, index) => ({ id: `focus-${index + 1}`, title })),
+        )
+      } catch (error) {
+        if (isActive) setErrors(prev => ({ ...prev, focus: error as Error }))
+      } finally {
+        if (isActive) setLoading(prev => ({ ...prev, focus: false }))
+      }
+    }
+
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [profileId, companyId])
+
+  const handleHabitToggle = useCallback(async (habit: WeeklyHabit) => {
+    const nextState = !habit.completed
+    setWeeklyHabits(prev => prev.map(item => (item.id === habit.id ? { ...item, completed: nextState } : item)))
+    try {
+      const { error } = await supabase
+        .from('weekly_habits')
+        .update({
+          completed: nextState,
+          completed_at: nextState ? new Date().toISOString() : null,
+        })
+        .eq('id', habit.id)
+      if (error) throw new Error(error.message)
+    } catch (error) {
+      setErrors(prev => ({ ...prev, habits: error as Error }))
+      setWeeklyHabits(prev =>
+        prev.map(item =>
+          item.id === habit.id
+            ? { ...item, completed: habit.completed, completed_at: habit.completed_at }
+            : item,
+        ),
+      )
+    }
+  }, [])
 
   return {
     weeklyPoints,

@@ -10,13 +10,11 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
-import { db } from '@/services/firebase'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { isFreeUser } from '@/utils/membership'
 
 export const WelcomePage: React.FC = () => {
-  const { profile, user } = useAuth()
+  const { profile, user, updateProfile } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
   const [loading, setLoading] = React.useState(false)
@@ -32,26 +30,17 @@ export const WelcomePage: React.FC = () => {
 
     setLoading(true)
     try {
-      const userRef = doc(db, 'users', user.uid)
-      const profileRef = doc(db, 'profiles', user.uid)
       const updatedProfile = {
         ...profile,
         onboardingComplete: true,
         onboardingSkipped: false,
       }
 
-      // Use setDoc with merge: true to create or update documents
-      await Promise.all([
-        setDoc(userRef, {
-          onboardingComplete: true,
-          updatedAt: serverTimestamp(),
-        }, { merge: true }),
-        setDoc(profileRef, {
-          onboardingComplete: true,
-          onboardingSkipped: false,
-          updatedAt: serverTimestamp(),
-        }, { merge: true }),
-      ])
+      const { error } = await updateProfile({
+        onboardingComplete: true,
+        onboardingSkipped: false,
+      })
+      if (error) throw error
 
       // Note: Referral points are now awarded automatically via Cloud Function
       // when the referred user completes their first platform activity (writes to pointsLedger).
@@ -87,26 +76,17 @@ export const WelcomePage: React.FC = () => {
 
     setLoading(true)
     try {
-      const userRef = doc(db, 'users', user.uid)
-      const profileRef = doc(db, 'profiles', user.uid)
       const updatedProfile = {
         ...profile,
         onboardingComplete: false,
         onboardingSkipped: true,
       }
 
-      // Use setDoc with merge: true to create or update documents
-      await Promise.all([
-        setDoc(userRef, {
-          onboardingSkipped: true,
-          updatedAt: serverTimestamp(),
-        }, { merge: true }),
-        setDoc(profileRef, {
-          onboardingComplete: false,
-          onboardingSkipped: true,
-          updatedAt: serverTimestamp(),
-        }, { merge: true }),
-      ])
+      const { error } = await updateProfile({
+        onboardingComplete: false,
+        onboardingSkipped: true,
+      })
+      if (error) throw error
 
       // Navigate to role-based landing page
       const landingPath = getLandingPathForRole(updatedProfile)

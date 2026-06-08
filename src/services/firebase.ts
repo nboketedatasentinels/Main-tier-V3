@@ -89,7 +89,32 @@ try {
 }
 
 // Initialize Firebase services
-export const auth: Auth = getAuth(app)
+//
+// Auth now runs on Supabase (see src/services/supabase.ts). The app no longer
+// calls Firebase Auth, but several legacy/dead services still import `auth`
+// (mostly `auth.currentUser`). We keep the export but initialize it LAZILY:
+// getAuth() - and the `getProjectConfig` network call it fires against the
+// decommissioned Firebase project (the noisy `iframe.js ... 400`) - only runs
+// if something actually touches `auth`, never on a normal page load.
+let _auth: Auth | null = null
+const resolveAuth = (): Auth => {
+  if (!_auth) _auth = getAuth(app)
+  return _auth
+}
+export const auth: Auth = new Proxy({} as Auth, {
+  get: (_target, prop) => {
+    const instance = resolveAuth() as unknown as Record<string | symbol, unknown>
+    const value = instance[prop]
+    return typeof value === 'function'
+      ? (value as (...args: unknown[]) => unknown).bind(instance)
+      : value
+  },
+  set: (_target, prop, value) => {
+    const instance = resolveAuth() as unknown as Record<string | symbol, unknown>
+    instance[prop] = value
+    return true
+  },
+}) as Auth
 const enableLongPolling = import.meta.env.VITE_FIRESTORE_FORCE_LONG_POLLING === 'true'
 const firestoreSettings: FirestoreSettings = {
   // Some privacy / ad-blocking extensions can block the default streaming

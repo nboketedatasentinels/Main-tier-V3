@@ -1,10 +1,27 @@
 import { createContext } from 'react'
-import { User } from 'firebase/auth'
 import { UserProfile, DashboardPreferences } from '@/types'
 import type { StandardRole } from '@/types'
 
+/**
+ * Minimal authenticated-user shape exposed to the app.
+ *
+ * Auth runs on Supabase now, but the codebase reads `user.uid` / `user.email`
+ * (and a few others) in ~150 places - the same surface the old Firebase `User`
+ * exposed. This shim keeps those consumers working without a sweeping rename:
+ * `uid` is the Supabase auth user id (uuid) and `getIdToken()` returns the
+ * Supabase access token.
+ */
+export interface AuthUser {
+  uid: string
+  email: string | null
+  displayName: string | null
+  photoURL: string | null
+  emailVerified: boolean
+  getIdToken: (forceRefresh?: boolean) => Promise<string>
+}
+
 export interface AuthContextType {
-  user: User | null
+  user: AuthUser | null
   profile: UserProfile | null
   userData: UserProfile | null
   loading: boolean
