@@ -19,7 +19,7 @@ import {
   listenToSystemAlerts,
   listenToTaskNotifications,
   listenToVerificationRequests,
-} from '@/services/superAdminService'
+} from '@/services/supabaseSuperAdminService'
 import {
   EngagementRiskAggregate,
   RegistrationRecord,
