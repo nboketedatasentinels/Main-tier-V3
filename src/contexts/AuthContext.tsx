@@ -588,10 +588,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     [fetchProfileWithRetry, recordProfileLoad, toAuthUser]
   )
 
-  const refreshAdminSession = async () => {
+  // Memoized so its identity is stable. Previously a new function was created
+  // every render; consumers that listed it in effect deps (e.g.
+  // useAdminNotifications) re-ran on every render, and since refreshSession()
+  // fires TOKEN_REFRESHED -> re-render, that became an infinite refresh loop
+  // that hit Supabase's 429 and force-logged-out the user.
+  const refreshAdminSession = useCallback(async () => {
     const { data } = await supabase.auth.refreshSession()
     extractClaimsRole(data.session)
-  }
+  }, [extractClaimsRole])
 
   /* ------------------------------------------------------------------ */
   /* 🔹 Account linking (handled natively by Supabase; no-op shims)      */
