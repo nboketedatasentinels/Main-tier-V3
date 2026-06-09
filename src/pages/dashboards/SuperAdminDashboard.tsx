@@ -206,7 +206,13 @@ export const SuperAdminDashboard: React.FC = () => {
       adminSessionRetriedRef.current = false
       return
     }
-    adminSessionRetriedRef.current = false
+    // Do NOT reset adminSessionRetriedRef here. It was reset on every
+    // refreshIndex-driven re-run, which let the permission-denied retry fire
+    // again and again - an infinite loop that hammered supabase.refreshSession()
+    // until the session was revoked (the "crashing / reloading on its own" plus
+    // auto-logout). The retry now fires at most once; after that we surface the
+    // error instead of looping. (Reset only happens on success or when leaving
+    // the super-admin view.)
     setStreamsLoading(true)
     sideStreamsLoadedRef.current = {
       verificationRequests: false,
@@ -311,7 +317,8 @@ export const SuperAdminDashboard: React.FC = () => {
     )
 
     return () => {
-      adminSessionRetriedRef.current = false
+      // Intentionally do not reset adminSessionRetriedRef here either - resetting
+      // on cleanup (which runs on every refreshIndex change) reopened the loop.
       unsubscribers.forEach((unsub) => unsub())
     }
   }, [isSuperAdminView, refreshAdminSession, refreshIndex, toast])
