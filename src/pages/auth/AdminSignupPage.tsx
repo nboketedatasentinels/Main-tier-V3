@@ -80,8 +80,9 @@ export const AdminSignupPage: React.FC = () => {
     }
     setLoading(true)
     try {
+      const normalizedEmail = email.trim().toLowerCase()
       const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/admin-signup`,
@@ -90,19 +91,38 @@ export const AdminSignupPage: React.FC = () => {
       })
 
       if (signUpError) {
+        // Account already exists (e.g. they confirmed their email and came back):
+        // sign in with the same credentials, then activate admin.
+        if (/already|registered|exists/i.test(signUpError.message)) {
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: normalizedEmail,
+            password,
+          })
+          if (signInError) {
+            setError(
+              /confirm/i.test(signInError.message)
+                ? 'Please confirm your email first (check your inbox), then submit again to finish.'
+                : getFriendlyErrorMessage(signInError),
+            )
+            return
+          }
+          await grantAndRedirect(accessCode)
+          return
+        }
         setError(getFriendlyErrorMessage(signUpError))
         return
       }
 
-      if (!data.session) {
-        // Email confirmation is ON: cannot elevate until they're authenticated.
-        setInfo(
-          'Account created. Confirm your email, then come back to this page and enter the access code to activate admin access.',
-        )
+      if (data.session) {
+        // Email confirmation OFF: we have a session, activate immediately.
+        await grantAndRedirect(accessCode)
         return
       }
 
-      await grantAndRedirect(accessCode)
+      // Email confirmation ON and brand-new account: must confirm first.
+      setInfo(
+        'Account created. Check your email and click the confirmation link, then submit this form again to finish activating admin access.',
+      )
     } catch (err) {
       setError(getFriendlyErrorMessage(err))
     } finally {
