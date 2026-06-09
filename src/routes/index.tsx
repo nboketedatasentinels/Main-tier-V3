@@ -17,6 +17,7 @@ import { HomePage } from '@/pages/home/HomePage'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
 import { AdminSignupPage } from '@/pages/auth/AdminSignupPage'
+import { AdminLoginPage } from '@/pages/auth/AdminLoginPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 import { ReferralLanding } from '@/pages/auth/ReferralLanding'
@@ -147,6 +148,7 @@ export const AppRoutes = () => {
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
         <Route path="/admin-signup" element={<AuthLayout><AdminSignupPage /></AuthLayout>} />
+        <Route path="/admin-login" element={<AuthLayout><AdminLoginPage /></AuthLayout>} />
         <Route path="/join" element={<AuthLayout><ReferralLanding /></AuthLayout>} />
         <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
