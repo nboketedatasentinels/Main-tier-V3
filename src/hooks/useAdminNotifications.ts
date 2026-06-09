@@ -5,7 +5,6 @@ import {
   markAdminNotificationRead,
   markAllAdminNotificationsRead,
 } from '@/services/notificationService'
-import { useAuth } from '@/hooks/useAuth'
 
 interface UseAdminNotificationsOptions {
   role: 'partner' | 'super_admin'
@@ -20,7 +19,6 @@ export const useAdminNotifications = ({
   limit = 50,
   filters = [],
 }: UseAdminNotificationsOptions) => {
-  const { refreshAdminSession } = useAuth()
   const [notifications, setNotifications] = useState<AdminNotification[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +41,7 @@ export const useAdminNotifications = ({
     setError(null)
     let isCancelled = false
 
-    const loadNotifications = async (attempt = 0): Promise<void> => {
+    const loadNotifications = async (): Promise<void> => {
       try {
         const items = await fetchAdminNotifications()
         if (isCancelled) return
@@ -59,17 +57,11 @@ export const useAdminNotifications = ({
       } catch (err) {
         if (isCancelled) return
         const code = (err as { code?: string })?.code
-        if (code === 'permission-denied' && attempt === 0) {
-          try {
-            await refreshAdminSession()
-            if (!isCancelled) {
-              await loadNotifications(1)
-            }
-            return
-          } catch (refreshError) {
-            console.error('[useAdminNotifications] token refresh failed', refreshError)
-          }
-        }
+        // Do NOT call refreshAdminSession() here. Notifications are still read
+        // from Firebase, which always denies under Supabase auth; refreshing the
+        // Supabase token cannot help and previously caused a
+        // refresh -> TOKEN_REFRESHED -> re-render -> refresh loop that hit
+        // Supabase's 429 rate limit and force-logged-out the user.
         console.error('[useAdminNotifications] load error', err)
         setNotifications([])
         setError(
@@ -96,7 +88,7 @@ export const useAdminNotifications = ({
         pollTimerRef.current = null
       }
     }
-  }, [enabled, limit, refreshAdminSession, role])
+  }, [enabled, limit, role])
 
   const filteredNotifications = useMemo(() => {
     if (!filters.length) return notifications
