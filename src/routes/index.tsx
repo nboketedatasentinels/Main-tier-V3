@@ -71,6 +71,7 @@ const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPa
 const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
 const LiftResultsPage = lazy(() => import('@/pages/journeys/LiftResultsPage'))
 const LiftAssessmentsAdminPage = lazy(() => import('@/pages/super-admin/LiftAssessmentsAdminPage'))
+const OrganizationsAdminPage = lazy(() => import('@/pages/super-admin/OrganizationsAdminPage'))
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -226,6 +227,7 @@ export const AppRoutes = () => {
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="lift-assessments" element={<LiftAssessmentsAdminPage />} />
+          <Route path="organizations" element={<OrganizationsAdminPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
