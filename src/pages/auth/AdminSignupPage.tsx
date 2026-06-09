@@ -58,6 +58,32 @@ export const AdminSignupPage: React.FC = () => {
     return false
   }
 
+  // After a fresh signup we DO have a session, but it still reflects the
+  // pre-admin role - landing straight on /admin/dashboard trips the
+  // requireSuperAdmin guard and dumps the user on /unauthorized. So we elevate
+  // the role in the DB now (while authenticated), then sign out and hand off to
+  // /admin-login. A clean sign-in reads the elevated role and the guard passes.
+  const claimThenRequireLogin = async (code: string): Promise<void> => {
+    const result = await claimAdminAccess(code.trim())
+    if (result !== 'ok') {
+      setError(
+        result === 'invalid_code'
+          ? 'That access code is not valid. Check the exact code (it is case-sensitive).'
+          : 'Could not grant admin access. Please try again.',
+      )
+      return
+    }
+    sessionStorage.removeItem(PENDING_CODE_KEY)
+    await supabase.auth.signOut()
+    toast({
+      title: 'Admin account created',
+      description: 'Please sign in to open your dashboard.',
+      status: 'success',
+      duration: 5000,
+    })
+    navigate('/admin-login', { replace: true })
+  }
+
   // If they return already signed in (e.g. after clicking the email link) and a
   // code is pending, activate admin automatically.
   useEffect(() => {
@@ -110,9 +136,10 @@ export const AdminSignupPage: React.FC = () => {
         return
       }
 
-      // Confirmation OFF -> we have a session -> activate now (one step).
+      // Confirmation OFF -> we have a session -> elevate the role, then send the
+      // user to sign in (the dashboard is only ever reached after a clean login).
       if (data.session) {
-        await grantAndRedirect(accessCode)
+        await claimThenRequireLogin(accessCode)
         return
       }
 
