@@ -49,6 +49,28 @@ export const AdminSignupPage: React.FC = () => {
   // the requireSuperAdmin guard would bounce the user to /unauthorized. A clean
   // sign-in re-reads the elevated role and passes the guard.
   const claimThenRequireLogin = async (code: string): Promise<void> => {
+    // Ensure the profile row exists BEFORE claiming. The claim function only
+    // runs `UPDATE profiles SET role='super_admin' WHERE id = auth.uid()`; a
+    // fresh signup can reach here before the provisioning trigger has created
+    // the row, so the UPDATE would hit zero rows and the role would silently
+    // stay 'free_user' (the bug that landed "admins" on the learner dashboard).
+    // We cannot set the role from the client (revoked by design), but we CAN
+    // create the row - then the claim's UPDATE lands on it.
+    const { data: sessionData } = await supabase.auth.getUser()
+    const authUser = sessionData.user
+    if (authUser) {
+      const { error: ensureRowError } = await supabase
+        .from('profiles')
+        .upsert(
+          { id: authUser.id, email: authUser.email },
+          { onConflict: 'id', ignoreDuplicates: true },
+        )
+      if (ensureRowError) {
+        setError('Could not prepare your profile. Please try again.')
+        return
+      }
+    }
+
     const result = await claimAdminAccess(code.trim())
     if (result !== 'ok') {
       setError(

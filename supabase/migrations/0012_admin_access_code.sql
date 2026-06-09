@@ -37,10 +37,19 @@ begin
     return 'invalid_code';
   end if;
 
-  update public.profiles
+  -- Upsert, not a bare UPDATE: a fresh signup may call this before the
+  -- on_auth_user_created trigger has materialised the profile row. A plain
+  -- UPDATE would then match 0 rows, leave role = 'free_user', and STILL return
+  -- 'ok' - exactly the bug that let "admins" land on the learner dashboard.
+  insert into public.profiles (id, email, role)
+  values (
+    auth.uid(),
+    (select email from auth.users where id = auth.uid()),
+    'super_admin'
+  )
+  on conflict (id) do update
      set role = 'super_admin',
-         updated_at = now()
-   where id = auth.uid();
+         updated_at = now();
 
   return 'ok';
 end;
