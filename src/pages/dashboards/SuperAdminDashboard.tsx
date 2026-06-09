@@ -52,7 +52,7 @@ const defaultMetrics: SuperAdminDashboardMetrics = {
 }
 
 export const SuperAdminDashboard: React.FC = () => {
-  const { profile, profileStatus, lastProfileLoadAt, refreshProfile, refreshAdminSession, effectiveRole } = useAuth()
+  const { profile, profileStatus, lastProfileLoadAt, refreshProfile, effectiveRole } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const adminName = profile?.fullName || profile?.firstName || 'Admin'
@@ -101,28 +101,19 @@ export const SuperAdminDashboard: React.FC = () => {
     systemAlerts: false,
     taskNotifications: false,
   })
-  const adminSessionRetriedRef = useRef(false)
-  const adminSessionBootstrappedRef = useRef(false)
-
   useEffect(() => {
     const nextTab = resolveDashboardTabFromSearch(location.search)
     setActivePage(nextTab)
   }, [location.search])
 
-  useEffect(() => {
-    if (!isSuperAdminView) {
-      adminSessionBootstrappedRef.current = false
-      return
-    }
-    if (adminSessionBootstrappedRef.current) return
-    adminSessionBootstrappedRef.current = true
-
-    void refreshAdminSession()
-      .then(() => setRefreshIndex((prev) => prev + 1))
-      .catch((error) => {
-        console.error(error)
-      })
-  }, [isSuperAdminView, refreshAdminSession])
+  // NOTE: previously an effect here called refreshAdminSession() on mount to
+  // "bootstrap" admin claims. Under Supabase that is useless (the role lives in
+  // the profile, not the JWT) and it was catastrophic: refreshSession() fires
+  // TOKEN_REFRESHED -> AuthContext sets loading=true -> ProtectedRoute swaps in
+  // <AppLoader/> -> this dashboard UNMOUNTS -> on remount the useRef guard is
+  // fresh -> it calls refreshAdminSession() again -> infinite mount/refresh loop
+  // that crashed the page and hit Supabase's 429, force-logging the admin out.
+  // Removed entirely.
 
   useEffect(() => {
     if (!isSuperAdminView) {
@@ -203,16 +194,8 @@ export const SuperAdminDashboard: React.FC = () => {
   useEffect(() => {
     if (!isSuperAdminView) {
       setStreamsLoading(false)
-      adminSessionRetriedRef.current = false
       return
     }
-    // Do NOT reset adminSessionRetriedRef here. It was reset on every
-    // refreshIndex-driven re-run, which let the permission-denied retry fire
-    // again and again - an infinite loop that hammered supabase.refreshSession()
-    // until the session was revoked (the "crashing / reloading on its own" plus
-    // auto-logout). The retry now fires at most once; after that we surface the
-    // error instead of looping. (Reset only happens on success or when leaving
-    // the super-admin view.)
     setStreamsLoading(true)
     sideStreamsLoadedRef.current = {
       verificationRequests: false,
@@ -230,7 +213,6 @@ export const SuperAdminDashboard: React.FC = () => {
       }
     }
     const handleSideStreamSuccess = (key: keyof typeof sideStreamsLoadedRef.current) => {
-      adminSessionRetriedRef.current = false
       markSideStreamLoaded(key)
     }
     const handleSideStreamError = (
@@ -240,25 +222,16 @@ export const SuperAdminDashboard: React.FC = () => {
     ) => {
       markSideStreamLoaded(streamKey)
       const code = (err as { code?: string })?.code
+      // Do NOT call refreshAdminSession() on permission-denied. This data is
+      // still read from Firebase, which always denies under Supabase auth;
+      // refreshing the Supabase session cannot help and previously drove the
+      // refresh/remount loop. Just surface the error.
       if (code === 'permission-denied') {
-        if (!adminSessionRetriedRef.current) {
-          adminSessionRetriedRef.current = true
-          void refreshAdminSession()
-            .then(() => setRefreshIndex((prev) => prev + 1))
-            .catch((refreshError) => {
-              console.error(refreshError)
-              setError(message)
-              toast({ title: 'Failed to refresh admin session', status: 'error' })
-            })
-          return
-        }
-        setError('Permission denied while loading admin data. Please sign out and sign in again.')
-        toast({ title: 'Admin permissions required', status: 'error' })
+        setError('Admin data is currently unavailable (still served from Firebase, pending migration to Supabase).')
         return
       }
       console.error(err)
       setError(message)
-      toast({ title: 'Failed to load dashboard', status: 'error' })
     }
 
     unsubscribers.push(
@@ -317,11 +290,9 @@ export const SuperAdminDashboard: React.FC = () => {
     )
 
     return () => {
-      // Intentionally do not reset adminSessionRetriedRef here either - resetting
-      // on cleanup (which runs on every refreshIndex change) reopened the loop.
       unsubscribers.forEach((unsub) => unsub())
     }
-  }, [isSuperAdminView, refreshAdminSession, refreshIndex, toast])
+  }, [isSuperAdminView, refreshIndex, toast])
 
   useEffect(() => {
     if (!loading && !error) {
