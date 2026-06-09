@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import {
   Alert,
   AlertIcon,
@@ -10,6 +10,7 @@ import {
   InputGroup,
   InputRightElement,
   IconButton,
+  Link,
   Text,
   VStack,
   useToast,
@@ -267,6 +268,12 @@ export const AdminSignupPage: React.FC = () => {
             <Button type="submit" variant="primary" size="lg" isLoading={loading} loadingText="Creating admin...">
               Create admin account
             </Button>
+            <Text fontSize="sm" color="text.secondary" textAlign="center">
+              Already an admin?{' '}
+              <Link as={RouterLink} to="/admin-login" color="brand.500" fontWeight="medium">
+                Sign in here
+              </Link>
+            </Text>
           </VStack>
         </form>
       )}
