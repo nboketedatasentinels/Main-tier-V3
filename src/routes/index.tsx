@@ -16,6 +16,7 @@ import { HomePage } from '@/pages/home/HomePage'
 // Page imports
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
+import { AdminSignupPage } from '@/pages/auth/AdminSignupPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { ProfileMissingPage } from '@/pages/auth/ProfileMissingPage'
 import { ReferralLanding } from '@/pages/auth/ReferralLanding'
@@ -70,6 +71,7 @@ const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPa
 const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
 const LiftResultsPage = lazy(() => import('@/pages/journeys/LiftResultsPage'))
 const LiftAssessmentsAdminPage = lazy(() => import('@/pages/super-admin/LiftAssessmentsAdminPage'))
+const OrganizationsAdminPage = lazy(() => import('@/pages/super-admin/OrganizationsAdminPage'))
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -144,6 +146,7 @@ export const AppRoutes = () => {
         <Route path="/upgrade" element={<UpgradePage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
+        <Route path="/admin-signup" element={<AuthLayout><AdminSignupPage /></AuthLayout>} />
         <Route path="/join" element={<AuthLayout><ReferralLanding /></AuthLayout>} />
         <Route path="/reset-password" element={<AuthLayout><ResetPasswordPage /></AuthLayout>} />
         <Route path="/auth/profile-missing" element={<AuthLayout><ProfileMissingPage /></AuthLayout>} />
@@ -224,6 +227,7 @@ export const AppRoutes = () => {
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="lift-assessments" element={<LiftAssessmentsAdminPage />} />
+          <Route path="organizations" element={<OrganizationsAdminPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
