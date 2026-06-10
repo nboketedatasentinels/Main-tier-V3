@@ -1,14 +1,15 @@
 /**
  * LIFT Assessment - single source of truth (content + scoring config).
  *
- * IMPORTANT: items 1-5 below marked `PLACEHOLDER` are NOT final. Swap the
- * question text, SCALE, intake option labels, and the two scoring formulas for
- * the real spec when provided - the scoring engine, gate, result page, storage,
- * and admin view all read from THIS file, so no logic changes are needed.
+ * Everything the assessment renders and scores is driven from THIS file: the
+ * four pillars, the 20 items, the answer scale, the intake fields, the scoring
+ * formulas, the archetype result copy, and the offers/coaching constants. The
+ * scoring engine, gate, result page, storage, and admin view all read from here,
+ * so editing a question or label needs no logic changes (the assessment is fully
+ * config-driven / dynamic).
  *
- * What is final here: the four pillars, the archetype RESULT COPY (provided by
- * the client), the offers/coaching constants, and the deterministic mapping
- * (archetype / development edge / lead tier / recommendation).
+ * Item IDs (L1-L5, I1-I5, F1-F5, T1-T5) are STABLE - the engine groups by them
+ * and L3/L5 drive the coaching trigger - so change `text`, never `id`.
  */
 
 export type PillarKey = 'L' | 'I' | 'F' | 'T'
@@ -44,7 +45,7 @@ export const HIGHEST_PRECEDENCE: PillarKey[] = ['L', 'I', 'F', 'T']
 /** Lowest-pillar (development edge) tie-break precedence (reverse; first wins). */
 export const LOWEST_PRECEDENCE: PillarKey[] = ['T', 'F', 'I', 'L']
 
-// ── Answer scale (PLACEHOLDER: confirm 0-4 vs 1-5 and the labels) ─────────────
+// ── Answer scale (five points, 0-4) ──────────────────────────────────────────
 export const SCALE = {
   min: 0,
   max: 4,
@@ -66,32 +67,32 @@ export interface AssessmentItem {
   reverse?: boolean
 }
 
-// ── The 20 items, 5 per pillar (PLACEHOLDER text - swap for the real questions).
-// IDs are STABLE and used by the engine; L3 and L5 drive the coaching trigger.
+// ── The 20 items, 5 per pillar. IDs are STABLE and used by the engine;
+// L3 and L5 drive the coaching trigger.
 export const ITEMS: AssessmentItem[] = [
-  { id: 'L1', pillar: 'L', text: '[PLACEHOLDER L1] I stay steady and clear-headed when a transformation gets chaotic.' },
-  { id: 'L2', pillar: 'L', text: '[PLACEHOLDER L2] I regulate my own reactions before responding under pressure.' },
-  { id: 'L3', pillar: 'L', text: '[PLACEHOLDER L3] (coaching-trigger item) I actively manage my energy and resilience over long change cycles.' },
-  { id: 'L4', pillar: 'L', text: '[PLACEHOLDER L4] I seek honest feedback on how I show up as a leader.' },
-  { id: 'L5', pillar: 'L', text: '[PLACEHOLDER L5] (coaching-trigger item) I have practices that keep me grounded when stakes are high.' },
+  { id: 'L1', pillar: 'L', text: 'I stay steady and clear-headed when a transformation gets chaotic.' },
+  { id: 'L2', pillar: 'L', text: 'I regulate my own reactions before responding under pressure.' },
+  { id: 'L3', pillar: 'L', text: 'I actively manage my energy and resilience over long change cycles.' },
+  { id: 'L4', pillar: 'L', text: 'I seek honest feedback on how I show up as a leader.' },
+  { id: 'L5', pillar: 'L', text: 'I have practices that keep me grounded when stakes are high.' },
 
-  { id: 'I1', pillar: 'I', text: '[PLACEHOLDER I1] I can tell where AI and data realistically fit in our work.' },
-  { id: 'I2', pillar: 'I', text: '[PLACEHOLDER I2] I distinguish genuine opportunity from hype.' },
-  { id: 'I3', pillar: 'I', text: '[PLACEHOLDER I3] I translate technical possibility into a credible plan.' },
-  { id: 'I4', pillar: 'I', text: '[PLACEHOLDER I4] I keep current with AI tools relevant to my domain.' },
-  { id: 'I5', pillar: 'I', text: '[PLACEHOLDER I5] I design solutions that account for real constraints.' },
+  { id: 'I1', pillar: 'I', text: 'I can tell where AI and data realistically fit in our work.' },
+  { id: 'I2', pillar: 'I', text: 'I distinguish genuine opportunity from hype.' },
+  { id: 'I3', pillar: 'I', text: 'I translate technical possibility into a credible plan.' },
+  { id: 'I4', pillar: 'I', text: 'I keep current with AI tools relevant to my domain.' },
+  { id: 'I5', pillar: 'I', text: 'I design solutions that account for real constraints.' },
 
-  { id: 'F1', pillar: 'F', text: '[PLACEHOLDER F1] I get teams to actually adopt new ways of working.' },
-  { id: 'F2', pillar: 'F', text: '[PLACEHOLDER F2] I read and dissolve resistance to change.' },
-  { id: 'F3', pillar: 'F', text: '[PLACEHOLDER F3] I build psychological safety for experimentation.' },
-  { id: 'F4', pillar: 'F', text: '[PLACEHOLDER F4] I coach others through the discomfort of change.' },
-  { id: 'F5', pillar: 'F', text: '[PLACEHOLDER F5] I create conditions where teams keep learning.' },
+  { id: 'F1', pillar: 'F', text: 'I get teams to actually adopt new ways of working.' },
+  { id: 'F2', pillar: 'F', text: 'I read and dissolve resistance to change.' },
+  { id: 'F3', pillar: 'F', text: 'I build psychological safety for experimentation.' },
+  { id: 'F4', pillar: 'F', text: 'I coach others through the discomfort of change.' },
+  { id: 'F5', pillar: 'F', text: 'I create conditions where teams keep learning.' },
 
-  { id: 'T1', pillar: 'T', text: '[PLACEHOLDER T1] I frame transformation in terms executives act on.' },
-  { id: 'T2', pillar: 'T', text: '[PLACEHOLDER T2] I build the operating model that sustains change.' },
-  { id: 'T3', pillar: 'T', text: '[PLACEHOLDER T3] I win sponsorship and budget for transformation.' },
-  { id: 'T4', pillar: 'T', text: '[PLACEHOLDER T4] I connect transformation to measurable business value.' },
-  { id: 'T5', pillar: 'T', text: '[PLACEHOLDER T5] I keep change on track across the long haul.' },
+  { id: 'T1', pillar: 'T', text: 'I frame transformation in terms executives act on.' },
+  { id: 'T2', pillar: 'T', text: 'I build the operating model that sustains change.' },
+  { id: 'T3', pillar: 'T', text: 'I win sponsorship and budget for transformation.' },
+  { id: 'T4', pillar: 'T', text: 'I connect transformation to measurable business value.' },
+  { id: 'T5', pillar: 'T', text: 'I keep change on track across the long haul.' },
 ]
 
 /** Items that drive the coaching trigger (raw score <= COACHING_ITEM_THRESHOLD). */
@@ -103,7 +104,7 @@ export const COACHING_PILLAR_THRESHOLD = 50 // Leading Self pillar < 50
 export const EMERGING_INDEX_THRESHOLD = 50 // LIFT Index < 50 -> Emerging Leader
 export const PRACTITIONER_PILLAR_THRESHOLD = 70 // all four pillars >= 70 -> Practitioner
 
-// ── Scoring formulas (PLACEHOLDER math: confirm normalization + index weighting).
+// ── Scoring formulas ─────────────────────────────────────────────────────────
 /** Pillar score 0-100 from its item raw scores (reverse-aware). */
 export const computePillarScore = (rawScores: number[]): number => {
   if (rawScores.length === 0) return 0
@@ -111,11 +112,11 @@ export const computePillarScore = (rawScores: number[]): number => {
   const maxSum = rawScores.length * SCALE.max
   return Math.round((sum / maxSum) * 100)
 }
-/** LIFT Index 0-100 from the four pillar scores (PLACEHOLDER: simple mean). */
+/** LIFT Index 0-100 from the four pillar scores (mean of the four pillars). */
 export const computeLiftIndex = (pillars: Record<PillarKey, number>): number =>
   Math.round((pillars.L + pillars.I + pillars.F + pillars.T) / 4)
 
-// ── Part A intake (PLACEHOLDER option labels; `min` fields drive Tier logic) ──
+// ── Part A intake (the `min` fields drive lead-tier logic) ───────────────────
 export interface IntakeOption {
   value: string
   label: string
