@@ -42,18 +42,20 @@ import {
   assignAmbassadorToOrganization,
   assignMentorToOrganization,
   assignPartnerToOrganization,
-  listenToAllUsers,
-  listenToAmbassadors,
-  listenToMentors,
-  listenToPartners,
   promoteUserToPartner,
   unassignLeadershipRole,
 } from '@/services/organizationService'
 import {
   deleteOrganization,
-  fetchOrganizations,
   logAdminAction,
 } from '@/services/superAdminService'
+import {
+  fetchOrganizations,
+  listenToAllUsers,
+  listenToAmbassadors,
+  listenToMentors,
+  listenToPartners,
+} from '@/services/supabaseSuperAdminService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'

@@ -17,7 +17,10 @@
  */
 import { supabase } from '@/services/supabase'
 import type {
+  AdminUserRecord,
   EngagementRiskAggregate,
+  OrganizationLead,
+  OrganizationRecord,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
   SystemAlertRecord,
@@ -243,4 +246,199 @@ export const listenToTaskNotifications = (
 ): Unsub => {
   onChange([])
   return () => {}
+}
+
+/* ------------------------------------------------------------------ */
+/* Admin users, all users, organizations, leadership - backed by the  */
+/* existing Supabase profiles + organizations tables. Reads only.     */
+/* ------------------------------------------------------------------ */
+
+type ProfileRow = {
+  id: string
+  full_name?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+  role?: string | null
+  created_at?: string | null
+  company_id?: string | null
+  organization_id?: string | null
+  data?: Record<string, unknown> | null
+}
+
+const ADMIN_ROLES = ['super_admin', 'partner', 'mentor', 'ambassador']
+
+const mapAdminUser = (row: ProfileRow): AdminUserRecord => {
+  const data = row.data ?? {}
+  const assignedOrganizations = Array.isArray((data as { assignedOrganizations?: unknown }).assignedOrganizations)
+    ? ((data as { assignedOrganizations?: string[] }).assignedOrganizations as string[])
+    : undefined
+  const fullName =
+    row.full_name ||
+    [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+    undefined
+  return {
+    id: row.id,
+    firstName: row.first_name ?? undefined,
+    lastName: row.last_name ?? undefined,
+    fullName,
+    email: row.email ?? undefined,
+    role: (row.role ?? 'partner') as AdminUserRecord['role'],
+    assignedOrganizations,
+    createdAt: row.created_at ?? undefined,
+  }
+}
+
+const mapLead = (row: ProfileRow): OrganizationLead => ({
+  id: row.id,
+  name:
+    row.full_name ||
+    [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+    row.email ||
+    'Unknown',
+  email: row.email ?? undefined,
+})
+
+const PROFILE_COLS = 'id, full_name, first_name, last_name, email, role, created_at, company_id, organization_id, data'
+
+export const listenToAdminUsers = (
+  onChange: (admins: AdminUserRecord[]) => void,
+  onError?: ErrCb,
+): Unsub => {
+  let cancelled = false
+  void (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(PROFILE_COLS)
+        .in('role', ADMIN_ROLES)
+        .order('created_at', { ascending: false })
+      if (error) throw new Error(error.message)
+      if (cancelled) return
+      onChange((data ?? []).map((r) => mapAdminUser(r as ProfileRow)))
+    } catch (err) {
+      if (!cancelled) onError?.(toErr(err, 'Failed to load admin users'))
+    }
+  })()
+  return () => {
+    cancelled = true
+  }
+}
+
+export const listenToUsers = (
+  onChange: (users: AdminUserRecord[]) => void,
+  onError?: ErrCb,
+): Unsub => {
+  let cancelled = false
+  void (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(PROFILE_COLS)
+        .order('created_at', { ascending: false })
+      if (error) throw new Error(error.message)
+      if (cancelled) return
+      onChange((data ?? []).map((r) => mapAdminUser(r as ProfileRow)))
+    } catch (err) {
+      if (!cancelled) onError?.(toErr(err, 'Failed to load users'))
+    }
+  })()
+  return () => {
+    cancelled = true
+  }
+}
+
+const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => ({
+  id: row.id as string,
+  name: (row.name as string) ?? '',
+  code: (row.code as string) ?? '',
+  status: ((row.status as string) ?? 'active') as OrganizationRecord['status'],
+  createdAt: (row.created_at as string) ?? undefined,
+  transformationPartnerId: (row.transformation_partner_id as string) ?? undefined,
+  organizationJourneyType: (row.organization_journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,
+})
+
+export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => mapOrganization(r as Record<string, unknown>))
+}
+
+export const listenToOrganizations = (
+  onChange: (organizations: OrganizationRecord[]) => void,
+  onError?: ErrCb,
+): Unsub => {
+  let cancelled = false
+  void (async () => {
+    try {
+      const rows = await fetchOrganizations()
+      if (cancelled) return
+      onChange(rows)
+    } catch (err) {
+      if (!cancelled) onError?.(toErr(err, 'Failed to load organizations'))
+    }
+  })()
+  return () => {
+    cancelled = true
+  }
+}
+
+const listenToRole = (
+  role: string,
+  onChange: (leads: OrganizationLead[]) => void,
+  onError?: ErrCb,
+): Unsub => {
+  let cancelled = false
+  void (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(PROFILE_COLS)
+        .eq('role', role)
+        .order('full_name', { ascending: true })
+      if (error) throw new Error(error.message)
+      if (cancelled) return
+      onChange((data ?? []).map((r) => mapLead(r as ProfileRow)))
+    } catch (err) {
+      if (!cancelled) onError?.(toErr(err, `Failed to load ${role}s`))
+    }
+  })()
+  return () => {
+    cancelled = true
+  }
+}
+
+export const listenToPartners = (onChange: (leads: OrganizationLead[]) => void, onError?: ErrCb): Unsub =>
+  listenToRole('partner', onChange, onError)
+
+export const listenToMentors = (onChange: (leads: OrganizationLead[]) => void, onError?: ErrCb): Unsub =>
+  listenToRole('mentor', onChange, onError)
+
+export const listenToAmbassadors = (onChange: (leads: OrganizationLead[]) => void, onError?: ErrCb): Unsub =>
+  listenToRole('ambassador', onChange, onError)
+
+export const listenToAllUsers = (
+  onChange: (users: Array<OrganizationLead & { role?: string }>) => void,
+  onError?: ErrCb,
+): Unsub => {
+  let cancelled = false
+  void (async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(PROFILE_COLS)
+        .order('full_name', { ascending: true })
+      if (error) throw new Error(error.message)
+      if (cancelled) return
+      onChange((data ?? []).map((r) => ({ ...mapLead(r as ProfileRow), role: (r as ProfileRow).role ?? undefined })))
+    } catch (err) {
+      if (!cancelled) onError?.(toErr(err, 'Failed to load users'))
+    }
+  })()
+  return () => {
+    cancelled = true
+  }
 }

@@ -39,11 +39,10 @@ import {
   assignOrganizations,
   createAdminUser,
   deleteAdminUser,
-  listenToAdminUsers,
-  listenToOrganizations,
   toggleAdminStatus,
   updateAdminUser,
 } from '@/services/superAdminService'
+import { listenToAdminUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { fetchAssignedOrganizations } from '@/services/organizationService'
 import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
 import { getDisplayName } from '@/utils/displayName'
