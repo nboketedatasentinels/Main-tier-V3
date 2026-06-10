@@ -8,6 +8,7 @@ import { OrganizationManagementPage } from '@/pages/super-admin/OrganizationMana
 import { ReportsAnalyticsPage } from '@/pages/super-admin/ReportsAnalyticsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
 import { AdminOversightPage } from '@/pages/super-admin/AdminOversightPage'
+import { LiftAssessmentsAdminPage } from '@/pages/super-admin/LiftAssessmentsAdminPage'
 import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
 import { FeedbackInboxPage } from '@/pages/super-admin/FeedbackInboxPage'
 import {
@@ -435,6 +436,8 @@ export const SuperAdminDashboard: React.FC = () => {
         return <ApprovalCenterPage />
       case 'admin-oversight':
         return <AdminOversightPage adminName={adminName} adminId={profile?.id} />
+      case 'lift':
+        return <LiftAssessmentsAdminPage />
       case 'feedback':
         return <FeedbackInboxPage />
       case 'reports':
