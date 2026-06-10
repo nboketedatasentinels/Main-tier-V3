@@ -1,26 +1,45 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Box, Flex, HStack, Spinner, Text, VStack } from '@chakra-ui/react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft, Check } from 'lucide-react'
 import {
-  Box,
-  Button,
-  Heading,
-  HStack,
-  Progress,
-  Radio,
-  RadioGroup,
-  Select,
-  Stack,
-  Text,
-  VStack,
-} from '@chakra-ui/react'
-import { ITEMS, SCALE, INTAKE_FIELDS } from '@/config/liftAssessment'
+  ITEMS,
+  SCALE,
+  INTAKE_FIELDS,
+  PILLARS,
+  type AssessmentItem,
+  type IntakeField,
+  type PillarKey,
+} from '@/config/liftAssessment'
 import { computeLiftResult, type ItemScores, type IntakeAnswers, type LiftResult } from '@/utils/liftScoring'
+
+const PLUM = '#27062e'
+const GOLD = '#eab130'
+
+const MotionBox = motion(Box)
 
 interface LiftAssessmentFlowProps {
   onComplete: (intake: IntakeAnswers, itemScores: ItemScores, result: LiftResult) => void
   submitting?: boolean
 }
 
-// Fisher-Yates shuffle (runtime randomization of item order; mapping preserved by id).
+type Step =
+  | { kind: 'intake'; field: IntakeField }
+  | { kind: 'item'; item: AssessmentItem }
+
+// Short pillar labels for the in-flow context chip.
+const PILLAR_SHORT: Record<PillarKey, string> = {
+  L: 'Leading Self',
+  I: 'Innovation & AI',
+  F: 'AI-Ready Teams',
+  T: 'Transforming Business',
+}
+const PILLAR_NAME: Record<string, string> = PILLARS.reduce(
+  (acc, p) => ({ ...acc, [p.key]: p.name }),
+  {} as Record<string, string>,
+)
+
+// Fisher-Yates shuffle (item order randomised per session; mapping preserved by id).
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -31,112 +50,263 @@ const shuffle = <T,>(arr: T[]): T[] => {
 }
 
 export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({ onComplete, submitting }) => {
-  const [step, setStep] = useState<'intake' | 'questions'>('intake')
+  const items = useMemo(() => shuffle(ITEMS), [])
+  const steps = useMemo<Step[]>(
+    () => [
+      ...INTAKE_FIELDS.map((field) => ({ kind: 'intake', field }) as Step),
+      ...items.map((item) => ({ kind: 'item', item }) as Step),
+    ],
+    [items],
+  )
+
+  const total = steps.length
+  const [index, setIndex] = useState(0)
+  const [dir, setDir] = useState(1)
   const [intake, setIntake] = useState<IntakeAnswers>({})
   const [scores, setScores] = useState<ItemScores>({})
+  const [scoring, setScoring] = useState(false)
+  const advanceTimer = useRef<number | null>(null)
 
-  // Randomize once per mount. NOTE (PLACEHOLDER): currently shuffles all 20 together.
-  const orderedItems = useMemo(() => shuffle(ITEMS), [])
+  const step = steps[index]
+  const isLast = index === total - 1
 
-  const intakeComplete = INTAKE_FIELDS.every((f) => Boolean(intake[f.id]))
-  const answeredCount = ITEMS.filter((i) => typeof scores[i.id] === 'number').length
-  const questionsComplete = answeredCount === ITEMS.length
+  useEffect(
+    () => () => {
+      if (advanceTimer.current) window.clearTimeout(advanceTimer.current)
+    },
+    [],
+  )
 
-  const handleSubmit = () => {
-    if (!intakeComplete || !questionsComplete) return
-    const result = computeLiftResult(scores, intake)
-    onComplete(intake, scores, result)
-  }
+  const finish = useCallback(
+    (finalIntake: IntakeAnswers, finalScores: ItemScores) => {
+      setScoring(true)
+      const result = computeLiftResult(finalScores, finalIntake)
+      // A short, deliberate "scoring" beat - feels considered, not janky.
+      window.setTimeout(() => onComplete(finalIntake, finalScores, result), 700)
+    },
+    [onComplete],
+  )
 
-  if (step === 'intake') {
+  const advanceAfter = useCallback(
+    (nextIntake: IntakeAnswers, nextScores: ItemScores) => {
+      if (advanceTimer.current) window.clearTimeout(advanceTimer.current)
+      advanceTimer.current = window.setTimeout(() => {
+        if (isLast) finish(nextIntake, nextScores)
+        else {
+          setDir(1)
+          setIndex((i) => Math.min(i + 1, total - 1))
+        }
+      }, 240)
+    },
+    [finish, isLast, total],
+  )
+
+  const pickIntake = useCallback(
+    (value: string) => {
+      if (step.kind !== 'intake') return
+      const next = { ...intake, [step.field.id]: value }
+      setIntake(next)
+      advanceAfter(next, scores)
+    },
+    [advanceAfter, intake, scores, step],
+  )
+
+  const pickItem = useCallback(
+    (value: number) => {
+      if (step.kind !== 'item') return
+      const next = { ...scores, [step.item.id]: value }
+      setScores(next)
+      advanceAfter(intake, next)
+    },
+    [advanceAfter, intake, scores, step],
+  )
+
+  const goBack = useCallback(() => {
+    if (advanceTimer.current) window.clearTimeout(advanceTimer.current)
+    setDir(-1)
+    setIndex((i) => Math.max(i - 1, 0))
+  }, [])
+
+  // Keyboard: 1-5 answers a scale item, number keys pick an intake option, Backspace goes back.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (scoring) return
+      if (e.key === 'Backspace' && index > 0) {
+        e.preventDefault()
+        goBack()
+        return
+      }
+      const n = Number(e.key)
+      if (!Number.isInteger(n) || n < 1) return
+      if (step.kind === 'item' && n <= SCALE.labels.length) {
+        e.preventDefault()
+        pickItem(n - 1)
+      } else if (step.kind === 'intake' && n <= step.field.options.length) {
+        e.preventDefault()
+        pickIntake(step.field.options[n - 1].value)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [goBack, index, pickIntake, pickItem, scoring, step])
+
+  const progress = Math.round(((index + (scoring ? 1 : 0)) / total) * 100)
+  const selectedIntake = step.kind === 'intake' ? intake[step.field.id] : undefined
+  const selectedItem = step.kind === 'item' ? scores[step.item.id] : undefined
+
+  if (scoring || submitting) {
     return (
-      <VStack align="stretch" spacing={6}>
+      <VStack spacing={6} py={16} textAlign="center">
+        <Spinner thickness="4px" speed="0.7s" emptyColor="gray.100" color={PLUM} boxSize="56px" />
         <Box>
-          <Heading size="md" color="brand.deepPlum">
-            First, a little about you
-          </Heading>
+          <Text fontSize="xl" fontWeight="bold" color={PLUM}>
+            Scoring your LIFT Index
+          </Text>
           <Text fontSize="sm" color="gray.500" mt={1}>
-            This tailors your results and recommendations.
+            Mapping your answers across the four pillars…
           </Text>
         </Box>
-        {INTAKE_FIELDS.map((field) => (
-          <Box key={field.id}>
-            <Text fontWeight="medium" mb={2} fontSize="sm">
-              {field.label}
-            </Text>
-            <Select
-              placeholder="Select..."
-              value={intake[field.id] ?? ''}
-              onChange={(e) => setIntake((prev) => ({ ...prev, [field.id]: e.target.value }))}
-            >
-              {field.options.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-          </Box>
-        ))}
-        <Button
-          alignSelf="flex-end"
-          colorScheme="purple"
-          isDisabled={!intakeComplete}
-          onClick={() => setStep('questions')}
-        >
-          Start the assessment
-        </Button>
       </VStack>
     )
   }
 
   return (
-    <VStack align="stretch" spacing={5}>
-      <Box position="sticky" top={0} bg="white" pb={2} zIndex={1}>
-        <HStack justify="space-between" mb={1}>
-          <Heading size="md" color="brand.deepPlum">
-            LIFT Assessment
-          </Heading>
-          <Text fontSize="sm" color="gray.500">
-            {answeredCount} / {ITEMS.length}
+    <VStack align="stretch" spacing={0} minH={{ base: 'auto', md: '440px' }}>
+      {/* Progress + context */}
+      <Box>
+        <HStack justify="space-between" mb={2}>
+          <HStack spacing={2} minH="24px">
+            {index > 0 && (
+              <Flex
+                as="button"
+                onClick={goBack}
+                align="center"
+                gap={1}
+                color="gray.500"
+                fontSize="sm"
+                _hover={{ color: PLUM }}
+                aria-label="Previous question"
+              >
+                <ArrowLeft size={16} />
+                Back
+              </Flex>
+            )}
+            {step.kind === 'item' && (
+              <Text
+                fontSize="xs"
+                fontWeight="bold"
+                letterSpacing="0.08em"
+                textTransform="uppercase"
+                color={GOLD}
+                title={PILLAR_NAME[step.item.pillar]}
+              >
+                {PILLAR_SHORT[step.item.pillar]}
+              </Text>
+            )}
+          </HStack>
+          <Text fontSize="sm" color="gray.500" fontWeight="medium">
+            {index + 1} <Box as="span" color="gray.300">/ {total}</Box>
           </Text>
         </HStack>
-        <Progress value={(answeredCount / ITEMS.length) * 100} size="sm" colorScheme="purple" borderRadius="full" />
+        <Box h="6px" w="full" bg="gray.100" borderRadius="full" overflow="hidden">
+          <MotionBox
+            h="full"
+            borderRadius="full"
+            bgGradient={`linear(to-r, ${PLUM}, ${GOLD})`}
+            initial={false}
+            animate={{ width: `${progress}%` }}
+            transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+          />
+        </Box>
       </Box>
 
-      {orderedItems.map((item, idx) => (
-        <Box key={item.id} borderWidth="1px" borderRadius="xl" p={4}>
-          <Text fontWeight="medium" mb={3}>
-            {idx + 1}. {item.text}
-          </Text>
-          <RadioGroup
-            value={scores[item.id] !== undefined ? String(scores[item.id]) : ''}
-            onChange={(val) => setScores((prev) => ({ ...prev, [item.id]: Number(val) }))}
+      {/* Question + answers */}
+      <Flex flex="1" align="center" py={{ base: 6, md: 8 }}>
+        <AnimatePresence mode="wait" custom={dir}>
+          <MotionBox
+            key={index}
+            w="full"
+            custom={dir}
+            initial={{ opacity: 0, x: dir > 0 ? 40 : -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: dir > 0 ? -40 : 40 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
           >
-            <Stack direction={{ base: 'column', sm: 'row' }} spacing={{ base: 2, sm: 4 }} flexWrap="wrap">
-              {SCALE.labels.map((label, value) => (
-                <Radio key={value} value={String(value)} colorScheme="purple">
-                  <Text fontSize="sm">{label}</Text>
-                </Radio>
-              ))}
-            </Stack>
-          </RadioGroup>
-        </Box>
-      ))}
+            {step.kind === 'intake' ? (
+              <VStack align="stretch" spacing={5}>
+                <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color={PLUM} lineHeight="1.25">
+                  {step.field.label}
+                </Text>
+                <VStack align="stretch" spacing={3}>
+                  {step.field.options.map((opt) => {
+                    const active = selectedIntake === opt.value
+                    return (
+                      <ChoiceRow
+                        key={opt.value}
+                        label={opt.label}
+                        active={active}
+                        onClick={() => pickIntake(opt.value)}
+                      />
+                    )
+                  })}
+                </VStack>
+              </VStack>
+            ) : (
+              <VStack align="stretch" spacing={6}>
+                <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color={PLUM} lineHeight="1.25">
+                  {step.item.text}
+                </Text>
+                <VStack align="stretch" spacing={3}>
+                  {SCALE.labels.map((label, value) => (
+                    <ChoiceRow
+                      key={value}
+                      label={label}
+                      active={selectedItem === value}
+                      onClick={() => pickItem(value)}
+                    />
+                  ))}
+                </VStack>
+              </VStack>
+            )}
+          </MotionBox>
+        </AnimatePresence>
+      </Flex>
 
-      <HStack justify="space-between">
-        <Button variant="ghost" onClick={() => setStep('intake')}>
-          Back
-        </Button>
-        <Button
-          colorScheme="purple"
-          isDisabled={!questionsComplete}
-          isLoading={submitting}
-          loadingText="Scoring..."
-          onClick={handleSubmit}
-        >
-          See my results
-        </Button>
-      </HStack>
+      <Text fontSize="xs" color="gray.400" textAlign="center" pt={2}>
+        Tip: tap an answer to continue. Press 1-{SCALE.labels.length} on your keyboard, or Backspace to go back.
+      </Text>
     </VStack>
   )
 }
+
+const ChoiceRow: React.FC<{ label: string; active: boolean; onClick: () => void }> = ({
+  label,
+  active,
+  onClick,
+}) => (
+  <Box
+    as="button"
+    type="button"
+    onClick={onClick}
+    textAlign="left"
+    w="full"
+    px={5}
+    py={4}
+    borderRadius="xl"
+    borderWidth="2px"
+    borderColor={active ? PLUM : 'gray.200'}
+    bg={active ? PLUM : 'white'}
+    color={active ? 'white' : 'gray.700'}
+    fontWeight="semibold"
+    transition="all 0.15s ease"
+    _hover={active ? {} : { borderColor: GOLD, bg: '#fffaf0', transform: 'translateY(-1px)' }}
+    _active={{ transform: 'scale(0.99)' }}
+  >
+    <Flex align="center" justify="space-between" gap={3}>
+      <Text>{label}</Text>
+      {active && <Check size={20} />}
+    </Flex>
+  </Box>
+)
+
+export default LiftAssessmentFlow
