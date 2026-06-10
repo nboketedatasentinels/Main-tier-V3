@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
-  Button,
   Center,
   Divider,
   Heading,
@@ -23,9 +22,11 @@ import {
   Th,
   Thead,
   Tr,
+  IconButton,
   useDisclosure,
   VStack,
 } from '@chakra-ui/react'
+import { Eye } from 'lucide-react'
 import { listLiftAssessments, type LiftAssessmentRow } from '@/services/liftAssessmentService'
 import { TIER_OWNERS, ITEMS, SCALE, INTAKE_FIELDS, PILLARS, type PillarKey } from '@/config/liftAssessment'
 
@@ -48,7 +49,12 @@ const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; o
       {row && (
         <>
           <ModalHeader color="brand.deepPlum">
-            <Text>{row.fullName ?? row.email ?? 'Learner'}</Text>
+            <Text>{row.fullName ?? 'Learner'}</Text>
+            {row.email && (
+              <Text fontSize="sm" fontWeight="normal" color="gray.500">
+                {row.email}
+              </Text>
+            )}
             <HStack mt={1} spacing={2} flexWrap="wrap">
               <Badge colorScheme="purple">{row.archetype}</Badge>
               <Badge>LIFT {row.liftIndex}</Badge>
@@ -175,7 +181,6 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
             <Thead>
               <Tr>
                 <Th>Name</Th>
-                <Th>Email</Th>
                 <Th>Category</Th>
                 <Th isNumeric>LIFT</Th>
                 <Th isNumeric>L</Th>
@@ -193,7 +198,6 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
               {sorted.map((r) => (
                 <Tr key={r.uid} _hover={{ bg: 'gray.50' }}>
                   <Td>{r.fullName ?? '-'}</Td>
-                  <Td>{r.email ?? '-'}</Td>
                   <Td>
                     <Badge colorScheme="purple">{r.archetype}</Badge>
                   </Td>
@@ -213,15 +217,20 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
                   <Td>{r.coachingTriggered ? 'Yes' : 'No'}</Td>
                   <Td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-'}</Td>
                   <Td>
-                    <Button size="xs" variant="outline" colorScheme="purple" onClick={() => openAnswers(r)}>
-                      View answers
-                    </Button>
+                    <IconButton
+                      aria-label="View answers"
+                      icon={<Eye size={18} />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="purple"
+                      onClick={() => openAnswers(r)}
+                    />
                   </Td>
                 </Tr>
               ))}
               {rows.length === 0 && (
                 <Tr>
-                  <Td colSpan={13}>
+                  <Td colSpan={12}>
                     <Text textAlign="center" py={6} color="gray.400">
                       No assessments completed yet.
                     </Text>
