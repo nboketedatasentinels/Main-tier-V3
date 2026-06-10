@@ -1,59 +1,65 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Award } from 'lucide-react'
+import { Sparkles, TrendingUp, Users, GraduationCap } from 'lucide-react'
+
+const serif = { fontFamily: 'Georgia, "Times New Roman", Times, serif' }
+
+const Feature: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, label }) => (
+  <div className="inline-flex items-center gap-2 text-neutral-700">
+    <span className="text-[#eab130]" aria-hidden="true">
+      {icon}
+    </span>
+    <span className="text-base font-medium">{label}</span>
+  </div>
+)
 
 export const HeroSection: React.FC = () => {
   const navigate = useNavigate()
 
   return (
-    <section className="relative w-full min-h-screen flex items-center justify-center overflow-hidden text-white">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none hidden sm:block absolute right-[-60px] top-[-60px] h-48 w-48 md:h-64 md:w-64 rounded-full bg-slate-200 opacity-20 blur-[60px] -z-10"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none hidden sm:block absolute left-[-80px] bottom-[-80px] h-64 w-64 md:h-96 md:w-96 rounded-full bg-accent-gold-100 opacity-20 blur-[60px] -z-10"
-      />
+    <section className="mx-auto w-full max-w-4xl px-6 py-16 text-center sm:py-24">
+      {/* Badge */}
+      <div className="mb-8 flex justify-center">
+        <span className="inline-flex items-center gap-2 rounded-full bg-[#fbf2d8] px-5 py-2 text-sm font-semibold text-[#9c6f15]">
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          Built by practitioners, for practitioners
+        </span>
+      </div>
 
-      <div className="relative z-10 mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
-        <div className="mb-6 flex justify-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-brand-indigo-100 px-4 py-2 text-sm font-medium text-brand-indigo-800 shadow-sm">
-            <Award className="h-4 w-4" aria-hidden="true" />
-            CPD-Accredited Training
-          </div>
-        </div>
+      {/* Headline */}
+      <h1
+        style={serif}
+        className="font-semibold leading-[1.1] tracking-tight text-[#1a1326] text-4xl sm:text-5xl md:text-6xl"
+      >
+        Digital transformation doesn&apos;t happen alone.{' '}
+        <span className="block text-[#e0a008]">Bring your team.</span>
+      </h1>
 
-        <h1
-          className="mx-auto max-w-2xl font-heading font-bold leading-tight tracking-tight text-3xl text-white sm:max-w-3xl sm:text-4xl md:text-5xl lg:max-w-4xl lg:text-6xl xl:text-7xl"
+      {/* Subtext */}
+      <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-neutral-600 sm:text-lg">
+        Learn with your team, apply it to live work, and track the outcomes you can take straight to your leadership.
+      </p>
+
+      {/* CTA */}
+      <div className="mt-10 flex flex-col items-center gap-3">
+        <button
+          type="button"
+          onClick={() => navigate('/signup')}
+          className="rounded-full bg-[#27062e] px-10 py-5 text-lg font-bold text-white shadow-lg transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
         >
-          Digital Transformation Doesn&apos;t Happen Alone.{' '}
-          <span className="text-accent-gold-100">Even Beyoncé Has a Team.</span>
-        </h1>
+          Start free with your team
+        </button>
+        <p className="text-sm text-neutral-500">Free 4-week Starter journey. No card needed.</p>
+      </div>
 
-        <p
-          className="mx-auto mt-6 max-w-xl px-4 font-body text-sm leading-relaxed text-white/85 sm:max-w-2xl sm:text-base md:text-lg lg:max-w-3xl lg:text-xl"
-        >
-          Our gamified, CPD-accredited platform gives your team the skills, coaching, and loving-but-firm accountability to
-          lead real change without burning out or boring everyone to death. Perfect for managers, team leads, and brave souls
-          wearing too many hats.
-        </p>
+      {/* Divider */}
+      <hr className="mx-auto mt-14 max-w-3xl border-neutral-200" />
 
-        <div className="mt-10 flex flex-col items-center gap-3 sm:gap-4">
-          <button
-            type="button"
-            onClick={() => navigate('/signup')}
-            className="h-12 sm:h-14 px-6 sm:px-8 rounded-full bg-brand-indigo-500 text-white font-semibold shadow-lg hover:opacity-95
-              w-full sm:w-auto max-w-md
-              focus:outline-none focus:ring-2 focus:ring-brand-indigo-500"
-          >
-            Get Started (+50 XP)
-          </button>
-
-          <p className="max-w-sm px-2 text-center text-xs text-white/80 sm:text-sm">
-            For go-getters who want to dive in and earn XP like a boss.
-          </p>
-        </div>
+      {/* Features */}
+      <div className="mt-8 flex flex-col items-center justify-center gap-6 sm:flex-row sm:gap-12">
+        <Feature icon={<TrendingUp className="h-5 w-5" />} label="Track real impact" />
+        <Feature icon={<Users className="h-5 w-5" />} label="Learn as a team" />
+        <Feature icon={<GraduationCap className="h-5 w-5" />} label="Coached by practitioners" />
       </div>
     </section>
   )

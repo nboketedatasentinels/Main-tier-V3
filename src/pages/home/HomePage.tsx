@@ -1,25 +1,48 @@
 import React from 'react'
-import { Header } from '@/components/Header'
+import { useNavigate } from 'react-router-dom'
 import { HeroSection } from '@/components/HeroSection'
-import { ShapeLandingBackground } from '@/components/ui/shape-landing-background'
+import { useAuth } from '@/hooks/useAuth'
 
 export const HomePage: React.FC = () => {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+
   return (
-    <>
-      <Header />
+    <div className="min-h-screen bg-white">
+      {/* Top bar */}
+      <header className="w-full bg-[#27062e]">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="flex items-center gap-3 rounded-md focus:outline-none focus:ring-2 focus:ring-[#eab130]"
+            aria-label="Transformation Leader home"
+          >
+            <img src="/t4.png" alt="" className="h-10 w-10 rounded-full object-cover" />
+            <span className="flex flex-col text-left leading-none">
+              <span className="font-heading text-base font-extrabold tracking-wide text-[#eab130] sm:text-lg">
+                TRANSFORMATION <span className="text-[#f9db59]">LEADER</span>
+              </span>
+              <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#eab130]/70">
+                Positive Impact &middot; Sustainable Change
+              </span>
+            </span>
+          </button>
 
-      <main className="relative min-h-screen w-full overflow-hidden bg-gradient-to-b from-[#020611] via-[#060d22] to-[#020611] text-white">
-        <ShapeLandingBackground className="opacity-70" />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(255,255,255,0.06)_1px,transparent_1px)] [background-size:28px_28px]"
-        />
-
-        <div className="relative z-10">
-          <HeroSection />
+          <button
+            type="button"
+            onClick={() => navigate(user ? '/app' : '/login')}
+            className="rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-white"
+          >
+            Dashboard
+          </button>
         </div>
+      </header>
+
+      <main>
+        <HeroSection />
       </main>
-    </>
+    </div>
   )
 }
 
