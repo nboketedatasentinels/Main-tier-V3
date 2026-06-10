@@ -28,7 +28,8 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { BarChart3, Calendar, Download, Search, TrendingUp } from 'lucide-react'
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { fetchEngagementRoster } from '@/services/userManagementService'
-import { listenToOrganizations, logAdminAction } from '@/services/superAdminService'
+import { logAdminAction } from '@/services/superAdminService'
+import { listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { OrganizationRecord, SuperAdminDashboardMetrics } from '@/types/admin'
 
 type TrendPoint = { label: string; value: number }

@@ -3,7 +3,7 @@ import { Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from
 import { UsersManagementTab } from './tabs/UsersManagementTab'
 import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
-import { listenToUsers, listenToOrganizations } from '@/services/superAdminService'
+import { listenToUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { OrganizationOption, ManagedUserRecord } from '@/services/userManagementService'
 import { getDisplayName } from '@/utils/displayName'
 
