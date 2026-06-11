@@ -192,6 +192,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
   const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
   const assignmentSectionLabel = programCadence === 'biweekly' ? '3-week window course assignments' : 'Monthly course assignments'
+  // Course-assignment section removed from the create modal per request (can be set later via edit).
+  const SHOW_COURSE_ASSIGNMENTS = false
   const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Cycle breakdown summary' : 'Monthly breakdown summary'
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
@@ -954,6 +956,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 </GridItem>
               </Grid>
 
+              {SHOW_COURSE_ASSIGNMENTS && (
               <Box>
                 <Text fontWeight="medium" mb={2}>
                   {assignmentSectionLabel}
@@ -1120,6 +1123,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </Box>
                 )}
               </Box>
+              )}
 
               <Box>
                 <Text fontWeight="medium" mb={2}>
@@ -1387,24 +1391,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                   </Box>
                 </Stack>
               </Box>
-
-              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      value={form.status}
-                      onChange={(e) => updateField('status', e.target.value as OrganizationRecord['status'])}
-                    >
-                      <option value="active">Active</option>
-                      <option value="pending">Pending</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                      <option value="watch">Watch</option>
-                    </Select>
-                  </FormControl>
-                </GridItem>
-              </Grid>
 
             </Stack>
           </ModalBody>
