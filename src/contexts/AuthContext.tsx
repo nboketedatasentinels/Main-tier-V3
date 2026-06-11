@@ -241,6 +241,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* ------------------------------------------------------------------ */
   /* 🔹 Auth State Listener                                              */
   /* ------------------------------------------------------------------ */
+  const loadedUidRef = useRef<string | null>(null)
+
   useEffect(() => {
     let isActive = true
 
@@ -250,6 +252,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       extractClaimsRole(session)
 
       if (!supaUser) {
+        loadedUidRef.current = null
         setUser(null)
         setProfile(null)
         setClaimsRole(null)
@@ -262,6 +265,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const authUser = toAuthUser(supaUser)
       setUser(authUser)
+
+      // Background refresh (e.g. TOKEN_REFRESHED when you switch back to the tab)
+      // for a user we've ALREADY loaded: do NOT flip global loading. Flipping it
+      // makes ProtectedRoute swap in the full-screen loader, which unmounts the
+      // current page and wipes in-progress form state. The token/claims are
+      // already updated above; nothing else needs to happen, so keep the app
+      // mounted and bail.
+      if (loadedUidRef.current === supaUser.id) {
+        return
+      }
+
       setLoading(true)
       setProfileLoading(true)
       setProfileStatus('loading')
@@ -276,6 +290,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.log('🟢 [Auth] Profile resolved', { origin, role: ensuredProfile?.role })
       setProfile(ensuredProfile)
       recordProfileLoad(ensuredProfile)
+      loadedUidRef.current = supaUser.id
       setProfileLoading(false)
       setLoading(false)
       setProfileStatus('ready')
