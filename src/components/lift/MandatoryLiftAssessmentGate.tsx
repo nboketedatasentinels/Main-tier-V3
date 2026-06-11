@@ -16,7 +16,8 @@ import {
   hasCompletedLiftAssessment,
   submitLiftAssessment,
 } from '@/services/liftAssessmentService'
-import type { LiftResult, ItemScores, IntakeAnswers } from '@/utils/liftScoring'
+import { computeLiftResult, type LiftResult, type ItemScores, type IntakeAnswers } from '@/utils/liftScoring'
+import { readPendingLift, clearPendingLift } from '@/utils/pendingLift'
 
 // Roles required to complete the one-time assessment (learners only; staff exempt).
 const GATED_ROLES = new Set(['free_user', 'paid_member', 'user'])
@@ -41,9 +42,30 @@ export const MandatoryLiftAssessmentGate: React.FC = () => {
     }
     setStatus('checking')
     hasCompletedLiftAssessment(uid)
-      .then((completed) => {
+      .then(async (completed) => {
         if (!active) return
-        setStatus(completed ? 'done' : 'needs')
+        if (completed) {
+          setStatus('done')
+          return
+        }
+        // Visitor took the assessment before signing up? Score + save those
+        // answers now and show their results - no need to retake.
+        const pending = readPendingLift()
+        if (pending) {
+          try {
+            const computed = computeLiftResult(pending.itemScores, pending.intake)
+            await submitLiftAssessment(uid, pending.intake, pending.itemScores, computed)
+            clearPendingLift()
+            if (!active) return
+            setResult(computed)
+            setStatus('result')
+            return
+          } catch (error) {
+            console.error('[LiftGate] pending submit failed', error)
+            // Fall through to asking them in-app.
+          }
+        }
+        if (active) setStatus('needs')
       })
       .catch((error) => {
         console.error('[LiftGate] completion check failed', error)

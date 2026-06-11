@@ -44,12 +44,12 @@ export const HeroSection: React.FC = () => {
       <div className="mt-10 flex flex-col items-center gap-3">
         <button
           type="button"
-          onClick={() => navigate('/signup')}
+          onClick={() => navigate('/assessment')}
           className="rounded-full bg-[#27062e] px-10 py-5 text-lg font-bold text-white shadow-lg transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
         >
-          Start free with your team
+          Get started
         </button>
-        <p className="text-sm text-neutral-500">Free 4-week Starter journey. No card needed.</p>
+        <p className="text-sm text-neutral-500">Take the 4-minute LIFT assessment. No card needed.</p>
       </div>
 
       {/* Divider */}
