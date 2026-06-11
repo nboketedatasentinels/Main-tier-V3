@@ -12,6 +12,7 @@ import { getLandingPathForRole } from '@/utils/roleRouting'
 import { MainLayout } from '@/layouts/MainLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { HomePage } from '@/pages/home/HomePage'
+import { PublicAssessmentPage } from '@/pages/assessment/PublicAssessmentPage'
 
 // Page imports
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -144,6 +145,7 @@ export const AppRoutes = () => {
         <Routes>
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
+        <Route path="/assessment" element={<PublicAssessmentPage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />

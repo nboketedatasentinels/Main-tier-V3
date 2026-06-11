@@ -21,6 +21,8 @@ const MotionBox = motion(Box)
 interface LiftAssessmentFlowProps {
   onComplete: (intake: IntakeAnswers, itemScores: ItemScores, result: LiftResult) => void
   submitting?: boolean
+  /** Where the flow opens. Public funnel passes 'countdown' (landing was the intro). */
+  initialPhase?: 'intro' | 'countdown' | 'questions'
 }
 
 type Step =
@@ -49,7 +51,11 @@ const shuffle = <T,>(arr: T[]): T[] => {
   return a
 }
 
-export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({ onComplete, submitting }) => {
+export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
+  onComplete,
+  submitting,
+  initialPhase = 'intro',
+}) => {
   const items = useMemo(() => shuffle(ITEMS), [])
   const steps = useMemo<Step[]>(
     () => [
@@ -60,7 +66,7 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({ onComple
   )
 
   const total = steps.length
-  const [phase, setPhase] = useState<'intro' | 'countdown' | 'questions'>('intro')
+  const [phase, setPhase] = useState<'intro' | 'countdown' | 'questions'>(initialPhase)
   const [index, setIndex] = useState(0)
   const [dir, setDir] = useState(1)
   const [intake, setIntake] = useState<IntakeAnswers>({})
