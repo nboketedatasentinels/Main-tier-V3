@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
+  Center,
   Container,
   Modal,
   ModalBody,
@@ -9,6 +10,7 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
+  Spinner,
   Text,
   VStack,
 } from '@chakra-ui/react'
@@ -16,7 +18,7 @@ import { LiftAssessmentFlow } from '@/components/lift/LiftAssessmentFlow'
 import { LiftResultView } from '@/components/lift/LiftResultView'
 import { useAuth } from '@/hooks/useAuth'
 import { savePendingLift } from '@/utils/pendingLift'
-import { submitLiftAssessment } from '@/services/liftAssessmentService'
+import { hasCompletedLiftAssessment, submitLiftAssessment } from '@/services/liftAssessmentService'
 import type { IntakeAnswers, ItemScores, LiftResult } from '@/utils/liftScoring'
 
 /**
@@ -28,8 +30,36 @@ import type { IntakeAnswers, ItemScores, LiftResult } from '@/utils/liftScoring'
  */
 export const PublicAssessmentPage: React.FC = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const [result, setResult] = useState<LiftResult | null>(null)
+  // Once-in-a-lifetime: if this signed-in user already has saved results, never
+  // show the countdown/assessment again - send them straight to their results.
+  const [checking, setChecking] = useState(true)
+
+  useEffect(() => {
+    let active = true
+    if (loading) return
+    if (!user?.uid) {
+      setChecking(false)
+      return
+    }
+    hasCompletedLiftAssessment(user.uid)
+      .then((completed) => {
+        if (!active) return
+        if (completed) {
+          navigate('/app/lift-results', { replace: true })
+        } else {
+          setChecking(false)
+        }
+      })
+      .catch(() => {
+        // Fail open: let them take it rather than trap them on a spinner.
+        if (active) setChecking(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [loading, user?.uid, navigate])
 
   const handleComplete = async (intake: IntakeAnswers, itemScores: ItemScores, computed: LiftResult) => {
     if (user?.uid) {
@@ -47,6 +77,14 @@ export const PublicAssessmentPage: React.FC = () => {
 
   const handleContinue = () => {
     navigate(user?.uid ? '/app/lift-results' : '/signup?from=assessment', { replace: true })
+  }
+
+  if (loading || checking) {
+    return (
+      <Center minH="100vh" bg="white">
+        <Spinner size="lg" color="#27062e" thickness="4px" />
+      </Center>
+    )
   }
 
   return (
