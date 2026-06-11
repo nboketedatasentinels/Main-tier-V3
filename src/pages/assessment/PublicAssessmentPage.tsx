@@ -1,7 +1,19 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Box, Container, Text, VStack } from '@chakra-ui/react'
+import {
+  Box,
+  Container,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
+  Text,
+  VStack,
+} from '@chakra-ui/react'
 import { LiftAssessmentFlow } from '@/components/lift/LiftAssessmentFlow'
+import { LiftResultView } from '@/components/lift/LiftResultView'
 import { useAuth } from '@/hooks/useAuth'
 import { savePendingLift } from '@/utils/pendingLift'
 import { submitLiftAssessment } from '@/services/liftAssessmentService'
@@ -9,30 +21,36 @@ import type { IntakeAnswers, ItemScores, LiftResult } from '@/utils/liftScoring'
 
 /**
  * Public, assessment-first funnel: a visitor takes the LIFT assessment without
- * an account. On finish, anonymous answers are stashed in the browser and the
- * visitor is sent to sign up / sign in; the post-login gate scores + saves them
- * and shows the results. A visitor already signed in is saved straight away.
+ * an account, then sees their results in a pop-up, then is sent to sign up /
+ * sign in. Anonymous answers are stashed in the browser so the post-login gate
+ * saves them to the new account (no retake). A visitor already signed in is
+ * saved straight away.
  */
 export const PublicAssessmentPage: React.FC = () => {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const [result, setResult] = useState<LiftResult | null>(null)
 
-  const handleComplete = async (intake: IntakeAnswers, itemScores: ItemScores, result: LiftResult) => {
+  const handleComplete = async (intake: IntakeAnswers, itemScores: ItemScores, computed: LiftResult) => {
     if (user?.uid) {
       try {
-        await submitLiftAssessment(user.uid, intake, itemScores, result)
+        await submitLiftAssessment(user.uid, intake, itemScores, computed)
       } catch {
-        /* results page re-reads from storage if the save hiccups */
+        /* the gate / results page reconcile if the save hiccups */
       }
-      navigate('/app/lift-results', { replace: true })
-      return
+    } else {
+      savePendingLift({ intake, itemScores })
     }
-    savePendingLift({ intake, itemScores })
-    navigate('/signup?from=assessment', { replace: true })
+    // Show their results in a pop-up first; the continue button routes onward.
+    setResult(computed)
+  }
+
+  const handleContinue = () => {
+    navigate(user?.uid ? '/app/lift-results' : '/signup?from=assessment', { replace: true })
   }
 
   return (
-    <Box minH="100vh" bg="#fffdf6" position="relative" overflow="hidden">
+    <Box minH="100vh" bg="white" position="relative" overflow="hidden">
       {/* Soft gold blobs */}
       <Box
         aria-hidden
@@ -93,6 +111,38 @@ export const PublicAssessmentPage: React.FC = () => {
         {/* No card - content sits directly on the page */}
         <LiftAssessmentFlow onComplete={handleComplete} initialPhase="countdown" />
       </Container>
+
+      {/* Results pop-up, shown when the assessment is complete */}
+      <Modal
+        isOpen={Boolean(result)}
+        onClose={() => {}}
+        closeOnOverlayClick={false}
+        closeOnEsc={false}
+        isCentered
+        size={{ base: 'full', md: '2xl' }}
+        scrollBehavior="inside"
+      >
+        <ModalOverlay bg="rgba(15, 3, 25, 0.85)" backdropFilter="blur(6px)" />
+        <ModalContent borderRadius={{ base: 'none', md: '2xl' }}>
+          <ModalHeader>Your LIFT Index</ModalHeader>
+          <ModalCloseButton onClick={handleContinue} />
+          <ModalBody py={6}>
+            {result && (
+              <LiftResultView
+                pillars={result.pillars}
+                liftIndex={result.liftIndex}
+                archetype={result.archetype}
+                developmentEdge={result.developmentEdge}
+                recommendedOffer={result.recommendedOffer}
+                leadTier={result.leadTier}
+                coachingTriggered={result.coachingTriggered}
+                onContinue={handleContinue}
+                continueLabel={user?.uid ? 'Continue' : 'Create your account to save this'}
+              />
+            )}
+          </ModalBody>
+        </ModalContent>
+      </Modal>
     </Box>
   )
 }
