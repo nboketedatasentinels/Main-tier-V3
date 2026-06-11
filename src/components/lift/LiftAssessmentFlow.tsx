@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, Flex, HStack, Spinner, Text, VStack } from '@chakra-ui/react'
+import { Box, Button, Flex, HStack, Spinner, Text, VStack } from '@chakra-ui/react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check } from 'lucide-react'
+import { ArrowLeft, Check, Sparkles } from 'lucide-react'
 import {
   ITEMS,
   SCALE,
@@ -60,6 +60,7 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({ onComple
   )
 
   const total = steps.length
+  const [phase, setPhase] = useState<'intro' | 'countdown' | 'questions'>('intro')
   const [index, setIndex] = useState(0)
   const [dir, setDir] = useState(1)
   const [intake, setIntake] = useState<IntakeAnswers>({})
@@ -170,6 +171,14 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({ onComple
     )
   }
 
+  if (phase === 'intro') {
+    return <Intro onStart={() => setPhase('countdown')} />
+  }
+
+  if (phase === 'countdown') {
+    return <Countdown onDone={() => setPhase('questions')} />
+  }
+
   return (
     <VStack align="stretch" spacing={0} minH={{ base: 'auto', md: '440px' }}>
       {/* Progress + context */}
@@ -276,6 +285,115 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({ onComple
         Tip: tap an answer to continue. Press 1-{SCALE.labels.length} on your keyboard, or Backspace to go back.
       </Text>
     </VStack>
+  )
+}
+
+const Intro: React.FC<{ onStart: () => void }> = ({ onStart }) => (
+  <VStack
+    spacing={7}
+    py={{ base: 8, md: 10 }}
+    textAlign="center"
+    minH={{ base: '360px', md: '440px' }}
+    justify="center"
+  >
+    <MotionBox
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+    >
+      <Flex
+        display="inline-flex"
+        align="center"
+        gap={2}
+        px={4}
+        py={1.5}
+        mb={4}
+        borderRadius="full"
+        bg="#fbf2d8"
+        color="#9c6f15"
+        fontWeight="bold"
+        fontSize="sm"
+      >
+        <Sparkles size={16} /> The LIFT Index
+      </Flex>
+      <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.2">
+        Discover your leadership profile
+      </Text>
+      <Text mt={3} maxW="md" mx="auto" color="gray.600">
+        A quick self-assessment across the four LIFT pillars. Answer honestly - there are no right or wrong
+        answers. It takes about 3-4 minutes.
+      </Text>
+    </MotionBox>
+    <Button
+      onClick={onStart}
+      px={12}
+      py={7}
+      borderRadius="full"
+      bg={PLUM}
+      color="white"
+      fontSize="lg"
+      fontWeight="bold"
+      shadow="lg"
+      _hover={{ bg: '#3a0d44' }}
+      _active={{ transform: 'scale(0.99)' }}
+    >
+      Get started
+    </Button>
+  </VStack>
+)
+
+const Countdown: React.FC<{ onDone: () => void }> = ({ onDone }) => {
+  const [n, setN] = useState(3)
+
+  useEffect(() => {
+    if (n === 0) {
+      const t = window.setTimeout(onDone, 650)
+      return () => window.clearTimeout(t)
+    }
+    const t = window.setTimeout(() => setN((v) => v - 1), 850)
+    return () => window.clearTimeout(t)
+  }, [n, onDone])
+
+  const label = n > 0 ? String(n) : 'Start'
+
+  return (
+    <Flex direction="column" align="center" justify="center" minH={{ base: '360px', md: '440px' }} gap={8}>
+      <Text fontSize="sm" letterSpacing="0.25em" textTransform="uppercase" color="gray.400">
+        Get ready
+      </Text>
+      <Box position="relative" w="170px" h="170px">
+        <MotionBox
+          position="absolute"
+          inset="0"
+          borderRadius="full"
+          border="3px solid"
+          borderColor={GOLD}
+          initial={{ scale: 0.85, opacity: 0.65 }}
+          animate={{ scale: 1.18, opacity: 0 }}
+          transition={{ duration: 0.85, repeat: Infinity, ease: 'easeOut' }}
+        />
+        <Flex position="absolute" inset="0" align="center" justify="center">
+          <AnimatePresence mode="wait">
+            <MotionBox
+              key={label}
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.8, opacity: 0 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            >
+              <Text
+                fontWeight="extrabold"
+                fontSize={label === 'Start' ? '4xl' : '7xl'}
+                bgGradient={`linear(to-br, ${PLUM}, ${GOLD})`}
+                bgClip="text"
+              >
+                {label}
+              </Text>
+            </MotionBox>
+          </AnimatePresence>
+        </Flex>
+      </Box>
+    </Flex>
   )
 }
 
