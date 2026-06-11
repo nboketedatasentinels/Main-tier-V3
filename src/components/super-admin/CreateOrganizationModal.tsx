@@ -1159,9 +1159,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                        Add user manually
                      </Text>
                      <Grid
-                      templateColumns={{ base: '1fr', lg: '2fr 1.3fr auto' }}
+                      templateColumns={{ base: '1fr', md: '2fr 1.4fr auto' }}
                       gap={3}
-                      alignItems="flex-end"
+                      alignItems="start"
                     >
                       <FormControl isRequired isInvalid={Boolean(manualErrors.email)}>
                         <FormLabel display="flex" alignItems="center" gap={2}>
@@ -1218,9 +1218,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         </Select>
                         <FormErrorMessage>{manualErrors.role}</FormErrorMessage>
                       </FormControl>
-                      <Button colorScheme="purple" onClick={handleAddManualEntry} alignSelf="flex-end">
-                        Add user
-                      </Button>
+                      <Box>
+                        {/* invisible label keeps the button on the same row as the inputs */}
+                        <FormLabel display={{ base: 'none', md: 'flex' }} opacity={0} aria-hidden>
+                          Add
+                        </FormLabel>
+                        <Button colorScheme="purple" onClick={handleAddManualEntry} w={{ base: 'full', md: 'auto' }}>
+                          Add user
+                        </Button>
+                      </Box>
                     </Grid>
                   </Box>
                   {inviteError ? (
