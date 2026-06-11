@@ -120,7 +120,7 @@ const getRestrictedFeatureForPath = (path: string): RestrictedFeatureConfig | nu
   RESTRICTED_FREE_FEATURES.find((feature) => path.startsWith(feature.pathPrefix)) ?? null
 
 export const MainLayout: React.FC = () => {
-  const { profile, profileStatus, signOut, signingOut } = useAuth()
+  const { profile, signOut, signingOut } = useAuth()
   useProgrammeNotificationSync()
   useSixWeekProgrammeNotificationSync()
   const location = useLocation()
@@ -162,10 +162,12 @@ export const MainLayout: React.FC = () => {
   const shouldAutoOpenTour = Boolean(
     welcomeKey && isAppShellRoute && localStorage.getItem(welcomeKey) === 'pending',
   )
-  // Only prompt once profile is fully loaded from database (profileStatus === 'ready')
-  const shouldPromptPersonalityModal = Boolean(
-    profile && isAppShellRoute && profileStatus === 'ready' && !hasCompletedPersonalityAndValues
-  )
+  // Personality/Values prerequisite pop-up ("Discover Your Leadership Superpowers!")
+  // is disabled - it no longer auto-opens. The 16 Personalities / Personal Values
+  // tests remain available from the Profile page; we just don't force them as a
+  // mandatory modal on entering the app.
+  const shouldPromptPersonalityModal = false
+  void hasCompletedPersonalityAndValues // retained for reference; no longer gates entry
   const onboardingSessionSuppressionKey = useMemo(
     () => (profile?.id ? `t4l.onboardingSessionSuppressed.${profile.id}` : null),
     [profile?.id],
