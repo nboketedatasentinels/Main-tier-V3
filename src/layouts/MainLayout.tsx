@@ -159,9 +159,9 @@ export const MainLayout: React.FC = () => {
       profile.coreValues.length === 5
     )
   }, [profile])
-  const shouldAutoOpenTour = Boolean(
-    welcomeKey && isAppShellRoute && localStorage.getItem(welcomeKey) === 'pending',
-  )
+  // Post-login welcome tour ("Build your village" / ecosystem walkthrough) is
+  // disabled - it no longer auto-opens after login.
+  const shouldAutoOpenTour = false
   // Personality/Values prerequisite pop-up ("Discover Your Leadership Superpowers!")
   // is disabled - it no longer auto-opens. The 16 Personalities / Personal Values
   // tests remain available from the Profile page; we just don't force them as a
