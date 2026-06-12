@@ -17,7 +17,6 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Users } from 'lucide-react'
 import { supabase } from '@/services/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { claimPartnerAccess } from '@/services/supabaseOrgService'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 
@@ -28,7 +27,6 @@ import { getFriendlyErrorMessage } from '@/utils/authErrors'
  */
 export const PartnerSignupPage: React.FC = () => {
   const navigate = useNavigate()
-  const { refreshProfile } = useAuth()
   const [mode, setMode] = useState<'signup' | 'signin'>('signup')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -41,8 +39,10 @@ export const PartnerSignupPage: React.FC = () => {
   const finishClaim = async () => {
     const result = await claimPartnerAccess()
     if (result === 'ok') {
-      await refreshProfile({ reason: 'partner-claim', isManual: true })
-      navigate('/partner/dashboard', { replace: true })
+      // Full reload so the session re-reads the freshly-granted partner role.
+      // (A client-side navigate hits the role guard before the new role has
+      // propagated, causing "Access denied" on the first try.)
+      window.location.assign('/partner/dashboard')
       return
     }
     // Not assigned (or error): block - sign them out and explain.
