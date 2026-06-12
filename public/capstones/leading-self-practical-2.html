@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Protocol Card</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"] {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  input[type="text"]::placeholder { color: #aaa; }
+  .substep-card input[type="text"] { background: #fff; }
+
+  /* Protocol Card -- distinctive UI for Practical 2 */
+  .protocol-card { background: linear-gradient(135deg, var(--plum) 0%, #2D2542 100%); border-radius: 16px; padding: 28px 32px; margin-bottom: 16px; position: relative; overflow: hidden; }
+  .protocol-card::before { content: ""; position: absolute; top: 0; right: 0; width: 120px; height: 100%; background: linear-gradient(90deg, transparent, rgba(245,200,66,0.08)); pointer-events: none; }
+  .protocol-card-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
+  .protocol-name-input { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(245,200,66,0.3); border-radius: 10px; padding: 16px 18px; font-family: 'DM Serif Display', serif; font-style: italic; font-size: 22px; color: var(--gold); }
+  .protocol-name-input:focus { outline: none; border-color: var(--gold); background: rgba(245,200,66,0.08); }
+  .protocol-name-input::placeholder { color: rgba(245,200,66,0.4); font-style: italic; }
+  .protocol-line { display: flex; gap: 14px; align-items: flex-start; padding: 14px 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .protocol-line:first-of-type { border-top: 1px solid rgba(255,255,255,0.12); margin-top: 18px; }
+  .protocol-line-num { width: 28px; height: 28px; background: var(--gold); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--plum); font-family: 'DM Serif Display', serif; }
+  .protocol-line-body { flex: 1; }
+  .protocol-line-label { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .protocol-line-text { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 10px 12px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 60px; line-height: 1.6; }
+  .protocol-line-text:focus { outline: none; border-color: var(--gold); }
+  .protocol-line-text::placeholder { color: rgba(255,255,255,0.35); }
+
+  /* Daily reps tracker */
+  .reps-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 8px; }
+  @media (max-width: 600px) { .reps-grid { grid-template-columns: 1fr; } }
+  .rep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 10px; padding: 14px; }
+  .rep-day { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 14px; color: var(--purple); margin-bottom: 4px; }
+  .rep-helper { font-size: 11px; color: #888; margin-bottom: 8px; line-height: 1.4; }
+  .rep-card textarea { background: #fff; font-size: 12px; min-height: 70px; padding: 8px 10px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .protocol-card { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity, .protocol-card { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Protocol Card</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Leading Self in the Age of AI</div>
+    <div class="practical-badge">Week 2 · Practical 2 of 6</div>
+  </div>
+  <h1 class="header-title">Protocol <em>Card</em></h1>
+  <p class="header-desc">Build the small, named protocol you'll deploy when your pattern fires. One trigger. Three moves. A signal phrase. Then practice it for five days. This is the boring middle of any change -- repetition before results -- and it's where most leaders quit. Don't.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Protocol is short -- a card you could keep on your desk. Three moves, not ten.</li>
+      <li>Tied to the pattern you named in Practical 1 -- not a generic "stay calm" card.</li>
+      <li>Includes a signal phrase -- something you say (out loud or to yourself) to interrupt the pattern in real time.</li>
+      <li>Practiced for at least three of five days, with honest notes on what landed and what didn't.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Carry forward the pattern -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Carry Forward the Pattern</div>
+      </div>
+    </div>
+    <p class="step-desc">From Practical 1, re-state the pattern you're working on and the trigger that fires it. The Protocol you build in Step 2 has to disrupt this specific pattern in this specific moment -- not patterns in general.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Pattern</div>
+        </div>
+        <div class="substep-body">From Practical 1, Step 1 (or your tightened version after AI pressure-testing).</div>
+        <textarea name="pattern_carry" placeholder="Under perceived scepticism in senior meetings, I lose my anchor as a leader and start narrating my reasoning instead of holding my position."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Trigger</div>
+        </div>
+        <div class="substep-body">From Practical 1, Step 1. The specific cue that fires the pattern.</div>
+        <textarea name="trigger_carry" placeholder="A senior stakeholder asking 'are you sure about this?' in a tone I read as sceptical, especially in front of others."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The Protocol Card -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Build the Protocol Card</div>
+      </div>
+    </div>
+    <p class="step-desc">A protocol is a small, repeatable sequence you deploy when the trigger fires. Three moves. A signal phrase. A name. Short enough to fit on a card you can keep on your desk -- because in real moments under pressure, you won't have time to read a checklist. The whole card should fit on one screen.</p>
+
+    <div class="protocol-card">
+      <div class="protocol-card-tag">Your Protocol Card</div>
+      <input type="text" name="protocol_name" class="protocol-name-input" placeholder="Name your protocol -- e.g. 'The Anchor', 'Hold and Pause', 'One Sentence Then Stop'">
+
+      <div class="protocol-line">
+        <div class="protocol-line-num">1</div>
+        <div class="protocol-line-body">
+          <div class="protocol-line-label">Move 1 -- The Interrupt</div>
+          <textarea name="move_1" class="protocol-line-text" placeholder="The first thing you do the instant you notice the trigger has fired. Often a physical or verbal pause. E.g. 'Take one breath before responding. Do not start a sentence on the same breath as the trigger.'"></textarea>
+        </div>
+      </div>
+
+      <div class="protocol-line">
+        <div class="protocol-line-num">2</div>
+        <div class="protocol-line-body">
+          <div class="protocol-line-label">Move 2 -- The Anchor</div>
+          <textarea name="move_2" class="protocol-line-text" placeholder="What you reconnect to instead of the pattern. The replacement behaviour. E.g. 'Restate the original recommendation in one clean sentence. Do not add context, qualifiers, or contingencies.'"></textarea>
+        </div>
+      </div>
+
+      <div class="protocol-line">
+        <div class="protocol-line-num">3</div>
+        <div class="protocol-line-body">
+          <div class="protocol-line-label">Move 3 -- The Hold</div>
+          <textarea name="move_3" class="protocol-line-text" placeholder="What you do to hold position rather than spiral. Often a deliberate stop. E.g. 'After the one sentence, stop talking. Let the silence sit. Wait for them to ask the next question.'"></textarea>
+        </div>
+      </div>
+
+      <div class="protocol-line">
+        <div class="protocol-line-num">★</div>
+        <div class="protocol-line-body">
+          <div class="protocol-line-label">Signal phrase -- the words that activate the protocol</div>
+          <textarea name="signal_phrase" class="protocol-line-text" placeholder="A short phrase you say (out loud or to yourself) that triggers the protocol. Should feel like yours, not a slogan. E.g. 'One sentence. Then stop.' or 'Hold the line.'"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Five-Day Reps -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Five Days of Reps</div>
+      </div>
+    </div>
+    <p class="step-desc">A protocol you don't practice is just a piece of paper. For five days this week, deploy the protocol when the trigger fires. Capture what happened in 1-2 lines per day -- not a journal, just a log. If the trigger didn't fire on a given day, note that and write what you'd have done if it had. The repetition is the work. This is the boring middle that most people quit at.</p>
+
+    <div class="reps-grid">
+      <div class="rep-card">
+        <div class="rep-day">Day 1</div>
+        <div class="rep-helper">Did the trigger fire? What happened?</div>
+        <textarea name="rep_day_1" placeholder="Trigger fired in 11am stand-up when COO asked 'are you confident on this date?' Used signal phrase, restated the date in one sentence, stopped. She said 'okay good' and moved on. Felt strange in my body but it landed."></textarea>
+      </div>
+      <div class="rep-card">
+        <div class="rep-day">Day 2</div>
+        <div class="rep-helper">Did the trigger fire? What happened?</div>
+        <textarea name="rep_day_2" placeholder="Trigger didn't fire today. Quiet day, mostly internal calls. If it had fired, I noticed I was already mentally rehearsing the protocol -- which feels different from how I usually walk into meetings."></textarea>
+      </div>
+      <div class="rep-card">
+        <div class="rep-day">Day 3</div>
+        <div class="rep-helper">Did the trigger fire? What happened?</div>
+        <textarea name="rep_day_3" placeholder="Trigger fired hard in steering committee. CFO challenged the AI vendor cost. I started the protocol then slipped -- added one qualifier after the clean sentence. Better than my baseline (would have been four qualifiers) but not yet the full protocol."></textarea>
+      </div>
+      <div class="rep-card">
+        <div class="rep-day">Day 4</div>
+        <div class="rep-helper">Did the trigger fire? What happened?</div>
+        <textarea name="rep_day_4" placeholder="Trigger fired in a 1:1 with my manager. Used the protocol cleanly. She paused longer than I expected after my one sentence -- which my old self would have read as her doubting me, and I would have filled the silence. This time I held it. She said 'okay, that helps.'"></textarea>
+      </div>
+      <div class="rep-card">
+        <div class="rep-day">Day 5</div>
+        <div class="rep-helper">Did the trigger fire? What happened?</div>
+        <textarea name="rep_day_5" placeholder="Trigger fired twice. Once with my manager (clean protocol), once in an email exchange (couldn't use the verbal protocol so I drafted, paused, deleted three qualifiers, sent the cleaner version). Adapted the protocol to writing -- worth keeping."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: What landed and what didn't -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">What Landed and What Didn't</div>
+      </div>
+    </div>
+    <p class="step-desc">After five days of reps, what's actually working in the protocol and what isn't? Don't grade yourself. Look at the protocol like an engineer looking at a system -- which parts hold, which parts need adjustment. This honesty is what makes Week 3 useful.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">What's Working</div>
+        </div>
+        <div class="substep-body">The part of the protocol that's actually disrupting the pattern. Be specific.</div>
+        <textarea name="working" placeholder="Move 1 (The Interrupt -- one breath before speaking) is the part that's doing the work. The pause is enough to disrupt the autopilot of the pattern. By Day 4 it was happening without me consciously deploying the protocol -- which is what rewiring is supposed to feel like."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What's Not Working Yet</div>
+        </div>
+        <div class="substep-body">The part of the protocol that's still slipping. Why -- not as self-criticism, just as observation.</div>
+        <textarea name="not_working" placeholder="Move 3 (The Hold -- letting the silence sit) is still the hardest. On Day 3 I slipped because the silence felt longer than I could tolerate. This is the part to keep working on -- the discomfort of the silence is real, but it's signal that the protocol is doing its job. I need to expect the discomfort, not avoid it."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Stress-Test the Protocol</h2>
+    <p class="ai-activity-desc">A protocol that works on paper often falls apart under pressure. AI as a sparring partner can simulate the kind of moment where your protocol will be tested -- including the angles you didn't plan for.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Run the Protocol Through Three Hard Scenarios</div>
+          <div class="ai-step-body">Ask AI to throw three realistic scenarios at you that test your protocol -- the kind that would normally fire your pattern. Find out where the protocol is fragile before a real moment finds out for you.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm building a protocol to disrupt a leadership pattern. The pattern: [paste your Step 1 pattern]. The trigger: [paste your Step 1 trigger]. My protocol: [paste your Step 2 protocol -- name, three moves, signal phrase]. Generate three realistic high-pressure scenarios where this trigger would fire hard. For each, walk me through what I'd say and do using my protocol. Where does the protocol hold? Where does it likely break? What one adjustment would make it more durable?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you adjust?</div>
+      <textarea class="ai-field" placeholder="AI ran three scenarios -- the strongest test was 'CFO interrupts your one sentence and asks a follow-up before you've finished.' My current protocol has no provision for this -- if interrupted, I'd default back to the old pattern. Adding to Move 3: 'If interrupted, finish my sentence calmly before responding to the new question. Do not jump to the new question.' Small but important addition."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Signal Phrase</div>
+          <div class="ai-step-body">A signal phrase that doesn't feel like yours won't fire when you need it. Ask AI to evaluate yours and offer two alternatives -- you might find the right one is the one you didn't write.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My signal phrase for activating a leadership protocol under pressure is: [paste your signal phrase]. For context, the protocol is about [paste protocol name and what it disrupts]. Evaluate this signal phrase. Does it sound like something I'd actually say to myself in a high-pressure moment, or does it sound like a slogan I'd find in a corporate training? Suggest two alternative signal phrases that might fit better -- and tell me what to listen for in choosing.</div>
+      <div class="prompt-label" style="margin-top:12px">Did you keep your phrase or switch? Why?</div>
+      <textarea class="ai-field" placeholder="My original phrase was 'One sentence. Then stop.' AI suggested two alternatives: 'Hold the line' and 'Land it and leave it.' The 'land it and leave it' lands harder -- it's how I actually talk, and it carries the energy of finishing rather than restraining. Switching to that. The lesson: my first instinct chose what I thought a leader should say. The second instinct chose something I'd actually say."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As a transformation leader, you'll increasingly be expected to deploy yourself with discipline in moments where AI is also in the room -- a vendor pitch with AI tools demonstrating in real time, an exec review where AI dashboards are on screen, a board moment where someone uses AI to challenge your numbers. How does your protocol need to hold in those AI-saturated moments specifically?</div>
+    <textarea placeholder="The AI-saturated moments will be harder for my pattern because the pace is faster -- AI gives a stakeholder the ability to lob challenges at me before I've finished speaking. The 'interrupt' in my protocol was built for human pace. I need to expect to be challenged mid-sentence with data the AI just surfaced, and hold my position anyway. The protocol holds if I trust that the breath, the one sentence, and the silence are still right -- even when the AI has produced a contradicting chart. The discipline is to land my position before responding to AI-produced challenges. It's not about ignoring the AI; it's about not letting the AI's pace dictate mine."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">A protocol that exists only on paper is still theoretical. Your peer is the first person to hear you say it out loud as a deployable thing. The aliveness of your voice when you read it tells you whether the protocol is yours yet -- or still belongs to the page.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the protocol card aloud -- name, three moves, signal phrase. Then read just one of your five rep entries. Don't explain. Listen to your peer's reaction. Their first observation usually catches whether the protocol is yours or imported.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Read your signal phrase aloud one more time. Does it sound like you, or like something a leadership book would say?</li>
+      <li>Of your five days, which day's note was hardest to write honestly? That's the day with the most to learn from.</li>
+      <li>If you ran this protocol for 30 more days, what's the version of you that would emerge? And do you actually want to be that version?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    pattern_carry: get('pattern_carry'),
+    trigger_carry: get('trigger_carry'),
+    protocol: {
+      name: get('protocol_name'),
+      move_1: get('move_1'),
+      move_2: get('move_2'),
+      move_3: get('move_3'),
+      signal_phrase: get('signal_phrase'),
+    },
+    reps: {
+      day_1: get('rep_day_1'),
+      day_2: get('rep_day_2'),
+      day_3: get('rep_day_3'),
+      day_4: get('rep_day_4'),
+      day_5: get('rep_day_5'),
+    },
+    working: get('working'),
+    not_working: get('not_working'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const repsFilled = Object.values(data.reps).filter(v => v && v.trim().length > 0).length;
+  const otherFields = [
+    data.pattern_carry,
+    data.trigger_carry,
+    data.protocol.name,
+    data.protocol.move_1,
+    data.protocol.move_2,
+    data.protocol.move_3,
+    data.protocol.signal_phrase,
+    data.working,
+    data.not_working,
+  ];
+  const otherFilled = otherFields.filter(v => v && v.trim().length > 0).length;
+
+  if (repsFilled < 3 || otherFilled < otherFields.length) {
+    const proceed = confirm("You haven't completed all sections yet. " + repsFilled + " of 5 days logged, " + otherFilled + " of " + otherFields.length + " other fields filled. The standard asks for at least 3 days of reps. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 2? Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W2)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

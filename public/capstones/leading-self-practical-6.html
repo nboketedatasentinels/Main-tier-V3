@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Accountability Brief</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  /* Journey recap card -- distinctive to closing Practical */
+  .journey-recap { background: linear-gradient(135deg, rgba(74,59,140,0.06) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 24px; }
+  .journey-recap-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 10px; }
+  .journey-recap-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--plum); margin-bottom: 14px; line-height: 1.3; }
+  .journey-recap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .journey-recap-grid { grid-template-columns: 1fr; } }
+  .recap-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; }
+  .recap-num { width: 24px; height: 24px; background: var(--purple); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 11px; font-weight: 700; color: #fff; font-family: 'DM Serif Display', serif; }
+  .recap-text { font-size: 13px; color: var(--plum); line-height: 1.5; }
+  .recap-text strong { color: var(--purple); font-weight: 600; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"] {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  input[type="text"]::placeholder { color: #aaa; }
+  .substep-card input[type="text"] { background: #fff; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .journey-recap { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Accountability Brief</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Leading Self in the Age of AI</div>
+    <div class="practical-badge">Week 6 · Practical 6 of 6</div>
+  </div>
+  <h1 class="header-title">Accountability <em>Brief</em></h1>
+  <p class="header-desc">Six weeks of inner work doesn't sustain itself. The pattern, the protocol, the trigger map -- they all need someone outside your head to hold you to them when the room goes quiet and the old habits get loud. This Practical names that someone. The brief is real. The cadence is concrete. The first ask has been made -- or you commit to making it this week.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>A specific person named -- by role and relationship, not a hypothetical "trusted peer."</li>
+      <li>Concrete cadence -- "Tuesday text" or "monthly Thursday call," not "regular check-ins."</li>
+      <li>Truth-telling territory named -- the specific thing you'll tell them you won't tell colleagues.</li>
+      <li>A real ask -- one you've made, or one you commit to making this week.</li>
+    </ul>
+  </div>
+
+  <!-- JOURNEY RECAP -->
+  <div class="journey-recap">
+    <div class="journey-recap-label">The Five Practicals You're Building On</div>
+    <div class="journey-recap-title">Six weeks of inner work, now ready for an outside witness.</div>
+    <div class="journey-recap-grid">
+      <div class="recap-item">
+        <div class="recap-num">01</div>
+        <div class="recap-text"><strong>Pattern Profile</strong> -- you named your default under pressure.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">02</div>
+        <div class="recap-text"><strong>Protocol Card</strong> -- you designed the alternative.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">03</div>
+        <div class="recap-text"><strong>Mindset Action Plan Draft</strong> -- you turned it into a system.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">04</div>
+        <div class="recap-text"><strong>Carrying Inventory</strong> -- you named what you'd been carrying.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">05</div>
+        <div class="recap-text"><strong>Trigger Map</strong> -- you mapped one trigger in detail.</div>
+      </div>
+      <div class="recap-item">
+        <div class="recap-num">06</div>
+        <div class="recap-text"><strong>This Practical</strong> -- the one that holds it all.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 1: Who -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Name the Person</div>
+      </div>
+    </div>
+    <p class="step-desc">An accountability partner is not a mentor, not a coach, not a therapist. They are someone who can sit with the work you've done over six weeks and hold you to it without rescuing you from it. That's a specific kind of person. Name them.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Who They Are</div>
+        </div>
+        <div class="substep-body">Their role and your relationship -- not their name. One sentence.</div>
+        <textarea name="who_they_are" placeholder="A peer Director from a different industry I met through a leadership programme three years ago. Not a colleague, not a friend exactly -- a leadership peer with no stake in my organisation."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Why Them Specifically</div>
+        </div>
+        <div class="substep-body">What makes them able to hold this work? Not what makes them nice -- what makes them able.</div>
+        <textarea name="why_them" placeholder="She's done her own version of this work and she's earned the right to call me out -- I've watched her hold her own boundaries with senior leaders without folding. She doesn't need me to be okay. And critically: she has nothing to lose if I take feedback hard, which means she'll actually give it."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Cadence -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Set the Cadence</div>
+      </div>
+    </div>
+    <p class="step-desc">"Regular check-ins" doesn't survive a busy quarter. Cadence has to be concrete enough that both of you know when the next one is without checking. Pick a rhythm you can actually keep -- if monthly is too much, weekly is too much.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Rhythm</div>
+        </div>
+        <div class="substep-body">Concrete. "Tuesday text," "first Friday of the month, 30-min call," "quarterly half-day."</div>
+        <textarea name="rhythm" placeholder="Two cadences. (1) A Tuesday voice note: 30 seconds, what's on top this week and what I'm avoiding. No reply expected unless I ask for one. (2) A 45-minute call on the first Saturday morning of each month, 8am her time. Both go in our calendars now."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">When You'll Skip It</div>
+        </div>
+        <div class="substep-body">What's the failure mode? Be honest about when this rhythm is most likely to break.</div>
+        <textarea name="failure_mode" placeholder="Most likely break: when something difficult is happening at work that I don't want to admit out loud. The Tuesday voice note will fall first -- it's the easier thing to skip. Mitigation: I've asked her to send me a 'noticed you missed Tuesday' text if I miss two in a row. Without the prompt, the avoidance wins."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Truth-Telling Territory -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Truth-Telling Territory</div>
+      </div>
+    </div>
+    <p class="step-desc">Accountability without specific truth-telling territory becomes a friendship. Both of you need to know what specifically this person hears about that nobody else does. Vulnerability as strategy: not vulnerability everywhere, but vulnerability with one person about specific things.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">What You'll Tell Them</div>
+        </div>
+        <div class="substep-body">The specific thing you'll tell them that you won't tell colleagues, family, or your manager.</div>
+        <textarea name="truth_territory" placeholder="When my old pattern wins -- specifically when I over-explain or pre-concede in a senior meeting and walk out feeling smaller than I should have. The pattern itself is named in Practical 1; the truth-telling is naming the moments it fired even after this work. Not the moments I beat it -- the moments I didn't."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What You Won't Ask Her To Do</div>
+        </div>
+        <div class="substep-body">Boundary check. What's not her job? Saves the relationship from drifting.</div>
+        <textarea name="boundary" placeholder="Not her job to advise me on the actual work decisions -- the AI vendor choice, the project scoping. She doesn't know my industry well enough and that's not what we're using each other for. Her job is to hold me to the work I named in this Journey, not to take over my career."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: The First Ask -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">Make the First Ask</div>
+      </div>
+    </div>
+    <p class="step-desc">Accountability that exists only in your head is not accountability. The first ask is what makes this real. Either it's already been made -- you've had the conversation -- or you commit to making it this week. No third option.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Ask</div>
+        </div>
+        <div class="substep-body">In one sentence -- what specifically you've asked or will ask of them.</div>
+        <textarea name="the_ask" placeholder="Will you be my accountability partner for the next six months -- Tuesday voice notes and a monthly Saturday call -- where the focus is whether I'm running the protocols I built in this Journey or sliding back into the old defaults?"></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Status of the Ask</div>
+        </div>
+        <div class="substep-body">Already made (when, what they said) or commit to making it (by when, how).</div>
+        <textarea name="ask_status" placeholder="Already made. Sent her a voice note last Wednesday outlining the ask, the cadence, and the truth-telling territory. She agreed Friday with one condition: that we both reserve the right to pause it after three months if it's not working. First Saturday call is in 9 days."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: The Pattern Across Six Weeks -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>5</span></div>
+      <div>
+        <div class="step-label">Step 5</div>
+        <div class="step-title">The Pattern Across the Six Weeks</div>
+      </div>
+    </div>
+    <p class="step-desc">Read your Practicals 1 through 5 again before answering this. Six weeks of inner work reveals patterns you couldn't see from inside any single Practical. Name one pattern you can see across the work -- specifically about how you lead under pressure when AI and digital transformation are reshaping the room.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Pattern</div>
+        </div>
+        <div class="substep-body">Something that showed up across at least three of the five Practicals. Not generic. Reference the Practicals.</div>
+        <textarea name="cross_pattern" placeholder="Across Practicals 1, 4, and 5, the same trigger keeps showing up -- the moment a senior leader challenges me publicly. The Pattern Profile named it as my default. The Carrying Inventory traced it back to the 'should-have-known' pattern from earlier in my career. The Trigger Map mapped its physical signature. The pattern beneath the pattern: I'm still leading from the version of myself that needed to prove I belonged in the room. The work going forward isn't more proving -- it's leading from the version that already does."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What This Means for AI / Digital Work</div>
+        </div>
+        <div class="substep-body">Specifically -- what does this pattern mean for how you'll lead in AI and digital transformation contexts going forward?</div>
+        <textarea name="ai_implication" placeholder="In AI and digital transformation rooms, the 'prove I belong' pattern is amplified -- the technology moves fast, the senior stakeholders use AI tools differently than I do, and the temptation to over-explain my recommendations is higher than in non-AI work. The accountability work is precisely about catching this in those rooms specifically. My Tuesday voice note will frequently be: 'Here's the AI/digital meeting this week, here's where the pattern is most likely to fire, here's the protocol I'm running.'"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Brief</h2>
+    <p class="ai-activity-desc">Accountability briefs are where senior practitioners write the version of accountability they wish they had -- generous, gentle, low-stakes. AI as an outside reader can hear when the brief is built to succeed or built to allow you to drift quietly.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Cadence</div>
+          <div class="ai-step-body">Ask AI to evaluate whether your cadence will actually survive a difficult quarter -- or whether you've designed the version that breaks the moment things get hard.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I've designed an accountability rhythm for the next six months: [paste your Step 2 rhythm and failure mode]. Pressure-test this. Specifically: (1) When in the next six months is this rhythm most likely to break, and what's the specific scenario? (2) Is the failure-mode mitigation strong enough to survive the breakdown, or is it dependent on me being in a state where I don't need it most? (3) What's one structural change to the cadence that would make it harder to skip when things are hard?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you adjust?</div>
+      <textarea class="ai-field" placeholder="AI's pushback: my mitigation depends on my partner sending the 'noticed you missed Tuesday' text -- but if she's busy, that prompt won't come. Suggested I add a calendar-based fallback: if I skip two Tuesdays in a row, I owe her a 5-minute voice note explaining what was happening, regardless of whether she prompted me. Updating the brief: the prompt is automatic, not relationship-dependent. Also AI noticed my failure mode admits it'll break exactly when I most need it -- and asked whether the brief addresses that. Adding: when I'm avoiding the rhythm, that itself is the data she gets in the next call."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Truth-Telling Territory</div>
+          <div class="ai-step-body">Ask AI to evaluate whether your truth-telling territory is real -- or whether you've described what you're already comfortable telling someone, which doesn't count.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My accountability brief names this as the truth-telling territory: [paste your Step 3]. Pressure-test it. Specifically: (1) Is this something I'm already comfortable telling someone, or is it actually new territory that takes courage? (2) What's one thing I'm carrying from the six-week Journey that I haven't named in this Practical -- the thing I'd tell my accountability partner only if I were being fully honest with myself? (3) Should that thing be added to the truth-telling territory, or kept private? Be honest. If I've written a comfortable version, say so.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI surface? Will you adjust the truth-telling territory?</div>
+      <textarea class="ai-field" placeholder="AI was direct. It said the territory I named (over-explaining moments) is already half-public -- I've talked about it in peer sessions during this Journey. The harder territory I haven't named: the moments I defer to AI tools in front of senior leaders because it's easier than holding my own analysis under challenge. That's the version I haven't said out loud to anyone. Adding it to the brief. Specifically: 'When I let an AI-generated analysis stand in for my own judgement in a senior meeting because I didn't want to defend my view.'"></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As AI becomes more present in your leadership rooms -- AI-augmented insights, AI-generated recommendations, AI in the background of every decision -- accountability becomes more important, not less. What's one specific pattern in your leadership-with-AI that you want your accountability partner to watch for over the next six months?</div>
+    <textarea placeholder="The pattern I want her watching for: when I let AI be the authority I should be. Specifically -- when I bring an AI-generated analysis into a senior meeting and present it as 'the data says' instead of 'here's my view, supported by AI analysis.' The first framing protects me from challenge by hiding behind the tool. The second framing is leadership. I want her to ask me, monthly: which version did you run this month -- and where did the first version sneak in? That's the question that catches the pattern before it embeds."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Accountability briefs are where the work either gets witnessed or quietly fades. A peer can hear when the brief names a real person and a real ask -- versus when it names a hypothetical relationship that's safer because nothing has been asked yet. This is the most important conversation of the six weeks.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read your Step 1 (who and why), Step 2 (cadence), Step 3 (truth-telling), and Step 4 (the ask) aloud, in order. Don't add context. Listen to your peer's reaction at Step 4. If you described an ask you haven't actually made yet, name that in the conversation -- and let them hold you to making it this week.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the people you could have named, why this person? Are you sure they can sit with hard truths -- or did you pick them because they're easier on you?</li>
+      <li>Your truth-telling territory -- is it the real thing you've been carrying, or the comfortable version you've already half-said out loud?</li>
+      <li>If you said the ask hasn't been made yet -- what's the specific reason you haven't asked, and is that reason still valid by Friday?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    person: {
+      who_they_are: get('who_they_are'),
+      why_them: get('why_them'),
+    },
+    cadence: {
+      rhythm: get('rhythm'),
+      failure_mode: get('failure_mode'),
+    },
+    truth_telling: {
+      territory: get('truth_territory'),
+      boundary: get('boundary'),
+    },
+    ask: {
+      content: get('the_ask'),
+      status: get('ask_status'),
+    },
+    synthesis: {
+      cross_pattern: get('cross_pattern'),
+      ai_implication: get('ai_implication'),
+    },
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const fields = [
+    data.person.who_they_are,
+    data.person.why_them,
+    data.cadence.rhythm,
+    data.cadence.failure_mode,
+    data.truth_telling.territory,
+    data.truth_telling.boundary,
+    data.ask.content,
+    data.ask.status,
+    data.synthesis.cross_pattern,
+    data.synthesis.ai_implication,
+  ];
+  const filled = fields.filter(v => v && v.trim().length > 0).length;
+  const total = fields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 6? This is the final Practical of the Leading Self in the Age of AI Journey -- once submitted, your full Practicals Portfolio (all six) is locked for assessor review.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W6)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

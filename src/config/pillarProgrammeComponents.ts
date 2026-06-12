@@ -74,7 +74,68 @@ const placeholderTriple = (pillarSlug: string): ProgrammeComponentEntry[] => [
 ]
 
 export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry[]> = {
-  leading_self: placeholderTriple('leading-self'),
+  leading_self: [
+    {
+      id: 'leading-self-capstone',
+      type: 'capstone',
+      title: 'Capstone',
+      description: 'Content coming soon.',
+      status: 'coming_soon',
+    },
+    {
+      id: 'leading-self-case-study',
+      type: 'case_study',
+      title: 'Case Study',
+      description: 'Content coming soon.',
+      status: 'coming_soon',
+    },
+    {
+      id: 'leading-self-practical',
+      type: 'practical',
+      title: 'Practicals Portfolio (6 parts)',
+      description:
+        'Six weekly practicals across the Leading Self in the Age of AI Journey. All required; together they form the Practicals Portfolio component.',
+      status: 'available',
+      parts: [
+        {
+          id: 'leading-self-practical-1',
+          title: 'Practical 1 · Pattern Profile',
+          description: 'Week 1 - name how you default under pressure: one pattern, three real moments, the belief underneath.',
+          href: '/capstones/leading-self-practical-1.html',
+        },
+        {
+          id: 'leading-self-practical-2',
+          title: 'Practical 2 · Protocol Card',
+          description: 'Week 2 - build the named protocol you deploy when the pattern fires, then practise it for five days.',
+          href: '/capstones/leading-self-practical-2.html',
+        },
+        {
+          id: 'leading-self-practical-3',
+          title: 'Practical 3 · Mindset Action Plan Draft',
+          description: 'Week 3 - the working draft that feeds your Capstone: replacement belief, new behaviour, 30-day metric.',
+          href: '/capstones/leading-self-practical-3.html',
+        },
+        {
+          id: 'leading-self-practical-4',
+          title: 'Practical 4 · Carrying Inventory',
+          description: 'Week 4 - take stock of the masks you carry into high-stakes rooms, then choose what to put down.',
+          href: '/capstones/leading-self-practical-4.html',
+        },
+        {
+          id: 'leading-self-practical-5',
+          title: 'Practical 5 · Trigger Map',
+          description: 'Week 5 - map one trigger in detail: body signal, old action, pause point, deliberate alternative.',
+          href: '/capstones/leading-self-practical-5.html',
+        },
+        {
+          id: 'leading-self-practical-6',
+          title: 'Practical 6 · Accountability Brief',
+          description: 'Week 6 - name who holds you to the work, the cadence, the truth-telling territory, and the first ask.',
+          href: '/capstones/leading-self-practical-6.html',
+        },
+      ],
+    },
+  ],
   innovation_technology: [
     {
       id: 'innovation-technology-capstone',

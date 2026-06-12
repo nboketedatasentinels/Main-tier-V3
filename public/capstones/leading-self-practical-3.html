@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Mindset Action Plan Draft</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  /* Capstone callout -- distinctive to this Practical, signals it feeds the Capstone */
+  .capstone-callout { background: linear-gradient(135deg, rgba(74,59,140,0.08) 0%, rgba(245,200,66,0.06) 100%); border: 1.5px solid rgba(74,59,140,0.2); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; }
+  .capstone-callout-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .capstone-callout-text { font-size: 13px; color: #444; line-height: 1.6; }
+  .capstone-callout-text strong { color: var(--purple); font-weight: 600; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  /* Plan-style block */
+  .plan-block { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+  .plan-tag { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 14px; color: var(--purple); margin-bottom: 4px; }
+  .plan-helper { font-size: 12px; color: #666; margin-bottom: 12px; line-height: 1.55; }
+  .plan-block textarea { background: #fff; min-height: 90px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Mindset Action Plan Draft</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Leading Self in the Age of AI</div>
+    <div class="practical-badge">Week 3 · Practical 3 of 6</div>
+  </div>
+  <h1 class="header-title">Mindset Action Plan <em>Draft</em></h1>
+  <p class="header-desc">A working draft of the plan you'll deliver as your Capstone. Not the final version. The version that has your honest first thinking on it -- the belief you're changing, the replacement, the behaviour you'll practice, the metric you'll hold yourself to. The Capstone polishes this. The draft surfaces what you actually believe.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Clear progression from Practical 1's belief to a named replacement -- not a generic "growth" statement.</li>
+      <li>The new behaviour you'll practice is specific. Drawn from your Practical 2 protocol, not invented fresh.</li>
+      <li>One metric you can actually track over 30 days. Observable. Honest. Not "feel more confident."</li>
+      <li>A draft, not a polished page. Honesty matters more than presentation -- the Capstone is where you polish.</li>
+    </ul>
+  </div>
+
+  <!-- CAPSTONE CALLOUT -->
+  <div class="capstone-callout">
+    <div class="capstone-callout-tag">How this feeds your Capstone</div>
+    <div class="capstone-callout-text">This Practical is the <strong>working draft</strong> of your Mindset Action Plan -- the Capstone artefact for Course 1 (Leading Under Pressure). The Capstone polishes this draft into a one-page plan you'll pin to your desktop and revisit at the 30-day mark and at end of Week 6. <strong>Don't try to write the Capstone here.</strong> Write the honest first version. The Capstone is for tightening.</div>
+  </div>
+
+  <!-- STEP 1: Carry forward what you know -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Carry Forward What You Know</div>
+      </div>
+    </div>
+    <p class="step-desc">Two weeks of work go into this draft. Re-state the belief you named in Practical 1 and the protocol you built in Practical 2 -- the draft has to grow from those, not start fresh. If your understanding of either has shifted as you've worked through the weeks, capture the current version.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The True Belief You're Changing</div>
+        </div>
+        <div class="substep-body">From Practical 1, Step 4 -- or your tightened version after AI pressure-testing.</div>
+        <textarea name="belief_carry" placeholder="I don't yet fully believe I belong in this seat -- so any moment of perceived doubt feels like the moment of being found out."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Protocol You're Practicing</div>
+        </div>
+        <div class="substep-body">From Practical 2, Step 2 -- the protocol name and what it disrupts.</div>
+        <textarea name="protocol_carry" placeholder="'Land it and Leave it' -- one breath, one clean sentence stating my position, then deliberate silence. Disrupts the over-explaining response to perceived scepticism."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The Replacement Belief -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Name the Replacement Belief</div>
+      </div>
+    </div>
+    <p class="step-desc">A belief you're changing has to be replaced with something -- not just removed. The replacement isn't an affirmation. It's a working belief you can act from. Specific to your true belief, written in language you'd actually say to yourself, and credible enough to hold in a real moment.</p>
+
+    <div class="plan-block">
+      <div class="plan-tag">The Replacement Belief</div>
+      <div class="plan-helper">In your own voice. Not "I am enough." Something specific to the true belief you named. The test: would you say this aloud to a peer without flinching at the language?</div>
+      <textarea name="replacement_belief" placeholder="I belong in this seat because of work I've actually done -- the credit risk modelling overhaul, the AI vendor selection that the board approved, the fifteen years of practice that put me in the room. My place isn't conditional on being right in every moment -- it's earned by what I keep delivering."></textarea>
+    </div>
+    <div class="plan-block">
+      <div class="plan-tag">Why This Replacement and Not a Generic One</div>
+      <div class="plan-helper">Two sentences. Why this specific replacement is the right one for the specific true belief you named -- not a one-size-fits-all confidence affirmation.</div>
+      <textarea name="replacement_rationale" placeholder="The true belief I named was about not believing I belong here. A generic 'I am confident' replacement doesn't address that. The specific replacement names what makes me belong -- actual delivered work -- which is the evidence the true belief refuses to look at."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 3: The New Behaviour -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">The New Behaviour You're Practicing</div>
+      </div>
+    </div>
+    <p class="step-desc">Belief change without behaviour change is just a thought you had. The new behaviour you'll practice for the next 30 days has to be specific, observable, and drawn from the protocol you tested in Week 2. This is what the rest of the Journey -- and the Capstone -- will hold you to.</p>
+
+    <div class="plan-block">
+      <div class="plan-tag">The Behaviour</div>
+      <div class="plan-helper">Specific. Observable. Tied to your protocol. The version a peer could spot in a meeting and say "yes, she's doing the new thing."</div>
+      <textarea name="new_behaviour" placeholder="When perceived scepticism fires in a senior meeting, I deploy the 'Land it and Leave it' protocol -- one breath, one clean sentence, deliberate silence. I do not add qualifiers. I let the silence sit until the other person speaks. This is the behaviour I'll practice for 30 days, in every meeting where the trigger is likely to fire."></textarea>
+    </div>
+    <div class="plan-block">
+      <div class="plan-tag">Three Triggers to Watch For</div>
+      <div class="plan-helper">The specific situations in the next 30 days where this behaviour will be tested. From your real calendar, not hypothetical scenarios.</div>
+      <textarea name="three_triggers" placeholder="(1) Monthly steering committee with the CFO -- next one is in 12 days. (2) The AI vendor evaluation review -- I'm presenting the recommendation in 18 days, the trigger will fire when challenged. (3) Quarterly business review with my manager and her boss -- in 26 days, where my pattern has historically shown up worst."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 4: The Metric -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">One Metric You'll Track for 30 Days</div>
+      </div>
+    </div>
+    <p class="step-desc">A plan without a metric is a wish. One metric you can track. Observable. Honest. Not feelings-based -- "I feel more confident" doesn't count, because we're terrible at remembering how we felt three weeks ago. Something you can put a tally mark next to. The metric is what makes this real on Day 30.</p>
+
+    <div class="plan-block">
+      <div class="plan-tag">The Metric</div>
+      <div class="plan-helper">Specific. Observable. Counted, not assessed. Something you could share with a peer at Day 30 and they could verify.</div>
+      <textarea name="metric" placeholder="In every senior meeting where the trigger fires (estimate 8-10 in the next 30 days), did I deploy the protocol and hold the line, or did I slip? Binary tally per occurrence. Goal: 6 of 10 clean deploys by Day 30. Stretch: 8 of 10. I'll capture this in a single notes file with date and one-line context per occurrence."></textarea>
+    </div>
+    <div class="plan-block">
+      <div class="plan-tag">What 'Success' Looks Like at Day 30</div>
+      <div class="plan-helper">If you achieve the metric, what observable difference will be visible -- to you, to your team, to your stakeholders? One sentence each.</div>
+      <textarea name="day_30_success" placeholder="To me: I trust myself in senior meetings without rehearsing for hours beforehand. To my team: meetings I run end on time because I'm not over-explaining. To my CFO: she stops asking for 'more concise updates from Mara' because the updates are already concise."></textarea>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Tighten the Draft</h2>
+    <p class="ai-activity-desc">A first draft is the version of yourself you're hoping is true. AI as an outside reader can help you find where the draft is still hedging -- and where it could be sharper without losing your voice.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Replacement Belief</div>
+          <div class="ai-step-body">Ask AI to read your true belief and your replacement together, and tell you whether the replacement actually answers the true belief -- or just sounds nice next to it.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm writing a Mindset Action Plan as a transformation leader. The true belief I'm changing is: [paste your Step 1 belief]. The replacement belief I'm working with is: [paste your Step 2 replacement]. Pressure-test this. (1) Does the replacement actually answer the true belief, or are they on different topics? (2) Is the replacement specific enough to act from in a real moment, or is it still a slogan? (3) What's the most honest version of this replacement I could write -- the one I haven't quite written yet?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you adjust your replacement?</div>
+      <textarea class="ai-field" placeholder="AI's pushback: my replacement was answering 'I belong here' but my true belief was specifically about being found out in moments of doubt. The replacement didn't address what to do with the moment of doubt itself -- it was about the seat in general. Tightening: 'My place isn't proven moment-to-moment by being right. It's proven over time by what I deliver. A moment of doubt is part of the work, not evidence I shouldn't be here.'"></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Metric</div>
+          <div class="ai-step-body">Ask AI to evaluate whether your metric will actually work -- or whether you've set up something that'll quietly fall apart by Day 14.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My 30-day metric for tracking a leadership behaviour change is: [paste your Step 4 metric]. (1) Will I actually track this for 30 days, or is the tracking system itself too cumbersome? (2) Is the metric specific enough that I can answer 'yes' or 'no' on each occurrence -- or is there ambiguity that will let me grade myself generously? (3) What's the failure mode -- the most likely reason this metric stops getting tracked by Day 14?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you adjust the metric?</div>
+      <textarea class="ai-field" placeholder="AI flagged that 'clean deploy' is ambiguous -- does adding one qualifier still count? It also flagged that the most likely failure mode is forgetting to log occurrences in real time, then trying to remember at week-end and grading myself generously. Two adjustments: (1) defining 'clean deploy' as zero qualifiers added after the one sentence -- binary, no grey area. (2) Logging in the same notes file within 30 minutes of the meeting, not at week-end. If I miss the 30-min window, the data point is dropped -- I'd rather have fewer honest data points than more vague ones."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As you start using AI more in your transformation work, AI will be in many of the moments where this new behaviour will be tested. How does the Mindset Action Plan you're drafting need to hold up specifically when AI is in the room with you -- producing data, generating responses, accelerating the pace of senior conversation?</div>
+    <textarea placeholder="The plan was written for human-paced meetings. AI accelerates the pace -- a CFO with an AI dashboard can challenge me with a fresh data point mid-sentence. My replacement belief still holds: my place is proven over time, not in any single moment. But the new behaviour needs an addition: when AI surfaces something in real time, I treat it as a new question, not a failure of my position. I land my original sentence, let it sit, then engage with the AI-surfaced point separately. The plan holds if I refuse to let AI's pace turn every meeting into a continuous referendum on whether I belong."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">A draft read aloud is different from a draft on the page. Your peer hears the conviction (or absence of it) in your voice when you say the replacement belief. They notice when the metric is something you'd actually track versus something you wrote because you needed a metric. This conversation is what tells you whether the draft is ready for the Capstone.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read your replacement belief aloud, then your new behaviour, then your metric. Don't add commentary. Listen for where your voice loses energy -- that's the part of the draft that's still wishful, and the part the Capstone needs to either tighten or rewrite.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Read your replacement belief aloud once more. Did you sound like you believed it, or like you were trying it on?</li>
+      <li>Your metric -- if I asked you on Day 14 whether you've been tracking it, what's the honest answer? If "I've been meaning to" is on the table, what's wrong with the metric?</li>
+      <li>If your true belief surfaced again in a senior meeting tomorrow, would the protocol you've drafted hold? Or is there one move missing that you already know about?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    belief_carry: get('belief_carry'),
+    protocol_carry: get('protocol_carry'),
+    replacement_belief: get('replacement_belief'),
+    replacement_rationale: get('replacement_rationale'),
+    new_behaviour: get('new_behaviour'),
+    three_triggers: get('three_triggers'),
+    metric: get('metric'),
+    day_30_success: get('day_30_success'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const fields = Object.values(data);
+  const filled = fields.filter(v => v && v.trim().length > 0).length;
+  const total = fields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 3? Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked. This draft will feed your Capstone -- the Mindset Action Plan -- which is the main deliverable for Course 1.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W3)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>
