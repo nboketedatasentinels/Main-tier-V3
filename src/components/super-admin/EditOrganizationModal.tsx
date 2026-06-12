@@ -320,6 +320,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         status: form.status,
         journeyType: form.organizationJourneyType ?? null,
         programDurationWeeks,
+        cohortStartDate: form.cohortStartDate ? String(form.cohortStartDate) : null,
+        village: form.village ?? null,
+        cluster: form.cluster ?? null,
+        pillar: form.pillar ?? null,
+        teamSize: form.teamSize ?? null,
+        programDurationMonths: form.programDuration ?? null,
       })
 
       toast({

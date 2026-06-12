@@ -348,15 +348,26 @@ export const listenToUsers = (
   }
 }
 
-const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => ({
-  id: row.id as string,
-  name: (row.name as string) ?? '',
-  code: (row.code as string) ?? '',
-  status: ((row.status as string) ?? 'active') as OrganizationRecord['status'],
-  createdAt: (row.created_at as string) ?? undefined,
-  transformationPartnerId: (row.transformation_partner_id as string) ?? undefined,
-  organizationJourneyType: (row.organization_journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,
-})
+const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
+  const settings = (row.settings as Record<string, unknown> | null) ?? {}
+  return {
+    id: row.id as string,
+    name: (row.name as string) ?? '',
+    code: (row.code as string) ?? '',
+    status: ((row.status as string) ?? 'active') as OrganizationRecord['status'],
+    createdAt: (row.created_at as string) ?? undefined,
+    transformationPartnerId: (row.transformation_partner_id as string) ?? undefined,
+    organizationJourneyType: (row.journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,
+    programDurationWeeks: (row.program_duration_weeks as number) ?? undefined,
+    // The form drives off programDuration (in months) - stored in settings.
+    programDuration: (settings.programDurationMonths as number) ?? undefined,
+    cohortStartDate: (row.cohort_start_date as string) ?? undefined,
+    village: (settings.village as string) ?? undefined,
+    cluster: (settings.cluster as string) ?? undefined,
+    pillar: (settings.pillar as OrganizationRecord['pillar']) ?? undefined,
+    teamSize: (settings.teamSize as number) ?? undefined,
+  }
+}
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
   const { data, error } = await supabase
