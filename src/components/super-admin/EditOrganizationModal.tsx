@@ -53,7 +53,7 @@ import {
   fetchOrganizationAssignments,
   fetchOrganizationDetails,
 } from '@/services/organizationService'
-import { cascadeCohortStartDateToProfiles, updateOrganization } from '@/services/superAdminService'
+import { updateOrganization as updateSupabaseOrganization } from '@/services/supabaseOrgService'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
@@ -73,7 +73,6 @@ import {
   getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
-import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -115,7 +114,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
-  const [originalCohortStartDate, setOriginalCohortStartDate] = useState<string | null>(null)
+  const [, setOriginalCohortStartDate] = useState<string | null>(null)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -355,51 +354,22 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
-      if (courseLimit && emptyMonths.length) {
-        throw new Error(`Please assign a course for each of the ${courseLimit} ${assignmentUnit}${courseLimit > 1 ? 's' : ''}`)
-      }
-
       setIsSubmitting(true)
-      const normalizedMonthlyAssignments: MonthlyCourseAssignments = {}
-      Object.entries(monthlyAssignments).forEach(([monthKey, courseId]) => {
-        normalizedMonthlyAssignments[monthKey] = resolveCourseIdFromMapping(courseId)
-      })
-      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(normalizedMonthlyAssignments, courseLimit)
-      const payload: OrganizationRecord = { ...form }
-      delete payload.id
-      await updateOrganization(organization.id, {
-        ...payload,
+      // Update core fields in Supabase. (The old Firebase updateOrganization +
+      // cohort cascade are dead now that the Firebase DB was deleted.)
+      const programDurationWeeks = form.programDuration ? Math.round(form.programDuration * 4) : null
+      await updateSupabaseOrganization(organization.id, {
+        name: form.name.trim(),
         code: form.code.toUpperCase(),
-        courseAssignments: assignmentArray,
-        monthlyCourseAssignments: normalizedMonthlyAssignments,
-        courseAssignmentStructure: 'monthly',
+        status: form.status,
+        journeyType: form.organizationJourneyType ?? null,
+        programDurationWeeks,
       })
-
-      const toDayKey = (value: string | null | undefined): string => {
-        if (!value) return ''
-        const d = new Date(value)
-        return isNaN(d.getTime()) ? value : d.toISOString().slice(0, 10)
-      }
-      const newCohortStartStr = form.cohortStartDate ? String(form.cohortStartDate) : ''
-      const cohortDateChanged =
-        !!newCohortStartStr && toDayKey(newCohortStartStr) !== toDayKey(originalCohortStartDate)
-
-      let cascadeMessage = `Cluster: ${clusterDisplayName}`
-      if (cohortDateChanged) {
-        const { affectedCount } = await cascadeCohortStartDateToProfiles(
-          organization.id,
-          newCohortStartStr,
-        )
-        cascadeMessage = `Program start date reset for ${affectedCount} member${
-          affectedCount === 1 ? '' : 's'
-        } - journey reset to Week 1. Existing points and history preserved.`
-      }
 
       toast({
         title: 'Organization updated successfully',
-        description: cascadeMessage,
+        description: `Cluster: ${clusterDisplayName}`,
         status: 'success',
-        duration: cohortDateChanged ? 8000 : 5000,
       })
       onUpdated?.({ ...form, id: organization.id })
       onClose()
