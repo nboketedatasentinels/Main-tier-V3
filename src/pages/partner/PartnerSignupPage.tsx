@@ -36,12 +36,14 @@ export const PartnerSignupPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
 
-  const finishClaim = async () => {
+  // Promotes the (currently signed-in) user to partner. Returns true on success.
+  // On failure it signs them out and sets an error. Does NOT navigate - callers
+  // decide where to go (signup -> back to sign in; signin -> dashboard).
+  const runPartnerClaim = async (): Promise<boolean> => {
     // Ensure the profile row exists BEFORE claiming. A fresh signup can reach
     // here before the provisioning trigger has created the row, and
     // claim_partner_access UPDATEs profiles.role - with no row the role is never
-    // set, so the partner lands on /unauthorized. Create the row first (same as
-    // the admin signup fix); claim_partner_access then promotes the real row.
+    // set. Create the row first, then the claim promotes the real row.
     const { data: sessionData } = await supabase.auth.getUser()
     if (sessionData.user) {
       await supabase
@@ -52,20 +54,14 @@ export const PartnerSignupPage: React.FC = () => {
         )
     }
     const result = await claimPartnerAccess()
-    if (result === 'ok') {
-      // Full reload so the session re-reads the freshly-granted partner role.
-      // (A client-side navigate hits the role guard before the new role has
-      // propagated, causing "Access denied" on the first try.)
-      window.location.assign('/partner/dashboard')
-      return
-    }
-    // Not assigned (or error): block - sign them out and explain.
+    if (result === 'ok') return true
     await supabase.auth.signOut()
     setError(
       result === 'not_assigned'
         ? 'This email has not been assigned to any organization. Ask your admin to assign you as a partner, then sign up again.'
         : 'Could not verify your partner access. Please try again.',
     )
+    return false
   }
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -97,7 +93,14 @@ export const PartnerSignupPage: React.FC = () => {
         return
       }
       if (data.session) {
-        await finishClaim()
+        // Verify + promote to partner, then sign out and send them to sign in
+        // (so account creation always passes through the login step).
+        const ok = await runPartnerClaim()
+        if (ok) {
+          await supabase.auth.signOut()
+          setMode('signin')
+          setInfo('Your partner account is ready. Please sign in to continue.')
+        }
         return
       }
       setMode('signin')
@@ -126,7 +129,12 @@ export const PartnerSignupPage: React.FC = () => {
         setError(getFriendlyErrorMessage(signInError))
         return
       }
-      await finishClaim()
+      // Signing in: verify + promote, then a full reload to the dashboard so the
+      // guard reads the freshly-granted partner role.
+      const ok = await runPartnerClaim()
+      if (ok) {
+        window.location.assign('/partner/dashboard')
+      }
     } catch (err) {
       setError(getFriendlyErrorMessage(err))
     } finally {
