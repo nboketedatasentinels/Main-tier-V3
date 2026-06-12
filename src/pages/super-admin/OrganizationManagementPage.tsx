@@ -343,8 +343,17 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   }, [organizations])
 
   const partnerLookup = useMemo(() => {
-    return new Map(partners.map((partner) => [partner.id, partner.name]))
-  }, [partners])
+    // Resolve from ALL users (not just the current partners list) so a newly
+    // assigned/promoted partner shows immediately instead of "Unassigned".
+    const map = new Map<string, string>()
+    allUsers.forEach((u) => {
+      if (u.name) map.set(u.id, u.name)
+    })
+    partners.forEach((p) => {
+      if (p.name) map.set(p.id, p.name)
+    })
+    return map
+  }, [allUsers, partners])
 
   const filteredOrganizations = useMemo(() => {
     return organizations.filter((org) => {
