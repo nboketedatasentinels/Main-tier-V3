@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink } from 'react-router-dom'
 import {
   Alert,
   AlertIcon,
@@ -28,7 +28,6 @@ import { getFriendlyErrorMessage } from '@/utils/authErrors'
  */
 export const AdminLoginPage: React.FC = () => {
   const { signIn, signOut, refreshProfile } = useAuth()
-  const navigate = useNavigate()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -68,7 +67,9 @@ export const AdminLoginPage: React.FC = () => {
         return
       }
 
-      navigate(getLandingPathForRole(profile), { replace: true })
+      // Full reload so the destination's role guard reads the freshly-loaded
+      // role from a clean session - avoids "Access denied" on the first sign-in.
+      window.location.assign(getLandingPathForRole(profile))
     } catch (err) {
       setError(getFriendlyErrorMessage(err))
     } finally {
