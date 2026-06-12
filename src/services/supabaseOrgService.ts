@@ -77,6 +77,32 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
   return mapOrg(data as Raw)
 }
 
+export interface UpdateOrgInput {
+  name?: string
+  code?: string
+  status?: string
+  journeyType?: string | null
+  programDurationWeeks?: number | null
+}
+
+/** Update an organization's core fields (RLS: is_partner_or_admin). */
+export const updateOrganization = async (id: string, patch: UpdateOrgInput): Promise<OrgRecord> => {
+  const updates: Record<string, unknown> = {}
+  if (patch.name !== undefined) updates.name = patch.name.trim()
+  if (patch.code !== undefined) updates.code = patch.code.trim().toUpperCase()
+  if (patch.status !== undefined) updates.status = patch.status
+  if (patch.journeyType !== undefined) updates.journey_type = patch.journeyType
+  if (patch.programDurationWeeks !== undefined) updates.program_duration_weeks = patch.programDurationWeeks
+  const { data, error } = await supabase
+    .from('organizations')
+    .update(updates)
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) throw new Error(error.message)
+  return mapOrg(data as Raw)
+}
+
 /** Candidate users for the partner picker (any user can be promoted). */
 export const listPartnerCandidates = async (): Promise<PartnerCandidate[]> => {
   const { data, error } = await supabase
