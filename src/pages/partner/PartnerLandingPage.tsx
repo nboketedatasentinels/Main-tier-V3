@@ -45,7 +45,7 @@ export const PartnerLandingPage: React.FC = () => {
 
       <main>
         <HeroSection
-          ctaTo="/signup"
+          ctaTo="/partner-signup"
           ctaLabel="Get started"
           note="Create your partner account - no assessment required."
         />

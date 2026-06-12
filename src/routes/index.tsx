@@ -14,6 +14,7 @@ import { AuthLayout } from '@/layouts/AuthLayout'
 import { HomePage } from '@/pages/home/HomePage'
 import { PublicAssessmentPage } from '@/pages/assessment/PublicAssessmentPage'
 import { PartnerLandingPage } from '@/pages/partner/PartnerLandingPage'
+import { PartnerSignupPage } from '@/pages/partner/PartnerSignupPage'
 
 // Page imports
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -148,6 +149,7 @@ export const AppRoutes = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/assessment" element={<PublicAssessmentPage />} />
         <Route path="/partners" element={<PartnerLandingPage />} />
+        <Route path="/partner-signup" element={<PartnerSignupPage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />

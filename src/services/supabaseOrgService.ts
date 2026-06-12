@@ -62,6 +62,8 @@ export interface OrgWriteExtras {
   pillar?: string | null
   teamSize?: number | null
   programDurationMonths?: number | null
+  /** Email of the assigned transformation partner (they claim it on signup). */
+  partnerEmail?: string | null
 }
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
@@ -70,7 +72,15 @@ const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   pillar: e.pillar ?? null,
   teamSize: e.teamSize ?? null,
   programDurationMonths: e.programDurationMonths ?? null,
+  partnerEmail: e.partnerEmail ? e.partnerEmail.trim().toLowerCase() : null,
 })
+
+/** Add a SECURITY DEFINER claim used by partner signup (see claim_partner_access RPC). */
+export const claimPartnerAccess = async (): Promise<string> => {
+  const { data, error } = await supabase.rpc('claim_partner_access')
+  if (error) throw new Error(error.message)
+  return (data as string) ?? 'error'
+}
 
 export interface CreateOrgInput extends OrgWriteExtras {
   name: string

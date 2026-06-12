@@ -326,6 +326,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         pillar: form.pillar ?? null,
         teamSize: form.teamSize ?? null,
         programDurationMonths: form.programDuration ?? null,
+        partnerEmail: form.assignedPartnerEmail ?? null,
       })
 
       toast({
@@ -406,6 +407,17 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   <FormControl>
                     <FormLabel>Village</FormLabel>
                     <Input value={form.village} onChange={(e) => updateField('village', e.target.value)} />
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Transformation partner email</FormLabel>
+                    <Input
+                      type="email"
+                      placeholder="partner@example.com"
+                      value={form.assignedPartnerEmail || ''}
+                      onChange={(e) => updateField('assignedPartnerEmail', e.target.value)}
+                    />
                   </FormControl>
                 </GridItem>
                 <GridItem>
