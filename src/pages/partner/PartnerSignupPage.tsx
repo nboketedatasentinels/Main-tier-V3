@@ -37,6 +37,20 @@ export const PartnerSignupPage: React.FC = () => {
   const [info, setInfo] = useState<string | null>(null)
 
   const finishClaim = async () => {
+    // Ensure the profile row exists BEFORE claiming. A fresh signup can reach
+    // here before the provisioning trigger has created the row, and
+    // claim_partner_access UPDATEs profiles.role - with no row the role is never
+    // set, so the partner lands on /unauthorized. Create the row first (same as
+    // the admin signup fix); claim_partner_access then promotes the real row.
+    const { data: sessionData } = await supabase.auth.getUser()
+    if (sessionData.user) {
+      await supabase
+        .from('profiles')
+        .upsert(
+          { id: sessionData.user.id, email: sessionData.user.email },
+          { onConflict: 'id', ignoreDuplicates: true },
+        )
+    }
     const result = await claimPartnerAccess()
     if (result === 'ok') {
       // Full reload so the session re-reads the freshly-granted partner role.
