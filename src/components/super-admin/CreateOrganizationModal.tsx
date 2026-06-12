@@ -571,7 +571,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const created = await createSupabaseOrganization({
         name: form.name.trim(),
         code: form.code.trim().toUpperCase(),
-        status: form.status,
+        // New orgs are created Active (the Status field was removed from this
+        // modal). Always send 'active' to satisfy organizations_status_check.
+        status: 'active',
         journeyType: form.organizationJourneyType ?? null,
         programDurationWeeks,
         cohortStartDate: form.cohortStartDate ? String(form.cohortStartDate) : null,
