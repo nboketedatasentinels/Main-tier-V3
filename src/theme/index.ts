@@ -203,6 +203,11 @@ const components = {
       primary: {
         bg: 'brand.primary',
         color: 'white',
+        // Chakra's Text baseStyle forces a dark color, so a <Text> nested inside
+        // a primary button ignores the button's white and renders unreadable on
+        // the dark-purple bg. Force any nested Chakra Text/icon to inherit white.
+        '.chakra-text': { color: 'white' },
+        '.chakra-icon': { color: 'white' },
         _hover: {
           bg: 'brand.dark',
           color: 'white',

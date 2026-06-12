@@ -79,7 +79,7 @@ const SidebarNav = ({
                 onClick={() => onNavigate?.(item.key)}
               >
                 <HStack justify="space-between" flex="1">
-                  <Text>{item.label}</Text>
+                  <Text color="inherit">{item.label}</Text>
                   {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
                     <Badge colorScheme="red" borderRadius="full">
                       {item.badgeCount}
