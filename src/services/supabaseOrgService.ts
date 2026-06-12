@@ -49,7 +49,30 @@ export const listOrganizations = async (): Promise<OrgRecord[]> => {
   return (data ?? []).map((r) => mapOrg(r as Raw))
 }
 
-export interface CreateOrgInput {
+/**
+ * The non-column org fields (village, cluster, pillar, cohort size, the
+ * program-duration-in-months the form uses) live in the organizations.settings
+ * jsonb long-tail. cohort_start_date is its own timestamptz column.
+ */
+export interface OrgWriteExtras {
+  status?: string
+  cohortStartDate?: string | null
+  village?: string | null
+  cluster?: string | null
+  pillar?: string | null
+  teamSize?: number | null
+  programDurationMonths?: number | null
+}
+
+const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
+  village: e.village ?? null,
+  cluster: e.cluster ?? null,
+  pillar: e.pillar ?? null,
+  teamSize: e.teamSize ?? null,
+  programDurationMonths: e.programDurationMonths ?? null,
+})
+
+export interface CreateOrgInput extends OrgWriteExtras {
   name: string
   code: string
   journeyType?: string | null
@@ -67,9 +90,11 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
       id,
       name: input.name.trim(),
       code: input.code.trim().toUpperCase(),
-      status: 'active',
+      status: input.status ?? 'active',
       journey_type: input.journeyType ?? null,
       program_duration_weeks: input.programDurationWeeks ?? null,
+      cohort_start_date: input.cohortStartDate || null,
+      settings: buildSettings(input),
     })
     .select('*')
     .single()
@@ -77,15 +102,14 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
   return mapOrg(data as Raw)
 }
 
-export interface UpdateOrgInput {
+export interface UpdateOrgInput extends OrgWriteExtras {
   name?: string
   code?: string
-  status?: string
   journeyType?: string | null
   programDurationWeeks?: number | null
 }
 
-/** Update an organization's core fields (RLS: is_partner_or_admin). */
+/** Update an organization's fields (RLS: is_partner_or_admin). */
 export const updateOrganization = async (id: string, patch: UpdateOrgInput): Promise<OrgRecord> => {
   const updates: Record<string, unknown> = {}
   if (patch.name !== undefined) updates.name = patch.name.trim()
@@ -93,6 +117,8 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
   if (patch.status !== undefined) updates.status = patch.status
   if (patch.journeyType !== undefined) updates.journey_type = patch.journeyType
   if (patch.programDurationWeeks !== undefined) updates.program_duration_weeks = patch.programDurationWeeks
+  if (patch.cohortStartDate !== undefined) updates.cohort_start_date = patch.cohortStartDate || null
+  updates.settings = buildSettings(patch)
   const { data, error } = await supabase
     .from('organizations')
     .update(updates)

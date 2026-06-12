@@ -565,8 +565,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const created = await createSupabaseOrganization({
         name: form.name.trim(),
         code: form.code.trim().toUpperCase(),
+        status: form.status,
         journeyType: form.organizationJourneyType ?? null,
         programDurationWeeks,
+        cohortStartDate: form.cohortStartDate ? String(form.cohortStartDate) : null,
+        village: form.village ?? null,
+        cluster: form.cluster ?? null,
+        pillar: form.pillar ?? null,
+        teamSize: form.teamSize ?? null,
+        programDurationMonths: form.programDuration ?? null,
       })
 
       const now = new Date()
