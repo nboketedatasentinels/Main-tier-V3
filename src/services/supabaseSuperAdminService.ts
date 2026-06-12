@@ -366,6 +366,7 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     cluster: (settings.cluster as string) ?? undefined,
     pillar: (settings.pillar as OrganizationRecord['pillar']) ?? undefined,
     teamSize: (settings.teamSize as number) ?? undefined,
+    assignedPartnerEmail: (settings.partnerEmail as string) ?? undefined,
   }
 }
 
