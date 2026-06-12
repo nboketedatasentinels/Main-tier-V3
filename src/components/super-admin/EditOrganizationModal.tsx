@@ -47,12 +47,7 @@ import {
 import { InfoIcon } from '@chakra-ui/icons'
 import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
-import {
-  determineClusterFromTeamSize,
-  fetchAvailableCourses,
-  fetchOrganizationAssignments,
-  fetchOrganizationDetails,
-} from '@/services/organizationService'
+import { determineClusterFromTeamSize } from '@/services/organizationService'
 import { updateOrganization as updateSupabaseOrganization } from '@/services/supabaseOrgService'
 import {
   MonthlyCourseAssignments,
@@ -64,7 +59,6 @@ import {
   getProgramSegmentDateRange,
   getProgramSegmentLabel,
   resolveProgramCadence,
-  resolveProgramMonthCount,
 } from '@/utils/monthlyCourseAssignments'
 import {
   clusterBoundaries,
@@ -239,52 +233,14 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setOriginalCohortStartDate(
         organization.cohortStartDate ? String(organization.cohortStartDate) : null,
       )
+      setMonthlyAssignments(organization.monthlyCourseAssignments ?? {})
     }
-
-    const fetchData = async () => {
-      if (!organization?.id) return
-      setIsLoading(true)
-      try {
-        const [courseOptions, organizationDetails, assignments] = await Promise.all([
-          fetchAvailableCourses(),
-          fetchOrganizationDetails(organization.id),
-          fetchOrganizationAssignments(organization.id),
-        ])
-
-        setCourses(courseOptions)
-
-        if (organizationDetails) {
-          const totalMonths = resolveProgramMonthCount(organizationDetails.programDuration ?? null)
-          setForm({
-            ...emptyOrganization,
-            ...organizationDetails,
-            courseAssignments: assignments.length
-              ? assignments
-              : organizationDetails.courseAssignments || [],
-          })
-          setOriginalCohortStartDate(
-            organizationDetails.cohortStartDate ? String(organizationDetails.cohortStartDate) : null,
-          )
-          setMonthlyAssignments(() => {
-            if (organizationDetails.monthlyCourseAssignments) {
-              return organizationDetails.monthlyCourseAssignments
-            }
-            return buildMonthlyAssignmentsFromArray(
-              assignments.length ? assignments : organizationDetails.courseAssignments || [],
-              totalMonths || assignments.length,
-            )
-          })
-        }
-      } catch (error) {
-        console.error(error)
-        toast({ title: 'Unable to load organization data', status: 'error' })
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [isOpen, organization, toast])
+    // The course list + extended org details used to be loaded from Firebase,
+    // which is gone now - so the form is populated directly from the org row
+    // above and the modal opens immediately (no spinner hang).
+    setCourses([])
+    setIsLoading(false)
+  }, [isOpen, organization])
 
   useEffect(() => {
     if (!isOpen) return
