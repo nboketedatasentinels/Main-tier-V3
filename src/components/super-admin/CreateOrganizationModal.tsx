@@ -58,18 +58,16 @@ import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import {
   BulkInvitationResult,
   CourseOption,
-  InvitationPayload,
   InviteDraft,
   OrganizationRecord,
   ProgramDurationOption,
 } from '@/types/admin'
 import {
-  createOrganizationWithInvitations,
   determineClusterFromTeamSize,
   fetchAvailableCourses,
   generateOrganizationCode,
-  validateOrganizationCodeUnique,
 } from '@/services/organizationService'
+import { createOrganization as createSupabaseOrganization } from '@/services/supabaseOrgService'
 import { InvitationResultsModal } from './InvitationResultsModal'
 import {
   MonthlyCourseAssignments,
@@ -84,7 +82,6 @@ import {
 } from '@/utils/monthlyCourseAssignments'
 import { downloadCSVTemplate, parseInvitationCSV } from '@/utils/csvUtils'
 import { normalizeEmail } from '@/utils/email'
-import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import {
   clusterBoundaries,
   clusterTiers,
@@ -159,8 +156,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   isOpen,
   onClose,
   onCreated,
-  adminId,
-  adminName,
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
@@ -551,8 +546,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       if (!form.name || form.name.length < 3) throw new Error('Organization name must be at least 3 characters')
       if (!form.code) throw new Error('Organization code is required')
       if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
-      const isUnique = await validateOrganizationCodeUnique(form.code)
-      if (!isUnique) throw new Error('Organization code is already in use')
       if (!form.programDuration) throw new Error('Program duration is required')
       if (form.programDuration === 1.5 && !form.pillar) {
         throw new Error('Pillar is required for the 6-week journey')
@@ -560,72 +553,43 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
-      if (courseLimit && emptyMonths.length) {
-        throw new Error(`Please assign a course for each of the ${courseLimit} ${assignmentUnit}${courseLimit > 1 ? 's' : ''}`)
-      }
       if (inviteDrafts.some((draft) => !draft.isValid)) {
         throw new Error('Resolve invitation errors before submitting.')
       }
 
       setIsSubmitting(true)
-      const normalizedMonthlyAssignments: MonthlyCourseAssignments = {}
-      Object.entries(monthlyAssignments).forEach(([monthKey, courseId]) => {
-        normalizedMonthlyAssignments[monthKey] = resolveCourseIdFromMapping(courseId)
+
+      // Create the organization in Supabase. (The old Firebase path hung under
+      // Supabase auth - that's why the button did nothing.)
+      const programDurationWeeks = form.programDuration ? Math.round(form.programDuration * 4) : null
+      const created = await createSupabaseOrganization({
+        name: form.name.trim(),
+        code: form.code.trim().toUpperCase(),
+        journeyType: form.organizationJourneyType ?? null,
+        programDurationWeeks,
       })
-      const assignmentArray = getAssignedCourseIdsFromMonthlyAssignments(normalizedMonthlyAssignments, courseLimit)
-      const organizationPayload: OrganizationRecord = {
-        ...form,
-        code: form.code.toUpperCase(),
-        courseAssignments: assignmentArray,
-        monthlyCourseAssignments: normalizedMonthlyAssignments,
-        courseAssignmentStructure: 'monthly',
-        cohortStartDate: form.cohortStartDate,
-        programDuration: form.programDuration,
-      }
-
-      const invitationPayloads: InvitationPayload[] = inviteDrafts.map((draft) => ({
-        name: draft.name,
-        email: draft.email || undefined,
-        role: draft.role,
-        method: draft.method,
-        organizationId: '',
-      }))
-
-      const { organizationId, invitationResult } = await createOrganizationWithInvitations(
-        organizationPayload,
-        invitationPayloads,
-        { adminId, adminName },
-      )
 
       const now = new Date()
       const organizationWithId: OrganizationRecord = {
-        ...organizationPayload,
-        id: organizationId,
-        createdAt: organizationPayload.createdAt ?? now,
-        updatedAt: organizationPayload.updatedAt ?? now,
+        ...form,
+        id: created.id,
+        code: form.code.toUpperCase(),
+        createdAt: now,
+        updatedAt: now,
       }
       if (onCreated) {
         try {
           await onCreated(organizationWithId)
         } catch (onCreatedError) {
-          console.error('[CreateOrganizationModal] Organization was created but post-create callback failed.', {
-            organizationId,
-            error: onCreatedError,
-          })
-          toast({
-            title: 'Organization created',
-            description: 'Post-create updates failed. Refresh to sync the latest data.',
-            status: 'warning',
-          })
+          console.error('[CreateOrganizationModal] post-create callback failed', onCreatedError)
         }
-      }
-      if (invitationResult) {
-        setResults(invitationResult)
-        resultsModal.onOpen()
       }
       toast({
         title: 'Organization created successfully',
-        description: `Cluster: ${clusterDisplayName}`,
+        description:
+          inviteDrafts.length > 0
+            ? 'Member invitations are not sent automatically yet - add members from the organization later.'
+            : `Cluster: ${clusterDisplayName}`,
         status: 'success',
       })
       onClose()
