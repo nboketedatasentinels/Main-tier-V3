@@ -96,11 +96,12 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
       : `org_${Date.now()}`
   const { data, error } = await supabase
     .from('organizations')
+    // Omit `status` so the DB column default ('active') applies - guarantees we
+    // never violate organizations_status_check.
     .insert({
       id,
       name: input.name.trim(),
       code: input.code.trim().toUpperCase(),
-      status: input.status ?? 'active',
       journey_type: input.journeyType ?? null,
       program_duration_weeks: input.programDurationWeeks ?? null,
       cohort_start_date: input.cohortStartDate || null,
