@@ -41,8 +41,6 @@ import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganiza
 import {
   assignAmbassadorToOrganization,
   assignMentorToOrganization,
-  assignPartnerToOrganization,
-  promoteUserToPartner,
   unassignLeadershipRole,
 } from '@/services/organizationService'
 import {
@@ -56,6 +54,7 @@ import {
   listenToMentors,
   listenToPartners,
 } from '@/services/supabaseSuperAdminService'
+import { assignPartnerToOrg, removePartnerFromOrg } from '@/services/supabaseOrgService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
@@ -240,45 +239,24 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const handleAssignPartner = async (
     partnerId: string | null,
-    options: { promoteFirst: boolean } = { promoteFirst: false },
+    _options: { promoteFirst: boolean } = { promoteFirst: false },
   ) => {
     if (!selectedOrg?.id) return
     try {
+      // Supabase RPC: assignPartnerToOrg promotes the chosen user to partner AND
+      // links them to the org in one call; removePartnerFromOrg clears it.
       if (partnerId) {
-        if (options.promoteFirst) {
-          // Elevate the user's role to partner BEFORE the org assignment so
-          // assignLeadershipRole's role-check (line 453 in organizationService)
-          // doesn't throw "User role must be partner".
-          await promoteUserToPartner(partnerId)
-          await logAdminAction({
-            action: 'User promoted to partner',
-            organizationName: selectedOrg.name,
-            organizationCode: selectedOrg.code,
-            adminId,
-            adminName,
-            metadata: { userId: partnerId },
-          })
-        }
-        await assignPartnerToOrganization(selectedOrg.id, partnerId)
+        await assignPartnerToOrg(selectedOrg.id, partnerId)
       } else {
-        await unassignLeadershipRole(selectedOrg.id, 'partner')
+        await removePartnerFromOrg(selectedOrg.id)
       }
       setOrganizations((prev) =>
         prev.map((org) =>
           org.id === selectedOrg.id ? { ...org, partnerId, transformationPartnerId: partnerId } : org,
         ),
       )
-      await logAdminAction({
-        action: 'Partner assignment updated',
-        organizationName: selectedOrg.name,
-        organizationCode: selectedOrg.code,
-        adminId,
-        adminName,
-        metadata: { partnerId },
-      })
       toast({
-        title: 'Partner updated',
-        description: 'Previous partner access was synchronized for this organization.',
+        title: partnerId ? 'Partner assigned' : 'Partner removed',
         status: 'success',
       })
       assignPartnerModal.onClose()
