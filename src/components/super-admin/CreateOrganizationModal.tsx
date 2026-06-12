@@ -67,7 +67,12 @@ import {
   fetchAvailableCourses,
   generateOrganizationCode,
 } from '@/services/organizationService'
-import { createOrganization as createSupabaseOrganization } from '@/services/supabaseOrgService'
+import {
+  createOrganization as createSupabaseOrganization,
+  assignPartnerToOrg,
+  listPartnerCandidates,
+  type PartnerCandidate,
+} from '@/services/supabaseOrgService'
 import { InvitationResultsModal } from './InvitationResultsModal'
 import {
   MonthlyCourseAssignments,
@@ -172,6 +177,23 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const [manualErrors, setManualErrors] = useState<InviteDraftErrors>({})
   const [selectedDraftIds, setSelectedDraftIds] = useState<string[]>([])
   const [recentImportIds, setRecentImportIds] = useState<string[]>([])
+  // Transformation partner (existing user) to assign on create.
+  const [partnerCandidates, setPartnerCandidates] = useState<PartnerCandidate[]>([])
+  const [selectedPartnerId, setSelectedPartnerId] = useState('')
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedPartnerId('')
+      return
+    }
+    let active = true
+    listPartnerCandidates()
+      .then((rows) => active && setPartnerCandidates(rows))
+      .catch((err) => console.error('[CreateOrg] failed to load partner candidates', err))
+    return () => {
+      active = false
+    }
+  }, [isOpen])
   const [lastImportCount, setLastImportCount] = useState(0)
   const bulkDeleteDialog = useDisclosure()
   const clearAllDialog = useDisclosure()
@@ -576,11 +598,27 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         programDurationMonths: form.programDuration ?? null,
       })
 
+      // Assign the chosen transformation partner (promotes them to partner).
+      if (selectedPartnerId) {
+        try {
+          await assignPartnerToOrg(created.id, selectedPartnerId)
+        } catch (assignErr) {
+          console.error('[CreateOrg] partner assignment failed', assignErr)
+          toast({
+            title: 'Organization created, but partner assignment failed',
+            description: 'Assign the partner from the org menu.',
+            status: 'warning',
+          })
+        }
+      }
+
       const now = new Date()
       const organizationWithId: OrganizationRecord = {
         ...form,
         id: created.id,
         code: form.code.toUpperCase(),
+        transformationPartnerId: selectedPartnerId || undefined,
+        partnerId: selectedPartnerId || undefined,
         createdAt: now,
         updatedAt: now,
       }
@@ -1095,6 +1133,30 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 )}
               </Box>
               )}
+
+              <Box>
+                <FormControl>
+                  <FormLabel display="flex" alignItems="center" gap={2}>
+                    Transformation partner
+                  </FormLabel>
+                  <Select
+                    placeholder="Unassigned (assign later)"
+                    value={selectedPartnerId}
+                    onChange={(e) => setSelectedPartnerId(e.target.value)}
+                  >
+                    {partnerCandidates.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {(c.fullName || c.email || c.id) +
+                          (c.email ? ` - ${c.email}` : '') +
+                          (c.role !== 'partner' ? ' (will be promoted)' : '')}
+                      </option>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    Pick an existing user to lead this organization. They are promoted to partner on create.
+                  </FormHelperText>
+                </FormControl>
+              </Box>
 
               <Box>
                 <Text fontWeight="medium" mb={2}>
