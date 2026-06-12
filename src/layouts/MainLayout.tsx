@@ -191,20 +191,8 @@ export const MainLayout: React.FC = () => {
   useEffect(() => {
     if (!profile) return
 
-    if (buildVillageKey) {
-      const hasVillageContext = Boolean(
-        profile.villageId ||
-          profile.corporateVillageId ||
-          profile.companyId ||
-          profile.companyCode ||
-          profile.organizationId,
-      )
-      const shouldPromptVillage =
-        isFreeUser && !hasVillageContext && location.pathname.startsWith('/app/')
-
-      const stored = localStorage.getItem(buildVillageKey)
-      setShowVillagePrompt(Boolean(shouldPromptVillage && !stored))
-    }
+    // "Create your village" prompt disabled - it no longer auto-opens after login.
+    setShowVillagePrompt(false)
 
   }, [buildVillageKey, isFreeUser, location.pathname, profile])
 
