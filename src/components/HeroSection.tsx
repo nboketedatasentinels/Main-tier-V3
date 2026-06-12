@@ -13,7 +13,18 @@ const Feature: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, lab
   </div>
 )
 
-export const HeroSection: React.FC = () => {
+interface HeroSectionProps {
+  /** Where the primary CTA goes (default: the public assessment). */
+  ctaTo?: string
+  ctaLabel?: string
+  note?: string
+}
+
+export const HeroSection: React.FC<HeroSectionProps> = ({
+  ctaTo = '/assessment',
+  ctaLabel = 'Get started',
+  note = 'Take the 4-minute LIFT assessment. No card needed.',
+}) => {
   const navigate = useNavigate()
 
   return (
@@ -44,12 +55,12 @@ export const HeroSection: React.FC = () => {
       <div className="mt-10 flex flex-col items-center gap-3">
         <button
           type="button"
-          onClick={() => navigate('/assessment')}
+          onClick={() => navigate(ctaTo)}
           className="rounded-full bg-[#27062e] px-10 py-5 text-lg font-bold text-white shadow-lg transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
         >
-          Get started
+          {ctaLabel}
         </button>
-        <p className="text-sm text-neutral-500">Take the 4-minute LIFT assessment. No card needed.</p>
+        <p className="text-sm text-neutral-500">{note}</p>
       </div>
 
       {/* Divider */}
