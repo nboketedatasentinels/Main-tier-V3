@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Pattern Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .substep-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .substep-grid, .substep-grid-3 { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"] {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  input[type="text"]::placeholder { color: #aaa; }
+  .substep-card input[type="text"] { background: #fff; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Pattern Profile</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Leading Self in the Age of AI</div>
+    <div class="practical-badge">Week 1 · Practical 1 of 6</div>
+  </div>
+  <h1 class="header-title">Pattern <em>Profile</em></h1>
+  <p class="header-desc">Name how you actually default under pressure -- not the version of yourself you wish showed up. One pattern. Three real moments where it ran. The belief underneath. This is the foundation of everything else in the Journey, so it has to be honest. The pattern you avoid here is the pattern that will keep costing you.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>One specific pattern -- not "I get stressed." A behavioural default that shows up in observable ways.</li>
+      <li>Three real moments from the last 90 days. Specific people, specific decisions, specific words.</li>
+      <li>The cost of the pattern named in concrete terms -- a relationship, a decision, a meeting, a moment of credibility.</li>
+      <li>The belief underneath named honestly. The flattering version is rarely the true version.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Name the Pattern -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Name the Pattern</div>
+      </div>
+    </div>
+    <p class="step-desc">When the pressure lands at work -- a stakeholder pushes back, a deadline tightens, a decision goes sideways -- something happens to how you show up. That something is your pattern. Name the one that runs you most often. Specific behaviours, not feelings. "I get anxious" is a feeling. "I over-explain to anyone who pushes back" is a pattern.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Pattern in One Sentence</div>
+        </div>
+        <div class="substep-body">Behavioural. Specific. Observable. The version a colleague would recognise if you described it to them.</div>
+        <textarea name="pattern_statement" placeholder="When stakeholders push back on my recommendation, I shift into over-explaining and adding qualifiers until the original recommendation has been buried under so much context that no one knows what I'm actually asking for."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">When It Shows Up</div>
+        </div>
+        <div class="substep-body">The trigger conditions. Not where it lands -- what sets it off. Be specific.</div>
+        <textarea name="pattern_trigger" placeholder="Triggered by a senior stakeholder asking 'are you sure about this?' in a tone I read as sceptical -- especially in front of other people. Less likely to fire in 1:1 conversations, much more likely in steering committees or exec reviews."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Three Real Moments -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Three Real Moments from the Last 90 Days</div>
+      </div>
+    </div>
+    <p class="step-desc">A pattern you can only describe abstractly is one you don't yet see clearly. Three specific moments from the last 90 days where this pattern ran. Real people, real meetings, real words. If you can't think of three, the pattern you've named in Step 1 is probably wrong -- come back and refine it.</p>
+
+    <div class="substep-grid-3">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Moment 1</div>
+        </div>
+        <div class="substep-body">When, who was there, what triggered it, what you did, what it cost.</div>
+        <textarea name="moment_1" placeholder="Two weeks ago, exec steering committee. CFO asked 'why this approach over X?' I gave a clean two-sentence answer initially. Then I kept talking. Added three caveats, two contingencies, and a paragraph about how 'we could revisit if needed.' The CFO disengaged after my second qualifier. The recommendation didn't land -- it got deferred to the next meeting."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Moment 2</div>
+        </div>
+        <div class="substep-body">When, who, trigger, what you did, what it cost.</div>
+        <textarea name="moment_2" placeholder="Last week, 1:1 with my manager. She challenged my plan to reduce vendor count. I started defending instead of listening. Spoke for four minutes uninterrupted. By the end I'd lost the thread of my own recommendation. She said 'let's revisit when you've thought it through' -- which I read as her seeing me as not ready."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>03</span></div>
+          <div class="substep-label">Moment 3</div>
+        </div>
+        <div class="substep-body">When, who, trigger, what you did, what it cost.</div>
+        <textarea name="moment_3" placeholder="Three days ago, AI vendor pitch with my Head of Tech and a board observer present. The vendor asked me a probing question about our data readiness. I gave a layered answer that started honest and ended up sounding like I wasn't sure of our position. The board observer noticed. Not catastrophic but I felt myself shrink in the moment."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: The Cost -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">The Cost of This Pattern</div>
+      </div>
+    </div>
+    <p class="step-desc">If this pattern is just a quirk, you wouldn't be working on it. It's costing you something -- credibility, relationships, decisions, energy. Name what it's actually cost in concrete terms. Not "it makes me feel bad about myself" -- what has it cost you in your actual leadership work.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">What It's Cost</div>
+        </div>
+        <div class="substep-body">Concrete. Recent. Specific. The thing you wouldn't want to admit to a peer but is true.</div>
+        <textarea name="cost_concrete" placeholder="Two recommendations that I believed in didn't land in the last quarter -- both for the same reason. The CFO has now asked twice for 'more concise updates from Mara' -- which is feedback I'd rather not have heard. I think I've also stopped raising more difficult ideas in steering committee because I anticipate the over-explaining and avoid the situation entirely."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What You're Avoiding</div>
+        </div>
+        <div class="substep-body">The harder cost -- what are you NOT doing because of this pattern? The opportunities you're walking past, the conversations you're not having.</div>
+        <textarea name="cost_avoidance" placeholder="I'm not putting forward the AI/data strategy work I genuinely believe we need -- because I know I'll over-explain it under exec questioning and lose the room. So I keep it as 'something I'm developing' rather than ever putting it on a steering committee agenda. That's six months of ducking the work I most want to do."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: The Belief Underneath -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">The Belief Underneath</div>
+      </div>
+    </div>
+    <p class="step-desc">Patterns don't run on their own. There's a belief driving each one -- often unspoken, often something you'd disagree with intellectually but are still living out. Name the belief. The flattering version of the belief is rarely the true one. "I want to be thorough" is the flattering version. "If they don't fully understand my thinking, they won't trust me" is closer to the truth. Go past the flattering version.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Flattering Belief</div>
+        </div>
+        <div class="substep-body">What you'd say if someone asked. What you'd put in a 360 review. The respectable version.</div>
+        <textarea name="flattering_belief" placeholder="I want to be thorough and respectful of senior leaders' need to understand the full context before they make a decision."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The True Belief</div>
+        </div>
+        <div class="substep-body">What's actually running. The belief that explains the behaviour. Often something about safety, worth, or the cost of being wrong.</div>
+        <textarea name="true_belief" placeholder="If they don't see all my thinking, they'll find a flaw I missed. If I just give a clean answer, I'm exposed -- and being exposed is being wrong, and being wrong means I shouldn't be in this seat. So over-explaining isn't thoroughness -- it's me trying to bullet-proof myself before they can question me."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Pattern</h2>
+    <p class="ai-activity-desc">When we're naming our own patterns, we tend to soften the edges -- we describe a version we can live with, not the version that's actually running us. AI as an outside voice can hear the gap between what you've written and what your three moments actually show.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test the Pattern Against the Moments</div>
+          <div class="ai-step-body">Ask AI to compare the pattern you named against the three moments you described. The pattern should be visible in all three. If it isn't, the pattern is wrong or the moments are wrong.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I'm working through a leadership self-awareness exercise. The pattern I've named for myself under pressure is: [paste your Step 1 pattern]. Here are three real moments where I think this pattern showed up: [paste your Step 2 moments 1, 2, 3]. Read these carefully. (1) Is the pattern I've named actually visible in all three moments? (2) Is there a different or more specific pattern that's even more visible? (3) Is there something I'm describing as the pattern that's actually a symptom of a deeper one? Be specific and unflinching.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI surface? Will you tighten the pattern?</div>
+      <textarea class="ai-field" placeholder="AI flagged that 'over-explaining' is the symptom but not the deeper pattern. Across all three moments, the deeper pattern is: I shift from speaking AS a leader to speaking ABOUT my thinking the moment I sense doubt in the room. Over-explaining is what that shift looks like. Anchoring is what's missing. Updating Step 1: 'Under perceived scepticism, I lose my anchor as a leader and start narrating my reasoning instead of holding my position.'"></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Pressure-Test the Belief</div>
+          <div class="ai-step-body">Ask AI to challenge your stated true belief -- is it actually the truth, or is it still a more polished version of the truth? Sometimes the third draft is the real one.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">Here is the true belief I've named as driving my pattern under pressure: [paste your Step 4 true belief]. Push on this. (1) Is this the actual driver, or is it still a relatively polished version of something rawer underneath? (2) What would a more honest version of this belief sound like -- the one I might be flinching from naming? (3) What does this belief assume about my worth, my safety, or my place in the room? Don't be gentle.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI push you toward? Will you adjust your true belief?</div>
+      <textarea class="ai-field" placeholder="AI's push: 'Being exposed is being wrong, and being wrong means I shouldn't be in this seat' is close but you're still hiding inside the word 'shouldn't.' The rawer version is: 'I don't fully believe I deserve this seat. So any moment where I might be wrong feels like the moment I get found out.' That sentence is what I'd been protecting myself from naming. Adjusting Step 4 true belief: 'I don't yet fully believe I belong in this seat -- so any moment of perceived doubt feels like the moment of being found out.'"></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">As you start using AI more in your transformation work, the AI will increasingly be in the room with you in the moments your pattern runs. What's the risk of using AI to outsource the moments that trigger your pattern -- and what would you have to keep doing yourself to stay anchored as a leader?</div>
+    <textarea placeholder="The risk is hiding inside the AI. If my pattern is over-explaining under perceived scepticism, AI gives me an infinite supply of more context to add -- I could endlessly elaborate before going into a steering committee. The pattern would just get more sophisticated, not break. What I'd have to keep doing myself: holding my position when challenged, in real time, with my own voice. AI can prepare me but it can't be the leader in the room. The work is to stop using preparation as a substitute for presence."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Pattern work is where senior practitioners are gentlest with themselves. We name the version we can live with, not the version that's actually running us. A peer who's done their own version of this work can hear the difference -- if you're brave enough to read it aloud.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read your Step 1 pattern, your Step 4 true belief, and just one of your three moments aloud. Don't add commentary. Don't soften before you read. Listen to your peer's first reaction -- the one before they say anything kind.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the three moments you described, which one was hardest to write down? That's probably the one closest to the real pattern.</li>
+      <li>Your true belief -- did you write what's true, or what's true enough to admit out loud?</li>
+      <li>What would change about how you show up next week if you genuinely believed this pattern was no longer running you?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    pattern_statement: get('pattern_statement'),
+    pattern_trigger: get('pattern_trigger'),
+    moments: {
+      moment_1: get('moment_1'),
+      moment_2: get('moment_2'),
+      moment_3: get('moment_3'),
+    },
+    cost_concrete: get('cost_concrete'),
+    cost_avoidance: get('cost_avoidance'),
+    flattering_belief: get('flattering_belief'),
+    true_belief: get('true_belief'),
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const fields = [
+    data.pattern_statement,
+    data.pattern_trigger,
+    data.moments.moment_1,
+    data.moments.moment_2,
+    data.moments.moment_3,
+    data.cost_concrete,
+    data.cost_avoidance,
+    data.flattering_belief,
+    data.true_belief,
+  ];
+  const filled = fields.filter(v => v && v.trim().length > 0).length;
+  const total = fields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 1? Once submitted, you can still edit until end of Week 1. After Week 1 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W1)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>
