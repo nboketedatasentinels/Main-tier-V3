@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 2: Telling My Story Is Risky</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --case-bg: #FFFEF9;
+    --counter-under: #B45309;
+    --counter-good: #166534;
+    --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .section-card, .standard-card, .case-block { break-inside: avoid; }
+    .case-body { display: block !important; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 24px; }
+    .content { padding: 20px 14px 40px; }
+    .section-card, .case-body { padding: 20px 18px; }
+    .case-header { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 2 · Telling My Story Is Risky</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Leading Self in the Age of AI</div>
+  <div class="case-eyebrow">Case Study 2 · Course 2 · Resilience Under Sustained Transformation Pressure</div>
+  <h1 class="header-title">Telling My Story <em>Is Risky</em></h1>
+  <div class="header-meta"><strong>Ngozi Okonjo-Iweala and the Cost of Leading, Nigeria 2012.</strong> The layer of cost-of-leading shame that operates underneath the visible work of senior reform leaders -- and the precision required to use vulnerability as a strategic move rather than as performance or as confession.</div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Recognise and name shame patterns), LO4 (Construct vulnerability as strategic capability), partial LO5 (Sustain via three integrated practices).</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 2 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that uses the case to think about your own carrying -- with the precision the framework demands.</div>
+    <ul class="standard-list">
+      <li>The shame pattern named explicitly using the Course 2 framework, anchored to specific evidence in the case rather than to general impressions of the leader.</li>
+      <li>The shame-versus-guilt distinction made at the level of identity (who I am) versus action (what I did) -- not as severity levels of the same emotion.</li>
+      <li>Vulnerability analysed as a strategic move with structural elements named -- distinguished from oversharing, confession, or therapy.</li>
+      <li>Application to your own carrying with the same discipline -- a specific moment in the next four weeks, with what you would say AND what you would not say, framed as strategy not as disclosure.</li>
+      <li>300-500 words across all four answers. Quality matters more than length. The answer to Q4 is the highest-stakes answer -- precision matters more than emotional reach.</li>
+    </ul>
+  </div>
+
+  <!-- CASE READING SECTION -->
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">Nigeria, December 2012 -- and the 2018 disclosure</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+
+      <div class="case-section-label">Background</div>
+      <p>In December 2012, Ngozi Okonjo-Iweala was the Coordinating Minister for the Economy and Minister of Finance of Nigeria, in her second tenure under President Goodluck Jonathan. She was leading a programme of reforms that included a crackdown on fraudulent claims for oil subsidy payments -- one of the largest sources of corruption in the Nigerian economy. Of the 6.7 billion US dollars Nigeria was spending annually on fuel subsidies, her team had identified 1.5 billion as fraudulent.</p>
+
+      <p>On 9 December 2012, her 83-year-old mother, Professor Kamene Okonjo, was kidnapped from the family home in Ogwashi-Ukwu, Delta State. The kidnappers' first demand, made publicly, was that Okonjo-Iweala resign from her position on live television and leave the country. The second demand was that she abandon the oil subsidy reforms.</p>
+
+      <p>Okonjo-Iweala did not resign. The reforms continued. Her mother escaped after several days. Six years later, in 2018, Okonjo-Iweala published her account of the period in the MIT Press book <em>Fighting Corruption Is Dangerous: The Story Behind the Headlines</em>. The opening line of that account is the sentence that organises this case study:</p>
+
+      <div class="pull-quote">"Telling my story is risky. But not telling it is also dangerous."</div>
+
+      <p>That sentence is not motivational. It is precise. It names a strategic decision Okonjo-Iweala made about when, why, and in what form to be visible about the cost of the work she had been doing. She had not spoken publicly about the kidnapping or its specific demands at the time. She had also not, in 2012, dwelt publicly on what the role had cost her -- the threats, the malicious press articles she has documented, the fact that she had returned to Nigeria for a second ministerial term knowing the personal exposure it carried. By 2018, she had decided that not telling the story was a greater risk to the work than telling it would be.</p>
+
+      <p>Okonjo-Iweala has spoken openly, including in a 2013 NPR interview and the 2018 book itself, about the layer of carrying that operates beneath public reform work. She has named, specifically, the 'Okonjo Wahala' nickname earned in the Ministry of Finance -- 'Okonjo Trouble' in Igbo -- and the relationship between visible toughness and the private cost of being the first woman to lead Nigeria's Finance Ministry, the first to lead Foreign Affairs, the first African to lead the World Trade Organization. The visible toughness was real. So was the carrying underneath it. In 2021, when Okonjo-Iweala became the first woman and the first African Director-General of the WTO, the line from the 2018 book was widely quoted -- because it was finally legible as a leadership move, not a personal disclosure.</p>
+
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not about courage. It is about the layer of cost-of-leading shame that operates underneath the visible work of senior reform leaders, and about the precision required to use vulnerability as a strategic move rather than as performance or as confession.</p>
+
+      <p>The questions below ask you to examine three things: which shame pattern is in play, how shame differs from guilt in this context, and what specifically made Okonjo-Iweala's 2018 disclosure strategic rather than therapeutic.</p>
+
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+        <li>Okonjo-Iweala, N. (2018). <em>Fighting Corruption Is Dangerous: The Story Behind the Headlines</em>. Cambridge MA: MIT Press. ISBN 978-0-262-03801-0.</li>
+        <li>Okonjo-Iweala, N. (2012). <em>Reforming the Unreformable: Lessons from Nigeria</em>. Cambridge MA: MIT Press.</li>
+        <li>Martin, M. (2012). 'Trying to reform Nigeria amid family kidnapping.' NPR Interview, 10 December 2012.</li>
+        <li><em>Foreign Affairs</em> (2013). 'Reforming Nigeria: An interview with Ngozi Okonjo-Iweala.' Foreign Affairs Magazine.</li>
+        <li><em>ThisDay</em> (2016). 'My mother was kidnapped because I advised Jonathan to remove fuel subsidy.' Interview with Le Monde, reported in ThisDay, 7 April 2016.</li>
+        <li>Brown, B. (2012). <em>Daring Greatly</em>. New York: Gotham Books. (Theoretical framework for shame versus guilt distinction.)</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- QUESTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 3 · Shame pattern identification</div>
+    </div>
+    <h2 class="section-title">Identify the shame pattern in play</h2>
+    <div class="section-prompt">Identify which of the three shame patterns from Course 2 is in play in Okonjo-Iweala's account: earned-place shame, should-have-known shame, or cost-of-leading shame. Justify the choice using specific evidence from the case.</div>
+    <div class="section-hint">Pick one pattern and defend it with case evidence. The justification has to point to specific elements in the case that fit the pattern you chose -- not to general impressions of the leader. More than one pattern may be defensible; what matters is whether the choice is defended from the case.</div>
+    <textarea name="q1" placeholder="The shame pattern in play is... The evidence in the case that fits this pattern is..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 3 · Shame versus guilt</div>
+    </div>
+    <h2 class="section-title">Distinguish shame from guilt in this case</h2>
+    <div class="section-prompt">Distinguish shame from guilt using this case. Where is shame operating in Okonjo-Iweala's account, and where would guilt have produced a different response? Two to three sentences.</div>
+    <div class="section-hint">The distinction operates at the level of identity versus action -- not at the level of emotional severity. The test is whether your answer makes the two emotions structurally different in what they would have produced in this case, not just synonyms for "bad feeling".</div>
+    <textarea name="q2" placeholder="Shame in this case operates at... Guilt would have operated at... and would have produced..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 50-80 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 4 · Vulnerability as strategy</div>
+    </div>
+    <h2 class="section-title">What made the 2018 disclosure strategic?</h2>
+    <div class="section-prompt">The opening line of the 2018 book is offered as an example of vulnerability used strategically rather than performed. What specifically made it strategic? Identify two elements of how she did it that distinguish the move from oversharing or confession.</div>
+    <div class="section-hint">Two elements, each named with structural reasoning -- not adjectives. The test is whether the elements you identify could be applied to a different leader's strategic disclosure. If they could, you've named the design discipline. If they couldn't, you've described this disclosure rather than analysed it. Strategic disclosure is structurally different from confession or therapy.</div>
+    <textarea name="q3" placeholder="Element 1: ... Element 2: ..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 3 + 4 · Application to your own carrying</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to something you are carrying</h2>
+    <div class="section-prompt">Name one thing you have been carrying in your current transformation work that started before this transformation. Name the shame pattern in play (earned-place, should-have-known, or cost-of-leading). Then describe one specific moment in the next four weeks where naming what is true -- using vulnerability as strategy, not as performance or confession -- would move the work forward. Be precise about what you would say and what you would not say.</div>
+    <div class="section-hint">This is the highest-weighted question. The carrying needs to be named (not gestured at), the pattern needs to be named explicitly using the Course 2 framework, and the upcoming moment needs to be specific (the meeting, the person, the situation). The "what you would say AND what you would not say" framing is doing structural work -- it's how the discipline gets evidenced. Strategic disclosure is precise about both. Confession only specifies what gets said.</div>
+    <textarea name="q4" placeholder="What I am carrying: ...&#10;The shame pattern in play: ...&#10;&#10;The upcoming moment: ...&#10;What I would say: ...&#10;What I would not say: ..." oninput="recountWords()" style="min-height: 200px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 110-200 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) {
+  if (!s || !s.trim()) return 0;
+  return s.trim().split(/\s+/).length;
+}
+
+function recountWords() {
+  const fields = ['q1', 'q2', 'q3', 'q4'];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="' + name + '"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name + 'Count');
+    if (display) {
+      display.textContent = c + ' words';
+    }
+  });
+
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+
+  const max = 600;
+  const goodMin = 300;
+  const goodMax = 500;
+  const bandLeft = (goodMin / max) * 100;
+  const bandWidth = ((goodMax - goodMin) / max) * 100;
+  bandEl.style.left = bandLeft + '%';
+  bandEl.style.width = bandWidth + '%';
+
+  const fillPct = Math.min(100, (total / max) * 100);
+  fillEl.style.width = fillPct + '%';
+
+  valEl.textContent = total + ' words';
+  valEl.classList.remove('under', 'good', 'over');
+  fillEl.classList.remove('good', 'over');
+
+  if (total < goodMin) {
+    valEl.classList.add('under');
+    hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.';
+  } else if (total <= goodMax) {
+    valEl.classList.add('good');
+    fillEl.classList.add('good');
+    hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.';
+  } else {
+    valEl.classList.add('over');
+    fillEl.classList.add('over');
+    hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.';
+  }
+}
+
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  const q1 = get('q1');
+  const q2 = get('q2');
+  const q3 = get('q3');
+  const q4 = get('q4');
+  return {
+    case_study: 2,
+    case_study_title: "Telling My Story Is Risky -- Ngozi Okonjo-Iweala and the Cost of Leading, Nigeria 2012",
+    journey: "Leading Self in the Age of AI",
+    course: "Course 2 -- Resilience Under Sustained Transformation Pressure",
+    outcomes_assessed: ["LO3", "LO4", "LO5_partial"],
+    answers: { q1, q2, q3, q4 },
+    word_counts: {
+      q1: countWords(q1),
+      q2: countWords(q2),
+      q3: countWords(q3),
+      q4: countWords(q4),
+      total: countWords(q1) + countWords(q2) + countWords(q3) + countWords(q4),
+    },
+  };
+}
+
+function submitCaseStudy() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 300) {
+    warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Below 300 sits outside the range.';
+  } else if (total > 500) {
+    warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Above 500 sits outside the range.';
+  }
+  if (!confirm("Submit Case Study 2: Telling My Story Is Risky?\n\nThis closes the Combined Case Studies component for the Leading Self in the Age of AI Journey. Both case studies (Nadella and Okonjo-Iweala) are marked together as one component, weighted 30% of your competence pass alongside the Combined Capstone (50%) and the Practicals Portfolio (20%)." + warning + "\n\nProceed?")) return;
+  console.log("Case Study 2 payload:", data);
+  alert("Case Study 2 received. The Combined Case Studies component is now ready for assessor review. (In production, this POSTs to /api/case-studies/submit with case_study = 2)");
+}
+
+recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

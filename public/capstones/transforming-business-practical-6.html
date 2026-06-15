@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Transformation Memo + Lessons Synthesis</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .capstone-badge { display: inline-block; background: rgba(245,200,66,0.4); border: 1px solid var(--gold); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 700; color: var(--plum); letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Capstone callout - bold for Capstone Part B */
+  .capstone-callout { background: var(--plum); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; }
+  .capstone-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .capstone-icon svg { width: 18px; height: 18px; }
+  .capstone-callout-text .cc-tag { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .capstone-callout-text .cc-body { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.6; }
+
+  /* Memo card - five-section composition */
+  .memo-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .memo-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .memo-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .memo-section { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .memo-section { grid-template-columns: 1fr; gap: 8px; } }
+  .memo-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .memo-body { display: flex; flex-direction: column; gap: 6px; }
+  .memo-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .memo-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .memo-section textarea { min-height: 110px; font-size: 12px; padding: 10px 12px; }
+  .memo-tag { display: inline-block; font-size: 10px; font-weight: 700; color: var(--gold-dark); background: rgba(245,200,66,0.12); border: 1px solid rgba(245,200,66,0.4); border-radius: 12px; padding: 3px 10px; letter-spacing: 0.06em; text-transform: uppercase; align-self: flex-start; margin-bottom: 6px; }
+
+  /* Audience naming card */
+  .audience-card { background: rgba(74,59,140,0.06); border: 1.5px solid var(--purple-light); border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
+  .audience-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .audience-card-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .audience-card-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+  .audience-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .audience-grid { grid-template-columns: 1fr; } }
+  .field-block { display: flex; flex-direction: column; gap: 6px; }
+  .field-block label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* Lessons Synthesis - distinctive treatment */
+  .synthesis-card { background: linear-gradient(135deg, rgba(245,200,66,0.08) 0%, rgba(74,59,140,0.06) 100%); border: 2px solid var(--gold); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .synthesis-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; text-align: center; }
+  .synthesis-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); text-align: center; margin-bottom: 6px; }
+  .synthesis-q { font-size: 13px; font-weight: 500; color: var(--purple); text-align: center; margin-bottom: 16px; font-style: italic; }
+  .synthesis-helper { font-size: 12px; color: #555; line-height: 1.65; margin-bottom: 16px; padding: 14px 16px; background: rgba(255,255,255,0.5); border-radius: 8px; border-left: 3px solid var(--gold); }
+  .synthesis-card textarea { min-height: 140px; background: #fff; border-color: var(--field-border); }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .memo-card, .memo-section, .synthesis-card { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .memo-card, .synthesis-card { padding: 20px 16px; }
+    .memo-section { padding: 16px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Transformation Memo + Lessons Synthesis</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Transforming Business with AI</div>
+    <div class="practical-badge">Week 6 · Practical 6 of 6</div>
+    <div class="capstone-badge">Capstone Part B</div>
+  </div>
+  <h1 class="header-title">The Transformation <em>Memo</em></h1>
+  <p class="header-desc">A five-section memo for one named executive sponsor. Vision (with the 24-hour recall data from Week 3). Resistance map (categorised, with category-matched moves from Week 4). System reset moves (drift-heatmap derived, from Week 5). Operating cadence (the five rhythms). Executive ask (specific, time-bound). Sendable as is. Plus the Lessons Synthesis paragraph -- the pattern across the six practicals that you did not see clearly in Week 1. This Practical and Capstone Part B are the same artefact. Triggers the second 7,000-point Module 2 payout.</p>
+</div>
+
+<div class="content">
+
+  <!-- CAPSTONE CALLOUT -->
+  <div class="capstone-callout">
+    <div class="capstone-icon">
+      <svg viewBox="0 0 18 18" fill="none"><path d="M9 1L11.5 6.5L17 7.5L13 11.5L14 17L9 14.5L4 17L5 11.5L1 7.5L6.5 6.5L9 1Z" fill="#1A1726" stroke="#1A1726" stroke-width="0.8" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="capstone-callout-text">
+      <div class="cc-tag">Capstone Part B · Week 6 · Closes the Combined Capstone</div>
+      <div class="cc-body">This Memo is also Part B of your Combined Capstone -- the operating document that holds the work together after the Connection Blueprint has built the buy-in. Both parts are weighted equally within the 50% Capstone allocation. Write this once. Write it for the named executive. Write it as if you are about to send it.</div>
+    </div>
+  </div>
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The Memo is sendable -- the named executive could read it and act on it without asking you for context.</li>
+      <li>The vision section is the version that survived the 24-hour recall test, not the version that lands well in slides.</li>
+      <li>The resistance map distinguishes the four categories (informed risk / fear / identity / political) and names a category-matched move for each significant resister -- no 'manage resistance' generic line.</li>
+      <li>The reset moves address cause not symptom. Cause-fix can be checked by a peer; symptom-fix dresses up escalation as reset.</li>
+      <li>The executive ask has a specific decision, a specific date, and a specific consequence of inaction.</li>
+      <li>The Lessons Synthesis names a pattern the practitioner did not see in Week 1 -- not professional-development reflection.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Name the executive sponsor -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Name the Executive Sponsor</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the five sections, name the audience. The Memo is written for one specific executive sponsor -- ideally the same audience as the Connection Blueprint in Week 2, so the Capstone Parts A and B form a connected arc. If the audience has changed (because the executive transitioned, or because the Memo is going one level higher than the Blueprint), name that explicitly -- the assessor needs to see the through-line between Part A and Part B.</p>
+
+    <div class="audience-card">
+      <div class="audience-card-label">The Executive Sponsor</div>
+      <div class="audience-card-q">Who is this Memo written for?</div>
+      <div class="audience-card-helper">Name and role. Whether they are the same audience as the Connection Blueprint in Week 2 -- and if not, why the audience has shifted.</div>
+      <div class="audience-grid">
+        <div class="field-block">
+          <label>Sponsor -- Role and Name</label>
+          <input type="text" name="sponsor_role" placeholder="Group CFO -- M. Daniels (same audience as the Connection Blueprint in Week 2)">
+        </div>
+        <div class="field-block">
+          <label>Same as Capstone Part A? Note any shift</label>
+          <input type="text" name="audience_continuity" placeholder="Same audience. The Memo extends the arc: Blueprint built the buy-in for redrafting the regulator submission; the Memo is the operating document for what comes after.">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The five-section Memo -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Write the Five Sections</div>
+      </div>
+    </div>
+    <p class="step-desc">Write the Memo as if you are about to send it to the named sponsor this afternoon. Each section is short -- the whole Memo is 800 to 1,000 words. The five sections are sequential. Vision before Resistance. Resistance before Reset. Reset before Cadence. Cadence before Ask. The order is the operating logic of the transformation -- it is also the order the sponsor's eye will travel down the page.</p>
+
+    <div class="memo-card">
+      <div class="memo-card-label">The Transformation Memo</div>
+      <div class="memo-card-sub">Five sections · in order · written for one named executive · sendable as is · 800-1,000 words total</div>
+
+      <div class="memo-section">
+        <div class="memo-num">01</div>
+        <div class="memo-body">
+          <span class="memo-tag">Drawing on Week 3</span>
+          <div class="memo-name">Vision</div>
+          <div class="memo-helper">The vision sentence as it actually survived 24-hour recall by team members in Week 3 -- not the version that read well in your draft. Plus one or two sentences of context for the sponsor: which version of the vision the team is now carrying, and why the recall data matters to the executive ask later in the Memo.</div>
+          <textarea name="memo_vision" placeholder="The vision the team is now carrying, after three rounds of 24-hour recall testing in Week 3, is: 'Every customer who calls us gets through fast -- with a real person available the moment they ask.' Sixteen words. The sentence is portable across the four organisational layers (Group exec, country GMs, branch managers, frontline). The element that did not survive recall in any test was the operational target ('60% AI-handled by FY26'). The element that did survive in every test was the customer-facing commitment ('a real person available'). This is the version carrying through to the regulator submission and the Q3 board narrative. The shift matters for the executive ask: the operational target lives in the dashboard, not in the vision."></textarea>
+        </div>
+      </div>
+
+      <div class="memo-section">
+        <div class="memo-num">02</div>
+        <div class="memo-body">
+          <span class="memo-tag">Drawing on Week 4</span>
+          <div class="memo-name">Resistance Map</div>
+          <div class="memo-helper">The four categories (informed risk / fear / identity / political), with the most significant resister named in each category that applies and a category-matched move named for each. At least one resistance must be identified as informed risk and treated as a signal, not a blocker. No 'manage resistance' generic line.</div>
+          <textarea name="memo_resistance" placeholder="Four categories, three currently relevant. Informed risk: the Chief Compliance Officer (C). The 3.4x conduct-complaint differential between AI-handled and human-handled cases is data she has been carrying for nine weeks; the category-matched move is to invite her brief to the rollout team as a working document, not a sign-off. The complaint differential is now a Programme metric. Identity: the Group Risk Director, raising model-explainability for six steering committees. Read currently is identity (defending discipline relevance) but the Resistance Reframe Practical surfaced an alternative read of informed risk on model risk management requirements. The category-matched move is the conversation booked for week one of Q3 with the same operational design as the C conversation. Political: the vendor account director, who has been talking directly to the CEO for three weeks on a roadmap acceleration. Category-matched move: the meeting on Friday with CCO in the room, which has now happened, and the procurement re-do with vendor commitments tied to regulator timeline. Fear is currently not the dominant category in the rollout's senior resistance pattern -- a finding, not an absence."></textarea>
+        </div>
+      </div>
+
+      <div class="memo-section">
+        <div class="memo-num">03</div>
+        <div class="memo-body">
+          <span class="memo-tag">Drawing on Week 5</span>
+          <div class="memo-name">System Reset Moves</div>
+          <div class="memo-helper">The reset moves derived from the Drift Heatmap. Most-drifted rhythm named, cause named, the reset move named with operational specificity. Address cause not symptom -- not 'more meetings', not 'longer agendas', not 'harder targets'.</div>
+          <textarea name="memo_reset" placeholder="The most-drifted rhythm in the past 60 days is Reset Trigger -- red. The system has been running on the original 14-month plan with reset triggered only by external crisis (the regulator move, the vendor pressure, the C conversation). The cause is the absence of a scheduled question -- 'is the plan still the plan?' -- in any of the existing operating rhythms. The reset move: a standing 30-minute item in the first steering committee of every quarter -- 'Plan Reality Check' -- with a written paper from the Programme Director and a written sign-off (or trigger-reset call) from the Steering Committee Chair. Booked for Tuesday 1 July, 09:00. The success measure for 30 days from that date: the Reality Check has run, with documented sign-off, and at least one item has been flagged for plan adjustment that was not surfacing through normal escalation -- which would confirm the rhythm is producing what it exists to produce, rather than running as theatre. Decision Cadence is amber and Communication Cadence is amber on outcome (green on process); both are downstream of the Reset Trigger fix and will be reassessed at the first Reality Check."></textarea>
+        </div>
+      </div>
+
+      <div class="memo-section">
+        <div class="memo-num">04</div>
+        <div class="memo-body">
+          <span class="memo-tag">From the Drift Heatmap framework</span>
+          <div class="memo-name">Operating Cadence</div>
+          <div class="memo-helper">The five rhythms going forward -- not the past 60 days, but how the rhythms will be running over the next 90 days. Specific. Where each rhythm will sit (which meeting, who owns it). Where two of the rhythms have changed.</div>
+          <textarea name="memo_cadence" placeholder="Going-forward cadence over the next 90 days. Decision Cadence: weekly steering committee, with decisions documented in writing and a 30-day decisions ledger maintained by the Programme Director (new -- closes the slip-from-meeting-to-meeting drift). Communication Cadence: monthly cascading briefing pack from Group exec to country to branch to frontline, with a quarterly recall-test sample at branch level (new -- introduces outcome-evidence to a rhythm that has been measured on process). Escalation Discipline: existing rhythm holds (currently green) -- standing escalation review at fortnightly working group, with the C conversation establishing the precedent for treating informed-risk escalation as data rather than blocker. Learning Cadence: existing rhythm holds (currently amber) -- existing post-phase reviews continue, with one structural change: Reality Check items get fed forward into the next phase scope, not just logged. Reset Trigger: new -- the standing Plan Reality Check, as detailed in section 3."></textarea>
+        </div>
+      </div>
+
+      <div class="memo-section">
+        <div class="memo-num">05</div>
+        <div class="memo-body">
+          <span class="memo-tag">The Ask</span>
+          <div class="memo-name">Executive Ask</div>
+          <div class="memo-helper">Specific decision. Specific date. Specific consequence of inaction. Sendable. The sponsor should be able to read this and know what they are being asked to decide, by when, and what changes for them if they do or do not act.</div>
+          <textarea name="memo_ask" placeholder="Two asks. (1) Confirm by 30 May that the Plan Reality Check standing item joins the Q3 steering committee agenda from 1 July onwards -- with the Steering Committee Chair (currently you) signing off the paper format and the trigger-reset call. If I do not have your confirmation by 30 May, the standing item is added by Programme Director note and runs without your formal sign-off, which weakens the rhythm at the first turn. (2) Confirm by 13 June whether the recall-test sample at branch level (introduced in the cadence section) sits within Group Comms or within the Programme. My recommendation is the Programme, because the test feeds the vision section of future Memos -- but the call is yours. If decision (2) does not land by 13 June, the first recall test runs out of the Programme by default, and we revisit at the first Reality Check on 1 July."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: AI Integration section -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">The AI Integration Section</div>
+      </div>
+    </div>
+    <p class="step-desc">The Capstone AI Integration section is part of the Memo submission. Pick one Digital Edge exercise output from the six weekly prompts -- the one whose pressure-test produced a real change in your thinking, not the one whose output was easiest to use. Then name what you kept, what you rejected, and why. Evaluative judgement, not adoption. The section can sit as an appendix to the Memo or be referenced inside it -- but the assessor needs to see judgement, not summary.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Exercise Selected</div>
+        </div>
+        <div class="substep-body">Which Digital Edge exercise -- the week, the prompt, what it tested.</div>
+        <textarea name="ai_exercise" placeholder="Week 4 Resistance Reframe pressure-test on the C reframe. The prompt asked AI to test whether the recategorisation from fear to informed risk was the genuinely correct read or the most flattering. AI pushed back -- the same evidence could support political resistance (C positioning for the Group Risk Director role). I did not switch the category, but I added a political adjacency note that reshaped the matched move."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What I Kept · Rejected · Why</div>
+        </div>
+        <div class="substep-body">Evaluative judgement. Including any AI suggestion you overrode -- and why.</div>
+        <textarea name="ai_judgement" placeholder="Kept: the recommendation to acknowledge the political adjacency in Stage 3 of the Reframe. The honesty was rigour-improving. Rejected: AI's suggestion to recategorise to political. The behavioural pattern (consistent technical objection, brief interventions, regulator-aware framing) does not fit political resistance, which would have been positional. The override matters because letting AI 'win' on the recategorisation would have produced a category-matched move (challenge the political move) that would have damaged the conversation with C. The judgement that mattered was: AI surfaced the adjacency I had missed; AI did not have the room-reading data to make the primary call."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4: The Lessons Synthesis -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">The Lessons Synthesis</div>
+      </div>
+    </div>
+    <p class="step-desc">The Synthesis is one paragraph that names the pattern across the six practicals -- something you did not see clearly in Week 1. Not professional-development reflection ('I learned to listen better'). Not a summary of each Practical. The pattern. The thing that integrated across the Door Practice, the Connection Blueprint, the Vision Sentence, the Resistance Reframe, the Drift Heatmap, and the Memo -- that you would not have written this way before the Journey began.</p>
+
+    <div class="synthesis-card">
+      <div class="synthesis-label">Lessons Synthesis</div>
+      <div class="synthesis-title">What pattern do you see across the six practicals?</div>
+      <div class="synthesis-q">A pattern you did not see in Week 1 -- not a summary, not generic reflection.</div>
+      <div class="synthesis-helper">A peer reading the Synthesis should be able to see the pattern as a real shift, not as polished language. If the paragraph could have been written in Week 1, the pattern is not yet integrated. If it names something the practitioner has now recognised across multiple weeks of work, it is.</div>
+      <textarea name="lessons_synthesis" placeholder="The pattern across the six practicals: every framework I learned this Journey was a discipline for treating ambiguous behaviour as data. The Door Practice treats the room as data the meeting agenda has not yet integrated. The Connection Blueprint treats the executive's unstated priority as data the Position section has to anchor to. The Vision Sentence Test treats the listener's reframing as data the original sentence had failed to capture. The Resistance Reframe treats consistent objection as data the Programme has been hearing as noise. The Drift Heatmap treats process-evidence as masking outcome-evidence. The Memo treats the AI override as data about the limits of AI judgement. Six weeks ago I would have written about each of these as a different leadership challenge. They are not different challenges. They are the same discipline -- read the signal as data before forcing it into the category your default frame already had ready -- applied across six different rooms. That discipline is the actual capability. Everything else was scaffolding."></textarea>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Memo Before You Send</h2>
+    <p class="ai-activity-desc">Transformation Memos fail in two predictable places -- the Memo reads as a status update with sections (vision-update, resistance-update, reset-update) rather than as one operating document, and the executive ask is dressed-up awareness rather than a real decision request. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether the Five Sections Read as One Memo</div>
+          <div class="ai-step-body">Ask AI to test whether the sections form a connected operating document or six exercises stapled together.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am submitting a five-section Transformation Memo for an executive sponsor: vision, resistance map, system reset moves, operating cadence, executive ask. The Memo is: [paste]. Pressure-test on three criteria. (1) Reading the Memo top to bottom, do the five sections build on each other -- does the resistance map reference the vision, does the reset reference the resistance, does the cadence reference the reset, does the ask reference the cadence -- or do the sections sit beside each other without connection? (2) If a sponsor read only the executive ask without the rest of the Memo, would they understand what they are being asked to decide and why? (3) Are there any sentences in the Memo that could have been written in Week 1 -- before the Practicals data existed -- which would suggest the sections have not actually drawn on the weekly work? Tell me where the Memo is six exercises rather than one document, and where it could be tightened.</div>
+      <div class="prompt-label" style="margin-top:12px">Where does the Memo not yet read as one document?</div>
+      <textarea class="ai-field" placeholder="AI flagged that section 4 (Operating Cadence) was not referencing section 3 (Reset Moves) tightly enough -- I had described the going-forward cadence in general terms when section 3 had already named the standing Reality Check as the new mechanism. Rewrote section 4 to lead with 'Going-forward cadence over the next 90 days incorporates the Reality Check from section 3 and adds two outcome-evidence rhythms.' AI also confirmed the executive ask references the cadence and the cadence references the reset -- the through-line is now visible. The Memo reads as one document, not five sections labelled in a row."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Lessons Synthesis for Pattern, Not Reflection</div>
+          <div class="ai-step-body">Ask AI to test whether the Synthesis names a real cross-practical pattern or a generic professional development paragraph.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My Lessons Synthesis paragraph reads: [paste]. Pressure-test on three criteria. (1) Could this paragraph have been written in Week 1 of the Journey, before any of the practicals were complete -- with the words 'I am about to learn' replacing 'I learned'? If yes, it is not a Synthesis, it is a learning intention. (2) Does the paragraph reference at least three of the six practicals by their actual content (the Door Practice room reading, the Connection Blueprint audience match, the Vision Sentence recall, the Resistance Reframe categorisation, the Drift Heatmap rhythm scoring, the Memo AI integration), or does it stay at 'I learned to listen, plan, and reflect'? (3) Is the pattern the practitioner names something a reader would not have predicted from the Journey title alone -- something specific about how the six pieces of work integrated -- or is it a paraphrase of the Journey description? Tell me where the Synthesis is reflection, not pattern.</div>
+      <div class="prompt-label" style="margin-top:12px">Where is the Synthesis reflection rather than pattern? What is the rewritten version?</div>
+      <textarea class="ai-field" placeholder="AI's first push: the Synthesis used the word 'data' six times, which read as a buzzword unless tied to the specific practicals. Rewrote with a direct line per practical -- 'the Door Practice treats the room as data the meeting agenda has not yet integrated' etc. AI's second push: the closing line ('that discipline is the actual capability') was tidy but generic. Rewrote to: 'That discipline is the actual capability. Everything else was scaffolding.' The second sentence makes the claim sharper -- and it is the line a peer reading the Synthesis would either agree with or push back on, which is what the Synthesis is for."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the Memo's reset moves have run for two quarters and the Reality Check has been at risk of theatre at least once, which section of this Memo will have aged worst -- and which will have held? And what does that prediction say about which discipline you have actually integrated versus which is still scaffolding?</div>
+    <textarea placeholder="The section most likely to age worst is the operating cadence -- specifically the recall-test sample at branch level. Rhythms with new mechanisms that depend on someone outside the Programme owning them are the most fragile, because the moment the owner gets pulled onto another priority the rhythm goes back to process-evidence. The section most likely to hold is the resistance map, because the four-category discipline is now portable to any new resistance that lands in the operating environment -- it is no longer an artefact, it is a habit. That prediction tells me the discipline I have integrated is resistance categorisation; the discipline still partly scaffolded is rhythm design that holds when ownership transfers. The next iteration of the Memo, in two quarters, should make rhythm ownership the harder section."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Transformation Memos fall apart at the same place every time -- the five sections sit beside each other rather than building on each other, and the Synthesis is reflection-language rather than pattern-language. A peer who has written their own Memo can hear both at the same speed an assessor will. This is the Capstone Part B submission -- it triggers the second 7,000-point payout. Bring it to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read out the executive ask first -- before any of the other sections. Ask your peer whether they understand what is being asked, by when, and what changes if it does not happen. If they cannot answer all three from the ask alone, the ask is not yet sendable. Then read the Lessons Synthesis. If your peer's first reaction is 'this could have been written in Week 1' -- it is reflection, not pattern. If they say 'this names something specific that I have to push back on or agree with' -- it is pattern, and the Synthesis is doing its work.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The five sections -- if you covered up the section labels, could your peer still tell which section was which from the language alone? If sections 3 and 4 sound interchangeable, the operating logic has not yet landed.</li>
+      <li>The executive ask -- if your peer pretended to be the named sponsor, would they reply 'I understand the decision' or would they reply 'I need more context first'? If the second, the ask is not yet sendable.</li>
+      <li>The Lessons Synthesis -- can your peer state the pattern back to you in one sentence using their own words? If they can, the pattern is integrated. If they have to quote you, the pattern is still language, not yet a discipline.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    sponsor: {
+      role: get('sponsor_role'),
+      continuity: get('audience_continuity')
+    },
+    memo: {
+      vision: get('memo_vision'),
+      resistance: get('memo_resistance'),
+      reset: get('memo_reset'),
+      cadence: get('memo_cadence'),
+      ask: get('memo_ask')
+    },
+    ai_integration: {
+      exercise: get('ai_exercise'),
+      judgement: get('ai_judgement')
+    },
+    lessons_synthesis: get('lessons_synthesis')
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const requiredFields = [
+    data.sponsor.role, data.sponsor.continuity,
+    data.memo.vision, data.memo.resistance, data.memo.reset, data.memo.cadence, data.memo.ask,
+    data.ai_integration.exercise, data.ai_integration.judgement,
+    data.lessons_synthesis
+  ];
+  const filled = requiredFields.filter(v => v && String(v).trim().length > 0).length;
+  const total = requiredFields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 6 (also Capstone Part B)? Once submitted, you can still edit until end of Week 6. After Week 6 closes, the submission is locked and triggers your second 7,000-point Module 2 payout, completing the Combined Capstone.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W6_CAPSTONE_B)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

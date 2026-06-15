@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part B: Resilience Action Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+  .capstone-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 14px; line-height: 1.5; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 110px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+  @media (max-width: 600px) { .two-col { grid-template-columns: 1fr; } }
+
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 20px; }
+  @media (max-width: 720px) { .three-col { grid-template-columns: 1fr; } }
+
+  .sub-q { margin-bottom: 16px; }
+  .sub-q-label { font-size: 13px; font-weight: 600; color: var(--plum); margin-bottom: 8px; }
+
+  /* Element 1: What good looks like card */
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  /* Element 2: Section number row with Outcome tag */
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* Element 3: Assessor Lens block (learner-facing criteria) */
+  .assessor-lens { background: #fff; border: 1.5px solid var(--gold); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .assessor-lens-header { padding: 18px 24px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; }
+  .assessor-lens-header:hover { background: rgba(245,200,66,0.04); }
+  .assessor-lens-header-text { flex: 1; }
+  .assessor-lens-tag { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .assessor-lens-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .assessor-lens-toggle { font-size: 13px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .assessor-lens-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .assessor-lens.open .assessor-lens-toggle::after { transform: rotate(180deg); }
+  .assessor-lens-body { display: none; padding: 0 24px 24px; border-top: 1px solid var(--border); }
+  .assessor-lens.open .assessor-lens-body { display: block; }
+  .assessor-lens-intro { font-size: 13px; color: #666; line-height: 1.65; margin: 16px 0 18px; font-style: italic; }
+  .criterion-block { margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .criterion-block:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .criterion-name { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px; letter-spacing: 0.04em; }
+  .criterion-outcome { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .criterion-desc { font-size: 13px; color: #444; line-height: 1.65; }
+
+  /* Shame pattern selector -- one of the three named patterns */
+  .shame-selector { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; margin-bottom: 18px; }
+  .shame-selector-label { font-size: 12px; font-weight: 600; color: var(--plum); margin-bottom: 4px; }
+  .shame-selector-hint { font-size: 11px; color: #888; line-height: 1.5; margin-bottom: 12px; font-style: italic; }
+  .shame-options { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  @media (max-width: 720px) { .shame-options { grid-template-columns: 1fr; } }
+  .shame-option { background: #fff; border: 1.5px solid var(--field-border); border-radius: 8px; padding: 10px 12px; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+  .shame-option:hover { border-color: var(--purple-light); }
+  .shame-option input[type="radio"] { display: none; }
+  .shame-option label { display: block; cursor: pointer; }
+  .shame-option-name { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px; }
+  .shame-option-desc { font-size: 11px; color: #666; line-height: 1.5; }
+  .shame-option:has(input:checked) { border-color: var(--gold); background: rgba(245,200,66,0.08); }
+
+  /* Three legs of the stool */
+  .stool-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 16px; }
+  @media (max-width: 720px) { .stool-grid { grid-template-columns: 1fr; } }
+  .leg { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .leg-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 22px; color: var(--gold-dark); line-height: 1; margin-bottom: 4px; }
+  .leg-name { font-size: 12px; font-weight: 700; color: var(--purple); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+  .leg textarea { background: #fff; min-height: 90px; font-size: 12px; }
+
+  /* Digital Edge card */
+  .digital-edge-card { background: linear-gradient(135deg, #0F1F16 0%, #14342A 100%); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; color: #fff; }
+  .digital-edge-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .digital-edge-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 8px; }
+  .digital-edge-meta { font-size: 12px; color: #4ADE80; margin-bottom: 16px; font-weight: 600; }
+  .digital-edge-meta a { color: #A7F3D0; text-decoration: underline; }
+  .digital-edge-why { font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 18px; line-height: 1.7; font-style: italic; padding-left: 12px; border-left: 2px solid rgba(74,222,128,0.4); }
+  .digital-edge-prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+  .digital-edge-prompt-box { background: rgba(0,0,0,0.4); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 14px 16px; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; margin-bottom: 16px; }
+  .digital-edge-instructions { font-size: 12px; color: rgba(255,255,255,0.65); line-height: 1.6; }
+  .digital-edge-instructions strong { color: #4ADE80; }
+
+  /* AI reflection block */
+  .ai-reflection { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-reflection-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-reflection-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-reflection-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-reflection-q { margin-bottom: 18px; }
+  .ai-reflection-q-label { font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px; }
+  .ai-reflection-q-hint { font-size: 12px; color: rgba(255,255,255,0.55); margin-bottom: 8px; font-style: italic; }
+  .ai-reflection textarea { background: rgba(255,255,255,0.06); border-color: rgba(45,122,79,0.4); color: #fff; min-height: 90px; }
+  .ai-reflection textarea:focus { border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-reflection textarea::placeholder { color: rgba(255,255,255,0.3); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .section-card, .ai-reflection, .digital-edge-card, .peer-prep { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .section-card, .ai-reflection, .digital-edge-card { padding: 20px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Resilience Action Plan</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Leading Self in the Age of AI</div>
+  <h1 class="header-title">Resilience <em>Action</em> Plan</h1>
+  <p class="header-desc">Six weeks of inner work made operational. What you've been carrying. Where it lives in you. The trigger map you'll run under pressure. The accountability partner with concrete cadence. And one line about the leader you are becoming. The Plan that holds across years -- not weeks.</p>
+  <div class="capstone-callout">Capstone Part B · Closes the Journey</div>
+</div>
+
+<div class="content">
+
+  <!-- ELEMENT 1: What good looks like -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Resilience Action Plan that holds up to BQA scrutiny.</div>
+    <ul class="standard-list">
+      <li>The shame pattern is named (earned-place / should-have-known / cost-of-leading) and distinguished from guilt -- not described in your own framework, named in the Course 2 framework.</li>
+      <li>What you're carrying is specific and honest -- and lives somewhere in the body you can name, not "I get stressed."</li>
+      <li>The Trigger Map is production-ready -- usable in 30 seconds under pressure, with recent evidence it has worked.</li>
+      <li>All three legs of the stool are operationalised -- mindset work, deliberate trigger response, accountability partner -- with the partner ask already made.</li>
+      <li>The Digital Edge AI work shows what you applied AND what you critically rejected -- evaluative judgement, not deference.</li>
+    </ul>
+  </div>
+
+  <!-- SECTION 1: What I Am Carrying -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 01</div>
+      <div class="outcome-tag">Outcome 3 · Shame literacy</div>
+    </div>
+    <h2 class="section-title">What I Am Carrying</h2>
+    <div class="section-prompt">Name what you have been carrying that started before this transformation work -- using the framework from Course 2.</div>
+    <div class="section-hint">Three patterns of shame interfere with sustained leadership effectiveness. Identify which one is in play, then name what specifically you've been carrying. The framework is doing the work; trust it.</div>
+
+    <div class="shame-selector">
+      <div class="shame-selector-label">Which shame pattern is primarily in play?</div>
+      <div class="shame-selector-hint">From The Anatomy of Shame. Name the primary one. If two are at play, you'll have a chance to note that below.</div>
+      <div class="shame-options">
+        <div class="shame-option">
+          <input type="radio" name="shame_pattern" id="earned-place" value="earned-place">
+          <label for="earned-place">
+            <div class="shame-option-name">Earned-place</div>
+            <div class="shame-option-desc">"I don't really belong here. They'll find out." Surfaces in rooms where you've earned your seat but feel you have to keep proving it.</div>
+          </label>
+        </div>
+        <div class="shame-option">
+          <input type="radio" name="shame_pattern" id="should-have-known" value="should-have-known">
+          <label for="should-have-known">
+            <div class="shame-option-name">Should-have-known</div>
+            <div class="shame-option-desc">"A leader at my level shouldn't have to ask this." Surfaces around gaps in knowledge or experience -- especially in fast-moving areas like AI.</div>
+          </label>
+        </div>
+        <div class="shame-option">
+          <input type="radio" name="shame_pattern" id="cost-of-leading" value="cost-of-leading">
+          <label for="cost-of-leading">
+            <div class="shame-option-name">Cost-of-leading</div>
+            <div class="shame-option-desc">"I should be able to handle this without it costing me." Surfaces around the toll of difficult decisions, lonely calls, and the impact on relationships.</div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <textarea name="section_01_carrying" placeholder="The conviction that I have to over-prepare for senior meetings because if I'm caught not knowing something, the room will conclude I shouldn't be there. A should-have-known pattern that's been running since I was promoted into the leadership track 5 years ago. The cost: I'm carrying twice the prep load of my peers and burning out faster. The harder version, only naming this now: I haven't admitted out loud that this is the pattern -- partly because admitting it would mean I've been operating from this place for years."></textarea>
+  </div>
+
+  <!-- SECTION 2: Where It Lives -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 02</div>
+      <div class="outcome-tag">Outcome 3 · The body as data</div>
+    </div>
+    <h2 class="section-title">Where It Lives</h2>
+    <div class="section-prompt">Patterns that have been running for years live somewhere in the body. The body is data. Where in your body does this carrying live, and what does it tell you?</div>
+    <div class="section-hint">Specific. Where, what sensation, when does it fire, when does it ease. Not "I get stressed" -- where in the body, what sensation.</div>
+    <div class="two-col">
+      <div class="sub-q">
+        <div class="sub-q-label">Where and what</div>
+        <textarea name="section_02_body_location" placeholder="Tightness across the upper chest, just below the collarbone -- like a band. Fires the morning of senior meetings, often before I'm even consciously thinking about them. Eases noticeably after the meeting is over, regardless of how it went."></textarea>
+      </div>
+      <div class="sub-q">
+        <div class="sub-q-label">What it's telling you</div>
+        <textarea name="section_02_body_message" placeholder="The body is registering threat in advance of the meeting -- before I know there's anything to be worried about. The conscious story is 'I'm prepared, I'll be fine.' The body story is 'we are about to walk into a room where you might be exposed.' Both are true. The body has been more honest with me than my own self-talk for years."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: Shame and Guilt -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 03</div>
+      <div class="outcome-tag">Outcome 3 · Shame distinguished from guilt</div>
+    </div>
+    <h2 class="section-title">Shame, Distinguished from Guilt</h2>
+    <div class="section-prompt">Why is what you named in Section 01 shame -- not guilt? And why does the distinction matter for how you lead?</div>
+    <div class="section-hint">Guilt: I did something wrong. Shame: something is wrong with me. Guilt can be repaired through action; shame requires renaming what you think is true about yourself. The distinction is the foundation of working with this honestly.</div>
+    <textarea name="section_03_shame_vs_guilt" style="min-height: 130px;" placeholder="If this were guilt, the message would be 'I made a mistake in last week's meeting' -- and I could repair it through action: better preparation, an apology, a follow-up. But the actual message is 'I am the kind of leader who shouldn't be in these rooms,' which is identity, not action. Guilt is repairable. Shame requires me to rename what I think is true about myself.
+
+The distinction matters for leadership because if I treat this as guilt, I'll keep trying to fix the feeling by working harder -- which is exactly what's been costing me. Treating it as shame means the fix isn't more preparation. The fix is naming the false belief underneath ('I shouldn't be here') and choosing not to lead from it. That's a structurally different move."></textarea>
+  </div>
+
+  <!-- SECTION 4: My Trigger Map -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 04</div>
+      <div class="outcome-tag">Outcomes 1+2 · Pattern + Application</div>
+    </div>
+    <h2 class="section-title">My Trigger Map</h2>
+    <div class="section-prompt">Pull forward the Trigger Map from Practical 5. The compressed, production-ready version -- the one you'd actually run under pressure.</div>
+    <div class="section-hint">Body signal → old action → pause point → deliberate alternative. Specific enough to use in 30 seconds. Then evidence: when has the Map worked recently?</div>
+    <div class="two-col">
+      <div class="sub-q">
+        <div class="sub-q-label">The Map (compressed)</div>
+        <textarea name="section_04_trigger_map" placeholder="Signal: chest tightness on senior meeting morning. Old action: over-prepare to the point of exhaustion, then over-explain in the room. Pause point: the trigger phrase 'I have a concern with...' from a senior leader -- one breath before responding. Alternative: 'That's a fair challenge -- let me address it directly,' then one specific answer, no caveats. If pushed twice: 'I hear you -- give me one minute to respond properly.'"></textarea>
+      </div>
+      <div class="sub-q">
+        <div class="sub-q-label">When it has worked recently</div>
+        <textarea name="section_04_evidence" placeholder="Last Wednesday's QBR. CFO challenged my AI vendor recommendation in front of the COO. Body signal fired before he finished the sentence. Caught the pause. Said 'That's a fair challenge -- the cost concern is real, here's how we've structured it...' One answer. He nodded and moved on. Old version of me would have given three caveats. This version gave one answer."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 5: My Accountability Partner -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 05</div>
+      <div class="outcome-tag">Outcomes 4+5 · Vulnerability as strategy</div>
+    </div>
+    <h2 class="section-title">My Accountability Partner</h2>
+    <div class="section-prompt">Who specifically is holding you accountable to this work going forward? What's the cadence? What's the truth-telling territory?</div>
+    <div class="section-hint">Vulnerability as strategy: not vulnerability everywhere, but vulnerability with one person about specific things. Real person. Real cadence. Real territory. Real ask -- already made, not hypothetical.</div>
+    <div class="two-col">
+      <div class="sub-q">
+        <div class="sub-q-label">Who and why them</div>
+        <textarea name="section_05_partner" placeholder="A peer Director from a different industry I met through a leadership programme three years ago. Not a colleague. She's done her own version of this work and earned the right to call me out -- I've watched her hold her own boundaries with senior leaders without folding. She has nothing to lose if I take feedback hard, which means she'll actually give it."></textarea>
+      </div>
+      <div class="sub-q">
+        <div class="sub-q-label">Cadence and status of the ask</div>
+        <textarea name="section_05_cadence" placeholder="Cadence: Tuesday voice note (30 seconds, what's on top, what I'm avoiding -- no reply expected). 45-minute call first Saturday of each month, 8am her time. Both in calendars.
+
+Status: ask was made via voice note last Wednesday. She agreed Friday with one condition -- we both reserve the right to pause it after three months if it's not working. First Saturday call is in 9 days."></textarea>
+      </div>
+    </div>
+    <div style="margin-top: 18px;">
+      <div class="sub-q-label">Truth-telling territory -- what specifically she hears about that no one else does</div>
+      <textarea name="section_05_truth_telling" placeholder="The moments my old pattern wins -- specifically when I let an AI-generated analysis stand in for my own judgement in a senior meeting because I didn't want to defend my view. That's the version I haven't said out loud to anyone. It's the should-have-known pattern using AI as cover. Naming it to her is the first move in catching it."></textarea>
+    </div>
+  </div>
+
+  <!-- SECTION 6: Three Legs of the Stool -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 06</div>
+      <div class="outcome-tag">Outcome 5 · Three integrated practices</div>
+    </div>
+    <h2 class="section-title">Three Legs of the Stool</h2>
+    <div class="section-prompt">Sustained leadership effectiveness requires three integrated practices. Not one. Not two. Show how all three are operationalised in your Plan going forward.</div>
+    <div class="section-hint">Distinction-level work has all three operational AND named with specifics. Below threshold has one or none. The stool only stands on three legs.</div>
+
+    <div class="stool-grid">
+      <div class="leg">
+        <div class="leg-num">01</div>
+        <div class="leg-name">Ongoing Mindset Work</div>
+        <textarea name="leg_mindset" placeholder="From the Mindset Action Plan (Capstone Part A). First Monday of each month, 8:00am, 30-min slot. Re-read the Plan. Note which alternative I ran, which I missed. One-line journal entry."></textarea>
+      </div>
+      <div class="leg">
+        <div class="leg-num">02</div>
+        <div class="leg-name">Deliberate Trigger Response</div>
+        <textarea name="leg_trigger" placeholder="From the Trigger Map (Section 04 above). Run on demand whenever the chest signal fires before a senior meeting. Body signal as the prompt. 30-second read of the compressed Map. Breath as the bridge between signal and response."></textarea>
+      </div>
+      <div class="leg">
+        <div class="leg-num">03</div>
+        <div class="leg-name">Accountability Partner</div>
+        <textarea name="leg_accountability" placeholder="From Section 05 above. Tuesday voice note + first Saturday monthly call. Truth-telling territory: moments the old pattern wins, especially around AI. Already in calendar; first call in 9 days."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 7: The Leader I Am Becoming -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 07</div>
+      <div class="outcome-tag">Synthesis · Six weeks distilled</div>
+    </div>
+    <h2 class="section-title">The Leader I Am Becoming</h2>
+    <div class="section-prompt">Six weeks of work distilled into one sentence. Then the why -- what changed in six weeks that makes this the sentence and not the one you'd have written in Week 1.</div>
+    <div class="section-hint">Not a corporate vision statement. Not aspirational. The sentence you'd say aloud to your accountability partner without flinching.</div>
+    <div class="two-col">
+      <div class="sub-q">
+        <div class="sub-q-label">The sentence</div>
+        <textarea name="section_07_sentence" placeholder="I am the leader who is learning to lead from the version of me that already belongs in the room, even when the old story is still loud."></textarea>
+      </div>
+      <div class="sub-q">
+        <div class="sub-q-label">Why this sentence now</div>
+        <textarea name="section_07_why" placeholder="At Week 1 the sentence would have been about confidence -- 'I'm becoming more confident.' This sentence is structurally different. Confidence was the symptom; the work was the renaming. The thing that changed: I stopped trying to fix the feeling and started naming the false belief underneath it. The body still tightens before senior meetings. The story it tells has changed."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 8: 90-Day Commitment -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 08</div>
+      <div class="outcome-tag">Forward commitment · 90 days</div>
+    </div>
+    <h2 class="section-title">90-Day Commitment</h2>
+    <div class="section-prompt">What specifically are you committing to in the 90 days after the Journey closes?</div>
+    <div class="section-hint">Three 30-day blocks. Each one with at least one concrete thing your accountability partner could check on. Not a wishlist -- an operating plan.</div>
+    <textarea name="section_08_commitment" style="min-height: 180px;" placeholder="Days 1-30: Run the three legs of the stool as designed. Tuesday voice notes weekly. First Saturday call. First Monday Mindset slot. Track: how many times the Trigger Map fired and worked vs. fired and I missed it. By Day 30, I can answer the question 'is this Plan operational, or am I performing it?'
+
+Days 31-60: First review with my manager -- I'll tell her about this Plan in our next 1:1 (Days 1-7) and review it with her at Day 30. By Day 60, I want her honest read on whether the patterns she's seen me run for years are visibly changing. If not, that's the data, and I revise.
+
+Days 61-90: First ask of the work. By Day 90, I will have used the new pattern in at least one moment that previously I would have ducked -- a board pitch, a difficult 1:1 with a senior peer, a real challenge from someone who outranks me. The Plan exists to make me reach for those moments instead of avoiding them. The 90-day question is whether I did."></textarea>
+  </div>
+
+  <!-- DIGITAL EDGE CARD (Week 6 -- adapted from Authority and Presence to Resilience architecture) -->
+  <div class="digital-edge-card">
+    <div class="digital-edge-tag">Digital Edge · AI Application</div>
+    <h2 class="digital-edge-title">Your 90-day Resilience plan from six weeks of work</h2>
+    <div class="digital-edge-meta">Week 6 standardised Digital Edge for this Capstone</div>
+    <div class="digital-edge-why">
+      Why this matters more than the Capstone itself: The Capstone is an input. A plan is an output. Practitioners finish programmes with notes, not plans. This is the conversion moment -- the prompt that takes everything (your Mindset Action Plan, your Trigger Map, your Accountability Brief, your peer reflections) and produces one page. Three 30-day blocks. The document you reference for the next 90 days.
+    </div>
+
+    <div class="digital-edge-prompt-label">The prompt (copy-paste into Claude, ChatGPT, or Gemini)</div>
+    <div class="digital-edge-prompt-box">You are a leadership coach. I'll paste four things below: my Mindset Action Plan (Capstone Part A), my Trigger Map (Practical 5), my Accountability Brief (Practical 6), and reflections from my peer sessions. Synthesise them into a one-page 90-day Resilience Plan organised as three 30-day blocks.
+
+For each 30-day block, name: (1) the one practice I'm building this block, (2) the one trigger response I'm reinforcing, (3) the one accountability move I'm making with my partner, (4) one observable measure that tells me whether this block is working.
+
+Use my language, not template language. Keep it shorter than I'll want it to be.
+
+Material: [paste Mindset Action Plan, Trigger Map, Accountability Brief, peer reflections]</div>
+
+    <div class="digital-edge-instructions">
+      <strong>How to apply this to your Capstone:</strong> Run the prompt with your Capstone Part A, your Practical 5, your Practical 6, and any peer session notes as input. Compare the AI's 90-day plan with what you wrote in Section 08 above. The four reflection questions below ask you to evidence your evaluative judgement -- this is Outcome 6 evidence, and the difference between distinction and pass is what you applied versus what you critically rejected.
+    </div>
+  </div>
+
+  <!-- AI REFLECTION (Outcome 6 evidence) -->
+  <div class="ai-reflection">
+    <div class="ai-reflection-tag">AI Integration · Outcome 6 evidence</div>
+    <h2 class="ai-reflection-title">Reflect on the Digital Edge Output</h2>
+    <p class="ai-reflection-desc">After running the Week 6 Digital Edge prompt above, answer these four questions. Distinction-level work demonstrates evaluative judgement -- shows what you applied AND what you critically rejected. The Capstone needs both.</p>
+
+    <div class="ai-reflection-q">
+      <div class="ai-reflection-q-label">01 · What did the AI surface that you hadn't written down?</div>
+      <div class="ai-reflection-q-hint">Something the prompt produced that you wouldn't have produced alone -- a structural reframe, a sequencing insight, a missing connection between practices.</div>
+      <textarea name="ai_surfaced" placeholder="The AI flagged that my 90-day plan as I wrote it (Section 08) front-loads everything in Days 1-30 and back-loads accountability in Days 61-90 -- which it identified as a pattern that would predict failure. Suggested re-ordering: accountability moves in Days 1-30 (highest commitment value when the Journey energy is freshest), trigger response reinforcement in Days 31-60, observable behaviour change in Days 61-90. That's a structural sequencing insight I would not have produced alone."></textarea>
+    </div>
+
+    <div class="ai-reflection-q">
+      <div class="ai-reflection-q-label">02 · What did you apply from the AI output to this Plan?</div>
+      <div class="ai-reflection-q-hint">Specific changes you made to your Capstone based on the AI version. Direct, concrete.</div>
+      <textarea name="ai_applied" placeholder="Two changes. First, I re-sequenced Section 08 so that the accountability partner conversations happen in Days 1-30, not Days 31-60 (the AI was right -- I'd buried the highest-leverage commitment in the middle block). Second, I added the 'observable measure' for each block, which I hadn't included in my draft. The Day-30 measure is now: how many Trigger Maps fired and worked vs. fired and I missed."></textarea>
+    </div>
+
+    <div class="ai-reflection-q">
+      <div class="ai-reflection-q-label">03 · What did you critically reject from the AI output?</div>
+      <div class="ai-reflection-q-hint">Where the AI version didn't land. Distinction-level work shows evaluative judgement.</div>
+      <textarea name="ai_rejected" placeholder="The AI suggested I add a Day-90 'integration session' with both my manager AND my accountability partner together, framed as a 360-style review. I rejected it. It would change the nature of the accountability relationship -- making my partner answerable to my manager's frame, not mine -- and it would also make my manager review my private resilience work, which is not her territory. The two relationships need to stay separate. Going with the original Day 60 manager check-in (her view of behaviour change) and Day 90 accountability partner review (separate, private)."></textarea>
+    </div>
+
+    <div class="ai-reflection-q">
+      <div class="ai-reflection-q-label">04 · What does this teach you about how to use AI in your inner-work and leadership going forward?</div>
+      <div class="ai-reflection-q-hint">One specific rule or discipline you're taking forward from the full six-week Journey.</div>
+      <textarea name="ai_rule" placeholder="The rule: AI is excellent at structural critique (sequencing, what's missing, what's overstated) and weak at relationship judgement. I'll use it as a structural sparring partner -- 'is this organised right, what's missing, what's the failure mode' -- but the relationship calls (who reviews what, who hears what, who holds what territory) stay mine. The 90-day plan is more honest because of the AI. The relationship boundaries are more honest because I held the line against it."></textarea>
+    </div>
+  </div>
+
+  <!-- ELEMENT 3: What the assessor is looking for (learner-facing criteria) -->
+  <div class="assessor-lens" id="assessorLens">
+    <div class="assessor-lens-header" onclick="document.getElementById('assessorLens').classList.toggle('open')">
+      <div class="assessor-lens-header-text">
+        <div class="assessor-lens-tag">Before you submit</div>
+        <div class="assessor-lens-title">What the assessor is looking for</div>
+      </div>
+      <div class="assessor-lens-toggle">View criteria</div>
+    </div>
+    <div class="assessor-lens-body">
+      <p class="assessor-lens-intro">The Combined Capstone (Part A + Part B) is marked against six criteria. The Resilience Action Plan you're submitting now closes the Combined Capstone -- evidencing four of the six criteria. Use this to self-check before submitting.</p>
+
+      <div class="criterion-block">
+        <div class="criterion-name">C3: Shame literacy</div>
+        <div class="criterion-outcome">Outcome 3 · evidenced in Sections 01, 02, 03</div>
+        <div class="criterion-desc">You name which shame pattern is in play (earned-place / should-have-known / cost-of-leading) and distinguish shame from guilt with specificity. The body section names where the carrying lives -- because the body is data. Distinction-level work is honest about which version of the pattern is actually in play, not the comfortable version.</div>
+      </div>
+
+      <div class="criterion-block">
+        <div class="criterion-name">C4: Vulnerability as strategy</div>
+        <div class="criterion-outcome">Outcome 4 · evidenced in Section 05</div>
+        <div class="criterion-desc">You name truth-telling territory specifically -- what you tell your accountability partner that you don't tell colleagues. Vulnerability is targeted (with one person, about specific things), not performative. The ask has been made -- not hypothetical.</div>
+      </div>
+
+      <div class="criterion-block">
+        <div class="criterion-name">C5: Three legs of the stool</div>
+        <div class="criterion-outcome">Outcome 5 · evidenced in Section 06</div>
+        <div class="criterion-desc">All three legs are operationalised -- ongoing mindset work, deliberate trigger response, accountability partner with cadence. Each leg is named with specifics. The Plan is genuinely sustainable, not aspirational.</div>
+      </div>
+
+      <div class="criterion-block">
+        <div class="criterion-name">C6: AI integration</div>
+        <div class="criterion-outcome">Outcome 6 · evidenced in the Digital Edge AI Reflection block</div>
+        <div class="criterion-desc">You ran the Week 6 Digital Edge prompt and reflected on what AI surfaced, what you applied, and what you critically rejected. The "rejected" question is where evaluative judgement is visible -- distinction-level work uses AI as a thinking partner, not a ghostwriter.</div>
+      </div>
+
+      <p class="assessor-lens-intro" style="margin-top: 18px;">The other two criteria (C1 Pattern recognition, C2 Application of alternatives) are evidenced in Capstone Part A submitted at end of Week 3. Both Parts are marked together as the Combined Capstone, weighted 50% of your competence pass.</p>
+    </div>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">The last peer conversation of the Journey.</h2>
+    <p class="peer-prep-sub">The Resilience Action Plan is the most synthesised piece of work you've produced. Polish can hide what's still loose. A peer who's worked through their own version can hear which parts are genuinely held together and which are stapled. The conversation is the test.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read Sections 01, 04, 05, and 07 aloud, in order. Then read the three legs in Section 06. Don't summarise -- read the actual content. The test is whether each section sounds like it belongs to the same person -- whether the carrying, the body, the trigger map, the partner, and the becoming sentence all hold together as one operating system.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The shame pattern you named -- is it the real one, or the one you were able to write about because you've already half-resolved it? What's the harder version you didn't quite name?</li>
+      <li>Of the three legs of the stool, which one is most likely to break first under pressure -- and what's the early warning sign you'll watch for?</li>
+      <li>The becoming sentence -- read it aloud once more. Did it sound like you, or did it sound like the version of you that finishes a leadership programme? If it's the second, what would the first version say instead?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  const getRadio = (name) => {
+    const el = document.querySelector('[name="' + name + '"]:checked');
+    return el ? el.value : '';
+  };
+  return {
+    section_01_shame_pattern: getRadio('shame_pattern'),
+    section_01_carrying: get('section_01_carrying'),
+    section_02_body_location: get('section_02_body_location'),
+    section_02_body_message: get('section_02_body_message'),
+    section_03_shame_vs_guilt: get('section_03_shame_vs_guilt'),
+    section_04_trigger_map: get('section_04_trigger_map'),
+    section_04_evidence: get('section_04_evidence'),
+    section_05_partner: get('section_05_partner'),
+    section_05_cadence: get('section_05_cadence'),
+    section_05_truth_telling: get('section_05_truth_telling'),
+    three_legs: {
+      mindset: get('leg_mindset'),
+      trigger: get('leg_trigger'),
+      accountability: get('leg_accountability'),
+    },
+    section_07_sentence: get('section_07_sentence'),
+    section_07_why: get('section_07_why'),
+    section_08_commitment: get('section_08_commitment'),
+    ai_integration: {
+      surfaced: get('ai_surfaced'),
+      applied: get('ai_applied'),
+      rejected: get('ai_rejected'),
+      rule: get('ai_rule'),
+    },
+  };
+}
+
+function submitCapstone() {
+  if (!confirm("Submit Capstone Part B: Resilience Action Plan?\n\nThis closes Course 2 (Resilience Under Sustained Transformation Pressure) and the Leading Self Journey overall. Once submitted, your Combined Capstone (Part A + Part B) is locked for assessor review alongside your Practicals Portfolio (20%) and Case Studies (30%).\n\nThe Combined Capstone carries 50% of your competence pass.")) return;
+  console.log("Capstone Part B payload:", collectFormData());
+  alert("Capstone Part B received. Combined Capstone (Part A + Part B) now ready for assessor review. (In production, this POSTs to /api/capstones/submit with submission_type = CAPSTONE_PART_B)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

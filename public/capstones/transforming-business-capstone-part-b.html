@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part B: The Transformation Memo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  .carry-note { background: rgba(74,59,140,0.06); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #444; line-height: 1.55; }
+  .carry-note strong { color: var(--purple); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 3px; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 160px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  .peer-prep { background: rgba(74,59,140,0.06); border: 1.5px solid rgba(74,59,140,0.2); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: #444; line-height: 1.65; margin-bottom: 16px; }
+  .peer-questions-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 13px; color: #2A2438; line-height: 1.65; padding: 8px 0 8px 24px; position: relative; border-bottom: 1px solid rgba(74,59,140,0.1); }
+  .peer-q-list li:last-child { border-bottom: none; }
+  .peer-q-list li::before { content: "?"; position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--purple); color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .peer-prep { break-inside: avoid; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .peer-prep { padding: 20px 18px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Capstone Part B · The Transformation Memo</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Transforming Business with AI</div>
+  <div class="case-eyebrow">Capstone Part B · Module 2 · Week 6 · Leading the Business Through AI-Era Change</div>
+  <h1 class="header-title">The <em>Transformation Memo</em></h1>
+  <div class="header-meta"><strong>A sponsor-facing operating memo written for one named executive sponsor. Five sections -- vision (with 24-hour recall data), resistance map (categorised), system reset moves, operating cadence (5 rhythms), executive ask -- plus the AI Integration section. The Memo must be sendable as is, with no further softening.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Construct and test a vision sentence), LO4 (Distinguish resistance categories), LO5 (Evaluate transformation system drift), LO6 (Integrate AI tools with judgement)</div>
+  <div class="header-meta"><strong>Word count:</strong> 800-1000 words total across all sections.</div>
+  <div class="case-callout">Capstone Part B of 2 · Combined Capstone = 50% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Memo sendable to a named executive sponsor -- vision tested, resistance categorised, reset moves named, cadence specific, ask explicit.</div>
+    <ul class="standard-list">
+      <li>The vision sentence in Section 1 is the version that survived 24-hour recall, not the version that lands well in slides.</li>
+      <li>The resistance map in Section 2 distinguishes the four categories explicitly -- informed risk, fear, identity, political -- with category-matched moves for each.</li>
+      <li>The system reset moves in Section 3 address cause, not symptom -- structural changes derived from the Drift Heatmap.</li>
+      <li>The operating cadence in Section 4 scores all five rhythms with specifics, identifies the most-drifted one, and names the reset move with named participants and dates.</li>
+      <li>The executive ask in Section 5 has a specific date, a specific decision required, and a specific consequence of inaction.</li>
+      <li>The AI Integration in Section 6 demonstrates evaluative judgement -- what was kept, what was rejected, why -- not uncritical adoption.</li>
+      <li>The Memo as a whole could be sent to the named executive sponsor without further softening.</li>
+    </ul>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all sections</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 800-1000 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 800-1000 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 01</div>
+      <div class="outcome-tag">Outcome 3 · Vision</div>
+    </div>
+    <h2 class="section-title">Vision -- with 24-hour recall data</h2>
+    <div class="section-prompt">State the transformation vision sentence (15-20 words maximum), then provide the 24-hour recall data from your three independent listeners in Practical 3. Include what each listener actually repeated back, what the data told you about the sentence's portability, and the revised version if revision was needed. The vision in this Memo is the version that survived recall.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Carry forward your vision sentence and 24-hour recall data from the Vision Sentence Test (Practical 3). The vision in the Memo is the recall-tested version, not the original draft.</div>
+    <div class="section-hint">The discipline is reporting the actual recall data, including failure to recall. A revised version that addresses the specific failure mode is stronger than an unrevised version that 'sort of' got through. The vision should be the one the team can carry, not the one that lands well in slides.</div>
+    <textarea name="s1" placeholder="Vision sentence (recall-tested version): ...
+
+24-hour recall data:
+  Listener 1 repeated back: ...
+  Listener 2 repeated back: ...
+  Listener 3 repeated back: ...
+
+What the data told me: ...
+Revised version (if needed): ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-160 words</span>
+      <span class="field-word-count" id="s1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 02</div>
+      <div class="outcome-tag">Outcome 4 · Resistance map</div>
+    </div>
+    <h2 class="section-title">Resistance map -- four categories with category-matched moves</h2>
+    <div class="section-prompt">Map the resistance you have encountered to this transformation across the four categories -- informed risk, fear, identity, political. For each category that is in play, name one specific resistance source (by role, situation, or pattern) and the category-matched move you are running for it. At least one resistance must be identified as informed risk and treated as a signal rather than a blocker.</div>
+    <div class="section-hint">The four categories produce structurally different resistance behaviours and require structurally different responses. Collapsing them into 'manage resistance' is the failure mode. For each category in play, the move named is specific to what that category requires -- not a general 'have a conversation'. Informed risk is the test of category discipline: it looks like resistance from the outside, but it is signal, and mishandling it is how transformations end up in regulatory or legal trouble.</div>
+    <textarea name="s2" placeholder="Informed risk:
+  Source: ...
+  Move: ...
+
+Fear:
+  Source: ...
+  Move: ...
+
+Identity:
+  Source: ...
+  Move: ...
+
+Political:
+  Source: ...
+  Move: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 150-190 words</span>
+      <span class="field-word-count" id="s2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 03</div>
+      <div class="outcome-tag">Outcome 5 · System reset moves</div>
+    </div>
+    <h2 class="section-title">System reset moves -- cause, not symptom</h2>
+    <div class="section-prompt">Name two or three system reset moves derived from the Drift Heatmap (Practical 5). Each move addresses the cause of the drift -- not a symptom. The moves are structural (a process change, a decision-rights reallocation, an escalation pathway redesign), not motivational gestures or ambition escalations.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Carry forward findings from the Drift Heatmap (Practical 5). The reset moves should address the most-drifted rhythm you identified, not escalate the original ambition.</div>
+    <div class="section-hint">The test of cause-versus-symptom: would the move still operate if the team's energy dropped? Structural moves do; motivational ones do not. Ambition escalation (more meetings, harder targets) is the most common failure mode and should be named explicitly if you are tempted toward it.</div>
+    <textarea name="s3" placeholder="Reset move 1:
+  What changes: ...
+  Cause it addresses: ...
+  Who is responsible: ...
+  By when: ...
+
+Reset move 2:
+  What changes: ...
+  Cause it addresses: ...
+  Who is responsible: ...
+  By when: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-160 words</span>
+      <span class="field-word-count" id="s3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 04</div>
+      <div class="outcome-tag">Outcome 5 · Operating cadence</div>
+    </div>
+    <h2 class="section-title">Operating cadence -- the five rhythms</h2>
+    <div class="section-prompt">Score the transformation operating system across the five rhythms -- decision cadence, communication cadence, escalation discipline, learning cadence, reset trigger -- as green/amber/red against observable evidence in the past 60 days. Identify the most-drifted rhythm and the specific reset action booked, including by when, with whom, and what success looks like in 30 days.</div>
+    <div class="section-hint">All five rhythms scored against observable evidence, not gut feel. The most-drifted rhythm is named honestly, including if it is uncomfortable to name. The reset action is in your calendar, with named participants -- not 'I will set up a meeting'. Success in 30 days is observable to someone other than you.</div>
+    <textarea name="s4" placeholder="Rhythm scores:
+  Decision cadence: ...
+  Communication cadence: ...
+  Escalation discipline: ...
+  Learning cadence: ...
+  Reset trigger: ...
+
+Most-drifted rhythm: ...
+
+Reset action booked:
+  What: ...
+  By when: ...
+  With whom: ...
+  Success at 30 days looks like: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-160 words</span>
+      <span class="field-word-count" id="s4Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 5 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 05</div>
+      <div class="outcome-tag">Outcome 5 · Executive ask</div>
+    </div>
+    <h2 class="section-title">Executive ask -- specific, time-bound, with a consequence</h2>
+    <div class="section-prompt">State the executive ask. The ask names the named executive sponsor, a specific decision required by a specific date, and the specific consequence of inaction. The Memo lives or dies on this section -- if the ask is generic, the Memo is information rather than a memo.</div>
+    <div class="section-hint">Three elements -- decision, date, consequence -- each named with operational specificity. The decision is one the executive can make in a single yes-or-no conversation, not a portfolio of moves. The date is real. The consequence is concrete -- not 'risk to the transformation' but 'we miss the regulatory window in Q3' or 'the Nigeria GM rolls back to legacy by 30 June'. Without a consequence, the executive has no reason to act on the date.</div>
+    <textarea name="s5" placeholder="Named executive sponsor: ...
+
+Decision required: ...
+
+By date: ...
+
+Consequence of inaction: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-160 words</span>
+      <span class="field-word-count" id="s5Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 6 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 06</div>
+      <div class="outcome-tag">Outcome 6 · AI Integration</div>
+    </div>
+    <h2 class="section-title">AI Integration -- judgement, not adoption</h2>
+    <div class="section-prompt">Select one Digital Edge exercise output from this Module (the resistance categorisation prompt, the vision stress-test prompt, the Drift Heatmap prompt, or another). Name what you kept from the AI output, what you rejected, and why -- including any instance where you overrode the AI suggestion with your own judgement.</div>
+    <div class="section-hint">The discipline is evaluative -- not 'AI gave me good ideas'. Name a specific output, what you kept and why, what you rejected and why. If everything was kept, you have summarised, not evaluated. The override case is the strongest evidence: where the AI suggested one move and you chose another, with the reasoning named.</div>
+    <textarea name="s6" placeholder="Digital Edge exercise selected: ...
+
+What I kept: ...
+  Why: ...
+
+What I rejected: ...
+  Why: ...
+
+Where I overrode the AI suggestion: ...
+  My reasoning: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-170 words</span>
+      <span class="field-word-count" id="s6Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, walk a peer through the Memo.</h2>
+    <p class="peer-prep-sub">The Memo is meant to be sendable to the named executive sponsor without further softening. The fastest test is whether a peer who knows the sponsor (or knows sponsors like them) would let you send it as is.</p>
+
+    <div class="peer-questions-label">Questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Could the Memo be sent to the named executive sponsor without further editing, or does it require softening?</li>
+      <li>Does the resistance map in Section 2 distinguish all four categories, or has it collapsed?</li>
+      <li>Does the executive ask in Section 5 have a specific date, a specific decision, and a specific consequence of inaction?</li>
+      <li>In Section 6 -- did you actually evaluate the AI output, or did you summarise it? Where did you override it?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) { if (!s || !s.trim()) return 0; return s.trim().split(/\s+/).length; }
+function recountWords() {
+  const fields = ["s1", "s2", "s3", "s4", "s5", "s6"];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="'+name+'"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name+'Count');
+    if (display) display.textContent = c+' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 1200, goodMin = 800, goodMax = 1000;
+  bandEl.style.left = ((goodMin/max)*100)+'%';
+  bandEl.style.width = (((goodMax-goodMin)/max)*100)+'%';
+  fillEl.style.width = Math.min(100,(total/max)*100)+'%';
+  valEl.textContent = total+' words';
+  valEl.classList.remove('under','good','over');
+  fillEl.classList.remove('good','over');
+  if (total < goodMin) { valEl.classList.add('under'); hintEl.textContent = 'Below the 800-word threshold. The expected range is 800-1000.'; }
+  else if (total <= goodMax) { valEl.classList.add('good'); fillEl.classList.add('good'); hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.'; }
+  else { valEl.classList.add('over'); fillEl.classList.add('over'); hintEl.textContent = 'Over 1000 words. The response needs to land in the 800-1000 word range.'; }
+}
+function collectFormData() {
+  const get = (n) => { const el = document.querySelector('[name="'+n+'"]'); return el ? el.value : ''; };
+  const fields = ["s1", "s2", "s3", "s4", "s5", "s6"];
+  const answers = {};
+  const word_counts = {};
+  let total = 0;
+  fields.forEach(name => {
+    const v = get(name);
+    answers[name] = v;
+    const c = countWords(v);
+    word_counts[name] = c;
+    total += c;
+  });
+  word_counts.total = total;
+  return {
+    capstone_part: "Capstone Part B",
+    capstone_id: "transforming_business_capstone_part_b_memo",
+    journey: "Transforming Business with AI",
+    module: "Module 2 -- Leading the Business Through AI-Era Change",
+    outcomes_assessed: ["LO3", "LO4", "LO5", "LO6"],
+    answers, word_counts,
+  };
+}
+function submitCapstone() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 800) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 800-1000. Below 800 sits outside the range.';
+  else if (total > 1000) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 800-1000. Above 1000 sits outside the range.';
+  if (!confirm("Submit Capstone Part B: The Transformation Memo?\\n\\nThis closes the Combined Capstone for the Transforming Business with AI Journey. Both parts (Connection Blueprint and Transformation Memo) are marked together as one component, weighted 50% of your competence pass alongside the Combined Case Studies (30%) and the Practicals Portfolio (20%)." + warning + '\n\nProceed?')) return;
+  console.log('Capstone payload:', data);
+  alert("Capstone Part B received. The Combined Capstone is now ready for assessor review. (In production, this POSTs to /api/capstone/submit with capstone_id = transforming_business_capstone_part_b_memo)");
+}
+recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

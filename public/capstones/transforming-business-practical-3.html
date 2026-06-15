@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Vision Sentence Test</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+    --recall-pass: #16A34A;
+    --recall-pass-bg: #DCFCE7;
+    --recall-fail: #DC2626;
+    --recall-fail-bg: #FEE2E2;
+    --recall-partial: #D97706;
+    --recall-partial-bg: #FEF3C7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Vision sentence input - hero element */
+  .vision-card { background: linear-gradient(135deg, rgba(74,59,140,0.06) 0%, rgba(245,200,66,0.06) 100%); border: 2px solid var(--gold); border-radius: 16px; padding: 28px 32px; margin-bottom: 16px; }
+  .vision-card-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; text-align: center; }
+  .vision-card-q { font-size: 14px; font-weight: 600; color: var(--plum); text-align: center; margin-bottom: 6px; }
+  .vision-card-helper { font-size: 12px; color: #666; text-align: center; margin-bottom: 16px; font-style: italic; }
+  .vision-input-wrapper { position: relative; margin-bottom: 8px; }
+  .vision-input { width: 100%; background: #fff; border: 1.5px solid var(--field-border); border-radius: 10px; padding: 14px 18px; font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); line-height: 1.4; }
+  .vision-input:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(245,200,66,0.15); }
+  .vision-counter { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #888; padding: 0 4px; }
+  .vision-counter .count { font-weight: 700; }
+  .vision-counter .count.in-range { color: var(--recall-pass); }
+  .vision-counter .count.out-of-range { color: var(--recall-fail); }
+
+  /* Recall test cards */
+  .recall-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .recall-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .recall-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .recall-test { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px; margin-bottom: 12px; }
+  .recall-test-header { display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; margin-bottom: 14px; }
+  .recall-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .recall-title-block { display: flex; flex-direction: column; gap: 4px; }
+  .recall-test-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .recall-test-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); line-height: 1.2; }
+  .recall-test-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-top: 2px; }
+  .recall-meta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--field-border); }
+  @media (max-width: 600px) { .recall-meta-row { grid-template-columns: 1fr; } }
+  .recall-meta-field { display: flex; flex-direction: column; gap: 4px; }
+  .recall-meta-field label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+  .recall-meta-field input { padding: 8px 12px; font-size: 12px; }
+  .recall-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .recall-field label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+  .recall-field .helper { font-size: 11px; color: #888; font-style: italic; line-height: 1.4; margin-bottom: 2px; }
+  .recall-test textarea { min-height: 64px; font-size: 12px; padding: 10px 12px; }
+
+  /* Recall verdict buttons */
+  .verdict-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 4px; }
+  .verdict-btn { background: #fff; border: 1.5px solid var(--field-border); border-radius: 8px; padding: 10px 8px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #555; cursor: pointer; transition: all 0.15s; letter-spacing: 0.04em; }
+  .verdict-btn:hover { transform: translateY(-1px); }
+  .verdict-btn[data-verdict="pass"]:hover { border-color: var(--recall-pass); background: rgba(22,163,74,0.06); color: var(--recall-pass); }
+  .verdict-btn[data-verdict="partial"]:hover { border-color: var(--recall-partial); background: rgba(217,119,6,0.06); color: var(--recall-partial); }
+  .verdict-btn[data-verdict="fail"]:hover { border-color: var(--recall-fail); background: rgba(220,38,38,0.06); color: var(--recall-fail); }
+  .verdict-btn[data-verdict="pass"].selected { background: var(--recall-pass-bg); border-color: var(--recall-pass); color: var(--recall-pass); border-width: 2px; }
+  .verdict-btn[data-verdict="partial"].selected { background: var(--recall-partial-bg); border-color: var(--recall-partial); color: var(--recall-partial); border-width: 2px; }
+  .verdict-btn[data-verdict="fail"].selected { background: var(--recall-fail-bg); border-color: var(--recall-fail); color: var(--recall-fail); border-width: 2px; }
+  .verdict-label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px; }
+
+  /* Revision callout */
+  .revision-card { background: rgba(245,200,66,0.06); border: 1.5px solid var(--gold); border-radius: 12px; padding: 20px 22px; margin-top: 4px; }
+  .revision-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .revision-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .revision-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .vision-card, .recall-card, .recall-test { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .vision-card { padding: 22px 18px; }
+    .recall-card { padding: 18px 16px; }
+    .verdict-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Vision Sentence Test</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Transforming Business with AI</div>
+    <div class="practical-badge">Week 3 · Practical 3 of 6</div>
+  </div>
+  <h1 class="header-title">The Vision Sentence <em>Test</em></h1>
+  <p class="header-desc">One repeatable vision sentence. 15 to 20 words. Tested with three independent listeners over 24 hours. The point is not the sentence that lands well in the slide deck. The point is the sentence that team members are still able to repeat 24 hours after they heard it. If they cannot, the sentence is not the vision -- it is rhetoric. The data from three real tests is the Practical.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The sentence is 15 to 20 words. If it is longer, it is not a sentence -- it is a paragraph wearing a sentence's clothes.</li>
+      <li>Three independent listeners ran the 24-hour test. Real people, real time gap, no rehearsal in between.</li>
+      <li>The 24-hour-later recall is captured verbatim where possible -- their words, not your interpretation of what they said.</li>
+      <li>The Practical reports the data faithfully -- including the listener who could not recall it, or recalled it wrong.</li>
+      <li>If a revision is needed, the revised version addresses the specific failure mode the test surfaced -- not a general 'make it shorter' edit.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Set the context for the sentence -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Frame the Vision Before You Write the Sentence</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the sentence, two pieces of context. The transformation the sentence is meant to carry. And the audience the sentence is meant to travel through -- the layers of the organisation it has to survive. Specificity here is what protects the sentence from drifting into rhetoric.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Transformation</div>
+        </div>
+        <div class="substep-body">The AI-era business transformation the sentence is meant to carry. Two sentences. What it is, who is leading it, what stage it is in.</div>
+        <textarea name="transformation_context" placeholder="An enterprise-wide AI customer service deployment in retail banking. I'm Group CDO. We are 14 months in, with executive committee accountability for a 60% AI-handled contact target by FY26 and a regulator that has just opened consultation on AI in financial services."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Layers</div>
+        </div>
+        <div class="substep-body">Which organisational layers does the sentence have to survive? Group exec, country GMs, function heads, branch managers, frontline?</div>
+        <textarea name="layer_context" placeholder="The sentence has to land at four layers. Group exec (already on board). Country GMs (where my Connection Blueprint last week landed). Branch managers across 1,400 branches (where the sentence drifts most). Frontline contact-centre agents (where it currently does not arrive at all). The 24-hour test is most consequential at the branch and frontline layer."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The vision sentence -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Write the Sentence</div>
+      </div>
+    </div>
+    <p class="step-desc">One sentence. 15 to 20 words. Designed to be repeatable in your absence -- by someone who heard it once. No clauses inside clauses. No vendor language. No 'leverage' or 'unlock'. The sentence has to do one thing: name what survives if the transformation works, in language a frontline team member could carry into a customer conversation.</p>
+
+    <div class="vision-card">
+      <div class="vision-card-label">Your Vision Sentence</div>
+      <div class="vision-card-q">15 to 20 words. Repeatable. Frontline-portable.</div>
+      <div class="vision-card-helper">Write the sentence. The counter will tell you whether you are inside the word range.</div>
+      <div class="vision-input-wrapper">
+        <input type="text" name="vision_sentence" id="vision-sentence" class="vision-input" placeholder="Every customer who calls us reaches help in under two minutes -- with a person available the moment they ask." oninput="updateWordCount()">
+      </div>
+      <div class="vision-counter">
+        <span>Aim: 15 to 20 words</span>
+        <span><span class="count" id="word-count">0</span> words</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: The three recall tests -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Run the Three 24-Hour Recall Tests</div>
+      </div>
+    </div>
+    <p class="step-desc">Three independent listeners. Share the sentence with each of them once -- in conversation, not in a deck, not in writing. Then 24 hours later (within an hour either side) ask them to repeat it back. Their words. Their pauses. The substance is what matters -- not whether they got the wording exactly right. Capture verbatim where you can. Honest about which test passed and which did not.</p>
+
+    <div class="recall-card">
+      <div class="recall-card-label">Three 24-Hour Recall Tests</div>
+      <div class="recall-card-sub">Three independent listeners · 24-hour gap · captured verbatim where possible</div>
+
+      <!-- TEST 1 -->
+      <div class="recall-test">
+        <div class="recall-test-header">
+          <div class="recall-num">01</div>
+          <div class="recall-title-block">
+            <div class="recall-test-label">Test 1</div>
+            <div class="recall-test-name">First Listener</div>
+            <div class="recall-test-helper">Ideally a team member or peer at the layer the sentence has to survive most -- not the layer most likely to remember.</div>
+          </div>
+        </div>
+        <div class="recall-meta-row">
+          <div class="recall-meta-field">
+            <label>Who (role / relationship)</label>
+            <input type="text" name="test_1_who" placeholder="Branch manager, retail bank, 9 years tenure -- has heard three previous AI town halls and remembers none of them.">
+          </div>
+          <div class="recall-meta-field">
+            <label>When said / when re-asked</label>
+            <input type="text" name="test_1_when" placeholder="Said Tue 16:00 in catch-up call; re-asked Wed 17:30 (25h 30m later, in office).">
+          </div>
+        </div>
+        <div class="recall-field">
+          <label>What you said (verbatim)</label>
+          <div class="helper">The sentence as you actually said it -- not the polished version. If you stumbled or rephrased, capture that.</div>
+          <textarea name="test_1_said" placeholder="'Every customer who calls us reaches help in under two minutes, with a person available the moment they ask.' I delivered it twice -- once in the agenda flow, once when she asked me to repeat it because I had said it quickly."></textarea>
+        </div>
+        <div class="recall-field">
+          <label>What they repeated back, 24 hours later (verbatim where possible)</label>
+          <div class="helper">Their words. Capture what they got, what they got partly, and what they did not get.</div>
+          <textarea name="test_1_recalled" placeholder="'Every customer reaches help fast -- and there's always someone real available if they ask.' She paused at 'fast' and said 'I think you said two minutes -- can't be sure.' Substance survived. The 'two minutes' specificity did not. She got 'a person available' clearly."></textarea>
+        </div>
+        <div class="recall-field">
+          <label class="verdict-label">Verdict</label>
+          <div class="helper">Pass = substance survived. Partial = substance partly survived (key element missing or inverted). Fail = could not recall, or recalled the wrong thing.</div>
+          <div class="verdict-row" data-test="1">
+            <button type="button" class="verdict-btn" data-verdict="pass">Pass</button>
+            <button type="button" class="verdict-btn" data-verdict="partial">Partial</button>
+            <button type="button" class="verdict-btn" data-verdict="fail">Fail</button>
+          </div>
+          <input type="hidden" name="test_1_verdict" value="">
+        </div>
+      </div>
+
+      <!-- TEST 2 -->
+      <div class="recall-test">
+        <div class="recall-test-header">
+          <div class="recall-num">02</div>
+          <div class="recall-title-block">
+            <div class="recall-test-label">Test 2</div>
+            <div class="recall-test-name">Second Listener</div>
+            <div class="recall-test-helper">A different layer or function -- ideally someone who is not in your transformation programme directly.</div>
+          </div>
+        </div>
+        <div class="recall-meta-row">
+          <div class="recall-meta-field">
+            <label>Who (role / relationship)</label>
+            <input type="text" name="test_2_who" placeholder="Frontline contact-centre team leader, 4 years tenure, runs a team of 18 agents.">
+          </div>
+          <div class="recall-meta-field">
+            <label>When said / when re-asked</label>
+            <input type="text" name="test_2_when" placeholder="Said Tue 11:00 in floor walkaround; re-asked Wed 11:45 (24h 45m later, by phone).">
+          </div>
+        </div>
+        <div class="recall-field">
+          <label>What you said (verbatim)</label>
+          <div class="helper">The sentence as you actually said it -- not the polished version.</div>
+          <textarea name="test_2_said" placeholder="Said the same sentence -- once, in passing, leaning on the corner of his pod. Did not flag it as 'this is the vision' -- said it as a thing I was working on."></textarea>
+        </div>
+        <div class="recall-field">
+          <label>What they repeated back, 24 hours later (verbatim where possible)</label>
+          <div class="helper">Their words. Capture what they got, what they got partly, and what they did not get.</div>
+          <textarea name="test_2_recalled" placeholder="'Something about the AI getting people through faster -- and people not feeling like they couldn't get to a real person.' He led with the AI -- I did not say AI in the sentence at all. The AI framing came from his current frame, not from what I said. The 'real person' element survived; the speed element survived as 'faster' rather than 'two minutes'."></textarea>
+        </div>
+        <div class="recall-field">
+          <label class="verdict-label">Verdict</label>
+          <div class="helper">Pass = substance survived. Partial = substance partly survived (key element missing or inverted). Fail = could not recall, or recalled the wrong thing.</div>
+          <div class="verdict-row" data-test="2">
+            <button type="button" class="verdict-btn" data-verdict="pass">Pass</button>
+            <button type="button" class="verdict-btn" data-verdict="partial">Partial</button>
+            <button type="button" class="verdict-btn" data-verdict="fail">Fail</button>
+          </div>
+          <input type="hidden" name="test_2_verdict" value="">
+        </div>
+      </div>
+
+      <!-- TEST 3 -->
+      <div class="recall-test">
+        <div class="recall-test-header">
+          <div class="recall-num">03</div>
+          <div class="recall-title-block">
+            <div class="recall-test-label">Test 3</div>
+            <div class="recall-test-name">Third Listener</div>
+            <div class="recall-test-helper">A peer outside the transformation -- a function head or external partner. The hardest test, because they have no incentive to recall.</div>
+          </div>
+        </div>
+        <div class="recall-meta-row">
+          <div class="recall-meta-field">
+            <label>Who (role / relationship)</label>
+            <input type="text" name="test_3_who" placeholder="Head of Group Communications -- peer, runs internal/external comms across the bank, no AI rollout accountability.">
+          </div>
+          <div class="recall-meta-field">
+            <label>When said / when re-asked</label>
+            <input type="text" name="test_3_when" placeholder="Said Wed 09:00 over coffee; re-asked Thu 09:30 (24h 30m later, on Slack DM).">
+          </div>
+        </div>
+        <div class="recall-field">
+          <label>What you said (verbatim)</label>
+          <div class="helper">The sentence as you actually said it -- not the polished version.</div>
+          <textarea name="test_3_said" placeholder="Said the same sentence over coffee. Followed it with one line of context: 'that's where we're trying to take the contact-centre work.' She nodded; we moved on to her topic."></textarea>
+        </div>
+        <div class="recall-field">
+          <label>What they repeated back, 24 hours later (verbatim where possible)</label>
+          <div class="helper">Their words. Capture what they got, what they got partly, and what they did not get.</div>
+          <textarea name="test_3_recalled" placeholder="'I don't think I can repeat it word for word. Something about answering customers fast and keeping a human in the loop?' She self-flagged that she could not recall verbatim. Substance arrived in the right shape. The 'two minutes' was gone. The 'human in the loop' framing was hers, not mine -- and is closer to what the regulator wants than what I said."></textarea>
+        </div>
+        <div class="recall-field">
+          <label class="verdict-label">Verdict</label>
+          <div class="helper">Pass = substance survived. Partial = substance partly survived (key element missing or inverted). Fail = could not recall, or recalled the wrong thing.</div>
+          <div class="verdict-row" data-test="3">
+            <button type="button" class="verdict-btn" data-verdict="pass">Pass</button>
+            <button type="button" class="verdict-btn" data-verdict="partial">Partial</button>
+            <button type="button" class="verdict-btn" data-verdict="fail">Fail</button>
+          </div>
+          <input type="hidden" name="test_3_verdict" value="">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STEP 4: The pattern and the revision -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>4</span></div>
+      <div>
+        <div class="step-label">Step 4</div>
+        <div class="step-title">Read the Data and Decide on Revision</div>
+      </div>
+    </div>
+    <p class="step-desc">Three tests, three pieces of data. The Practical is what they reveal. Two checks. First: across the three, what survived and what did not? The pattern is the data, not any single test. Second: based on the pattern, do you revise the sentence -- and if so, how does the revision address the specific failure mode the tests surfaced? Honest about whether the original sentence is portable or not.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">What Survived</div>
+        </div>
+        <div class="substep-body">Across the three tests -- which elements made it through to recall? Which did not? Which was reframed by the listener into different language?</div>
+        <textarea name="what_survived" placeholder="Survived across all three: the 'human available' element. Survived in two of three: the 'speed' element (one specifically as 'fast', losing the two-minute specificity). Did not survive in any: the 'two minutes' specificity. Reframed by listeners: the AI framing (Test 2 inserted AI into a sentence I had deliberately kept it out of) and the 'human in the loop' regulator-language framing (Test 3)."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">What This Says About Portability</div>
+        </div>
+        <div class="substep-body">The substance survived but the specificity did not. Is the original sentence portable, or fragile? Honest.</div>
+        <textarea name="portability_read" placeholder="Substance is portable. Specificity is fragile -- the 'two minutes' figure dropped in all three tests. That is the right thing to drop, in my read -- frontline staff and peers do not need the operational target, they need the customer commitment. The sentence is portable for the audiences that matter (branch and frontline) and the specificity I was protecting (the 60% target) is not the version of the vision that needs to travel."></textarea>
+      </div>
+    </div>
+
+    <div class="revision-card">
+      <div class="revision-label">Revision (if needed)</div>
+      <div class="revision-q">Based on the data, revise the sentence -- or confirm it stays as written.</div>
+      <div class="revision-helper">If the data shows the sentence is portable, the revision can be a confirmation. If it shows the sentence has a specific failure mode (a clause that gets dropped, a word that gets reframed), the revised version should address that specifically -- not be a general edit.</div>
+      <div class="vision-input-wrapper">
+        <input type="text" name="revised_sentence" class="vision-input" placeholder="Every customer who calls us reaches help fast -- with a real person available the moment they ask.">
+      </div>
+      <div class="vision-counter">
+        <span>Aim: 15 to 20 words</span>
+        <span><span class="count" id="revised-word-count">0</span> words</span>
+      </div>
+      <textarea name="revision_rationale" placeholder="Dropping 'two minutes' deliberately -- it dropped in all three tests, and the rest of the sentence read as more honest without a specific number that the listener could not verify. Replacing 'in under two minutes' with 'fast' and adding 'real' to 'person'. The two changes match the language listeners actually used. The revised sentence is 17 words and is closer to what survived than to what I originally wrote." style="margin-top: 12px;"></textarea>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Sentence and the Tests</h2>
+    <p class="ai-activity-desc">Vision sentences fail in two predictable places -- the practitioner tests with three listeners who already know the transformation (so recall is artificially high), and the revision is a general 'make it shorter' edit instead of one that addresses what the data actually surfaced. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test the Sentence Without Context</div>
+          <div class="ai-step-body">Ask AI to repeat the sentence back without any context -- and see what an outside reader hears. The biggest failure mode is the sentence that only works if you already know the transformation.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am testing a vision sentence for an AI-era business transformation. Here is the sentence with no context: [paste]. Three checks. (1) Read the sentence out loud once and tell me what you can repeat back five seconds later. (2) Without knowing what industry I am in, what would you guess the transformation is about? (3) Are there any words in the sentence that an external reader would interpret in two opposite ways depending on their frame? Tell me what is portable about the sentence and what depends on the listener already being inside the transformation.</div>
+      <div class="prompt-label" style="margin-top:12px">What is portable? What depends on context the listener already has?</div>
+      <textarea class="ai-field" placeholder="AI repeated 'customers reach help fast with a real person available' from a single read. The two-minute specificity dropped for AI as well -- which matched the human listeners. AI flagged 'real person' as a phrase whose meaning depends on whether the listener knows AI is involved -- to a regulator-frame reader, 'real person' reads as 'human escalation right'; to an operations-frame reader, 'real person' reads as 'agent staffing'. The two readings do not collide here, but AI noted the dual-read as a feature to keep an eye on at higher layers."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether the Revision Addresses the Failure Mode</div>
+          <div class="ai-step-body">Ask AI to test whether the revised sentence is a real revision (addresses what the tests surfaced) or a cosmetic one (just shorter or smoother).</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My original vision sentence: [paste]. The data from three 24-hour recall tests: [paste a brief summary -- what survived, what did not, what was reframed]. My revised sentence: [paste]. Pressure-test the revision on three criteria. (1) Does the revised sentence address the specific failure mode the tests surfaced -- or is it just shorter and smoother in general? (2) If the original sentence had a word that got reframed by listeners (e.g. 'in under two minutes' became 'fast'), did the revision keep the listener's word, or did the practitioner reinstate the original word out of attachment? (3) Is the revised sentence different enough that the next round of recall tests would produce different data, or close enough that you would expect the same drift? Tell me whether this is a real revision or cosmetic.</div>
+      <div class="prompt-label" style="margin-top:12px">Real revision or cosmetic? What would make it more real?</div>
+      <textarea class="ai-field" placeholder="AI confirmed the revision is real -- I kept the listener's word ('fast' instead of 'two minutes') rather than reinstate the original. But AI pushed back: I had also kept 'reaches' which two of three listeners had reframed as 'gets through to'. The revision was real on one dimension and cosmetic on another. Updated: 'Every customer who calls us gets through fast -- with a real person available the moment they ask.' Now both reframings the listeners produced are in the sentence. 16 words."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Three months from now, after the revised sentence has been spoken at four town halls and reproduced in twenty-six middle-management briefings, what is the version that will be coming back to you in the 24-hour recall test? And is that version still the vision, or is it the operational metric your bonus structure rewards?</div>
+    <textarea placeholder="In three months the sentence coming back will probably be: 'getting customers through faster with AI -- and keeping humans available for hard cases.' AI will have re-entered the sentence (because every middle-management briefing inserts it) and 'hard cases' will have replaced 'the moment they ask' (because that is how operations frame it for staffing). That version is closer to the operational metric than to the vision. The trigger that should override the drift is the recall test -- if the sentence comes back six months from now in operational language, run the test again at branch level and revise. The discipline is not getting the sentence right once -- it is testing recall on a recurring cadence."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Vision Sentence Tests fall apart at the same place every time -- the practitioner tests with three listeners who are too close to the transformation (so recall is artificially high), or the revision is a tidy-up that does not address the failure mode the data surfaced. A peer who has run their own test can hear both at the same speed an assessor will. Bring this to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read out the original sentence first -- once, with no context. Ask your peer what they remember thirty seconds later. If they get most of it back, the sentence is in the right shape; if they get the wrong half, the sentence is mis-weighted. Then read out the three recall summaries and the revised sentence. Ask your peer whether the revision addresses what the tests surfaced -- or whether it is a different sentence that happens to be shorter.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Your three listeners -- were any of them too close to the transformation to give you a fair test? If yes, the data is partly artefact, not signal.</li>
+      <li>The element that did not survive recall -- the 'two minutes' or whichever specific phrase dropped -- was that the right thing to lose, or are you defending its loss because the alternative is admitting the sentence was too long?</li>
+      <li>The revised sentence -- if you ran three new tests with three new listeners next week, what would you predict the recall data to look like? If you cannot predict, the revision is not yet calibrated.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function updateWordCount() {
+  const field = document.getElementById('vision-sentence');
+  const counter = document.getElementById('word-count');
+  if (!field || !counter) return;
+  const words = field.value.trim() ? field.value.trim().split(/\s+/).length : 0;
+  counter.textContent = words;
+  counter.classList.remove('in-range', 'out-of-range');
+  if (words >= 15 && words <= 20) counter.classList.add('in-range');
+  else if (words > 0) counter.classList.add('out-of-range');
+}
+
+function updateRevisedWordCount() {
+  const field = document.querySelector('[name="revised_sentence"]');
+  const counter = document.getElementById('revised-word-count');
+  if (!field || !counter) return;
+  const words = field.value.trim() ? field.value.trim().split(/\s+/).length : 0;
+  counter.textContent = words;
+  counter.classList.remove('in-range', 'out-of-range');
+  if (words >= 15 && words <= 20) counter.classList.add('in-range');
+  else if (words > 0) counter.classList.add('out-of-range');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const revised = document.querySelector('[name="revised_sentence"]');
+  if (revised) revised.addEventListener('input', updateRevisedWordCount);
+  updateWordCount();
+  updateRevisedWordCount();
+
+  // Verdict button selection
+  document.querySelectorAll('.verdict-row').forEach(row => {
+    const testNum = row.dataset.test;
+    row.querySelectorAll('.verdict-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        row.querySelectorAll('.verdict-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const hidden = document.querySelector('[name="test_' + testNum + '_verdict"]');
+        if (hidden) hidden.value = btn.dataset.verdict;
+      });
+    });
+  });
+});
+
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  const buildTest = (n) => ({
+    who: get('test_' + n + '_who'),
+    when: get('test_' + n + '_when'),
+    said: get('test_' + n + '_said'),
+    recalled: get('test_' + n + '_recalled'),
+    verdict: get('test_' + n + '_verdict')
+  });
+  return {
+    setup: {
+      transformation: get('transformation_context'),
+      layers: get('layer_context')
+    },
+    sentence: get('vision_sentence'),
+    tests: {
+      test_1: buildTest(1),
+      test_2: buildTest(2),
+      test_3: buildTest(3)
+    },
+    pattern: {
+      what_survived: get('what_survived'),
+      portability_read: get('portability_read')
+    },
+    revision: {
+      revised_sentence: get('revised_sentence'),
+      rationale: get('revision_rationale')
+    }
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const allTests = [data.tests.test_1, data.tests.test_2, data.tests.test_3];
+  const testFields = allTests.flatMap(t => [t.who, t.when, t.said, t.recalled, t.verdict]);
+  const requiredFields = [
+    data.setup.transformation, data.setup.layers,
+    data.sentence,
+    ...testFields,
+    data.pattern.what_survived, data.pattern.portability_read,
+    data.revision.revised_sentence, data.revision.rationale
+  ];
+  const filled = requiredFields.filter(v => v && String(v).trim().length > 0).length;
+  const total = requiredFields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 3? Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W3)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

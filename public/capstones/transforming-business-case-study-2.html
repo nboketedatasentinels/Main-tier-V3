@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 2: The Resistance Everyone Misread</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --case-bg: #FFFEF9; --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .case-block { break-inside: avoid; } .case-body { display: block !important; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .case-body { padding: 20px 18px; } .case-header { padding: 16px 20px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 2 · The Resistance Everyone Misread</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Transforming Business with AI</div>
+  <div class="case-eyebrow">Case Study 2 · Module 2 · Leading the Business Through AI-Era Change</div>
+  <h1 class="header-title">The Resistance <em>Everyone Misread</em></h1>
+  <div class="header-meta"><strong>Safaricom's Zuri AI Chatbot and the M-Pesa High Court Petition, Kenya, 2025. A senior practitioner team that read the resistance signals through a single category when the resistance was actually informed risk and rights-based concern -- and escalated into legal action.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Construct and test a vision sentence), LO4 (Distinguish resistance categories), LO5 (Evaluate transformation system drift)</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 2 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that uses the case to think about vision portability, resistance categories, and operating system drift in an AI rollout under regulatory pressure.</div>
+    <ul class="standard-list">
+      <li>The user-recall version of the vision named from case evidence -- the petition language and the customer service routing pattern, not the press-release framing.</li>
+      <li>The resistance category named with discipline -- distinguished from the other three categories using a structural distinction, not labelled.</li>
+      <li>The five rhythms each scored against case evidence -- not assigned colours generically, with the drift identified in one specific rhythm and a reset move that addresses cause not symptom.</li>
+      <li>Application to your own scope with the same discipline -- a real AI rollout where you suspect the resistance is being misread, the cost of continuing to misread it, and the reset move you are running this month.</li>
+      <li>300-500 words across all four answers. Use specific elements from the case (the November 2025 petition, the named respondents, 100 million daily transactions, the September 2025 Fintech 2.0 migration) where they sharpen the argument.</li>
+    </ul>
+  </div>
+
+  <!-- CASE READING SECTION -->
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">Safaricom Kenya, 2024-2025 -- and the November 2025 petition</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+      <div class="case-section-label">Background</div>
+      <p>Safaricom is Kenya's largest mobile network operator, headquartered in Nairobi, and the parent company of M-Pesa -- the mobile money service launched in March 2007 that transformed financial inclusion in Kenya from 26% in 2006 to 84.8% by 2024. Group CEO Dr. Peter Ndegwa has led Safaricom through a $500 million Vision 2030 transformation programme. Esther Waititu serves as Chief Financial Services Officer and James Maitai as Chief Technology Information Officer. M-Pesa accounts for 44.2% of Safaricom's total service revenue in Kenya, with over 35 million active users, more than 100 million transactions daily, and a network of 300,000 agents and 1.9 million merchants.</p>
+      <p>Across 2024 and 2025, Safaricom rolled out an integrated AI strategy across customer service, fraud detection, network operations, and product development. The flagship customer-facing AI deployment is Zuri, a generative AI chatbot built on Amazon Bedrock and SageMaker, serving 30+ million M-Pesa users. Internal documentation positioned Zuri as augmentation -- handling routine queries, freeing human agents for complex issues. The Fintech 2.0 platform migration occurred on 22 September 2025, with all 35 million users moved to a cloud-native, AI-native architecture in a single overnight window.</p>
+      <p>In November 2025, Victor Odhiambo filed a petition in the Nairobi High Court against Safaricom and four respondents (the Attorney-General, the Communications Authority of Kenya, the Competition Authority of Kenya, and the Kenya Consumer Protection Advisory Committee). The petition alleges that Safaricom's AI ecosystem -- specifically Zuri and the automated decision-making systems behind M-Pesa transaction approvals, reversals, and account restrictions -- violates constitutional rights including privacy, fair administrative action, and consumer protection.</p>
+      <p>The petition's central allegation is operationally specific. It states that customers calling 100 and 234 customer service lines are routed to Zuri without guaranteed access to a human agent. Zuri 'acts as a gatekeeper, limiting escalation to human intervention even in urgent cases involving fraud, mistaken transfers, or compromised accounts.' Court documents highlight that Safaricom processes over 100 million M-Pesa transactions daily, with automated systems handling approvals, reversals, and account restrictions in real time. The petition references Kenya's National AI Strategy 2025-2030, which acknowledges gaps in the legal framework, while arguing that large-scale AI deployment in essential services has continued without sufficient safeguards.</p>
+      <p>Inside Safaricom, public statements from CTIO Maitai and CFSO Waititu through 2025 framed the AI integration as 'enhancing operational efficiency' and 'enabling faster, more agile product launches.' The internal vision sentence in 2024-2025 publications was repeatable: 'AI-native infrastructure for Africa's digital economy.' Yet the resistance that emerged -- from a single Kenyan citizen filing a constitutional petition -- was not reflected in any internal customer feedback channels or stakeholder engagement reporting prior to the filing.</p>
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not a story about whether Safaricom's AI deployment was technically capable. By external measures, the M-Pesa platform performance metrics improved substantially -- transaction capacity rose from 4,500 to 6,000 transactions per second with peak capacity to 12,000, fraud detection accuracy reached 89% (F1 score), and the September 2025 Fintech 2.0 migration succeeded. It is a story about a senior practitioner team that read the resistance signals through a single category -- adoption-aversion -- when the resistance was actually informed risk and rights-based concern that escalated into legal action.</p>
+      <p>The questions below ask you to analyse where the vision sentence drifted between executive statements and operational reality, identify which resistance categories were misread, and design the operating system reset that should have been triggered before the petition was filed.</p>
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+      <li>Daily Nation, 'Safaricom sued over AI use in customer service and M-PESA decisions' (November 2025).</li>
+      <li>Safaricom Press Release, 'Safaricom Announces Largest M-PESA Upgrade Yet' (19 September 2025).</li>
+      <li>Tech in Africa, 'Safaricom's New Innovation Strategy: AI, Fintech, and the Future of Kenya's Tech Ecosystem' (February 2026).</li>
+      <li>Kenyan Wallstreet, 'How Safaricom is Leveraging AI to Bolster M-Pesa Security and Efficiency' (August 2025).</li>
+      <li>Medium / Moses Kemibaro, 'M-PESA Reloaded: The Reasons Why Safaricom's Fintech 2.0' (September 2025).</li>
+      <li>Kenya National AI Strategy 2025-2030.</li>
+      <li>Safaricom Annual Reports 2022-2025 (safaricom.co.ke investor relations).</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- QUESTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 3 · Vision portability</div>
+    </div>
+    <h2 class="section-title">Did the internal vision sentence survive 24-hour recall among M-Pesa users?</h2>
+    <div class="section-prompt">Safaricom's internal vision sentence in 2024-2025 was 'AI-native infrastructure for Africa's digital economy.' Did this sentence survive the 24-hour recall test among M-Pesa users and customer service-facing employees -- and what version of the vision were users carrying that ultimately surfaced in the High Court petition?</div>
+    <div class="section-hint">The 24-hour recall test asks what version of the vision is being carried, not what was articulated. The user-recall version is read from case evidence -- the petition language, the customer service routing pattern, what users were complaining about. The gap between the two versions is the answer; collapsing the internal vision and the user-recall version into the same thing is the failure mode.</div>
+    <textarea name="q1" placeholder="The internal vision sentence: ...
+The version M-Pesa users were carrying (read from the petition): ...
+The gap: ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 4 · Resistance category</div>
+    </div>
+    <h2 class="section-title">Distinguish the four resistance categories -- and identify the misread</h2>
+    <div class="section-prompt">The resistance that culminated in the November 2025 petition had been visible in customer service interaction patterns for at least 12 months. Which of the four resistance categories -- informed risk, fear, identity, political -- did Safaricom's leadership misread, and which category was the resistance actually in?</div>
+    <div class="section-hint">The four categories are course content -- the question asks you to apply the discipline. The misread and the actual category are different categories, named separately. The distinction has to be structural -- what each category produces in the resistance behaviour, not just emotional flavour. Case evidence anchors the call: the named respondents in the petition, the constitutional rights basis, the regulatory framing.</div>
+    <textarea name="q2" placeholder="The category Safaricom's leadership misread it as: ... (because ...)
+The category the resistance was actually in: ... (because ...)" oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 60-100 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 5 · Drift heatmap</div>
+    </div>
+    <h2 class="section-title">Score the five rhythms -- and name the reset move</h2>
+    <div class="section-prompt">Score Safaricom's AI rollout operating system on the five rhythms -- decision cadence, communication cadence, escalation discipline, learning cadence, reset trigger -- as it was operating in mid-2025. Which rhythm had drifted most, and what specific reset move should have been triggered before the petition filing?</div>
+    <div class="section-hint">All five rhythms scored against case evidence -- not assigned colours generically. The most-drifted rhythm is identified explicitly. The reset move addresses cause, not symptom: a process change with named participants and a date, not 'better customer service'. The test is whether the reset move could have been triggered before the petition filing on the evidence available at the time.</div>
+    <textarea name="q3" placeholder="Decision cadence: ...
+Communication cadence: ...
+Escalation discipline: ...
+Learning cadence: ...
+Reset trigger: ...
+
+Most-drifted rhythm: ...
+Reset move: ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 80-120 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 3 + 4 + 5 · Application to your own scope</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to an AI rollout where resistance is being misread</h2>
+    <div class="section-prompt">Identify an AI rollout in your own organisational scope where you suspect the resistance is being read through the wrong category. Name the current category label, the category you suspect it is actually in, the cost of continuing to misread it, and the one reset move you will trigger this month to test the alternative reading.</div>
+    <div class="section-hint">This is the highest-weighted question. The rollout is real (yours, not transferred). The resistance has been visible to you and currently has a category label you've assigned to it. The cost of continuing to misread it is concrete -- a likely consequence with a probability and a horizon, not 'things might go wrong'. The reset move you trigger this month is in your calendar.</div>
+    <textarea name="q4" placeholder="The AI rollout in my scope: ...
+The current category label being applied to the resistance: ...
+The category I suspect it is actually in: ...
+The cost of continuing to misread it: ...
+The reset move I will trigger this month: ..." oninput="recountWords()" style="min-height: 200px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 90-170 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) { if (!s || !s.trim()) return 0; return s.trim().split(/\s+/).length; }
+function recountWords() {
+  const fields = ['q1','q2','q3','q4'];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="'+name+'"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name+'Count');
+    if (display) display.textContent = c+' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 600, goodMin = 300, goodMax = 500;
+  bandEl.style.left = ((goodMin/max)*100)+'%';
+  bandEl.style.width = (((goodMax-goodMin)/max)*100)+'%';
+  fillEl.style.width = Math.min(100,(total/max)*100)+'%';
+  valEl.textContent = total+' words';
+  valEl.classList.remove('under','good','over');
+  fillEl.classList.remove('good','over');
+  if (total < goodMin) { valEl.classList.add('under'); hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.'; }
+  else if (total <= goodMax) { valEl.classList.add('good'); fillEl.classList.add('good'); hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.'; }
+  else { valEl.classList.add('over'); fillEl.classList.add('over'); hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.'; }
+}
+function collectFormData() {
+  const get = (n) => { const el = document.querySelector('[name="'+n+'"]'); return el ? el.value : ''; };
+  const q1=get('q1'), q2=get('q2'), q3=get('q3'), q4=get('q4');
+  return { case_study: 2, case_study_title: "The Resistance Everyone Misread -- Safaricom's Zuri AI Chatbot and the M-Pesa High Court Petition, Kenya, 2025", journey: "Transforming Business with AI", module: "Module 2 -- Leading the Business Through AI-Era Change",
+    outcomes_assessed: ["LO3", "LO4", "LO5"], answers: {q1,q2,q3,q4},
+    word_counts: { q1:countWords(q1), q2:countWords(q2), q3:countWords(q3), q4:countWords(q4),
+      total: countWords(q1)+countWords(q2)+countWords(q3)+countWords(q4) } };
+}
+function submitCaseStudy() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 300) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 300-500. Below 300 sits outside the range.';
+  else if (total > 500) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 300-500. Above 500 sits outside the range.';
+  if (!confirm("Submit Case Study 2: The Resistance Everyone Misread?\\n\\nThis closes the Combined Case Studies component for the Transforming Business with AI Journey. Both case studies (Standard Bank and Safaricom) are marked together as one component, weighted 30% of your competence pass alongside the Combined Capstone (50%) and the Practicals Portfolio (20%)." + warning + '\n\nProceed?')) return;
+  console.log('Case Study payload:', data);
+  alert("Case Study 2 received. The Combined Case Studies component is now ready for assessor review. (In production, this POSTs to /api/case-studies/submit with case_study = 2)");
+}
+recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

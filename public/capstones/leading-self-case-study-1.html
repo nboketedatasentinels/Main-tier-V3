@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 1: The Pattern That Was Costing the Company</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --case-bg: #FFFEF9;
+    --counter-under: #B45309;
+    --counter-good: #166534;
+    --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  /* What good looks like card */
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  /* Case reading section -- collapsible */
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+
+  /* Word counter sticky bar */
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+
+  /* Question Section cards */
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+
+  /* Assessor lens block (learner-facing criteria) */
+  .assessor-lens { background: #fff; border: 1.5px solid var(--gold); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .assessor-lens-header { padding: 18px 24px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; }
+  .assessor-lens-header:hover { background: rgba(245,200,66,0.04); }
+  .assessor-lens-header-text { flex: 1; }
+  .assessor-lens-tag { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .assessor-lens-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .assessor-lens-toggle { font-size: 13px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .assessor-lens-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .assessor-lens.open .assessor-lens-toggle::after { transform: rotate(180deg); }
+  .assessor-lens-body { display: none; padding: 0 24px 24px; border-top: 1px solid var(--border); }
+  .assessor-lens.open .assessor-lens-body { display: block; }
+  .assessor-lens-intro { font-size: 13px; color: #666; line-height: 1.65; margin: 16px 0 18px; font-style: italic; }
+  .criterion-block { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .criterion-block:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+  .criterion-name { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px; letter-spacing: 0.04em; }
+  .criterion-outcome { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
+  .criterion-desc { font-size: 13px; color: #444; line-height: 1.65; }
+
+  /* Peer prep block */
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .section-card, .standard-card, .assessor-lens, .case-block, .peer-prep { break-inside: avoid; }
+    .assessor-lens-body, .case-body { display: block !important; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 24px; }
+    .content { padding: 20px 14px 40px; }
+    .section-card, .case-body { padding: 20px 18px; }
+    .case-header { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 1 · The Pattern That Was Costing the Company</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Leading Self in the Age of AI</div>
+  <div class="case-eyebrow">Case Study 1 · Course 1 · Leading Under Pressure</div>
+  <h1 class="header-title">The Pattern That Was <em>Costing the Company</em></h1>
+  <div class="header-meta"><strong>Satya Nadella's First Year at Microsoft, 2014.</strong> A leader who had a default pattern under pressure, recognised what it was costing him, and designed a specific behavioural alternative.</div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Identify and analyse personal leadership patterns under pressure), LO2 (Apply intentional behavioural alternatives).</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 1 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A case study response that uses the case to think with -- not to summarise.</div>
+    <ul class="standard-list">
+      <li>The pattern named with the trigger-reaction-cost framework explicit -- the trigger named precisely, the reaction named, the cost named in concrete terms.</li>
+      <li>Each answer argued from the case, not from generic leadership commentary. The case is treated as evidence to think with -- not as a quote source.</li>
+      <li>The deliberate alternative analysed for design discipline -- two specific elements named that made it operational rather than aspirational.</li>
+      <li>Application to your own pattern with the same structure -- a specific trigger, a specific move, an observable success measure. Could be run starting Monday.</li>
+      <li>300-500 words across all four answers. Quality matters more than length. Avoid hindsight bias and avoid over-claiming about what produced Microsoft's market-cap result.</li>
+    </ul>
+  </div>
+
+  <!-- CASE READING SECTION (collapsible) -->
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">Microsoft, February 2014 -- the first weeks</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+
+      <div class="case-section-label">Background</div>
+      <p>On 4 February 2014, Satya Nadella became the third CEO of Microsoft, succeeding Steve Ballmer. He inherited a company that had become, by his own account, internally combative. Microsoft engineers and product leaders had spent more than a decade in a culture where being seen as the smartest person in the room was the path to promotion. Meetings were performances. Disagreement was sport.</p>
+
+      <p>In his 2017 book <em>Hit Refresh</em>, Nadella describes the leadership pattern he found in himself when he stepped into the CEO role. The pattern was not the company's pattern. It was his own. He noticed that under pressure -- particularly in the first weeks of the role, with the press scrutiny, the share price commentary, and the internal scepticism that he was 'an inside hire who would change nothing' -- he defaulted to proving his technical credentials. He over-explained. He answered questions before they were fully asked. He used technical depth as a shield against the question of whether he could lead.</p>
+
+      <p>The cost of the pattern was specific. Senior leaders who needed to bring him problems learned, in the first weeks, that bringing a problem produced a technical response, not a leadership response. They started filtering. The information that reached Nadella narrowed. He has described, in a 2018 Harvard Business Review interview and on the McKinsey podcast 'Inside the Strategy Room' in 2019, the moment he recognised the pattern and the deliberate alternative he installed in its place.</p>
+
+      <p>The deliberate alternative was a single behavioural change: when a senior leader brought him a problem, he would ask one question before responding.</p>
+
+      <div class="pull-quote">"What do you need from me to move this forward?"</div>
+
+      <p>The change was small. It was not framed as transformation. He has said publicly that it took him roughly six months to make the new pattern automatic.</p>
+
+      <p>Microsoft's market capitalisation when Nadella took over was approximately 314 billion US dollars. By the end of 2019, it had crossed 1 trillion. Nadella has consistently credited the cultural shift -- not the cloud bet, not the Activision acquisition -- as the foundation that made everything else possible.</p>
+
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not about Microsoft. It is about a leader who had a default pattern under pressure, recognised what it was costing him, and designed a specific behavioural alternative.</p>
+
+      <p>The questions below ask you to examine that design discipline -- and to apply it to one of your own patterns.</p>
+
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+        <li>Nadella, S. (2017). <em>Hit Refresh</em>. New York: HarperBusiness.</li>
+        <li>Ignatius, A. (2018). 'Microsoft's next act: Satya Nadella in conversation with HBR.' <em>Harvard Business Review</em>, May-June 2018.</li>
+        <li>McKinsey and Company (2019). 'Microsoft's next act.' <em>Inside the Strategy Room</em> podcast, episode 38, 24 April 2019.</li>
+        <li>Bass, D. (2018). 'Satya Nadella's Microsoft.' <em>Bloomberg Businessweek</em>, 27 September 2018.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- WORD COUNTER (sticks to the top of the answer area) -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- QUESTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 1 · Pattern recognition</div>
+    </div>
+    <h2 class="section-title">Name Nadella's default pattern using trigger-reaction-cost</h2>
+    <div class="section-prompt">Name Nadella's default pattern in the first weeks as CEO using the Course 1 framework: what was the trigger, what was the reaction, and what was the cost? Three sentences.</div>
+    <div class="section-hint">Three sentences, one for each element. Specificity is the test -- a trigger named precisely (drawn from what the case actually documents), a reaction named at the level of behaviour, a cost named in concrete terms rather than as generic morale or trust language.</div>
+    <textarea name="q1" placeholder="Trigger: ... Reaction: ... Cost: ..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 60-90 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 1 · Pattern as leadership not communication</div>
+    </div>
+    <h2 class="section-title">Why is over-explaining a leadership pattern, not a communication habit?</h2>
+    <div class="section-prompt">Why is over-explaining a leadership pattern, not just a communication habit? Use the case to argue the point. Two to three sentences.</div>
+    <div class="section-hint">Argue from the case. What changed because of the pattern -- what others did or stopped doing, what the leader could see and what he stopped being able to see, what the pattern signalled. The argument has to use the case as evidence rather than treat the pattern as a personality tic.</div>
+    <textarea name="q2" placeholder="Over-explaining is a leadership pattern because..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 50-80 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 2 · Design discipline</div>
+    </div>
+    <h2 class="section-title">Why did Nadella's deliberate alternative work?</h2>
+    <div class="section-prompt">Nadella's deliberate alternative was one question. Why did the design choice work? Identify two specific elements of the alternative that made it operational rather than aspirational.</div>
+    <div class="section-hint">Two specific elements, each named with operational reasoning. The test is whether the elements you identify could be applied to a different leader's alternative -- if they could, you've named the structural design discipline rather than the surface form. An alternative treated as motivational rather than designed misses what the case is actually showing.</div>
+    <textarea name="q3" placeholder="Element 1: ... Element 2: ..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 1 + 2 · Application to own pattern</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to a pattern of your own</h2>
+    <div class="section-prompt">Name one default pattern of your own that emerges under transformation pressure, using the same trigger-reaction-cost structure. Then design one specific behavioural alternative -- not aspirational language, an actual move you could run starting Monday morning. Specify the trigger that activates it, the alternative itself, and what success looks like in the next instance.</div>
+    <div class="section-hint">This is the highest-weighted question. The pattern needs to be specific (not "I get stressed"). The alternative needs a specific trigger, a specific move, and an observable success measure -- something a peer could see in the next instance, not internal feeling. The alternative should be runnable starting Monday morning.</div>
+    <textarea name="q4" placeholder="My pattern -- Trigger: ... Reaction: ... Cost: ...&#10;&#10;The alternative I will run -- Trigger: ... Move: ... Success measure: ..." oninput="recountWords()" style="min-height: 180px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 120-220 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) {
+  if (!s || !s.trim()) return 0;
+  return s.trim().split(/\s+/).length;
+}
+
+function recountWords() {
+  const fields = ['q1', 'q2', 'q3', 'q4'];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="' + name + '"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name + 'Count');
+    if (display) {
+      display.textContent = c + ' words';
+    }
+  });
+
+  // Total counter
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+
+  // Visual band: 300-500 = "good zone" within 0-600 scale
+  const max = 600;
+  const goodMin = 300;
+  const goodMax = 500;
+  const bandLeft = (goodMin / max) * 100;
+  const bandWidth = ((goodMax - goodMin) / max) * 100;
+  bandEl.style.left = bandLeft + '%';
+  bandEl.style.width = bandWidth + '%';
+
+  const fillPct = Math.min(100, (total / max) * 100);
+  fillEl.style.width = fillPct + '%';
+
+  valEl.textContent = total + ' words';
+  valEl.classList.remove('under', 'good', 'over');
+  fillEl.classList.remove('good', 'over');
+
+  if (total < goodMin) {
+    valEl.classList.add('under');
+    hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.';
+  } else if (total <= goodMax) {
+    valEl.classList.add('good');
+    fillEl.classList.add('good');
+    hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.';
+  } else {
+    valEl.classList.add('over');
+    fillEl.classList.add('over');
+    hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.';
+  }
+}
+
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  const q1 = get('q1');
+  const q2 = get('q2');
+  const q3 = get('q3');
+  const q4 = get('q4');
+  return {
+    case_study: 1,
+    case_study_title: "The Pattern That Was Costing the Company -- Satya Nadella's First Year at Microsoft, 2014",
+    journey: "Leading Self in the Age of AI",
+    course: "Course 1 -- Leading Under Pressure",
+    outcomes_assessed: ["LO1", "LO2"],
+    answers: { q1, q2, q3, q4 },
+    word_counts: {
+      q1: countWords(q1),
+      q2: countWords(q2),
+      q3: countWords(q3),
+      q4: countWords(q4),
+      total: countWords(q1) + countWords(q2) + countWords(q3) + countWords(q4),
+    },
+  };
+}
+
+function submitCaseStudy() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 300) {
+    warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Below 300 sits outside the range.';
+  } else if (total > 500) {
+    warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Above 500 sits outside the range.';
+  }
+  if (!confirm("Submit Case Study 1: The Pattern That Was Costing the Company?\n\nThis is one of two case studies in the Combined Case Studies component. Both case studies are marked together as one component, weighted 30% of your competence pass.\n\nAfter submission, Case Study 2 (Okonjo-Iweala, Course 2) closes the component at end of Week 6." + warning + "\n\nProceed?")) return;
+  console.log("Case Study 1 payload:", data);
+  alert("Case Study 1 received. Case Study 2 (Okonjo-Iweala, Course 2) closes the Combined Case Studies component at end of Week 6. (In production, this POSTs to /api/case-studies/submit with case_study = 1)");
+}
+
+// Initial paint
+recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

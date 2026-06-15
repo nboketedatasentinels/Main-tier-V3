@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Resistance Reframe</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+    --conv-line: #C9A020;
+    --cat-risk: #2563EB;
+    --cat-risk-bg: #DBEAFE;
+    --cat-fear: #DC2626;
+    --cat-fear-bg: #FEE2E2;
+    --cat-identity: #7C3AED;
+    --cat-identity-bg: #EDE9FE;
+    --cat-political: #D97706;
+    --cat-political-bg: #FEF3C7;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .heaviest-badge { display: inline-block; background: rgba(245,200,66,0.4); border: 1px solid var(--gold); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 700; color: var(--plum); letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Resistance Reframe stages -- five-stage anatomy */
+  .conv-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .conv-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .conv-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 24px; font-style: italic; }
+  .conv-stages { position: relative; padding-left: 0; }
+  .conv-stage { position: relative; background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px 20px; margin-bottom: 16px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .conv-stage { grid-template-columns: 1fr; gap: 8px; } }
+  .conv-stage:not(:last-child)::after { content: ""; display: block; position: absolute; left: 47px; top: calc(100% + 0px); width: 2px; height: 16px; background: var(--conv-line); }
+  @media (max-width: 600px) { .conv-stage:not(:last-child)::after { display: none; } }
+  .conv-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .conv-body { display: flex; flex-direction: column; gap: 6px; }
+  .conv-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .conv-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .conv-stage textarea { min-height: 80px; font-size: 12px; padding: 10px 12px; }
+
+  /* Category selector - the heart of the Practical */
+  .category-card { background: rgba(74,59,140,0.04); border: 1.5px solid var(--purple-light); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .category-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .category-card-q { font-size: 14px; font-weight: 600; color: var(--plum); text-align: center; margin-bottom: 4px; }
+  .category-card-helper { font-size: 12px; color: #666; line-height: 1.55; text-align: center; margin-bottom: 18px; font-style: italic; }
+  .category-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  @media (max-width: 720px) { .category-row { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 480px) { .category-row { grid-template-columns: 1fr; } }
+  .cat-btn { background: #fff; border: 1.5px solid var(--field-border); border-radius: 10px; padding: 14px 12px; font-family: 'DM Sans', sans-serif; cursor: pointer; transition: all 0.15s; text-align: left; }
+  .cat-btn:hover { transform: translateY(-1px); }
+  .cat-btn .cat-name { font-size: 13px; font-weight: 700; color: var(--plum); margin-bottom: 4px; letter-spacing: 0.02em; }
+  .cat-btn .cat-desc { font-size: 11px; color: #666; line-height: 1.4; font-style: italic; }
+  .cat-btn[data-category="risk"]:hover { border-color: var(--cat-risk); background: rgba(37,99,235,0.04); }
+  .cat-btn[data-category="fear"]:hover { border-color: var(--cat-fear); background: rgba(220,38,38,0.04); }
+  .cat-btn[data-category="identity"]:hover { border-color: var(--cat-identity); background: rgba(124,58,237,0.04); }
+  .cat-btn[data-category="political"]:hover { border-color: var(--cat-political); background: rgba(217,119,6,0.04); }
+  .cat-btn[data-category="risk"].selected { background: var(--cat-risk-bg); border-color: var(--cat-risk); border-width: 2px; }
+  .cat-btn[data-category="risk"].selected .cat-name { color: var(--cat-risk); }
+  .cat-btn[data-category="fear"].selected { background: var(--cat-fear-bg); border-color: var(--cat-fear); border-width: 2px; }
+  .cat-btn[data-category="fear"].selected .cat-name { color: var(--cat-fear); }
+  .cat-btn[data-category="identity"].selected { background: var(--cat-identity-bg); border-color: var(--cat-identity); border-width: 2px; }
+  .cat-btn[data-category="identity"].selected .cat-name { color: var(--cat-identity); }
+  .cat-btn[data-category="political"].selected { background: var(--cat-political-bg); border-color: var(--cat-political); border-width: 2px; }
+  .cat-btn[data-category="political"].selected .cat-name { color: var(--cat-political); }
+
+  /* Pre-conversation context block */
+  .pre-conv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .pre-conv-grid { grid-template-columns: 1fr; } }
+  .pre-conv-field label { display: block; font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .conv-card, .conv-stage, .category-card { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .conv-card, .category-card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Resistance Reframe</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Transforming Business with AI</div>
+    <div class="practical-badge">Week 4 · Practical 4 of 6</div>
+    <div class="heaviest-badge">Heaviest Week</div>
+  </div>
+  <h1 class="header-title">The Resistance <em>Reframe</em></h1>
+  <p class="header-desc">Pick the resister you have been treating as a blocker -- the one who has been pushing back on the AI rollout, slow-walking the regulator response, raising the same question for the third time, or going quiet at the moments you most needed them in. Run the conversation with them. Then come back and reflect on what category the resistance was actually in -- informed risk, fear, identity, or political -- and what shifted when you made the category-matched move instead of your default response. Reflection is the Practical -- the conversation is the cost of admission.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The resister is named -- by initial or short reference -- and the AI-era dynamic the resistance attaches to is specific (rollout pushback, regulatory concern, vendor scope creep, board scepticism, middle-management slow-walk).</li>
+      <li>The category you had been making is named honestly -- including if the default category was 'this person is a blocker' rather than a real diagnostic read.</li>
+      <li>The category the resistance was actually in is one of the four -- informed risk, fear, identity, political -- not a hybrid or 'all of the above'.</li>
+      <li>The category-matched move is named with operational specificity -- not 'I listened more', not 'I was empathetic'. A specific change in how you ran the conversation.</li>
+      <li>What is now in motion is a concrete next step -- a meeting booked, a memo redrafted, an escalation withdrawn, an authority recognised in writing -- with a date.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the conversation -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Set Up the Resistance Before You Reflect</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the five-stage reflection, two pieces of context. Who the resister is -- by initial or short reference -- and the AI-era dynamic the resistance attaches to. The category-matched move is only credible if a peer can see what was at stake, and what would have been at stake if the resistance had been read wrong for another month.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Resister</div>
+        </div>
+        <div class="substep-body">By initial or short reference. Their role. Their formal authority on the rollout. Their relationship to you. Whether you initiated the conversation or they did.</div>
+        <textarea name="resister_who" placeholder="C -- Chief Compliance Officer. Six years' tenure. Sits on the AI Governance Steering Committee with technical authority over the regulator submission. We have a peer relationship -- she is not in my reporting line, and I am not in hers. She had been raising the same complaint-rate question every steering committee for nine weeks. I initiated this conversation -- the third request from her side had been ignored by Programme leadership."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The AI-Era Dynamic</div>
+        </div>
+        <div class="substep-body">What about this resistance is AI-era specific? Not a generic management challenge -- the dynamic that exists because the rollout is AI.</div>
+        <textarea name="ai_era_dynamic" placeholder="The conduct-complaint differential between AI-handled and human-handled cases is currently 3.4x. The regulator has just opened consultation on AI in financial services and is asking specifically about complaint differentials by channel type. C had been raising this in the steering committee in language Programme leadership had been hearing as 'compliance always says no'. The resistance was carrying regulator-readiness data the rollout team had not yet integrated. AI-era specificity: the regulator's framing of AI complaints as a distinct conduct category did not exist 18 months ago."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The five-stage anatomy -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Reflect Across the Five Stages</div>
+      </div>
+    </div>
+    <p class="step-desc">Walk the resistance reframe in five stages. The order is the diagnostic logic. Stages 2 and 3 are where the Practical lives -- the read you had been making, against the read you should have been making. Resist the temptation to write Stage 2 (your default read) in retrospect-friendly language. The point of the Practical is that you had been reading it wrong, until the conversation forced the recategorisation.</p>
+
+    <div class="conv-card">
+      <div class="conv-card-label">The Resistance Reframe Anatomy</div>
+      <div class="conv-card-sub">Five stages · in order · the recategorisation moment in Stage 3 is the work</div>
+
+      <div class="conv-stages">
+        <div class="conv-stage">
+          <div class="conv-num">01</div>
+          <div class="conv-body">
+            <div class="conv-name">Who and What's at Stake</div>
+            <div class="conv-helper">The resister, named. The specific decision or programme momentum that their resistance has been affecting. What would happen in the next 30 days if the resistance had not been addressed.</div>
+            <textarea name="stage_1_who" placeholder="C, Chief Compliance Officer. Her resistance had been blocking sign-off on the regulator submission and the next-phase rollout. If unresolved in the next 30 days, the regulator submission would have gone in without her sign-off (an internal control failure), or been delayed past the consultation window (a regulator-relationship failure). The Programme's Q3 board narrative was at stake either way."></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">02</div>
+          <div class="conv-body">
+            <div class="conv-name">The Read You Had Been Making</div>
+            <div class="conv-helper">The category your default frame had put the resistance into. Honest. Most defaults are 'this person is a blocker' or 'this is fear of the new' -- neither is a real diagnostic read.</div>
+            <textarea name="stage_2_default_read" placeholder="My default read had been: she is risk-averse and is using the regulator's consultation as a vehicle to slow the rollout. I had categorised this as fear -- specifically, fear of accountability if the regulator engagement did not go well, displaced into procedural caution. I had been treating her interventions in steering committee as resistance-to-overcome -- looking for ways to address her concern just well enough to get her sign-off without changing the rollout substantively."></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">03</div>
+          <div class="conv-body">
+            <div class="conv-name">The Read You Should Have Been Making</div>
+            <div class="conv-helper">The actual category -- one of informed risk, fear, identity, political. Pick the category below to lock the read. What was the resistance carrying that you had been missing?</div>
+            <textarea name="stage_3_correct_read" placeholder="The correct read was informed risk. C had been working with the FCA's previous AI guidance for six months and had operational pattern recognition on what 'defensible' means in a regulator review. The 3.4x complaint differential was data she had been carrying for the Programme to use, not a procedural objection. Her interventions had been brief, technical, and consistent -- not the pattern of fear-based resistance, which would have been emotional, escalating, or surfacing through informal channels. I had been miscategorising the resistance because the same frame I would have been using two AI rollouts ago no longer fit. The 'compliance says no' shorthand had aged out of the operating environment."></textarea>
+
+            <!-- Category selector -->
+            <div class="category-card" style="margin-top: 16px; margin-bottom: 0;">
+              <div class="category-card-label">Lock the Category</div>
+              <div class="category-card-q">Which of the four categories was the resistance actually in?</div>
+              <div class="category-card-helper">Pick one. The category-matched move in Stage 4 has to align to it. Hybrid categories are usually a sign the read is not yet honest.</div>
+              <div class="category-row">
+                <button type="button" class="cat-btn" data-category="risk">
+                  <div class="cat-name">Informed Risk</div>
+                  <div class="cat-desc">Carrying real data the rollout has not yet integrated.</div>
+                </button>
+                <button type="button" class="cat-btn" data-category="fear">
+                  <div class="cat-name">Fear</div>
+                  <div class="cat-desc">Anxiety about consequences -- to job, to authority, to the work.</div>
+                </button>
+                <button type="button" class="cat-btn" data-category="identity">
+                  <div class="cat-name">Identity</div>
+                  <div class="cat-desc">The role itself is being redefined; the resister is defending who they are.</div>
+                </button>
+                <button type="button" class="cat-btn" data-category="political">
+                  <div class="cat-name">Political</div>
+                  <div class="cat-desc">A power or coalition move; the resistance is positional, not substantive.</div>
+                </button>
+              </div>
+              <input type="hidden" name="resistance_category" value="">
+            </div>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">04</div>
+          <div class="conv-body">
+            <div class="conv-name">The Category-Matched Move</div>
+            <div class="conv-helper">What you did in the conversation that you would not have done if you had stayed with your default read. Specific. Operational. The move that matches the category, not a general 'I listened better'.</div>
+            <textarea name="stage_4_matched_move" placeholder="Because the category was informed risk, the matched move was: ask C to brief the rollout team -- not the steering committee, the rollout team -- on what 'defensible' looks like in a regulator review, before the next regulator submission draft. I asked her to do this in writing as a working document, not as a compliance sign-off. The move recognised that her resistance had been an attempt to share data the Programme had not been treating as data. If I had stayed with the fear read, the matched move would have been reassurance and procedural cover -- which would have continued the misread. The informed-risk move was: invite the resistance into the design phase, treat it as expertise."></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">05</div>
+          <div class="conv-body">
+            <div class="conv-name">What Is Now in Motion</div>
+            <div class="conv-helper">One specific thing. A meeting booked, a memo redrafted, an authority recognised in writing, an escalation withdrawn. With a date. Not 'we agreed to keep talking'.</div>
+            <textarea name="stage_5_motion" placeholder="Three dated commitments out of one conversation. (1) C is briefing the rollout team on Wednesday 14 May, with a working document delivered Monday 12 May. (2) The regulator submission will be redrafted to lead with our complaint-differential remediation plan -- her recommendation -- by 21 May, before the 28 May consultation deadline. (3) C and I are meeting weekly through the consultation window with a standing 30-minute pre-board slot before the Q3 narrative closes. The complaint differential is now a Programme metric, not a compliance objection."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Cost of misreading -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Cost of the Original Misread</div>
+      </div>
+    </div>
+    <p class="step-desc">The category-matched move is the work. The cost of having had the wrong category for the previous nine weeks (or however long) is the lesson. Two checks. First: what would have happened in the next 30 days if you had continued with the misread? Second: where else in your week is the same default category likely to be misreading another resistance? Naming the second is what makes the Practical generalise. Without it, you have reframed one resistance, not changed an instinct.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Cost of Continuing the Misread</div>
+        </div>
+        <div class="substep-body">If you had continued treating this resistance as your default category for another 30 days -- what specifically would have failed?</div>
+        <textarea name="cost_of_misread" placeholder="The regulator submission would have gone in unchanged on 28 May. The complaint differential would have remained an internal compliance objection, not an externally-visible remediation plan. When the regulator response came back asking specifically about complaint differentials by channel type (which the consultation paper signalled), the Programme's response would have been retrospective and defensive. The Q3 board narrative would have been about how we are managing the regulator's concern, not about how we surfaced it ourselves. C's authority in the steering committee would have continued to be discounted -- which would have produced the next informed-risk signal arriving even later."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Where Else the Same Default May Be Misreading</div>
+        </div>
+        <div class="substep-body">Where else in your week is the same default category likely to be miscategorising another resistance? One specific name or role.</div>
+        <textarea name="other_misreads" placeholder="The Group Risk Director on the AI Governance Steering Committee has been raising the model-explainability question for the past six committees. I have been categorising it as identity (defending his discipline's relevance in an AI-era organisation). Reading it through the C lens, the alternative is that he is carrying informed risk on model risk management requirements that the rollout team has not yet integrated. Same default, possibly the same misread. This is the next conversation."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Recategorisation</h2>
+    <p class="ai-activity-desc">Resistance Reframes fail in two predictable places -- the practitioner picks the safest category in retrospect (often 'informed risk', because it flatters the resister), and the category-matched move is described in language soft enough that it would match any of the four categories. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether the Category Is the Honest One</div>
+          <div class="ai-step-body">Ask AI to test whether the category you settled on is the genuinely correct one -- or the most flattering one to the resister and the practitioner.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am reframing a resistance I had been misreading. The resister is: [paste]. The default read I had been making was: [paste]. The read I now believe is correct is [category]. The evidence I am using: [paste]. Pressure-test the recategorisation on three criteria. (1) Is the new category the one a third-party assessor would arrive at independently, or is it the one most flattering to the resister and to me? (2) Could the same evidence support a different category -- and if so, which one, and what would have to be true about the resister's behaviour to confirm the alternative? (3) The evidence I cite -- is it specific to this case, or could it be applied to any of the four categories with minor rewording? Tell me where the read might still be defensive and what would make it more rigorous.</div>
+      <div class="prompt-label" style="margin-top:12px">Where might the recategorisation still be defensive? What is the more honest read?</div>
+      <textarea class="ai-field" placeholder="AI pushed back on my read. The same evidence (consistent technical objections, brief interventions, regulator-aware framing) could also support political resistance -- C has been positioning herself for the Group Risk Director role, and informed-risk framing in the steering committee builds her case for that role. AI was not telling me to switch the category, but it was telling me the read was less rigorous than I had written. I rewrote Stage 3 to acknowledge that informed risk is the correct primary category but that there is a political adjacency I should be alert to. The category-matched move stays the same -- but the awareness changes."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Category-Matched Move for Specificity</div>
+          <div class="ai-step-body">Ask AI to test whether the move you describe is genuinely category-matched -- or whether it would match any of the four categories with the names changed.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My category-matched move was: [paste]. The resistance was in category [category]. Pressure-test on three criteria. (1) If the resistance had actually been fear, would my move have been the same -- or substantially different? (2) If it had been identity, would my move have been the same -- or substantially different? (3) If my described move could fit three of the four categories, it is not yet category-matched -- it is just 'I listened more thoughtfully'. Identify which words in the move description make it specifically informed-risk-matched, and which words would survive any category. Rewrite the move with the category-specific words tightened.</div>
+      <div class="prompt-label" style="margin-top:12px">Where is the move not yet category-matched? What is the rewritten version?</div>
+      <textarea class="ai-field" placeholder="AI flagged that 'invite the resistance into the design phase' would also fit a fear-matched move (reassurance through inclusion) and an identity-matched move (recognising the resister's expertise). The genuinely informed-risk-specific element was 'as a working document, not as a compliance sign-off' -- the operational distinction between treating the resister as expertise versus as approval gate. I tightened Stage 4 to lead with that distinction. The move is now category-matched on the operational mechanism, not just on the gesture."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the next regulator window opens or the next AI-era pressure cycle compounds, which of the four resistance categories are you most likely to default-miscategorise? And what is the trigger that should override the default next time?</div>
+    <textarea placeholder="I am most likely to default-miscategorise informed risk as fear -- specifically when the resister has historically been the cautious voice and when the AI-era data they are carrying has not yet been validated by an external authority. The pattern: 'compliance always raises this' becomes 'compliance is doing its thing' becomes 'I do not need to read the substance'. The trigger that should override the default is the count -- if the same person has raised the same substantive question more than twice in a quarterly cycle and I have not yet read the question as data, I have miscategorised. The rule: third raise = recategorise."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Resistance Reframes fall apart at the same place every time -- the practitioner picks the most flattering category in retrospect, and the category-matched move is described in language soft enough that it would fit any category. A peer who has reframed their own resistance can hear both at the same speed an assessor will. Bring this to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read out the default read first (Stage 2) before the corrected read. If your peer's first reaction is 'that read makes the resister sound like a problem' -- the default was operating in the role you needed to recategorise out of. Then read the category-matched move (Stage 4). Ask your peer whether the move would have looked different under any of the other three categories. If they say 'I think this would match fear or identity too' -- the move is not yet category-specific.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The category you settled on -- is it the one the evidence supports, or the one most flattering to the resister? Could the same evidence support a different category?</li>
+      <li>Your category-matched move -- if you read it back without the category label, would your peer be able to identify which of the four it was matched to? If not, the move is generic.</li>
+      <li>The other place you flagged the same default may be misreading -- if you do not have a conversation with that person in the next two weeks, what is the cost of carrying the misread for another month?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Category button selection
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      const hidden = document.querySelector('[name="resistance_category"]');
+      if (hidden) hidden.value = btn.dataset.category;
+    });
+  });
+});
+
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    setup: {
+      resister: get('resister_who'),
+      ai_era_dynamic: get('ai_era_dynamic')
+    },
+    anatomy: {
+      stake: get('stage_1_who'),
+      default_read: get('stage_2_default_read'),
+      correct_read: get('stage_3_correct_read'),
+      category: get('resistance_category'),
+      matched_move: get('stage_4_matched_move'),
+      now_in_motion: get('stage_5_motion')
+    },
+    cost_and_pattern: {
+      cost_of_misread: get('cost_of_misread'),
+      other_misreads: get('other_misreads')
+    }
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const requiredFields = [
+    data.setup.resister, data.setup.ai_era_dynamic,
+    data.anatomy.stake, data.anatomy.default_read, data.anatomy.correct_read,
+    data.anatomy.category, data.anatomy.matched_move, data.anatomy.now_in_motion,
+    data.cost_and_pattern.cost_of_misread, data.cost_and_pattern.other_misreads
+  ];
+  const filled = requiredFields.filter(v => v && String(v).trim().length > 0).length;
+  const total = requiredFields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 4? Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W4)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

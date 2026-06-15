@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 1: The Vision the Team Stopped Repeating</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --case-bg: #FFFEF9; --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .case-block { break-inside: avoid; } .case-body { display: block !important; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .case-body { padding: 20px 18px; } .case-header { padding: 16px 20px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 1 · The Vision the Team Stopped Repeating</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Transforming Business with AI</div>
+  <div class="case-eyebrow">Case Study 1 · Module 1 · The Room You Walk Into</div>
+  <h1 class="header-title">The Vision the Team <em>Stopped Repeating</em></h1>
+  <div class="header-meta"><strong>Standard Bank's AI-led Transformation, South Africa and 21 sub-Saharan markets, 2020-2025. What happens to a transformation vision as it cascades through 21 markets and multiple management layers -- and the difference between the vision an executive articulates in interviews and the vision team members can repeat 24 hours after hearing it.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Analyse the room walked into; apply the Door Practice), LO2 (Design and demonstrate the Connection Blueprint)</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 1 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that reads the room across 21 markets, identifies the layer where the vision drifted, and designs a Connection Blueprint that travels.</div>
+    <ul class="standard-list">
+      <li>Door Practice applied to a specific country market -- AI fluency, the listener's actual top priority that quarter, and a vendor narrative named, not gestured at.</li>
+      <li>The drift layer named with specificity -- which transition between layers the vision lost portability at, and the dynamic that produced the drift (incentive structure, communication asymmetry, or KPI translation).</li>
+      <li>The Connection Blueprint addressed to a named country General Manager by role -- with Position, Now, Stake, Survival each anchored to that GM's actual incentive structure, not the head office one.</li>
+      <li>Application to your own scope with the same discipline -- a real vision drift, the specific layer where it is happening, and one Blueprint section you are rewriting this week.</li>
+      <li>300-500 words across all four answers. Use specific elements from the case (the "first mover taxes" phrase, 71% cloud migration, 21 country markets, 2025 CEO of the Year recognition) where they sharpen the argument.</li>
+    </ul>
+  </div>
+
+  <!-- CASE READING SECTION -->
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">Standard Bank Group, 2020-2025 -- and the cascade across 21 markets</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+      <div class="case-section-label">Background</div>
+      <p>Standard Bank Group is Africa's largest bank by assets, headquartered in Johannesburg, South Africa, with operations in 21 sub-Saharan African countries. CEO Sim Tshabalala, who became Group CEO in 2013, has led an extensive digital and AI-led transformation programme through the SBG 2025 strategy and into the bank's 2028 targets.</p>
+      <p>Public reporting documents the strategic direction with notable consistency. Tshabalala has stated explicitly across multiple interviews -- with HBR IdeaCast, Daily Investor, and InfotechLead in 2024 and 2025 -- that the bank's stance is to stay close to AI developments without being on the cutting edge. His phrase, repeated in multiple settings: 'we do not want to pay first mover taxes.' He describes AI as 'a tool to meet human needs' rather than as a force that will 'obliterate banking, insurance, and asset management.'</p>
+      <p>By the bank's FY25 reporting, 71% of migratable servers had been moved to cloud and 88% of legacy infrastructure had been decommissioned. AI deployment has focused on credit decisioning, fraud detection, and personalised financial services -- with CIO Jörg Fischer overseeing the technology transformation. Standard Bank serves more than 20 million active clients; about 99% of customer interactions occur through digital channels.</p>
+      <p>The transformation has been judged externally as successful. Tshabalala was named Africa's CEO of the Year in 2025 by The Asian Banker for driving pan-African integration, digital transformation, and sustainable growth. He has announced his retirement at end of 2027, with a CEO and CFO transition scheduled.</p>
+      <p>Inside the bank's 21 markets, however, public commentary from former and current employees on professional networks documents a pattern that has emerged across the rollout. The original transformation vision -- articulated by Tshabalala in 2020-2021 around becoming 'a client-centred platform business' that delivers 'individualised, instantly available solutions' -- was clear, repeatable, and widely shared at launch. By 2024, in country teams in Nigeria, Kenya, and Uganda, the version of the vision being repeated by middle management had drifted significantly: the 'client-centred platform' framing had been replaced in many internal communications by efficiency, productivity, and cost-reduction language tracked to specific operational metrics. Senior practitioners reported in industry forums (including the 2024 African Banking Conference in Cape Town) that the vision team members could repeat 24 hours after a town hall was no longer the original Tshabalala vision -- it was the operational metric closest to their current bonus.</p>
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not a story about whether Standard Bank's AI strategy is right -- by external measures it is performing well. It is a story about what happens to a transformation vision as it cascades through 21 markets and multiple management layers, and about the difference between the vision an executive articulates in interviews and the vision team members can repeat 24 hours after hearing it.</p>
+      <p>The questions below ask you to analyse the room Tshabalala has been walking into across multiple country markets, identify why the vision drifted in specific layers, and design a Connection Blueprint that would have travelled better across the layers.</p>
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+      <li>HBR IdeaCast, 'Future of Business: Standard Bank's CEO on Driving Sustainable Growth and Shared Prosperity' (November 2025).</li>
+      <li>InfotechLead, 'Standard Bank steps up AI-led digital transformation with cloud, data analytics, and platform innovation' (April 2026).</li>
+      <li>Daily Investor, 'Sim Tshabalala's last test as Standard Bank CEO' (March 2026).</li>
+      <li>The Asian Banker, 'Sim Tshabalala named CEO of the Year in Africa' (December 2025).</li>
+      <li>Standard Bank Group Annual Reports 2022-2024 (standardbank.com investor relations).</li>
+      <li>Strategy+Business interview, 'Managing Africa's Money' (December 2018).</li>
+      <li>Public LinkedIn posts and African Banking Conference proceedings, 2024-2025.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- QUESTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 1 · Door Practice</div>
+    </div>
+    <h2 class="section-title">Read the room Tshabalala is walking into in a country market</h2>
+    <div class="section-prompt">When Tshabalala walks into a country market town hall in Nigeria or Kenya in 2024, what is the room he is actually walking into -- in terms of AI fluency, the listener's actual top priority that quarter, and the vendor narrative that has shaped middle-management framing of the AI rollout? Use the Door Practice framework.</div>
+    <div class="section-hint">Three things to read -- AI fluency, top priority, vendor narrative. Each one named with specificity to a real country (the case anchors three: Nigeria, Kenya, Uganda). "Top priority" is the priority for the listener that quarter, not the priority for head office. The asymmetric AI fluency is the test -- the practitioner has to be honest about whether the room has more or less fluency than they themselves do.</div>
+    <textarea name="q1" placeholder="In a [country] town hall, the room Tshabalala is walking into is...
+
+AI fluency in the room: ...
+The listener's top priority that quarter: ...
+The vendor narrative shaping middle-management framing: ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 80-130 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 1 · Drift layer</div>
+    </div>
+    <h2 class="section-title">Why did the 'client-centred platform' vision drift to operational metric language?</h2>
+    <div class="section-prompt">Why did the original 'client-centred platform' vision drift to operational metric language in middle management communications? Identify the specific layer where the drift happened and the dynamic that caused it.</div>
+    <div class="section-hint">A specific transition between management layers -- not "the message got lost over time". The dynamic that caused it is structural (incentive structure, communication asymmetry, KPI translation, or bonus alignment), not "managers did not communicate well". The test is whether your answer points to where intervention has to happen, not who to blame.</div>
+    <textarea name="q2" placeholder="The drift happened at the transition between... and... The dynamic that caused it was..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 50-80 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 2 · Connection Blueprint</div>
+    </div>
+    <h2 class="section-title">Construct the four-section Blueprint addressed to a country GM</h2>
+    <div class="section-prompt">Construct a four-section Connection Blueprint -- Position, Now, Stake, Survival -- that Tshabalala (or his Group Strategy team) could have used in 2022 to communicate the vision to country market General Managers in language matched to their actual incentive structure. Name a specific country GM by role, their priority that quarter, and the language match.</div>
+    <div class="section-hint">Four sections, each addressed to a named country GM by role. Position anchors to the programme's actual state, not the press-release version. Now anchors to a specific business cycle moment for that GM (a regulatory window, a competitor move, a board cycle), not generic urgency. Stake names what is at stake for the GM specifically. Survival names what survival of the transformation requires from the GM in language they would use about their own work.</div>
+    <textarea name="q3" placeholder="Country GM (by role): ...
+Their priority that quarter: ...
+
+Position: ...
+Now: ...
+Stake: ...
+Survival: ..." oninput="recountWords()" ></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 90-130 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- QUESTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 1 + 2 · Application to your own scope</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to a vision drift in your own scope</h2>
+    <div class="section-prompt">Identify a transformation vision in your own current organisational scope where the version being repeated 24 hours after the town hall is not the version you articulated. Name the layer where the drift is happening and the one Connection Blueprint section you will rewrite this week to address it.</div>
+    <div class="section-hint">This is the highest-weighted question. The vision drift needs to be real (something you have actually heard repeated back differently from how you said it), the layer needs to be specific (which transition between layers), and the Blueprint section you rewrite is one of the four (Position, Now, Stake, Survival) -- not all four. The rewrite happens this week, in your calendar.</div>
+    <textarea name="q4" placeholder="The vision in my scope: ...
+The version being repeated 24 hours later: ...
+The layer where drift is happening: ...
+The Blueprint section I am rewriting this week: ..." oninput="recountWords()" style="min-height: 200px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 80-160 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) { if (!s || !s.trim()) return 0; return s.trim().split(/\s+/).length; }
+function recountWords() {
+  const fields = ['q1','q2','q3','q4'];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="'+name+'"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name+'Count');
+    if (display) display.textContent = c+' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 600, goodMin = 300, goodMax = 500;
+  bandEl.style.left = ((goodMin/max)*100)+'%';
+  bandEl.style.width = (((goodMax-goodMin)/max)*100)+'%';
+  fillEl.style.width = Math.min(100,(total/max)*100)+'%';
+  valEl.textContent = total+' words';
+  valEl.classList.remove('under','good','over');
+  fillEl.classList.remove('good','over');
+  if (total < goodMin) { valEl.classList.add('under'); hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.'; }
+  else if (total <= goodMax) { valEl.classList.add('good'); fillEl.classList.add('good'); hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.'; }
+  else { valEl.classList.add('over'); fillEl.classList.add('over'); hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.'; }
+}
+function collectFormData() {
+  const get = (n) => { const el = document.querySelector('[name="'+n+'"]'); return el ? el.value : ''; };
+  const q1=get('q1'), q2=get('q2'), q3=get('q3'), q4=get('q4');
+  return { case_study: 1, case_study_title: "The Vision the Team Stopped Repeating -- Standard Bank's AI-led Transformation, South Africa, 2020-2025", journey: "Transforming Business with AI", module: "Module 1 -- The Room You Walk Into",
+    outcomes_assessed: ["LO1", "LO2"], answers: {q1,q2,q3,q4},
+    word_counts: { q1:countWords(q1), q2:countWords(q2), q3:countWords(q3), q4:countWords(q4),
+      total: countWords(q1)+countWords(q2)+countWords(q3)+countWords(q4) } };
+}
+function submitCaseStudy() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 300) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 300-500. Below 300 sits outside the range.';
+  else if (total > 500) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 300-500. Above 500 sits outside the range.';
+  if (!confirm("Submit Case Study 1: The Vision the Team Stopped Repeating?\\n\\nThis is one of two case studies in the Combined Case Studies component. Both case studies are marked together as one component, weighted 30% of your competence pass.\\n\\nAfter submission, Case Study 2 (Safaricom, Module 2) closes the component at end of Week 6." + warning + '\n\nProceed?')) return;
+  console.log('Case Study payload:', data);
+  alert("Case Study 1 received. Case Study 2 (Safaricom, Module 2) closes the Combined Case Studies component at end of Week 6. (In production, this POSTs to /api/case-studies/submit with case_study = 1)");
+}
+recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

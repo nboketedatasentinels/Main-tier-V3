@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Connection Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Connection Blueprint - distinctive to Practical 2 */
+  .blueprint-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .blueprint-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .blueprint-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .blueprint-section { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .blueprint-section { grid-template-columns: 1fr; gap: 8px; } }
+  .bp-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .bp-body { display: flex; flex-direction: column; gap: 6px; }
+  .bp-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .bp-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .blueprint-section textarea { min-height: 90px; font-size: 12px; padding: 10px 12px; }
+
+  /* Audience naming card - ahead of the Blueprint */
+  .audience-card { background: rgba(74,59,140,0.06); border: 1.5px solid var(--purple-light); border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
+  .audience-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .audience-card-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .audience-card-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+  .audience-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .audience-grid { grid-template-columns: 1fr; } }
+  .field-block { display: flex; flex-direction: column; gap: 6px; }
+  .field-block label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* Capstone callout */
+  .capstone-callout { background: var(--plum); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; }
+  .capstone-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .capstone-icon svg { width: 18px; height: 18px; }
+  .capstone-callout-text .cc-tag { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .capstone-callout-text .cc-body { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.6; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .blueprint-card, .blueprint-section { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .blueprint-card { padding: 18px 16px; }
+    .blueprint-section { padding: 16px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Connection Blueprint</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Transforming Business with AI</div>
+    <div class="practical-badge">Week 2 · Practical 2 of 6</div>
+  </div>
+  <h1 class="header-title">The Connection <em>Blueprint</em></h1>
+  <p class="header-desc">A four-section persuasion artefact -- Position, Now, Stake, Survival -- written for one named executive whose decision is the one that matters in the next 90 days. Not a generic transformation message. A piece of writing that an executive could read in seven minutes and act on. This Practical and the Capstone Part A are the same artefact -- the Blueprint you submit here triggers the 7,000-point Module 1 payout.</p>
+</div>
+
+<div class="content">
+
+  <!-- CAPSTONE CALLOUT -->
+  <div class="capstone-callout">
+    <div class="capstone-icon">
+      <svg viewBox="0 0 18 18" fill="none"><path d="M9 1L11.5 6.5L17 7.5L13 11.5L14 17L9 14.5L4 17L5 11.5L1 7.5L6.5 6.5L9 1Z" fill="#1A1726" stroke="#1A1726" stroke-width="0.8" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="capstone-callout-text">
+      <div class="cc-tag">Capstone Part A · Week 2</div>
+      <div class="cc-body">This Blueprint is also Part A of your Combined Capstone. One artefact, two uses -- weekly Practical and summative submission. Write it once, write it for the named executive, write it as if you are about to send it.</div>
+    </div>
+  </div>
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The audience is a specific real executive -- by role, ideally name -- not 'the leadership team' or 'the board'.</li>
+      <li>The Now anchors to a specific business cycle moment: a board cycle, a regulatory window, a competitor move. Not generic 'urgency'.</li>
+      <li>The Stake is named in the audience's language -- the consequence they care about, not the consequence the practitioner wants them to care about.</li>
+      <li>The Survival section names what survival of the transformation requires from this audience in the next 90 days. Specific, time-bound, accountable. Not vision language.</li>
+      <li>A peer reading the Blueprint can predict what the named executive would say in response. If they cannot, the audience match is not yet there.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Name the audience and the moment -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Name the Audience and the Moment</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the four sections, name the audience -- specifically. Name what is true about their week that an outsider would not know. The Blueprint is only as good as the audience it is written for. A generic Blueprint is the same as no Blueprint.</p>
+
+    <div class="audience-card">
+      <div class="audience-card-label">The Audience</div>
+      <div class="audience-card-q">Who, by role and name, would read this Blueprint?</div>
+      <div class="audience-card-helper">Pick one real executive whose decision is the one that matters for the transformation in the next 90 days. The CEO, the COO, the Group CFO, the Chair of the Audit Committee, the Group Risk Director. Not the leadership team. One person.</div>
+      <div class="audience-grid">
+        <div class="field-block">
+          <label>Audience -- Role and Name</label>
+          <input type="text" name="audience_role" placeholder="Group CFO -- M. Daniels (12 years at the company, 4 in this role)">
+        </div>
+        <div class="field-block">
+          <label>Their Top Priority This Quarter</label>
+          <input type="text" name="audience_priority" placeholder="The Q3 board update on capital allocation -- whether the AI investment line should hold or be reframed before half-year results">
+        </div>
+      </div>
+    </div>
+
+    <div class="audience-card" style="background: rgba(245,200,66,0.06); border-color: rgba(245,200,66,0.5);">
+      <div class="audience-card-label" style="color: var(--gold-dark);">The Moment</div>
+      <div class="audience-card-q">What about right now makes this the right moment for this Blueprint to land?</div>
+      <div class="audience-card-helper">Not 'now is urgent' -- specifics. The board cycle, the regulator window, the competitor move, the executive transition, the budget cycle. The moment a peer reading this could verify externally.</div>
+      <textarea name="moment_context" placeholder="Two specific moments stacked. (1) The Q3 board lands 9 weeks from now and the capital allocation discussion is on the standing agenda. (2) The regulator opened consultation on AI in financial services six weeks ago, and the response window closes in five weeks -- earlier than the board. The Blueprint needs to land before the regulator response is signed off, because that response will commit us to a public position the CFO will then have to defend on Q3."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 2: The four-section Blueprint -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Write the Four Sections</div>
+      </div>
+    </div>
+    <p class="step-desc">Write the Blueprint as if you are about to send it to the named executive this afternoon. Each section is short -- two to three short paragraphs at most. The four are sequential. Position before Now. Now before Stake. Stake before Survival. The order is the persuasion logic. Resist the temptation to lead with Survival ('what I need from you') -- that is the section the audience will read last.</p>
+
+    <div class="blueprint-card">
+      <div class="blueprint-card-label">The Connection Blueprint</div>
+      <div class="blueprint-card-sub">Four sections · in order · written for one named executive · sendable as is</div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">01</div>
+        <div class="bp-body">
+          <div class="bp-name">Position</div>
+          <div class="bp-helper">Where the transformation programme stands today, with specifics. Not the executive summary version -- the version that names the actual state. What is true. What is working. What is not. In the audience's frame of reference, not yours.</div>
+          <textarea name="bp_position" placeholder="The AI customer service rollout is now serving 38% of inbound voice contacts and 62% of inbound chat across the retail bank, against the FY26 target of 60% blended. Capital deployed to date is £142M of an authorised £180M envelope. The two metrics that matter for capital allocation: cost-per-resolved-contact has fallen 31% over 18 months; first-contact resolution has improved 11 points. The metric that does not yet add up: complaints-to-regulator on AI-handled cases are running 3.4x the rate of human-handled cases, against a regulator that has just opened consultation. The position is strong on operational economics, exposed on conduct."></textarea>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">02</div>
+        <div class="bp-body">
+          <div class="bp-name">Now</div>
+          <div class="bp-helper">Why this moment, specifically. The business cycle moment that makes this the right time to act, not generic urgency. A peer reading should be able to verify the moment externally -- a published board calendar, a regulator deadline, a competitor announcement.</div>
+          <textarea name="bp_now" placeholder="The regulator's consultation response window closes 28 May. Our submission is currently scoped to defend the rollout as it stands, with the conduct-complaint differential as an acknowledged but managed risk. The Q3 board lands 9 weeks later, on 1 August, with capital allocation as a standing item. If the regulator response goes in unchanged, we commit publicly to a position the Q3 board will then have to defend -- and the conduct-complaint differential will be the story, not the operational economics. The decision window is therefore the next four weeks, not the next nine."></textarea>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">03</div>
+        <div class="bp-body">
+          <div class="bp-name">Stake</div>
+          <div class="bp-helper">What is at stake for the named executive specifically. Not the organisation in the abstract -- the audience's accountability, in the audience's language. What survives or fails for them, depending on what they decide.</div>
+          <textarea name="bp_stake" placeholder="If we hold the current regulator submission and the conduct-complaint differential becomes the Q3 story, the capital allocation question stops being about whether the AI line is well-deployed and starts being about whether the executive team is reading risk well. Your Q3 brief becomes a defence, not a forward plan. The line you have personally signed off on becomes the line a non-executive director asks you to walk through in detail, with the regulator paper open beside it. The stake is not the rollout -- the stake is whether the AI investment narrative is yours to set or yours to defend at Q3."></textarea>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">04</div>
+        <div class="bp-body">
+          <div class="bp-name">Survival</div>
+          <div class="bp-helper">What survival of the transformation requires from this audience in the next 90 days. Specific. Time-bound. Accountable. The decision, the moment, the consequence of inaction. This is the section that has to be sendable -- the executive should be able to read it and know what is being asked of them, by when, and what changes for them if they do or do not act.</div>
+          <textarea name="bp_survival" placeholder="Three asks. (1) A 30-minute decision in the next two weeks: do we redraft the regulator submission to lead with our conduct-complaint remediation plan, rather than acknowledge it as managed risk? My recommendation is yes; the redraft is already scoped and would cost two days of legal review. (2) A standing item on your Q3 board pre-read, drafted by my team and reviewed by yours, that frames the AI investment around forward conduct economics not historical operational economics. (3) An agreed escalation point: if the regulator response goes in unchanged and the conduct-complaint differential does not improve in 60 days, we hold a 30-minute pre-board between you and me to revise the Q3 narrative before the board pack closes. If I do not have your decision on (1) by 28 April, the regulator submission goes in as currently drafted, and the Q3 narrative is already partly written."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Test the audience match -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Test the Audience Match Before You Submit</div>
+      </div>
+    </div>
+    <p class="step-desc">The Blueprint is only as good as how well it lands with its named audience. Two checks. First: read each section back asking 'is this in the executive's language, or my language?' Second: predict what the executive would say in response to the Survival ask. If you cannot predict the response, the Blueprint is not yet matched -- you are writing into uncertainty about how the audience will receive it. Both checks are honest, not heroic.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Language Match</div>
+        </div>
+        <div class="substep-body">Which of the four sections is most in your language and least in the executive's? Honest. Most Blueprints are weakest in Position because the practitioner defaults to programme-narrative.</div>
+        <textarea name="language_match" placeholder="Position is most in my language -- I led with operational economics because that is the data I work with daily. The CFO's language is capital, exposure, and Q-cycle defensibility. I rewrote Position to lead with the £142M of £180M envelope and the conduct-complaint differential as an exposure metric, not an operational metric. The shift was 60 words and changed how the Blueprint reads from minute 1."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Predicted Response</div>
+        </div>
+        <div class="substep-body">If you sent this Blueprint this afternoon, what would the named executive say in their reply? Specific.</div>
+        <textarea name="predicted_response" placeholder="The CFO will reply within 24 hours with one of two responses. Most likely: 'agree to (1) and (3); (2) needs to go through the Group Strategy team first because of the board pre-read process.' Less likely but possible: 'come and walk me through the conduct-complaint remediation plan before I commit to (1).' I have prepared for both. If response is the first, I move on (1) immediately. If response is the second, the meeting is booked for next week with the remediation plan one-pager in hand."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Blueprint</h2>
+    <p class="ai-activity-desc">Connection Blueprints fail in two predictable places -- the Now section reads as generic urgency rather than verifiable business cycle moment, and the Survival ask is vague enough that the executive can read it as 'awareness' rather than 'decision'. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test the Now Against External Verifiability</div>
+          <div class="ai-step-body">Ask AI to test whether the Now section anchors to something a peer or assessor could verify externally -- not to a feeling of urgency.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am writing a four-section Connection Blueprint for a senior executive. The Now section reads: [paste]. Pressure-test it on three criteria. (1) Does the Now name a specific date or window that a peer could verify externally -- a board calendar, a regulator deadline, a competitor announcement, a financial reporting cycle? (2) Is the urgency in the Now derived from the named moment, or is it a separate claim of urgency the moment is meant to support? (3) If you stripped out every adjective and every word that could be replaced with 'soon' or 'critical', is the Now still a Now? Tell me where the section is in feeling-language and rewrite the weakest sentence with a verifiable anchor.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the Now go abstract? What is the rewritten version?</div>
+      <textarea class="ai-field" placeholder="AI flagged the second sentence -- I had written 'we need to act with urgency before the regulator response goes in.' The verifiable anchor was already in the first sentence (28 May deadline). The 'urgency' line was duplicating the data with feeling-language. Rewrote to: 'The decision window is the next four weeks, not the next nine -- because the regulator submission on 28 May commits us publicly to a position the 1 August Q3 board will then have to defend.' Two specific dates, one logical link, no feeling-language."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Survival Section as a Decision Document</div>
+          <div class="ai-step-body">Ask AI to test whether the Survival section is sendable -- whether the executive could read it and know what they are being asked to decide, by when, and what changes if they do or do not act.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My Survival section reads: [paste]. Pretend you are the named executive ([role]) reading this for the first time. Test on three criteria. (1) After reading the section, can you list the specific decisions being asked of you, with dates? (2) Is the consequence of inaction in the section -- not implied, stated -- so you understand what changes for you if you do nothing? (3) Are the asks calibrated -- does the practitioner know the difference between a decision-level ask, an awareness-level ask, and a delegation-level ask? Tell me where the Survival section is asking for awareness when it should be asking for a decision, or asking for a decision when it should be delegating.</div>
+      <div class="prompt-label" style="margin-top:12px">Where is the calibration off? What is the rewritten Survival section?</div>
+      <textarea class="ai-field" placeholder="AI flagged ask (2) -- I had written 'a standing item on your Q3 board pre-read' which the CFO would have read as awareness, not decision. The actual decision is whether the AI investment narrative for Q3 belongs to me to draft or to the Group Strategy team. I rewrote (2) to: 'Confirm by 5 May whether the AI investment narrative for Q3 is mine to draft for review by you, or whether it sits with Group Strategy. The board pre-read process changes depending on which.' Now it is a decision with a date and a consequence."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">If the named executive reads this Blueprint and decides not to act on Survival -- not because they disagree but because they did not feel the Stake landed -- which section is the one that failed to do its work? And what is the version of that section that would have made the decision unavoidable?</div>
+    <textarea placeholder="Stake is the section most likely to fail to do its work. I currently have it as 'your Q3 brief becomes a defence not a forward plan' which is honest but already-known. The version that would make the decision unavoidable is one that names a specific non-executive director by role who would surface the conduct-complaint differential at Q3 -- the Audit Committee Chair has been on the regulator paper since week one. Naming her by role in the Stake section would make it specific. I have not done that because it shades into political. But political is the actual lever, and softening it for sendability is also softening the decision."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Connection Blueprints fall apart at the same place every time -- the practitioner can write four credible sections, but a peer reading them cannot predict what the named executive would say in reply. If your peer cannot predict the response, the Blueprint is not yet matched. Bring this to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read out the Audience naming first -- the role, the name, the priority this quarter. Then read the Survival section. Ask your peer to predict the response. If they say 'I would need more context to predict' -- the Blueprint is not yet sendable, because a real audience would not have more context than your peer at this point. If they say 'they would say yes to (1) and bounce (2) to Group Strategy' -- the Blueprint is matched and your test of the predicted response should match theirs.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The named executive -- if your peer Googled the role and the moment, would the moment verify? If not, the Now is in feeling-language not in fact.</li>
+      <li>The Survival section -- can your peer state the three asks back to you with dates and consequences, or do they have to re-read it twice? If they re-read it, the executive will too -- and the executive will not have a second read.</li>
+      <li>The predicted response you wrote -- does it match what your peer would predict? If they diverge, one of you is reading the audience wrong, and that is the conversation worth having before submission.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  return {
+    audience: {
+      role: get('audience_role'),
+      priority: get('audience_priority'),
+      moment: get('moment_context')
+    },
+    blueprint: {
+      position: get('bp_position'),
+      now: get('bp_now'),
+      stake: get('bp_stake'),
+      survival: get('bp_survival')
+    },
+    test: {
+      language_match: get('language_match'),
+      predicted_response: get('predicted_response')
+    }
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const requiredFields = [
+    data.audience.role, data.audience.priority, data.audience.moment,
+    data.blueprint.position, data.blueprint.now, data.blueprint.stake, data.blueprint.survival,
+    data.test.language_match, data.test.predicted_response
+  ];
+  const filled = requiredFields.filter(v => v && String(v).trim().length > 0).length;
+  const total = requiredFields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 2 (also Capstone Part A)? Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked and triggers your 7,000-point Module 1 payout.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W2_CAPSTONE_A)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

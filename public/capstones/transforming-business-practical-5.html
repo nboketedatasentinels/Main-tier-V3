@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | The Drift Heatmap</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+    --heat-green: #16A34A;
+    --heat-green-bg: #DCFCE7;
+    --heat-green-border: #86EFAC;
+    --heat-amber: #D97706;
+    --heat-amber-bg: #FEF3C7;
+    --heat-amber-border: #FCD34D;
+    --heat-red: #DC2626;
+    --heat-red-bg: #FEE2E2;
+    --heat-red-border: #FCA5A5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Drift Heatmap - distinctive to Practical 5 */
+  .heatmap-card { background: linear-gradient(135deg, rgba(220,38,38,0.04) 0%, rgba(217,119,6,0.04) 50%, rgba(22,163,74,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .heatmap-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .heatmap-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 20px; font-style: italic; }
+  .heatmap-legend { display: flex; justify-content: center; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid; }
+  .legend-swatch.green { background: var(--heat-green-bg); border-color: var(--heat-green); }
+  .legend-swatch.amber { background: var(--heat-amber-bg); border-color: var(--heat-amber); }
+  .legend-swatch.red { background: var(--heat-red-bg); border-color: var(--heat-red); }
+
+  .heatmap-row { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr 220px; gap: 18px; align-items: stretch; }
+  @media (max-width: 720px) { .heatmap-row { grid-template-columns: 1fr; gap: 12px; align-items: start; } }
+  .heat-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .heat-body { display: flex; flex-direction: column; gap: 6px; }
+  .heat-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .heat-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 6px; }
+  .heatmap-row textarea { min-height: 80px; font-size: 12px; padding: 10px 12px; flex: 1; }
+  .heat-score { display: flex; flex-direction: column; align-items: stretch; gap: 6px; justify-content: flex-start; }
+  .heat-score-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .heat-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+  .heat-btn { background: #fff; border: 1.5px solid var(--field-border); border-radius: 8px; padding: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #555; cursor: pointer; transition: all 0.15s; letter-spacing: 0.06em; }
+  .heat-btn:hover { transform: translateY(-1px); }
+  .heat-btn[data-rating="green"]:hover { border-color: var(--heat-green); background: rgba(22,163,74,0.06); color: var(--heat-green); }
+  .heat-btn[data-rating="amber"]:hover { border-color: var(--heat-amber); background: rgba(217,119,6,0.06); color: var(--heat-amber); }
+  .heat-btn[data-rating="red"]:hover { border-color: var(--heat-red); background: rgba(220,38,38,0.06); color: var(--heat-red); }
+  .heat-btn[data-rating="green"].selected { background: var(--heat-green-bg); border-color: var(--heat-green); color: var(--heat-green); border-width: 2px; }
+  .heat-btn[data-rating="amber"].selected { background: var(--heat-amber-bg); border-color: var(--heat-amber); color: var(--heat-amber); border-width: 2px; }
+  .heat-btn[data-rating="red"].selected { background: var(--heat-red-bg); border-color: var(--heat-red); color: var(--heat-red); border-width: 2px; }
+
+  /* Reset move card */
+  .reset-card { background: rgba(220,38,38,0.04); border: 1.5px solid var(--heat-red); border-radius: 12px; padding: 20px 22px; margin-top: 4px; }
+  .reset-card .reset-label { font-size: 10px; font-weight: 700; color: var(--heat-red); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .reset-card .reset-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .reset-card .reset-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+  .reset-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 600px) { .reset-grid { grid-template-columns: 1fr; } }
+  .field-block { display: flex; flex-direction: column; gap: 6px; }
+  .field-block label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+
+  /* Cause-vs-symptom callout */
+  .cause-callout { background: rgba(245,200,66,0.06); border: 1.5px solid var(--gold); border-radius: 12px; padding: 18px 22px; margin-bottom: 20px; }
+  .cause-callout-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .cause-callout-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .cause-callout-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .heatmap-card, .heatmap-row, .reset-card { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .heatmap-card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Drift Heatmap</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Transforming Business with AI</div>
+    <div class="practical-badge">Week 5 · Practical 5 of 6</div>
+  </div>
+  <h1 class="header-title">The Drift <em>Heatmap</em></h1>
+  <p class="header-desc">Score the transformation operating system across five rhythms -- decision cadence, communication cadence, escalation discipline, learning cadence, reset trigger -- as green/amber/red against observable evidence in the past 60 days. Pick the genuinely most-drifted rhythm, not the safest one to talk about. Then design the reset move that addresses the cause, not the symptom -- and book it in the calendar with named participants and a 30-day success measure. The reset is the work; the heatmap is the diagnostic.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Each rhythm scored against observable evidence from the past 60 days, not against gut feel or against the dashboard you wish you were running.</li>
+      <li>The most-drifted rhythm is the genuinely most-drifted one -- including if naming it surfaces a leadership cadence you have been letting slip personally.</li>
+      <li>The reset move addresses cause, not symptom. If the move is 'more meetings', 'longer agendas', or 'harder targets', it is escalation, not reset.</li>
+      <li>The reset is booked in the calendar with named participants, a specific date, and an observable success measure for 30 days from now.</li>
+      <li>The 30-day success measure is something a peer could check on the date -- not a feeling, not 'I will know it when I see it'.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the system you are scoring -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Frame the System You Are Scoring</div>
+      </div>
+    </div>
+    <p class="step-desc">Before you score, name the system. Not a generic transformation -- the specific operating system of the AI-era business transformation you are leading right now. Specificity here protects against scoring the version of the system you wish you were running.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Operating System</div>
+        </div>
+        <div class="substep-body">The transformation programme. Two sentences. What it is, who runs it day-to-day, what the formal rhythms are.</div>
+        <textarea name="system_context" placeholder="The enterprise-wide AI customer service rollout in retail banking. I'm Group CDO. Day-to-day delivery sits with the Programme Director and her team of 14. Formal rhythms: weekly steering committee (Tuesday 09:00, 60 minutes); fortnightly working group (Thursday 14:00, 90 minutes); monthly executive committee paper (first Monday); quarterly board update."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The 60-Day Window</div>
+        </div>
+        <div class="substep-body">What real events from the past 60 days will you score against? Two or three brief markers.</div>
+        <textarea name="window_context" placeholder="Past 60 days: regulator opened consultation (week 1 of window); two emergency steering committees called over conduct-complaint differential (weeks 3 and 5); Resistance Reframe conversation with the CCO (week 6); Q3 board pre-read process began (week 8)."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The five-rhythm heatmap -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Score the Five Rhythms</div>
+      </div>
+    </div>
+    <p class="step-desc">Score each rhythm green, amber, or red against what you have actually observed in the past 60 days. For each one, write the specific evidence -- the meeting that did or did not happen, the decision that did or did not get made, the signal that was or was not picked up. Score against evidence, not against the version of the system you want to defend in this audit.</p>
+
+    <div class="heatmap-card">
+      <div class="heatmap-card-label">The Drift Heatmap</div>
+      <div class="heatmap-card-sub">Five operating rhythms · scored against observable evidence · the past 60 days</div>
+      <div class="heatmap-legend">
+        <div class="legend-item"><div class="legend-swatch green"></div>Green: holding</div>
+        <div class="legend-item"><div class="legend-swatch amber"></div>Amber: drift visible</div>
+        <div class="legend-item"><div class="legend-swatch red"></div>Red: drifted, costing</div>
+      </div>
+
+      <!-- RHYTHM 1: Decision cadence -->
+      <div class="heatmap-row">
+        <div class="heat-num">01</div>
+        <div class="heat-body">
+          <div class="heat-name">Decision Cadence</div>
+          <div class="heat-helper">Decisions land in the rhythm they are scheduled to land in. Items do not slip from steering committee to steering committee. Decisions made are decisions executed -- not decisions to revisit next time.</div>
+          <textarea name="rhythm_1_evidence" placeholder="Observable evidence from the past 60 days. The specific decision that did or did not land in the rhythm it was meant to."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Score</div>
+          <div class="heat-buttons" data-rhythm="1">
+            <button type="button" class="heat-btn" data-rating="green">Green</button>
+            <button type="button" class="heat-btn" data-rating="amber">Amber</button>
+            <button type="button" class="heat-btn" data-rating="red">Red</button>
+          </div>
+          <input type="hidden" name="rhythm_1_score" value="">
+        </div>
+      </div>
+
+      <!-- RHYTHM 2: Communication cadence -->
+      <div class="heatmap-row">
+        <div class="heat-num">02</div>
+        <div class="heat-body">
+          <div class="heat-name">Communication Cadence</div>
+          <div class="heat-helper">The vision and the operational state are being communicated to the layers that matter, in the rhythm they are meant to be. Town halls happen, briefings land, the field hears from the centre on the schedule that was promised -- and the message that arrives is the one that was sent.</div>
+          <textarea name="rhythm_2_evidence" placeholder="Observable evidence from the past 60 days. Did the comms rhythm hold, slip, or fail? Where in the layers?"></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Score</div>
+          <div class="heat-buttons" data-rhythm="2">
+            <button type="button" class="heat-btn" data-rating="green">Green</button>
+            <button type="button" class="heat-btn" data-rating="amber">Amber</button>
+            <button type="button" class="heat-btn" data-rating="red">Red</button>
+          </div>
+          <input type="hidden" name="rhythm_2_score" value="">
+        </div>
+      </div>
+
+      <!-- RHYTHM 3: Escalation discipline -->
+      <div class="heatmap-row">
+        <div class="heat-num">03</div>
+        <div class="heat-body">
+          <div class="heat-name">Escalation Discipline</div>
+          <div class="heat-helper">Issues escalate to the right level at the right time -- not too early (overwhelming the executive), not too late (after the regulator has noticed, after the petition has been filed, after the board has read about it). Escalation goes through the rhythm, not around it.</div>
+          <textarea name="rhythm_3_evidence" placeholder="Observable evidence. Where did escalation happen at the right time? Where did it skip a level, jump too fast, or arrive too late?"></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Score</div>
+          <div class="heat-buttons" data-rhythm="3">
+            <button type="button" class="heat-btn" data-rating="green">Green</button>
+            <button type="button" class="heat-btn" data-rating="amber">Amber</button>
+            <button type="button" class="heat-btn" data-rating="red">Red</button>
+          </div>
+          <input type="hidden" name="rhythm_3_score" value="">
+        </div>
+      </div>
+
+      <!-- RHYTHM 4: Learning cadence -->
+      <div class="heatmap-row">
+        <div class="heat-num">04</div>
+        <div class="heat-body">
+          <div class="heat-name">Learning Cadence</div>
+          <div class="heat-helper">The transformation has a rhythm for learning from what is happening -- not just monitoring what is happening. Patterns are being read, signals from the field are travelling back to the centre, the post-mortem on each phase is producing the next phase, not just the current report.</div>
+          <textarea name="rhythm_4_evidence" placeholder="Observable evidence. Where is learning happening at a defined rhythm? Where is the rollout running on assumption from week one?"></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Score</div>
+          <div class="heat-buttons" data-rhythm="4">
+            <button type="button" class="heat-btn" data-rating="green">Green</button>
+            <button type="button" class="heat-btn" data-rating="amber">Amber</button>
+            <button type="button" class="heat-btn" data-rating="red">Red</button>
+          </div>
+          <input type="hidden" name="rhythm_4_score" value="">
+        </div>
+      </div>
+
+      <!-- RHYTHM 5: Reset trigger -->
+      <div class="heatmap-row">
+        <div class="heat-num">05</div>
+        <div class="heat-body">
+          <div class="heat-name">Reset Trigger</div>
+          <div class="heat-helper">The system has a rhythm for noticing when it is drifting and triggering a reset -- not waiting for a crisis to force it. A reset trigger is the rhythm that says 'the original plan is no longer the right plan' before the regulator, the board, or the petition does it for you.</div>
+          <textarea name="rhythm_5_evidence" placeholder="Observable evidence. Has a reset been triggered in the past 60 days? Was it triggered by the system, or forced by an external event?"></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Score</div>
+          <div class="heat-buttons" data-rhythm="5">
+            <button type="button" class="heat-btn" data-rating="green">Green</button>
+            <button type="button" class="heat-btn" data-rating="amber">Amber</button>
+            <button type="button" class="heat-btn" data-rating="red">Red</button>
+          </div>
+          <input type="hidden" name="rhythm_5_score" value="">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STEP 3: Pick the most-drifted rhythm and address cause -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Pick the Most-Drifted Rhythm and Address the Cause</div>
+      </div>
+    </div>
+    <p class="step-desc">If two or more rhythms scored red, pick the one whose drift is producing the most cost in the rest of the system. The most-drifted rhythm is rarely the one that is easiest to talk about. Before you design the reset move, name the cause -- the underlying mechanism producing the drift, not the symptom you can see. The reset has to address the cause. If it addresses the symptom, you are escalating, not resetting.</p>
+
+    <div class="cause-callout">
+      <div class="cause-callout-label">The Most-Drifted Rhythm</div>
+      <div class="cause-callout-q">Which one, and what is the cause?</div>
+      <div class="cause-callout-helper">Name the rhythm. Then name the cause -- the underlying mechanism producing the drift. The cause is not 'we are too busy' or 'people are not engaged'. It is the structural reason the rhythm has slipped.</div>
+      <div class="field-block" style="margin-bottom: 12px;">
+        <label>Most-Drifted Rhythm</label>
+        <input type="text" name="most_drifted_rhythm" placeholder="Reset Trigger -- red. The rollout has been running on the original plan for 14 months without a structural review, despite the regulator move and the conduct-complaint differential.">
+      </div>
+      <textarea name="cause" placeholder="The cause: there is no operating rhythm that triggers a reset. The steering committee monitors progress against the original plan; it does not have a standing item asking whether the original plan is still the right one. Reset has been an ad-hoc response to escalation -- emergency steering committees called when something specific went wrong. The mechanism that produces the drift is the absence of a scheduled question -- 'is the plan still the plan?' -- in any of the existing rhythms. Without it, the only trigger for reset is crisis."></textarea>
+    </div>
+
+    <div class="reset-card">
+      <div class="reset-label">The Reset Move</div>
+      <div class="reset-q">Design the move that addresses the cause -- and book it in the calendar.</div>
+      <div class="reset-helper">The reset move addresses cause not symptom. Not 'more meetings', not 'longer agendas', not 'harder targets'. Booked with named participants, a specific date, and a 30-day observable success measure.</div>
+
+      <div class="reset-grid">
+        <div class="field-block">
+          <label>The Reset Move (specific)</label>
+          <textarea name="reset_move" placeholder="Add a standing 30-minute item to the first steering committee of every quarter -- 'Plan Reality Check' -- that asks two questions in writing: (1) what has changed in the operating environment since the last quarter? (2) is the plan as currently scoped still the right plan? The Programme Director owns the paper; the steering committee chair signs off whether reset is or is not triggered. The mechanism is the standing question, not a person noticing -- which is what has been failing."></textarea>
+        </div>
+        <div class="field-block">
+          <label>Why This Addresses Cause Not Symptom</label>
+          <textarea name="cause_not_symptom" placeholder="Symptom-fix would have been: more emergency steering committees. Cause-fix is: a scheduled question that does not require an emergency to surface. The standing item exists whether or not anything specific has gone wrong, which is the only way reset becomes a rhythm rather than a crisis response."></textarea>
+        </div>
+      </div>
+
+      <div class="reset-grid">
+        <div class="field-block">
+          <label>Booked Date</label>
+          <input type="text" name="booked_date" placeholder="First steering committee of Q3 -- Tuesday 1 July, 09:00. Standing 30-minute item, first on the agenda.">
+        </div>
+        <div class="field-block">
+          <label>Named Participants</label>
+          <input type="text" name="named_participants" placeholder="Programme Director (paper owner), Steering Committee Chair (sign-off), Group Strategy Director (challenge), CCO (regulatory lens), me (final call).">
+        </div>
+      </div>
+
+      <div class="field-block">
+        <label>30-Day Success Measure (verifiable)</label>
+        <textarea name="success_measure" placeholder="By 1 August, two specific things are true. (1) The Q3 Plan Reality Check has been run, with a written paper from the Programme Director and a written sign-off (or trigger-reset call) from the Steering Committee Chair. (2) The Q3 board pre-read references the Reality Check outcome, not the original 14-month-old plan. A peer can verify both by checking the steering committee minutes and the board pre-read."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Reset</h2>
+    <p class="ai-activity-desc">Drift Heatmaps fail in two predictable places -- the practitioner picks the safest rhythm to talk about (rather than the genuinely most-drifted), and the reset move escalates the original ambition rather than addressing the cause. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether You Picked the Safest Rhythm</div>
+          <div class="ai-step-body">Ask AI to test whether the most-drifted rhythm you named is the genuinely most-drifted one -- or the safest one to surface to leadership.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I have scored five operating rhythms (decision cadence, communication cadence, escalation discipline, learning cadence, reset trigger) green/amber/red. My scores and evidence are: [paste]. The most-drifted rhythm I picked is: [paste]. Pressure-test on three criteria. (1) Of the rhythms I scored red or amber, which one would surface a leadership cadence I have personally been letting slip -- and is that the one I picked, or did I pick a different red? (2) Of the rhythms I scored green, is there one where the evidence I cited is process-evidence (the meeting happened) rather than outcome-evidence (the meeting produced what it was meant to)? (3) If a Group CFO read this heatmap, which rhythm would they ask to drill into first -- and is that the one I have foregrounded, or have I steered them toward the safer one? Tell me where the read is defensive.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the read go defensive? What is the rhythm you should have foregrounded?</div>
+      <textarea class="ai-field" placeholder="AI flagged that I had scored Communication Cadence green based on town-hall attendance numbers (process evidence) rather than 24-hour recall data (outcome evidence). Reading the Vision Sentence Test results from Week 3 against this, the actual Communication Cadence score is amber -- the rhythm holds for delivery, not for recall. AI also pushed back on Reset Trigger as my most-drifted: 'Reset Trigger is structurally important but it is also the most flattering choice for a CDO to surface, because it puts the gap on the system not on you. Is Decision Cadence honestly green?' I rescored Decision Cadence to amber based on three items that have slipped from steering to steering this quarter. Reset Trigger remains the most-drifted -- but with the honesty about Decision Cadence sitting alongside it."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether the Reset Move Addresses Cause</div>
+          <div class="ai-step-body">Ask AI to test whether the reset move addresses the cause -- or whether it is escalation dressed as reset.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My most-drifted rhythm is [paste]. The cause I named is [paste]. The reset move I designed is [paste]. The 30-day success measure is [paste]. Pressure-test on three criteria. (1) Could the reset move be described as 'more of what we already do' (more meetings, longer agendas, harder targets) -- or does it introduce a new mechanism the system has not been running? (2) Does the success measure check whether the cause has been addressed, or only whether the reset move has happened (process versus outcome again)? (3) If the reset move runs as planned for 30 days but the rhythm does not change, what was the design flaw? Tell me where the move is escalation, not reset, and rewrite the success measure with cause-level verification.</div>
+      <div class="prompt-label" style="margin-top:12px">Where is the move escalation? What is the rewritten success measure?</div>
+      <textarea class="ai-field" placeholder="AI confirmed the standing item is a new mechanism (not 'more meetings'). But the success measure was process-only -- 'the Reality Check has been run' is the move happening, not the cause being addressed. The cause was 'no scheduled question forces reset; only crisis does.' The cause-level verification is whether reset gets called when nothing has gone visibly wrong -- the system surfacing drift rather than reacting to it. I rewrote the success measure to add: 'and at least one item in the Reality Check paper has been flagged for plan adjustment that was not surfacing through normal steering committee escalation.' Now the measure checks whether the rhythm is producing what the rhythm exists to produce."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the Q3 Plan Reality Check has run twice and the system has had two opportunities to trigger a reset without a crisis -- which rhythm will have started drifting in the cover that the new mechanism creates? And what is the second-order reset trigger that should override the first if that happens?</div>
+    <textarea placeholder="In six months the Plan Reality Check itself will be at risk of becoming theatre -- a standing item that is run because it is on the agenda, with a paper that has been smoothed before it lands. The rhythm most likely to drift in the cover the new mechanism creates is Learning Cadence -- because the existence of a quarterly Reality Check can produce the false impression that learning is being done. The second-order trigger that should override is the recall test: at the end of the second Reality Check, ask three steering committee members 24 hours later what was said about plan adjustment. If they cannot recall, the mechanism is theatre. The discipline is not designing the reset rhythm -- it is testing it for theatre at the second turn of the cycle."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Drift Heatmaps fall apart at the same place every time -- the practitioner picks the safest rhythm to surface (often Reset Trigger because it puts the gap on the system not on the leader), and the reset move is escalation in the language of reset. A peer who has scored their own system can hear both at the same speed an assessor will. Bring this to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read out the five rhythm scores first, with the evidence for each. If your peer's first reaction is 'all the reds are about the system, none are about you' -- the heatmap is defensive and at least one score needs revisiting. Then read the reset move and the success measure. Ask your peer whether the move would change the rhythm in 30 days, or whether the rhythm could absorb the move without changing.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the rhythms you scored green -- is the evidence process-evidence (the meeting happened) or outcome-evidence (the meeting produced what it was meant to)? If the green is process-only, it is at risk of being amber.</li>
+      <li>The most-drifted rhythm you picked -- is it the one that puts the gap most uncomfortably on a leader (you, your sponsor, your peer) rather than on the system? If it is on the system, you may have picked the safer one.</li>
+      <li>Your reset move -- if the steering committee runs it as designed and the rhythm does not change in 30 days, what was the design flaw? If you cannot answer that in advance, the success measure is process-only.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  // Heatmap rating selection
+  document.querySelectorAll('.heat-buttons').forEach(group => {
+    const rhythmNum = group.dataset.rhythm;
+    group.querySelectorAll('.heat-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.heat-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        const hidden = document.querySelector('[name="rhythm_' + rhythmNum + '_score"]');
+        if (hidden) hidden.value = btn.dataset.rating;
+      });
+    });
+  });
+});
+
+function collectFormData() {
+  const get = (name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    return el ? el.value : '';
+  };
+  const buildRhythm = (n) => ({
+    evidence: get('rhythm_' + n + '_evidence'),
+    score: get('rhythm_' + n + '_score')
+  });
+  return {
+    setup: {
+      system: get('system_context'),
+      window: get('window_context')
+    },
+    heatmap: {
+      decision_cadence: buildRhythm(1),
+      communication_cadence: buildRhythm(2),
+      escalation_discipline: buildRhythm(3),
+      learning_cadence: buildRhythm(4),
+      reset_trigger: buildRhythm(5)
+    },
+    most_drifted: {
+      rhythm: get('most_drifted_rhythm'),
+      cause: get('cause')
+    },
+    reset: {
+      move: get('reset_move'),
+      cause_not_symptom: get('cause_not_symptom'),
+      booked_date: get('booked_date'),
+      participants: get('named_participants'),
+      success_measure: get('success_measure')
+    }
+  };
+}
+
+function submitPractical() {
+  const data = collectFormData();
+  const allRhythms = [
+    data.heatmap.decision_cadence, data.heatmap.communication_cadence,
+    data.heatmap.escalation_discipline, data.heatmap.learning_cadence, data.heatmap.reset_trigger
+  ];
+  const rhythmFields = allRhythms.flatMap(r => [r.evidence, r.score]);
+  const requiredFields = [
+    data.setup.system, data.setup.window,
+    ...rhythmFields,
+    data.most_drifted.rhythm, data.most_drifted.cause,
+    data.reset.move, data.reset.cause_not_symptom,
+    data.reset.booked_date, data.reset.participants, data.reset.success_measure
+  ];
+  const filled = requiredFields.filter(v => v && String(v).trim().length > 0).length;
+  const total = requiredFields.length;
+
+  if (filled < total) {
+    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
+    if (!proceed) return;
+  }
+
+  if (!confirm("Submit Practical 5? Once submitted, you can still edit until end of Week 5. After Week 5 closes, the submission is locked.")) return;
+
+  console.log("Submission payload:", data);
+  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W5)");
+}
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>

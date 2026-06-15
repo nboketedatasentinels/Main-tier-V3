@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part A: The Connection Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  .carry-note { background: rgba(74,59,140,0.06); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #444; line-height: 1.55; }
+  .carry-note strong { color: var(--purple); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 3px; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 160px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  .peer-prep { background: rgba(74,59,140,0.06); border: 1.5px solid rgba(74,59,140,0.2); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: #444; line-height: 1.65; margin-bottom: 16px; }
+  .peer-questions-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 13px; color: #2A2438; line-height: 1.65; padding: 8px 0 8px 24px; position: relative; border-bottom: 1px solid rgba(74,59,140,0.1); }
+  .peer-q-list li:last-child { border-bottom: none; }
+  .peer-q-list li::before { content: "?"; position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--purple); color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .peer-prep { break-inside: avoid; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .peer-prep { padding: 20px 18px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Capstone Part A · The Connection Blueprint</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Transforming Business with AI</div>
+  <div class="case-eyebrow">Capstone Part A · Module 1 · Week 2 · The Room You Walk Into</div>
+  <h1 class="header-title">The <em>Connection Blueprint</em></h1>
+  <div class="header-meta"><strong>An audience-matched persuasion artefact written for a specific named executive who controls the decision on your transformation. Four sections -- Position, Now, Stake, Survival -- in language matched to that executive's actual priority at this moment in the business cycle. The Blueprint should be sendable to that executive as is, with no further softening.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Analyse the room walked into; apply the Door Practice), LO2 (Design and demonstrate the Connection Blueprint)</div>
+  <div class="header-meta"><strong>Word count:</strong> 600-800 words total across all sections.</div>
+  <div class="case-callout">Capstone Part A of 2 · Combined Capstone = 50% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Blueprint sendable to a named executive -- audience matched, anchored to the right moment in the business cycle, defensible without your personal explanation.</div>
+    <ul class="standard-list">
+      <li>The named executive is a real person you could send this to -- by role and ideally name -- not a hypothetical.</li>
+      <li>Position anchors to the audience's actual top concern at this moment, not the practitioner's.</li>
+      <li>Now is anchored to a specific business cycle moment (a board cycle, a regulatory window, a competitor move, an earnings cycle), not generic urgency.</li>
+      <li>Stake is named in language the named executive would actually use about their own work -- not transformation jargon.</li>
+      <li>Survival names what survival of the transformation requires from this audience in the next 90 days, with specific, time-bound, accountable asks.</li>
+      <li>A peer reading the Blueprint could predict what the named executive would say in response.</li>
+    </ul>
+  </div>
+
+  <!-- WORD COUNTER -->
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all sections</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 600-800 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 600-800 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <!-- SECTION 1 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 01</div>
+      <div class="outcome-tag">Outcome 2 · Position</div>
+    </div>
+    <h2 class="section-title">Position -- where the transformation programme stands today</h2>
+    <div class="section-prompt">State Position with specifics: where the transformation programme stands today, in language matched to the named executive's actual top concern (not yours). Identify the executive at the top of the section -- by role, ideally by name. Anchor to the audience's perspective, not the head office or programme team perspective.</div>
+    <div class="section-hint">Audience first. State the executive (role, name if known), then their top concern at this moment. Position then describes the programme's actual state in language the executive would use to describe it -- not transformation team language. Specifics matter: numbers, milestones, what is and is not in flight. Avoid press-release framing; the executive can read that elsewhere.</div>
+    <textarea name="s1" placeholder="Named executive: ...
+  Role: ...
+  Their top concern at this moment: ...
+
+Position (where the programme stands today, in their language): ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 140-180 words</span>
+      <span class="field-word-count" id="s1Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 2 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 02</div>
+      <div class="outcome-tag">Outcome 2 · Now</div>
+    </div>
+    <h2 class="section-title">Now -- the moment in the business cycle that makes this the right time</h2>
+    <div class="section-prompt">State Now: the moment in the business cycle that makes this the right time to act. Anchor to a specific business cycle moment for the named executive -- a board cycle, a regulatory window, a competitor move, an earnings cycle, a budget cycle. Avoid generic urgency.</div>
+    <div class="section-hint">The Now anchor is a real calendar event -- a date that exists on the executive's calendar regardless of your transformation. Generic urgency ('the market is changing fast', 'we need to move now') does not meet the bar. The test: if the executive looked at their calendar, the moment you name should be visible there.</div>
+    <textarea name="s2" placeholder="The business cycle moment: ...
+  Why this moment specifically: ...
+  What window it opens or closes: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-170 words</span>
+      <span class="field-word-count" id="s2Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 3 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 03</div>
+      <div class="outcome-tag">Outcome 2 · Stake</div>
+    </div>
+    <h2 class="section-title">Stake -- what is at stake for the named executive</h2>
+    <div class="section-prompt">State Stake: what is at stake for the named executive specifically -- not for the organisation in general, not for the transformation programme, not for the practitioner. Use language the executive would use about their own work, including risk, accountability, reputation, and outcome.</div>
+    <div class="section-hint">Stake is read from the executive's perspective. The test: would the executive recognise this as their actual stake, or as the transformation team's view of what their stake should be? Two failure modes: collapsing 'organisational stake' and 'executive stake' (different); writing in transformation jargon rather than the language the executive uses internally.</div>
+    <textarea name="s3" placeholder="For [executive name/role], what is at stake:
+  Risk: ...
+  Accountability: ...
+  Reputation: ...
+  Outcome: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 150-200 words</span>
+      <span class="field-word-count" id="s3Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- SECTION 4 -->
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 04</div>
+      <div class="outcome-tag">Outcome 2 · Survival</div>
+    </div>
+    <h2 class="section-title">Survival -- what survival of the transformation requires from this audience</h2>
+    <div class="section-prompt">State Survival: what survival of the transformation requires from the named executive in the next 90 days. Specific, time-bound, accountable. Survival is not vision language -- it names what this executive must do (or not do) for the transformation to survive. The asks are operational and observable.</div>
+    <div class="section-hint">The asks are time-bound (named dates) and accountable (the executive can succeed or fail at them). Vision language ('lead the change', 'champion the work') does not meet the bar. Two operational tests: an executive could read the asks and put them on their calendar; a peer could check whether the asks were met without ambiguity. The strongest Survival sections also name what survival does not require -- removing scope creep from the executive's plate.</div>
+    <textarea name="s4" placeholder="For survival of the transformation, [executive name] needs to:
+
+  Within 30 days: ...
+  Within 60 days: ...
+  Within 90 days: ...
+
+What survival does not require: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 180-250 words</span>
+      <span class="field-word-count" id="s4Count">0 words</span>
+    </div>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, walk a peer through the Blueprint.</h2>
+    <p class="peer-prep-sub">The Connection Blueprint is meant to be sendable to the named executive. The fastest test is whether a peer who knows the executive (or knows how executives like them think) can predict what the response would be.</p>
+
+    <div class="peer-questions-label">Questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Is the named executive a real person you could send this to, or a hypothetical?</li>
+      <li>Is the Now anchored to a specific calendar event for that executive, or to generic urgency?</li>
+      <li>Does Stake read in the executive's language about their own work, or in transformation team language?</li>
+      <li>Could the executive read the Survival section and put the asks on their calendar without further interpretation?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) { if (!s || !s.trim()) return 0; return s.trim().split(/\s+/).length; }
+function recountWords() {
+  const fields = ["s1", "s2", "s3", "s4"];
+  let total = 0;
+  fields.forEach(name => {
+    const el = document.querySelector('[name="'+name+'"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name+'Count');
+    if (display) display.textContent = c+' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 960, goodMin = 600, goodMax = 800;
+  bandEl.style.left = ((goodMin/max)*100)+'%';
+  bandEl.style.width = (((goodMax-goodMin)/max)*100)+'%';
+  fillEl.style.width = Math.min(100,(total/max)*100)+'%';
+  valEl.textContent = total+' words';
+  valEl.classList.remove('under','good','over');
+  fillEl.classList.remove('good','over');
+  if (total < goodMin) { valEl.classList.add('under'); hintEl.textContent = 'Below the 600-word threshold. The expected range is 600-800.'; }
+  else if (total <= goodMax) { valEl.classList.add('good'); fillEl.classList.add('good'); hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.'; }
+  else { valEl.classList.add('over'); fillEl.classList.add('over'); hintEl.textContent = 'Over 800 words. The response needs to land in the 600-800 word range.'; }
+}
+function collectFormData() {
+  const get = (n) => { const el = document.querySelector('[name="'+n+'"]'); return el ? el.value : ''; };
+  const fields = ["s1", "s2", "s3", "s4"];
+  const answers = {};
+  const word_counts = {};
+  let total = 0;
+  fields.forEach(name => {
+    const v = get(name);
+    answers[name] = v;
+    const c = countWords(v);
+    word_counts[name] = c;
+    total += c;
+  });
+  word_counts.total = total;
+  return {
+    capstone_part: "Capstone Part A",
+    capstone_id: "transforming_business_capstone_part_a_blueprint",
+    journey: "Transforming Business with AI",
+    module: "Module 1 -- The Room You Walk Into -- Connection and Stakeholder Influence under AI Pressure",
+    outcomes_assessed: ["LO1", "LO2"],
+    answers, word_counts,
+  };
+}
+function submitCapstone() {
+  const data = collectFormData();
+  const total = data.word_counts.total;
+  let warning = '';
+  if (total < 600) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 600-800. Below 600 sits outside the range.';
+  else if (total > 800) warning = '\n\nWARNING: Total response is '+total+' words. The expected range is 600-800. Above 800 sits outside the range.';
+  if (!confirm("Submit Capstone Part A: The Connection Blueprint?\\n\\nThis is Capstone Part A of 2 in the Combined Capstone for Transforming Business with AI. Both parts are marked together as one component, weighted 50% of your competence pass.\\n\\nAfter submission, Capstone Part B (Transformation Memo, Week 6) closes the Combined Capstone at end of Module 2." + warning + '\n\nProceed?')) return;
+  console.log('Capstone payload:', data);
+  alert("Capstone Part A received. Capstone Part B (Transformation Memo, Week 6) closes the Combined Capstone at end of Week 6. (In production, this POSTs to /api/capstone/submit with capstone_id = transforming_business_capstone_part_a_blueprint)");
+}
+recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+</body>
+</html>
