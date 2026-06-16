@@ -1,0 +1,11 @@
+opportunity_1: Fleet utilisation has sat flat at 67% for 11 consecutive months across our 240 vehicles, and the weekly utilisation report that should drive dispatch decisions is 14 hand-built Excel exports costing 6 analyst hours/wk that nobody acts on. Cost of inaction: roughly $1.2M/yr of avoidable opex left on the table plus about 300 wasted analyst hours/yr.
+
+opportunity_2: Empty-return mileage on backhaul legs runs at an estimated 31% because load-matching is done by phone between three depots with no shared visibility. Cost of inaction: roughly $700k/yr in fuel and driver hours burned moving air, growing as diesel prices rise.
+
+opportunity_3: Preventive-maintenance scheduling is reactive: 22% of services happen after a breakdown rather than on plan, pulling vehicles off the road unpredictably. Cost of inaction: roughly $450k/yr in emergency repairs and missed deliveries, plus unmeasured reliability damage with two anchor contract customers.
+
+chosen_opportunity: Opportunity 1: closing the fleet-utilisation gap by replacing the ignored 14-export weekly report with an automated weekly action dashboard.
+
+why_chosen: It carries the largest cost of inaction ($1.2M/yr vs $700k and $450k), it sits squarely in the COO's Operating Leverage cost programme so it has a sponsor already looking for exactly this, and it is the most within my direct scope as Operations Analytics Lead: I own the data and the report, so I can move without waiting on depot managers or maintenance vendors. The ROI is also the most defensible because the baseline (67% for 11 months) is already measured and uncontested.
+
+chosen_opportunity_one_sentence: Fleet utilisation has been stuck at 67% for 11 months because the weekly report meant to drive reallocation is 14 manual exports nobody acts on, and an automated weekly action dashboard can move it to 70% (about $1.2M/yr) within a 90-day pilot for $35k and 0.4 FTE.

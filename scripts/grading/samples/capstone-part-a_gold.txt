@@ -1,0 +1,35 @@
+section_01_opportunity: Fleet utilisation has sat flat at 67% for 11 consecutive months across our 240 vehicles. The weekly utilisation report that should be driving dispatch decisions is 14 hand-built Excel exports, costs 6 analyst hours every week, and lands in inboxes that no one acts on. We are paying to produce a number, then ignoring it. Go look at last Monday's report distribution and count how many vehicle-reallocation decisions it triggered: the answer is zero.
+
+section_02_cost: Holding utilisation at 67% rather than reaching 70% leaves roughly $1.2M/yr of avoidable opex on the table. The reporting process itself burns 6 analyst hrs/wk (about 300 hrs/yr) producing output that changes no decision. Strategically, flat utilisation is the single largest unaddressed line in the Operating Leverage programme, and every month we wait is a month the COO's cost target slips further out of reach.
+
+section_03_decision_maker: The COO owns the operations P&L and the Operating Leverage cost programme, and has sole authority to release the $35k capital and the 0.4 FTE. They were burned by the 2023 logistics-platform migration that was cancelled at 60% delivered, so they discount anything that smells like a big build. They speak in 'visible to action': they want to see the line that moves and the decision it triggers, not a dashboard tour. Frame everything as one number, one owner, one weekly decision.
+
+section_03_strategic_link: The COO's Operating Leverage cost programme: doing more freight movement without adding fleet or headcount.
+
+proposal_title: From 67% to 70%: an automated weekly action dashboard to unlock $1.2M of fleet operating leverage
+
+proposal_to_from: To: COO | From: Operations Analytics Lead | Date: 15 June 2026
+
+proposal_opportunity: Fleet utilisation has been flat at 67% for 11 months while the weekly utilisation report consumes 6 analyst hours across 14 manual Excel exports and drives no decisions. The number exists; the action does not. Automating that report into a single weekly action view on our existing platforms turns a sunk reporting cost into a live lever on utilisation.
+
+proposal_strategic: This is the most direct unaddressed contributor to your Operating Leverage programme: more freight on the same 240 vehicles, no new capital fleet.
+
+proposal_business_case: Today: 67% utilisation, 6 analyst hrs/wk on reporting, zero decisions triggered. Target: 70% utilisation within the 90-day pilot, worth roughly $1.2M/yr in opex. Cost: $35k one-off plus 0.4 FTE analyst for the pilot. Payback: the saving covers the spend inside the first quarter of run-rate, and the 0.4 FTE replaces, not adds to, the 6 manual hours.
+
+proposal_ask: Approve a 90-day pilot at $35k capital plus 0.4 FTE analyst, with a single go/no-go review at day 90 against a 70% utilisation target. Decision requested by 30 June so we start on the July dispatch cycle.
+
+section_05_framing: Framed as a 90-day pilot on existing platforms with a hard go/no-go, because the COO was burned by a multi-year migration cancelled at 60%: this de-risks by being small, reversible and fast. Led with the trend and the dollar figure because they think 'visible to action'. Deliberately excluded the data-architecture detail, the tooling comparison and any phase-2 roadmap: those invite the 'big build' fear and belong in Part B scope, not on the one-pager.
+
+section_06_pushback: Objection: 'We tried a platform fix in 2023 and killed it at 60%, why is this different?' Response: That was a multi-year replacement of core systems; this is a 90-day pilot that adds a reporting layer on top of platforms we already run, with no migration and a built-in go/no-go at day 90. Worst case we stop at $35k and keep the analyst time we freed up. The ask stands because the downside is capped and known.
+
+section_07_practicals: The Opportunity Map (Practical 1) is where the 67%-for-11-months flatline and the 6 hrs/wk wasted reporting effort were sized and ranked top of the list, which is why this is the chosen opportunity over smaller ones. The Stakeholder Position Paper (Practical 2) mapped the COO's 'visible to action' language and 2023 scar tissue, which directly shaped the pilot framing, the go/no-go gate, and the decision to exclude architecture detail.
+
+section_08_length: Confirmed under one page. Cut: the tooling/vendor comparison, a data-quality appendix, a phase-2 expansion to fuel and maintenance metrics, and the full risk register. Each lives in Part B. The one-pager keeps only trend, strategic link, four-line business case and the dated ask.
+
+ai_surfaced: The AI flagged that I had quantified the $1.2M upside but never stated the cost of the reporting process itself, and asked whether the COO would suspect the 0.4 FTE was net-new headcount, which contradicts an Operating Leverage story.
+
+ai_applied: I added the 6 hrs/wk reporting cost as a second quantified line, and made explicit that the 0.4 FTE replaces the freed-up manual hours rather than adding headcount, so the ask reads as leverage not cost growth.
+
+ai_rejected: The AI proposed adding a competitor-benchmarking paragraph and a three-phase roadmap to 'strengthen' the case. I rejected both: they push the page over length and, worse, the roadmap signals exactly the open-ended big-build commitment that got the 2023 project cancelled. Restraint is the persuasion move here.
+
+ai_rule: Use AI to stress-test for gaps and hidden assumptions in my own draft, never to add volume. Anything it suggests adding must survive the test 'does this move the specific decision-maker closer to yes?' or it gets cut.

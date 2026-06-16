@@ -30,6 +30,20 @@ export type ProgrammeSubmissionStatus =
   | 'approved'
   | 'needs_revision'
 
+/**
+ * AI grade written by the gradeProgrammeSubmission Cloud Function. ADVISORY
+ * ONLY - it never sets status or awards points; partners remain the gate.
+ */
+export interface AiGrade {
+  status: 'completed' | 'error'
+  score: number | null
+  feedback: string | null
+  pass: boolean | null
+  model: string | null
+  error: string | null
+  gradedAt: Date | null
+}
+
 export interface ProgrammeComponentSubmission {
   /** Firestore doc id - format: `{uid}__{componentId}`. */
   id: string
@@ -56,6 +70,23 @@ export interface ProgrammeComponentSubmission {
   reviewerName: string | null
   partnerNotes: string | null
   score: number | null
+  // AI grade (advisory) - written by the gradeProgrammeSubmission function.
+  aiGrade: AiGrade | null
+}
+
+const parseAiGrade = (raw: unknown): AiGrade | null => {
+  if (!raw || typeof raw !== 'object') return null
+  const d = raw as Record<string, unknown>
+  const status = d.status === 'error' ? 'error' : 'completed'
+  return {
+    status,
+    score: typeof d.score === 'number' ? d.score : null,
+    feedback: typeof d.feedback === 'string' ? d.feedback : null,
+    pass: typeof d.pass === 'boolean' ? d.pass : null,
+    model: typeof d.model === 'string' ? d.model : null,
+    error: typeof d.error === 'string' ? d.error : null,
+    gradedAt: toDate(d.gradedAt),
+  }
 }
 
 const toDate = (value: unknown): Date | null => {
@@ -110,6 +141,7 @@ const fromSnapshot = (id: string, data: DocumentData): ProgrammeComponentSubmiss
   reviewerName: typeof data.reviewerName === 'string' ? data.reviewerName : null,
   partnerNotes: typeof data.partnerNotes === 'string' ? data.partnerNotes : null,
   score: typeof data.score === 'number' ? data.score : null,
+  aiGrade: parseAiGrade(data.aiGrade),
 })
 
 const sortByLastUpdatedDesc = (

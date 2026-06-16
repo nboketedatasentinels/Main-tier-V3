@@ -27,3 +27,4 @@ export * from "./at-risk-api";
 export * from "./send-nudge-email";
 export * from "./send-feedback-notification";
 export * from "./send-programme-email";
+export * from "./grade-programme-submission";

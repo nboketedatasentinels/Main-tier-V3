@@ -1,0 +1,33 @@
+section_01_reference: This project delivers an automated weekly fleet-utilisation action dashboard for our 240-vehicle operation, replacing the 14 manual Excel exports and 6 analyst hours a week that currently produce a report nobody acts on. Built on our existing platforms over a 90-day pilot at $35k capital plus 0.4 FTE analyst, it surfaces a single weekly utilisation number with the specific vehicle-reallocation decisions it triggers, owned by dispatch. The target is to move utilisation from 67% to 70%, worth roughly $1.2M/yr in opex, with a clean go/no-go decision at day 90.
+
+section_02_objectives: 1) An automated weekly utilisation dashboard sourced from existing telematics and dispatch data, no manual exports. 2) A defined weekly decision routine: dispatch reviews the view every Monday and actions named under-utilised vehicles. 3) A retired legacy process: the 14 Excel exports and 6 analyst hours decommissioned. 4) A day-90 evaluation pack measuring utilisation against the 70% target and the decisions the dashboard drove.
+
+section_02_outcomes: Fleet utilisation moves from a flat 67% toward 70%, releasing roughly $1.2M/yr of opex against the Operating Leverage programme. Dispatch acts on utilisation weekly instead of ignoring a report. 6 analyst hours a week are redeployed from manual export to analysis. The organisation gains a repeatable model for turning a standing report into a standing decision.
+
+section_03_in_scope: In scope: the full 240-vehicle fleet utilisation metric; automated weekly refresh from existing telematics and dispatch systems; the dashboard view and its single action list; the weekly dispatch decision routine; decommissioning the 14 manual exports; and the day-90 go/no-go evaluation. The 0.4 FTE analyst supports the pilot within this scope.
+
+section_03_out_of_scope: Out of scope: fuel-efficiency and maintenance dashboards (different data, dilutes the utilisation focus); any new telematics hardware or platform procurement (the 2023 migration scar means we ride existing systems only); driver-level performance scoring (an HR and IR minefield, not needed for utilisation); and any multi-site or trailer-pool expansion (kept for a post-pilot phase if the go/no-go passes). Each is excluded to keep the 90-day pilot small, reversible and on-budget.
+
+methodology: Hybrid
+
+section_04_methodology_rationale: Hybrid fits because the data plumbing is a fixed, sequenced job best run Waterfall-style: connect telematics, connect dispatch, validate the utilisation calculation in a set order. But the decision routine, what the dashboard shows and how dispatch acts on it, must be tuned in fortnightly cycles with the dispatch team, because the value is in adoption, not the build. We fix the data backbone, then iterate the action layer. Pure Agile risks the COO's fear of an open-ended build; pure Waterfall risks shipping a view nobody uses.
+
+section_05_timeline: Days 1-15: data connections to telematics and dispatch live; utilisation calculation validated against last quarter. Days 16-30: first dashboard build; baseline 67% confirmed in-tool. Days 31-45: weekly dispatch decision routine launched; first reallocations actioned. Days 46-75: two fortnightly iteration cycles tuning the action list with dispatch. Days 76-85: manual Excel process decommissioned. Days 86-90: evaluation pack and go/no-go review against 70%.
+
+section_05_dependencies: 1) Read access to telematics and dispatch data, owned by IT Systems Manager. 2) Dispatch lead commits to the weekly decision routine, owned by Dispatch Manager. 3) Validated baseline utilisation figure, owned by Operations Analytics Lead. 4) Sign-off to retire the legacy Excel report, owned by COO. 5) 0.4 FTE analyst time ring-fenced, owned by Operations Analytics Lead.
+
+section_06_budget: $35k capital: $18k integration and dashboard build, $9k platform configuration, $5k data-validation effort, $3k contingency (about 9%). Plus 0.4 FTE analyst across 90 days. Confidence: High on capital (existing platforms, fixed-scope build); Medium on the FTE, since iteration cycles with dispatch could run hot if adoption is slow, which the contingency partly covers.
+
+risk_1: Risk: Dispatch does not adopt the weekly decision routine, so the dashboard becomes another ignored report and utilisation stays at 67%. | Severity: High | Likelihood: Medium | Mitigation: Co-design the action list with dispatch in the fortnightly cycles, tie it to an existing Monday dispatch huddle, and track decisions-actioned as a pilot KPI, not just utilisation. | Owner: Dispatch Manager
+
+risk_2: Risk: Telematics and dispatch data quality is worse than assumed, so the utilisation figure is disputed and trust collapses. | Severity: High | Likelihood: Medium | Mitigation: Validate the calculation against last quarter's manual report in days 1-15 before any decisions ride on it; publish the data-quality caveats openly. | Owner: IT Systems Manager
+
+section_08_defence: Challenge: 'Why not include fuel and maintenance now and get more value from one build?' Answer: Bundling them triples the data scope and turns a 90-day pilot into the kind of multi-stream build that got the 2023 project cancelled. Utilisation alone carries the $1.2M case. If the go/no-go passes, fuel and maintenance become a fast follow-on on a proven backbone. I am holding the scope precisely because narrowness is what makes the day-90 decision clean.
+
+ai_surfaced: The AI stress-tested the scope and flagged that I measured success only by utilisation reaching 70%, which is lagging and slow; if adoption is poor the pilot would look failed at day 90 with no earlier signal, and the COO would have nothing to course-correct on.
+
+ai_applied: I added decisions-actioned per week as a leading indicator in the objectives and the day-90 pack, so adoption is visible from week 3 and the COO can intervene before the lagging utilisation number lands.
+
+ai_rejected: The AI recommended adding a formal change-management workstream with a comms plan and training programme. I rejected it as over-engineering for a 0.4 FTE pilot on one team: a workstream that heavy signals a big programme and contradicts the small-and-reversible framing the COO needs. Embedding the routine in the existing Monday huddle does the job.
+
+ai_rule: Use AI to pressure-test the scope for failure modes I cannot see early, especially missing leading indicators. Adopt its fixes that add early signal; reject its fixes that add process weight disproportionate to a pilot.

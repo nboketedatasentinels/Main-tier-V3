@@ -1,0 +1,23 @@
+project_summary: A 90-day pilot to replace 14 ignored manual Excel exports with an automated weekly utilisation action dashboard, built on our existing telematics and TMS, to move fleet utilisation from 67% to 70% (about $1.2M/yr).
+
+project_distinctives: First, the value is unlocked by behaviour change, not by the dashboard itself, so we cannot specify success up front and have to learn what makes dispatchers act. Second, the COO was burned by a 2023 migration cancelled at 60%, so reversibility and visible weekly progress matter more than a complete plan. Third, the data and platforms already exist, so there is little to build and much to iterate, meaning short feedback loops are cheap.
+
+methodology_choice: Agile, run as short weekly iterations against the live utilisation number.
+
+headline_reason: The hard problem is making dispatchers act, not building the dashboard, and you can only learn what drives action by shipping a small version weekly and watching utilisation respond.
+
+reason_1: Because value depends on behaviour change we cannot specify in advance, each week we ship one change to the action list and observe whether reallocation decisions and utilisation move, then keep or discard it. A fixed up-front spec (Waterfall) would lock in guesses about what motivates dispatchers before we have learned anything.
+
+reason_2: The COO's 60%-abandoned-migration scar means weekly working increments are themselves the risk control: every Friday there is something live and a utilisation reading, so the project can be stopped at any point having already delivered value, never stranded mid-build.
+
+reason_3: Because the platforms and data already exist, iteration is cheap and there is almost no long-lead build to sequence, so Agile's short cycles fit naturally where Waterfall's phase gates would add ceremony without reducing any real risk.
+
+counter_argument: A reasonable critic argues that Agile's lack of a fixed end-state is exactly what frightens a COO who watched an open-ended project drift to 60% and die, and that a tightly specified Waterfall plan with a clear scope and end date would feel safer and easier to govern for a sponsor who wants predictability.
+
+counter_response: That worry is right about open-endedness but wrong about which method causes it. We bound the openness with a hard 90-day window and a day-90 go/no-go, so there is a fixed end date. What we keep flexible is only the content of the weekly action list, which is the part we genuinely cannot know in advance. Waterfall would not have saved the 2023 project: it failed because it ran 60% of the way with nothing usable, which is precisely the failure mode weekly working increments prevent.
+
+ai_risk_1: Iterating fast on an automated dashboard can quietly entrench a bad utilisation metric: if the formula double-counts idle-but-loaded vehicles, Agile speed scales the error weekly. Mitigation: freeze and sign off the utilisation definition with operations in week one, and re-validate the metric against a manual sample at each iteration before trusting it.
+
+ai_risk_2: Automating the weekly action list risks dispatchers following it blindly and reallocating vehicles in ways that breach customer service windows. Mitigation: keep a human dispatcher decision in the loop, surface the recommendation with its reason rather than as a command, and review any reallocation that touches an anchor-contract route.
+
+ai_risk_3: Rapid iteration can outrun documentation, leaving the dashboard a black box only I understand, which recreates the key-person fragility that killed the 2023 project. Mitigation: maintain a one-page living spec of data sources and logic updated each sprint, and pair with a second analyst from week one so no single person owns the pipeline.

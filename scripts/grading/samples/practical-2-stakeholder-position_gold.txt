@@ -1,0 +1,25 @@
+chosen_opportunity_restated: Fleet utilisation has been stuck at 67% for 11 months because the weekly report meant to drive reallocation is 14 manual exports nobody acts on, and an automated weekly action dashboard can move it to 70% (about $1.2M/yr) within a 90-day pilot for $35k and 0.4 FTE.
+
+action_needed: Approve a 90-day pilot funded at $35k plus 0.4 FTE of my analyst's time to build and run an automated weekly utilisation action dashboard on our existing telematics and TMS platforms, with a go/no-go review at day 90 against a 70% target.
+
+dm_role: The Chief Operating Officer, who owns the operations P&L and sponsors the company-wide Operating Leverage cost programme.
+
+dm_authority: The $35k and the 0.4 FTE both sit inside the operations P&L the COO owns, so no one above needs to sign off. The utilisation number is also one of the headline metrics in the COO's own Operating Leverage programme, which means this is not a request landing in someone else's territory: it is moving a needle the COO is already personally accountable for to the board.
+
+dm_relationship: Functional and credible but not close. The COO knows my analysis is reliable and quotes my numbers in reviews, but I am two levels down and we interact mostly through my line manager. I have credibility on data and almost none yet on delivery, because the COO has never seen me ship something operational, only report on it.
+
+priority_1: Hitting the Operating Leverage cost-reduction target this financial year. Real signal: the COO opens every monthly ops review with the programme scorecard and has restructured two depot teams against it, so this is backed by action, not just talk.
+
+priority_2: Protecting frontline operating capacity while cutting cost. Real signal: when finance proposed parking 15 vehicles to cut cost, the COO blocked it, saying capacity cuts are a false economy, which shows a genuine preference for efficiency gains over capacity cuts.
+
+priority_3: Not getting burned again by a stalled technology project. Real signal: the COO still references the 2023 logistics-platform migration that was cancelled at 60% complete, and now repeats the phrase 'visible to action' as a test for any new initiative, which is a scar shaping every funding decision.
+
+blocker_1: Fear of another 60%-and-abandoned project. The 2023 platform migration burned cash and credibility, so any proposal that smells like a big build or a long runway gets shut down before it is heard.
+
+blocker_2: Doubt that a dashboard changes behaviour. The COO has watched the existing weekly report be ignored for 11 months and reasonably asks why a prettier version would be acted on when the current one is not.
+
+blocker_3: FTE protectiveness. With the Operating Leverage programme squeezing headcount, committing even 0.4 FTE feels like it cuts against the cost message the COO is selling to everyone else.
+
+proposal_response: Against the abandoned-project fear: frame it as a 90-day pilot on platforms we already license, with a hard day-90 go/no-go and a kill switch, so it can never become another stranded 60% build. Against the doubt that a dashboard changes behaviour: the deliverable is not a report but a weekly named-action list tied to specific vehicles and a standing 15-minute dispatch decision slot, so the output is decisions taken, not a number distributed. Against FTE protectiveness: the 0.4 FTE is reallocated from the 6 analyst hrs/wk already wasted on manual exports, so it is net-neutral to headcount and actually frees capacity once automated.
+
+strongest_argument: You are already paying 300 analyst hours a year to produce a utilisation number that triggers zero decisions, while 67% utilisation leaves $1.2M of your Operating Leverage target on the table every year. For $35k and ninety days, on platforms we already own, I will turn that wasted report into a weekly action list and prove three points of utilisation. If it is not visibly moving the number by day 90, we stop and you have lost a quarter, not a migration. That is the smallest, most reversible bet you can make against your single largest flat cost line.

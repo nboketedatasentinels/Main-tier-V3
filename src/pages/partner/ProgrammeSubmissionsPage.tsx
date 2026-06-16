@@ -693,6 +693,61 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
 
             <Box
               p={4}
+              bg="#eef4fb"
+              border="1px solid"
+              borderColor="#cfe0f2"
+              rounded="lg"
+            >
+              <Stack spacing={3}>
+                <HStack justify="space-between" align="center">
+                  <Text fontSize="sm" fontWeight="bold" color="#1f4e79">
+                    AI grade (advisory)
+                  </Text>
+                  {submission.aiGrade?.status === 'completed' && (
+                    <HStack spacing={2}>
+                      <Badge colorScheme="blue" borderRadius="full" px={2}>
+                        {submission.aiGrade.score ?? '-'}/100
+                      </Badge>
+                      <Badge
+                        colorScheme={submission.aiGrade.pass ? 'green' : 'orange'}
+                        borderRadius="full"
+                        px={2}
+                      >
+                        {submission.aiGrade.pass ? 'Suggests PASS' : 'Suggests revise'}
+                      </Badge>
+                    </HStack>
+                  )}
+                </HStack>
+
+                {!submission.aiGrade && (
+                  <Text fontSize="xs" color="gray.600">
+                    No AI grade yet. It is generated automatically a few moments after a
+                    submission and only for artefacts that have a rubric.
+                  </Text>
+                )}
+
+                {submission.aiGrade?.status === 'error' && (
+                  <Text fontSize="xs" color="red.600">
+                    AI grading failed: {submission.aiGrade.error ?? 'unknown error'}. Review
+                    the answers manually.
+                  </Text>
+                )}
+
+                {submission.aiGrade?.status === 'completed' && (
+                  <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
+                    {submission.aiGrade.feedback || 'No feedback returned.'}
+                  </Text>
+                )}
+
+                <Text fontSize="xs" color="gray.500">
+                  Guidance only. The AI does not set status or award points - your review
+                  below is the decision. Always check the answers yourself.
+                </Text>
+              </Stack>
+            </Box>
+
+            <Box
+              p={4}
               bg="#f9f5fb"
               border="1px solid"
               borderColor="#e6dbef"

@@ -1,0 +1,21 @@
+decision_maker_summary: The COO, who owns the operations P&L and the Operating Leverage programme, is my sponsor; she was burned by the 2023 logistics-platform migration cancelled at 60% and wants to stay visible to action, so she watches early signals closely.
+
+risk_focus: I am briefing the highest-impact risk: the telematics, driver-roster and customer-ERP systems use inconsistent vehicle identifiers, so the consolidated utilisation figure could be wrong and cost us your trust in the dashboard.
+
+lede: Before we go further, there is one risk I want on the table now rather than at day 60: our three source systems do not agree on what a vehicle is, and until they do, any utilisation number I show you could be wrong.
+
+severity_likelihood: If a mismatched ID slips through, the dashboard could overstate utilisation, you act on a 70% figure that is really 66%, and the moment that gap surfaces the whole tool loses credibility, putting the $1.2M/yr utilisation case and the Operating Leverage narrative at risk over a data-plumbing fault.
+
+actions_taken: I have already booked a two-week reconciliation sprint for days 1 to 14 with the Fleet Systems Administrator to agree a single master vehicle ID, and I have set a hard go-live gate of a 98% match against a manual sample of 30 vehicles, so no figure reaches you until it clears that bar.
+
+the_ask: I need you to hold the dashboard's first utilisation numbers until day 14 when the ID reconciliation clears its gate, and to back that delay if anyone pushes for figures sooner.
+
+pushback_1: "Fourteen days of nothing? After 2023 I cannot sell a pilot that goes quiet for two weeks. I need something visible to point to."
+
+response_1: It is not two weeks of silence: by day 21 you will have a working dashboard on 20 vehicles you can see and pressure-test. What I am asking is that the firm-wide number waits 14 days so it is right the first time. A visible-but-wrong figure is exactly what cost us trust in 2023; a slightly later figure that holds up is what keeps you visible to action.
+
+pushback_2: "Fine, but rather than gate on the data, why not just show the numbers with a caveat that they are provisional? People can handle a caveat."
+
+response_2: Provisional numbers are how trust erodes quietly: once a caveated 70% is in a slide, the caveat drops off and the number sticks. I would rather show no firm figure than a sticky wrong one. The gate is two weeks; a misremembered provisional number can mislead decisions for months. Let me hold the line at day 14 and you will never have to defend a figure I had to walk back.
+
+closing_line: So we are agreed: the 20-vehicle view lands day 21, the firm-wide number waits for the day-14 accuracy gate, and you back that hold. I will send you the reconciliation result on day 14 and we review it in our 15-minute slot that Friday.

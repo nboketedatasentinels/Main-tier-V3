@@ -1,0 +1,31 @@
+section_01_context: Programme: Fleet Utilisation Action Dashboard (90-day pilot). Reporting period: Day 45 of 90, fortnight ending 14 June 2026.
+
+section_01_distribution: Distribution: COO (sponsor), Dispatch Manager, IT Systems Manager, Finance Business Partner (Operations). Prepared by: Operations Analytics Lead.
+
+risk_1: Risk: Dispatch adoption of the weekly decision routine is partial; in the last fortnight only 4 of 9 flagged reallocations were actioned, so utilisation gains are tracking below the line needed for 70% by day 90. | Severity: High | Likelihood: Medium | Mitigation: Moved the dashboard review into the Monday dispatch huddle from this week; Dispatch Manager now owns a decisions-actioned target of 80%. | Owner: Dispatch Manager
+
+risk_2: Risk: A telematics data gap on 11 vehicles is understating utilisation, risking a dispute over the baseline at the day-90 review. | Severity: Medium | Likelihood: Medium | Mitigation: IT reconciling the 11 vehicles by day 55; baseline footnoted with the affected count so no decision rests on disputed data. | Owner: IT Systems Manager
+
+rag_status: amber
+
+section_03_rationale: Amber, not green: the dashboard is live and on budget, but utilisation is at 68.1% against a day-45 glide-path of 68.5%, and adoption (4 of 9 reallocations actioned) is the cause, which is a behaviour problem not a build problem. Amber, not red: the gap is small, the cause is identified, and the fix (Monday huddle integration) is already in place with two fortnights to recover. Red would overstate; green would hide a real adoption risk the COO needs to see.
+
+section_04_decisions: 1) Endorse the Dispatch Manager owning an 80% decisions-actioned target, confirmed at this meeting. 2) Approve IT prioritising the 11-vehicle telematics reconciliation by day 55, this week. 3) Confirm the day-90 go/no-go criteria stand at 70% utilisation plus 80% decisions-actioned, so the bar is fixed before the final fortnight, by end of this meeting.
+
+section_05_completed: Completed this fortnight: dashboard live on existing platforms with automated weekly refresh; baseline confirmed at 67%; first two weekly dispatch reviews held; 4 vehicle reallocations actioned; first iteration cycle with dispatch closed, simplifying the action list to a single ranked view.
+
+section_05_in_flight: In flight: adoption of the decision routine is below target (4 of 9 actioned). Recovery: routine moved into the standing Monday huddle this week with a named 80% target and weekly tracking, giving two fortnights to close the gap before day 90. Slipped: the 11-vehicle telematics reconciliation is one week behind; recovery is IT prioritisation to land by day 55.
+
+section_06_stakeholder_position: Healthy disagreement: the Dispatch Manager argues some flagged reallocations are operationally unwise on the day, which is legitimate and is being folded into the action-list logic. The Finance Business Partner wants the $1.2M restated net of any reallocation cost, a fair challenge now being modelled. Watch: the IT Systems Manager has framed the telematics gap as a reason to pause, which reads less as a data concern than as distancing from a pilot that competes with their own roadmap; managed by giving IT clear ownership of the reconciliation so they are invested, not sidelined.
+
+section_07_defensibility: Holds: the build, budget and baseline are evidenced and the adoption shortfall is reported openly with a dated fix, so a challenge of 'are you hiding a slip' fails. Over-concede risk: under pressure I might agree the 70% target is unrealistic and lower it to protect the amber; I should not, because the data supports 70% if adoption recovers, and moving the goalposts mid-pilot would destroy the credibility of the day-90 go/no-go with a COO already wary of soft commitments.
+
+section_08_forward: Next-period priorities: 1) Lift decisions-actioned to 80% via the Monday huddle. 2) Close the 11-vehicle telematics reconciliation. 3) Model the net $1.2M with Finance. Flip to green: utilisation back on glide-path (about 69%) with adoption at or above 80% by day 60. Flip to red: adoption stays below 50% after the huddle change, meaning the behaviour will not move in time and the pilot cannot credibly hit 70%.
+
+ai_surfaced: The AI audit flagged that my draft RAG rationale used hedging language ('broadly on track', 'minor adoption issues') that softened a real shortfall, and that I had not quantified what 'on track' meant, leaving the COO unable to judge severity.
+
+ai_applied: I replaced the hedging with hard figures (68.1% vs a 68.5% glide-path, 4 of 9 reallocations actioned) and gave explicit green/red flip criteria, so the status is auditable rather than reassuring.
+
+ai_rejected: The AI suggested downgrading to red to 'show transparency'. I rejected it: red would misrepresent a small, recoverable gap with an active fix, and crying red on a recoverable amber trains the COO to discount my future reports. The honest colour is amber, and accuracy beats performative candour.
+
+ai_rule: Use AI to strip hedging and force every status claim to a number with a flip-criterion. But the RAG colour is my judgement call against the evidence, not the AI's: I will not let it talk me into a colour the data does not support in either direction.

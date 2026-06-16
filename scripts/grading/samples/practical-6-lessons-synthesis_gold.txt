@@ -1,0 +1,13 @@
+pattern_1: Across the Stakeholder Map (Practical 1), the Risk Register (Practical 4) and the Briefing Script (Practical 5), my consistent strength is anchoring everything to the COO's lived scar tissue: I designed each artefact around her 2023 migration-at-60% experience and her 'visible to action' need. The map identified her as the make-or-break sponsor, the register's top risks were framed as trust risks not just technical ones, and the briefing led with the risk she most fears. I read the human decision-maker accurately and built backwards from her, not from the data.
+
+pattern_2: The recurring blind spot is that I underweight the people doing the work versus the person sponsoring it. The Stakeholder Map (Practical 1) and the Briefing Script (Practical 5) are rich on the COO but thin on depot managers and drivers, and only when I reached the Risk Register (Practical 4) did the driver-privacy and access risks surface, almost as an afterthought. I optimise for the sponsor's confidence and routinely defer the frontline whose behaviour the 67-to-70% lift actually depends on.
+
+hardest_practical: The Risk Register (Practical 4) took the most effort to make honest, because writing down a High/High data-integrity risk on my own project meant admitting the consolidated number I am selling could be wrong.
+
+why_hard: Because I am the Operations Analytics Lead pitching a data product to a COO who already cancelled one project at 60%, every High risk I logged read like ammunition against my own pilot. The honest reason it was hard is that candour and self-advocacy were pulling in opposite directions, and my instinct was to soften the rating to protect the business case rather than to protect the decision.
+
+real_gap: My real gap is frontline change facilitation: I can model the COO but I cannot yet run a working session with depot managers to design how they will actually use a weekly action. Next week, when the day-21 thin-slice meets the depots, I will likely get polite nods and zero behaviour change, and the utilisation needle will not move even though the dashboard is correct.
+
+commitment: Within 90 days I will run at least three facilitated working sessions with named depot managers to co-design the weekly action ritual, and ship a one-page 'how we use this dashboard' agreed by them: done or not done, verifiable from the calendar invites and the signed-off page.
+
+first_action: In the next 7 days I will email the two depot managers covering the day-21 thin-slice vehicles and book a 45-minute working session for week 4, with one question on the agenda: what would make a weekly action worth acting on for you.
