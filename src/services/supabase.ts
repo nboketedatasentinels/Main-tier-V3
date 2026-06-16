@@ -49,3 +49,14 @@ export const supabase: SupabaseClient = createClient(url ?? '', anonKey ?? '', {
     flowType: 'pkce',
   },
 })
+
+// Bridge the (public) Supabase url + anon key to same-origin static HTML pages
+// like /capstones/*.html, so they can re-use the learner's Supabase session
+// (stored in this origin's localStorage) without hard-coding keys per page.
+try {
+  if (typeof window !== 'undefined' && window.localStorage && supabaseConfigStatus.isValid) {
+    window.localStorage.setItem('t4l_sb_config', JSON.stringify({ url, anonKey }))
+  }
+} catch {
+  // localStorage may be unavailable (private browsing); non-fatal.
+}
