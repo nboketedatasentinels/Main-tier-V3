@@ -1,17 +1,4 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  Timestamp,
-  updateDoc,
-  where,
-  type DocumentData,
-  type QuerySnapshot,
-} from 'firebase/firestore'
-import { db } from './firebase'
+import { supabase } from '@/services/supabase'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints } from './pointsService'
 import { createInAppNotification } from './notificationService'
@@ -24,6 +11,8 @@ export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical'
 // idempotent. See docs/points-system.md.
 const PILLAR_AWARD_WEEK = 1
 
+const TABLE = 'programme_component_submissions'
+
 export type ProgrammeSubmissionStatus =
   | 'submitted'
   | 'in_review'
@@ -31,8 +20,9 @@ export type ProgrammeSubmissionStatus =
   | 'needs_revision'
 
 /**
- * AI grade written by the gradeProgrammeSubmission Cloud Function. ADVISORY
- * ONLY - it never sets status or awards points; partners remain the gate.
+ * AI grade written server-side by the `grade-submission` Supabase Edge Function
+ * (triggered by a DB webhook on insert/update). ADVISORY ONLY - it never sets
+ * status or awards points; partners remain the gate.
  */
 export interface AiGrade {
   status: 'completed' | 'error'
@@ -45,7 +35,7 @@ export interface AiGrade {
 }
 
 export interface ProgrammeComponentSubmission {
-  /** Firestore doc id - format: `{uid}__{componentId}`. */
+  /** Supabase row uuid (primary key). */
   id: string
   uid: string
   email: string | null
@@ -70,8 +60,18 @@ export interface ProgrammeComponentSubmission {
   reviewerName: string | null
   partnerNotes: string | null
   score: number | null
-  // AI grade (advisory) - written by the gradeProgrammeSubmission function.
+  // AI grade (advisory) - written by the grade-submission Edge Function.
   aiGrade: AiGrade | null
+}
+
+const toDate = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return null
 }
 
 const parseAiGrade = (raw: unknown): AiGrade | null => {
@@ -85,19 +85,9 @@ const parseAiGrade = (raw: unknown): AiGrade | null => {
     pass: typeof d.pass === 'boolean' ? d.pass : null,
     model: typeof d.model === 'string' ? d.model : null,
     error: typeof d.error === 'string' ? d.error : null,
-    gradedAt: toDate(d.gradedAt),
+    // edge function writes snake_case `graded_at`; tolerate `gradedAt` too.
+    gradedAt: toDate(d.graded_at ?? d.gradedAt),
   }
-}
-
-const toDate = (value: unknown): Date | null => {
-  if (!value) return null
-  if (value instanceof Date) return value
-  if (value instanceof Timestamp) return value.toDate()
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const candidate = value as { toDate?: () => Date }
-    if (typeof candidate.toDate === 'function') return candidate.toDate()
-  }
-  return null
 }
 
 const sanitizeAnswers = (raw: unknown): Record<string, string> => {
@@ -110,39 +100,48 @@ const sanitizeAnswers = (raw: unknown): Record<string, string> => {
   return out
 }
 
-const fromSnapshot = (id: string, data: DocumentData): ProgrammeComponentSubmission => ({
-  id,
-  uid: typeof data.uid === 'string' ? data.uid : id.split('__')[0] ?? '',
-  email: typeof data.email === 'string' ? data.email : null,
-  displayName: typeof data.displayName === 'string' ? data.displayName : null,
-  organizationId: typeof data.organizationId === 'string' ? data.organizationId : null,
-  componentId: typeof data.componentId === 'string' ? data.componentId : '',
-  componentType: (['capstone', 'case_study', 'practical'] as const).includes(data.componentType)
-    ? (data.componentType as ProgrammeComponentType)
-    : null,
-  componentTitle: typeof data.componentTitle === 'string' ? data.componentTitle : null,
-  pillar: typeof data.pillar === 'string' ? data.pillar : null,
-  partId: typeof data.partId === 'string' ? data.partId : null,
-  partTitle: typeof data.partTitle === 'string' ? data.partTitle : null,
-  answers: sanitizeAnswers(data.answers),
-  answerCount: typeof data.answerCount === 'number' ? data.answerCount : 0,
-  status:
-    data.status === 'in_review' ||
-    data.status === 'approved' ||
-    data.status === 'needs_revision'
-      ? (data.status as ProgrammeSubmissionStatus)
-      : 'submitted',
-  submittedAt: toDate(data.submittedAt),
-  lastUpdatedAt: toDate(data.lastUpdatedAt),
-  resubmittedAt: toDate(data.resubmittedAt),
-  sourcePage: typeof data.sourcePage === 'string' ? data.sourcePage : null,
-  reviewedAt: toDate(data.reviewedAt),
-  reviewedBy: typeof data.reviewedBy === 'string' ? data.reviewedBy : null,
-  reviewerName: typeof data.reviewerName === 'string' ? data.reviewerName : null,
-  partnerNotes: typeof data.partnerNotes === 'string' ? data.partnerNotes : null,
-  score: typeof data.score === 'number' ? data.score : null,
-  aiGrade: parseAiGrade(data.aiGrade),
-})
+type Row = Record<string, unknown>
+
+const fromRow = (row: Row): ProgrammeComponentSubmission => {
+  const componentType = row.component_type
+  return {
+    id: String(row.id ?? ''),
+    uid: typeof row.user_id === 'string' ? row.user_id : '',
+    // email/displayName aren't stored on the submission row; the partner UI
+    // resolves the learner from organisation membership where needed.
+    email: typeof row.email === 'string' ? row.email : null,
+    displayName: typeof row.display_name === 'string' ? row.display_name : null,
+    organizationId: typeof row.organization_id === 'string' ? row.organization_id : null,
+    componentId: typeof row.component_id === 'string' ? row.component_id : '',
+    componentType: (['capstone', 'case_study', 'practical'] as const).includes(
+      componentType as ProgrammeComponentType,
+    )
+      ? (componentType as ProgrammeComponentType)
+      : null,
+    componentTitle: typeof row.component_title === 'string' ? row.component_title : null,
+    pillar: typeof row.pillar === 'string' ? row.pillar : null,
+    partId: typeof row.part_id === 'string' ? row.part_id : null,
+    partTitle: typeof row.part_title === 'string' ? row.part_title : null,
+    answers: sanitizeAnswers(row.answers),
+    answerCount: typeof row.answer_count === 'number' ? row.answer_count : 0,
+    status:
+      row.status === 'in_review' ||
+      row.status === 'approved' ||
+      row.status === 'needs_revision'
+        ? (row.status as ProgrammeSubmissionStatus)
+        : 'submitted',
+    submittedAt: toDate(row.submitted_at),
+    lastUpdatedAt: toDate(row.last_updated_at),
+    resubmittedAt: toDate(row.resubmitted_at),
+    sourcePage: typeof row.source_page === 'string' ? row.source_page : null,
+    reviewedAt: toDate(row.reviewed_at),
+    reviewedBy: typeof row.reviewed_by === 'string' ? row.reviewed_by : null,
+    reviewerName: typeof row.reviewer_name === 'string' ? row.reviewer_name : null,
+    partnerNotes: typeof row.partner_notes === 'string' ? row.partner_notes : null,
+    score: typeof row.score === 'number' ? row.score : null,
+    aiGrade: parseAiGrade(row.ai_grade),
+  }
+}
 
 const sortByLastUpdatedDesc = (
   a: ProgrammeComponentSubmission,
@@ -154,8 +153,10 @@ const sortByLastUpdatedDesc = (
 }
 
 /**
- * Subscribe to all submissions for a set of organization ids. Firestore
- * `in` queries cap at 30 values per request; we chunk and merge.
+ * Subscribe to all submissions for a set of organization ids. Does an initial
+ * fetch, then live-refetches on any change via a Supabase realtime channel.
+ * RLS (migration 0014, `partner_manages_org`) scopes rows to orgs the caller
+ * manages, so the org filter here is belt-and-braces.
  */
 export function subscribeToSubmissionsByOrgIds(
   organizationIds: string[],
@@ -168,37 +169,43 @@ export function subscribeToSubmissionsByOrgIds(
     return () => undefined
   }
 
-  const CHUNK = 30
-  const chunks: string[][] = []
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    chunks.push(ids.slice(i, i + CHUNK))
+  let cancelled = false
+
+  const fetchRows = async () => {
+    try {
+      const { data, error } = await supabase
+        .from(TABLE)
+        .select('*')
+        .in('organization_id', ids)
+      if (error) throw error
+      if (cancelled) return
+      const rows = (data ?? []).map((r) => fromRow(r as Row)).sort(sortByLastUpdatedDesc)
+      onUpdate(rows)
+    } catch (err) {
+      console.error('[programmeComponentSubmissionService] fetch failed', err)
+      onError?.(err instanceof Error ? err : new Error(String(err)))
+    }
   }
 
-  const buffers: ProgrammeComponentSubmission[][] = chunks.map(() => [])
-  const colRef = collection(db, 'programmeComponentSubmissions')
+  void fetchRows()
 
-  const emit = () => {
-    const merged = new Map<string, ProgrammeComponentSubmission>()
-    buffers.flat().forEach((row) => merged.set(row.id, row))
-    onUpdate(Array.from(merged.values()).sort(sortByLastUpdatedDesc))
-  }
-
-  const unsubscribers = chunks.map((chunk, index) => {
-    const q = query(colRef, where('organizationId', 'in', chunk))
-    return onSnapshot(
-      q,
-      (snap: QuerySnapshot<DocumentData>) => {
-        buffers[index] = snap.docs.map((d) => fromSnapshot(d.id, d.data()))
-        emit()
-      },
-      (err) => {
-        console.error('[programmeComponentSubmissionService] subscribe failed', err)
-        onError?.(err)
+  // Live updates: re-fetch on any change to the table. RLS still scopes what
+  // this client can actually read, so a broad listener is safe.
+  const channel = supabase
+    .channel(`pcs-${ids.join('_').slice(0, 40)}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: TABLE },
+      () => {
+        void fetchRows()
       },
     )
-  })
+    .subscribe()
 
-  return () => unsubscribers.forEach((u) => u())
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
 }
 
 export interface ReviewUpdate {
@@ -213,16 +220,20 @@ export async function updateSubmissionReview(
   submissionId: string,
   update: ReviewUpdate,
 ): Promise<void> {
-  const ref = doc(db, 'programmeComponentSubmissions', submissionId)
-  await updateDoc(ref, {
-    status: update.status,
-    partnerNotes: update.partnerNotes,
-    score: update.score,
-    reviewedBy: update.reviewerId,
-    reviewerName: update.reviewerName,
-    reviewedAt: serverTimestamp(),
-    lastUpdatedAt: serverTimestamp(),
-  })
+  const nowIso = new Date().toISOString()
+  const { error } = await supabase
+    .from(TABLE)
+    .update({
+      status: update.status,
+      partner_notes: update.partnerNotes,
+      score: update.score,
+      reviewed_by: update.reviewerId,
+      reviewer_name: update.reviewerName,
+      reviewed_at: nowIso,
+      last_updated_at: nowIso,
+    })
+    .eq('id', submissionId)
+  if (error) throw error
 }
 
 /**
@@ -247,8 +258,9 @@ export interface ApproveAndAwardResult {
 /**
  * Mark a submission approved AND award the learner the component's points.
  *
- * Reuses the canonical partner-issued points path (awardChecklistPoints) so the
- * ledger stays the single source of truth. `claimRef` is the componentId, which:
+ * The submission row lives in Supabase; the points award stays on the canonical
+ * partner-issued ledger path (`awardChecklistPoints`) so the ledger remains the
+ * single source of truth. `claimRef` is the componentId, which:
  *  - keeps awarding idempotent per submission (re-approving never double-awards), and
  *  - lets the two case studies (which share activityId "case_study") each award.
  */
@@ -266,10 +278,17 @@ export async function approveSubmissionAndAward(params: {
 
   // Resolve the learner's journey so progress is attributed correctly; pillar
   // components only exist on 6W, so fall back to 6W to resolve the points.
-  const profileSnap = await getDoc(doc(db, 'profiles', submission.uid))
-  const journeyType = ((profileSnap.exists()
-    ? (profileSnap.data() as { journeyType?: string }).journeyType
-    : null) || '6W') as JourneyType
+  let journeyType: JourneyType = '6W'
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('journey_type')
+      .eq('id', submission.uid)
+      .maybeSingle()
+    if (profile?.journey_type) journeyType = profile.journey_type as JourneyType
+  } catch (err) {
+    console.warn('[programmeComponentSubmissionService] journey_type lookup failed; defaulting to 6W', err)
+  }
 
   const activity =
     getActivityDefinitionById({ activityId: submission.componentType, journeyType }) ??

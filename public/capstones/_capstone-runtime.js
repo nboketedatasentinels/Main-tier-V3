@@ -2,39 +2,27 @@
  * Shared submission runtime for /capstones/*.html.
  *
  * What this does:
- *  1. Reads <meta name="programme-component-*"> tags from the page.
- *  2. Loads Firebase using the config the React app published to localStorage.
- *  3. Picks up the learner's existing auth session (same origin).
+ *  1. Reads <meta name="programme-component-*"> tags from the page (with
+ *     filename-based fallbacks).
+ *  2. Loads Supabase using the config the React app published to localStorage
+ *     (t4l_sb_config = { url, anonKey }, written by src/services/supabase.ts).
+ *  3. Picks up the learner's existing Supabase auth session (same origin --
+ *     supabase-js reads the persisted session from localStorage).
  *  4. On Submit (window.submitCapstone / submitCaseStudy / submitPractical),
- *     collects every named input/textarea, builds a submission doc, and
- *     writes it to Firestore at
- *       programmeComponentSubmissions/{uid}__{componentId}.
+ *     collects every named input/textarea and upserts a row into
+ *       public.programme_component_submissions  (one per learner per artefact).
  *  5. Shows a small status banner with success / error.
  *
- * The React app's Firestore rules enforce that a learner can only write
- * their own submission. Partners + admins of the learner's org can read.
+ * RLS (migration 0014) lets a learner write only their own submission, and
+ * partners/admins of the learner's org read + review it. A Database Webhook on
+ * INSERT/UPDATE of the table invokes the `grade-submission` Edge Function,
+ * which writes the advisory `ai_grade` server-side -- so by the time a partner
+ * opens it, the submission is already graded. No client AI call needed.
  */
 
-import {
-  initializeApp,
-  getApps,
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'
-import {
-  getAuth,
-  onAuthStateChanged,
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const APP_BASE = '/app/courses#programme-components'
-const CONFIG_KEY = 't4l_fb_config'
+const CONFIG_KEY = 't4l_sb_config'
 
 function readMeta(name) {
   const el = document.querySelector(`meta[name="${name}"]`)
@@ -152,39 +140,31 @@ if (!META.componentId) {
 }
 
 const config = readConfig()
-let firebaseApp = null
-let firestore = null
-let firebaseAuth = null
-let authUser = null
-let authResolved = false
+let supabase = null
 
-if (config?.apiKey && config?.projectId) {
-  firebaseApp = getApps().length ? getApps()[0] : initializeApp(config)
-  firebaseAuth = getAuth(firebaseApp)
-  firestore = getFirestore(firebaseApp)
-
-  onAuthStateChanged(firebaseAuth, (user) => {
-    authUser = user
-    authResolved = true
-    if (!user) {
-      console.warn('[capstone-runtime] no signed-in user detected')
-    }
+if (config?.url && config?.anonKey) {
+  // Same url+anonKey as the React app => same persisted-session storage key,
+  // so this client transparently picks up the learner's existing login.
+  supabase = createClient(config.url, config.anonKey, {
+    auth: { persistSession: true, autoRefreshToken: true },
   })
 } else {
-  console.error('[capstone-runtime] Firebase config not found in localStorage. Was the main app loaded on this origin?')
+  console.error('[capstone-runtime] Supabase config not found in localStorage (t4l_sb_config). Was the main app loaded on this origin?')
 }
 
-function waitForAuth(timeoutMs = 4000) {
-  return new Promise((resolve) => {
-    if (authResolved) return resolve(authUser)
-    const startedAt = Date.now()
-    const id = setInterval(() => {
-      if (authResolved || Date.now() - startedAt > timeoutMs) {
-        clearInterval(id)
-        resolve(authUser)
-      }
-    }, 100)
-  })
+async function getUser() {
+  if (!supabase) return null
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      console.warn('[capstone-runtime] auth.getUser error', error)
+      return null
+    }
+    return data?.user ?? null
+  } catch (err) {
+    console.warn('[capstone-runtime] auth.getUser threw', err)
+    return null
+  }
 }
 
 async function submit() {
@@ -192,12 +172,13 @@ async function submit() {
     showBanner('error', 'This page is missing its component id. Refresh; if it persists, contact your partner.')
     return
   }
-  if (!firestore || !firebaseAuth) {
+  if (!supabase) {
     showBanner('error', "We couldn't connect to your account. Open this page from the main app and try again.")
     return
   }
   showBanner('info', 'Submitting your work...')
-  const user = await waitForAuth()
+
+  const user = await getUser()
   if (!user) {
     showBanner(
       'error',
@@ -208,101 +189,84 @@ async function submit() {
 
   const answers = collectAnswers()
   const answeredCount = Object.values(answers).filter((v) => typeof v === 'string' && v.trim().length > 0).length
-
   if (answeredCount === 0) {
     showBanner('error', 'Nothing to submit yet. Fill in the fields and try again.')
     return
   }
 
-  const submissionId = `${user.uid}__${META.componentId}`
-  const ref = doc(firestore, 'programmeComponentSubmissions', submissionId)
-
-  // Look up learner profile so the submission records its organizationId.
-  // Without it the partner dashboard can't scope submissions to their orgs.
+  // Learner's org so the partner dashboard can scope the submission.
   let organizationId = null
   try {
-    const profileSnap = await getDoc(doc(firestore, 'profiles', user.uid))
-    if (profileSnap.exists()) {
-      const data = profileSnap.data() || {}
-      organizationId = data.organizationId ?? data.orgId ?? data.companyId ?? null
-    }
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('organization_id')
+      .eq('id', user.id)
+      .maybeSingle()
+    organizationId = profile?.organization_id ?? null
   } catch (err) {
-    console.warn('[capstone-runtime] could not read learner profile for orgId', err)
+    console.warn('[capstone-runtime] could not read learner profile for organization_id', err)
+  }
+
+  // Detect resubmission so we preserve the original submitted_at.
+  let isResubmission = false
+  try {
+    const { data: existing } = await supabase
+      .from('programme_component_submissions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('component_id', META.componentId)
+      .maybeSingle()
+    isResubmission = !!existing
+  } catch (err) {
+    console.warn('[capstone-runtime] resubmission check failed', err)
+  }
+
+  const nowIso = new Date().toISOString()
+  const row = {
+    user_id: user.id,
+    organization_id: organizationId,
+    component_id: META.componentId,
+    component_type: META.componentType ?? null,
+    component_title: META.componentTitle ?? null,
+    pillar: META.pillar ?? null,
+    part_id: META.partId ?? null,
+    part_title: META.partTitle ?? null,
+    answers,
+    answer_count: answeredCount,
+    status: 'submitted',
+    last_updated_at: nowIso,
+    source_page: typeof window !== 'undefined' ? window.location.pathname : null,
+  }
+  if (isResubmission) {
+    row.resubmitted_at = nowIso
+  } else {
+    row.submitted_at = nowIso
   }
 
   try {
-    // Read existing doc to preserve original submittedAt + capture resubmissions.
-    const existing = await getDoc(ref)
-    const isResubmission = existing.exists()
+    const { error } = await supabase
+      .from('programme_component_submissions')
+      .upsert(row, { onConflict: 'user_id,component_id' })
+    if (error) throw error
 
-    await setDoc(
-      ref,
-      {
-        uid: user.uid,
-        email: user.email ?? null,
-        displayName: user.displayName ?? null,
-        organizationId,
-        componentId: META.componentId,
-        componentType: META.componentType ?? null,
-        componentTitle: META.componentTitle ?? null,
-        pillar: META.pillar ?? null,
-        partId: META.partId ?? null,
-        partTitle: META.partTitle ?? null,
-        answers,
-        answerCount: answeredCount,
-        status: 'submitted',
-        submittedAt: isResubmission ? existing.data().submittedAt : serverTimestamp(),
-        lastUpdatedAt: serverTimestamp(),
-        resubmittedAt: isResubmission ? serverTimestamp() : null,
-        sourcePage: typeof window !== 'undefined' ? window.location.pathname : null,
-      },
-      { merge: true },
-    )
     showBanner(
       'success',
-      isResubmission ? 'Resubmitted. Your partner will see the updated answers.' : 'Submitted. Your partner can now review.',
+      isResubmission
+        ? 'Resubmitted. Your partner will see the updated answers (re-graded automatically).'
+        : 'Submitted. It is being graded, then your partner can review it.',
     )
-
-    // Notify the learner's partner so the submission lands in their review
-    // queue / notifications. admin_notifications is readable by partners +
-    // admins of the org (target_roles), and rules allow any signed-in user to
-    // create one. Non-fatal: the submission already saved if this fails.
-    if (organizationId) {
-      try {
-        const verb = isResubmission ? 'resubmitted' : 'submitted'
-        await addDoc(collection(firestore, 'admin_notifications'), {
-          type: 'system_event',
-          category: 'action_required',
-          title: 'New programme submission to review',
-          message: `${user.displayName || user.email || 'A learner'} ${verb} "${META.componentTitle || META.componentId}" for review.`,
-          severity: 'info',
-          target_roles: ['partner', 'super_admin'],
-          related_id: organizationId,
-          is_read: false,
-          metadata: {
-            kind: 'programme_submission',
-            submissionId,
-            uid: user.uid,
-            organizationId,
-            componentId: META.componentId,
-            componentType: META.componentType ?? null,
-            componentTitle: META.componentTitle ?? null,
-            pillar: META.pillar ?? null,
-            resubmission: isResubmission,
-          },
-          created_at: serverTimestamp(),
-        })
-      } catch (notifyErr) {
-        console.warn('[capstone-runtime] partner notification failed', notifyErr)
-      }
-    }
   } catch (err) {
     console.error('[capstone-runtime] save failed', err)
-    showBanner('error', "We couldn't save your submission. Check your connection and try again.")
+    const msg = err?.message || ''
+    if (/row-level security|permission|denied/i.test(msg)) {
+      showBanner('error', "We couldn't save your submission (permission). Make sure you're signed in to the main app on this device.")
+    } else {
+      showBanner('error', "We couldn't save your submission. Check your connection and try again.")
+    }
   }
 }
 
-// Bind the three legacy handler names the existing HTML pages use.
+// Bind the handler names the existing HTML pages use.
 window.submitCapstone = submit
 window.submitCaseStudy = submit
 window.submitPractical = submit
