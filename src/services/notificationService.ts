@@ -15,7 +15,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { auth, db } from './firebase'
 import {
   AdminNotification,
   NotificationRecord,
@@ -461,6 +461,11 @@ export const listenToAdminNotifications = (
 }
 
 export const fetchAdminNotifications = async (): Promise<AdminNotification[]> => {
+  // Admin notifications still live in Firestore. Under Supabase auth there is no
+  // Firebase session, so every read is denied - and polling it on a timer made
+  // the Firestore SDK throw INTERNAL ASSERTION (ca9/b815). Skip the call when
+  // there's no Firebase session; the bell shows empty instead of crashing the page.
+  if (!auth.currentUser) return []
   const adminQuery = query(adminNotificationsCollection, orderBy('created_at', 'desc'))
   const snapshot = await getDocs(adminQuery)
   return snapshot.docs.map((docSnap) => ({
@@ -470,11 +475,13 @@ export const fetchAdminNotifications = async (): Promise<AdminNotification[]> =>
 }
 
 export const markAdminNotificationRead = async (notificationId: string) => {
+  if (!auth.currentUser) return
   const notificationRef = doc(db, 'admin_notifications', notificationId)
   await updateDoc(notificationRef, { is_read: true })
 }
 
 export const markAllAdminNotificationsRead = async () => {
+  if (!auth.currentUser) return
   const snapshot = await getDocs(adminNotificationsCollection)
   await Promise.all(snapshot.docs.map((docSnap) => updateDoc(docSnap.ref, { is_read: true })))
 }
