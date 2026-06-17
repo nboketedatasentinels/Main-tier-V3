@@ -39,6 +39,13 @@ as $$
 $$;
 
 -- ── table ────────────────────────────────────────────────────────────────────
+-- Drop any earlier/partial version first so a re-run always lands the CURRENT
+-- schema (an older draft used `uid` instead of `user_id`, which makes the
+-- `create table if not exists` below a no-op and the user_id index then fail).
+-- Safe: no live submissions exist yet -- the write path only goes live once the
+-- app is deployed against this table.
+drop table if exists public.programme_component_submissions cascade;
+
 create table if not exists public.programme_component_submissions (
   id                uuid primary key default gen_random_uuid(),
   user_id           uuid not null references public.profiles(id) on delete cascade,
