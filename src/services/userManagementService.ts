@@ -1,20 +1,17 @@
 import {
   Timestamp,
-  addDoc,
   collection,
-  deleteDoc,
-  doc,
   getDocs,
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
-  setDoc,
 } from 'firebase/firestore'
 import { db } from './firebase'
+import { supabase } from '@/services/supabase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { normalizeEmail } from '@/utils/email'
+import { normalizeRole } from '@/utils/role'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -99,16 +96,6 @@ export interface EngagementTrendPoint {
 const usersCollection = collection(db, 'users')
 const organizationsCollection = collection(db, ORG_COLLECTION)
 const engagementCollection = collection(db, 'user_engagement_scores')
-const notificationsCollection = collection(db, 'notifications')
-const adminActivityCollection = collection(db, 'admin_activity_log')
-
-const upsertUserMirrors = async (userId: string, payload: Record<string, unknown>) => {
-  const cleaned = removeUndefinedFields(payload)
-  await Promise.all([
-    setDoc(doc(db, 'profiles', userId), cleaned, { merge: true }),
-    setDoc(doc(db, 'users', userId), cleaned, { merge: true }),
-  ])
-}
 
 const parseDateValue = (value?: unknown): Date | null => {
   if (!value) return null
@@ -284,51 +271,90 @@ export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> =>
   })
 }
 
+// Supabase migration helpers.
+// The app's MembershipStatus type includes 'inactive', but the public.profiles
+// membership_status column only accepts 'free' | 'paid'. We map 'inactive' to
+// 'free' so the write does not violate the column constraint.
+const toProfilesMembershipStatus = (status: MembershipStatus): 'free' | 'paid' =>
+  status === 'paid' ? 'paid' : 'free'
+
+// profiles.role CHECK accepts only: free_user|paid_member|mentor|ambassador|
+// partner|super_admin. normalizeRole maps legacy values (admin->partner, etc.)
+// but returns 'user' as its base; the DB enum uses 'free_user'. Coerce here so a
+// role write never violates the CHECK constraint.
+const toProfilesRole = (role: ManagedUserRole): string => {
+  const normalized = normalizeRole(role)
+  return normalized === 'user' ? 'free_user' : normalized
+}
+
+const throwIfSupabaseError = (error: { message: string } | null, action: string) => {
+  if (error) {
+    throw new Error(`${action} failed: ${error.message}`)
+  }
+}
+
 export const updateUserRole = async (userId: string, role: ManagedUserRole, companyId?: string | null) => {
   const updates: Record<string, unknown> = {
-    role,
-    updatedAt: serverTimestamp(),
+    role: toProfilesRole(role),
+    updated_at: new Date().toISOString(),
   }
   if (typeof companyId !== 'undefined') {
-    updates.companyId = companyId
+    updates.company_id = companyId
   }
-  await upsertUserMirrors(userId, updates)
+  const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
+  throwIfSupabaseError(error, 'updateUserRole')
 }
 
 export const updateMembershipStatus = async (userId: string, membershipStatus: MembershipStatus) => {
-  await upsertUserMirrors(userId, {
-    membershipStatus,
-    updatedAt: serverTimestamp(),
-  })
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      membership_status: toProfilesMembershipStatus(membershipStatus),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+  throwIfSupabaseError(error, 'updateMembershipStatus')
 }
 
 export const deleteUserAccount = async (userId: string) => {
-  await Promise.all([
-    deleteDoc(doc(db, 'profiles', userId)),
-    deleteDoc(doc(db, 'users', userId)),
-  ])
+  // A browser (anon) Supabase client cannot delete an auth.users row - that
+  // requires the service-role key and must be done server-side (e.g. an Edge
+  // Function / admin API). Here we only remove the public.profiles row.
+  const { error } = await supabase.from('profiles').delete().eq('id', userId)
+  throwIfSupabaseError(error, 'deleteUserAccount')
 }
 
 export const bulkUpdateRole = async (userIds: string[], role: ManagedUserRole) => {
-  const results = await Promise.allSettled(userIds.map((id) => updateUserRole(id, role)))
-  const failedIds = results
-    .map((result, idx) => (result.status === 'rejected' ? userIds[idx] : null))
-    .filter((id): id is string => typeof id === 'string')
-  return {
-    successfulIds: userIds.filter((id) => !failedIds.includes(id)),
-    failedIds,
+  if (!userIds.length) {
+    return { successfulIds: [], failedIds: [] }
   }
+  const { error } = await supabase
+    .from('profiles')
+    .update({ role: toProfilesRole(role), updated_at: new Date().toISOString() })
+    .in('id', userIds)
+  // Single bulk statement: it succeeds or fails as a whole, so we cannot report
+  // per-id failures the way the old per-doc loop did.
+  if (error) {
+    return { successfulIds: [], failedIds: [...userIds] }
+  }
+  return { successfulIds: [...userIds], failedIds: [] }
 }
 
 export const bulkUpdateMembershipStatus = async (userIds: string[], membershipStatus: MembershipStatus) => {
-  const results = await Promise.allSettled(userIds.map((id) => updateMembershipStatus(id, membershipStatus)))
-  const failedIds = results
-    .map((result, idx) => (result.status === 'rejected' ? userIds[idx] : null))
-    .filter((id): id is string => typeof id === 'string')
-  return {
-    successfulIds: userIds.filter((id) => !failedIds.includes(id)),
-    failedIds,
+  if (!userIds.length) {
+    return { successfulIds: [], failedIds: [] }
   }
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      membership_status: toProfilesMembershipStatus(membershipStatus),
+      updated_at: new Date().toISOString(),
+    })
+    .in('id', userIds)
+  if (error) {
+    return { successfulIds: [], failedIds: [...userIds] }
+  }
+  return { successfulIds: [...userIds], failedIds: [] }
 }
 
 export const assignRoleToUser = async (
@@ -338,46 +364,79 @@ export const assignRoleToUser = async (
   notes?: string,
 ) => {
   const payload: Record<string, unknown> = {
-    role,
-    accountStatus: 'active',
-    updatedAt: serverTimestamp(),
+    role: toProfilesRole(role),
+    account_status: 'active',
+    updated_at: new Date().toISOString(),
   }
 
   if (role === 'ambassador') {
-    payload.isActiveAmbassador = true
+    payload.is_active_ambassador = true
   }
 
   if (company) {
-    payload.companyId = company.id
-    payload.companyCode = company.code || null
-    payload.companyName = company.name
+    payload.company_id = company.id
+    payload.company_code = company.code || null
+    payload.company_name = company.name
   }
 
   if (notes) {
     payload.notes = notes
   }
 
-  await upsertUserMirrors(userId, payload)
+  const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
+  throwIfSupabaseError(error, 'assignRoleToUser')
 
-  await addDoc(notificationsCollection, {
+  // Best-effort role-assignment notification. A failure here must not roll back
+  // the role assignment above, so we log and continue rather than throw.
+  const { error: notificationError } = await supabase.from('notifications').insert({
     user_id: userId,
     type: 'role_assignment',
     message: `You have been assigned the role of ${role}.`,
     is_read: false,
-    created_at: serverTimestamp(),
+    created_at: new Date().toISOString(),
     metadata: {
       notes: notes || null,
     },
   })
+  if (notificationError) {
+    console.warn('[assignRoleToUser] failed to create notification', notificationError.message)
+  }
+}
+
+// Maps the camelCase ManagedUserRecord fields that correspond to real
+// public.profiles columns onto their snake_case column names. Only mappable
+// fields are forwarded; unmapped record fields (e.g. derived/display values)
+// are dropped so the Supabase write does not reference unknown columns.
+const mapManagedUserUpdatesToProfileColumns = (updates: Partial<ManagedUserRecord>) => {
+  const columns: Record<string, unknown> = {}
+  if (typeof updates.role !== 'undefined') columns.role = toProfilesRole(updates.role)
+  if (typeof updates.membershipStatus !== 'undefined') {
+    columns.membership_status = toProfilesMembershipStatus(updates.membershipStatus)
+  }
+  if (typeof updates.companyId !== 'undefined') columns.company_id = updates.companyId
+  if (typeof updates.companyCode !== 'undefined') columns.company_code = updates.companyCode
+  if (typeof updates.companyName !== 'undefined') columns.company_name = updates.companyName
+  if (typeof updates.transformationTier !== 'undefined') {
+    columns.transformation_tier = updates.transformationTier
+  }
+  if (typeof updates.accountStatus !== 'undefined') columns.account_status = updates.accountStatus
+  if (typeof updates.notes !== 'undefined') columns.notes = updates.notes
+  if (typeof updates.mentorId !== 'undefined') columns.mentor_id = updates.mentorId
+  if (typeof updates.ambassadorId !== 'undefined') columns.ambassador_id = updates.ambassadorId
+  if (typeof updates.isActiveAmbassador !== 'undefined') {
+    columns.is_active_ambassador = updates.isActiveAmbassador
+  }
+  if (typeof updates.assignedOrganizations !== 'undefined') {
+    columns.assigned_organizations = updates.assignedOrganizations
+  }
+  return columns
 }
 
 export const updateUser = async (userId: string, updates: Partial<ManagedUserRecord>) => {
-  const payload = { ...updates }
-  delete (payload as { id?: string }).id
-  await upsertUserMirrors(userId, {
-    ...payload,
-    updatedAt: serverTimestamp(),
-  })
+  const payload = mapManagedUserUpdatesToProfileColumns(updates)
+  payload.updated_at = new Date().toISOString()
+  const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
+  throwIfSupabaseError(error, 'updateUser')
 }
 
 type AccessAuditField =
@@ -454,27 +513,27 @@ export const updateUserAccessWithAudit = async (params: {
     source = 'users_management_panel',
   } = params
 
-  const payload = { ...updates }
-  delete (payload as { id?: string }).id
-
   const changedFields = accessAuditFields.filter((field) => !isAuditValueEqual(before[field], after[field]))
   if (!changedFields.length) return
 
-  await upsertUserMirrors(userId, {
-    ...payload,
-    accessLastUpdatedAt: serverTimestamp(),
-    accessLastUpdatedBy: actorId || null,
-    accessLastUpdatedByName: actorName || null,
-    accessLastReason: reason || null,
-    updatedAt: serverTimestamp(),
-  })
+  const payload = mapManagedUserUpdatesToProfileColumns(updates)
+  payload.access_last_updated_at = new Date().toISOString()
+  payload.access_last_updated_by = actorId || null
+  payload.access_last_updated_by_name = actorName || null
+  payload.access_last_reason = reason || null
+  payload.updated_at = new Date().toISOString()
 
+  const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
+  throwIfSupabaseError(error, 'updateUserAccessWithAudit')
+
+  // Best-effort audit trail. A failure to record the audit row must not undo
+  // the access change that already succeeded above, so we log and continue.
   const auditEntry = removeUndefinedFields({
     action: 'user_access_updated',
-    userId,
-    adminId: actorId || undefined,
-    adminName: actorName || undefined,
-    createdAt: serverTimestamp(),
+    user_id: userId,
+    admin_id: actorId || undefined,
+    admin_name: actorName || undefined,
+    created_at: new Date().toISOString(),
     metadata: {
       reason: reason || null,
       source,
@@ -484,7 +543,10 @@ export const updateUserAccessWithAudit = async (params: {
     },
   })
 
-  await addDoc(adminActivityCollection, auditEntry)
+  const { error: auditError } = await supabase.from('admin_activity_log').insert(auditEntry)
+  if (auditError) {
+    console.warn('[updateUserAccessWithAudit] failed to write audit log', auditError.message)
+  }
 }
 
 export const fetchEngagementRoster = async (): Promise<EngagementRosterEntry[]> => {

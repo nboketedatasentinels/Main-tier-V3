@@ -1,15 +1,4 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  Timestamp,
-  updateDoc,
-} from 'firebase/firestore'
-import { db } from './firebase'
+import { supabase } from '@/services/supabase'
 
 export type FeedbackCategory = 'bug' | 'feature_request' | 'general' | 'appreciation'
 
@@ -38,62 +27,112 @@ export interface FeedbackRecord {
   reviewedBy: string | null
 }
 
-export const submitFeedback = async (input: FeedbackInput): Promise<string> => {
-  const docRef = await addDoc(collection(db, 'feedback'), {
-    userId: input.userId,
-    userEmail: input.userEmail,
-    userName: input.userName,
-    category: input.category,
-    message: input.message.trim(),
-    pageContext: input.pageContext ?? null,
-    status: 'new',
-    createdAt: serverTimestamp(),
-  })
-  return docRef.id
+const FEEDBACK_TABLE = 'feedback'
+
+interface FeedbackRow {
+  id: string
+  uid: string | null
+  user_email: string | null
+  user_name: string | null
+  category: string | null
+  message: string | null
+  page_context: string | null
+  status: string | null
+  reviewed_by: string | null
+  created_at: string | null
+  reviewed_at: string | null
+  updated_at?: string | null
+  data?: Record<string, unknown> | null
 }
 
-const toDate = (value: unknown): Date | null => {
+const toDate = (value: string | null | undefined): Date | null => {
   if (!value) return null
-  if (value instanceof Date) return value
-  if (value instanceof Timestamp) return value.toDate()
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const candidate = value as { toDate?: () => Date }
-    if (typeof candidate.toDate === 'function') return candidate.toDate()
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const mapRow = (row: FeedbackRow): FeedbackRecord => ({
+  id: row.id,
+  userId: row.uid ?? null,
+  userEmail: row.user_email ?? null,
+  userName: row.user_name ?? null,
+  category: (row.category as FeedbackCategory) ?? 'general',
+  message: row.message ?? '',
+  pageContext: row.page_context ?? null,
+  status: (row.status as FeedbackStatus) ?? 'new',
+  createdAt: toDate(row.created_at),
+  reviewedAt: toDate(row.reviewed_at),
+  reviewedBy: row.reviewed_by ?? null,
+})
+
+export const submitFeedback = async (input: FeedbackInput): Promise<string> => {
+  const id = crypto.randomUUID()
+  const nowIso = new Date().toISOString()
+
+  const { error } = await supabase.from(FEEDBACK_TABLE).insert({
+    id,
+    uid: input.userId,
+    user_email: input.userEmail,
+    user_name: input.userName,
+    category: input.category,
+    message: input.message.trim(),
+    page_context: input.pageContext ?? null,
+    status: 'new',
+    created_at: nowIso,
+    updated_at: nowIso,
+  })
+
+  if (error) {
+    console.error('[feedbackService] submitFeedback failed', error)
+    throw new Error(error.message)
   }
-  return null
+
+  return id
 }
 
 export const subscribeToFeedback = (
   onUpdate: (records: FeedbackRecord[]) => void,
   onError?: (err: Error) => void
 ) => {
-  const q = query(collection(db, 'feedback'), orderBy('createdAt', 'desc'))
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const records: FeedbackRecord[] = snapshot.docs.map((d) => {
-        const data = d.data() as Record<string, unknown>
-        return {
-          id: d.id,
-          userId: (data.userId as string | null) ?? null,
-          userEmail: (data.userEmail as string | null) ?? null,
-          userName: (data.userName as string | null) ?? null,
-          category: (data.category as FeedbackCategory) ?? 'general',
-          message: (data.message as string) ?? '',
-          pageContext: (data.pageContext as string | null) ?? null,
-          status: (data.status as FeedbackStatus) ?? 'new',
-          createdAt: toDate(data.createdAt),
-          reviewedAt: toDate(data.reviewedAt),
-          reviewedBy: (data.reviewedBy as string | null) ?? null,
-        }
-      })
-      onUpdate(records)
-    },
-    (err) => {
-      console.error('[feedbackService] subscribe failed', err)
-      onError?.(err)
+  let active = true
+
+  const fetchAll = async () => {
+    const { data, error } = await supabase
+      .from(FEEDBACK_TABLE)
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (!active) return
+
+    if (error) {
+      console.error('[feedbackService] subscribe fetch failed', error)
+      onError?.(new Error(error.message))
+      return
     }
-  )
+
+    const records = ((data as FeedbackRow[]) ?? []).map(mapRow)
+    onUpdate(records)
+  }
+
+  // Initial load.
+  void fetchAll()
+
+  // Realtime: re-fetch on any change to the feedback table.
+  const channel = supabase
+    .channel('feedback-changes')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: FEEDBACK_TABLE },
+      () => {
+        void fetchAll()
+      }
+    )
+    .subscribe()
+
+  return () => {
+    active = false
+    void supabase.removeChannel(channel)
+  }
 }
 
 export const updateFeedbackStatus = async (
@@ -101,9 +140,20 @@ export const updateFeedbackStatus = async (
   status: FeedbackStatus,
   reviewerId: string | null
 ): Promise<void> => {
-  await updateDoc(doc(db, 'feedback', feedbackId), {
-    status,
-    reviewedAt: serverTimestamp(),
-    reviewedBy: reviewerId,
-  })
+  const nowIso = new Date().toISOString()
+
+  const { error } = await supabase
+    .from(FEEDBACK_TABLE)
+    .update({
+      status,
+      reviewed_by: reviewerId,
+      reviewed_at: nowIso,
+      updated_at: nowIso,
+    })
+    .eq('id', feedbackId)
+
+  if (error) {
+    console.error('[feedbackService] updateFeedbackStatus failed', error)
+    throw new Error(error.message)
+  }
 }

@@ -1,270 +1,255 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from 'firebase/firestore'
-import { auth, db } from './firebase'
-import { RawUpgradeRequest, UpgradeRequest, UpgradeRequestForm, UpgradeRequestStatus } from '@/types/upgrade'
+import { supabase } from '@/services/supabase'
+import { UpgradeRequest, UpgradeRequestForm, UpgradeRequestStatus, UpgradeRequestType } from '@/types/upgrade'
 import { AdminDataError } from '@/services/admin/adminErrors'
 
-const REQUEST_COLLECTION = 'upgrade_requests'
-const ADMIN_NOTIFICATIONS = 'admin_notifications'
-const USERS_COLLECTION = 'users'
-const PROFILES_COLLECTION = 'profiles'
-const VILLAGES_COLLECTION = 'villages'
+const REQUEST_TABLE = 'upgrade_requests'
 
-const toUpgradeRequest = (snapshotId: string, data: RawUpgradeRequest): UpgradeRequest => {
+/**
+ * Shape of a raw row returned by Supabase for public.upgrade_requests.
+ * Columns are snake_case; timestamps arrive as ISO strings.
+ */
+interface UpgradeRequestRow {
+  id: string
+  uid: string | null
+  request_type: UpgradeRequestType
+  current_tier: string | null
+  requested_tier: string | null
+  status: UpgradeRequestStatus
+  message: string | null
+  admin_notes: string | null
+  contact_preference: string | null
+  contact_details: string | null
+  village_id: string | null
+  village_name: string | null
+  user_details: UpgradeRequest['userDetails'] | null
+  requested_at: string | null
+  reviewed_at: string | null
+  reviewed_by: string | null
+  created_at: string | null
+  updated_at: string | null
+  data: Record<string, unknown> | null
+}
+
+/**
+ * Map a snake_case Supabase row to the camelCase UpgradeRequest interface.
+ * villageDescription has no dedicated column; it is persisted inside `data`.
+ */
+const toUpgradeRequest = (row: UpgradeRequestRow): UpgradeRequest => {
+  const extra = (row.data ?? {}) as Record<string, unknown>
+  const villageDescription =
+    (extra.villageDescription as string | undefined) ?? null
+
   return {
-    id: snapshotId,
-    user_id: data.user_id,
-    request_type: data.request_type,
-    current_tier: data.current_tier ?? null,
-    requested_tier: data.requested_tier ?? null,
-    status: data.status,
-    message: data.message ?? null,
-    admin_notes: data.admin_notes ?? null,
-    villageId: data.villageId ?? null,
-    villageName: data.villageName ?? null,
-    villageDescription: data.villageDescription ?? null,
-    userDetails: data.userDetails ?? null,
-    requested_at: data.requested_at?.toDate().toISOString() ?? new Date().toISOString(),
-    reviewed_at: data.reviewed_at?.toDate().toISOString() ?? null,
-    reviewed_by: data.reviewed_by ?? null,
-    contact_preference: data.contact_preference ?? null,
-    contact_details: data.contact_details ?? null,
+    id: row.id,
+    user_id: row.uid ?? '',
+    request_type: row.request_type,
+    current_tier: row.current_tier ?? null,
+    requested_tier: row.requested_tier ?? null,
+    status: row.status,
+    message: row.message ?? null,
+    admin_notes: row.admin_notes ?? null,
+    villageId: row.village_id ?? null,
+    villageName: row.village_name ?? null,
+    villageDescription,
+    userDetails: row.user_details ?? null,
+    requested_at: row.requested_at ?? row.created_at ?? new Date().toISOString(),
+    reviewed_at: row.reviewed_at ?? null,
+    reviewed_by: row.reviewed_by ?? null,
+    contact_preference: row.contact_preference ?? null,
+    contact_details: row.contact_details ?? null,
   }
 }
 
 export const createUpgradeRequest = async (userId: string, requestData: UpgradeRequestForm) => {
-  const userSnapshot = await getDoc(doc(db, USERS_COLLECTION, userId))
+  // Pull learner profile details so the admin view has context (best-effort).
   let profileData: Record<string, unknown> | null = null
-  if (userSnapshot.exists()) {
-    profileData = userSnapshot.data() as Record<string, unknown>
-  } else {
-    const profileSnapshot = await getDoc(doc(db, PROFILES_COLLECTION, userId))
-    if (profileSnapshot.exists()) {
-      profileData = profileSnapshot.data() as Record<string, unknown>
-    }
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profileRow) {
+    profileData = profileRow as Record<string, unknown>
   }
 
-  const villageId = (profileData?.villageId as string | undefined) || null
-  let villageName: string | null = (profileData?.villageName as string | undefined) || null
+  const villageId = (profileData?.village_id as string | undefined) || (profileData?.villageId as string | undefined) || null
+  let villageName: string | null =
+    (profileData?.village_name as string | undefined) || (profileData?.villageName as string | undefined) || null
   let villageDescription: string | null =
+    (profileData?.village_description as string | undefined) ||
     (profileData?.villageDescription as string | undefined) ||
+    (profileData?.village_purpose as string | undefined) ||
     (profileData?.villagePurpose as string | undefined) ||
     null
 
   if (villageId) {
-    const villageSnapshot = await getDoc(doc(db, VILLAGES_COLLECTION, villageId))
-    if (villageSnapshot.exists()) {
-      const villageData = villageSnapshot.data() as { name?: string; description?: string }
-      villageName = villageData.name || villageName
-      villageDescription = villageData.description || villageDescription
+    const { data: villageRow } = await supabase
+      .from('villages')
+      .select('name, description')
+      .eq('id', villageId)
+      .maybeSingle()
+    if (villageRow) {
+      const village = villageRow as { name?: string; description?: string }
+      villageName = village.name || villageName
+      villageDescription = village.description || villageDescription
     }
   }
 
   const userDetails = profileData
     ? {
-        fullName: (profileData.fullName as string | undefined) || null,
-        firstName: (profileData.firstName as string | undefined) || null,
-        lastName: (profileData.lastName as string | undefined) || null,
+        fullName: (profileData.full_name as string | undefined) || (profileData.fullName as string | undefined) || null,
+        firstName: (profileData.first_name as string | undefined) || (profileData.firstName as string | undefined) || null,
+        lastName: (profileData.last_name as string | undefined) || (profileData.lastName as string | undefined) || null,
         email: (profileData.email as string | undefined) || null,
         role: (profileData.role as string | undefined) || null,
-        phoneNumber: (profileData.phoneNumber as string | undefined) || null,
-        companyId: (profileData.companyId as string | undefined) || null,
-        organizationId: (profileData.organizationId as string | undefined) || null,
+        phoneNumber:
+          (profileData.phone_number as string | undefined) || (profileData.phoneNumber as string | undefined) || null,
+        companyId:
+          (profileData.company_id as string | undefined) || (profileData.companyId as string | undefined) || null,
+        organizationId:
+          (profileData.organization_id as string | undefined) ||
+          (profileData.organizationId as string | undefined) ||
+          null,
       }
     : null
 
-  const docRef = await addDoc(collection(db, REQUEST_COLLECTION), {
-    user_id: userId,
+  const id = crypto.randomUUID()
+  const nowIso = new Date().toISOString()
+
+  const insertPayload = {
+    id,
+    uid: userId,
     request_type: requestData.requestType,
     current_tier: requestData.currentTier ?? null,
     requested_tier: requestData.requestedTier ?? null,
-    status: 'pending',
+    status: 'pending' as UpgradeRequestStatus,
     message: requestData.message ?? null,
     admin_notes: null,
     contact_preference: requestData.contactPreference ?? null,
     contact_details: requestData.contactDetails ?? null,
-    villageId,
-    villageName,
-    villageDescription,
-    userDetails,
-    requested_at: serverTimestamp(),
-  })
+    village_id: villageId,
+    village_name: villageName,
+    user_details: userDetails,
+    requested_at: nowIso,
+    // villageDescription has no column - stash it in the data jsonb so the
+    // mapper can recover it on read.
+    data: villageDescription ? { villageDescription } : null,
+  }
 
-  const created = await getDoc(docRef)
-  const data = created.data() as RawUpgradeRequest
+  const { data: inserted, error } = await supabase
+    .from(REQUEST_TABLE)
+    .insert(insertPayload)
+    .select('*')
+    .single()
 
-  await addDoc(collection(db, ADMIN_NOTIFICATIONS), {
-    type: 'upgrade_request',
-    category: 'upgrade_request',
-    message: `New upgrade request from ${userDetails?.fullName || userDetails?.email || 'a user'}`,
-    is_read: false,
-    read: false,
-    target_roles: ['super_admin'],
-    metadata: {
-      userId,
-      userName: userDetails?.fullName || userDetails?.firstName || userDetails?.email || userId,
-      userEmail: userDetails?.email || null,
-      currentTier: requestData.currentTier ?? null,
-      requestedTier: requestData.requestedTier ?? requestData.requestType,
-      villageName,
-      requestId: docRef.id,
-      route: `/super-admin?tab=approvals&requestId=${docRef.id}`,
-    },
-    created_at: serverTimestamp(),
-  })
+  if (error) {
+    throw new AdminDataError('Failed to create upgrade request.', error.code, { message: error.message })
+  }
 
-  return toUpgradeRequest(docRef.id, data)
+  // Best-effort admin notification. A failure here must not block the request.
+  try {
+    await supabase.from('admin_notifications').insert({
+      id: crypto.randomUUID(),
+      type: 'upgrade_request',
+      category: 'upgrade_request',
+      message: `New upgrade request from ${userDetails?.fullName || userDetails?.email || 'a user'}`,
+      is_read: false,
+      read: false,
+      target_roles: ['super_admin'],
+      metadata: {
+        userId,
+        userName: userDetails?.fullName || userDetails?.firstName || userDetails?.email || userId,
+        userEmail: userDetails?.email || null,
+        currentTier: requestData.currentTier ?? null,
+        requestedTier: requestData.requestedTier ?? requestData.requestType,
+        villageName,
+        requestId: id,
+        route: `/super-admin?tab=approvals&requestId=${id}`,
+      },
+      created_at: nowIso,
+    })
+  } catch {
+    // Swallow notification errors - the request itself succeeded.
+  }
+
+  return toUpgradeRequest(inserted as UpgradeRequestRow)
 }
 
 export const getUserUpgradeRequests = async (userId: string): Promise<UpgradeRequest[]> => {
-  const q = query(
-    collection(db, REQUEST_COLLECTION),
-    where('user_id', '==', userId),
-    orderBy('requested_at', 'desc')
-  )
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
+  const { data, error } = await supabase
+    .from(REQUEST_TABLE)
+    .select('*')
+    .eq('uid', userId)
+    .order('requested_at', { ascending: false })
+
+  if (error) {
+    throw new AdminDataError('Failed to load upgrade requests.', error.code, { message: error.message })
+  }
+
+  return (data as UpgradeRequestRow[]).map(toUpgradeRequest)
 }
 
 export const checkPendingRequest = async (userId: string): Promise<UpgradeRequest | null> => {
-  const q = query(
-    collection(db, REQUEST_COLLECTION),
-    where('user_id', '==', userId),
-    where('status', '==', 'pending'),
-    orderBy('requested_at', 'desc'),
-    limit(1)
-  )
-  const snapshot = await getDocs(q)
-  if (snapshot.empty) return null
-  const docSnap = snapshot.docs[0]
-  return toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest)
+  const { data, error } = await supabase
+    .from(REQUEST_TABLE)
+    .select('*')
+    .eq('uid', userId)
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: false })
+    .limit(1)
+
+  if (error) {
+    throw new AdminDataError('Failed to check pending upgrade request.', error.code, { message: error.message })
+  }
+
+  const rows = data as UpgradeRequestRow[]
+  if (!rows || rows.length === 0) return null
+  return toUpgradeRequest(rows[0])
 }
 
 export const getAllUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
   const startedAt = performance.now()
-  const constraints = [orderBy('requested_at', 'desc')]
-  const runQuery = async () => {
-    const q = query(collection(db, REQUEST_COLLECTION), ...constraints)
-    return getDocs(q)
+
+  const { data, error } = await supabase
+    .from(REQUEST_TABLE)
+    .select('*')
+    .order('requested_at', { ascending: false })
+
+  if (error) {
+    const code = error.code ?? 'unknown'
+    console.error('🔴 [Admin] upgrade_requests failed', { code, message: error.message })
+
+    // Supabase returns 42501 (insufficient_privilege) when RLS blocks the read.
+    if (code === '42501') {
+      throw new AdminDataError('You do not have permission to view upgrade requests.', 'permission-denied')
+    }
+
+    throw new AdminDataError('Failed to load upgrade requests.', code, { message: error.message })
   }
 
-  try {
-    console.log('🟣 [Admin] upgrade_requests query constraints:', constraints.map((constraint) => String(constraint)))
-    const snapshot = await runQuery()
-    console.log(
-      '🟢 [Admin] upgrade_requests loaded:',
-      snapshot.size,
-      'docs in',
-      Math.round(performance.now() - startedAt),
-      'ms'
-    )
-    return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
-  } catch (err) {
-    let effectiveError: unknown = err
-    let code = (effectiveError as { code?: string })?.code ?? 'unknown'
-
-    if (code === 'permission-denied' && auth.currentUser) {
-      try {
-        await auth.currentUser.getIdToken(true)
-        const retrySnapshot = await runQuery()
-        console.log(
-          '🟢 [Admin] upgrade_requests loaded after token refresh:',
-          retrySnapshot.size,
-          'docs in',
-          Math.round(performance.now() - startedAt),
-          'ms'
-        )
-        return retrySnapshot.docs.map((docSnap) =>
-          toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest),
-        )
-      } catch (retryError) {
-        effectiveError = retryError
-        code = (effectiveError as { code?: string })?.code ?? code
-      }
-    }
-
-    const message = (effectiveError as { message?: string })?.message
-    const debugContext: Record<string, unknown> = {
-      uid: auth.currentUser?.uid ?? null,
-      hasCurrentUser: Boolean(auth.currentUser),
-    }
-
-    if (auth.currentUser) {
-      try {
-        const tokenResult = await auth.currentUser.getIdTokenResult()
-        debugContext.tokenClaims = {
-          role: tokenResult.claims?.role ?? null,
-          claimsRole: tokenResult.claims?.claimsRole ?? null,
-          customRole: tokenResult.claims?.customRole ?? null,
-          admin: tokenResult.claims?.admin ?? null,
-          super_admin: tokenResult.claims?.super_admin ?? null,
-          superAdmin: tokenResult.claims?.superAdmin ?? null,
-          partner: tokenResult.claims?.partner ?? null,
-        }
-      } catch (tokenError) {
-        debugContext.tokenClaimsError = (tokenError as { message?: string })?.message ?? String(tokenError)
-      }
-
-      try {
-        const [usersSnap, profilesSnap] = await Promise.all([
-          getDoc(doc(db, USERS_COLLECTION, auth.currentUser.uid)),
-          getDoc(doc(db, PROFILES_COLLECTION, auth.currentUser.uid)),
-        ])
-        debugContext.roleDocs = {
-          usersExists: usersSnap.exists(),
-          usersRole: usersSnap.exists() ? (usersSnap.data() as { role?: string; userRole?: string }).role ?? null : null,
-          usersUserRole: usersSnap.exists()
-            ? (usersSnap.data() as { role?: string; userRole?: string }).userRole ?? null
-            : null,
-          profilesExists: profilesSnap.exists(),
-          profilesRole: profilesSnap.exists()
-            ? (profilesSnap.data() as { role?: string; userRole?: string }).role ?? null
-            : null,
-          profilesUserRole: profilesSnap.exists()
-            ? (profilesSnap.data() as { role?: string; userRole?: string }).userRole ?? null
-            : null,
-        }
-      } catch (roleDocError) {
-        debugContext.roleDocError = (roleDocError as { message?: string })?.message ?? String(roleDocError)
-      }
-    }
-
-    console.error('🔴 [Admin] upgrade_requests failed', { code, message, err: effectiveError, debugContext })
-
-    if (code === 'failed-precondition') {
-      throw new AdminDataError(
-        'Upgrade requests query needs a Firestore composite index (status + requested_at).',
-        code,
-        { hint: 'Open Firebase console error logs to create the index link automatically.' }
-      )
-    }
-
-    if (code === 'permission-denied') {
-      throw new AdminDataError('You do not have permission to view upgrade requests.', code)
-    }
-
-    throw new AdminDataError('Failed to load upgrade requests.', code)
-  }
-}
-export const getPendingUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
-  const q = query(
-    collection(db, REQUEST_COLLECTION),
-    where('status', '==', 'pending'),
-    orderBy('requested_at', 'desc')
+  const rows = data as UpgradeRequestRow[]
+  console.log(
+    '🟢 [Admin] upgrade_requests loaded:',
+    rows.length,
+    'rows in',
+    Math.round(performance.now() - startedAt),
+    'ms'
   )
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
+  return rows.map(toUpgradeRequest)
+}
+
+export const getPendingUpgradeRequests = async (): Promise<UpgradeRequest[]> => {
+  const { data, error } = await supabase
+    .from(REQUEST_TABLE)
+    .select('*')
+    .eq('status', 'pending')
+    .order('requested_at', { ascending: false })
+
+  if (error) {
+    throw new AdminDataError('Failed to load pending upgrade requests.', error.code, { message: error.message })
+  }
+
+  return (data as UpgradeRequestRow[]).map(toUpgradeRequest)
 }
 
 export const updateUpgradeRequestStatus = async (
@@ -273,26 +258,35 @@ export const updateUpgradeRequestStatus = async (
   notes?: string,
   reviewedBy?: string
 ) => {
-  const requestRef = doc(db, REQUEST_COLLECTION, requestId)
-  await updateDoc(requestRef, {
-    status,
-    admin_notes: notes ?? null,
-    reviewed_by: reviewedBy ?? null,
-    reviewed_at: serverTimestamp(),
-  })
+  const { data, error } = await supabase
+    .from(REQUEST_TABLE)
+    .update({
+      status,
+      admin_notes: notes ?? null,
+      reviewed_by: reviewedBy ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', requestId)
+    .select('*')
+    .single()
 
-  const updated = await getDoc(requestRef)
-  const data = updated.data() as RawUpgradeRequest
-  return toUpgradeRequest(requestId, data)
+  if (error) {
+    throw new AdminDataError('Failed to update upgrade request.', error.code, { message: error.message })
+  }
+
+  return toUpgradeRequest(data as UpgradeRequestRow)
 }
 
 export const getUserRequestsForAdmin = async (userId: string): Promise<UpgradeRequest[]> => {
-  const q = query(
-    collection(db, REQUEST_COLLECTION),
-    where('user_id', '==', userId),
-    orderBy('requested_at', 'desc')
-  )
-  const snapshot = await getDocs(q)
-  return snapshot.docs.map((docSnap) => toUpgradeRequest(docSnap.id, docSnap.data() as RawUpgradeRequest))
-}
+  const { data, error } = await supabase
+    .from(REQUEST_TABLE)
+    .select('*')
+    .eq('uid', userId)
+    .order('requested_at', { ascending: false })
 
+  if (error) {
+    throw new AdminDataError('Failed to load user upgrade requests.', error.code, { message: error.message })
+  }
+
+  return (data as UpgradeRequestRow[]).map(toUpgradeRequest)
+}
