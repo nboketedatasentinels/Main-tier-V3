@@ -591,6 +591,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         id: created.id,
         code: form.code.toUpperCase(),
         assignedPartnerEmail: partnerEmail.trim() || undefined,
+        // If the partner email matched an existing user, createOrganization
+        // links them and returns the id - carry it so the new row shows the
+        // partner immediately instead of "Unassigned".
+        transformationPartnerId: created.transformationPartnerId ?? undefined,
         createdAt: now,
         updatedAt: now,
       }
