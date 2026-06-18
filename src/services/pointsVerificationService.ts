@@ -13,6 +13,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from './pointsService'
 import { getActivityDefinitionById, resolveCanonicalActivityId } from '@/config/pointsConfig'
 import { createInAppNotification } from './notificationService'
@@ -73,6 +74,52 @@ interface ApproverInfo {
   name?: string | null
 }
 
+// Supabase migration: `point_verifications` (0002) is the canonical store - it
+// consolidates the legacy Firestore `points_verification_requests` and
+// `points_verifications`, distinguished by `status`. Maps a snake_case row to
+// the shape the admin UI already consumes.
+type PointVerificationRow = {
+  id: string
+  uid: string | null
+  organization_id: string | null
+  week: number | null
+  activity_id: string | null
+  activity_title: string | null
+  points: number | null
+  proof_url: string | null
+  notes: string | null
+  status: PointsVerificationRequestStatus | null
+  created_at: string | null
+  approved_at: string | null
+  approved_by: string | null
+  approved_by_name: string | null
+  rejected_at: string | null
+  rejected_by: string | null
+  rejected_by_name: string | null
+  rejection_reason: string | null
+}
+
+const mapVerificationRow = (row: PointVerificationRow): PointsVerificationRequest => ({
+  id: row.id,
+  user_id: row.uid ?? '',
+  organizationId: row.organization_id ?? null,
+  week: row.week ?? 0,
+  activity_id: row.activity_id ?? '',
+  activity_title: row.activity_title ?? undefined,
+  points: row.points ?? undefined,
+  proof_url: row.proof_url ?? undefined,
+  notes: row.notes ?? undefined,
+  status: row.status ?? undefined,
+  created_at: row.created_at,
+  approved_at: row.approved_at,
+  approved_by: row.approved_by,
+  approved_by_name: row.approved_by_name,
+  rejected_at: row.rejected_at,
+  rejected_by: row.rejected_by,
+  rejected_by_name: row.rejected_by_name,
+  rejection_reason: row.rejection_reason,
+})
+
 /**
  * Listens to pending points verification requests.
  */
@@ -92,29 +139,58 @@ export const listenToPointsVerificationRequests = (
 }
 
 /**
- * Listens to all points verification requests with filters.
+ * Subscribes to all points verification requests with filters.
+ *
+ * Supabase-backed: does an initial fetch from `point_verifications`, then keeps
+ * the list live via a realtime channel. Returns an unsubscribe that tears the
+ * channel down, preserving the original listener contract. (The Firestore
+ * onSnapshot version failed with "Missing or insufficient permissions" once
+ * auth moved to Supabase - the user is no longer authenticated to Firebase.)
  */
 export const listenToAllPointsVerificationRequests = (
   onChange: (requests: PointsVerificationRequest[]) => void,
   options?: { status?: PointsVerificationRequestStatus | 'all'; limit?: number },
   onError?: (error: unknown) => void,
 ) => {
-  const filters: QueryConstraint[] = []
-  if (options?.status && options.status !== 'all') {
-    filters.push(where('status', '==', options.status))
+  let cancelled = false
+
+  const load = async () => {
+    let q = supabase
+      .from('point_verifications')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (options?.status && options.status !== 'all') {
+      q = q.eq('status', options.status)
+    }
+    if (options?.limit) {
+      q = q.limit(options.limit)
+    }
+    const { data, error } = await q
+    if (cancelled) return
+    if (error) {
+      onError?.(error)
+      return
+    }
+    onChange((data ?? []).map((row) => mapVerificationRow(row as PointVerificationRow)))
   }
 
-  const unorderedQuery = query(collection(db, 'points_verification_requests'), ...filters)
-  return onSnapshot(
-    unorderedQuery,
-    (snapshot) => {
-      const mapped = mapAndSortRequests(snapshot as { docs: Array<{ id: string; data: () => unknown }> })
-      onChange(options?.limit ? mapped.slice(0, options.limit) : mapped)
-    },
-    (error) => {
-      onError?.(error)
-    },
-  )
+  void load()
+
+  const channel = supabase
+    .channel('point_verifications_admin')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'point_verifications' },
+      () => {
+        void load()
+      },
+    )
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
 }
 
 /**
