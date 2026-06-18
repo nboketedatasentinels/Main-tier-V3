@@ -67,7 +67,7 @@ import {
   fetchAvailableCourses,
   generateOrganizationCode,
 } from '@/services/organizationService'
-import { createOrganization as createSupabaseOrganization } from '@/services/supabaseOrgService'
+import { createOrganization as createSupabaseOrganization, inviteOrgMember } from '@/services/supabaseOrgService'
 import { InvitationResultsModal } from './InvitationResultsModal'
 import {
   MonthlyCourseAssignments,
@@ -605,12 +605,30 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
           console.error('[CreateOrganizationModal] post-create callback failed', onCreatedError)
         }
       }
+
+      // Add the invited members to the org. Existing accounts are enrolled into
+      // the org's paid journey immediately; new emails become pending invites
+      // that enroll automatically when they sign up with that email.
+      const validDrafts = inviteDrafts.filter((draft) => draft.isValid && draft.email.trim())
+      let invitedNow = 0
+      let invitedPending = 0
+      for (const draft of validDrafts) {
+        const result = await inviteOrgMember(created.id, draft.email, draft.role)
+        if (result.ok) {
+          if (result.status === 'enrolled') invitedNow += 1
+          else invitedPending += 1
+        } else {
+          console.warn('[CreateOrganizationModal] invite failed', draft.email, result.error)
+        }
+      }
+
+      const inviteSummary =
+        validDrafts.length > 0
+          ? `${invitedNow} member(s) enrolled now, ${invitedPending} will join on signup.`
+          : `Cluster: ${clusterDisplayName}`
       toast({
         title: 'Organization created successfully',
-        description:
-          inviteDrafts.length > 0
-            ? 'Member invitations are not sent automatically yet - add members from the organization later.'
-            : `Cluster: ${clusterDisplayName}`,
+        description: inviteSummary,
         status: 'success',
       })
       onClose()
