@@ -573,7 +573,15 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                         const safeName = (org.name || '').trim() || 'Unnamed organization'
                         const safeCode = (org.code || '').trim() || 'No code'
                         const safeTeamSize = Number.isFinite(org.teamSize) ? Number(org.teamSize) : 0
-                        const safePartner = partnerLookup.get(org.transformationPartnerId || '') || 'Unassigned'
+                        const resolvedPartner = partnerLookup.get(org.transformationPartnerId || '')
+                        // A partner assigned by email at creation has no
+                        // transformation_partner_id until that email signs up,
+                        // so surface the pending email instead of "Unassigned".
+                        const safePartner =
+                          resolvedPartner ||
+                          (org.assignedPartnerEmail
+                            ? `Pending: ${org.assignedPartnerEmail}`
+                            : 'Unassigned')
                         const createdAt =
                           typeof org.createdAt === 'string'
                             ? org.createdAt

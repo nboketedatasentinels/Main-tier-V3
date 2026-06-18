@@ -110,6 +110,37 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
     .select('*')
     .single()
   if (error) throw new Error(error.message)
+
+  // If a partner email was supplied and it already belongs to a registered
+  // user, link them now (promote + set transformation_partner_id) so the org
+  // shows the partner instead of "Unassigned". If the email has no account yet,
+  // it stays a pending claim in settings.partnerEmail (claimed on signup).
+  const partnerEmail = input.partnerEmail?.trim().toLowerCase()
+  if (partnerEmail) {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .ilike('email', partnerEmail)
+        .maybeSingle()
+      if (profile?.id) {
+        await assignPartnerToOrg(id, profile.id as string)
+        // Re-read so the returned record reflects the transformation_partner_id
+        // the assignment RPC just wrote.
+        const { data: fresh } = await supabase
+          .from('organizations')
+          .select('*')
+          .eq('id', id)
+          .single()
+        if (fresh) return mapOrg(fresh as Raw)
+      }
+    } catch (linkError) {
+      // Non-fatal: the org is created either way and the partner can be
+      // assigned later from the organizations list.
+      console.warn('[createOrganization] partner email auto-link skipped', linkError)
+    }
+  }
+
   return mapOrg(data as Raw)
 }
 
@@ -172,4 +203,28 @@ export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
   const { data, error } = await supabase.rpc('admin_remove_partner', { org_id: orgId })
   if (error) throw new Error(error.message)
   if (data !== 'ok') throw new Error(`Removal failed: ${data}`)
+}
+
+export interface ClaimOrgResult {
+  ok: boolean
+  error?: string
+  organizationId?: string
+  organizationName?: string
+  code?: string
+  journeyType?: string
+}
+
+/**
+ * Enroll the CURRENT user (auth.uid()) into an organization by its code.
+ * Sets org membership + the org's journey + paid membership (role -> paid_member)
+ * server-side, because client code cannot write profiles.role (revoked in 0012).
+ * A user who joins via an org code belongs to that org and is never a free_user.
+ * Returns the resolved org info; never throws (callers branch on `ok`).
+ */
+export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResult> => {
+  const { data, error } = await supabase.rpc('claim_organization_code', {
+    p_code: code.trim().toUpperCase(),
+  })
+  if (error) return { ok: false, error: error.message }
+  return (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
 }

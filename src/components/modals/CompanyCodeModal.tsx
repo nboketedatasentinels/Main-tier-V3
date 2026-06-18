@@ -18,10 +18,9 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { CheckCircle, XCircle } from 'lucide-react'
-import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { validateCompanyCode } from '@/services/organizationService'
+import { claimOrganizationCode } from '@/services/supabaseOrgService'
 import { useAuth } from '@/hooks/useAuth'
-import { TransformationTier, UserRole } from '@/types'
-import { normalizeRole } from '@/utils/role'
 
 interface CompanyCodeModalProps {
   isOpen: boolean
@@ -125,35 +124,42 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
     }
 
     setIsSubmitting(true)
-    const shouldIncrementMemberCount = !!companyId && companyId !== profile?.companyId
-    const nextAssignedOrganizations = companyId
+
+    // Enroll through the server-side RPC. It binds the user to the org and sets
+    // the org's journey + paid_member role. The role column can't be written by
+    // client code (revoked in 0012), so this must NOT go through updateProfile.
+    const claim = await claimOrganizationCode(trimmedCode)
+    if (!claim.ok) {
+      setIsSubmitting(false)
+      const friendly =
+        claim.error === 'code_not_found'
+          ? 'Company code not found.'
+          : claim.error === 'org_inactive'
+            ? 'This company is not active.'
+            : claim.error || 'Unable to apply company code.'
+      toast({ title: 'Unable to apply company code', description: friendly, status: 'error', duration: 5000 })
+      return
+    }
+
+    const claimedOrgId = claim.organizationId ?? companyId ?? undefined
+    const claimedOrgName = claim.organizationName ?? companyName
+    const nextAssignedOrganizations = claimedOrgId
       ? Array.from(
           new Set([
             ...((profile?.assignedOrganizations || []).filter((id): id is string => typeof id === 'string' && id.trim().length > 0)),
-            companyId,
+            claimedOrgId,
           ]),
         )
       : profile?.assignedOrganizations
-    const updatedPreferences = {
-      ...(profile?.dashboardPreferences ?? {}),
-      lockedToFreeExperience: false,
-    }
 
-    const normalizedCurrentRole = normalizeRole(profile?.role)
-    const roleUpdates =
-      normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
-        ? { role: UserRole.USER }
-        : {}
-
+    // Non-privileged extras (data jsonb): record the org in the user's list and
+    // unlock the paid experience. Role/journey/membership were set by the RPC.
     const { error } = await updateProfile({
-      companyCode: trimmedCode,
-      companyId: companyId ?? undefined,
-      companyName: companyName ?? undefined,
-      ...(companyId ? { assignedOrganizations: nextAssignedOrganizations } : {}),
-      ...roleUpdates,
-      membershipStatus: 'paid',
-      transformationTier: companyId ? TransformationTier.CORPORATE_MEMBER : TransformationTier.INDIVIDUAL_PAID,
-      dashboardPreferences: updatedPreferences,
+      ...(claimedOrgId ? { assignedOrganizations: nextAssignedOrganizations } : {}),
+      dashboardPreferences: {
+        ...(profile?.dashboardPreferences ?? {}),
+        lockedToFreeExperience: false,
+      },
     })
     setIsSubmitting(false)
 
@@ -167,20 +173,12 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
       return
     }
 
-    if (companyId && shouldIncrementMemberCount) {
-      try {
-        await incrementOrganizationMemberCount(companyId)
-      } catch (incrementError) {
-        console.warn('🟠 [CompanyCodeModal] Unable to increment organization member count', incrementError)
-      }
-    }
-
     await refreshProfile({ reason: 'company-code-upgrade' })
 
     toast({
       title: 'You are now a paid member',
-      description: companyName
-        ? `Connected to ${companyName}. Your membership has been upgraded.`
+      description: claimedOrgName
+        ? `Connected to ${claimedOrgName}. Your membership has been upgraded.`
         : 'Company code saved successfully. Your membership has been upgraded.',
       status: 'success',
       duration: 4000,
