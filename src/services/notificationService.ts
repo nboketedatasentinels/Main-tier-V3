@@ -1,8 +1,6 @@
 import {
   addDoc,
-  type DocumentData,
   type FirestoreError,
-  type QuerySnapshot,
   collection,
   doc,
   getDoc,
@@ -16,6 +14,7 @@ import {
   where,
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
+import { supabase } from './supabase'
 import {
   AdminNotification,
   NotificationRecord,
@@ -27,69 +26,114 @@ const notificationsCollection = collection(db, 'notifications')
 const adminNotificationsCollection = collection(db, 'admin_notifications')
 const weeklyAlertsCollection = collection(db, 'weekly_target_alerts')
 
-const toMillis = (value: unknown): number => {
-  if (!value) return 0
-  if (value instanceof Date) return value.getTime()
-  if (typeof value === 'number') return value
-  if (typeof value === 'string') {
-    const parsed = Date.parse(value)
-    return Number.isNaN(parsed) ? 0 : parsed
-  }
-  if (typeof value === 'object' && 'toDate' in value) {
-    const maybeDate = (value as { toDate?: () => Date }).toDate?.()
-    return maybeDate instanceof Date ? maybeDate.getTime() : 0
-  }
-  return 0
+// Supabase migration: `notifications` (0004) keys the owner on `uid` (uuid),
+// not `user_id`. Map the row to the shape the UI already consumes.
+type NotificationRow = {
+  id: string
+  uid: string | null
+  type: NotificationType | null
+  notification_type: NotificationType | null
+  category: NotificationRecord['category'] | null
+  title: string | null
+  message: string | null
+  is_read: boolean | null
+  related_id: string | null
+  action_response: NotificationRecord['action_response']
+  created_at: string | null
+  data: Record<string, unknown> | null
 }
 
-const mapNotifications = (snapshot: QuerySnapshot<DocumentData>) => {
-  return snapshot.docs
-    .map((docSnap) => ({
-      ...(docSnap.data() as NotificationRecord),
-      id: docSnap.id,
-    }))
-    .sort((left, right) => toMillis(right.created_at) - toMillis(left.created_at))
-}
+const mapNotificationRow = (row: NotificationRow): NotificationRecord => ({
+  ...(row.data ?? {}),
+  id: row.id,
+  user_id: row.uid ?? undefined,
+  type: (row.type ?? row.notification_type ?? 'unknown') as NotificationType,
+  notification_type: row.notification_type ?? undefined,
+  category: row.category ?? undefined,
+  title: row.title ?? undefined,
+  message: row.message ?? '',
+  is_read: row.is_read ?? false,
+  read: row.is_read ?? false,
+  related_id: row.related_id ?? undefined,
+  action_response: row.action_response ?? null,
+  created_at: row.created_at ?? undefined,
+})
 
+/**
+ * Subscribes to a user's notifications.
+ *
+ * Supabase-backed: initial fetch from `notifications` (keyed on `uid`) plus a
+ * realtime channel scoped to that user. Returns an unsubscribe that tears the
+ * channel down, preserving the original listener contract. (The Firestore
+ * onSnapshot version failed with "Missing or insufficient permissions" once
+ * auth moved to Supabase - the user has no Firebase session.)
+ */
 export const listenToUserNotifications = (
   userId: string,
   onChange: (notifications: NotificationRecord[]) => void,
-  onError?: (error: FirestoreError) => void,
+  onError?: (error: unknown) => void,
 ) => {
-  const notificationsQuery = query(notificationsCollection, where('user_id', '==', userId))
-  return onSnapshot(
-    notificationsQuery,
-    (snapshot) => {
-      onChange(mapNotifications(snapshot))
-    },
-    onError,
-  )
+  let cancelled = false
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('uid', userId)
+      .order('created_at', { ascending: false })
+    if (cancelled) return
+    if (error) {
+      onError?.(error)
+      return
+    }
+    onChange((data ?? []).map((row) => mapNotificationRow(row as NotificationRow)))
+  }
+
+  void load()
+
+  const channel = supabase
+    .channel(`notifications_${userId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'notifications', filter: `uid=eq.${userId}` },
+      () => {
+        void load()
+      },
+    )
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
 }
 
 export const markNotificationRead = async (notificationId: string) => {
-  const notificationRef = doc(db, 'notifications', notificationId)
-  await updateDoc(notificationRef, { is_read: true, read: true })
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('id', notificationId)
+  if (error) throw error
 }
 
 export const markAllNotificationsRead = async (userId: string) => {
-  const notificationsQuery = query(
-    notificationsCollection,
-    where('user_id', '==', userId),
-    where('is_read', '==', false),
-  )
-  const snapshot = await getDocs(notificationsQuery)
-  const updates = snapshot.docs.map((docSnap) =>
-    updateDoc(docSnap.ref, { is_read: true, read: true }),
-  )
-  await Promise.all(updates)
+  const { error } = await supabase
+    .from('notifications')
+    .update({ is_read: true })
+    .eq('uid', userId)
+    .eq('is_read', false)
+  if (error) throw error
 }
 
 export const updateNotificationAction = async (
   notificationId: string,
   action_response: NotificationRecord['action_response'],
 ) => {
-  const notificationRef = doc(db, 'notifications', notificationId)
-  await updateDoc(notificationRef, { action_response, is_read: true, read: true })
+  const { error } = await supabase
+    .from('notifications')
+    .update({ action_response, is_read: true })
+    .eq('id', notificationId)
+  if (error) throw error
 }
 
 export const respondToChallenge = async (challengeId: string, action: 'accepted' | 'declined') => {
