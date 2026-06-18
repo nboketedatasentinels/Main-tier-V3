@@ -9,7 +9,6 @@ import {
   getDoc,
   getDocs,
   increment,
-  limit,
   onSnapshot,
   QuerySnapshot,
   query,
@@ -22,6 +21,7 @@ import {
 import { auth, db } from './firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { Organization } from '@/types'
+import { supabase } from '@/services/supabase'
 import {
   BulkInvitationResult,
   CourseOption,
@@ -334,25 +334,37 @@ export const validateCompanyCode = async (
     return { valid: false, error: 'Company code is required.' }
   }
 
-  const snapshot = await getDocs(query(orgCollection, where('code', '==', trimmed), limit(1)))
-  if (snapshot.empty) {
+  // Organizations were migrated to Supabase (create/list/update). The signup
+  // code lookup must read Supabase too - otherwise codes for any org created
+  // after the migration would never resolve ("Company code not found").
+  const { data: row, error } = await supabase
+    .from('organizations')
+    .select(
+      'id, code, name, status, journey_type, program_duration_weeks, cohort_start_date, settings, member_count, created_at, updated_at',
+    )
+    .ilike('code', trimmed)
+    .limit(1)
+    .maybeSingle()
+
+  if (error) {
+    return { valid: false, error: 'Unable to validate company code.' }
+  }
+  if (!row) {
     return { valid: false, error: 'Company code not found.' }
   }
 
-  const docSnap = snapshot.docs[0]
-  const data = docSnap.data() as Partial<OrganizationRecord> & {
-    memberCount?: number
-    settings?: Record<string, unknown>
-  }
-  const rawProgramDuration =
-    data.programDuration ?? (data as { program_duration?: number | string | null }).program_duration ?? null
-  const programDurationWeeks = normalizeProgramDurationWeeks(data.programDurationWeeks, rawProgramDuration)
+  const settings = (row.settings as Record<string, unknown> | null) ?? {}
+  const programDurationMonths = (settings.programDurationMonths as number | string | null) ?? null
+  const programDurationWeeks = normalizeProgramDurationWeeks(
+    row.program_duration_weeks as number | null,
+    programDurationMonths,
+  )
   const journeyType = resolveJourneyType({
-    journeyType: data.journeyType,
+    journeyType: row.journey_type,
     programDurationWeeks,
-    programDuration: rawProgramDuration,
+    programDuration: programDurationMonths,
   })
-  const status = normalizeOrganizationStatus(data.status)
+  const status = normalizeOrganizationStatus(row.status as string | undefined)
   if (status !== 'active') {
     return { valid: false, error: 'Company is not active.' }
   }
@@ -360,17 +372,17 @@ export const validateCompanyCode = async (
   return {
     valid: true,
     organization: {
-      id: docSnap.id,
-      code: data.code || trimmed,
-      name: data.name || 'Unknown organization',
+      id: row.id as string,
+      code: (row.code as string) || trimmed,
+      name: (row.name as string) || 'Unknown organization',
       status,
-      createdAt: normalizeTimestamp(data.createdAt),
-      updatedAt: normalizeTimestamp(data.updatedAt),
-      memberCount: data.memberCount ?? 0,
-      settings: data.settings,
+      createdAt: normalizeTimestamp(row.created_at as string | undefined),
+      updatedAt: normalizeTimestamp(row.updated_at as string | undefined),
+      memberCount: (row.member_count as number) ?? 0,
+      settings,
       journeyType: journeyType ?? undefined,
       programDurationWeeks: programDurationWeeks ?? undefined,
-      cohortStartDate: normalizeTimestamp(data.cohortStartDate),
+      cohortStartDate: normalizeTimestamp(row.cohort_start_date as string | undefined),
     },
   }
 }

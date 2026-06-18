@@ -11,6 +11,7 @@ import { supabase, supabaseConfigStatus } from '@/services/supabase'
 import { AuthContext, AuthContextType, AuthUser } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { canAccessOrganization } from '@/services/organizationAccessService'
+import { claimOrganizationCode } from '@/services/supabaseOrgService'
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 
 interface AuthProviderProps {
@@ -283,9 +284,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const loadedProfile = await fetchProfileWithRetry(authUser)
       if (!isActive) return
 
-      const ensuredProfile = loadedProfile
+      let ensuredProfile = loadedProfile
         ? { ...loadedProfile, assignedOrganizations: loadedProfile.assignedOrganizations ?? [] }
         : null
+
+      // Org-code enrollment. A user who signed up with an organization code
+      // belongs to that org and can never be free_user: they inherit the org's
+      // journey + paid membership (role -> paid_member). The role write can only
+      // happen server-side (client role writes are revoked in 0012), so we call
+      // the claim RPC once a session exists, then reload the profile. Guard on
+      // "not yet enrolled" so we never re-apply (which would clobber the journey)
+      // on subsequent logins.
+      if (ensuredProfile && !ensuredProfile.organizationId && !ensuredProfile.companyId) {
+        const meta = (supaUser.user_metadata as Record<string, unknown>) || {}
+        const pendingCode = (
+          (typeof meta.pending_company_code === 'string' ? meta.pending_company_code : '') ||
+          (typeof window !== 'undefined' ? localStorage.getItem('t4l.pendingCompanyCode') ?? '' : '')
+        ).trim()
+        if (pendingCode) {
+          const claim = await claimOrganizationCode(pendingCode)
+          if (typeof window !== 'undefined') localStorage.removeItem('t4l.pendingCompanyCode')
+          if (!isActive) return
+          if (claim.ok) {
+            const reloaded = await fetchProfileWithRetry(authUser)
+            if (!isActive) return
+            if (reloaded) {
+              ensuredProfile = { ...reloaded, assignedOrganizations: reloaded.assignedOrganizations ?? [] }
+            }
+          } else {
+            console.warn('🟠 [Auth] Org-code enrollment skipped:', claim.error)
+          }
+        }
+      }
 
       console.log('🟢 [Auth] Profile resolved', { origin, role: ensuredProfile?.role })
       setProfile(ensuredProfile)
@@ -419,6 +449,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const parts = normalizedFullName.split(/\s+/).filter(Boolean)
     const firstName = parts[0] || 'User'
     const lastName = parts.slice(1).join(' ')
+    const pendingCompanyCode = userData.companyCode?.trim().toUpperCase() || ''
 
     setLoading(true)
     setProfileLoading(true)
@@ -429,10 +460,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         options: {
           emailRedirectTo: `${window.location.origin}/login`,
           // Consumed by the on_auth_user_created trigger to seed the profile.
+          // pending_company_code rides in metadata so org-code enrollment can be
+          // applied on first sign-in (survives email confirmation + other
+          // devices, where localStorage/the post-signup session aren't available).
           data: {
             full_name: normalizedFullName,
             first_name: firstName,
             last_name: lastName,
+            ...(pendingCompanyCode ? { pending_company_code: pendingCompanyCode } : {}),
           },
         },
       })

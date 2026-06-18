@@ -204,3 +204,27 @@ export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
   if (error) throw new Error(error.message)
   if (data !== 'ok') throw new Error(`Removal failed: ${data}`)
 }
+
+export interface ClaimOrgResult {
+  ok: boolean
+  error?: string
+  organizationId?: string
+  organizationName?: string
+  code?: string
+  journeyType?: string
+}
+
+/**
+ * Enroll the CURRENT user (auth.uid()) into an organization by its code.
+ * Sets org membership + the org's journey + paid membership (role -> paid_member)
+ * server-side, because client code cannot write profiles.role (revoked in 0012).
+ * A user who joins via an org code belongs to that org and is never a free_user.
+ * Returns the resolved org info; never throws (callers branch on `ok`).
+ */
+export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResult> => {
+  const { data, error } = await supabase.rpc('claim_organization_code', {
+    p_code: code.trim().toUpperCase(),
+  })
+  if (error) return { ok: false, error: error.message }
+  return (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
+}
