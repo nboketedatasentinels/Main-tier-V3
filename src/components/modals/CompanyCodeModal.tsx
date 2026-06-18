@@ -18,7 +18,7 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { CheckCircle, XCircle } from 'lucide-react'
-import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
+import { validateCompanyCode } from '@/services/organizationService'
 import { claimOrganizationCode } from '@/services/supabaseOrgService'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -143,7 +143,6 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
 
     const claimedOrgId = claim.organizationId ?? companyId ?? undefined
     const claimedOrgName = claim.organizationName ?? companyName
-    const shouldIncrementMemberCount = !!claimedOrgId && claimedOrgId !== profile?.companyId
     const nextAssignedOrganizations = claimedOrgId
       ? Array.from(
           new Set([
@@ -172,14 +171,6 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
         duration: 5000,
       })
       return
-    }
-
-    if (claimedOrgId && shouldIncrementMemberCount) {
-      try {
-        await incrementOrganizationMemberCount(claimedOrgId)
-      } catch (incrementError) {
-        console.warn('🟠 [CompanyCodeModal] Unable to increment organization member count', incrementError)
-      }
     }
 
     await refreshProfile({ reason: 'company-code-upgrade' })

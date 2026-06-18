@@ -26,12 +26,13 @@ security definer
 set search_path = public
 as $$
 declare
-  v_uid     uuid := auth.uid();
-  v_code    text := upper(trim(coalesce(p_code, '')));
-  v_org     record;
-  v_journey text;
-  v_weeks   int;
-  v_start   date;
+  v_uid      uuid := auth.uid();
+  v_code     text := upper(trim(coalesce(p_code, '')));
+  v_org      record;
+  v_journey  text;
+  v_weeks    int;
+  v_start    date;
+  v_prev_org text;
 begin
   if v_uid is null then
     return jsonb_build_object('ok', false, 'error', 'not_authenticated');
@@ -78,6 +79,10 @@ begin
 
   v_start := coalesce(v_org.cohort_start_date::date, current_date);
 
+  -- Remember the user's current org so we only bump member_count on a genuinely
+  -- new membership (not when re-running the claim for the same org).
+  select organization_id into v_prev_org from public.profiles where id = v_uid;
+
   update public.profiles
      set organization_id     = v_org.id,
          company_id          = v_org.id,
@@ -100,6 +105,15 @@ begin
 
   if not found then
     return jsonb_build_object('ok', false, 'error', 'profile_not_found');
+  end if;
+
+  -- Count this member against the org (server-side, atomic) only when they
+  -- weren't already in it. Keeps organizations.member_count on Supabase too.
+  if v_prev_org is distinct from v_org.id then
+    update public.organizations
+       set member_count = coalesce(member_count, 0) + 1,
+           updated_at = now()
+     where id = v_org.id;
   end if;
 
   return jsonb_build_object(
