@@ -59,6 +59,10 @@ const mapNotificationRow = (row: NotificationRow): NotificationRecord => ({
   created_at: row.created_at ?? undefined,
 })
 
+// Monotonic suffix so every realtime subscription gets a distinct channel topic
+// (see the comment at the channel() call below for why this is required).
+let notificationChannelSeq = 0
+
 /**
  * Subscribes to a user's notifications.
  *
@@ -91,8 +95,15 @@ export const listenToUserNotifications = (
 
   void load()
 
+  // Each subscription needs its OWN channel. supabase.channel(topic) returns an
+  // existing channel when the topic matches (RealtimeClient.channel), so two
+  // components subscribing to the same user (e.g. ProgrammePushPopup +
+  // NotificationsList) would share one channel - and the second `.on()` after
+  // the first `.subscribe()` throws "cannot add postgres_changes callbacks
+  // after subscribe()". A unique topic per call guarantees a fresh, unsubscribed
+  // channel every time.
   const channel = supabase
-    .channel(`notifications_${userId}`)
+    .channel(`notifications_${userId}_${++notificationChannelSeq}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'notifications', filter: `uid=eq.${userId}` },

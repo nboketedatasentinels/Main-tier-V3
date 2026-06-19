@@ -147,6 +147,10 @@ export const listenToPointsVerificationRequests = (
  * onSnapshot version failed with "Missing or insufficient permissions" once
  * auth moved to Supabase - the user is no longer authenticated to Firebase.)
  */
+// Monotonic suffix so every realtime subscription gets a distinct channel topic
+// (see the comment at the channel() call for why this is required).
+let pointVerificationChannelSeq = 0
+
 export const listenToAllPointsVerificationRequests = (
   onChange: (requests: PointsVerificationRequest[]) => void,
   options?: { status?: PointsVerificationRequestStatus | 'all'; limit?: number },
@@ -176,8 +180,13 @@ export const listenToAllPointsVerificationRequests = (
 
   void load()
 
+  // Unique topic per subscription: supabase.channel(topic) reuses an existing
+  // channel with the same topic, so a remount before the async teardown
+  // completes (or two mounts at once) would hit an already-subscribed channel
+  // and `.on()` would throw "cannot add postgres_changes callbacks after
+  // subscribe()". A monotonic suffix guarantees a fresh channel each time.
   const channel = supabase
-    .channel('point_verifications_admin')
+    .channel(`point_verifications_admin_${++pointVerificationChannelSeq}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'point_verifications' },

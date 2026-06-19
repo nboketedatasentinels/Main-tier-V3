@@ -266,3 +266,40 @@ export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResul
   if (error) return { ok: false, error: error.message }
   return (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
 }
+
+export interface InviteMemberResult {
+  ok: boolean
+  status?: 'enrolled' | 'pending'
+  error?: string
+}
+
+/**
+ * Admin/partner adds a member to an org by email. If the email already has an
+ * account they're enrolled immediately (org + journey + role); otherwise a
+ * pending invitation is recorded and enrollment happens when they sign up with
+ * that email. Mirrors the org-code path for admin-driven adds. Never throws.
+ */
+export const inviteOrgMember = async (
+  orgId: string,
+  email: string,
+  role: string = 'user',
+): Promise<InviteMemberResult> => {
+  const { data, error } = await supabase.rpc('admin_invite_org_member', {
+    p_org_id: orgId,
+    p_email: email.trim().toLowerCase(),
+    p_role: role || 'user',
+  })
+  if (error) return { ok: false, error: error.message }
+  return (data ?? { ok: false, error: 'no_result' }) as InviteMemberResult
+}
+
+/**
+ * Called once a session exists for a freshly signed-up user: enrolls them into
+ * any organization they were invited to by email (the email counterpart to
+ * claimOrganizationCode). Never throws; callers branch on `ok`.
+ */
+export const acceptOrgInvitations = async (): Promise<{ ok: boolean; error?: string }> => {
+  const { data, error } = await supabase.rpc('accept_org_invitations')
+  if (error) return { ok: false, error: error.message }
+  return (data ?? { ok: false, error: 'no_result' }) as { ok: boolean; error?: string }
+}

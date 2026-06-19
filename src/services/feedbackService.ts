@@ -90,6 +90,10 @@ export const submitFeedback = async (input: FeedbackInput): Promise<string> => {
   return id
 }
 
+// Monotonic suffix so every realtime subscription gets a distinct channel topic
+// (see the comment at the channel() call for why this is required).
+let feedbackChannelSeq = 0
+
 export const subscribeToFeedback = (
   onUpdate: (records: FeedbackRecord[]) => void,
   onError?: (err: Error) => void
@@ -117,9 +121,13 @@ export const subscribeToFeedback = (
   // Initial load.
   void fetchAll()
 
-  // Realtime: re-fetch on any change to the feedback table.
+  // Realtime: re-fetch on any change to the feedback table. Unique topic per
+  // subscription - supabase.channel(topic) reuses a same-topic channel, so a
+  // remount before async teardown (or two mounts at once) would hit an
+  // already-subscribed channel and `.on()` would throw "cannot add
+  // postgres_changes callbacks after subscribe()".
   const channel = supabase
-    .channel('feedback-changes')
+    .channel(`feedback-changes_${++feedbackChannelSeq}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: FEEDBACK_TABLE },

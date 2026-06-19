@@ -1,6 +1,6 @@
 -- ============================================================================
 -- T4L  ·  Org-code enrollment (Supabase)
--- 0016: SECURITY DEFINER function to bind a signing-up user to an organization
+-- 0017: SECURITY DEFINER function to bind a signing-up user to an organization
 -- by its 6-char code, applying the org's journey + paid membership.
 --
 -- A user who signs up with an organization code BELONGS to that organization

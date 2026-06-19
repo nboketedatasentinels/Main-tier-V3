@@ -11,7 +11,7 @@ import { supabase, supabaseConfigStatus } from '@/services/supabase'
 import { AuthContext, AuthContextType, AuthUser } from './AuthContextType'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { canAccessOrganization } from '@/services/organizationAccessService'
-import { claimOrganizationCode } from '@/services/supabaseOrgService'
+import { claimOrganizationCode, acceptOrgInvitations } from '@/services/supabaseOrgService'
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 
 interface AuthProviderProps {
@@ -301,18 +301,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           (typeof meta.pending_company_code === 'string' ? meta.pending_company_code : '') ||
           (typeof window !== 'undefined' ? localStorage.getItem('t4l.pendingCompanyCode') ?? '' : '')
         ).trim()
+
+        let enrolled = false
         if (pendingCode) {
+          // Self-enrollment: the user typed an org code at signup.
           const claim = await claimOrganizationCode(pendingCode)
           if (typeof window !== 'undefined') localStorage.removeItem('t4l.pendingCompanyCode')
           if (!isActive) return
-          if (claim.ok) {
-            const reloaded = await fetchProfileWithRetry(authUser)
-            if (!isActive) return
-            if (reloaded) {
-              ensuredProfile = { ...reloaded, assignedOrganizations: reloaded.assignedOrganizations ?? [] }
-            }
-          } else {
-            console.warn('🟠 [Auth] Org-code enrollment skipped:', claim.error)
+          if (claim.ok) enrolled = true
+          else console.warn('🟠 [Auth] Org-code enrollment skipped:', claim.error)
+        }
+        if (!enrolled) {
+          // Admin-driven: an admin added this email to an org. Enroll into any
+          // pending invitation matching the signed-up email.
+          const accepted = await acceptOrgInvitations()
+          if (!isActive) return
+          if (accepted.ok) enrolled = true
+        }
+        if (enrolled) {
+          const reloaded = await fetchProfileWithRetry(authUser)
+          if (!isActive) return
+          if (reloaded) {
+            ensuredProfile = { ...reloaded, assignedOrganizations: reloaded.assignedOrganizations ?? [] }
           }
         }
       }
