@@ -12,13 +12,13 @@ import {
   type JourneyType,
 } from '@/config/pointsConfig'
 import { resolveJourneyType } from '@/utils/journeyType'
+import { getOrganizationJourney } from '@/services/supabaseOrgService'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   onSnapshot,
   query,
@@ -294,18 +294,22 @@ export function useWeeklyChecklistViewModel() {
         if (isFreeUser(profile) && !profile.companyId) {
           journeyType = '4W'
         } else if (profile.companyId) {
-          const orgSnap = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
-          if (orgSnap.exists()) {
-            const orgData = orgSnap.data()
-            journeyType = (resolveJourneyType(orgData) as JourneyType) || '6W'
-            const rawStartDate = orgData.cohortStartDate
-            if (rawStartDate) {
-              if (typeof rawStartDate === 'string') {
-                orgCohortStartDate = rawStartDate
-              } else if (rawStartDate.toDate) {
-                orgCohortStartDate = rawStartDate.toDate().toISOString()
-              }
-            }
+          // Organizations live in Supabase now; read the org's journey there.
+          // The legacy Firestore org doc is empty for orgs created via the admin
+          // UI post-migration, which made corporate members fall back to '6W'.
+          const org = await getOrganizationJourney(profile.companyId)
+          if (org) {
+            journeyType =
+              (resolveJourneyType({
+                journeyType: org.journeyType,
+                programDurationWeeks: org.programDurationWeeks,
+                programDuration: org.programDurationMonths,
+              }) as JourneyType) || '6W'
+            orgCohortStartDate = org.cohortStartDate
+          } else if (profile.journeyType) {
+            // Org not found - fall back to the journey the claim_organization_code
+            // RPC stamped on the profile at join time.
+            journeyType = profile.journeyType as JourneyType
           }
         } else if (profile.journeyType) {
           journeyType = profile.journeyType as JourneyType

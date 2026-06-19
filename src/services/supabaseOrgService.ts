@@ -144,6 +144,44 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
   return mapOrg(data as Raw)
 }
 
+export interface OrgJourneyInfo {
+  journeyType: string | null
+  programDurationWeeks: number | null
+  programDurationMonths: number | null
+  cohortStartDate: string | null
+}
+
+/**
+ * Fetch just the journey fields for one organization (member-side).
+ *
+ * Drives the weekly-checklist journey + cohort start date for corporate
+ * members. Reads Supabase, where organizations now live - the legacy Firestore
+ * org document is empty for any org created via the admin UI after the
+ * migration, which is why members otherwise fell back to the default journey.
+ * Returns null when the org is missing or the read fails (caller falls back to
+ * the journey the join RPC stamped on the profile).
+ */
+export const getOrganizationJourney = async (orgId: string): Promise<OrgJourneyInfo | null> => {
+  if (!orgId) return null
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('journey_type, program_duration_weeks, cohort_start_date, settings')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (error) {
+    console.warn('[supabaseOrgService] getOrganizationJourney failed', error)
+    return null
+  }
+  if (!data) return null
+  const settings = (data.settings as Record<string, unknown> | null) ?? {}
+  return {
+    journeyType: (data.journey_type as string) ?? null,
+    programDurationWeeks: (data.program_duration_weeks as number) ?? null,
+    programDurationMonths: (settings.programDurationMonths as number) ?? null,
+    cohortStartDate: (data.cohort_start_date as string) ?? null,
+  }
+}
+
 export interface UpdateOrgInput extends OrgWriteExtras {
   name?: string
   code?: string
