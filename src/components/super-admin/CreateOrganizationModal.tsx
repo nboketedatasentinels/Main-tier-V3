@@ -612,24 +612,35 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       const validDrafts = inviteDrafts.filter((draft) => draft.isValid && draft.email.trim())
       let invitedNow = 0
       let invitedPending = 0
+      const failedInvites: string[] = []
       for (const draft of validDrafts) {
         const result = await inviteOrgMember(created.id, draft.email, draft.role)
         if (result.ok) {
           if (result.status === 'enrolled') invitedNow += 1
           else invitedPending += 1
         } else {
+          // Never let a failed invite hide behind a green toast: collect it so
+          // the admin is told exactly which emails did not get added.
+          failedInvites.push(draft.email)
           console.warn('[CreateOrganizationModal] invite failed', draft.email, result.error)
         }
       }
 
       const inviteSummary =
         validDrafts.length > 0
-          ? `${invitedNow} member(s) enrolled now, ${invitedPending} will join on signup.`
+          ? `${invitedNow} member(s) enrolled now, ${invitedPending} will join on signup.` +
+            (failedInvites.length
+              ? ` ${failedInvites.length} invite(s) FAILED: ${failedInvites.join(', ')}`
+              : '')
           : `Cluster: ${clusterDisplayName}`
       toast({
-        title: 'Organization created successfully',
+        title: failedInvites.length
+          ? 'Organization created, but some invites failed'
+          : 'Organization created successfully',
         description: inviteSummary,
-        status: 'success',
+        status: failedInvites.length ? 'warning' : 'success',
+        duration: failedInvites.length ? 12000 : 5000,
+        isClosable: true,
       })
       onClose()
     } catch (error) {

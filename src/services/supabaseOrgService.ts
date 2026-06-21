@@ -96,12 +96,15 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
       : `org_${Date.now()}`
   const { data, error } = await supabase
     .from('organizations')
-    // Omit `status` so the DB column default ('active') applies - guarantees we
-    // never violate organizations_status_check.
+    // Create the org ACTIVE so members can enroll immediately. The type-the-code
+    // path (claim_organization_code) rejects any org whose status is not
+    // 'active'; the DB column default is 'pending', which silently blocked
+    // self-enrollment for every new org. 'active' is a valid status_check value.
     .insert({
       id,
       name: input.name.trim(),
       code: input.code.trim().toUpperCase(),
+      status: 'active',
       journey_type: input.journeyType ?? null,
       program_duration_weeks: input.programDurationWeeks ?? null,
       cohort_start_date: input.cohortStartDate || null,
