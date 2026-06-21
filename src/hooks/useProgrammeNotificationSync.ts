@@ -4,6 +4,7 @@ import {
   type ProgrammeSyncResult,
 } from '@/services/programmeNotificationScheduler'
 import { useAuth } from './useAuth'
+import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 
 declare global {
   interface Window {
@@ -23,6 +24,9 @@ export const useProgrammeNotificationSync = (): void => {
       lastSyncedUidRef.current = null
       return
     }
+    // Firebase->Supabase migration: the programme scheduler reads/writes
+    // Firestore, unavailable to a Supabase-auth user. Skip until migrated.
+    if (!FIRESTORE_READS_AVAILABLE) return
 
     const runSync = async (): Promise<ProgrammeSyncResult | null> => {
       if (inFlightRef.current) return null

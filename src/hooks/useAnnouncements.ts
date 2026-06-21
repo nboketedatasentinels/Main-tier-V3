@@ -11,6 +11,7 @@ import {
   setDoc,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { useAuth } from './useAuth'
 
 export type AnnouncementTier = 'global' | 'org_wide' | 'org_specific'
@@ -120,6 +121,14 @@ export const useAnnouncements = (): UseAnnouncementsResult => {
 
   useEffect(() => {
     if (!user) {
+      setAnnouncements([])
+      setLoading(false)
+      return
+    }
+    // Firebase->Supabase migration: announcements still live in Firestore, which
+    // a Supabase-auth user cannot read. Skip until migrated (no listeners, no
+    // permission-denied flood).
+    if (!FIRESTORE_READS_AVAILABLE) {
       setAnnouncements([])
       setLoading(false)
       return
