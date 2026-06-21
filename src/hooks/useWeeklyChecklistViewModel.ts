@@ -13,6 +13,8 @@ import {
 } from '@/config/pointsConfig'
 import { resolveJourneyType } from '@/utils/journeyType'
 import { getOrganizationJourney } from '@/services/supabaseOrgService'
+import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
+import { supabase } from '@/services/supabase'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
 import { ORG_COLLECTION } from '@/constants/organizations'
@@ -79,13 +81,6 @@ export interface ProofModalState {
   proofUrl: string
   notes: string
   rejectionReason?: string | null
-}
-
-type LedgerRow = {
-  activityId?: string
-  weekNumber?: number
-  monthNumber?: number
-  createdAt?: { toMillis?: () => number; seconds?: number } | null
 }
 
 function isAdminProfile(profile: { role?: string; userRole?: string } | null | undefined): boolean {
@@ -384,109 +379,98 @@ export function useWeeklyChecklistViewModel() {
     Record<string, Set<number>>
   >({})
   const [ledgerLoaded, setLedgerLoaded] = useState(false)
+  // Bumped after a claim/revoke to refetch the ledger. Supabase reads here are
+  // one-shot fetches (not realtime), so an award must trigger a reload.
+  const [ledgerRefreshKey, setLedgerRefreshKey] = useState(0)
+  const refreshLedger = useCallback(() => setLedgerRefreshKey((k) => k + 1), [])
 
   useEffect(() => {
     if (!user) return
-
-    const windowNumber = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
-
-    const weekQ = query(
-      collection(db, 'pointsLedger'),
-      where('uid', '==', user.uid),
-      where('weekNumber', '==', selectedWeek),
-    )
-    const windowQ = query(
-      collection(db, 'pointsLedger'),
-      where('uid', '==', user.uid),
-      where('monthNumber', '==', windowNumber),
-    )
-    const globalQ = query(
-      collection(db, 'pointsLedger'),
-      where('uid', '==', user.uid),
-    )
+    let isActive = true
 
     // Reset ledgerLoaded when week changes
     setLedgerLoaded(false)
 
-    // Real-time listener for current week completions
-    const unsubWeek = onSnapshot(weekQ, snap => {
+    const run = async () => {
+      // Supabase points_ledger is the source of truth (the award/revoke RPCs are
+      // the write path). Real columns: uid, activity_id, points, created_at,
+      // week_number. There is no window column, so the cycle/window is derived
+      // from week_number via getWindowNumber() (matches how it was stored).
+      const { data, error } = await supabase
+        .from('points_ledger')
+        .select('activity_id, points, created_at, week_number')
+        .eq('uid', user.uid)
+      if (!isActive) return
+      if (error) {
+        console.error('[ledgerCache] supabase fetch failed', error.message)
+        setLedgerLoaded(true)
+        return
+      }
+
+      const currentWindow = getWindowNumber(selectedWeek, PARALLEL_WINDOW_SIZE_WEEKS)
+
       const weekCompleted = new Set<string>()
       const weekCounts: Record<string, number> = {}
-      snap.docs.forEach(d => {
-        const row = d.data() as LedgerRow
-        if (!row.activityId) return
-        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
-        weekCompleted.add(activityId)
-        weekCounts[activityId] = (weekCounts[activityId] ?? 0) + 1
-      })
-      setLedgerCache(prev => ({
-        ...prev,
-        weekCompleted,
-        weekCounts,
-      }))
-      setLedgerLoaded(true)
-    }, (e) => console.error('[ledgerCache] week listener failed', e))
-
-    // Real-time listener for window counts (cycle-based)
-    const unsubWindow = onSnapshot(windowQ, snap => {
       const windowCounts: Record<string, number> = {}
       const lastCompletedWeekByActivity: Record<string, number> = {}
-      snap.docs.forEach(d => {
-        const row = d.data() as LedgerRow
-        if (!row.activityId) return
-        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
-        windowCounts[activityId] = (windowCounts[activityId] ?? 0) + 1
-        const wk = Number(row.weekNumber ?? 0)
-        if (wk > 0) {
-          lastCompletedWeekByActivity[activityId] = Math.max(
-            lastCompletedWeekByActivity[activityId] ?? 0,
-            wk,
-          )
-        }
-      })
-      setLedgerCache(prev => ({
-        ...prev,
-        windowCounts,
-        lastCompletedWeekByActivity,
-      }))
-    }, (e) => console.error('[ledgerCache] window listener failed', e))
-
-    // Real-time listener for ALL-TIME completions (persisted data - critical for frequency display)
-    const unsubGlobal = onSnapshot(globalQ, snap => {
       const totalCompletedAllTime: Record<string, number> = {}
       const lastCompletedTimestamp: Record<string, number> = {}
       const completedWeeksByActivity: Record<string, Set<number>> = {}
-      snap.docs.forEach(d => {
-        const row = d.data() as LedgerRow
-        if (!row.activityId) return
-        const activityId = resolveCanonicalActivityId(row.activityId) ?? row.activityId
+
+      ;(data ?? []).forEach((r) => {
+        const row = r as { activity_id?: string; week_number?: number; created_at?: string }
+        if (!row.activity_id) return
+        const activityId = resolveCanonicalActivityId(row.activity_id) ?? row.activity_id
+        const wk = Number(row.week_number ?? 0)
+        const rowWindow = wk > 0 ? getWindowNumber(wk, PARALLEL_WINDOW_SIZE_WEEKS) : 0
+
+        // All-time (persisted - critical for frequency display)
         totalCompletedAllTime[activityId] = (totalCompletedAllTime[activityId] ?? 0) + 1
-        // Track the most recent completion timestamp per activity
-        const ts = row.createdAt?.toMillis?.() ?? (row.createdAt?.seconds ? row.createdAt.seconds * 1000 : 0)
+        const ts = row.created_at ? new Date(row.created_at).getTime() : 0
         if (ts > 0) {
           lastCompletedTimestamp[activityId] = Math.max(lastCompletedTimestamp[activityId] ?? 0, ts)
         }
-        const wk = Number(row.weekNumber ?? 0)
         if (wk > 0) {
           const set = completedWeeksByActivity[activityId] ?? new Set<number>()
           set.add(wk)
           completedWeeksByActivity[activityId] = set
         }
+
+        // Current window (cycle-based)
+        if (rowWindow === currentWindow) {
+          windowCounts[activityId] = (windowCounts[activityId] ?? 0) + 1
+          if (wk > 0) {
+            lastCompletedWeekByActivity[activityId] = Math.max(
+              lastCompletedWeekByActivity[activityId] ?? 0,
+              wk,
+            )
+          }
+        }
+
+        // Selected week
+        if (wk === selectedWeek) {
+          weekCompleted.add(activityId)
+          weekCounts[activityId] = (weekCounts[activityId] ?? 0) + 1
+        }
       })
-      setLedgerCache(prev => ({
-        ...prev,
+
+      setLedgerCache({
+        weekCompleted,
+        weekCounts,
+        windowCounts,
+        lastCompletedWeekByActivity,
         totalCompletedAllTime,
         lastCompletedTimestamp,
         completedWeeksByActivity,
-      }))
-    }, (e) => console.error('[ledgerCache] global listener failed', e))
-
-    return () => {
-      unsubWeek()
-      unsubWindow()
-      unsubGlobal()
+      })
+      setLedgerLoaded(true)
     }
-  }, [selectedWeek, user])
+
+    void run()
+    return () => {
+      isActive = false
+    }
+  }, [selectedWeek, user, ledgerRefreshKey])
 
   // Live listener for all pending verification requests (across weeks).
   // Used by the UI to surface the "Awaiting approval" bucket and to keep the
@@ -494,6 +478,7 @@ export function useWeeklyChecklistViewModel() {
   // review.
   useEffect(() => {
     if (!user) return
+    if (!FIRESTORE_READS_AVAILABLE) return
     const q = query(
       collection(db, 'points_verification_requests'),
       where('user_id', '==', user.uid),
@@ -733,7 +718,7 @@ export function useWeeklyChecklistViewModel() {
       }
     }
 
-    sync()
+    if (FIRESTORE_READS_AVAILABLE) void sync()
   }, [persistChecklist, selectedWeek, user])
 
   /* ------------------------------------------------------------------ */
@@ -1029,6 +1014,7 @@ export function useWeeklyChecklistViewModel() {
           onProofRequired: (act) => openProofModal(act),
           onSuccess: async (status) => {
             await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
+            refreshLedger()
             if (status === 'completed') {
               triggerHaptic('success')
               toast({
@@ -1060,6 +1046,7 @@ export function useWeeklyChecklistViewModel() {
       isAdmin,
       journey,
       openProofModal,
+      refreshLedger,
       selectedWeek,
       setActivityMutationInFlight,
       setActivityStatusLocal,
@@ -1113,6 +1100,7 @@ export function useWeeklyChecklistViewModel() {
           notes: undefined,
           rejectionReason: null,
         })
+        refreshLedger()
         triggerHaptic('success')
       } catch (e) {
         console.error(e)
@@ -1127,7 +1115,7 @@ export function useWeeklyChecklistViewModel() {
         setActivityMutationInFlight(activity.id, false)
       }
     },
-    [isAdmin, isWeekLocked, journey, selectedWeek, setActivityMutationInFlight, setActivityStatusLocal, toast, user],
+    [isAdmin, isWeekLocked, journey, refreshLedger, selectedWeek, setActivityMutationInFlight, setActivityStatusLocal, toast, user],
   )
 
   const closeProofModal = useCallback(() => {
