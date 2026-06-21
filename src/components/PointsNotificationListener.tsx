@@ -3,6 +3,7 @@ import { collection, limit, onSnapshot, orderBy, query, type FirestoreError, whe
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/hooks/useToast'
 import { db } from '@/services/firebase'
+import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { PEER_SESSION_CONFIRMATION_ACTIVITY, PEER_SESSION_NO_SHOW_ACTIVITY } from '@/config/pointsConfig'
 import emitter from '@/utils/eventEmitter'
 import { WeeklyTargetAlert } from '@/types/notifications'
@@ -98,7 +99,7 @@ export const PointsNotificationListener = () => {
         },
       )
 
-    unsubscribeAlerts = subscribeAlerts(false)
+    if (FIRESTORE_READS_AVAILABLE) unsubscribeAlerts = subscribeAlerts(false)
 
     return () => {
       emitter.removeEventListener('pointsAwarded', pointsListener)
@@ -108,6 +109,7 @@ export const PointsNotificationListener = () => {
 
   useEffect(() => {
     if (!user) return undefined
+    if (!FIRESTORE_READS_AVAILABLE) return undefined
 
     const ledgerIds = new Set<string>()
     let initialSnapshot = true
