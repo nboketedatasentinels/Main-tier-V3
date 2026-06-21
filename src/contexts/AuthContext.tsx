@@ -297,8 +297,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // on subsequent logins.
       if (ensuredProfile && !ensuredProfile.organizationId && !ensuredProfile.companyId) {
         const meta = (supaUser.user_metadata as Record<string, unknown>) || {}
+        // The pending org code is stashed at signup in auth metadata, but the
+        // email-confirmation path (and older signups) persist it only to
+        // profiles.data.pendingCompanyCode - which mapRowToProfile spreads onto
+        // the profile. Read all three sources so enrollment fires no matter
+        // where the code landed; the claim is idempotent and the RPC clears the
+        // code on success, so re-reads never re-apply.
+        const profilePendingCode = (ensuredProfile as Record<string, unknown>).pendingCompanyCode
         const pendingCode = (
           (typeof meta.pending_company_code === 'string' ? meta.pending_company_code : '') ||
+          (typeof profilePendingCode === 'string' ? profilePendingCode : '') ||
           (typeof window !== 'undefined' ? localStorage.getItem('t4l.pendingCompanyCode') ?? '' : '')
         ).trim()
 
