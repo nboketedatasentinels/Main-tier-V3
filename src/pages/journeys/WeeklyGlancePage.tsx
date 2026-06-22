@@ -39,6 +39,7 @@ import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceDa
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
+import { getOrganizationJourney } from '@/services/supabaseOrgService'
 import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { getJourneyTiming } from '@/utils/weekCalculations'
@@ -494,16 +495,15 @@ export const WeeklyGlancePage = () => {
       return
     }
     let cancelled = false
-    void getDoc(doc(db, ORG_COLLECTION, profile.companyId)).then((snap) => {
-      if (cancelled || !snap.exists()) return
-      const orgData = snap.data() as Record<string, unknown>
-      const raw = orgData.cohortStartDate
-      if (typeof raw === 'string') {
-        setOrgCohortStartDate(raw)
-      } else if (raw && typeof raw === 'object' && 'toDate' in raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
-        setOrgCohortStartDate((raw as { toDate: () => Date }).toDate().toISOString())
-      }
-      const resolved = resolveJourneyType(orgData) as JourneyType | undefined
+    // Org journey + cohort start now live in Supabase (the Firebase org doc was
+    // deleted in the migration). getOrganizationJourney reads the journey_type /
+    // cohort_start_date columns directly.
+    void getOrganizationJourney(profile.companyId).then((info) => {
+      if (cancelled || !info) return
+      if (info.cohortStartDate) setOrgCohortStartDate(info.cohortStartDate)
+      const resolved = info.journeyType
+        ? (resolveJourneyType({ journeyType: info.journeyType }) as JourneyType | undefined)
+        : undefined
       if (resolved) setOrgJourneyType(resolved)
     })
     return () => {

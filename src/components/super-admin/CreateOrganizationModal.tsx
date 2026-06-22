@@ -568,6 +568,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       // Create the organization in Supabase. (The old Firebase path hung under
       // Supabase auth - that's why the button did nothing.)
       const programDurationWeeks = form.programDuration ? Math.round(form.programDuration * 4) : null
+      // Ordered course array derived from the per-month assignment map, kept for
+      // consumers that read the flat `courseAssignments` array.
+      const orderedCourseAssignments = Array.from({ length: courseLimit }, (_, index) =>
+        monthlyAssignments[String(index + 1)] || '',
+      )
       const created = await createSupabaseOrganization({
         name: form.name.trim(),
         code: form.code.trim().toUpperCase(),
@@ -583,6 +588,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         teamSize: form.teamSize ?? null,
         programDurationMonths: form.programDuration ?? null,
         partnerEmail: partnerEmail.trim() || null,
+        monthlyCourseAssignments: monthlyAssignments,
+        courseAssignments: orderedCourseAssignments,
+        courseAssignmentStructure: 'monthly',
       })
 
       const now = new Date()

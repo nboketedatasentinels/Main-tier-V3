@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react'
-import { doc, onSnapshot, Timestamp } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
+import { getOrganizationProgram } from '@/services/supabaseOrgService'
 import {
   MonthlyCourseAssignments,
   getMonthlyAssignmentsArray,
@@ -30,9 +28,6 @@ const normalizeDate = (value: unknown): Date | null => {
   if (typeof value === 'string') {
     const parsed = new Date(value)
     return isNaN(parsed.getTime()) ? null : parsed
-  }
-  if (value instanceof Timestamp) {
-    return value.toDate()
   }
   if (typeof value === 'object' && (value as { toDate?: () => Date }).toDate) {
     return (value as { toDate: () => Date }).toDate()
@@ -79,29 +74,27 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
 
     setLoading(true)
     setError(null)
+    let cancelled = false
 
-    const organizationRef = doc(db, ORG_COLLECTION, organizationId)
-    const unsubscribe = onSnapshot(
-      organizationRef,
-      snapshot => {
-        if (!snapshot.exists()) {
+    // Org program now lives in Supabase (the Firebase org doc was deleted in the
+    // migration). Journey fields are columns; course assignments + pillar live in
+    // the settings jsonb. Field names match the old Firestore shape so the
+    // normalization below is unchanged.
+    void getOrganizationProgram(organizationId)
+      .then(data => {
+        if (cancelled) return
+        if (!data) {
           setProgram(null)
           setLoading(false)
           return
         }
 
-        const data = snapshot.data()
-        const rawDuration =
-          data.programDuration || data.program_duration || data.duration || data.programLength
-        const programDuration: number | string | null =
-          typeof rawDuration === 'number' || typeof rawDuration === 'string' ? rawDuration : null
+        const programDuration: number | null = data.programDuration ?? null
         const rawMonthlyAssignments = data.monthlyCourseAssignments
         const monthlyCourseAssignments = isMonthlyCourseAssignments(rawMonthlyAssignments)
           ? rawMonthlyAssignments
           : null
-        const courseAssignments = normalizeCourseAssignmentArray(
-          data.courseAssignments || data.assignedCourses || data.defaultCourses
-        )
+        const courseAssignments = normalizeCourseAssignmentArray(data.courseAssignments)
         const programDurationWeeks =
           normalizeDurationWeeks(data.programDurationWeeks) ?? resolveDurationWeeksFromProgramDuration(programDuration)
         const journeyType = resolveJourneyType({
@@ -129,16 +122,18 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
           pillar: isPillar(data.pillar) ? data.pillar : null,
         })
         setLoading(false)
-      },
-      snapshotError => {
-        console.error('Organization listener error', snapshotError)
+      })
+      .catch(err => {
+        if (cancelled) return
+        console.error('Organization program load error', err)
         setProgram(null)
         setError('Unable to load organization program.')
         setLoading(false)
-      }
-    )
+      })
 
-    return () => unsubscribe()
+    return () => {
+      cancelled = true
+    }
   }, [organizationId])
 
   return { program, loading, error }
