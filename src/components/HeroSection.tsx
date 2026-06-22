@@ -60,13 +60,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       {/* CTA */}
       <div className="mt-10 flex flex-col items-center gap-4">
         <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
-          <button
-            type="button"
-            onClick={() => navigate(ctaTo)}
-            className="w-full rounded-full bg-[#27062e] px-6 py-3 text-base font-bold text-white shadow-md transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2 sm:w-auto"
-          >
-            {ctaLabel}
-          </button>
           {hasSecondary && (
             <button
               type="button"
@@ -76,6 +69,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               {secondaryLabel}
             </button>
           )}
+          <button
+            type="button"
+            onClick={() => navigate(ctaTo)}
+            className="w-full rounded-full bg-[#27062e] px-6 py-3 text-base font-bold text-white shadow-md transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2 sm:w-auto"
+          >
+            {ctaLabel}
+          </button>
         </div>
         <p className="text-sm text-neutral-500">{note}</p>
       </div>
