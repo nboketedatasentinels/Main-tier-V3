@@ -40,7 +40,12 @@ export const HomePage: React.FC = () => {
       </header>
 
       <main>
-        <HeroSection />
+        <HeroSection
+          ctaTo="/signup"
+          ctaLabel="Get started"
+          secondaryTo="/assessment"
+          secondaryLabel="Take the assessment"
+        />
       </main>
     </div>
   )

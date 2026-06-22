@@ -14,18 +14,24 @@ const Feature: React.FC<{ icon: React.ReactNode; label: string }> = ({ icon, lab
 )
 
 interface HeroSectionProps {
-  /** Where the primary CTA goes (default: the public assessment). */
+  /** Where the primary CTA goes (default: sign up). */
   ctaTo?: string
   ctaLabel?: string
+  /** Where the secondary CTA goes. Rendered only when set. */
+  secondaryTo?: string
+  secondaryLabel?: string
   note?: string
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
-  ctaTo = '/assessment',
+  ctaTo = '/signup',
   ctaLabel = 'Get started',
+  secondaryTo,
+  secondaryLabel,
   note = 'Take the 4-minute LIFT assessment. No card needed.',
 }) => {
   const navigate = useNavigate()
+  const hasSecondary = Boolean(secondaryTo && secondaryLabel)
 
   return (
     <section className="mx-auto w-full max-w-4xl px-6 py-16 text-center sm:py-24">
@@ -52,14 +58,25 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       </p>
 
       {/* CTA */}
-      <div className="mt-10 flex flex-col items-center gap-3">
-        <button
-          type="button"
-          onClick={() => navigate(ctaTo)}
-          className="rounded-full bg-[#27062e] px-10 py-5 text-lg font-bold text-white shadow-lg transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
-        >
-          {ctaLabel}
-        </button>
+      <div className="mt-10 flex flex-col items-center gap-4">
+        <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+          <button
+            type="button"
+            onClick={() => navigate(ctaTo)}
+            className="w-full rounded-full bg-[#27062e] px-10 py-5 text-lg font-bold text-white shadow-lg transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2 sm:w-auto"
+          >
+            {ctaLabel}
+          </button>
+          {hasSecondary && (
+            <button
+              type="button"
+              onClick={() => navigate(secondaryTo!)}
+              className="w-full rounded-full border-2 border-[#27062e] bg-white px-10 py-5 text-lg font-bold text-[#27062e] transition hover:bg-[#27062e] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2 sm:w-auto"
+            >
+              {secondaryLabel}
+            </button>
+          )}
+        </div>
         <p className="text-sm text-neutral-500">{note}</p>
       </div>
 
