@@ -64,6 +64,12 @@ export interface OrgWriteExtras {
   programDurationMonths?: number | null
   /** Email of the assigned transformation partner (they claim it on signup). */
   partnerEmail?: string | null
+  /** Per-month course assignment map, e.g. { "1": "courseId", "2": "" }. */
+  monthlyCourseAssignments?: Record<string, string> | null
+  /** Flat course assignment array (legacy/array mode). */
+  courseAssignments?: string[] | null
+  /** Which assignment shape the org uses. */
+  courseAssignmentStructure?: 'monthly' | 'array' | null
 }
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
@@ -73,6 +79,11 @@ const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   teamSize: e.teamSize ?? null,
   programDurationMonths: e.programDurationMonths ?? null,
   partnerEmail: e.partnerEmail ? e.partnerEmail.trim().toLowerCase() : null,
+  // Course assignments live in the settings jsonb (the org table has no column
+  // for them). Read back by useOrganizationProgramCourses + monthlyCoursesService.
+  monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,
+  courseAssignments: e.courseAssignments ?? null,
+  courseAssignmentStructure: e.courseAssignmentStructure ?? null,
 })
 
 /** Add a SECURITY DEFINER claim used by partner signup (see claim_partner_access RPC). */
@@ -182,6 +193,57 @@ export const getOrganizationJourney = async (orgId: string): Promise<OrgJourneyI
     programDurationWeeks: (data.program_duration_weeks as number) ?? null,
     programDurationMonths: (settings.programDurationMonths as number) ?? null,
     cohortStartDate: (data.cohort_start_date as string) ?? null,
+  }
+}
+
+/**
+ * Raw org program fields used by useOrganizationProgramCourses +
+ * monthlyCoursesService. Mirrors the field names the old Firestore org
+ * document exposed, so the existing normalization in those consumers works
+ * unchanged. Journey fields are columns; the course assignments + pillar +
+ * program-duration-in-months live in the settings jsonb. Returns null when the
+ * org is missing or the read fails.
+ */
+export interface OrgProgramRaw {
+  journeyType: string | null
+  programDurationWeeks: number | null
+  programDuration: number | null
+  cohortStartDate: string | null
+  monthlyCourseAssignments: Record<string, string> | null
+  courseAssignments: string[] | null
+  courseAssignmentStructure: 'monthly' | 'array' | null
+  pillar: string | null
+}
+
+export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramRaw | null> => {
+  if (!orgId) return null
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('journey_type, program_duration_weeks, cohort_start_date, settings')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (error) {
+    console.warn('[supabaseOrgService] getOrganizationProgram failed', error)
+    return null
+  }
+  if (!data) return null
+  const settings = (data.settings as Record<string, unknown> | null) ?? {}
+  const monthly = settings.monthlyCourseAssignments
+  const courses = settings.courseAssignments
+  const structure = settings.courseAssignmentStructure
+  return {
+    journeyType: (data.journey_type as string) ?? null,
+    programDurationWeeks: (data.program_duration_weeks as number) ?? null,
+    programDuration: (settings.programDurationMonths as number) ?? null,
+    cohortStartDate: (data.cohort_start_date as string) ?? null,
+    monthlyCourseAssignments:
+      monthly && typeof monthly === 'object' && !Array.isArray(monthly)
+        ? (monthly as Record<string, string>)
+        : null,
+    courseAssignments: Array.isArray(courses) ? (courses as string[]) : null,
+    courseAssignmentStructure:
+      structure === 'monthly' || structure === 'array' ? structure : null,
+    pillar: (settings.pillar as string) ?? null,
   }
 }
 

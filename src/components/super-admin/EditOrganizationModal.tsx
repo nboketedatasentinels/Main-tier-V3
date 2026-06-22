@@ -314,6 +314,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       // Update core fields in Supabase. (The old Firebase updateOrganization +
       // cohort cascade are dead now that the Firebase DB was deleted.)
       const programDurationWeeks = form.programDuration ? Math.round(form.programDuration * 4) : null
+      // Ordered course array derived from the per-month assignment map, kept for
+      // consumers that read the flat `courseAssignments` array.
+      const orderedCourseAssignments = Array.from({ length: courseLimit }, (_, index) =>
+        monthlyAssignments[String(index + 1)] || '',
+      )
       await updateSupabaseOrganization(organization.id, {
         name: form.name.trim(),
         code: form.code.toUpperCase(),
@@ -327,6 +332,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         teamSize: form.teamSize ?? null,
         programDurationMonths: form.programDuration ?? null,
         partnerEmail: form.assignedPartnerEmail ?? null,
+        monthlyCourseAssignments: monthlyAssignments,
+        courseAssignments: orderedCourseAssignments,
+        courseAssignmentStructure: 'monthly',
       })
 
       toast({
