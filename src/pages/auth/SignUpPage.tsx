@@ -13,7 +13,6 @@ import { GenderOption, Organization, UserRole } from "@/types"
 import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
 import { PrivacyPolicyModal } from "@/components/modals/PrivacyPolicyModal"
-import { GoogleIcon } from "@/components/icons/GoogleIcon"
 import { CompanyCodeModal } from "@/components/modals/CompanyCodeModal"
 
 interface FormData {
@@ -30,7 +29,7 @@ interface FormData {
 export const SignUpPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { signUp, signInWithGoogle, profile, profileLoading, user } = useAuth()
+  const { signUp, profile, profileLoading, user } = useAuth()
   const toast = useToast()
 
   const [formData, setFormData] = useState<FormData>({
@@ -45,7 +44,6 @@ export const SignUpPage: React.FC = () => {
   })
 
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
@@ -301,61 +299,6 @@ export const SignUpPage: React.FC = () => {
     navigate(getLandingPathForRole(profile ?? UserRole.FREE_USER), { replace: true })
   }, [pendingGoogleNavigation, profileLoading, profile, showCompanyCodeModal, navigate, user])
 
-  const handleGoogleSignUp = async () => {
-    setError(null)
-
-    if (!formData.acceptTerms) {
-      setError("You must accept the Terms of Use and Privacy Policy.")
-      return
-    }
-
-    const pendingCode = formData.companyCode.trim().toUpperCase()
-    if (pendingCode && companyCodeValid !== false) {
-      localStorage.setItem('t4l.pendingCompanyCode', pendingCode)
-    } else {
-      localStorage.removeItem('t4l.pendingCompanyCode')
-    }
-
-    setGoogleLoading(true)
-    try {
-      const { error: googleError, isNewUser, redirect } = await signInWithGoogle()
-      if (googleError) {
-        setError(getFriendlyErrorMessage(googleError))
-        return
-      }
-
-      if (redirect) {
-        return
-      }
-
-      const currentUser = auth.currentUser
-      if (currentUser?.uid && isNewUser) {
-        localStorage.setItem(`t4l.newUserWelcome.${currentUser.uid}`, "pending")
-      }
-
-      if (isNewUser) {
-        // Don't remove pending_ref here - fetchOrCreateUserDoc reads it
-        // asynchronously and removes it after processing the referral.
-        setShowCompanyCodeModal(true)
-        setPendingGoogleNavigation(true)
-      } else {
-        setShowCompanyCodeModal(false)
-        setPendingGoogleNavigation(true)
-      }
-
-      toast({
-        title: "Signed in with Google!",
-        description: "Welcome to Transformational Leader.",
-        status: "success",
-        duration: 5000,
-      })
-    } catch (err) {
-      setError(getFriendlyErrorMessage(err))
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
   return (
     <div className="w-full">
       {error && (
@@ -393,22 +336,6 @@ export const SignUpPage: React.FC = () => {
             )}
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={handleGoogleSignUp}
-          disabled={googleLoading}
-          className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-border-control bg-surface-default text-sm font-medium text-text-primary shadow-sm hover:bg-surface-subtle disabled:opacity-60"
-        >
-          <GoogleIcon />
-          {googleLoading ? "Connecting Google..." : "Continue with Google"}
-        </button>
-
-        <div className="flex items-center gap-3 text-xs text-text-muted">
-          <span className="h-px flex-1 bg-border-control" />
-          <span>or sign up with email</span>
-          <span className="h-px flex-1 bg-border-control" />
-        </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-text-secondary">Full Name</label>

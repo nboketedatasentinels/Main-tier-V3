@@ -21,27 +21,20 @@ import {
 } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { PasswordChangeModal } from '@/components/PasswordChangeModal'
-import { AccountLinkingModal } from '@/components/auth/AccountLinkingModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
-import { GoogleIcon } from '@/components/icons/GoogleIcon'
 import { PhoneNumberPromptModal } from '@/components/modals/PhoneNumberPromptModal'
 
 export const LoginPage: React.FC = () => {
   const {
     signIn,
     signInWithMagicLink,
-    signInWithGoogle,
     user,
     profile,
     profileLoading,
     effectiveRole,
     effectiveRoleSource,
     refreshProfile,
-    pendingLinkEmail,
-    showAccountLinkingModal,
-    linkGoogleAccount,
-    dismissAccountLinking,
   } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
@@ -51,9 +44,7 @@ export const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [googleError, setGoogleError] = useState<string | null>(null)
 
   const [magicLinkSent, setMagicLinkSent] = useState(false)
   const [showPasswordChangeModal, setShowPasswordChangeModal] = useState(false)
@@ -131,7 +122,6 @@ export const LoginPage: React.FC = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setGoogleError(null)
 
     if (!email.trim()) {
       setError('Please enter your email address.')
@@ -232,48 +222,6 @@ export const LoginPage: React.FC = () => {
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    setError(null)
-    setGoogleError(null)
-    setGoogleLoading(true)
-    try {
-      const { error: googleError, redirect } = await signInWithGoogle()
-      if (googleError) {
-        const friendlyMessage = getFriendlyErrorMessage(googleError)
-        setGoogleError(friendlyMessage)
-        toast({
-          title: 'Google sign-in failed',
-          description: friendlyMessage,
-          status: 'error',
-          duration: 5000,
-        })
-        return
-      }
-
-      if (redirect) {
-        return
-      }
-
-      toast({
-        title: 'Signed in with Google!',
-        description: 'Welcome to Transformational Leader.',
-        status: 'success',
-        duration: 3000,
-      })
-    } catch (err) {
-      const friendlyMessage = getFriendlyErrorMessage(err)
-      setGoogleError(friendlyMessage)
-      toast({
-        title: 'Google sign-in failed',
-        description: friendlyMessage,
-        status: 'error',
-        duration: 5000,
-      })
-    } finally {
-      setGoogleLoading(false)
-    }
-  }
-
   const handlePasswordChangeSuccess = () => {
     setShowPasswordChangeModal(false)
   }
@@ -328,13 +276,6 @@ export const LoginPage: React.FC = () => {
             <Alert status="error" borderRadius="md">
               <AlertIcon />
               {error}
-            </Alert>
-          )}
-
-          {googleError && (
-            <Alert status="error" borderRadius="md">
-              <AlertIcon />
-              {googleError}
             </Alert>
           )}
 
@@ -433,16 +374,6 @@ export const LoginPage: React.FC = () => {
             Send Magic Link
           </Button>
 
-          <Button
-            variant="secondary"
-            onClick={handleGoogleSignIn}
-            isLoading={googleLoading}
-            size="lg"
-            leftIcon={<GoogleIcon />}
-          >
-            Continue with Google
-          </Button>
-
           <VStack spacing={2}>
             <Link as={RouterLink} to="/reset-password" color="brand.primary" fontSize="sm">
               Forgot password?
@@ -465,13 +396,6 @@ export const LoginPage: React.FC = () => {
           onSuccess={handlePasswordChangeSuccess}
         />
       )}
-
-      <AccountLinkingModal
-        isOpen={showAccountLinkingModal}
-        onClose={dismissAccountLinking}
-        email={pendingLinkEmail || ''}
-        onLinkAccount={linkGoogleAccount}
-      />
 
       <PhoneNumberPromptModal
         isOpen={showPhonePrompt}
