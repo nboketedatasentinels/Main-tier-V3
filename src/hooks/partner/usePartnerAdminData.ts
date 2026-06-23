@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { collection, doc, onSnapshot, query, where, type Query, type DocumentData } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
 import { useAuth } from '@/hooks/useAuth'
 import { useRetryLogic } from '@/hooks/useRetryLogic'
 import { useWeeklyPointsFetcher } from '@/hooks/partner/useWeeklyPointsFetcher'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
-import { listenToOrganizationsByIds } from '@/services/organizationService'
+import { listenToOrganizationsByIds, listenToActiveOrganizations } from '@/services/organizationService'
+import {
+  listenToPartnerAssignedOrgIds,
+  listenToPartnerMembers,
+} from '@/services/partnerSupabaseReads'
 import {
   listenToOrganizationStatsUpdates,
   updateOrganizationStatisticsBatch,
@@ -26,9 +27,6 @@ import {
   mapWeeklyPointsToProgress,
 } from '@/utils/partnerProgress'
 import type { OrganizationRecord, PartnerAssignment } from '@/types/admin'
-
-// Firestore 'in' query limit
-const FIRESTORE_IN_QUERY_LIMIT = 30
 
 export type PartnerRiskLevel = 'engaged' | 'watch' | 'concern' | 'critical'
 
@@ -168,44 +166,6 @@ const buildQueryKeys = (assignments: string[]): string[] => {
   return Array.from(deduped)
 }
 
-const createChunkedOrgQueries = (
-  orgKeys: string[],
-  isSuperAdmin: boolean
-): { queries: Query<DocumentData>[]; hasQueryLimitWarning: boolean } => {
-  if (isSuperAdmin || orgKeys.length === 0) {
-    return { queries: [], hasQueryLimitWarning: false }
-  }
-
-  const uniqueKeys = Array.from(new Set(orgKeys.map((k) => k.trim()).filter(Boolean)))
-
-  if (uniqueKeys.length === 0) {
-    return { queries: [], hasQueryLimitWarning: false }
-  }
-
-  const hasQueryLimitWarning = uniqueKeys.length > FIRESTORE_IN_QUERY_LIMIT
-
-  if (hasQueryLimitWarning) {
-    logger.warn(
-      `[PartnerAdminData] Organization keys (${uniqueKeys.length}) exceed Firestore limit of ${FIRESTORE_IN_QUERY_LIMIT}. ` +
-      'Using chunked queries to fetch all users.'
-    )
-  }
-
-  const queries: Query<DocumentData>[] = []
-  // Query multiple fields to handle different naming conventions (companyId is set at signup)
-  const queryFields = ['organizationId', 'organization_id', 'companyId', 'companyCode', 'company_code'] as const
-
-  for (let i = 0; i < uniqueKeys.length; i += FIRESTORE_IN_QUERY_LIMIT) {
-    const chunk = uniqueKeys.slice(i, i + FIRESTORE_IN_QUERY_LIMIT)
-
-    queryFields.forEach((field) => {
-      queries.push(query(collection(db, 'profiles'), where(field, 'in', chunk)))
-    })
-  }
-
-  return { queries, hasQueryLimitWarning }
-}
-
 export const usePartnerAdminData = (
   partnerId?: string | null,
   options: UsePartnerAdminDataOptions = {},
@@ -271,147 +231,35 @@ export const usePartnerAdminData = (
     setQueryAssignmentsLoading(true)
     setAssignmentsError(null)
 
-    // 1. Modern Source: users/${partnerId} document
-    const partnerDocRef = doc(db, 'users', partnerId)
-
-    // 2. Legacy Source: partner_organizations collection where partnerId == partnerId
-    const legacyQuery = query(
-      collection(db, 'partner_organizations'),
-      where('partnerId', '==', partnerId)
-    )
-
-    // 3. Source-of-truth: organizations where transformationPartnerId == partnerId.
-    // Required because syncOrganizationPartnerChange writes to users/{partnerId}
-    // via safeUpdate, which silently swallows errors when that doc doesn't
-    // exist (common for users promoted from regular accounts). Without this
-    // listener, the dropdown only sees orgs that made it into the partner
-    // doc and misses any whose bidirectional sync failed.
-    const orgSourceOfTruthQuery = query(
-      collection(db, ORG_COLLECTION),
-      where('transformationPartnerId', '==', partnerId),
-      where('status', 'in', ['active', 'watch', 'paused'])
-    )
-
-    let partnerDocOrgIds: string[] = []
-    let legacyOrgIds: string[] = []
-    let orgSourceOrgIds: string[] = []
-    let partnerDocLoaded = false
-    let legacyLoaded = false
-    let orgSourceLoaded = false
-    let partnerDocErrorOccurred = false
-    let legacyErrorOccurred = false
-    let orgSourceErrorOccurred = false
-
-    const updateCombinedAssignments = () => {
-      const combined = Array.from(
-        new Set([...partnerDocOrgIds, ...legacyOrgIds, ...orgSourceOrgIds])
-      )
-      setAssignedOrganizationIds(combined)
-
-      // Only stop loading when all listeners have responded at least once
-      if (partnerDocLoaded && legacyLoaded && orgSourceLoaded) {
-        if (partnerDocErrorOccurred && legacyErrorOccurred && orgSourceErrorOccurred) {
-          setAssignmentsError('Unable to load partner assignments from any source.')
-        } else {
-          setAssignmentsError(null)
-        }
-      }
-
-      console.log('[PartnerAdminData] Combined partner assignments updated', {
-        partnerId,
-        totalCount: combined.length,
-        fromPartnerDoc: partnerDocOrgIds.length,
-        fromLegacy: legacyOrgIds.length,
-        fromOrgSource: orgSourceOrgIds.length,
-        loading: !(partnerDocLoaded && legacyLoaded && orgSourceLoaded),
-      })
-    }
-
-    const unsubPartnerDoc = onSnapshot(
-      partnerDocRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data() as {
-            assignedOrganizations?: Array<string | { organizationId?: string; companyCode?: string }>
-          }
-          const raw = data.assignedOrganizations || []
-          partnerDocOrgIds = raw
-            .map((assignment) => {
-              if (typeof assignment === 'string') return assignment.trim()
-              return assignment.organizationId?.trim() || ''
-            })
-            .filter((orgId): orgId is string => !!orgId)
-        } else {
-          partnerDocOrgIds = []
-        }
-        partnerDocLoaded = true
-        partnerDocErrorOccurred = false
+    // Supabase: union of organizations.transformation_partner_id (canonical) and
+    // profiles.{partnerId}.data.assignedOrganizations (mirror). Both resolved by
+    // listenToPartnerAssignedOrgIds. The legacy `partner_organizations`
+    // collection has no Supabase equivalent and is dropped.
+    const unsubscribe = listenToPartnerAssignedOrgIds(
+      partnerId,
+      (orgIds) => {
+        setAssignmentsFromDoc([])
+        setAssignmentsFromQuery(orgIds)
         setDocAssignmentsLoading(false)
-        updateCombinedAssignments()
+        setQueryAssignmentsLoading(false)
+        setAssignmentsError(null)
+        console.log('[PartnerAdminData] Partner assignments updated', {
+          partnerId,
+          totalCount: orgIds.length,
+        })
       },
       (err) => {
-        console.error('[PartnerAdminData] Modern assignments load failed', err)
-        partnerDocLoaded = true
-        partnerDocErrorOccurred = true
+        console.error('[PartnerAdminData] Assigned orgs load failed', err)
+        setAssignmentsFromDoc([])
+        setAssignmentsFromQuery([])
         setDocAssignmentsLoading(false)
-        updateCombinedAssignments()
-      }
-    )
-
-    const unsubLegacy = onSnapshot(
-      legacyQuery,
-      (snap) => {
-        legacyOrgIds = snap.docs
-          .map((docSnap) => {
-            const data = docSnap.data() as { organizationId?: string }
-            if (data.organizationId) return data.organizationId.trim()
-            // Fallback to extracting from ID if organizationId field is missing
-            // ID format is usually partnerId_organizationId
-            const parts = docSnap.id.split('_')
-            if (parts.length > 1) return parts[1].trim()
-            return ''
-          })
-          .filter((orgId): orgId is string => !!orgId)
-
-        legacyLoaded = true
-        legacyErrorOccurred = false
         setQueryAssignmentsLoading(false)
-        updateCombinedAssignments()
+        setAssignmentsError('Unable to load partner assignments.')
       },
-      (err) => {
-        console.error('[PartnerAdminData] Legacy assignments load failed', err)
-        legacyLoaded = true
-        legacyErrorOccurred = true
-        setQueryAssignmentsLoading(false)
-        updateCombinedAssignments()
-      }
-    )
-
-    const unsubOrgSource = onSnapshot(
-      orgSourceOfTruthQuery,
-      (snap) => {
-        orgSourceOrgIds = snap.docs.map((docSnap) => docSnap.id.trim()).filter(Boolean)
-        orgSourceLoaded = true
-        orgSourceErrorOccurred = false
-        // Org-source-of-truth shares the "query" loading flag with the legacy
-        // listener - both feed the same combined assignments set, and the
-        // dashboard treats them as a single "non-doc" source for loading UX.
-        setQueryAssignmentsLoading(false)
-        updateCombinedAssignments()
-      },
-      (err) => {
-        console.error('[PartnerAdminData] Org-source-of-truth load failed', err)
-        orgSourceLoaded = true
-        orgSourceErrorOccurred = true
-        setQueryAssignmentsLoading(false)
-        updateCombinedAssignments()
-      }
     )
 
     return () => {
-      unsubPartnerDoc()
-      unsubLegacy()
-      unsubOrgSource()
+      unsubscribe()
     }
   }, [enabled, isSuperAdmin, partnerId, profileStatus])
 
@@ -548,14 +396,13 @@ export const usePartnerAdminData = (
       }
 
       if (isSuperAdmin) {
-        unsubscribe = onSnapshot(
-          query(collection(db, ORG_COLLECTION), where('status', '==', 'active')),
-          (snapshot) => {
+        unsubscribe = listenToActiveOrganizations(
+          (activeOrgs: OrganizationRecord[]) => {
             logger.debug('[PartnerAdminData] Super admin organizations loaded', {
-              count: snapshot.size,
+              count: activeOrgs.length,
             })
-            const scoped = snapshot.docs.map((docSnap) => {
-              const data = docSnap.data() as Partial<PartnerOrganization> & OrganizationRecord
+            const scoped = activeOrgs.map((org) => {
+              const data = org as OrganizationRecord & Partial<PartnerOrganization>
               // Fallback chain so the partner dashboard's journey progress bar
               // works for any org configured with a journey, even if an explicit
               // cohort start hasn't been set: cohortStartDate → programStart →
@@ -564,13 +411,13 @@ export const usePartnerAdminData = (
                 data.cohortStartDate || data.programStart || data.createdAt
               )
               return {
-                id: docSnap.id,
-                code: data.code || docSnap.id,
-                name: data.name || docSnap.id,
+                id: data.id,
+                code: data.code || data.id || '',
+                name: data.name || data.code || data.id || 'Unknown organization',
                 status: (data.status as PartnerOrganization['status']) || 'active',
                 activeUsers: data.activeUsers ?? 0,
                 newThisWeek: data.newThisWeek ?? 0,
-                lastActive: data.lastActive,
+                lastActive: typeof data.lastActive === 'string' ? data.lastActive : undefined,
                 tags: data.tags || [],
                 warning: !data.name || !data.code ? 'Organization details incomplete.' : undefined,
                 journeyType: data.journeyType, // Include for 6W at-risk logic
@@ -579,7 +426,7 @@ export const usePartnerAdminData = (
             })
             handleSnapshot(scoped)
           },
-          handleError
+          handleError,
         )
       } else {
         if (!assignedOrganizationIds.length) {
@@ -587,20 +434,9 @@ export const usePartnerAdminData = (
           return
         }
 
-        // DIAG: confirm what we ask Firestore to load. Remove after dropdown bug is fixed.
-        console.log('[PartnerAdminData DIAG] listenToOrganizationsByIds INPUT:', {
-          assignedOrganizationIds,
-          count: assignedOrganizationIds.length,
-        })
         unsubscribe = listenToOrganizationsByIds(
           assignedOrganizationIds,
           (assignedOrgs: OrganizationRecord[]) => {
-            // DIAG: confirm what Firestore returns. Remove after dropdown bug is fixed.
-            console.log('[PartnerAdminData DIAG] listenToOrganizationsByIds CALLBACK:', {
-              count: assignedOrgs.length,
-              ids: assignedOrgs.map(o => o.id),
-              names: assignedOrgs.map(o => o.name),
-            })
             logger.debug('[PartnerAdminData] Assigned organizations loaded', {
               count: assignedOrgs.length,
             })
@@ -821,27 +657,18 @@ export const usePartnerAdminData = (
         return
       }
 
-      const { queries: orgQueries, hasQueryLimitWarning: queryLimitWarning } = createChunkedOrgQueries(
-        rawAssignedKeys,
-        isSuperAdmin || debugMode
-      )
-      setHasQueryLimitWarning(queryLimitWarning)
+      // Supabase has no 30-item 'in' limit; member profiles load in one paged
+      // read scoped by org keys (or all profiles for super_admin/debug). The
+      // query-limit warning is retained (always false) for API shape stability.
+      setHasQueryLimitWarning(false)
 
-      const queriesToExecute = orgQueries.length > 0 ? orgQueries : [collection(db, 'profiles')]
-
-      logger.debug('[PartnerAdminData] Setting up user queries', {
-        queryCount: queriesToExecute.length,
+      logger.debug('[PartnerAdminData] Setting up Supabase member load', {
         isSuperAdmin,
         debugMode,
         assignedOrgCount: rawAssignedKeys.length,
-        hasQueryLimitWarning: queryLimitWarning,
       })
 
-      const unsubscribers: (() => void)[] = []
       const accumulatedDocsMap = new Map<string, { id: string; data: () => FirestorePartnerUser }>()
-      const queryDocIdsMap = new Map<number, Set<string>>()
-      let pendingSnapshots = queriesToExecute.length
-      let hasReceivedInitialData = false
 
       const processAccumulatedDocs = async () => {
         const currentSnapshotId = ++processingRef.current.snapshotId
@@ -1211,66 +1038,29 @@ export const usePartnerAdminData = (
         }
       }
 
-      queriesToExecute.forEach((q, queryIndex) => {
-        const unsub = onSnapshot(
-          q,
-          (snapshot) => {
-            if (!isMounted) return
-
-            const queryDocIds = queryDocIdsMap.get(queryIndex) || new Set<string>()
-            queryDocIdsMap.set(queryIndex, queryDocIds)
-
-            let hasDocChanges = false
-
-            snapshot.docChanges().forEach((change) => {
-              const docSnap = change.doc
-
-              if (change.type === 'removed') {
-                queryDocIds.delete(docSnap.id)
-                let stillReferenced = false
-                for (const ids of queryDocIdsMap.values()) {
-                  if (ids.has(docSnap.id)) {
-                    stillReferenced = true
-                    break
-                  }
-                }
-                if (!stillReferenced) {
-                  accumulatedDocsMap.delete(docSnap.id)
-                }
-                hasDocChanges = true
-                return
-              }
-
-              queryDocIds.add(docSnap.id)
-              accumulatedDocsMap.set(docSnap.id, {
-                id: docSnap.id,
-                data: () => docSnap.data() as FirestorePartnerUser,
-              })
-              hasDocChanges = true
+      // One Supabase read (paged) replaces the chunked Firestore listeners.
+      // On every load we rebuild the doc map and re-run the existing
+      // filter/hydrate pipeline, which is agnostic to the data source.
+      unsubscribe = listenToPartnerMembers(
+        rawAssignedKeys,
+        (docs) => {
+          if (!isMounted) return
+          accumulatedDocsMap.clear()
+          docs.forEach((d) => {
+            accumulatedDocsMap.set(d.id, {
+              id: d.id,
+              data: () => d.data() as FirestorePartnerUser,
             })
-
-            if (!hasReceivedInitialData) {
-              pendingSnapshots--
-              if (pendingSnapshots <= 0) {
-                hasReceivedInitialData = true
-                void processAccumulatedDocs()
-              }
-            } else if (hasDocChanges) {
-              void processAccumulatedDocs()
-            }
-          },
-          (err) => {
-            if (!isMounted) return
-            logger.error(`[PartnerAdminData] Query ${queryIndex} failed`, err)
-            retryUsersHandler.scheduleRetry(err, subscribe, setUsersError, setUsersLoading)
-          }
-        )
-        unsubscribers.push(unsub)
-      })
-
-      unsubscribe = () => {
-        unsubscribers.forEach((unsub) => unsub())
-      }
+          })
+          void processAccumulatedDocs()
+        },
+        (err) => {
+          if (!isMounted) return
+          logger.error('[PartnerAdminData] Member load failed', err)
+          retryUsersHandler.scheduleRetry(err, subscribe, setUsersError, setUsersLoading)
+        },
+        { all: isSuperAdmin || debugMode },
+      )
     }
 
     subscribe()

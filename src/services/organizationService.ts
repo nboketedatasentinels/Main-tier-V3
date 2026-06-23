@@ -149,55 +149,130 @@ export const fetchOrganizationsByIds = async (
   return results
 }
 
+// Supabase organizations row -> the OrganizationRecord shape the partner
+// dashboard consumes. journeyType / cohortStartDate are extra (PartnerOrganization)
+// fields the dashboard reads; OrganizationRecord casts tolerate them.
+type SupabaseOrgRow = {
+  id: string
+  code: string | null
+  name: string | null
+  status: string | null
+  transformation_partner_id: string | null
+  journey_type: string | null
+  program_duration_weeks: number | null
+  cohort_start_date: string | null
+  member_count: number | null
+  settings: Record<string, unknown> | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+const ORG_SELECT_COLUMNS =
+  'id, code, name, status, transformation_partner_id, journey_type, ' +
+  'program_duration_weeks, cohort_start_date, member_count, settings, created_at, updated_at'
+
+const mapOrganizationRow = (row: SupabaseOrgRow): OrganizationRecord =>
+  ({
+    id: row.id,
+    code: row.code ?? row.id,
+    name: row.name ?? row.code ?? row.id ?? 'Unnamed organization',
+    status: (row.status ?? 'active') as OrganizationRecord['status'],
+    memberCount: row.member_count ?? 0,
+    transformationPartnerId: row.transformation_partner_id ?? undefined,
+    settings: (row.settings ?? {}) as Record<string, unknown>,
+    createdAt: row.created_at ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
+    // Extra fields read by the partner dashboard (PartnerOrganization shape):
+    journeyType: row.journey_type ?? undefined,
+    cohortStartDate: row.cohort_start_date ?? undefined,
+  }) as OrganizationRecord & {
+    journeyType?: string
+    cohortStartDate?: string
+    transformationPartnerId?: string
+  }
+
+// Monotonic suffix so every realtime subscription gets a distinct channel topic.
+let organizationsByIdsChannelSeq = 0
+
 export const listenToOrganizationsByIds = (
   organizationIds: string[],
   onUpdate: (organizations: OrganizationRecord[]) => void,
-  onError?: (error: FirestoreError) => void,
+  onError?: (error: unknown) => void,
 ): (() => void) => {
-  if (!organizationIds.length) {
+  const ids = Array.from(new Set(organizationIds.map((id) => (id ?? '').trim()).filter(Boolean)))
+  if (!ids.length) {
     onUpdate([])
     return () => {}
   }
 
-  const chunks: string[][] = []
-  for (let i = 0; i < organizationIds.length; i += 10) {
-    chunks.push(organizationIds.slice(i, i + 10))
+  let cancelled = false
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select(ORG_SELECT_COLUMNS)
+      .in('id', ids)
+    if (cancelled) return
+    if (error) {
+      onError?.(error)
+      return
+    }
+    onUpdate(((data ?? []) as unknown as SupabaseOrgRow[]).map(mapOrganizationRow))
   }
 
-  const chunkData = new Map<number, OrganizationRecord[]>()
+  void load()
 
-  const emit = () => {
-    const combined: OrganizationRecord[] = []
-    chunkData.forEach((records) => {
-      combined.push(...records)
+  const channel = supabase
+    .channel(`organizations_by_ids_${++organizationsByIdsChannelSeq}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'organizations' }, () => {
+      void load()
     })
-    onUpdate(combined)
-  }
-
-  const unsubscribes = chunks.map((chunk, index) =>
-    onSnapshot(
-      query(collection(db, 'organizations'), where(documentId(), 'in', chunk)),
-      (snapshot: QuerySnapshot) => {
-        const records = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...(docSnap.data() as OrganizationRecord),
-        }))
-        chunkData.set(index, records)
-        emit()
-      },
-      (error) => {
-        if (onError) {
-          onError(error)
-        }
-      },
-    ),
-  )
+    .subscribe()
 
   return () => {
-    unsubscribes.forEach((unsubscribe) => unsubscribe())
+    cancelled = true
+    void supabase.removeChannel(channel)
   }
 }
 
+
+/**
+ * Realtime listener for all active organizations (super_admin scope).
+ * Supabase-backed; mirrors listenToOrganizationsByIds' load+channel pattern.
+ */
+export const listenToActiveOrganizations = (
+  onUpdate: (organizations: OrganizationRecord[]) => void,
+  onError?: (error: unknown) => void,
+): (() => void) => {
+  let cancelled = false
+
+  const load = async () => {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select(ORG_SELECT_COLUMNS)
+      .eq('status', 'active')
+    if (cancelled) return
+    if (error) {
+      onError?.(error)
+      return
+    }
+    onUpdate(((data ?? []) as unknown as SupabaseOrgRow[]).map(mapOrganizationRow))
+  }
+
+  void load()
+
+  const channel = supabase
+    .channel(`organizations_active_${++organizationsByIdsChannelSeq}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'organizations' }, () => {
+      void load()
+    })
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
+}
 
 export const generateOrganizationCode = (name: string) => {
   const validChars = name.toUpperCase().match(/[A-Z0-9]/g) ?? []

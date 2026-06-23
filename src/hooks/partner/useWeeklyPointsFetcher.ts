@@ -1,11 +1,45 @@
 import { useCallback, useRef } from 'react'
-import { collection, collectionGroup, getDocs, query, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { WeeklyPointsRecord } from '@/utils/partnerProgress'
 import { logger } from '@/utils/partnerDashboardUtils'
 
+// Supabase `.in()` lists stay comfortably small; the ledger itself is paged via
+// .range() because a partner's members can exceed the 1000-row default cap.
+const UID_BATCH_SIZE = 200
+const PAGE_SIZE = 1000
+
+const chunk = <T,>(items: T[], size: number): T[][] => {
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
+
+type LedgerRow = { uid: string | null; points: number | null; week_number: number | null }
+
+// Pages through points_ledger for a batch of uids, past the 1000-row cap.
+const fetchLedgerRows = async (uids: string[]): Promise<LedgerRow[]> => {
+  const rows: LedgerRow[] = []
+  let from = 0
+  for (;;) {
+    const { data, error } = await supabase
+      .from('points_ledger')
+      .select('uid, points, week_number')
+      .in('uid', uids)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    const page = (data ?? []) as LedgerRow[]
+    rows.push(...page)
+    if (page.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return rows
+}
+
 // ============================================================================
-// FIX: Fetch actual total points from pointsLedger collection
+// Total points per user, summed from the Supabase points_ledger.
+// (The partner dashboard uses profiles.total_points for display; this remains
+// for callers that need the ledger-derived total.)
 // ============================================================================
 
 interface TotalPointsResult {
@@ -22,29 +56,18 @@ export const fetchTotalPointsFromLedger = async (
 
   const pointsByUser: Record<string, number> = {}
   const errors: Array<{ batch: string[]; error: unknown }> = []
-  const batches: string[][] = []
 
   // Initialize all users with 0 points
   userIds.forEach((uid) => {
     pointsByUser[uid] = 0
   })
 
-  // Firestore 'in' queries support max 30 values
-  for (let i = 0; i < userIds.length; i += 30) {
-    batches.push(userIds.slice(i, i + 30))
-  }
-
-  for (const batch of batches) {
+  for (const batch of chunk(userIds, UID_BATCH_SIZE)) {
     try {
-      const ledgerQuery = query(
-        collection(db, 'pointsLedger'),
-        where('uid', 'in', batch)
-      )
-      const snapshot = await getDocs(ledgerQuery)
-      snapshot.docs.forEach((docSnap) => {
-        const data = docSnap.data()
-        const uid = data.uid as string
-        const points = typeof data.points === 'number' ? data.points : 0
+      const rows = await fetchLedgerRows(batch)
+      rows.forEach((row) => {
+        const uid = row.uid
+        const points = typeof row.points === 'number' ? row.points : 0
         if (uid && points > 0) {
           pointsByUser[uid] = (pointsByUser[uid] || 0) + points
         }
@@ -66,10 +89,6 @@ interface BatchResult {
   pointsByUser: Record<string, WeeklyPointsRecord[]>
   errors: Array<{ batch: string[]; error: unknown }>
   hasPartialFailure: boolean
-}
-
-const getErrorCode = (error: unknown): string => {
-  return (error as { code?: string })?.code ?? ''
 }
 
 export const useWeeklyPointsFetcher = () => {
@@ -94,64 +113,38 @@ export const useWeeklyPointsFetcher = () => {
       const fetchPromise = (async (): Promise<BatchResult> => {
         const pointsByUser: Record<string, WeeklyPointsRecord[]> = {}
         const errors: Array<{ batch: string[]; error: unknown }> = []
-        const batches: string[][] = []
-        let collectionGroupPermissionDenied = false
 
-        // Firestore 'in' queries support max 30 values
-        for (let i = 0; i < userIds.length; i += 10) {
-          batches.push(userIds.slice(i, i + 10))
-        }
-
-        // Try collection group query first (newer data structure)
-        for (const batch of batches) {
+        // Aggregate the Supabase points_ledger into per-week earned totals.
+        // NOTE: the ledger carries EARNED points only; the per-week target
+        // (required_points) lived in the legacy `weekly_points` collection and
+        // is not on the ledger. It comes through as 0 here - risk/progress that
+        // needs the target should derive it from journey config (follow-up).
+        for (const batch of chunk(userIds, UID_BATCH_SIZE)) {
           try {
-            const weeklyQuery = query(
-              collectionGroup(db, 'weekly_points'),
-              where('user_id', 'in', batch)
-            )
-            const weeklySnapshot = await getDocs(weeklyQuery)
-            weeklySnapshot.docs.forEach((docSnap) => {
-              const data = docSnap.data() as WeeklyPointsRecord
-              if (!data.user_id) return
-              pointsByUser[data.user_id] = [...(pointsByUser[data.user_id] || []), data]
+            const rows = await fetchLedgerRows(batch)
+            // uid -> week -> summed earned points
+            const byUserWeek: Record<string, Record<number, number>> = {}
+            rows.forEach((row) => {
+              const uid = row.uid
+              const week = row.week_number ?? 0
+              if (!uid || !week) return
+              const points = typeof row.points === 'number' ? row.points : 0
+              byUserWeek[uid] = byUserWeek[uid] || {}
+              byUserWeek[uid][week] = (byUserWeek[uid][week] || 0) + points
+            })
+            Object.entries(byUserWeek).forEach(([uid, weeks]) => {
+              const records: WeeklyPointsRecord[] = Object.entries(weeks).map(
+                ([week, earned]) => ({
+                  user_id: uid,
+                  week_number: Number(week),
+                  points_earned: earned,
+                }),
+              )
+              pointsByUser[uid] = [...(pointsByUser[uid] || []), ...records]
             })
           } catch (error) {
-            if (getErrorCode(error) === 'permission-denied') {
-              collectionGroupPermissionDenied = true
-              logger.warn('Collection group weekly_points query denied; falling back to legacy collection.', {
-                batchSize: batch.length,
-              })
-            } else {
-              logger.error(`Failed to fetch weekly points for batch`, error)
-              errors.push({ batch, error })
-            }
-          }
-        }
-
-        // Fallback to top-level collection if no data was found and either:
-        // 1) no collection-group errors occurred, or
-        // 2) collection-group reads are denied by rules in this environment.
-        if (
-          !Object.keys(pointsByUser).length &&
-          userIds.length &&
-          (!errors.length || collectionGroupPermissionDenied)
-        ) {
-          for (const batch of batches) {
-            try {
-              const legacyQuery = query(
-                collection(db, 'weekly_points'),
-                where('user_id', 'in', batch)
-              )
-              const legacySnapshot = await getDocs(legacyQuery)
-              legacySnapshot.docs.forEach((docSnap) => {
-                const data = docSnap.data() as WeeklyPointsRecord
-                if (!data.user_id) return
-                pointsByUser[data.user_id] = [...(pointsByUser[data.user_id] || []), data]
-              })
-            } catch (error) {
-              logger.error(`Failed to fetch legacy weekly points for batch`, error)
-              errors.push({ batch, error })
-            }
+            logger.error(`Failed to fetch weekly points for batch`, error)
+            errors.push({ batch, error })
           }
         }
 
