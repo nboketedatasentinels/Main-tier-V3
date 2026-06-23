@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { collection, doc, onSnapshot, query as firestoreQuery, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
+import { listenToPartnerAssignedOrgIds } from '@/services/partnerSupabaseReads'
 import type { PartnerAdminSnapshot, PartnerAssignment } from '@/types/admin'
 
 interface UsePartnerAdminSnapshotOptions {
@@ -10,37 +9,6 @@ interface UsePartnerAdminSnapshotOptions {
 
 const isActiveAssignment = (assignment: PartnerAssignment) =>
   !assignment.status || assignment.status === 'active'
-
-const parseAssignedOrganizations = (value: unknown): PartnerAssignment[] => {
-  if (!Array.isArray(value)) return []
-
-  const assignments: PartnerAssignment[] = []
-
-  value.forEach((entry) => {
-    if (typeof entry === 'string') {
-      const organizationId = entry.trim()
-      if (organizationId) {
-        assignments.push({ organizationId, status: 'active' })
-      }
-      return
-    }
-
-    if (entry && typeof entry === 'object') {
-      const organizationId = (entry as { organizationId?: string }).organizationId?.trim()
-      const companyCode = (entry as { companyCode?: string }).companyCode?.trim()
-      const status = (entry as { status?: PartnerAssignment['status'] }).status ?? 'active'
-      if (organizationId || companyCode) {
-        assignments.push({
-          organizationId: organizationId || undefined,
-          companyCode: companyCode || undefined,
-          status,
-        })
-      }
-    }
-  })
-
-  return assignments
-}
 
 export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions = {}) => {
   const { enabled = true } = options
@@ -109,59 +77,32 @@ export const usePartnerAdminSnapshot = (options: UsePartnerAdminSnapshotOptions 
     setQueryLoading(true)
     setError(null)
 
-    // 1. Listen to the user document for assigned organizations
-    const unsubscribeDoc = onSnapshot(
-      doc(db, 'users', user.uid),
-      (docSnap) => {
-        if (!docSnap.exists()) {
-          setAssignmentsFromDoc([])
-          setDocLoading(false)
-          // Don't error here, rely on the query
-          return
-        }
-
-        const data = docSnap.data() as { assignedOrganizations?: unknown }
-        const parsed = parseAssignedOrganizations(data.assignedOrganizations)
-        setAssignmentsFromDoc(parsed)
-        setDocLoading(false)
-      },
-      (err) => {
-        console.error('[PartnerAdminSnapshot] Failed to load partner doc', err)
+    // Supabase: union of organizations.transformation_partner_id (canonical) and
+    // profiles.{uid}.data.assignedOrganizations (mirror), resolved server-side.
+    // One source now feeds the "query" slot; the "doc" slot stays empty.
+    const unsubscribe = listenToPartnerAssignedOrgIds(
+      user.uid,
+      (orgIds) => {
         setAssignmentsFromDoc([])
+        setAssignmentsFromQuery(
+          orgIds.map((organizationId) => ({ organizationId, status: 'active' as const })),
+        )
         setDocLoading(false)
-        // We don't set global error here to allow the query to succeed
-      }
-    )
-
-    // 2. Listen to the organizations collection (Source of Truth)
-    const organizationsQuery = firestoreQuery(
-      collection(db, 'organizations'),
-      where('transformationPartnerId', '==', user.uid),
-      where('status', 'in', ['active', 'watch', 'paused']) // Exclude inactive/suspended if desired, or keep all
-    )
-
-    const unsubscribeQuery = onSnapshot(
-      organizationsQuery,
-      (querySnap) => {
-        const fromQuery: PartnerAssignment[] = querySnap.docs.map((doc) => ({
-          organizationId: doc.id,
-          status: 'active', // Default to active for queried orgs, or map from org status
-          companyCode: doc.data().code,
-        }))
-        setAssignmentsFromQuery(fromQuery)
         setQueryLoading(false)
+        setError(null)
       },
       (err) => {
-        console.error('[PartnerAdminSnapshot] Failed to query organizations', err)
+        console.error('[PartnerAdminSnapshot] Failed to load partner assignments', err)
+        setAssignmentsFromDoc([])
         setAssignmentsFromQuery([])
+        setDocLoading(false)
         setQueryLoading(false)
         setError('Unable to load partner organizations.')
-      }
+      },
     )
 
     return () => {
-      unsubscribeDoc()
-      unsubscribeQuery()
+      unsubscribe()
     }
   }, [enabled, isSuperAdmin, profileStatus, user?.uid])
 

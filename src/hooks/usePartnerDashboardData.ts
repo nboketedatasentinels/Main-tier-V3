@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerInterventions } from '@/hooks/partner/usePartnerInterventions'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { usePartnerAdminData as usePartnerAdminSnapshotData } from '@/hooks/partner/usePartnerAdminData'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
+import { listenToUserNotifications } from '@/services/notificationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
@@ -237,25 +236,26 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     if (profileStatus !== 'ready') return
     if (!profile?.id) return
 
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('user_id', '==', profile.id),
-      where('is_read', '==', false)
+    // Supabase: listenToUserNotifications returns the full set (created_at desc);
+    // narrow to unread + selectedOrg client-side so the bell badge matches the
+    // drawer. (Was a Firestore onSnapshot on `notifications` keyed on user_id.)
+    const unsubscribe = listenToUserNotifications(
+      profile.id,
+      (all) => {
+        const visible = all.filter((n) => n.is_read === false).filter(matchesSelectedOrg)
+        setNotificationCount(visible.length)
+      },
+      (error) => {
+        logger.error('[PartnerDashboard] Failed to load unread notifications', error)
+      },
     )
-
-    const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-      const visible = snapshot.docs
-        .map((d) => ({ ...(d.data() as NotificationRecord), id: d.id }))
-        .filter(matchesSelectedOrg)
-      setNotificationCount(visible.length)
-    })
 
     return () => unsubscribe()
   }, [profile?.id, profileStatus, matchesSelectedOrg])
 
-  // Recent notifications for the partner dashboard. We fetch a wider window
-  // (limit 25) so that after the org filter is applied, we still have
-  // enough rows to surface the most recent 5 for the selected org.
+  // Recent notifications for the partner dashboard. The Supabase listener
+  // returns the user's notifications newest-first; after the org filter we
+  // surface the most recent 5 for the selected org.
   useEffect(() => {
     if (profileStatus !== 'ready' || !profile?.id) {
       setNotifications([])
@@ -266,23 +266,10 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     setNotificationsLoading(true)
     setNotificationsError(null)
 
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('user_id', '==', profile.id),
-      orderBy('created_at', 'desc'),
-      limit(25),
-    )
-
-    const unsubscribe = onSnapshot(
-      notificationsQuery,
-      (snapshot) => {
-        const items = snapshot.docs
-          .map((docSnap) => ({
-            ...(docSnap.data() as NotificationRecord),
-            id: docSnap.id,
-          }))
-          .filter(matchesSelectedOrg)
-          .slice(0, 5)
+    const unsubscribe = listenToUserNotifications(
+      profile.id,
+      (all) => {
+        const items = all.filter(matchesSelectedOrg).slice(0, 5)
         setNotifications(items)
         setNotificationsLoading(false)
       },

@@ -1,6 +1,5 @@
 import {
   FieldValue,
-  QueryConstraint,
   Timestamp,
   collection,
   doc,
@@ -212,31 +211,47 @@ export const listenToPointsVerificationRequestsByOrganizations = (
   organizationIds?: string[],
   onError?: (error: unknown) => void,
 ) => {
-  const filters: QueryConstraint[] = [where('status', '==', 'pending')]
+  let cancelled = false
+  const orgIds = Array.from(
+    new Set((organizationIds ?? []).map((id) => (id ?? '').trim()).filter(Boolean)),
+  )
 
-  // If organizationIds provided and not empty, add organization filter
-  // Note: Firestore 'in' queries are limited to 30 items
-  if (organizationIds && organizationIds.length > 0) {
-    if (organizationIds.length > 30) {
-      console.warn(
-        '[pointsVerificationService] Organization IDs exceed Firestore limit of 30. ' +
-          'Only first 30 organizations will be queried.',
-      )
+  const load = async () => {
+    let q = supabase
+      .from('point_verifications')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+    // No org filter for super_admin (empty list) -> all pending requests.
+    if (orgIds.length > 0) {
+      q = q.in('organization_id', orgIds)
     }
-    const queryOrgIds = organizationIds.slice(0, 30)
-    filters.push(where('organizationId', 'in', queryOrgIds))
+    const { data, error } = await q
+    if (cancelled) return
+    if (error) {
+      onError?.(error)
+      return
+    }
+    onChange((data ?? []).map((row) => mapVerificationRow(row as PointVerificationRow)))
   }
 
-  const scopedQuery = query(collection(db, 'points_verification_requests'), ...filters)
-  return onSnapshot(
-    scopedQuery,
-    (snapshot) => {
-      onChange(mapAndSortRequests(snapshot as { docs: Array<{ id: string; data: () => unknown }> }))
-    },
-    (error) => {
-      onError?.(error)
-    },
-  )
+  void load()
+
+  const channel = supabase
+    .channel(`point_verifications_org_${++pointVerificationChannelSeq}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'point_verifications' },
+      () => {
+        void load()
+      },
+    )
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
 }
 
 /**
