@@ -95,6 +95,29 @@ export const ProtectedRoute: React.FC<Props> = ({
   // Effective role prefers custom claims, then profile.role
   const userRole = effectiveRole
 
+  // ── STRICT role containment ────────────────────────────────────────────────
+  // admin = admin, partner = partner, user = user. A privileged role can NEVER
+  // render another area's dashboard - not even for the single frame a nested
+  // redirect takes to fire (that frame is what made the learner dashboard
+  // "flash" before the admin/partner dashboard appeared). Because this runs
+  // inside the ProtectedRoute that wraps each area's layout, returning a
+  // <Navigate> here stops that layout from mounting at all. This sits behind the
+  // DB role invariant (migration 0023) and the login-page blocks.
+  //
+  // Note: this only runs after loading is done and the real profile/role is
+  // known (the loading + !profile guards above already returned), so the
+  // transient fallback 'user' role can never trigger a wrong bounce.
+  const path = location.pathname
+  const inArea = (...prefixes: string[]) =>
+    prefixes.some((p) => path === p || path.startsWith(`${p}/`))
+
+  if (userRole === 'super_admin' && inArea('/app', '/partner', '/mentor', '/ambassador')) {
+    return <Navigate to="/admin/dashboard" replace />
+  }
+  if (userRole === 'partner' && inArea('/app', '/admin', '/mentor', '/ambassador')) {
+    return <Navigate to="/partner/dashboard" replace />
+  }
+
   // Check account status
   const accountStatus = profile.accountStatus?.toString().toLowerCase()
   if (accountStatus === AccountStatus.INACTIVE || accountStatus === 'inactive') {

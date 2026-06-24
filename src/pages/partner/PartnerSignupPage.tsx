@@ -14,7 +14,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Users } from 'lucide-react'
 import { supabase } from '@/services/supabase'
 import { claimPartnerAccess } from '@/services/supabaseOrgService'
@@ -24,17 +24,26 @@ import { getFriendlyErrorMessage } from '@/utils/authErrors'
  * Partner signup/signin. No company code (a partner can manage several orgs).
  * A partner can only get in if an admin has assigned their email to an
  * organization - claimPartnerAccess promotes + links them, or rejects them.
+ *
+ * The view is driven entirely by the ROUTE, never by in-place state, so the URL
+ * always matches what is on screen: /partner-signup = create account,
+ * /partner-signin = sign in. Transitions between them navigate (and may carry an
+ * info message + the typed email via location state).
  */
-export const PartnerSignupPage: React.FC = () => {
+export const PartnerSignupPage: React.FC<{ initialMode?: 'signup' | 'signin' }> = ({
+  initialMode = 'signup',
+}) => {
   const navigate = useNavigate()
-  const [mode, setMode] = useState<'signup' | 'signin'>('signup')
+  const location = useLocation()
+  const seeded = (location.state as { info?: string; email?: string } | null) ?? null
+  const mode = initialMode
   const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(seeded?.email ?? '')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [info, setInfo] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(seeded?.info ?? null)
 
   // Promotes the (currently signed-in) user to partner. Returns true on success.
   // On failure it signs them out and sets an error. Does NOT navigate - callers
@@ -53,7 +62,17 @@ export const PartnerSignupPage: React.FC = () => {
           { onConflict: 'id', ignoreDuplicates: true },
         )
     }
-    const result = await claimPartnerAccess()
+    let result: string
+    try {
+      result = await claimPartnerAccess()
+    } catch (err) {
+      // A thrown error (RPC unavailable, network) must NOT leave a live session
+      // sitting on an un-promoted role - the user would silently land on
+      // whatever dashboard their existing profile.role maps to. Treat it as a
+      // failed claim: sign out and surface the error.
+      result = 'error'
+      console.error('[PartnerSignup] claimPartnerAccess failed', err)
+    }
     if (result === 'ok') return true
     await supabase.auth.signOut()
     setError(
@@ -79,14 +98,18 @@ export const PartnerSignupPage: React.FC = () => {
         email: normalizedEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/partner-signup`,
+          emailRedirectTo: `${window.location.origin}/partner-signin`,
           data: { full_name: fullName.trim() || normalizedEmail.split('@')[0] },
         },
       })
       if (signUpError) {
         if (/already|registered|exists/i.test(signUpError.message)) {
-          setMode('signin')
-          setInfo('You already have an account. Sign in below to activate partner access.')
+          navigate('/partner-signin', {
+            state: {
+              info: 'You already have an account. Sign in below to activate partner access.',
+              email: normalizedEmail,
+            },
+          })
           return
         }
         setError(getFriendlyErrorMessage(signUpError))
@@ -98,13 +121,21 @@ export const PartnerSignupPage: React.FC = () => {
         const ok = await runPartnerClaim()
         if (ok) {
           await supabase.auth.signOut()
-          setMode('signin')
-          setInfo('Your partner account is ready. Please sign in to continue.')
+          navigate('/partner-signin', {
+            state: {
+              info: 'Your partner account is ready. Please sign in to continue.',
+              email: normalizedEmail,
+            },
+          })
         }
         return
       }
-      setMode('signin')
-      setInfo('Account created. If a confirmation email was sent, confirm it first, then sign in below.')
+      navigate('/partner-signin', {
+        state: {
+          info: 'Account created. If a confirmation email was sent, confirm it first, then sign in below.',
+          email: normalizedEmail,
+        },
+      })
     } catch (err) {
       setError(getFriendlyErrorMessage(err))
     } finally {
@@ -221,7 +252,7 @@ export const PartnerSignupPage: React.FC = () => {
                 <Button type="submit" variant="primary" size="lg" isLoading={loading} loadingText="Creating...">
                   Create partner account
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setMode('signin'); setError(null); setInfo(null) }}>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/partner-signin')}>
                   Already have an account? Sign in
                 </Button>
               </VStack>
@@ -237,7 +268,7 @@ export const PartnerSignupPage: React.FC = () => {
                 <Button type="submit" variant="primary" size="lg" isLoading={loading} loadingText="Signing in...">
                   Sign in
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setMode('signup'); setError(null); setInfo(null) }}>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/partner-signup')}>
                   Back to sign up
                 </Button>
               </VStack>

@@ -24,11 +24,13 @@ import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { PhoneNumberPromptModal } from '@/components/modals/PhoneNumberPromptModal'
+import { PartnerLoginBlockedModal } from '@/components/modals/PartnerLoginBlockedModal'
 
 export const LoginPage: React.FC = () => {
   const {
     signIn,
     signInWithMagicLink,
+    signOut,
     user,
     profile,
     profileLoading,
@@ -51,6 +53,7 @@ export const LoginPage: React.FC = () => {
   const [profileTimeoutReached, setProfileTimeoutReached] = useState(false)
   const [refreshingProfile, setRefreshingProfile] = useState(false)
   const [showPhonePrompt, setShowPhonePrompt] = useState(false)
+  const [showPartnerBlocked, setShowPartnerBlocked] = useState(false)
 
   useEffect(() => {
     const refCode = searchParams.get('ref')?.trim()
@@ -80,6 +83,16 @@ export const LoginPage: React.FC = () => {
     if (profileLoading) return
     if (!user || !profile) return
 
+    // STRICT: partners may ONLY sign in through the partner portal (/partners).
+    // If a partner authenticates here, block them, sign the session back out so
+    // no partner session is left open on a non-partner entry point, and point
+    // them to the right door. This must run before any navigation below.
+    if (effectiveRole === 'partner') {
+      setShowPartnerBlocked(true)
+      void signOut()
+      return
+    }
+
     if (!profile.phoneNumber) {
       setShowPhonePrompt(true)
       return
@@ -103,7 +116,7 @@ export const LoginPage: React.FC = () => {
 
     console.log('🎯 LoginPage: Navigating to:', landingPath)
     navigate(landingPath, { replace: true })
-  }, [user, profile, profileLoading, effectiveRole, effectiveRoleSource, navigate, searchParams])
+  }, [user, profile, profileLoading, effectiveRole, effectiveRoleSource, navigate, searchParams, signOut])
 
   useEffect(() => {
     if (!user || profile) {
@@ -404,6 +417,11 @@ export const LoginPage: React.FC = () => {
           // After successfully saving phone, send the user to the welcome page
           navigate('/welcome', { replace: true })
         }}
+      />
+
+      <PartnerLoginBlockedModal
+        isOpen={showPartnerBlocked}
+        onClose={() => setShowPartnerBlocked(false)}
       />
     </>
   )

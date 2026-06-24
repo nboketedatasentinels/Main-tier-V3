@@ -19,12 +19,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { resolveRole } from '@/utils/role'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
+import { PartnerLoginBlockedModal } from '@/components/modals/PartnerLoginBlockedModal'
 
 /**
- * Dedicated admin sign-in. Authenticates, then confirms the account actually
- * has an admin role (super_admin or partner) before routing to the admin
- * dashboard. Non-admin accounts are signed back out so an admin session is
- * never left open for a non-admin user.
+ * Dedicated admin sign-in. Authenticates, then confirms the account is a
+ * super_admin before routing to the admin dashboard. Partners are NOT admins
+ * here: they may only sign in through the partner portal (/partners), so a
+ * partner who lands here is blocked and pointed to the right door. Any other
+ * non-admin account is signed back out so an admin session is never left open.
  */
 export const AdminLoginPage: React.FC = () => {
   const { signIn, signOut, refreshProfile } = useAuth()
@@ -34,6 +36,7 @@ export const AdminLoginPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showPartnerBlocked, setShowPartnerBlocked] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,7 +62,14 @@ export const AdminLoginPage: React.FC = () => {
       const { profile } = await refreshProfile({ reason: 'admin-login', isManual: true })
       const role = resolveRole(profile?.role)
 
-      if (role !== 'super_admin' && role !== 'partner') {
+      // STRICT: partners can never sign in here - they use the partner portal.
+      if (role === 'partner') {
+        await signOut()
+        setShowPartnerBlocked(true)
+        return
+      }
+
+      if (role !== 'super_admin') {
         await signOut()
         setError(
           'This account does not have admin access. Use the regular sign-in page, or sign up with the admin access code.',
@@ -142,6 +152,11 @@ export const AdminLoginPage: React.FC = () => {
           </Text>
         </VStack>
       </form>
+
+      <PartnerLoginBlockedModal
+        isOpen={showPartnerBlocked}
+        onClose={() => setShowPartnerBlocked(false)}
+      />
     </VStack>
   )
 }
