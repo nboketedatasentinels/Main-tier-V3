@@ -150,6 +150,7 @@ export const AppRoutes = () => {
         <Route path="/assessment" element={<PublicAssessmentPage />} />
         <Route path="/partners" element={<PartnerLandingPage />} />
         <Route path="/partner-signup" element={<PartnerSignupPage />} />
+        <Route path="/partner-signin" element={<PartnerSignupPage initialMode="signin" />} />
         <Route path="/upgrade" element={<UpgradePage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
