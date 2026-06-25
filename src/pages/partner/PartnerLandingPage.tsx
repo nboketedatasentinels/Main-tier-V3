@@ -35,7 +35,7 @@ export const PartnerLandingPage: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => navigate(user ? '/app' : '/login')}
+            onClick={() => navigate(user ? '/app' : '/partner-signin')}
             className="rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-white"
           >
             {user ? 'Dashboard' : 'Sign in'}
