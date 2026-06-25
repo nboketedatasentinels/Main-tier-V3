@@ -9,10 +9,6 @@ import {
   listenToPartnerMembers,
 } from '@/services/partnerSupabaseReads'
 import {
-  listenToOrganizationStatsUpdates,
-  updateOrganizationStatisticsBatch,
-} from '@/services/organizationStatsService'
-import {
   logger,
   normalizeTimestamp,
   normalizeOrgKey,
@@ -270,7 +266,6 @@ export const usePartnerAdminData = (
   const [lastOrganizationsSuccessAt, setLastOrganizationsSuccessAt] = useState<Date | null>(null)
   const [orgRefreshIndex, setOrgRefreshIndex] = useState(0)
 
-  const statsListenersRef = useRef<(() => void)[]>([])
   const retryOrganizationsHandler = useRetryLogic({
     maxRetries: 3,
     onMaxRetriesExceeded: () => {
@@ -488,53 +483,11 @@ export const usePartnerAdminData = (
     // NOTE: retryOrganizationsHandler and assignedOrganizationIds intentionally excluded
   ])
 
-  // FIX: Track if stats have been initialized
-  const statsInitializedRef = useRef(false)
-
-  useEffect(() => {
-    if (profileStatus !== 'ready' || !organizations.length) {
-      return
-    }
-
-    // FIX: Only initialize stats once
-    if (statsInitializedRef.current) {
-      return
-    }
-    statsInitializedRef.current = true
-
-    statsListenersRef.current.forEach((unsub) => unsub())
-    statsListenersRef.current = []
-
-    let isMounted = true
-
-    const updateStats = async () => {
-      try {
-        await updateOrganizationStatisticsBatch(organizations)
-      } catch (err) {
-        logger.error('Failed to update organization statistics', err)
-      }
-    }
-
-    void updateStats()
-
-    statsListenersRef.current = organizations.map((org) =>
-      listenToOrganizationStatsUpdates(
-        { id: org.id, code: org.code || org.id || '' },
-        {
-          onError: (err) => {
-            if (!isMounted) return
-            logger.error('Failed to refresh organization stats', err)
-          },
-        }
-      )
-    )
-
-    return () => {
-      isMounted = false
-      statsListenersRef.current.forEach((unsub) => unsub())
-      statsListenersRef.current = []
-    }
-  }, [organizations, profileStatus])
+  // Organization statistics are derived client-side from the Supabase-loaded
+  // `users` + `organizations` (see usePartnerMetrics). The legacy Firestore
+  // stats listener (onSnapshot on the `users` collection, one per org) was
+  // removed in the Supabase cutover: with no Firebase session it only threw
+  // "Missing or insufficient permissions" and fed nothing the dashboard reads.
 
   const [users, setUsers] = useState<PartnerUser[]>([])
   const [usersLoading, setUsersLoading] = useState(true)

@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-  type Query,
-  type DocumentData,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
-
-const FIRESTORE_IN_QUERY_LIMIT = 30
+import { supabase } from '@/services/supabase'
 
 export interface PartnerPendingInvitation {
   id: string
@@ -26,37 +16,29 @@ interface Options {
   enabled?: boolean
 }
 
-const toDate = (value: unknown): Date | null => {
-  if (!value) return null
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
-  const obj = value as { toDate?: () => Date; seconds?: number }
-  if (typeof obj.toDate === 'function') {
-    try {
-      const d = obj.toDate()
-      return Number.isNaN(d.getTime()) ? null : d
-    } catch {
-      return null
-    }
-  }
-  if (typeof obj.seconds === 'number') {
-    return new Date(obj.seconds * 1000)
-  }
-  if (typeof value === 'string') {
-    const d = new Date(value)
-    return Number.isNaN(d.getTime()) ? null : d
-  }
-  return null
+type InvitationRow = {
+  id: string
+  email: string | null
+  role: string | null
+  organization_id: string | null
+  status: string | null
+  created_at: string | null
 }
 
+const toDate = (value: string | null): Date | null => {
+  if (!value) return null
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+let invitationsChannelSeq = 0
+
 /**
- * Real-time listener for pending invitations across the partner's assigned
- * organizations. Chunked into batches of 30 to satisfy Firestore's `in`
- * operator limit. Returns deduplicated, sorted invitations (newest first).
+ * Pending invitations across the partner's assigned organizations, read from the
+ * Supabase `invitations` table (migrated off Firestore; RLS grants partner/admin
+ * SELECT - see 0024). Initial load + realtime channel, newest first.
  */
-export const usePartnerPendingInvitations = ({
-  organizationIds,
-  enabled = true,
-}: Options) => {
+export const usePartnerPendingInvitations = ({ organizationIds, enabled = true }: Options) => {
   const [invitations, setInvitations] = useState<PartnerPendingInvitation[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -84,78 +66,53 @@ export const usePartnerPendingInvitations = ({
       return
     }
 
+    let cancelled = false
     setLoading(true)
     setError(null)
 
-    const queries: Query<DocumentData>[] = []
-    for (let i = 0; i < orgIds.length; i += FIRESTORE_IN_QUERY_LIMIT) {
-      const chunk = orgIds.slice(i, i + FIRESTORE_IN_QUERY_LIMIT)
-      queries.push(
-        query(
-          collection(db, 'invitations'),
-          where('status', '==', 'pending'),
-          where('organizationId', 'in', chunk),
-        ),
-      )
+    const load = async () => {
+      try {
+        const { data, error: queryError } = await supabase
+          .from('invitations')
+          .select('id, email, role, organization_id, status, created_at')
+          .eq('status', 'pending')
+          .in('organization_id', orgIds)
+          .order('created_at', { ascending: false })
+
+        if (cancelled) return
+        if (queryError) throw queryError
+
+        const list: PartnerPendingInvitation[] = ((data ?? []) as InvitationRow[]).map((row) => ({
+          id: row.id,
+          email: row.email ?? '',
+          role: row.role ?? undefined,
+          organizationId: row.organization_id ?? '',
+          createdAt: toDate(row.created_at),
+          expiresAt: null,
+        }))
+
+        setInvitations(list)
+        setLoading(false)
+      } catch (err) {
+        if (cancelled) return
+        console.error('[usePartnerPendingInvitations] Query failed', err)
+        setError('Unable to load pending invitations.')
+        setLoading(false)
+      }
     }
 
-    const accumulator = new Map<number, Map<string, PartnerPendingInvitation>>()
-    let pendingInitial = queries.length
+    void load()
 
-    const recompute = () => {
-      const merged = new Map<string, PartnerPendingInvitation>()
-      accumulator.forEach((batch) => {
-        batch.forEach((invite, id) => {
-          merged.set(id, invite)
-        })
+    const channel = supabase
+      .channel(`partner_pending_invitations_${++invitationsChannelSeq}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invitations' }, () => {
+        void load()
       })
-      const list = Array.from(merged.values()).sort((a, b) => {
-        const aTime = a.createdAt ? a.createdAt.getTime() : 0
-        const bTime = b.createdAt ? b.createdAt.getTime() : 0
-        return bTime - aTime
-      })
-      setInvitations(list)
-    }
-
-    const unsubscribers = queries.map((q, index) => {
-      accumulator.set(index, new Map())
-      return onSnapshot(
-        q,
-        (snapshot) => {
-          const batch = new Map<string, PartnerPendingInvitation>()
-          snapshot.docs.forEach((docSnap) => {
-            const data = docSnap.data() as Record<string, unknown>
-            batch.set(docSnap.id, {
-              id: docSnap.id,
-              email: typeof data.email === 'string' ? data.email : '',
-              name: typeof data.name === 'string' ? data.name : undefined,
-              role: typeof data.role === 'string' ? data.role : undefined,
-              organizationId:
-                typeof data.organizationId === 'string' ? data.organizationId : '',
-              createdAt: toDate(data.createdAt),
-              expiresAt: toDate(data.expiresAt),
-            })
-          })
-          accumulator.set(index, batch)
-          if (pendingInitial > 0) {
-            pendingInitial -= 1
-            if (pendingInitial === 0) setLoading(false)
-          }
-          recompute()
-        },
-        (err) => {
-          console.error('[usePartnerPendingInvitations] Query failed', err)
-          setError('Unable to load pending invitations.')
-          if (pendingInitial > 0) {
-            pendingInitial -= 1
-            if (pendingInitial === 0) setLoading(false)
-          }
-        },
-      )
-    })
+      .subscribe()
 
     return () => {
-      unsubscribers.forEach((unsub) => unsub())
+      cancelled = true
+      void supabase.removeChannel(channel)
     }
   }, [enabled, orgIdsKey])
 
