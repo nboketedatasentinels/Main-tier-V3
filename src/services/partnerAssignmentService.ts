@@ -1,12 +1,6 @@
 import { db } from "@/services/firebase";
-import {
-  collection,
-  getDocs,
-  query,
-  where,
-  doc,
-  getDoc,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "@/services/supabase";
 import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
 import { createApprovalRequest } from "./approvalsService";
@@ -14,42 +8,67 @@ import { upsertChecklistActivity } from "./checklistService";
 import { awardChecklistPoints } from "./pointsService";
 import { createInAppNotification } from "./notificationService";
 
-const chunkList = <T,>(items: T[], size: number): T[][] => {
-  const chunks: T[][] = []
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size))
-  }
-  return chunks
+type EligibleLearnerRow = {
+  id: string
+  email: string | null
+  first_name: string | null
+  last_name: string | null
+  full_name: string | null
+  role: string | null
+  organization_id: string | null
+  company_code: string | null
+  journey_type: string | null
+  total_points: number | null
 }
 
+const ELIGIBLE_LEARNER_COLUMNS =
+  'id, email, first_name, last_name, full_name, role, organization_id, ' +
+  'company_code, journey_type, total_points'
+
+/**
+ * Eligible learners for partner-issued activities, read from Supabase `profiles`
+ * (migrated off Firestore in the auth cutover). Scoped to the partner's assigned
+ * org keys, matched against either `organization_id` or `company_code` (org
+ * assignments come through as ids and/or codes). Returns loosely-typed profiles
+ * the assignment page reads by `id/email/fullName/journeyType`.
+ */
 export async function getEligibleLearnersForActivity(
   _activityId: string,
   organizationIds?: string[],
 ) {
   try {
-    const profilesCollection = collection(db, "profiles")
-    const normalized = (organizationIds || []).filter((id) => !!id)
-
-    if (!normalized.length) {
-      const snapshot = await getDocs(query(profilesCollection))
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile))
-    }
-
-    const chunks = chunkList(normalized, 30)
-    const snapshots = await Promise.all(
-      chunks.map((chunk) =>
-        getDocs(query(profilesCollection, where("organizationId", "in", chunk))),
-      ),
+    const keys = Array.from(
+      new Set((organizationIds || []).map((id) => (id ?? '').trim()).filter(Boolean)),
     )
 
-    const userMap = new Map<string, UserProfile>()
-    snapshots.forEach((snapshot) => {
-      snapshot.docs.forEach((docSnap) => {
-        userMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() } as UserProfile)
-      })
-    })
+    let query = supabase.from('profiles').select(ELIGIBLE_LEARNER_COLUMNS)
+    if (keys.length) {
+      const list = `(${keys.map((k) => `"${k.replace(/"/g, '')}"`).join(',')})`
+      query = query.or(`organization_id.in.${list},company_code.in.${list}`)
+    }
 
-    return Array.from(userMap.values())
+    const { data, error } = await query
+    if (error) throw error
+
+    return ((data ?? []) as unknown as EligibleLearnerRow[]).map((row) => {
+      const fullName =
+        row.full_name ||
+        [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+        row.email ||
+        'Learner'
+      return {
+        id: row.id,
+        email: row.email ?? '',
+        firstName: row.first_name ?? undefined,
+        lastName: row.last_name ?? undefined,
+        fullName,
+        role: row.role ?? undefined,
+        organizationId: row.organization_id ?? undefined,
+        companyCode: row.company_code ?? undefined,
+        journeyType: row.journey_type ?? undefined,
+        totalPoints: row.total_points ?? 0,
+      }
+    }) as unknown as UserProfile[]
   } catch (error) {
     console.error("[PartnerAssignmentService] Failed to fetch eligible learners", error);
     throw error;

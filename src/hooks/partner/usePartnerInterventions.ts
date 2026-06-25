@@ -1,25 +1,12 @@
 import { useEffect, useState } from 'react'
-import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { logger } from '@/utils/partnerDashboardUtils'
+import {
+  listenToPartnerInterventions,
+  type PartnerInterventionSummary,
+} from '@/services/partnerInterventionsService'
 
-export interface PartnerInterventionSummary {
-  id: string
-  name: string
-  target: string
-  reason: string
-  status: 'active' | 'watch' | 'critical' | 'escalated'
-  deadline: string
-  organizationCode?: string
-  userId?: string
-  partnerId?: string
-  openedAt?: string
-  statusChangedAt?: string
-  riskVerdicts?: string[]
-  assignedAdminName?: string
-  escalationReason?: string
-}
+export type { PartnerInterventionSummary } from '@/services/partnerInterventionsService'
 
 interface UsePartnerInterventionsOptions {
   selectedOrg: string
@@ -28,17 +15,14 @@ interface UsePartnerInterventionsOptions {
   enabled?: boolean
 }
 
-// ============================================================================
-// FIX #3: Proper handling of Firestore 'in' query limits with warning
-// ============================================================================
-const FIRESTORE_IN_QUERY_LIMIT = 30
-
 export const usePartnerInterventions = (options: UsePartnerInterventionsOptions) => {
   const { selectedOrg, assignedOrgKeys, selectedOrgKeys, enabled = true } = options
   const { isSuperAdmin, user, profileStatus } = useAuth()
 
   const [interventions, setInterventions] = useState<PartnerInterventionSummary[]>([])
-  const [hasQueryLimitWarning, setHasQueryLimitWarning] = useState(false)
+  // Supabase `.in(...)` has no Firestore-style 30-item ceiling, so the queue is
+  // never silently truncated. Kept in the return shape for consumer compat.
+  const [hasQueryLimitWarning] = useState(false)
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
@@ -47,67 +31,17 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
 
     if (!user?.uid) return
 
-    let q = query(collection(db, 'interventions'), orderBy('opened_at', 'desc'))
+    const assignedIds = Array.from(assignedOrgKeys).filter(Boolean)
 
-    if (!isSuperAdmin) {
-      // FIX #6: Use lowercase keys consistently for Firestore queries
-      // Note: This assumes Firestore data is also stored lowercase
-      const assignedIds = Array.from(assignedOrgKeys).filter(Boolean)
-
-      if (assignedIds.length === 0) {
-        setInterventions([])
-        setHasQueryLimitWarning(false)
-        return
-      }
-
-      // FIX #3: Warn when query is truncated
-      if (assignedIds.length > FIRESTORE_IN_QUERY_LIMIT) {
-        logger.warn(
-          `[PartnerInterventions] Query truncated: ${assignedIds.length} org keys exceeds ` +
-            `Firestore limit of ${FIRESTORE_IN_QUERY_LIMIT}. Some interventions may be missing.`
-        )
-        setHasQueryLimitWarning(true)
-      } else {
-        setHasQueryLimitWarning(false)
-      }
-
-      q = query(
-        q,
-        where('organization_code', 'in', assignedIds.slice(0, FIRESTORE_IN_QUERY_LIMIT))
-      )
+    if (!isSuperAdmin && assignedIds.length === 0) {
+      setInterventions([])
+      return
     }
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const scoped = snapshot.docs
-        .map((docSnap) => {
-          const data = docSnap.data() as Partial<PartnerInterventionSummary> & {
-            partner_id?: string
-            organization_code?: string
-            opened_at?: string
-            status_changed_at?: string
-            risk_verdicts?: string[]
-            assigned_admin_name?: string
-            escalation_reason?: string
-          }
-
-          return {
-            id: docSnap.id,
-            name: data.name || 'Intervention',
-            target: data.target || 'Assigned learner',
-            reason: data.reason || 'Intervention in progress',
-            status: (data.status as PartnerInterventionSummary['status']) || 'active',
-            deadline: data.deadline || data.opened_at || new Date().toISOString(),
-            organizationCode: data.organizationCode || data.organization_code,
-            userId: data.userId,
-            partnerId: data.partner_id,
-            openedAt: data.openedAt || data.opened_at,
-            statusChangedAt: data.status_changed_at || data.opened_at,
-            riskVerdicts: data.risk_verdicts || ['Behind on engagement targets'],
-            assignedAdminName: data.assigned_admin_name || 'Governance Team',
-            escalationReason: data.escalation_reason || 'SLA Breach',
-          }
-        })
-        .filter((item) => {
+    const unsubscribe = listenToPartnerInterventions(
+      { orgCodes: assignedIds, all: isSuperAdmin },
+      (rows) => {
+        const scoped = rows.filter((item) => {
           const orgCode = item.organizationCode?.toLowerCase()
 
           // Filter by partner assignment
@@ -124,20 +58,20 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
           }
 
           // Filter by selected organization
-          if (
-            selectedOrg !== 'all' &&
-            selectedOrg &&
-            orgCode &&
-            !selectedOrgKeys.has(orgCode)
-          ) {
+          if (selectedOrg !== 'all' && selectedOrg && orgCode && !selectedOrgKeys.has(orgCode)) {
             return false
           }
 
           return true
         })
 
-      setInterventions(scoped)
-    })
+        setInterventions(scoped)
+      },
+      (err) => {
+        logger.error('[PartnerInterventions] Failed to load interventions', err)
+        setInterventions([])
+      },
+    )
 
     return () => unsubscribe()
   }, [

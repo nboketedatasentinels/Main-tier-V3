@@ -26,8 +26,8 @@ import { format, formatDistanceToNow, isValid } from 'date-fns'
 import { AlertTriangle, Bell, CalendarClock, ClipboardCheck, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
-import { addDoc, collection, doc, updateDoc } from 'firebase/firestore'
-import { auth, db } from '@/services/firebase'
+import { auth } from '@/services/firebase'
+import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { DashboardErrorBoundary } from '@/components/ui/DashboardErrorBoundary'
@@ -1315,28 +1315,22 @@ export const PartnerDashboard: React.FC = () => {
         const status = riskStatus === 'critical' || riskStatus === 'at_risk' ? 'critical' : 'active'
         const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
 
-        const docRef = await addDoc(collection(db, 'interventions'), {
+        recordedInterventionId = await createIntervention({
           name,
           target,
           reason,
           status,
           deadline,
-          organization_code: organizationCode,
+          organizationCode,
           userId,
-          partner_id: user?.uid || null,
-          opened_at: nowIso,
-          status_changed_at: nowIso,
-          risk_verdicts: riskVerdicts,
+          partnerId: user?.uid || null,
+          riskVerdicts,
         })
-
-        recordedInterventionId = docRef.id
         engagementUserId = userId
         actionLabel = 'Added intervention case'
       } else {
-        const interventionRef = doc(db, 'interventions', caseId)
-
         if (action === 'start_intervention') {
-          await updateDoc(interventionRef, {
+          await updateIntervention(caseId, {
             status: 'active',
             status_changed_at: nowIso,
             started_at: nowIso,
@@ -1348,7 +1342,7 @@ export const PartnerDashboard: React.FC = () => {
             (typeof additionalData?.reason === 'string' && additionalData.reason.trim()) ||
             'Escalated by partner'
 
-          await updateDoc(interventionRef, {
+          await updateIntervention(caseId, {
             status: 'escalated',
             escalation_reason: reason,
             assigned_admin_name: selectedCase?.assignedAdminName || 'Governance Team',
@@ -1365,7 +1359,7 @@ export const PartnerDashboard: React.FC = () => {
             (typeof additionalData?.reason === 'string' && additionalData.reason.trim()) ||
             'Extension requested by partner'
 
-          await updateDoc(interventionRef, {
+          await updateIntervention(caseId, {
             deadline: parsedBase.toISOString(),
             extension_reason: extensionReason,
             extension_requested_at: nowIso,
@@ -1379,7 +1373,7 @@ export const PartnerDashboard: React.FC = () => {
           const nextStatus =
             outcome === 'improved' ? 'watch' : outcome === 'worsened' ? 'escalated' : 'active'
 
-          await updateDoc(interventionRef, {
+          await updateIntervention(caseId, {
             status: nextStatus,
             intervention_outcome: outcome,
             status_changed_at: nowIso,
