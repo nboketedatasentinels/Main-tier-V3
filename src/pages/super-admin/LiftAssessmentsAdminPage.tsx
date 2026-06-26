@@ -79,12 +79,18 @@ const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; o
               </Text>
             )}
             <HStack mt={1} spacing={2} flexWrap="wrap">
-              <Badge colorScheme="purple">{row.archetype}</Badge>
-              <Badge>LIFT {row.liftIndex}</Badge>
-              <Badge colorScheme={tierColor[row.leadTier] ?? 'gray'}>
-                Tier {row.leadTier} · {TIER_OWNERS[row.leadTier]}
-              </Badge>
-              {row.coachingTriggered && <Badge colorScheme="orange">Coaching flagged</Badge>}
+              {row.archetype ? (
+                <>
+                  <Badge colorScheme="purple">{row.archetype}</Badge>
+                  <Badge>LIFT {row.liftIndex}</Badge>
+                  <Badge colorScheme={tierColor[row.leadTier] ?? 'gray'}>
+                    Tier {row.leadTier} · {TIER_OWNERS[row.leadTier]}
+                  </Badge>
+                  {row.coachingTriggered && <Badge colorScheme="orange">Coaching flagged</Badge>}
+                </>
+              ) : (
+                <Badge colorScheme="gray">Incomplete assessment</Badge>
+              )}
             </HStack>
           </ModalHeader>
           <ModalCloseButton />
@@ -302,7 +308,9 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
           </Badge>
         </HStack>
         <Text fontSize="sm" color="gray.500" mt={-2}>
-          Visitors who completed the public assessment and left their details. Open a row for their full result and answers.
+          Visitors who started the public assessment and left their details. Details are captured up-front, so
+          leads marked <Box as="span" fontWeight="semibold">Incomplete</Box> entered their info but did not finish
+          the questions. Open a row for their full result and answers.
         </Text>
 
         <TableContainer bg="white" borderRadius="xl" borderWidth="1px">
@@ -330,15 +338,23 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
                   <Td>{r.intake.country ?? '-'}</Td>
                   <Td>{r.intake.phone ?? '-'}</Td>
                   <Td>
-                    <Badge colorScheme="purple">{r.archetype}</Badge>
+                    {r.archetype ? (
+                      <Badge colorScheme="purple">{r.archetype}</Badge>
+                    ) : (
+                      <Badge colorScheme="gray">Incomplete</Badge>
+                    )}
                   </Td>
                   <Td isNumeric fontWeight="bold">
-                    {r.liftIndex}
+                    {r.archetype ? r.liftIndex : '-'}
                   </Td>
                   <Td>
-                    <Badge colorScheme={tierColor[r.leadTier] ?? 'gray'}>
-                      {r.leadTier} · {TIER_OWNERS[r.leadTier]}
-                    </Badge>
+                    {r.archetype ? (
+                      <Badge colorScheme={tierColor[r.leadTier] ?? 'gray'}>
+                        {r.leadTier} · {TIER_OWNERS[r.leadTier]}
+                      </Badge>
+                    ) : (
+                      '-'
+                    )}
                   </Td>
                   <Td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-'}</Td>
                   <Td>

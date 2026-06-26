@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Box,
@@ -18,6 +18,8 @@ import { LiftAssessmentFlow } from '@/components/lift/LiftAssessmentFlow'
 import { LiftResultView } from '@/components/lift/LiftResultView'
 import { useAuth } from '@/hooks/useAuth'
 import {
+  completeLiftLead,
+  createLiftLead,
   hasCompletedLiftAssessment,
   submitLiftAssessment,
   submitLiftLead,
@@ -25,16 +27,20 @@ import {
 import type { IntakeAnswers, ItemScores, LiftResult } from '@/utils/liftScoring'
 
 /**
- * Public, assessment-first funnel: a visitor takes the LIFT assessment without
- * an account, then sees their results in a pop-up, then is sent to sign up /
- * sign in. Anonymous answers are stashed in the browser so the post-login gate
- * saves them to the new account (no retake). A visitor already signed in is
- * saved straight away.
+ * Public, assessment-first funnel (no account, no app access). A visitor enters
+ * their contact details, takes the LIFT assessment, sees their results in a
+ * pop-up, and lands on a thank-you page. The lead is saved UP-FRONT (the moment
+ * details are submitted) so the admin captures it even if they abandon the
+ * questions; it is completed with their scores when they finish. A visitor who
+ * happens to be signed in is saved to their own account instead.
  */
 export const PublicAssessmentPage: React.FC = () => {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
   const [result, setResult] = useState<LiftResult | null>(null)
+  // Id of the lead row created up-front (anonymous visitors only), so we can
+  // complete it with scores once the assessment is finished.
+  const leadIdRef = useRef<string | null>(null)
   // Once-in-a-lifetime: if this signed-in user already has saved results, never
   // show the countdown/assessment again - send them straight to their results.
   const [checking, setChecking] = useState(true)
@@ -64,6 +70,20 @@ export const PublicAssessmentPage: React.FC = () => {
     }
   }, [loading, user?.uid, navigate])
 
+  // Contact details submitted (before the questions). Save the anonymous lead
+  // immediately so the admin keeps it even if they never finish. Best-effort and
+  // fire-and-forget: we never block the visitor from starting the assessment.
+  const handleContactCaptured = (intake: IntakeAnswers) => {
+    if (user?.uid) return // signed-in visitors save to their account at the end
+    createLiftLead(intake)
+      .then((id) => {
+        leadIdRef.current = id
+      })
+      .catch(() => {
+        /* non-fatal: handleComplete falls back to a one-shot insert */
+      })
+  }
+
   const handleComplete = async (intake: IntakeAnswers, itemScores: ItemScores, computed: LiftResult) => {
     if (user?.uid) {
       try {
@@ -72,10 +92,15 @@ export const PublicAssessmentPage: React.FC = () => {
         /* the gate / results page reconcile if the save hiccups */
       }
     } else {
-      // Anonymous visitor: capture the lead (contact details live inside `intake`).
-      // Best-effort - we still show their results even if the save hiccups.
+      // Anonymous visitor: complete the lead we created up-front. If that insert
+      // never landed (no id), fall back to a one-shot insert so we still capture
+      // them. Best-effort - results show either way.
       try {
-        await submitLiftLead(intake, itemScores, computed)
+        if (leadIdRef.current) {
+          await completeLiftLead(leadIdRef.current, intake, itemScores, computed)
+        } else {
+          await submitLiftLead(intake, itemScores, computed)
+        }
       } catch {
         /* non-fatal: results still show, thank-you page still loads */
       }
@@ -155,13 +180,17 @@ export const PublicAssessmentPage: React.FC = () => {
             Your LIFT profile awaits
           </Text>
           <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" maxW="lg">
-            A few honest answers - about four minutes. When you finish, you&apos;ll create your account (or sign in)
-            to unlock and keep your results.
+            A few honest answers - about four minutes. See your full LIFT profile the moment you finish, and
+            we&apos;ll send it to your inbox. No account needed.
           </Text>
         </VStack>
 
         {/* No card - content sits directly on the page */}
-        <LiftAssessmentFlow onComplete={handleComplete} initialPhase="countdown" />
+        <LiftAssessmentFlow
+          onComplete={handleComplete}
+          onContactCaptured={handleContactCaptured}
+          initialPhase="countdown"
+        />
       </Container>
 
       {/* Results pop-up, shown when the assessment is complete */}
