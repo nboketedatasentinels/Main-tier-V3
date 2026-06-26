@@ -179,6 +179,94 @@ export const INTAKE_FIELDS: IntakeField[] = [
 export const TIER_A_SENIORITY = new Set(['c_suite', 'vp_head'])
 export const TIER_B_ROLES = new Set(['director', 'senior_manager', 'manager', 'team_lead'])
 
+// ── Contact capture (lead details collected AFTER the questions) ──────────────
+// Shown once the assessment is answered, just before results are revealed. The
+// values are merged into `intake` (jsonb) so they persist on both the signed-in
+// save and the anonymous pending-lift hand-off - no schema change needed.
+export type ContactFieldId =
+  | 'firstName'
+  | 'lastName'
+  | 'email'
+  | 'organisation'
+  | 'country'
+  | 'gender'
+  | 'phone'
+
+export interface ContactField {
+  id: ContactFieldId
+  label: string
+  type: 'text' | 'email' | 'tel' | 'select'
+  placeholder?: string
+  required: boolean
+  /** Layout hint: render this field at half width (pairs up on wider screens). */
+  half?: boolean
+  options?: { value: string; label: string }[]
+}
+
+export const GENDER_OPTIONS: { value: string; label: string }[] = [
+  { value: 'woman', label: 'Woman' },
+  { value: 'man', label: 'Man' },
+  { value: 'non_binary', label: 'Non-binary' },
+  { value: 'prefer_not', label: 'Prefer not to say' },
+]
+
+/** Country list for the contact step (alphabetical; value === label). */
+export const COUNTRIES: string[] = [
+  'Afghanistan', 'Albania', 'Algeria', 'Andorra', 'Angola', 'Antigua and Barbuda', 'Argentina',
+  'Armenia', 'Australia', 'Austria', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados',
+  'Belarus', 'Belgium', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana',
+  'Brazil', 'Brunei', 'Bulgaria', 'Burkina Faso', 'Burundi', 'Cambodia', 'Cameroon', 'Canada',
+  'Cape Verde', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo',
+  'Costa Rica', "Côte d'Ivoire", 'Croatia', 'Cuba', 'Cyprus', 'Czechia', 'Democratic Republic of the Congo',
+  'Denmark', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
+  'Equatorial Guinea', 'Eritrea', 'Estonia', 'Eswatini', 'Ethiopia', 'Fiji', 'Finland', 'France',
+  'Gabon', 'Gambia', 'Georgia', 'Germany', 'Ghana', 'Greece', 'Grenada', 'Guatemala', 'Guinea',
+  'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hungary', 'Iceland', 'India', 'Indonesia', 'Iran',
+  'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati',
+  'Kuwait', 'Kyrgyzstan', 'Laos', 'Latvia', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Liechtenstein',
+  'Lithuania', 'Luxembourg', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Malta',
+  'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia', 'Moldova', 'Monaco', 'Mongolia',
+  'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Netherlands',
+  'New Zealand', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'North Macedonia', 'Norway', 'Oman',
+  'Pakistan', 'Palau', 'Palestine', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines',
+  'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saint Kitts and Nevis', 'Saint Lucia',
+  'Saint Vincent and the Grenadines', 'Samoa', 'San Marino', 'Sao Tome and Principe', 'Saudi Arabia',
+  'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Singapore', 'Slovakia', 'Slovenia',
+  'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Spain', 'Sri Lanka',
+  'Sudan', 'Suriname', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan', 'Tanzania', 'Thailand',
+  'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu',
+  'Uganda', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan',
+  'Vanuatu', 'Vatican City', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe',
+]
+
+export const CONTACT_FIELDS: ContactField[] = [
+  { id: 'firstName', label: 'First name', type: 'text', placeholder: 'Jordan', required: true, half: true },
+  { id: 'lastName', label: 'Last name', type: 'text', placeholder: 'Mensah', required: true, half: true },
+  { id: 'email', label: 'Work email', type: 'email', placeholder: 'you@company.com', required: true },
+  {
+    id: 'organisation',
+    label: 'Organisation',
+    type: 'text',
+    placeholder: 'Where you lead',
+    required: true,
+  },
+  {
+    id: 'country',
+    label: 'Country',
+    type: 'select',
+    required: true,
+    options: COUNTRIES.map((c) => ({ value: c, label: c })),
+  },
+  { id: 'gender', label: 'Gender', type: 'select', required: true, options: GENDER_OPTIONS },
+  {
+    id: 'phone',
+    label: 'Phone number',
+    type: 'tel',
+    placeholder: 'Optional',
+    required: false,
+  },
+]
+
 // ── Offers / recommendations ─────────────────────────────────────────────────
 export interface Offer {
   key: string
@@ -209,50 +297,458 @@ export const TIER_OWNERS: Record<LeadTier, string> = {
   C: 'Ayakwa',
 }
 
-// ── Result-page copy per archetype (FINAL - provided by client) ───────────────
-export interface ArchetypeCopy {
-  strength: string
-  body: string
-  sayItOutLoud: string
-  /** Show the development edge line for this archetype? (false for Practitioner) */
-  showEdge: boolean
+// ── Result content per archetype (FINAL spec) ────────────────────────────────
+// Voice: American English, no em dashes, behaviour-based ("how you show up"),
+// never personality labels. Static per archetype: reveal, the four pillar
+// blocks, the carry/edge line, the three scenarios. Dynamic per person: the
+// scores/bar widths and the development path (chosen by the lowest pillar).
+
+/** Short pillar labels used in the pillar-by-pillar headings (e.g. "L · Leading Self"). */
+export const PILLAR_SHORT_LABEL: Record<PillarKey, string> = {
+  L: 'Leading Self',
+  I: 'Innovation and AI',
+  F: 'Fostering AI-Ready Teams',
+  T: 'Transforming Business',
 }
 
-export const ARCHETYPE_COPY: Record<Archetype, ArchetypeCopy> = {
+/** Accent colour per archetype (matches the official symbol's label colour). */
+export const ARCHETYPE_ACCENT: Record<Archetype, string> = {
+  Anchor: '#9c6f15',
+  Architect: '#2563eb',
+  Catalyst: '#247a4d',
+  Operator: '#6b21a8',
+  Practitioner: '#9c6f15',
+  'Emerging Leader': '#6b7280',
+}
+
+export interface PillarBlock {
+  key: PillarKey
+  /** This pillar's role for the archetype (drives the "(your strength/your edge)" tag). */
+  role?: 'strength' | 'edge'
+  howYouShowUp: string
+  asset: string
+  watchFor: string
+}
+
+export interface Scenario {
+  /** Bolded situation lead-in. */
+  situation: string
+  /** What it means for this leader and the move to make. */
+  guidance: string
+}
+
+export interface DevelopmentPath {
+  /** Descriptive line ("Your development edge is ..." or "Development path: ..."). */
+  body: string
+  /** The "Recommended next: ..." sentence. */
+  recommended: string
+}
+
+export interface ArchetypeContent {
+  /** Strongest-pillar line shown under the symbol. */
+  strongest: string
+  reveal: string
+  /** Four pillar blocks, strength first (spec order). */
+  pillarBlocks: PillarBlock[]
+  carryEdge: string
+  /** Three "how this plays out under pressure" scenarios. */
+  scenarios: Scenario[]
+  /** Practitioner & Emerging Leader use a fixed path; others resolve by lowest pillar. */
+  fixedDevelopmentPath?: DevelopmentPath
+}
+
+// ── Development paths, selected by the person's LOWEST pillar (Section 2) ──────
+export const DEVELOPMENT_PATHS: Record<PillarKey, DevelopmentPath> = {
+  L: {
+    body: 'Your development edge is Leading Self in the Age of AI: holding your judgment, steadiness, and ethics when the change gets loud.',
+    recommended: 'Recommended next: the Leading Self pillar journey.',
+  },
+  I: {
+    body: 'Your development edge is Innovation and AI for Digital Transformation: reading where AI and data genuinely fit, and telling ambition from reality.',
+    recommended: 'Recommended next: the Innovation and AI pillar journey.',
+  },
+  F: {
+    body: 'Your development edge is Fostering AI-Ready Teams: getting people to adopt change and dissolving the resistance that stalls most transformations.',
+    recommended: 'Recommended next: the Fostering AI-Ready Teams pillar journey.',
+  },
+  T: {
+    body: 'Your development edge is Transforming Business with AI: moving the business and the boardroom, and framing change for executives.',
+    recommended: 'Recommended next: the Transforming Business pillar journey.',
+  },
+}
+
+/** Foundation path used when there is no single lowest pillar to act on. */
+export const DEFAULT_DEVELOPMENT_PATH: DevelopmentPath = {
+  body: 'Your development path is the foundation across all four pillars.',
+  recommended:
+    'Recommended next: the Gateway Journey, The Transformation Practitioner, which builds the foundation across all four pillars.',
+}
+
+// ── Static chrome shared by the result page and email ─────────────────────────
+export const RESULT_CHROME = {
+  eyebrow: 'YOUR LIFT INDEX RESULT',
+  mission: 'We develop the leaders who make AI and digital transformation succeed.',
+  retake: 'Retake the LIFT Index in 90 days to see how your pattern shifts.',
+  carryBadge: 'CARRIES YOU',
+  edgeBadge: 'GROWTH EDGE',
+  primaryCta: 'Start the Gateway Journey',
+} as const
+
+export const ARCHETYPE_CONTENT: Record<Archetype, ArchetypeContent> = {
   Anchor: {
-    strength: 'Leading Self in the Age of AI',
-    body: 'You lead yourself well under pressure, and people feel it. You hold steadiness when transformations get loud, and that is rarer than it sounds. Your edge is turning that inner steadiness outward, into the business and the boardroom, so the calm becomes momentum others can follow.',
-    sayItOutLoud: 'I scored as The Anchor on the LIFT Index.',
-    showEdge: true,
+    strongest: 'Leading Self in the Age of AI',
+    reveal:
+      'You are the leader a team stays steady around when the transformation gets loud. Your judgment holds when the plan stops behaving, and people borrow that steadiness from you without realising they are doing it.',
+    pillarBlocks: [
+      {
+        key: 'L',
+        role: 'strength',
+        howYouShowUp:
+          'You regulate yourself before you act. When the plan stops behaving, your judgment holds, and the room reads that as permission to stay calm.',
+        asset: 'Teams co-regulate off you. You are the steady signal in a noisy change.',
+        watchFor:
+          'Steadiness can read as not feeling the urgency. Say the stakes out loud so calm is not mistaken for low investment.',
+      },
+      {
+        key: 'F',
+        howYouShowUp:
+          'People trust you, so you can move them through changes they would resist from someone else.',
+        asset: 'You hold real trust capital, the kind you can spend on a hard transition.',
+        watchFor:
+          "You may absorb the team's distress instead of surfacing it. Distribute the load before it sits only on you.",
+      },
+      {
+        key: 'I',
+        howYouShowUp:
+          'You weigh AI decisions calmly and are slow to chase a tool because it is loud this quarter.',
+        asset: 'You will not get stampeded by a board demo into adopting the wrong thing.',
+        watchFor:
+          'Calm can slide into wait. Put a date on the decision so wait does not quietly become the default.',
+      },
+      {
+        key: 'T',
+        role: 'edge',
+        howYouShowUp:
+          'You hold the work together on the ground, but you are less inclined to push it up into the boardroom and frame it for executives.',
+        asset: 'You give a programme a dependable delivery floor.',
+        watchFor:
+          'This is your edge. Your steadiness stays internal. The next step is translating it into executive language, sponsorship, and budget.',
+      },
+    ],
+    carryEdge:
+      'What carries you: Leading Self. Typical growth edge: Transforming Business. Your edge is not a weakness, it is the most useful place to put your next 90 days.',
+    scenarios: [
+      {
+        situation: 'A rollout stalls at month three.',
+        guidance:
+          'You will hold the team steady, which most leaders cannot. The risk is that you absorb the pressure instead of escalating it to the sponsors who can clear the blocker. Escalate earlier than feels comfortable.',
+      },
+      {
+        situation: 'The board wants AI, and wants it now.',
+        guidance:
+          'You will not get stampeded, and that is an asset. Make sure your calm reads as a position, not hesitation. Walk in with a dated adopt, adapt, or wait recommendation.',
+      },
+      {
+        situation: 'Your strongest person resists the change.',
+        guidance:
+          'You will keep the relationship intact where others would break it. Watch that you do not carry their resistance quietly on their behalf. Name it, and keep moving.',
+      },
+    ],
   },
   Architect: {
-    strength: 'Innovation and AI for Digital Transformation',
-    body: 'You see the technical path others miss. You read where AI and data actually fit, and you can tell ambition from reality. Your edge is the human side of the work, bringing teams and executives with you so the path you see actually gets walked.',
-    sayItOutLoud: 'I scored as The Architect on the LIFT Index.',
-    showEdge: true,
+    strongest: 'Innovation and AI for Digital Transformation',
+    reveal:
+      'You are the leader who sees the technical path before anyone else, and can tell a real AI fit from a loud one. Where others get sold, you assess.',
+    pillarBlocks: [
+      {
+        key: 'I',
+        role: 'strength',
+        howYouShowUp:
+          'You read where AI and data genuinely fit and separate ambition from reality quickly.',
+        asset: 'You will not waste a budget cycle on a tool that demos well and delivers nothing.',
+        watchFor:
+          'Being right is not the same as being followed. The clearest path still needs people willing to walk it.',
+      },
+      {
+        key: 'L',
+        howYouShowUp:
+          'You trust your own read, which steadies you, though the pressure of being the one who sees it can sit heavy.',
+        asset: 'Conviction other people borrow.',
+        watchFor: 'Hold the line between confidence and not hearing the room.',
+      },
+      {
+        key: 'F',
+        role: 'edge',
+        howYouShowUp:
+          'You can explain the path, but bringing people emotionally with you is less instinctive.',
+        asset: 'Clarity people can follow once they are on board.',
+        watchFor: 'A correct plan a team resists still fails. Spend real time on adoption, not just logic.',
+      },
+      {
+        key: 'T',
+        howYouShowUp:
+          'You can frame the technical case, but translating it into boardroom and budget language is less natural.',
+        asset: 'Substance behind the pitch.',
+        watchFor: 'Executives buy outcomes and risk, not architecture. Lead with what it does for the business.',
+      },
+    ],
+    carryEdge:
+      'What carries you: Innovation and AI. Typical growth edge: Fostering AI-Ready Teams. The path you see only matters if people walk it.',
+    scenarios: [
+      {
+        situation: 'The board wants a tool you know is wrong.',
+        guidance:
+          "You will see it clearly. The risk is winning the argument and losing the room. Frame your case in their language, not the tool's.",
+      },
+      {
+        situation: 'Your team is not adopting the path you mapped.',
+        guidance:
+          'You will be tempted to re-explain the logic. The block usually is not logic, it is buy-in. Bring them into the why before the what.',
+      },
+      {
+        situation: 'Two AI options, both plausible.',
+        guidance:
+          'This is your strength. Score them against the transformation, not the feature list, and put a date on the call so analysis does not become delay.',
+      },
+    ],
   },
   Catalyst: {
-    strength: 'Fostering AI-Ready Teams',
-    body: 'You get teams to actually adopt change. You read people and dissolve resistance that stops most transformations cold. Your edge is the executive frame, translating what you do on the ground into the language that wins sponsorship and budget upstairs.',
-    sayItOutLoud: 'I scored as The Catalyst on the LIFT Index.',
-    showEdge: true,
+    strongest: 'Fostering AI-Ready Teams',
+    reveal:
+      'You are the leader who gets people to actually move. Where transformations stall on resistance, you are the one who dissolves it.',
+    pillarBlocks: [
+      {
+        key: 'F',
+        role: 'strength',
+        howYouShowUp:
+          'You read team dynamics and shift trust, status, and safety so people adopt change instead of bracing against it.',
+        asset: 'You unstick the human resistance that kills most transformations.',
+        watchFor:
+          'You can carry the team so well that leadership never sees the cost. Make the work visible.',
+      },
+      {
+        key: 'L',
+        howYouShowUp: "You feel the team's state deeply, which is both your gift and your load.",
+        asset: 'Empathy that earns trust fast.',
+        watchFor: 'You may absorb everyone’s pressure and neglect your own steadiness. Protect it.',
+      },
+      {
+        key: 'I',
+        howYouShowUp: 'You focus on people over tools, so AI-fit judgment is less your instinct.',
+        asset: 'You keep technology in service of people.',
+        watchFor:
+          'Lean on the framework to tell real AI fit from hype, so you do not adopt just to keep people comfortable.',
+      },
+      {
+        key: 'T',
+        role: 'edge',
+        howYouShowUp:
+          'You move people on the ground, but translating that into the executive frame is less natural.',
+        asset: 'Proof that change is landing where it counts.',
+        watchFor: 'Your edge: turn ground-level wins into the language that wins sponsorship and budget.',
+      },
+    ],
+    carryEdge:
+      'What carries you: Fostering AI-Ready Teams. Typical growth edge: Transforming Business. The room that funds the work speaks a different language than the team doing it.',
+    scenarios: [
+      {
+        situation: 'A resistant team is stalling the rollout.',
+        guidance:
+          'This is your strength. You will move them. Make sure leadership sees what that took, or it gets taken for granted.',
+      },
+      {
+        situation: 'You need budget to keep the change alive.',
+        guidance:
+          'Translate the ground-level wins into business outcomes and risk. The boardroom funds what it can measure.',
+      },
+      {
+        situation: 'A tool everyone likes is not actually working.',
+        guidance:
+          'You will be tempted to keep the peace. Name the gap. Comfortable and effective are not the same thing.',
+      },
+    ],
   },
   Operator: {
-    strength: 'Transforming Business with AI',
-    body: 'You move the business and the room. You frame transformation for executives, read resistance, and build the operating system that holds change together. Your edge is closer to home: sustaining the people doing the work, and yourself, across the long haul.',
-    sayItOutLoud: 'I scored as The Operator on the LIFT Index.',
-    showEdge: true,
+    strongest: 'Transforming Business with AI',
+    reveal:
+      'You are the leader who moves the business and the room. You frame change for executives and build the operating system that holds it together.',
+    pillarBlocks: [
+      {
+        key: 'T',
+        role: 'strength',
+        howYouShowUp:
+          'You map stakeholders, frame transformation for the boardroom, and build the structure that makes change survive contact.',
+        asset: 'You make change stick at the organisational level, not just the pilot.',
+        watchFor:
+          'Systems move organisations, but people live inside them. Do not let the operating model outrun the humans in it.',
+      },
+      {
+        key: 'L',
+        role: 'edge',
+        howYouShowUp: 'You carry a lot of organisational weight, which can quietly cost you.',
+        asset: 'You hold under load.',
+        watchFor:
+          'Sustaining yourself across the long haul is the edge closest to home. Guard your own steadiness.',
+      },
+      {
+        key: 'I',
+        howYouShowUp: 'You make sound calls on where AI fits at the business level.',
+        asset: 'A strategic read on technology.',
+        watchFor:
+          "Stay close enough to the detail that the board's enthusiasm does not override the actual fit.",
+      },
+      {
+        key: 'F',
+        howYouShowUp:
+          'You move the structure, but the felt experience of the people inside it can get less attention.',
+        asset: 'Clear direction people can orient to.',
+        watchFor:
+          "Change adopted on paper is not adopted. Invest in the team's lived transition, not just the plan.",
+      },
+    ],
+    carryEdge:
+      'What carries you: Transforming Business. Typical growth edge: Leading Self. You can hold the organisation, the risk is not holding yourself.',
+    scenarios: [
+      {
+        situation: 'The transformation is on track but morale is sinking.',
+        guidance:
+          'You will see the plan working. Watch the people. Structure without sustained humans stalls at month three.',
+      },
+      {
+        situation: 'You are carrying the whole programme.',
+        guidance:
+          'Your strength is also your risk. Build in what sustains you and the people doing the work, or the long haul wins.',
+      },
+      {
+        situation: 'The board wants it faster.',
+        guidance:
+          'You can frame the trade-offs better than anyone. Make the human cost of speed part of the conversation, not an afterthought.',
+      },
+    ],
   },
   Practitioner: {
-    strength: 'Balanced across all four LIFT pillars',
-    body: 'You lead transformation across all four pillars. This is the integrated profile the LIFT framework points toward, and very few people land here. The work now is not catching up, it is staying sharp and helping others get here.',
-    sayItOutLoud: 'I scored as The Practitioner on the LIFT Index.',
-    showEdge: false,
+    strongest: 'Balanced across all four pillars',
+    reveal:
+      'You are strong across all four pillars at once, which is rare. This is what the whole LIFT framework points toward.',
+    pillarBlocks: [
+      {
+        key: 'L',
+        howYouShowUp: 'You hold yourself steady, and it is visible to the people around you.',
+        asset: 'A steady centre others orient to.',
+        watchFor:
+          'The risk at this level is autopilot. Keep examining your own patterns when the change gets hard.',
+      },
+      {
+        key: 'I',
+        howYouShowUp: 'You judge AI fit well and are hard to sell.',
+        asset: 'Sound technology decisions under pressure.',
+        watchFor: 'Stay curious. The tools keep moving, and yesterday’s read expires.',
+      },
+      {
+        key: 'F',
+        howYouShowUp: 'You move teams through change others would lose.',
+        asset: 'Adoption you can rely on.',
+        watchFor: 'Keep developing other people, not only delivering through them.',
+      },
+      {
+        key: 'T',
+        howYouShowUp: 'You move the business and the boardroom.',
+        asset: 'Organisational reach.',
+        watchFor: 'Use your range to lift the people around you, not to do it all yourself.',
+      },
+    ],
+    carryEdge:
+      'No single weak pillar. Your edge is not a gap, it is staying sharp and helping others get there.',
+    scenarios: [
+      {
+        situation: 'You are the most capable person in the room.',
+        guidance:
+          'The trap is doing it all yourself. Your highest-leverage move now is to multiply through others.',
+      },
+      {
+        situation: 'A pillar you are strong in starts to feel automatic.',
+        guidance: 'Comfort is the risk at your level. Keep pressure-testing your own reasoning.',
+      },
+      {
+        situation: 'Someone junior is where you were years ago.',
+        guidance:
+          'Developing them is worth more than out-delivering them. That is the work now.',
+      },
+    ],
+    fixedDevelopmentPath: {
+      body: "Development path: range and reach. Stay sharp across all four pillars and turn your capability into other people's.",
+      recommended:
+        'Recommended next: Top Voices membership and Transformation Coaching, which are built for practitioners at this level.',
+    },
   },
   'Emerging Leader': {
-    strength: 'All four LIFT pillars (your foundation to build)',
-    body: 'You are early, and you are in the right place. You have the instinct to lead transformation and the honesty to find out where you stand, which is exactly where every practitioner starts. The fastest way forward is the Gateway, the journey built for practitioners new to the framework.',
-    sayItOutLoud: 'I scored as an Emerging Leader on the LIFT Index. Ask me again in six months.',
-    showEdge: false,
+    strongest: 'Early across the four pillars',
+    reveal:
+      'You are early in the journey, with the instinct to lead transformation and the honesty to find out where you stand. That honesty is the part most people skip.',
+    pillarBlocks: [
+      {
+        key: 'L',
+        howYouShowUp: 'You are building the steadiness that holds under pressure.',
+        asset: 'Self-awareness, which is where it starts.',
+        watchFor: 'First step: notice your own pattern when change gets hard.',
+      },
+      {
+        key: 'I',
+        howYouShowUp: 'You are learning to tell a real AI fit from hype.',
+        asset: 'Openness without being sold.',
+        watchFor: 'First step: use the adopt, adapt, or wait lens on one real decision.',
+      },
+      {
+        key: 'F',
+        howYouShowUp: 'You are learning to move people through change.',
+        asset: 'Instinct for people.',
+        watchFor: 'First step: read where the trust and the resistance actually sit.',
+      },
+      {
+        key: 'T',
+        howYouShowUp: 'You are learning to frame change for the business.',
+        asset: 'Ambition pointed in the right direction.',
+        watchFor: 'First step: write one one-page proposal on a real opportunity.',
+      },
+    ],
+    carryEdge:
+      'Everything is a growth edge right now, and that is exactly where every practitioner started. The honesty to measure it is the hard part, and you have already done it.',
+    scenarios: [
+      {
+        situation: 'You are handed your first real change initiative.',
+        guidance:
+          'You will feel underprepared. Everyone does. Structure beats instinct here, and structure can be learned.',
+      },
+      {
+        situation: 'Someone senior asks what you think about an AI tool.',
+        guidance:
+          'You do not need to be the expert. A simple adopt, adapt, or wait read is more useful than a confident guess.',
+      },
+      {
+        situation: 'A teammate resists a change you are driving.',
+        guidance:
+          'Do not take it personally or push harder. Start by understanding the resistance.',
+      },
+    ],
+    fixedDevelopmentPath: {
+      body: 'Development path: build the foundation.',
+      recommended:
+        'Recommended next: the Gateway Journey, The Transformation Practitioner, which gives you the structure first so you do not learn it the hard way.',
+    },
   },
+}
+
+/**
+ * Resolve the development path for the result. Practitioner and Emerging Leader
+ * use their fixed path; every other archetype is driven off the ACTUAL lowest
+ * pillar (not the archetype's "typical" edge), per the spec.
+ */
+export const resolveDevelopmentPath = (
+  archetype: Archetype,
+  edge: PillarKey | null,
+): DevelopmentPath => {
+  const fixed = ARCHETYPE_CONTENT[archetype].fixedDevelopmentPath
+  if (fixed) return fixed
+  if (edge) return DEVELOPMENT_PATHS[edge]
+  return DEFAULT_DEVELOPMENT_PATH
 }

@@ -27,8 +27,16 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { Eye } from 'lucide-react'
-import { listLiftAssessments, type LiftAssessmentRow } from '@/services/liftAssessmentService'
-import { TIER_OWNERS, ITEMS, SCALE, INTAKE_FIELDS, PILLARS, type PillarKey } from '@/config/liftAssessment'
+import { listLiftAssessments, listLiftLeads, type LiftAssessmentRow } from '@/services/liftAssessmentService'
+import {
+  TIER_OWNERS,
+  ITEMS,
+  SCALE,
+  INTAKE_FIELDS,
+  PILLARS,
+  GENDER_OPTIONS,
+  type PillarKey,
+} from '@/config/liftAssessment'
 
 const tierColor: Record<string, string> = { A: 'red', B: 'purple', C: 'green' }
 
@@ -37,6 +45,21 @@ const intakeLabel = (fieldId: string, value: string | undefined): string => {
   const field = INTAKE_FIELDS.find((f) => f.id === fieldId)
   return field?.options.find((o) => o.value === value)?.label ?? value
 }
+
+const genderLabel = (value: string | undefined): string =>
+  value ? GENDER_OPTIONS.find((o) => o.value === value)?.label ?? value : '-'
+
+// Contact details captured in the public funnel live inside `intake`.
+const CONTACT_ROWS: { key: string; label: string }[] = [
+  { key: 'email', label: 'Work email' },
+  { key: 'phone', label: 'Phone' },
+  { key: 'organisation', label: 'Organisation' },
+  { key: 'country', label: 'Country' },
+  { key: 'gender', label: 'Gender' },
+]
+
+const hasContact = (row: LiftAssessmentRow): boolean =>
+  Boolean(row.intake.firstName || row.intake.lastName || row.intake.email || row.intake.organisation)
 
 const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; onClose: () => void }> = ({
   row,
@@ -66,6 +89,28 @@ const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; o
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
+            {/* Contact details (public-funnel leads only) */}
+            {hasContact(row) && (
+              <>
+                <Text fontSize="sm" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="0.06em" mb={2}>
+                  Contact details
+                </Text>
+                <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3} mb={5}>
+                  {CONTACT_ROWS.map((c) => (
+                    <Box key={c.key} borderWidth="1px" borderRadius="lg" px={3} py={2}>
+                      <Text fontSize="xs" color="gray.500">
+                        {c.label}
+                      </Text>
+                      <Text fontSize="sm" fontWeight="medium">
+                        {c.key === 'gender' ? genderLabel(row.intake.gender) : row.intake[c.key] || '-'}
+                      </Text>
+                    </Box>
+                  ))}
+                </SimpleGrid>
+                <Divider mb={4} />
+              </>
+            )}
+
             {/* Intake */}
             <Text fontSize="sm" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="0.06em" mb={2}>
               About them
@@ -131,6 +176,7 @@ const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; o
 
 export const LiftAssessmentsAdminPage: React.FC = () => {
   const [rows, setRows] = useState<LiftAssessmentRow[]>([])
+  const [leads, setLeads] = useState<LiftAssessmentRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<LiftAssessmentRow | null>(null)
@@ -138,8 +184,12 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
 
   useEffect(() => {
     let active = true
-    listLiftAssessments()
-      .then((data) => active && setRows(data))
+    Promise.all([listLiftAssessments(), listLiftLeads()])
+      .then(([assessments, leadRows]) => {
+        if (!active) return
+        setRows(assessments)
+        setLeads(leadRows)
+      })
       .catch((err) => active && setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => active && setLoading(false))
     return () => {
@@ -233,6 +283,80 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
                   <Td colSpan={12}>
                     <Text textAlign="center" py={6} color="gray.400">
                       No assessments completed yet.
+                    </Text>
+                  </Td>
+                </Tr>
+              )}
+            </Tbody>
+          </Table>
+        </TableContainer>
+
+        {/* Public funnel leads (no account) */}
+        <HStack justify="space-between" pt={4}>
+          <Heading size="md" color="brand.deepPlum">
+            Public leads (no account)
+          </Heading>
+          <Badge fontSize="md" colorScheme="orange">
+            {leads.length} leads
+          </Badge>
+        </HStack>
+        <Text fontSize="sm" color="gray.500" mt={-2}>
+          Visitors who completed the public assessment and left their details. Open a row for their full result and answers.
+        </Text>
+
+        <TableContainer bg="white" borderRadius="xl" borderWidth="1px">
+          <Table size="sm">
+            <Thead>
+              <Tr>
+                <Th>Name</Th>
+                <Th>Work email</Th>
+                <Th>Organisation</Th>
+                <Th>Country</Th>
+                <Th>Phone</Th>
+                <Th>Category</Th>
+                <Th isNumeric>LIFT</Th>
+                <Th>Tier (owner)</Th>
+                <Th>Date</Th>
+                <Th />
+              </Tr>
+            </Thead>
+            <Tbody>
+              {leads.map((r) => (
+                <Tr key={r.uid} _hover={{ bg: 'gray.50' }}>
+                  <Td>{r.fullName ?? '-'}</Td>
+                  <Td>{r.intake.email ?? '-'}</Td>
+                  <Td>{r.intake.organisation ?? '-'}</Td>
+                  <Td>{r.intake.country ?? '-'}</Td>
+                  <Td>{r.intake.phone ?? '-'}</Td>
+                  <Td>
+                    <Badge colorScheme="purple">{r.archetype}</Badge>
+                  </Td>
+                  <Td isNumeric fontWeight="bold">
+                    {r.liftIndex}
+                  </Td>
+                  <Td>
+                    <Badge colorScheme={tierColor[r.leadTier] ?? 'gray'}>
+                      {r.leadTier} · {TIER_OWNERS[r.leadTier]}
+                    </Badge>
+                  </Td>
+                  <Td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : '-'}</Td>
+                  <Td>
+                    <IconButton
+                      aria-label="View lead"
+                      icon={<Eye size={18} />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="purple"
+                      onClick={() => openAnswers(r)}
+                    />
+                  </Td>
+                </Tr>
+              ))}
+              {leads.length === 0 && (
+                <Tr>
+                  <Td colSpan={10}>
+                    <Text textAlign="center" py={6} color="gray.400">
+                      No public leads yet.
                     </Text>
                   </Td>
                 </Tr>

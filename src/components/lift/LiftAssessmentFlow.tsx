@@ -1,13 +1,29 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Box, Button, Flex, HStack, Spinner, Text, VStack } from '@chakra-ui/react'
+import {
+  Box,
+  Button,
+  Flex,
+  FormControl,
+  FormErrorMessage,
+  FormLabel,
+  HStack,
+  Input,
+  Select,
+  SimpleGrid,
+  Spinner,
+  Text,
+  VStack,
+} from '@chakra-ui/react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowLeft, Check, Sparkles } from 'lucide-react'
+import { ArrowLeft, Check, Gift, Lock, Sparkles } from 'lucide-react'
 import {
   ITEMS,
   SCALE,
   INTAKE_FIELDS,
+  CONTACT_FIELDS,
   PILLARS,
   type AssessmentItem,
+  type ContactField,
   type IntakeField,
   type PillarKey,
 } from '@/config/liftAssessment'
@@ -66,7 +82,7 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
   )
 
   const total = steps.length
-  const [phase, setPhase] = useState<'intro' | 'countdown' | 'questions'>(initialPhase)
+  const [phase, setPhase] = useState<'intro' | 'countdown' | 'questions' | 'details'>(initialPhase)
   const [index, setIndex] = useState(0)
   const [dir, setDir] = useState(1)
   const [intake, setIntake] = useState<IntakeAnswers>({})
@@ -95,17 +111,28 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
   )
 
   const advanceAfter = useCallback(
-    (nextIntake: IntakeAnswers, nextScores: ItemScores) => {
+    (_nextIntake: IntakeAnswers, _nextScores: ItemScores) => {
       if (advanceTimer.current) window.clearTimeout(advanceTimer.current)
       advanceTimer.current = window.setTimeout(() => {
-        if (isLast) finish(nextIntake, nextScores)
+        // Last question answered -> collect contact details before revealing results.
+        if (isLast) setPhase('details')
         else {
           setDir(1)
           setIndex((i) => Math.min(i + 1, total - 1))
         }
       }, 240)
     },
-    [finish, isLast, total],
+    [isLast, total],
+  )
+
+  // Contact step submitted: fold the details into intake, then score + finish.
+  const handleDetails = useCallback(
+    (contact: Partial<IntakeAnswers>) => {
+      const merged = { ...intake, ...contact }
+      setIntake(merged)
+      finish(merged, scores)
+    },
+    [finish, intake, scores],
   )
 
   const pickIntake = useCallback(
@@ -137,7 +164,7 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
   // Keyboard: 1-5 answers a scale item, number keys pick an intake option, Backspace goes back.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (scoring) return
+      if (scoring || phase !== 'questions') return
       if (e.key === 'Backspace' && index > 0) {
         e.preventDefault()
         goBack()
@@ -155,7 +182,7 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [goBack, index, pickIntake, pickItem, scoring, step])
+  }, [goBack, index, phase, pickIntake, pickItem, scoring, step])
 
   const progress = Math.round(((index + (scoring ? 1 : 0)) / total) * 100)
   const selectedIntake = step.kind === 'intake' ? intake[step.field.id] : undefined
@@ -183,6 +210,10 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
 
   if (phase === 'countdown') {
     return <Countdown onDone={() => setPhase('questions')} />
+  }
+
+  if (phase === 'details') {
+    return <ContactDetails onSubmit={handleDetails} submitting={Boolean(submitting)} />
   }
 
   return (
@@ -403,6 +434,205 @@ const Countdown: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   )
 }
 
+// ── Contact capture: the moment the assessment is done, before results show.
+// Framed as the unlock - "your profile + points are ready, tell us where to send them."
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const ContactDetails: React.FC<{
+  onSubmit: (contact: Partial<IntakeAnswers>) => void
+  submitting: boolean
+}> = ({ onSubmit, submitting }) => {
+  const [values, setValues] = useState<Record<string, string>>({})
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const setField = (id: string, value: string) => {
+    setValues((v) => ({ ...v, [id]: value }))
+    // Clear an error as soon as the user starts fixing it.
+    if (errors[id]) setErrors((e) => ({ ...e, [id]: '' }))
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const next: Record<string, string> = {}
+    for (const field of CONTACT_FIELDS) {
+      const val = (values[field.id] ?? '').trim()
+      if (field.required && !val) {
+        next[field.id] = `${field.label} is required`
+      } else if (field.id === 'email' && val && !EMAIL_RE.test(val)) {
+        next[field.id] = 'Enter a valid email address'
+      }
+    }
+    setErrors(next)
+    if (Object.keys(next).length > 0) return
+
+    // Hand back trimmed, non-empty values only.
+    const contact: Partial<IntakeAnswers> = {}
+    for (const field of CONTACT_FIELDS) {
+      const val = (values[field.id] ?? '').trim()
+      if (val) contact[field.id] = val
+    }
+    onSubmit(contact)
+  }
+
+  const half = CONTACT_FIELDS.filter((f) => f.half)
+  const full = CONTACT_FIELDS.filter((f) => !f.half)
+
+  const renderField = (field: ContactField) => {
+    const value = values[field.id] ?? ''
+    const error = errors[field.id]
+    const focusStyles = {
+      borderColor: GOLD,
+      boxShadow: `0 0 0 1px ${GOLD}`,
+    }
+    return (
+      <FormControl key={field.id} isInvalid={Boolean(error)} isRequired={field.required}>
+        <FormLabel fontSize="sm" fontWeight="semibold" color={PLUM} mb={1.5}>
+          {field.label}
+        </FormLabel>
+        {field.type === 'select' ? (
+          <Select
+            value={value}
+            onChange={(e) => setField(field.id, e.target.value)}
+            placeholder={`Select ${field.label.toLowerCase()}`}
+            size="lg"
+            borderRadius="xl"
+            borderWidth="2px"
+            borderColor="gray.200"
+            bg="white"
+            color={value ? 'gray.800' : 'gray.400'}
+            _hover={{ borderColor: 'gray.300' }}
+            _focus={focusStyles}
+          >
+            {field.options?.map((opt) => (
+              <option key={opt.value} value={opt.value} style={{ color: '#1A202C' }}>
+                {opt.label}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            type={field.type}
+            value={value}
+            onChange={(e) => setField(field.id, e.target.value)}
+            placeholder={field.placeholder}
+            size="lg"
+            borderRadius="xl"
+            borderWidth="2px"
+            borderColor="gray.200"
+            bg="white"
+            _hover={{ borderColor: 'gray.300' }}
+            _focus={focusStyles}
+            _placeholder={{ color: 'gray.400' }}
+          />
+        )}
+        <FormErrorMessage fontSize="xs">{error}</FormErrorMessage>
+      </FormControl>
+    )
+  }
+
+  return (
+    <MotionBox
+      as="form"
+      onSubmit={handleSubmit}
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+    >
+      <VStack align="stretch" spacing={6}>
+        {/* The reward framing - results + points are waiting */}
+        <VStack spacing={3} textAlign="center">
+          <Flex
+            display="inline-flex"
+            align="center"
+            gap={2}
+            px={4}
+            py={1.5}
+            borderRadius="full"
+            bg="#fbf2d8"
+            color="#9c6f15"
+            fontWeight="bold"
+            fontSize="sm"
+            mx="auto"
+          >
+            <Sparkles size={16} /> Your results are ready
+          </Flex>
+          <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.2">
+            Where should we send your LIFT profile?
+          </Text>
+          <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" maxW="md" mx="auto">
+            You&apos;ve done the hard part. Add your details to reveal your full profile - your archetype, your
+            LIFT Index, and the personalised next steps our team will share with you.
+          </Text>
+        </VStack>
+
+        {/* Gold reward strip - makes the unlock tangible */}
+        <Flex
+          align="center"
+          gap={3}
+          px={4}
+          py={3}
+          borderRadius="xl"
+          bgGradient="linear(to-r, #fffaf0, #fbf2d8)"
+          borderWidth="1px"
+          borderColor="#f3e2b3"
+        >
+          <Flex
+            align="center"
+            justify="center"
+            boxSize="38px"
+            borderRadius="full"
+            bg={GOLD}
+            color={PLUM}
+            flexShrink={0}
+          >
+            <Gift size={20} />
+          </Flex>
+          <Box>
+            <Text fontWeight="bold" color={PLUM} fontSize="sm">
+              Your full LIFT profile is ready
+            </Text>
+            <Text fontSize="xs" color="#9c6f15">
+              Enter your details to reveal your archetype and score in the next step.
+            </Text>
+          </Box>
+        </Flex>
+
+        {/* The form */}
+        <VStack align="stretch" spacing={4}>
+          <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+            {half.map(renderField)}
+          </SimpleGrid>
+          {full.map(renderField)}
+        </VStack>
+
+        <Button
+          type="submit"
+          isLoading={submitting}
+          loadingText="Revealing your profile"
+          rightIcon={<Sparkles size={18} />}
+          size="lg"
+          py={7}
+          borderRadius="full"
+          bg={PLUM}
+          color="white"
+          fontWeight="bold"
+          fontSize="md"
+          shadow="lg"
+          _hover={{ bg: '#3a0d44' }}
+          _active={{ transform: 'scale(0.99)' }}
+        >
+          Reveal my LIFT profile
+        </Button>
+
+        <Flex align="center" justify="center" gap={1.5} color="gray.400">
+          <Lock size={13} />
+          <Text fontSize="xs">Your details are private and used only to deliver your results.</Text>
+        </Flex>
+      </VStack>
+    </MotionBox>
+  )
+}
+
 const ChoiceRow: React.FC<{ label: string; active: boolean; onClick: () => void }> = ({
   label,
   active,
@@ -427,7 +657,7 @@ const ChoiceRow: React.FC<{ label: string; active: boolean; onClick: () => void 
     _active={{ transform: 'scale(0.99)' }}
   >
     <Flex align="center" justify="space-between" gap={3}>
-      <Text>{label}</Text>
+      <Text color={active ? 'white' : 'inherit'}>{label}</Text>
       {active && <Check size={20} />}
     </Flex>
   </Box>

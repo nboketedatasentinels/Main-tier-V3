@@ -13,6 +13,7 @@ import { MainLayout } from '@/layouts/MainLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { HomePage } from '@/pages/home/HomePage'
 import { PublicAssessmentPage } from '@/pages/assessment/PublicAssessmentPage'
+import { ThankYouPage } from '@/pages/assessment/ThankYouPage'
 import { PartnerLandingPage } from '@/pages/partner/PartnerLandingPage'
 import { PartnerSignupPage } from '@/pages/partner/PartnerSignupPage'
 
@@ -148,6 +149,7 @@ export const AppRoutes = () => {
         {/* Public routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/assessment" element={<PublicAssessmentPage />} />
+        <Route path="/assessment/thank-you" element={<ThankYouPage />} />
         <Route path="/partners" element={<PartnerLandingPage />} />
         <Route path="/partner-signup" element={<PartnerSignupPage />} />
         <Route path="/partner-signin" element={<PartnerSignupPage initialMode="signin" />} />

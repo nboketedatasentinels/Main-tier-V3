@@ -17,8 +17,11 @@ import {
 import { LiftAssessmentFlow } from '@/components/lift/LiftAssessmentFlow'
 import { LiftResultView } from '@/components/lift/LiftResultView'
 import { useAuth } from '@/hooks/useAuth'
-import { savePendingLift } from '@/utils/pendingLift'
-import { hasCompletedLiftAssessment, submitLiftAssessment } from '@/services/liftAssessmentService'
+import {
+  hasCompletedLiftAssessment,
+  submitLiftAssessment,
+  submitLiftLead,
+} from '@/services/liftAssessmentService'
 import type { IntakeAnswers, ItemScores, LiftResult } from '@/utils/liftScoring'
 
 /**
@@ -69,14 +72,25 @@ export const PublicAssessmentPage: React.FC = () => {
         /* the gate / results page reconcile if the save hiccups */
       }
     } else {
-      savePendingLift({ intake, itemScores })
+      // Anonymous visitor: capture the lead (contact details live inside `intake`).
+      // Best-effort - we still show their results even if the save hiccups.
+      try {
+        await submitLiftLead(intake, itemScores, computed)
+      } catch {
+        /* non-fatal: results still show, thank-you page still loads */
+      }
     }
     // Show their results in a pop-up first; the continue button routes onward.
     setResult(computed)
   }
 
   const handleContinue = () => {
-    navigate(user?.uid ? '/app/lift-results' : '/signup?from=assessment', { replace: true })
+    if (user?.uid) {
+      navigate('/app/lift-results', { replace: true })
+    } else {
+      // No account, no platform access - thank them and recap their result.
+      navigate('/assessment/thank-you', { replace: true, state: { result } })
+    }
   }
 
   if (loading || checking) {
@@ -175,7 +189,7 @@ export const PublicAssessmentPage: React.FC = () => {
                 leadTier={result.leadTier}
                 coachingTriggered={result.coachingTriggered}
                 onContinue={handleContinue}
-                continueLabel={user?.uid ? 'Continue' : 'Create your account to save this'}
+                continueLabel="Continue"
               />
             )}
           </ModalBody>
