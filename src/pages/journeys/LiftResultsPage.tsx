@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Box, Center, Heading, Spinner, Text, VStack } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { LiftResultView } from '@/components/lift/LiftResultView'
@@ -19,6 +20,7 @@ const offerByKey = (key: string): Offer => {
 
 export const LiftResultsPage: React.FC = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [row, setRow] = useState<LiftAssessmentRow | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -70,6 +72,7 @@ export const LiftResultsPage: React.FC = () => {
           recommendedOffer={offerByKey(row.recommendedOffer)}
           leadTier={row.leadTier}
           coachingTriggered={row.coachingTriggered}
+          onPrimaryCta={() => navigate('/app/journeys')}
         />
       </VStack>
     </Box>

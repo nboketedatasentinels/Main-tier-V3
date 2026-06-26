@@ -29,6 +29,18 @@ export interface LiftResultViewProps {
   recommendedOffer: Offer
   leadTier: LeadTier
   coachingTriggered: boolean
+  /**
+   * 'public' = the anonymous funnel result. It ENDS at the LIFT readout: the
+   * "What to build next" recommendation and coaching offer are omitted (those go
+   * to the follow-up email, not the page). 'app' = the signed-in member view,
+   * which shows the next-step recommendation and offer CTAs. Defaults to 'app'.
+   */
+  variant?: 'public' | 'app'
+  /** App-only: handler for the "What to build next" primary CTA. The button is
+   *  hidden unless this is provided, so we never render a dead link. */
+  onPrimaryCta?: () => void
+  /** App-only: handler for the coaching CTA. Hidden unless provided. */
+  onBookCoaching?: () => void
   /** Optional CTA shown at the bottom (e.g. "Continue to the app"). */
   onContinue?: () => void
   continueLabel?: string
@@ -54,9 +66,13 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
   archetype,
   developmentEdge,
   coachingTriggered,
+  variant = 'app',
+  onPrimaryCta,
+  onBookCoaching,
   onContinue,
   continueLabel = 'Continue',
 }) => {
+  const isPublic = variant === 'public'
   const content = ARCHETYPE_CONTENT[archetype]
   const accent = ARCHETYPE_ACCENT[archetype]
   const path = resolveDevelopmentPath(archetype, developmentEdge)
@@ -239,30 +255,44 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
         </VStack>
       </Section>
 
-      {/* 6 · What to build next */}
-      <Section>
-        <SectionTitle>What to build next</SectionTitle>
-        <Text color="gray.700" lineHeight="1.7">
-          {path.body}
-        </Text>
-        <Text color={PLUM} fontWeight="semibold" mt={2} lineHeight="1.6">
-          {path.recommended}
-        </Text>
-        <Button mt={4} bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start">
-          {RESULT_CHROME.primaryCta}
-        </Button>
-      </Section>
+      {/* 6 · What to build next (app only - public gets this in the follow-up email) */}
+      {!isPublic && (
+        <Section>
+          <SectionTitle>What to build next</SectionTitle>
+          <Text color="gray.700" lineHeight="1.7">
+            {path.body}
+          </Text>
+          <Text color={PLUM} fontWeight="semibold" mt={2} lineHeight="1.6">
+            {path.recommended}
+          </Text>
+          {onPrimaryCta && (
+            <Button mt={4} bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start" onClick={onPrimaryCta}>
+              {RESULT_CHROME.primaryCta}
+            </Button>
+          )}
+        </Section>
+      )}
 
-      {/* Coaching overlay (any archetype, when triggered) */}
-      {coachingTriggered && (
+      {/* Coaching overlay (app only, any archetype, when triggered) */}
+      {!isPublic && coachingTriggered && (
         <Box bg="orange.50" borderRadius="2xl" p={{ base: 5, md: 6 }} borderWidth="1px" borderColor="orange.200">
           <SectionTitle>Transformation Coaching</SectionTitle>
           <Text fontSize="sm" color="gray.700">
             {COACHING.single} or {COACHING.pack}. {COACHING.blurb}
           </Text>
-          <Button mt={3} variant="outline" borderColor={FLAME} color={FLAME} _hover={{ bg: 'orange.100' }} size="sm">
-            Book a coaching session
-          </Button>
+          {onBookCoaching && (
+            <Button
+              mt={3}
+              variant="outline"
+              borderColor={FLAME}
+              color={FLAME}
+              _hover={{ bg: 'orange.100' }}
+              size="sm"
+              onClick={onBookCoaching}
+            >
+              Book a coaching session
+            </Button>
+          )}
         </Box>
       )}
 
