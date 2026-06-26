@@ -36,6 +36,12 @@ const MotionBox = motion(Box)
 
 interface LiftAssessmentFlowProps {
   onComplete: (intake: IntakeAnswers, itemScores: ItemScores, result: LiftResult) => void
+  /**
+   * Fired the moment contact details are submitted (before the questions). The
+   * public funnel uses this to save the lead up-front, so it is captured even if
+   * the visitor abandons the assessment partway.
+   */
+  onContactCaptured?: (contact: IntakeAnswers) => void
   submitting?: boolean
   /** Where the flow opens. Public funnel passes 'countdown' (landing was the intro). */
   initialPhase?: 'intro' | 'countdown' | 'questions'
@@ -69,6 +75,7 @@ const shuffle = <T,>(arr: T[]): T[] => {
 
 export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
   onComplete,
+  onContactCaptured,
   submitting,
   initialPhase = 'intro',
 }) => {
@@ -111,28 +118,32 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
   )
 
   const advanceAfter = useCallback(
-    (_nextIntake: IntakeAnswers, _nextScores: ItemScores) => {
+    (nextIntake: IntakeAnswers, nextScores: ItemScores) => {
       if (advanceTimer.current) window.clearTimeout(advanceTimer.current)
       advanceTimer.current = window.setTimeout(() => {
-        // Last question answered -> collect contact details before revealing results.
-        if (isLast) setPhase('details')
+        // Last question answered -> score + reveal results (details were collected up-front).
+        if (isLast) finish(nextIntake, nextScores)
         else {
           setDir(1)
           setIndex((i) => Math.min(i + 1, total - 1))
         }
       }, 240)
     },
-    [isLast, total],
+    [finish, isLast, total],
   )
 
-  // Contact step submitted: fold the details into intake, then score + finish.
+  // Contact step submitted (up-front, before the questions): fold the details
+  // into intake, hand them to the funnel to save the lead now, then start.
   const handleDetails = useCallback(
     (contact: Partial<IntakeAnswers>) => {
       const merged = { ...intake, ...contact }
       setIntake(merged)
-      finish(merged, scores)
+      onContactCaptured?.(merged)
+      setDir(1)
+      setIndex(0)
+      setPhase('questions')
     },
-    [finish, intake, scores],
+    [intake, onContactCaptured],
   )
 
   const pickIntake = useCallback(
@@ -209,7 +220,7 @@ export const LiftAssessmentFlow: React.FC<LiftAssessmentFlowProps> = ({
   }
 
   if (phase === 'countdown') {
-    return <Countdown onDone={() => setPhase('questions')} />
+    return <Countdown onDone={() => setPhase('details')} />
   }
 
   if (phase === 'details') {
@@ -539,7 +550,7 @@ const ContactDetails: React.FC<{
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
       <VStack align="stretch" spacing={6}>
-        {/* The reward framing - results + points are waiting */}
+        {/* Up-front framing - a few details, then straight into the assessment */}
         <VStack spacing={3} textAlign="center">
           <Flex
             display="inline-flex"
@@ -554,18 +565,18 @@ const ContactDetails: React.FC<{
             fontSize="sm"
             mx="auto"
           >
-            <Sparkles size={16} /> Your results are ready
+            <Sparkles size={16} /> First, the basics
           </Flex>
           <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.2">
-            Where should we send your LIFT profile?
+            Where should we send your results?
           </Text>
           <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" maxW="md" mx="auto">
-            You&apos;ve done the hard part. Add your details to reveal your full profile - your archetype, your
-            LIFT Index, and the personalised next steps our team will share with you.
+            Add your details so we can send your full LIFT profile - your archetype, your LIFT Index, and the
+            personalised next steps our team will share with you. Then you&apos;ll go straight into the assessment.
           </Text>
         </VStack>
 
-        {/* Gold reward strip - makes the unlock tangible */}
+        {/* Gold strip - sets the expectation for what's next */}
         <Flex
           align="center"
           gap={3}
@@ -589,10 +600,10 @@ const ContactDetails: React.FC<{
           </Flex>
           <Box>
             <Text fontWeight="bold" color={PLUM} fontSize="sm">
-              Your full LIFT profile is ready
+              About 4 minutes, then your full profile
             </Text>
             <Text fontSize="xs" color="#9c6f15">
-              Enter your details to reveal your archetype and score in the next step.
+              We&apos;ll email your LIFT profile so you never lose it.
             </Text>
           </Box>
         </Flex>
@@ -608,7 +619,7 @@ const ContactDetails: React.FC<{
         <Button
           type="submit"
           isLoading={submitting}
-          loadingText="Revealing your profile"
+          loadingText="Saving your details"
           rightIcon={<Sparkles size={18} />}
           size="lg"
           py={7}
@@ -621,7 +632,7 @@ const ContactDetails: React.FC<{
           _hover={{ bg: '#3a0d44' }}
           _active={{ transform: 'scale(0.99)' }}
         >
-          Reveal my LIFT profile
+          Start the assessment
         </Button>
 
         <Flex align="center" justify="center" gap={1.5} color="gray.400">

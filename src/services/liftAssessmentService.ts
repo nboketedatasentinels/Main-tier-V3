@@ -100,7 +100,66 @@ export const submitLiftAssessment = async (
 }
 
 /**
- * Persist an ANONYMOUS lead from the public funnel (no account). The visitor's
+ * Create an ANONYMOUS lead UP-FRONT, the moment contact details are submitted
+ * (before the questions). Returns the new lead id so the funnel can complete it
+ * once the visitor finishes. Capturing here - rather than at the end - means the
+ * admin keeps the lead even if the visitor abandons the assessment partway.
+ * Best-effort: failures are surfaced to the caller, which still runs the flow.
+ */
+export const createLiftLead = async (intake: IntakeAnswers): Promise<string | null> => {
+  // Generate the id client-side: anonymous visitors cannot read rows back (the
+  // SELECT policy is partner/admin-only), so we cannot rely on insert-returning.
+  // Owning the id up-front lets us complete the same row later via UPDATE.
+  const id = crypto.randomUUID()
+  const { error } = await supabase.from('lift_leads').insert({
+    id,
+    first_name: intake.firstName ?? null,
+    last_name: intake.lastName ?? null,
+    email: intake.email ?? null,
+    organisation: intake.organisation ?? null,
+    country: intake.country ?? null,
+    gender: intake.gender ?? null,
+    phone: intake.phone ?? null,
+    intake,
+  })
+  if (error) throw new Error(error.message)
+  return id
+}
+
+/**
+ * Complete a previously-created lead with the assessment scores/result. Locks
+ * the row (sets `completed_at`) so it stays immutable from the client after.
+ */
+export const completeLiftLead = async (
+  id: string,
+  intake: IntakeAnswers,
+  itemScores: ItemScores,
+  result: LiftResult,
+): Promise<void> => {
+  const { error } = await supabase
+    .from('lift_leads')
+    .update({
+      intake,
+      item_scores: itemScores,
+      pillar_l: result.pillars.L,
+      pillar_i: result.pillars.I,
+      pillar_f: result.pillars.F,
+      pillar_t: result.pillars.T,
+      lift_index: result.liftIndex,
+      archetype: result.archetype,
+      development_edge: result.developmentEdge,
+      recommended_offer: result.recommendedOffer.key,
+      lead_tier: result.leadTier,
+      coaching_triggered: result.coachingTriggered,
+      completed_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+}
+
+/**
+ * Persist an ANONYMOUS lead from the public funnel in one shot (no account).
+ * Fallback for when the up-front `createLiftLead` did not yield an id - the
  * contact details are carried inside `intake`; we also lift them into dedicated
  * columns so partner/admin can list/filter leads without digging into jsonb.
  * Best-effort: failures are surfaced to the caller, which still shows results.
@@ -130,6 +189,7 @@ export const submitLiftLead = async (
     recommended_offer: result.recommendedOffer.key,
     lead_tier: result.leadTier,
     coaching_triggered: result.coachingTriggered,
+    completed_at: new Date().toISOString(),
   })
   if (error) throw new Error(error.message)
 }

@@ -247,8 +247,8 @@ export const CONTACT_FIELDS: ContactField[] = [
     id: 'organisation',
     label: 'Organisation',
     type: 'text',
-    placeholder: 'Where you lead',
-    required: true,
+    placeholder: 'Where you lead (optional)',
+    required: false,
   },
   {
     id: 'country',
