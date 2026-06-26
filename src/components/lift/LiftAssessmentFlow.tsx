@@ -21,6 +21,8 @@ import {
   SCALE,
   INTAKE_FIELDS,
   CONTACT_FIELDS,
+  COUNTRY_DIAL_CODES,
+  DIAL_CODES,
   PILLARS,
   type AssessmentItem,
   type ContactField,
@@ -457,7 +459,15 @@ const ContactDetails: React.FC<{
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const setField = (id: string, value: string) => {
-    setValues((v) => ({ ...v, [id]: value }))
+    setValues((v) => {
+      const next = { ...v, [id]: value }
+      // Auto-fill the phone dial code from the chosen country (still editable).
+      if (id === 'country') {
+        const code = COUNTRY_DIAL_CODES[value]
+        if (code) next.dialCode = code
+      }
+      return next
+    })
     // Clear an error as soon as the user starts fixing it.
     if (errors[id]) setErrors((e) => ({ ...e, [id]: '' }))
   }
@@ -482,6 +492,17 @@ const ContactDetails: React.FC<{
       const val = (values[field.id] ?? '').trim()
       if (val) contact[field.id] = val
     }
+    // Combine dial code + national number into one E.164-ish string, dropping a
+    // leading zero when a code is present (e.g. +254 + 0712... -> +254712...).
+    const rawPhone = (values.phone ?? '').trim()
+    if (rawPhone) {
+      const code = (values.dialCode ?? '').trim()
+      let digits = rawPhone.replace(/\D/g, '')
+      if (code) digits = digits.replace(/^0+/, '')
+      contact.phone = code ? `${code}${digits}` : digits
+    } else {
+      delete contact.phone
+    }
     onSubmit(contact)
   }
 
@@ -500,7 +521,49 @@ const ContactDetails: React.FC<{
         <FormLabel fontSize="sm" fontWeight="semibold" color={PLUM} mb={1.5}>
           {field.label}
         </FormLabel>
-        {field.type === 'select' ? (
+        {field.id === 'phone' ? (
+          <HStack spacing={2} align="stretch">
+            <Select
+              aria-label="Country dial code"
+              value={values.dialCode ?? ''}
+              onChange={(e) => setField('dialCode', e.target.value)}
+              w="110px"
+              flexShrink={0}
+              size="lg"
+              borderRadius="xl"
+              borderWidth="2px"
+              borderColor="gray.200"
+              bg="white"
+              color={values.dialCode ? 'gray.800' : 'gray.400'}
+              _hover={{ borderColor: 'gray.300' }}
+              _focus={focusStyles}
+            >
+              <option value="" disabled>
+                +code
+              </option>
+              {DIAL_CODES.map((code) => (
+                <option key={code} value={code} style={{ color: '#1A202C' }}>
+                  {code}
+                </option>
+              ))}
+            </Select>
+            <Input
+              type="tel"
+              value={value}
+              onChange={(e) => setField(field.id, e.target.value)}
+              placeholder={field.placeholder}
+              size="lg"
+              borderRadius="xl"
+              borderWidth="2px"
+              borderColor="gray.200"
+              bg="white"
+              flex="1"
+              _hover={{ borderColor: 'gray.300' }}
+              _focus={focusStyles}
+              _placeholder={{ color: 'gray.400' }}
+            />
+          </HStack>
+        ) : field.type === 'select' ? (
           <Select
             value={value}
             onChange={(e) => setField(field.id, e.target.value)}
