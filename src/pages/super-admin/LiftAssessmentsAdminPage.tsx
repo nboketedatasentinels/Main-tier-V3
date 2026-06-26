@@ -184,14 +184,15 @@ export const LiftAssessmentsAdminPage: React.FC = () => {
 
   useEffect(() => {
     let active = true
-    Promise.all([listLiftAssessments(), listLiftLeads()])
-      .then(([assessments, leadRows]) => {
-        if (!active) return
-        setRows(assessments)
-        setLeads(leadRows)
-      })
+    // Leads are fetched independently so a missing lift_leads table (migration
+    // not yet run) never breaks the assessments list.
+    listLiftAssessments()
+      .then((data) => active && setRows(data))
       .catch((err) => active && setError(err instanceof Error ? err.message : 'Failed to load'))
       .finally(() => active && setLoading(false))
+    listLiftLeads()
+      .then((data) => active && setLeads(data))
+      .catch(() => active && setLeads([]))
     return () => {
       active = false
     }
