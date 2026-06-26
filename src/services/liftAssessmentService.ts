@@ -99,6 +99,80 @@ export const submitLiftAssessment = async (
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Persist an ANONYMOUS lead from the public funnel (no account). The visitor's
+ * contact details are carried inside `intake`; we also lift them into dedicated
+ * columns so partner/admin can list/filter leads without digging into jsonb.
+ * Best-effort: failures are surfaced to the caller, which still shows results.
+ */
+export const submitLiftLead = async (
+  intake: IntakeAnswers,
+  itemScores: ItemScores,
+  result: LiftResult,
+): Promise<void> => {
+  const { error } = await supabase.from('lift_leads').insert({
+    first_name: intake.firstName ?? null,
+    last_name: intake.lastName ?? null,
+    email: intake.email ?? null,
+    organisation: intake.organisation ?? null,
+    country: intake.country ?? null,
+    gender: intake.gender ?? null,
+    phone: intake.phone ?? null,
+    intake,
+    item_scores: itemScores,
+    pillar_l: result.pillars.L,
+    pillar_i: result.pillars.I,
+    pillar_f: result.pillars.F,
+    pillar_t: result.pillars.T,
+    lift_index: result.liftIndex,
+    archetype: result.archetype,
+    development_edge: result.developmentEdge,
+    recommended_offer: result.recommendedOffer.key,
+    lead_tier: result.leadTier,
+    coaching_triggered: result.coachingTriggered,
+  })
+  if (error) throw new Error(error.message)
+}
+
+const mapLeadRow = (row: Raw): LiftAssessmentRow => {
+  const intake = (row.intake as IntakeAnswers) ?? {}
+  const fullName = `${(row.first_name as string) ?? ''} ${(row.last_name as string) ?? ''}`.trim()
+  return {
+    uid: row.id as string,
+    intake,
+    itemScores: (row.item_scores as ItemScores) ?? {},
+    pillars: {
+      L: (row.pillar_l as number) ?? 0,
+      I: (row.pillar_i as number) ?? 0,
+      F: (row.pillar_f as number) ?? 0,
+      T: (row.pillar_t as number) ?? 0,
+    },
+    liftIndex: (row.lift_index as number) ?? 0,
+    archetype: row.archetype as Archetype,
+    developmentEdge: (row.development_edge as PillarKey | null) ?? null,
+    recommendedOffer: (row.recommended_offer as string) ?? '',
+    leadTier: row.lead_tier as LeadTier,
+    coachingTriggered: Boolean(row.coaching_triggered),
+    createdAt: (row.created_at as string) ?? '',
+    fullName: fullName || null,
+    email: (row.email as string) ?? null,
+  }
+}
+
+/**
+ * Admin/partner: list all ANONYMOUS leads from the public funnel (no account).
+ * Contact details (organisation, country, gender, phone, ...) live inside each
+ * row's `intake`, so the admin view reads them straight off `row.intake`.
+ */
+export const listLiftLeads = async (): Promise<LiftAssessmentRow[]> => {
+  const { data, error } = await supabase
+    .from('lift_leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((r) => mapLeadRow(r as Raw))
+}
+
 /** Admin/partner: list all assessments with the learner's name/email (aggregate view). */
 export const listLiftAssessments = async (): Promise<LiftAssessmentRow[]> => {
   const { data, error } = await supabase

@@ -34,6 +34,14 @@ export interface IntakeAnswers {
   teamSize?: string
   years?: string
   orgSize?: string
+  // Contact details captured after the questions (lead data; not used in scoring).
+  firstName?: string
+  lastName?: string
+  email?: string
+  organisation?: string
+  country?: string
+  gender?: string
+  phone?: string
   [key: string]: string | undefined
 }
 

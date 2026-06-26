@@ -1,33 +1,19 @@
 import React from 'react'
-import {
-  Badge,
-  Box,
-  Button,
-  Divider,
-  Heading,
-  HStack,
-  Stack,
-  Text,
-  VStack,
-} from '@chakra-ui/react'
-import {
-  Radar,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  ResponsiveContainer,
-} from 'recharts'
+import { Badge, Box, Button, Flex, HStack, Text, VStack } from '@chakra-ui/react'
 import {
   PILLARS,
-  ARCHETYPE_COPY,
-  OFFERS,
+  PILLAR_SHORT_LABEL,
+  ARCHETYPE_CONTENT,
+  ARCHETYPE_ACCENT,
+  RESULT_CHROME,
   COACHING,
+  resolveDevelopmentPath,
   type PillarKey,
   type Archetype,
   type LeadTier,
   type Offer,
 } from '@/config/liftAssessment'
+import { ArchetypeSymbol } from '@/components/lift/ArchetypeSymbol'
 
 // Brand palette (THEME_CONTRACT): plum, flame, royal purple, gold
 const PLUM = '#27062e'
@@ -48,154 +34,230 @@ export interface LiftResultViewProps {
   continueLabel?: string
 }
 
-const pillarName = (key: PillarKey | null): string =>
-  key ? PILLARS.find((p) => p.key === key)?.name ?? '' : ''
+const SINGLE_PILLAR_ARCHETYPES: Archetype[] = ['Anchor', 'Architect', 'Catalyst', 'Operator']
+
+const Section: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Box bg="white" borderRadius="2xl" p={{ base: 5, md: 7 }} boxShadow="sm" borderWidth="1px" borderColor="gray.100">
+    {children}
+  </Box>
+)
+
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Text fontSize="xs" fontWeight="bold" letterSpacing="0.14em" textTransform="uppercase" color={ROYAL} mb={4}>
+    {children}
+  </Text>
+)
 
 export const LiftResultView: React.FC<LiftResultViewProps> = ({
   pillars,
   liftIndex,
   archetype,
   developmentEdge,
-  recommendedOffer,
-  leadTier,
   coachingTriggered,
   onContinue,
   continueLabel = 'Continue',
 }) => {
-  const copy = ARCHETYPE_COPY[archetype]
-  const radarData = PILLARS.map((p) => ({ pillar: p.key, score: pillars[p.key] }))
+  const content = ARCHETYPE_CONTENT[archetype]
+  const accent = ARCHETYPE_ACCENT[archetype]
+  const path = resolveDevelopmentPath(archetype, developmentEdge)
+  const archetypeName = archetype === 'Emerging Leader' ? 'The Emerging Leader' : `The ${archetype}`
+
+  // Carry = highest pillar, edge = lowest (developmentEdge). Bar badges only for
+  // the four single-pillar archetypes; Practitioner/Emerging explain in copy.
+  const carryKey = PILLARS.reduce<PillarKey>(
+    (best, p) => (pillars[p.key] > pillars[best] ? p.key : best),
+    PILLARS[0].key,
+  )
+  const showBarBadges = SINGLE_PILLAR_ARCHETYPES.includes(archetype)
 
   return (
-    <VStack align="stretch" spacing={6}>
-      {/* LIFT Index + radar */}
-      <Box bg="white" borderRadius="2xl" p={{ base: 5, md: 7 }} boxShadow="sm" borderWidth="1px">
-        <Stack direction={{ base: 'column', md: 'row' }} align="center" spacing={6}>
-          <VStack spacing={0} minW="160px">
-            <Text fontSize="sm" color="gray.500" fontWeight="medium">
-              Your LIFT Index
-            </Text>
-            <Text fontSize="6xl" fontWeight="bold" lineHeight="1" color={PLUM}>
-              {liftIndex}
-            </Text>
-            <Text fontSize="xs" color="gray.400">
-              out of 100
-            </Text>
-          </VStack>
-          <Box flex="1" h="260px" w="full">
-            <ResponsiveContainer width="100%" height="100%">
-              <RadarChart data={radarData} outerRadius="75%">
-                <PolarGrid stroke="#e2d9ea" />
-                <PolarAngleAxis dataKey="pillar" tick={{ fill: ROYAL, fontSize: 13, fontWeight: 600 }} />
-                <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#9aa', fontSize: 10 }} />
-                <Radar dataKey="score" stroke={FLAME} fill={GOLD} fillOpacity={0.45} />
-              </RadarChart>
-            </ResponsiveContainer>
-          </Box>
-        </Stack>
-        <HStack spacing={4} mt={2} justify="center" wrap="wrap">
-          {PILLARS.map((p) => (
-            <HStack key={p.key} spacing={2}>
-              <Badge bg={PLUM} color="white" borderRadius="full" px={2}>
-                {p.key}
-              </Badge>
-              <Text fontSize="sm" color="gray.600">
-                {pillars[p.key]}
-              </Text>
-            </HStack>
-          ))}
-        </HStack>
-      </Box>
-
-      {/* Archetype block */}
-      <Box bg="white" borderRadius="2xl" p={{ base: 5, md: 7 }} boxShadow="sm" borderWidth="1px">
-        <Heading size="lg" color={PLUM}>
-          {archetype === 'Emerging Leader' ? 'The Emerging Leader' : `The ${archetype}`}
-        </Heading>
-        <Text mt={3} color="gray.700" lineHeight="1.7">
-          {copy.body}
-        </Text>
-
-        <Divider my={4} />
-
-        <VStack align="stretch" spacing={2} fontSize="sm">
-          <Text>
-            <Text as="span" fontWeight="bold" color={ROYAL}>
-              Strength:{' '}
-            </Text>
-            {copy.strength}
+    <VStack align="stretch" spacing={5}>
+      {/* 1 · Archetype reveal */}
+      <Section>
+        <VStack align="stretch" spacing={4}>
+          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.18em" textTransform="uppercase" color={accent}>
+            {RESULT_CHROME.eyebrow}
           </Text>
-          {copy.showEdge && developmentEdge && (
-            <Text>
-              <Text as="span" fontWeight="bold" color={ROYAL}>
-                Your edge:{' '}
+          <Flex align="center" gap={4} wrap="wrap">
+            <Box flexShrink={0}>
+              <ArchetypeSymbol archetype={archetype} size={68} />
+            </Box>
+            <Box flex="1" minW="180px">
+              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.1">
+                {archetypeName}
               </Text>
-              {pillarName(developmentEdge)}
-            </Text>
-          )}
-          <Text>
-            <Text as="span" fontWeight="bold" color={ROYAL}>
-              Start here:{' '}
-            </Text>
-            {recommendedOffer.label}
-            {recommendedOffer.price ? ` (${recommendedOffer.price})` : ''}
-          </Text>
-          <Text fontStyle="italic" color="gray.500" mt={1}>
-            Say it out loud: &ldquo;{copy.sayItOutLoud}&rdquo;
+              <Text fontSize="sm" color="gray.600" mt={1}>
+                <Text as="span" fontWeight="bold" color={accent}>
+                  Strongest pillar:{' '}
+                </Text>
+                {content.strongest}
+              </Text>
+            </Box>
+            <VStack spacing={0} align={{ base: 'flex-start', sm: 'flex-end' }}>
+              <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                LIFT Index
+              </Text>
+              <Text
+                fontSize="4xl"
+                fontWeight="extrabold"
+                lineHeight="1"
+                bgGradient={`linear(to-br, ${PLUM}, ${GOLD})`}
+                bgClip="text"
+              >
+                {liftIndex}
+              </Text>
+              <Text fontSize="xs" color="gray.400">
+                out of 100
+              </Text>
+            </VStack>
+          </Flex>
+          <Text color="gray.700" lineHeight="1.7">
+            {content.reveal}
           </Text>
         </VStack>
+      </Section>
+
+      {/* 2 · Pillar profile (bars, width = score) */}
+      <Section>
+        <SectionTitle>Your pillar profile</SectionTitle>
+        <VStack align="stretch" spacing={4}>
+          {PILLARS.map((p) => {
+            const score = pillars[p.key]
+            const isCarry = showBarBadges && p.key === carryKey
+            const isEdge = showBarBadges && p.key === developmentEdge
+            return (
+              <Box key={p.key}>
+                <Flex justify="space-between" align="center" mb={1.5} gap={2}>
+                  <HStack spacing={2} minW={0}>
+                    <Badge bg={PLUM} color="white" borderRadius="full" px={2} flexShrink={0}>
+                      {p.key}
+                    </Badge>
+                    <Text fontSize="sm" fontWeight="semibold" color={PLUM} noOfLines={1}>
+                      {p.name}
+                    </Text>
+                    {isCarry && (
+                      <Badge bg={GOLD} color={PLUM} borderRadius="full" px={2} fontSize="0.62rem" flexShrink={0}>
+                        {RESULT_CHROME.carryBadge}
+                      </Badge>
+                    )}
+                    {isEdge && (
+                      <Badge
+                        variant="outline"
+                        color={ROYAL}
+                        borderColor={ROYAL}
+                        borderRadius="full"
+                        px={2}
+                        fontSize="0.62rem"
+                        flexShrink={0}
+                      >
+                        {RESULT_CHROME.edgeBadge}
+                      </Badge>
+                    )}
+                  </HStack>
+                  <Text fontSize="sm" fontWeight="bold" color={PLUM} flexShrink={0}>
+                    {score}
+                  </Text>
+                </Flex>
+                <Box h="10px" w="full" bg="gray.100" borderRadius="full" overflow="hidden">
+                  <Box h="full" borderRadius="full" bgGradient={`linear(to-r, ${PLUM}, ${GOLD})`} width={`${score}%`} />
+                </Box>
+              </Box>
+            )
+          })}
+        </VStack>
+      </Section>
+
+      {/* 3 · Pillar by pillar */}
+      <Section>
+        <SectionTitle>Pillar by pillar</SectionTitle>
+        <VStack align="stretch" spacing={5}>
+          {content.pillarBlocks.map((block) => (
+            <Box key={block.key}>
+              <Flex align="center" gap={2} mb={2}>
+                <Text fontSize="md" fontWeight="bold" color={PLUM}>
+                  {block.key} · {PILLAR_SHORT_LABEL[block.key]}
+                </Text>
+                {block.role && (
+                  <Text fontSize="sm" fontWeight="semibold" color={accent}>
+                    {block.role === 'strength' ? '(your strength)' : '(your edge)'}
+                  </Text>
+                )}
+              </Flex>
+              <VStack align="stretch" spacing={1.5} fontSize="sm" color="gray.700" lineHeight="1.6">
+                <Text>
+                  <Text as="span" fontWeight="bold" color={ROYAL}>
+                    How you show up.{' '}
+                  </Text>
+                  {block.howYouShowUp}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="bold" color={ROYAL}>
+                    Asset.{' '}
+                  </Text>
+                  {block.asset}
+                </Text>
+                <Text>
+                  <Text as="span" fontWeight="bold" color={ROYAL}>
+                    Watch for.{' '}
+                  </Text>
+                  {block.watchFor}
+                </Text>
+              </VStack>
+            </Box>
+          ))}
+        </VStack>
+      </Section>
+
+      {/* 4 · Carry and edge */}
+      <Box
+        borderRadius="2xl"
+        p={{ base: 5, md: 6 }}
+        bgGradient="linear(to-r, #fffaf0, #fbf2d8)"
+        borderWidth="1px"
+        borderColor="#f3e2b3"
+      >
+        <SectionTitle>Carry and edge</SectionTitle>
+        <Text color={PLUM} fontWeight="medium" lineHeight="1.7">
+          {content.carryEdge}
+        </Text>
       </Box>
 
-      {/* Tier-specific CTA */}
-      <Box bg="white" borderRadius="2xl" p={{ base: 5, md: 7 }} boxShadow="sm" borderWidth="1px">
-        {leadTier === 'A' ? (
-          <VStack align="stretch" spacing={3}>
-            <Heading size="sm" color={PLUM}>
-              Let&rsquo;s talk about your transformation at scale
-            </Heading>
-            <Text fontSize="sm" color="gray.600">
-              Based on your role and team, the best next step is a conversation.
-            </Text>
-            <Button bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start">
-              Book a discovery call
-            </Button>
-          </VStack>
-        ) : leadTier === 'B' ? (
-          <VStack align="stretch" spacing={3}>
-            <Heading size="sm" color={PLUM}>
-              Your recommended Power Journey
-            </Heading>
-            <Text fontSize="sm" color="gray.700">
-              {recommendedOffer.label}
-              {recommendedOffer.price ? ` - ${recommendedOffer.price}` : ''}
-            </Text>
-            <Button bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start">
-              Start this journey
-            </Button>
-          </VStack>
-        ) : (
-          <VStack align="stretch" spacing={3}>
-            <Heading size="sm" color={PLUM}>
-              Your next steps
-            </Heading>
-            <Text fontSize="sm" color="gray.700">
-              {archetype === 'Practitioner'
-                ? `${OFFERS.topVoices.label} (${OFFERS.topVoices.price}), the coaching path, and an invitation to apply to the closed Practitioner community.`
-                : `${recommendedOffer.label}${recommendedOffer.price ? ` (${recommendedOffer.price})` : ''}, plus an invitation to join the community.`}
-            </Text>
-            <Button bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start">
-              Explore membership and community
-            </Button>
-          </VStack>
-        )}
-      </Box>
+      {/* 5 · How this plays out under pressure */}
+      <Section>
+        <SectionTitle>How this plays out under pressure</SectionTitle>
+        <VStack align="stretch" spacing={4}>
+          {content.scenarios.map((s) => (
+            <Box key={s.situation} borderLeftWidth="3px" borderColor={GOLD} pl={4}>
+              <Text fontWeight="bold" color={PLUM} fontSize="sm">
+                {s.situation}
+              </Text>
+              <Text fontSize="sm" color="gray.700" mt={1} lineHeight="1.6">
+                {s.guidance}
+              </Text>
+            </Box>
+          ))}
+        </VStack>
+      </Section>
 
-      {/* Coaching overlay (any archetype) */}
+      {/* 6 · What to build next */}
+      <Section>
+        <SectionTitle>What to build next</SectionTitle>
+        <Text color="gray.700" lineHeight="1.7">
+          {path.body}
+        </Text>
+        <Text color={PLUM} fontWeight="semibold" mt={2} lineHeight="1.6">
+          {path.recommended}
+        </Text>
+        <Button mt={4} bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start">
+          {RESULT_CHROME.primaryCta}
+        </Button>
+      </Section>
+
+      {/* Coaching overlay (any archetype, when triggered) */}
       {coachingTriggered && (
         <Box bg="orange.50" borderRadius="2xl" p={{ base: 5, md: 6 }} borderWidth="1px" borderColor="orange.200">
-          <Heading size="sm" color={ROYAL}>
-            Transformation Coaching
-          </Heading>
-          <Text fontSize="sm" color="gray.700" mt={2}>
+          <SectionTitle>Transformation Coaching</SectionTitle>
+          <Text fontSize="sm" color="gray.700">
             {COACHING.single} or {COACHING.pack}. {COACHING.blurb}
           </Text>
           <Button mt={3} variant="outline" borderColor={FLAME} color={FLAME} _hover={{ bg: 'orange.100' }} size="sm">
@@ -203,6 +265,16 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
           </Button>
         </Box>
       )}
+
+      {/* Footer chrome */}
+      <VStack spacing={1.5} pt={1} textAlign="center">
+        <Text fontSize="xs" color="gray.500">
+          {RESULT_CHROME.retake}
+        </Text>
+        <Text fontSize="xs" color="gray.400" fontStyle="italic">
+          {RESULT_CHROME.mission}
+        </Text>
+      </VStack>
 
       {onContinue && (
         <Button size="lg" bg={PLUM} color="white" _hover={{ bg: ROYAL }} onClick={onContinue}>
