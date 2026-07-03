@@ -18,9 +18,20 @@ export interface LiftAssessmentRow {
   leadTier: LeadTier
   coachingTriggered: boolean
   createdAt: string
+  // Last time the snapshot was written (drives 90-day retake eligibility).
+  updatedAt?: string
   // present only on admin list (joined from profiles)
   fullName?: string | null
   email?: string | null
+}
+
+/** A single take from the append-only history log (for before/after deltas). */
+export interface LiftHistoryEntry {
+  pillars: Record<PillarKey, number>
+  liftIndex: number
+  archetype: Archetype
+  developmentEdge: PillarKey | null
+  takenAt: string
 }
 
 type Raw = Record<string, unknown>
@@ -44,6 +55,7 @@ const mapRow = (row: Raw): LiftAssessmentRow => {
     leadTier: row.lead_tier as LeadTier,
     coachingTriggered: Boolean(row.coaching_triggered),
     createdAt: (row.created_at as string) ?? '',
+    updatedAt: (row.updated_at as string) ?? undefined,
     fullName: (profile?.full_name as string) ?? null,
     email: (profile?.email as string) ?? null,
   }
@@ -129,6 +141,13 @@ export const createLiftLead = async (intake: IntakeAnswers): Promise<string | nu
 /**
  * Complete a previously-created lead with the assessment scores/result. Locks
  * the row (sets `completed_at`) so it stays immutable from the client after.
+ *
+ * Goes through the `complete_lift_lead` SECURITY DEFINER RPC, NOT a direct
+ * .update(): `lift_leads` SELECT is partner/admin-only, and RLS requires a row
+ * to be visible via SELECT before an UPDATE can match it — so an anonymous
+ * .update() silently affects 0 rows (200, no error) and completed_at never gets
+ * set. The RPC runs as the owner, bypasses RLS for this one controlled write,
+ * and keeps reads locked down. See migration 0029.
  */
 export const completeLiftLead = async (
   id: string,
@@ -136,24 +155,21 @@ export const completeLiftLead = async (
   itemScores: ItemScores,
   result: LiftResult,
 ): Promise<void> => {
-  const { error } = await supabase
-    .from('lift_leads')
-    .update({
-      intake,
-      item_scores: itemScores,
-      pillar_l: result.pillars.L,
-      pillar_i: result.pillars.I,
-      pillar_f: result.pillars.F,
-      pillar_t: result.pillars.T,
-      lift_index: result.liftIndex,
-      archetype: result.archetype,
-      development_edge: result.developmentEdge,
-      recommended_offer: result.recommendedOffer.key,
-      lead_tier: result.leadTier,
-      coaching_triggered: result.coachingTriggered,
-      completed_at: new Date().toISOString(),
-    })
-    .eq('id', id)
+  const { error } = await supabase.rpc('complete_lift_lead', {
+    p_id: id,
+    p_intake: intake,
+    p_item_scores: itemScores,
+    p_pillar_l: result.pillars.L,
+    p_pillar_i: result.pillars.I,
+    p_pillar_f: result.pillars.F,
+    p_pillar_t: result.pillars.T,
+    p_lift_index: result.liftIndex,
+    p_archetype: result.archetype,
+    p_development_edge: result.developmentEdge,
+    p_recommended_offer: result.recommendedOffer.key,
+    p_lead_tier: result.leadTier,
+    p_coaching_triggered: result.coachingTriggered,
+  })
   if (error) throw new Error(error.message)
 }
 
