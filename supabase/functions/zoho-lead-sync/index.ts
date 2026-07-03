@@ -7,7 +7,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // (works for a manual {"lead_id":...} call OR the Supabase webhook payload),
 // gates on completed_at + zoho_lead_id, creates the Zoho lead, writes the id back.
 // ---------------------------------------------------------------------------
-const FUNCTION_VERSION = "2026-07-02-datetime";
+const FUNCTION_VERSION = "2026-07-03-layout-owner-desc";
 
 // Structured custom fields (boss's spec). OFF until the fields exist in Zoho AND
 // the API names below are confirmed via /settings/fields — sending an unknown
@@ -320,6 +320,13 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
 
   const ownerId = getOwnerId(lead.lead_tier);
   if (ownerId) leadData.Owner = { id: ownerId };
+
+  // Place the record on a specific Leads layout (e.g. "LIFT Assessment") when
+  // its layout id is configured. Without this, Zoho files new records under the
+  // default ("Standard"/"Leads") layout, so a "Layout is LIFT Assessment" filter
+  // shows nothing. Set ZOHO_LEADS_LAYOUT_ID to the layout's id to route them.
+  const layoutId = Deno.env.get("ZOHO_LEADS_LAYOUT_ID");
+  if (layoutId && MODULE === "Leads") leadData.Layout = { id: layoutId };
 
   // POST once. If Zoho rejects the record SPECIFICALLY because the Owner is
   // invalid (e.g. the tier's routing user was deactivated/deleted in Zoho),
