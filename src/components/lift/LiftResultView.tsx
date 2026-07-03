@@ -6,7 +6,6 @@ import {
   ARCHETYPE_CONTENT,
   ARCHETYPE_ACCENT,
   RESULT_CHROME,
-  COACHING,
   resolveDevelopmentPath,
   type PillarKey,
   type Archetype,
@@ -39,8 +38,6 @@ export interface LiftResultViewProps {
   /** App-only: handler for the "What to build next" primary CTA. The button is
    *  hidden unless this is provided, so we never render a dead link. */
   onPrimaryCta?: () => void
-  /** App-only: handler for the coaching CTA. Hidden unless provided. */
-  onBookCoaching?: () => void
   /** Optional CTA shown at the bottom (e.g. "Continue to the app"). */
   onContinue?: () => void
   continueLabel?: string
@@ -65,10 +62,8 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
   liftIndex,
   archetype,
   developmentEdge,
-  coachingTriggered,
   variant = 'app',
   onPrimaryCta,
-  onBookCoaching,
   onContinue,
   continueLabel = 'Continue',
 }) => {
@@ -271,29 +266,6 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
             </Button>
           )}
         </Section>
-      )}
-
-      {/* Coaching overlay (app only, any archetype, when triggered) */}
-      {!isPublic && coachingTriggered && (
-        <Box bg="orange.50" borderRadius="2xl" p={{ base: 5, md: 6 }} borderWidth="1px" borderColor="orange.200">
-          <SectionTitle>Transformation Coaching</SectionTitle>
-          <Text fontSize="sm" color="gray.700">
-            {COACHING.single} or {COACHING.pack}. {COACHING.blurb}
-          </Text>
-          {onBookCoaching && (
-            <Button
-              mt={3}
-              variant="outline"
-              borderColor={FLAME}
-              color={FLAME}
-              _hover={{ bg: 'orange.100' }}
-              size="sm"
-              onClick={onBookCoaching}
-            >
-              Book a coaching session
-            </Button>
-          )}
-        </Box>
       )}
 
       {/* Footer chrome */}
