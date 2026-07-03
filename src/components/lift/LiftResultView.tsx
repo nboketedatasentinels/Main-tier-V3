@@ -20,6 +20,10 @@ const FLAME = '#f4540c'
 const ROYAL = '#350e6f'
 const GOLD = '#eab130'
 
+// Where the public funnel sends people to unlock the full breakdown.
+const BOOKING_URL =
+  'https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0K_YpzXDULQVZ0LGCIxH3K-no0TTHaBQ5jFNLUq6CC1lx_LFMyuwDUMLeByAHVx1ih5phOnIRF'
+
 export interface LiftResultViewProps {
   pillars: Record<PillarKey, number>
   liftIndex: number
@@ -29,16 +33,17 @@ export interface LiftResultViewProps {
   leadTier: LeadTier
   coachingTriggered: boolean
   /**
-   * 'public' = the anonymous funnel result. It ENDS at the LIFT readout: the
-   * "What to build next" recommendation and coaching offer are omitted (those go
-   * to the follow-up email, not the page). 'app' = the signed-in member view,
-   * which shows the next-step recommendation and offer CTAs. Defaults to 'app'.
+   * 'public' = the anonymous funnel result. It reveals the archetype + LIFT
+   * score, then GATES the full breakdown behind a "book a call" CTA. 'app' =
+   * the signed-in member view, which shows the full breakdown and the
+   * next-step recommendation. Defaults to 'app'.
    */
   variant?: 'public' | 'app'
   /** App-only: handler for the "What to build next" primary CTA. The button is
    *  hidden unless this is provided, so we never render a dead link. */
   onPrimaryCta?: () => void
-  /** Optional CTA shown at the bottom (e.g. "Continue to the app"). */
+  /** Optional CTA shown at the bottom (e.g. "Continue to the app"). On the
+   *  public gated view this becomes the low-key "continue anyway" escape. */
   onContinue?: () => void
   continueLabel?: string
 }
@@ -81,53 +86,10 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
   )
   const showBarBadges = SINGLE_PILLAR_ARCHETYPES.includes(archetype)
 
-  return (
-    <VStack align="stretch" spacing={5}>
-      {/* 1 · Archetype reveal */}
-      <Section>
-        <VStack align="stretch" spacing={4}>
-          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.18em" textTransform="uppercase" color={accent}>
-            {RESULT_CHROME.eyebrow}
-          </Text>
-          <Flex align="center" gap={4} wrap="wrap">
-            <Box flexShrink={0}>
-              <ArchetypeSymbol archetype={archetype} size={68} />
-            </Box>
-            <Box flex="1" minW="180px">
-              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.1">
-                {archetypeName}
-              </Text>
-              <Text fontSize="sm" color="gray.600" mt={1}>
-                <Text as="span" fontWeight="bold" color={accent}>
-                  Strongest pillar:{' '}
-                </Text>
-                {content.strongest}
-              </Text>
-            </Box>
-            <VStack spacing={0} align={{ base: 'flex-start', sm: 'flex-end' }}>
-              <Text fontSize="xs" color="gray.500" fontWeight="medium">
-                LIFT Index
-              </Text>
-              <Text
-                fontSize="4xl"
-                fontWeight="extrabold"
-                lineHeight="1"
-                bgGradient={`linear(to-br, ${PLUM}, ${GOLD})`}
-                bgClip="text"
-              >
-                {liftIndex}
-              </Text>
-              <Text fontSize="xs" color="gray.400">
-                out of 100
-              </Text>
-            </VStack>
-          </Flex>
-          <Text color="gray.700" lineHeight="1.7">
-            {content.reveal}
-          </Text>
-        </VStack>
-      </Section>
-
+  // Sections 2–5: the detailed breakdown. Shown in full to signed-in members;
+  // blurred behind the booking gate for the anonymous public funnel.
+  const breakdown = (
+    <>
       {/* 2 · Pillar profile (bars, width = score) */}
       <Section>
         <SectionTitle>Your pillar profile</SectionTitle>
@@ -249,39 +211,218 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
           ))}
         </VStack>
       </Section>
+    </>
+  )
 
-      {/* 6 · What to build next (app only - public gets this in the follow-up email) */}
-      {!isPublic && (
-        <Section>
-          <SectionTitle>What to build next</SectionTitle>
+  return (
+    <VStack align="stretch" spacing={5}>
+      {/* 1 · Archetype reveal */}
+      <Section>
+        <VStack align="stretch" spacing={4}>
+          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.18em" textTransform="uppercase" color={accent}>
+            {RESULT_CHROME.eyebrow}
+          </Text>
+          <Flex align="center" gap={4} wrap="wrap">
+            <Box flexShrink={0}>
+              <ArchetypeSymbol archetype={archetype} size={68} />
+            </Box>
+            <Box flex="1" minW="180px">
+              <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.1">
+                {archetypeName}
+              </Text>
+              <Text fontSize="sm" color="gray.600" mt={1}>
+                <Text as="span" fontWeight="bold" color={accent}>
+                  Strongest pillar:{' '}
+                </Text>
+                {content.strongest}
+              </Text>
+            </Box>
+            <VStack spacing={0} align={{ base: 'flex-start', sm: 'flex-end' }}>
+              <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                LIFT Index
+              </Text>
+              <Text
+                fontSize="4xl"
+                fontWeight="extrabold"
+                lineHeight="1"
+                bgGradient={`linear(to-br, ${PLUM}, ${GOLD})`}
+                bgClip="text"
+              >
+                {liftIndex}
+              </Text>
+              <Text fontSize="xs" color="gray.400">
+                out of 100
+              </Text>
+            </VStack>
+          </Flex>
           <Text color="gray.700" lineHeight="1.7">
-            {path.body}
+            {content.reveal}
           </Text>
-          <Text color={PLUM} fontWeight="semibold" mt={2} lineHeight="1.6">
-            {path.recommended}
-          </Text>
-          {onPrimaryCta && (
-            <Button mt={4} bg={FLAME} color="white" _hover={{ bg: ROYAL }} alignSelf="flex-start" onClick={onPrimaryCta}>
-              {RESULT_CHROME.primaryCta}
+        </VStack>
+      </Section>
+
+      {isPublic ? (
+        /* Public funnel: tease the breakdown, then gate it behind a call. */
+        <Box position="relative">
+          {/* Blurred peek of the full breakdown — enough to see it's rich, not enough to read. */}
+          <Box
+            aria-hidden="true"
+            maxH="300px"
+            overflow="hidden"
+            filter="blur(7px)"
+            opacity={0.55}
+            sx={{ pointerEvents: 'none', userSelect: 'none' }}
+          >
+            <VStack align="stretch" spacing={5}>
+              {breakdown}
+            </VStack>
+          </Box>
+          {/* Fade the peek into the gate. */}
+          <Box
+            position="absolute"
+            left={0}
+            right={0}
+            bottom={0}
+            h="180px"
+            bgGradient="linear(to-b, rgba(255,255,255,0), #ffffff)"
+            pointerEvents="none"
+          />
+
+          {/* The gate — the last, unmissable thing. */}
+          <Box
+            mt={-14}
+            position="relative"
+            borderRadius="2xl"
+            p={{ base: 6, md: 8 }}
+            bgGradient={`linear(to-br, ${PLUM}, ${ROYAL})`}
+            color="white"
+            boxShadow="2xl"
+            borderWidth="1px"
+            borderColor="whiteAlpha.200"
+          >
+            <VStack align="stretch" spacing={4}>
+              <Text
+                fontSize="xs"
+                fontWeight="bold"
+                letterSpacing="0.16em"
+                textTransform="uppercase"
+                color={GOLD}
+                textAlign="center"
+              >
+                🔒 Your full breakdown is ready
+              </Text>
+              <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="extrabold" lineHeight="1.2" textAlign="center">
+                You&rsquo;ve seen your score. You haven&rsquo;t seen what it means.
+              </Text>
+              <Text color="whiteAlpha.900" lineHeight="1.7" textAlign="center">
+                The number is the easy part. The real read — where you&rsquo;ll quietly stall, the strength you can
+                build a career on, and the one move that shifts your trajectory — is mapped out below. On a short
+                call we&rsquo;ll walk you through all of it, together, and where to go next.
+              </Text>
+
+              <VStack
+                align="stretch"
+                spacing={2}
+                bg="whiteAlpha.100"
+                borderRadius="xl"
+                p={4}
+                fontSize="sm"
+                color="whiteAlpha.900"
+              >
+                {[
+                  'Your four pillars, scored and ranked',
+                  'Where you lose ground under real pressure',
+                  'Your carry strength — and your growth edge',
+                  'The single most valuable thing to build next',
+                ].map((line) => (
+                  <HStack key={line} align="start" spacing={2}>
+                    <Text as="span" color={GOLD} fontWeight="bold" lineHeight="1.6">
+                      ✓
+                    </Text>
+                    <Text lineHeight="1.6">{line}</Text>
+                  </HStack>
+                ))}
+              </VStack>
+
+              <Button
+                as="a"
+                href={BOOKING_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="lg"
+                bg={GOLD}
+                color={PLUM}
+                fontWeight="bold"
+                _hover={{ bg: '#f9db59', transform: 'translateY(-1px)' }}
+                _active={{ bg: GOLD }}
+                boxShadow="lg"
+              >
+                Book my call — unlock everything
+              </Button>
+
+              <Text fontSize="xs" color="whiteAlpha.700" textAlign="center">
+                No pressure — bring your questions.
+              </Text>
+
+              {onContinue && (
+                <Button
+                  variant="link"
+                  color="whiteAlpha.700"
+                  fontSize="sm"
+                  fontWeight="medium"
+                  onClick={onContinue}
+                  _hover={{ color: 'white' }}
+                >
+                  I&rsquo;ll continue with just my score for now
+                </Button>
+              )}
+            </VStack>
+          </Box>
+        </Box>
+      ) : (
+        /* Signed-in member: the full breakdown, plus next steps. */
+        <>
+          {breakdown}
+
+          {/* 6 · What to build next */}
+          <Section>
+            <SectionTitle>What to build next</SectionTitle>
+            <Text color="gray.700" lineHeight="1.7">
+              {path.body}
+            </Text>
+            <Text color={PLUM} fontWeight="semibold" mt={2} lineHeight="1.6">
+              {path.recommended}
+            </Text>
+            {onPrimaryCta && (
+              <Button
+                mt={4}
+                bg={FLAME}
+                color="white"
+                _hover={{ bg: ROYAL }}
+                alignSelf="flex-start"
+                onClick={onPrimaryCta}
+              >
+                {RESULT_CHROME.primaryCta}
+              </Button>
+            )}
+          </Section>
+
+          {/* Footer chrome */}
+          <VStack spacing={1.5} pt={1} textAlign="center">
+            <Text fontSize="xs" color="gray.500">
+              {RESULT_CHROME.retake}
+            </Text>
+            <Text fontSize="xs" color="gray.400" fontStyle="italic">
+              {RESULT_CHROME.mission}
+            </Text>
+          </VStack>
+
+          {onContinue && (
+            <Button size="lg" bg={PLUM} color="white" _hover={{ bg: ROYAL }} onClick={onContinue}>
+              {continueLabel}
             </Button>
           )}
-        </Section>
-      )}
-
-      {/* Footer chrome */}
-      <VStack spacing={1.5} pt={1} textAlign="center">
-        <Text fontSize="xs" color="gray.500">
-          {RESULT_CHROME.retake}
-        </Text>
-        <Text fontSize="xs" color="gray.400" fontStyle="italic">
-          {RESULT_CHROME.mission}
-        </Text>
-      </VStack>
-
-      {onContinue && (
-        <Button size="lg" bg={PLUM} color="white" _hover={{ bg: ROYAL }} onClick={onContinue}>
-          {continueLabel}
-        </Button>
+        </>
       )}
     </VStack>
   )

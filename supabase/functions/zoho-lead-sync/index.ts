@@ -7,7 +7,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 // (works for a manual {"lead_id":...} call OR the Supabase webhook payload),
 // gates on completed_at + zoho_lead_id, creates the Zoho lead, writes the id back.
 // ---------------------------------------------------------------------------
-const FUNCTION_VERSION = "2026-07-02-datetime";
+const FUNCTION_VERSION = "2026-07-03-layout-owner-desc";
 
 // Structured custom fields (boss's spec). OFF until the fields exist in Zoho AND
 // the API names below are confirmed via /settings/fields — sending an unknown
@@ -229,6 +229,24 @@ function carryPillar(lead: any): string | null {
   return PILLAR_SHORT[best[0]] ?? null;
 }
 
+// Edge pillar for the Zoho field. Prefer the app's development_edge; but the
+// Practitioner archetype has NO single edge (development_edge is null there), so
+// fall back to the lowest-scoring pillar. This keeps Edge_Pillar populated 100%
+// of the time. Tie-break L>I>F>T (strict <) matches carryPillar's ordering.
+// deno-lint-ignore no-explicit-any
+function edgePillar(lead: any): string | null {
+  if (lead.development_edge) return PILLAR_SHORT[lead.development_edge] ?? null;
+  const scores: [string, number][] = [
+    ["L", Number(lead.pillar_l) || 0],
+    ["I", Number(lead.pillar_i) || 0],
+    ["F", Number(lead.pillar_f) || 0],
+    ["T", Number(lead.pillar_t) || 0],
+  ];
+  let worst = scores[0];
+  for (const s of scores) if (s[1] < worst[1]) worst = s; // strict < preserves L>I>F>T order on ties
+  return PILLAR_SHORT[worst[0]] ?? null;
+}
+
 // Seniority mapping (confirmed): our intake.role -> Zoho Seniority_Level picklist.
 const SENIORITY_MAP: Record<string, string> = {
   c_suite: "VP or C-suite",
@@ -309,7 +327,7 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
     set(CF.scoreF, lead.pillar_f);
     set(CF.scoreT, lead.pillar_t);
     set(CF.carry, carryPillar(lead));
-    set(CF.edge, lead.development_edge ? PILLAR_SHORT[lead.development_edge] : null);
+    set(CF.edge, edgePillar(lead));
     set(CF.completedAt, toZohoDateTime(lead.completed_at)); // Zoho-strict datetime (no microseconds, +00:00)
     set(CF.seniority, lead.intake?.role ? SENIORITY_MAP[lead.intake.role] : null);
     set(CF.cadence, cadenceTrack(lead));
@@ -320,6 +338,13 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
 
   const ownerId = getOwnerId(lead.lead_tier);
   if (ownerId) leadData.Owner = { id: ownerId };
+
+  // Place the record on a specific Leads layout (e.g. "LIFT Assessment") when
+  // its layout id is configured. Without this, Zoho files new records under the
+  // default ("Standard"/"Leads") layout, so a "Layout is LIFT Assessment" filter
+  // shows nothing. Set ZOHO_LEADS_LAYOUT_ID to the layout's id to route them.
+  const layoutId = Deno.env.get("ZOHO_LEADS_LAYOUT_ID");
+  if (layoutId && MODULE === "Leads") leadData.Layout = { id: layoutId };
 
   // POST once. If Zoho rejects the record SPECIFICALLY because the Owner is
   // invalid (e.g. the tier's routing user was deactivated/deleted in Zoho),
