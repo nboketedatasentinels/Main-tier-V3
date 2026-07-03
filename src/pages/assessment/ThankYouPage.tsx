@@ -1,13 +1,17 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Box, Button, Container, Flex, Text, VStack } from '@chakra-ui/react'
-import { CheckCircle2, Sparkles } from 'lucide-react'
+import { Box, Button, Container, Flex, HStack, Text, VStack } from '@chakra-ui/react'
+import { Check, CheckCircle2, Copy, Linkedin, Sparkles } from 'lucide-react'
 import { ARCHETYPE_CONTENT } from '@/config/liftAssessment'
 import { ArchetypeSymbol } from '@/components/lift/ArchetypeSymbol'
 import type { LiftResult } from '@/utils/liftScoring'
 
 const PLUM = '#27062e'
 const GOLD = '#eab130'
+
+// The public link we want people to share — the clean marketing domain.
+const SHARE_URL = 'https://www.t4leader.com'
+const LINKEDIN_SHARE_URL = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(SHARE_URL)}`
 
 /**
  * Public, end-of-funnel thank-you. Anonymous visitors land here after seeing
@@ -22,6 +26,21 @@ export const ThankYouPage: React.FC = () => {
   const location = useLocation()
   const result = (location.state as { result?: LiftResult } | null)?.result ?? null
   const content = result ? ARCHETYPE_CONTENT[result.archetype] : null
+  const [copied, setCopied] = useState(false)
+
+  const shareOnLinkedIn = () => {
+    window.open(LINKEDIN_SHARE_URL, '_blank', 'noopener,noreferrer')
+  }
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(SHARE_URL)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2000)
+    } catch {
+      /* clipboard blocked - LinkedIn share is still available */
+    }
+  }
 
   return (
     <Box minH="100vh" bg="white" position="relative" overflow="hidden">
@@ -149,6 +168,58 @@ export const ThankYouPage: React.FC = () => {
               )}
             </Box>
           )}
+
+          {/* Share - turn each taker into a referral */}
+          <Box
+            w="full"
+            borderRadius="2xl"
+            borderWidth="1px"
+            borderColor="gray.100"
+            bg="white"
+            px={{ base: 6, md: 8 }}
+            py={{ base: 6, md: 7 }}
+            shadow="sm"
+          >
+            <VStack spacing={4}>
+              <VStack spacing={1}>
+                <Text fontSize="md" fontWeight="bold" color={PLUM}>
+                  Know a leader who should take this?
+                </Text>
+                <Text fontSize="sm" color="gray.600" textAlign="center" maxW="sm">
+                  Share the LIFT assessment and help more leaders discover their profile.
+                </Text>
+              </VStack>
+              <HStack spacing={3} flexWrap="wrap" justify="center">
+                <Button
+                  onClick={shareOnLinkedIn}
+                  leftIcon={<Linkedin size={18} />}
+                  px={6}
+                  borderRadius="full"
+                  bg="#0A66C2"
+                  color="white"
+                  fontWeight="bold"
+                  _hover={{ bg: '#004182' }}
+                  _active={{ transform: 'scale(0.99)' }}
+                >
+                  Share on LinkedIn
+                </Button>
+                <Button
+                  onClick={copyLink}
+                  leftIcon={copied ? <Check size={18} /> : <Copy size={18} />}
+                  px={6}
+                  borderRadius="full"
+                  variant="outline"
+                  borderColor="gray.300"
+                  color={PLUM}
+                  fontWeight="semibold"
+                  _hover={{ bg: 'gray.50' }}
+                  _active={{ transform: 'scale(0.99)' }}
+                >
+                  {copied ? 'Link copied' : 'Copy link'}
+                </Button>
+              </HStack>
+            </VStack>
+          </Box>
 
           <Button
             onClick={() => navigate('/')}

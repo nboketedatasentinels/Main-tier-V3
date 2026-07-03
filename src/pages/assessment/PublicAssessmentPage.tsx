@@ -210,6 +210,7 @@ export const PublicAssessmentPage: React.FC = () => {
           <ModalBody py={6}>
             {result && (
               <LiftResultView
+                variant="public"
                 pillars={result.pillars}
                 liftIndex={result.liftIndex}
                 archetype={result.archetype}
