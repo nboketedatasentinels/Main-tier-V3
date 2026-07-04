@@ -304,7 +304,13 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
               >
                 🔒 Your full breakdown is ready
               </Text>
-              <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="extrabold" lineHeight="1.2" textAlign="center">
+              <Text
+                fontSize={{ base: 'xl', md: '2xl' }}
+                fontWeight="extrabold"
+                lineHeight="1.2"
+                textAlign="center"
+                color="white"
+              >
                 You&rsquo;ve seen your score. You haven&rsquo;t seen what it means.
               </Text>
               <Text color="whiteAlpha.900" lineHeight="1.7" textAlign="center">
@@ -332,7 +338,9 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                     <Text as="span" color={GOLD} fontWeight="bold" lineHeight="1.6">
                       ✓
                     </Text>
-                    <Text lineHeight="1.6">{line}</Text>
+                    <Text color="whiteAlpha.900" lineHeight="1.6">
+                      {line}
+                    </Text>
                   </HStack>
                 ))}
               </VStack>
@@ -353,14 +361,14 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                 Book my call — unlock everything
               </Button>
 
-              <Text fontSize="xs" color="whiteAlpha.700" textAlign="center">
+              <Text fontSize="xs" color="whiteAlpha.800" textAlign="center">
                 No pressure — bring your questions.
               </Text>
 
               {onContinue && (
                 <Button
                   variant="link"
-                  color="whiteAlpha.700"
+                  color="whiteAlpha.800"
                   fontSize="sm"
                   fontWeight="medium"
                   onClick={onContinue}
