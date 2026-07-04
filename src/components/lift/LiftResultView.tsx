@@ -6,7 +6,6 @@ import {
   ARCHETYPE_CONTENT,
   ARCHETYPE_ACCENT,
   RESULT_CHROME,
-  resolveDevelopmentPath,
   type PillarKey,
   type Archetype,
   type LeadTier,
@@ -16,7 +15,6 @@ import { ArchetypeSymbol } from '@/components/lift/ArchetypeSymbol'
 
 // Brand palette (THEME_CONTRACT): plum, flame, royal purple, gold
 const PLUM = '#27062e'
-const FLAME = '#f4540c'
 const ROYAL = '#350e6f'
 const GOLD = '#eab130'
 
@@ -39,9 +37,6 @@ export interface LiftResultViewProps {
    * next-step recommendation. Defaults to 'app'.
    */
   variant?: 'public' | 'app'
-  /** App-only: handler for the "What to build next" primary CTA. The button is
-   *  hidden unless this is provided, so we never render a dead link. */
-  onPrimaryCta?: () => void
   /** Optional CTA shown at the bottom (e.g. "Continue to the app"). On the
    *  public gated view this becomes the low-key "continue anyway" escape. */
   onContinue?: () => void
@@ -68,14 +63,12 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
   archetype,
   developmentEdge,
   variant = 'app',
-  onPrimaryCta,
   onContinue,
   continueLabel = 'Continue',
 }) => {
   const isPublic = variant === 'public'
   const content = ARCHETYPE_CONTENT[archetype]
   const accent = ARCHETYPE_ACCENT[archetype]
-  const path = resolveDevelopmentPath(archetype, developmentEdge)
   const archetypeName = archetype === 'Emerging Leader' ? 'The Emerging Leader' : `The ${archetype}`
 
   // Carry = highest pillar, edge = lowest (developmentEdge). Bar badges only for
@@ -383,29 +376,6 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
         /* Signed-in member: the full breakdown, plus next steps. */
         <>
           {breakdown}
-
-          {/* 6 · What to build next */}
-          <Section>
-            <SectionTitle>What to build next</SectionTitle>
-            <Text color="gray.700" lineHeight="1.7">
-              {path.body}
-            </Text>
-            <Text color={PLUM} fontWeight="semibold" mt={2} lineHeight="1.6">
-              {path.recommended}
-            </Text>
-            {onPrimaryCta && (
-              <Button
-                mt={4}
-                bg={FLAME}
-                color="white"
-                _hover={{ bg: ROYAL }}
-                alignSelf="flex-start"
-                onClick={onPrimaryCta}
-              >
-                {RESULT_CHROME.primaryCta}
-              </Button>
-            )}
-          </Section>
 
           {/* Footer chrome */}
           <VStack spacing={1.5} pt={1} textAlign="center">
