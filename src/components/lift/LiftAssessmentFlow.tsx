@@ -24,6 +24,8 @@ import {
   COUNTRY_DIAL_CODES,
   DIAL_CODES,
   PILLARS,
+  validateWorkEmail,
+  validatePhone,
   type AssessmentItem,
   type ContactField,
   type IntakeField,
@@ -449,8 +451,6 @@ const Countdown: React.FC<{ onDone: () => void }> = ({ onDone }) => {
 
 // ── Contact capture: the moment the assessment is done, before results show.
 // Framed as the unlock - "your profile + points are ready, tell us where to send them."
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
 const ContactDetails: React.FC<{
   onSubmit: (contact: Partial<IntakeAnswers>) => void
   submitting: boolean
@@ -468,8 +468,15 @@ const ContactDetails: React.FC<{
       }
       return next
     })
-    // Clear an error as soon as the user starts fixing it.
-    if (errors[id]) setErrors((e) => ({ ...e, [id]: '' }))
+    // Clear an error as soon as the user starts fixing it. Choosing a dial code
+    // (or a country, which auto-fills it) also clears any phone error, since
+    // that error is keyed to the phone field, not the code.
+    setErrors((e) => {
+      if (!errors[id] && !(id === 'dialCode' || id === 'country')) return e
+      const cleared = { ...e, [id]: '' }
+      if (id === 'dialCode' || id === 'country') cleared.phone = ''
+      return cleared
+    })
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -477,10 +484,16 @@ const ContactDetails: React.FC<{
     const next: Record<string, string> = {}
     for (const field of CONTACT_FIELDS) {
       const val = (values[field.id] ?? '').trim()
-      if (field.required && !val) {
+      if (field.id === 'email') {
+        // Work email only: reject personal/disposable providers, not just bad shape.
+        const emailError = validateWorkEmail(val)
+        if (emailError) next[field.id] = emailError
+      } else if (field.id === 'phone') {
+        // Optional, but if given it must be a real, plausible number.
+        const phoneError = validatePhone(val, values.dialCode ?? '')
+        if (phoneError) next[field.id] = phoneError
+      } else if (field.required && !val) {
         next[field.id] = `${field.label} is required`
-      } else if (field.id === 'email' && val && !EMAIL_RE.test(val)) {
-        next[field.id] = 'Enter a valid email address'
       }
     }
     setErrors(next)
@@ -613,32 +626,6 @@ const ContactDetails: React.FC<{
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
       <VStack align="stretch" spacing={6}>
-        {/* Up-front framing - a few details, then straight into the assessment */}
-        <VStack spacing={3} textAlign="center">
-          <Flex
-            display="inline-flex"
-            align="center"
-            gap={2}
-            px={4}
-            py={1.5}
-            borderRadius="full"
-            bg="#fbf2d8"
-            color="#9c6f15"
-            fontWeight="bold"
-            fontSize="sm"
-            mx="auto"
-          >
-            <Sparkles size={16} /> First, the basics
-          </Flex>
-          <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="extrabold" color={PLUM} lineHeight="1.2">
-            Where should we send your results?
-          </Text>
-          <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" maxW="md" mx="auto">
-            Add your details so we can send your full LIFT profile - your archetype, your LIFT Index, and the
-            personalised next steps our team will share with you. Then you&apos;ll go straight into the assessment.
-          </Text>
-        </VStack>
-
         {/* Gold strip - sets the expectation for what's next */}
         <Flex
           align="center"
@@ -683,7 +670,6 @@ const ContactDetails: React.FC<{
           type="submit"
           isLoading={submitting}
           loadingText="Saving your details"
-          rightIcon={<Sparkles size={18} />}
           size="lg"
           py={7}
           borderRadius="full"

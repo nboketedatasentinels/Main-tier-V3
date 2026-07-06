@@ -317,6 +317,91 @@ export const CONTACT_FIELDS: ContactField[] = [
   },
 ]
 
+// ── Contact validation (work email + real phone) ─────────────────────────────
+// The assessment is a B2B lead funnel, so the email field must be a real work
+// address (not a personal inbox) and any phone number must look genuine. Both
+// live here so the form and any server-side check read the same rules.
+
+/** Basic email shape check (something@something.tld). */
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * Consumer / free-provider email domains we reject on the "work email" field.
+ * Lower-cased; matched against the part after the "@". Covers the big global
+ * providers plus their common country variants and legacy ISP mailboxes.
+ */
+export const FREE_EMAIL_DOMAINS = new Set<string>([
+  // Google
+  'gmail.com', 'googlemail.com',
+  // Microsoft
+  'outlook.com', 'outlook.co.uk', 'outlook.fr', 'outlook.de', 'outlook.es', 'outlook.com.br',
+  'hotmail.com', 'hotmail.co.uk', 'hotmail.fr', 'hotmail.de', 'hotmail.es', 'hotmail.it',
+  'hotmail.com.br', 'hotmail.com.au', 'live.com', 'live.co.uk', 'live.fr', 'live.de', 'msn.com',
+  'windowslive.com', 'passport.com',
+  // Yahoo / Oath
+  'yahoo.com', 'yahoo.co.uk', 'yahoo.co.in', 'yahoo.in', 'yahoo.fr', 'yahoo.de', 'yahoo.es',
+  'yahoo.it', 'yahoo.ca', 'yahoo.com.au', 'yahoo.com.br', 'yahoo.com.mx', 'ymail.com', 'rocketmail.com',
+  // Apple
+  'icloud.com', 'me.com', 'mac.com',
+  // Privacy-focused / other global
+  'protonmail.com', 'proton.me', 'pm.me', 'gmx.com', 'gmx.net', 'gmx.de', 'gmx.us', 'mail.com',
+  'email.com', 'yandex.com', 'yandex.ru', 'mail.ru', 'zoho.com', 'zohomail.com', 'fastmail.com',
+  'hey.com', 'tutanota.com', 'tuta.io', 'hushmail.com', 'aol.com', 'aim.com', 'inbox.com', 'gawab.com',
+  // Regional consumer / ISP mailboxes
+  'rediffmail.com', 'qq.com', '163.com', '126.com', 'sina.com', 'sohu.com', 'naver.com', 'daum.net',
+  'hanmail.net', 'comcast.net', 'verizon.net', 'att.net', 'sbcglobal.net', 'bellsouth.net', 'cox.net',
+  'charter.net', 'earthlink.net', 'juno.com', 'optonline.net', 'btinternet.com', 'virginmedia.com',
+  'sky.com', 'talktalk.net', 'ntlworld.com', 'blueyonder.co.uk', 'orange.fr', 'wanadoo.fr', 'free.fr',
+  'laposte.net', 'sfr.fr', 'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'web.de', 't-online.de',
+  'freenet.de', 'arcor.de', 'shaw.ca', 'rogers.com', 'sympatico.ca', 'bigpond.com', 'optusnet.com.au',
+  'terra.com.br', 'uol.com.br', 'bol.com.br',
+])
+
+/**
+ * Disposable / throwaway inbox domains. These are never a qualified lead, so we
+ * block them outright with a distinct message.
+ */
+export const DISPOSABLE_EMAIL_DOMAINS = new Set<string>([
+  'mailinator.com', 'guerrillamail.com', 'guerrillamail.info', 'guerrillamail.net', '10minutemail.com',
+  'trashmail.com', 'temp-mail.org', 'tempmail.com', 'tempmailo.com', 'throwawaymail.com', 'yopmail.com',
+  'getnada.com', 'sharklasers.com', 'maildrop.cc', 'dispostable.com', 'fakeinbox.com', 'mailnesia.com',
+  'mintemail.com', 'spamgourmet.com', 'tempinbox.com', 'emailondeck.com', 'moakt.com', 'mohmal.com',
+  'tempr.email', 'discard.email', 'mailcatch.com', 'trbvm.com', 'spam4.me', 'grr.la',
+])
+
+/**
+ * Validate the work-email field. Returns a user-facing error string, or null if
+ * the address is a valid work email.
+ */
+export const validateWorkEmail = (raw: string): string | null => {
+  const email = raw.trim().toLowerCase()
+  if (!email) return 'Work email is required'
+  if (!EMAIL_RE.test(email)) return 'Enter a valid email address'
+  const domain = email.slice(email.lastIndexOf('@') + 1)
+  if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) return 'Temporary email addresses are not accepted'
+  if (FREE_EMAIL_DOMAINS.has(domain)) return 'Please use your work email, not a personal one'
+  return null
+}
+
+/**
+ * Validate a phone number. The field is optional, so an empty value passes.
+ * When present it must have a dial code and a plausible national number (real
+ * length, not a repeated or obviously fake sequence). `nationalRaw` is the
+ * number as typed; `dialCode` is the selected "+code".
+ */
+export const validatePhone = (nationalRaw: string, dialCode: string): string | null => {
+  const national = (nationalRaw ?? '').trim()
+  if (!national) return null // optional
+  if (!dialCode) return 'Select a country code for your phone number'
+  const digits = national.replace(/\D/g, '').replace(/^0+/, '')
+  if (digits.length < 6 || digits.length > 14) return 'Enter a valid phone number'
+  if (/^(\d)\1+$/.test(digits)) return 'Enter a valid phone number' // all one digit
+  if ('01234567890123456789'.includes(digits) || '09876543210987654321'.includes(digits)) {
+    return 'Enter a valid phone number' // straight run, e.g. 12345678
+  }
+  return null
+}
+
 // ── Offers / recommendations ─────────────────────────────────────────────────
 export interface Offer {
   key: string
