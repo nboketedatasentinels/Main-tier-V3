@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Box, Button, Container, Flex, HStack, Text, VStack } from '@chakra-ui/react'
-import { Check, CheckCircle2, Copy, Linkedin, Sparkles } from 'lucide-react'
+import { Check, CheckCircle2, Copy, Linkedin, Share2, Sparkles } from 'lucide-react'
 import { ARCHETYPE_CONTENT } from '@/config/liftAssessment'
 import { ArchetypeSymbol } from '@/components/lift/ArchetypeSymbol'
 import type { LiftResult } from '@/utils/liftScoring'
@@ -9,9 +9,27 @@ import type { LiftResult } from '@/utils/liftScoring'
 const PLUM = '#27062e'
 const GOLD = '#eab130'
 
-// The public link we want people to share — the clean marketing domain.
-const SHARE_URL = 'https://www.t4leader.com'
-const LINKEDIN_SHARE_URL = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(SHARE_URL)}`
+// Where we send people to take the assessment — this is the link the share
+// preview card renders from (its OG tags live in index.html).
+const ASSESSMENT_URL = 'https://app.t4leader.com/assessment'
+const LINKEDIN_SHARE_URL = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ASSESSMENT_URL)}`
+
+/**
+ * The ready-to-post caption. It carries the person's ACTUAL result (archetype +
+ * LIFT Index) and the assessment link, so a share both shows how they rated and
+ * invites their network to find out how they'd rate. Degrades to a generic
+ * invite when the result is missing (direct visit / refresh). No em dashes, per
+ * brand voice.
+ */
+const buildCaption = (result: LiftResult | null): string => {
+  const cta = `Curious how you'd rate? Take the free 4-minute LIFT Index: ${ASSESSMENT_URL}`
+  if (!result) {
+    return `I just mapped my leadership profile with the LIFT Index, a quick read on how you lead AI and digital transformation across four pillars. ${cta}`
+  }
+  const profile =
+    result.archetype === 'Emerging Leader' ? 'an Emerging Leader' : `The ${result.archetype}`
+  return `My LIFT Index is ${result.liftIndex} and my leadership profile is ${profile}. The LIFT Index scores how you lead AI and digital transformation across four pillars. ${cta}`
+}
 
 /**
  * Public, end-of-funnel thank-you. Anonymous visitors land here after seeing
@@ -26,19 +44,46 @@ export const ThankYouPage: React.FC = () => {
   const location = useLocation()
   const result = (location.state as { result?: LiftResult } | null)?.result ?? null
   const content = result ? ARCHETYPE_CONTENT[result.archetype] : null
+  const caption = buildCaption(result)
   const [copied, setCopied] = useState(false)
+  const [pasteHint, setPasteHint] = useState(false)
 
-  const shareOnLinkedIn = () => {
+  // Copy the result caption for the user to paste, then open the LinkedIn
+  // composer on the assessment link. LinkedIn can't pre-fill the caption, so
+  // copying it is what lets the post actually show their result.
+  const shareOnLinkedIn = async () => {
+    try {
+      await navigator.clipboard.writeText(caption)
+      setPasteHint(true)
+      window.setTimeout(() => setPasteHint(false), 6000)
+    } catch {
+      /* clipboard blocked - they can still copy the caption manually below */
+    }
     window.open(LINKEDIN_SHARE_URL, '_blank', 'noopener,noreferrer')
   }
 
-  const copyLink = async () => {
+  // Native share sheet (mobile / supported browsers) pre-fills the caption for
+  // real. Falls back to the LinkedIn flow when unavailable.
+  const shareNative = async () => {
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ text: caption, url: ASSESSMENT_URL })
+        return
+      } catch {
+        /* user cancelled - do nothing */
+        return
+      }
+    }
+    await shareOnLinkedIn()
+  }
+
+  const copyCaption = async () => {
     try {
-      await navigator.clipboard.writeText(SHARE_URL)
+      await navigator.clipboard.writeText(caption)
       setCopied(true)
       window.setTimeout(() => setCopied(false), 2000)
     } catch {
-      /* clipboard blocked - LinkedIn share is still available */
+      /* clipboard blocked */
     }
   }
 
@@ -169,7 +214,7 @@ export const ThankYouPage: React.FC = () => {
             </Box>
           )}
 
-          {/* Share - turn each taker into a referral */}
+          {/* Share your result - turn each taker into a referral */}
           <Box
             w="full"
             borderRadius="2xl"
@@ -183,28 +228,61 @@ export const ThankYouPage: React.FC = () => {
             <VStack spacing={4}>
               <VStack spacing={1}>
                 <Text fontSize="md" fontWeight="bold" color={PLUM}>
-                  Know a leader who should take this?
+                  Share your result
                 </Text>
                 <Text fontSize="sm" color="gray.600" textAlign="center" maxW="sm">
-                  Share the LIFT assessment and help more leaders discover their profile.
+                  Post your LIFT profile and challenge your network to see how they rate.
                 </Text>
               </VStack>
+
+              {/* The exact caption that gets posted - shows their actual result. */}
+              <Box
+                w="full"
+                textAlign="left"
+                borderRadius="xl"
+                borderWidth="1px"
+                borderColor="gray.200"
+                bg="gray.50"
+                px={4}
+                py={3}
+              >
+                <Text fontSize="sm" color="gray.700" lineHeight="1.6" whiteSpace="pre-wrap">
+                  {caption}
+                </Text>
+              </Box>
+
               <HStack spacing={3} flexWrap="wrap" justify="center">
+                {typeof navigator !== 'undefined' && typeof navigator.share === 'function' ? (
+                  <Button
+                    onClick={shareNative}
+                    leftIcon={<Share2 size={18} />}
+                    px={6}
+                    borderRadius="full"
+                    bg={PLUM}
+                    color="white"
+                    fontWeight="bold"
+                    _hover={{ bg: '#3a0d44' }}
+                    _active={{ transform: 'scale(0.99)' }}
+                  >
+                    Share your result
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={shareOnLinkedIn}
+                    leftIcon={<Linkedin size={18} />}
+                    px={6}
+                    borderRadius="full"
+                    bg="#0A66C2"
+                    color="white"
+                    fontWeight="bold"
+                    _hover={{ bg: '#004182' }}
+                    _active={{ transform: 'scale(0.99)' }}
+                  >
+                    Share on LinkedIn
+                  </Button>
+                )}
                 <Button
-                  onClick={shareOnLinkedIn}
-                  leftIcon={<Linkedin size={18} />}
-                  px={6}
-                  borderRadius="full"
-                  bg="#0A66C2"
-                  color="white"
-                  fontWeight="bold"
-                  _hover={{ bg: '#004182' }}
-                  _active={{ transform: 'scale(0.99)' }}
-                >
-                  Share on LinkedIn
-                </Button>
-                <Button
-                  onClick={copyLink}
+                  onClick={copyCaption}
                   leftIcon={copied ? <Check size={18} /> : <Copy size={18} />}
                   px={6}
                   borderRadius="full"
@@ -215,9 +293,15 @@ export const ThankYouPage: React.FC = () => {
                   _hover={{ bg: 'gray.50' }}
                   _active={{ transform: 'scale(0.99)' }}
                 >
-                  {copied ? 'Link copied' : 'Copy link'}
+                  {copied ? 'Caption copied' : 'Copy caption'}
                 </Button>
               </HStack>
+
+              {pasteHint && (
+                <Text fontSize="xs" color="#9c6f15" textAlign="center">
+                  We copied your caption. Paste it into the post (Ctrl / Cmd + V), then share.
+                </Text>
+              )}
             </VStack>
           </Box>
 
