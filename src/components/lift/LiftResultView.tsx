@@ -314,9 +314,9 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                 You&rsquo;ve seen your score. You haven&rsquo;t seen what it means.
               </Text>
               <Text color="whiteAlpha.900" lineHeight="1.7" textAlign="center">
-                The number is the easy part. The real read — where you&rsquo;ll quietly stall, the strength you can
-                build a career on, and the one move that shifts your trajectory — is mapped out below. On a short
-                call we&rsquo;ll walk you through all of it, together, and where to go next.
+                The score is the easy part. Below is the real read: where you&rsquo;ll quietly stall, the strength
+                to build a career on, and the one move that shifts your trajectory. We&rsquo;ll walk you through it
+                on a short call.
               </Text>
 
               <VStack
@@ -330,9 +330,9 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
               >
                 {[
                   'Your four pillars, scored and ranked',
-                  'Where you lose ground under real pressure',
-                  'Your carry strength — and your growth edge',
-                  'The single most valuable thing to build next',
+                  'Where you lose ground under pressure',
+                  'Your carry strength and your growth edge',
+                  'The most valuable thing to build next',
                 ].map((line) => (
                   <HStack key={line} align="start" spacing={2}>
                     <Text as="span" color={GOLD} fontWeight="bold" lineHeight="1.6">
@@ -358,11 +358,11 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                 _active={{ bg: GOLD }}
                 boxShadow="lg"
               >
-                Book my call — unlock everything
+                Book my call
               </Button>
 
               <Text fontSize="xs" color="whiteAlpha.800" textAlign="center">
-                No pressure — bring your questions.
+                No pressure. Bring your questions.
               </Text>
 
               {onContinue && (
@@ -374,7 +374,7 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                   onClick={onContinue}
                   _hover={{ color: 'white' }}
                 >
-                  I&rsquo;ll continue with just my score for now
+                  Continue with just my score
                 </Button>
               )}
             </VStack>
