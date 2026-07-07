@@ -9,10 +9,19 @@ import type { LiftResult } from '@/utils/liftScoring'
 const PLUM = '#27062e'
 const GOLD = '#eab130'
 
-// Where we send people to take the assessment — this is the link the share
-// preview card renders from (its OG tags live in index.html).
-const ASSESSMENT_URL = 'https://app.t4leader.com/assessment'
-const LINKEDIN_SHARE_URL = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(ASSESSMENT_URL)}`
+const SITE_URL = 'https://app.t4leader.com'
+// Where we send people to take the assessment (used in the caption CTA).
+const ASSESSMENT_URL = `${SITE_URL}/assessment`
+
+// The per-result share link. Its OG card (served by api/share.ts + api/og.tsx)
+// shows the person's ACTUAL result - archetype + LIFT Index - and the page it
+// links to invites the viewer to take the assessment. Falls back to the plain
+// assessment link when the result is missing (refresh / direct visit).
+const buildShareUrl = (result: LiftResult | null): string => {
+  if (!result) return ASSESSMENT_URL
+  const params = new URLSearchParams({ a: result.archetype, i: String(result.liftIndex) })
+  return `${SITE_URL}/r?${params.toString()}`
+}
 
 /**
  * The ready-to-post caption. It carries the person's ACTUAL result (archetype +
@@ -45,12 +54,15 @@ export const ThankYouPage: React.FC = () => {
   const result = (location.state as { result?: LiftResult } | null)?.result ?? null
   const content = result ? ARCHETYPE_CONTENT[result.archetype] : null
   const caption = buildCaption(result)
+  const shareUrl = buildShareUrl(result)
+  const linkedInShareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`
   const [copied, setCopied] = useState(false)
   const [pasteHint, setPasteHint] = useState(false)
 
   // Copy the result caption for the user to paste, then open the LinkedIn
-  // composer on the assessment link. LinkedIn can't pre-fill the caption, so
-  // copying it is what lets the post actually show their result.
+  // composer on the per-result share link. The link's OG card already shows
+  // their archetype + LIFT Index; LinkedIn can't pre-fill the caption text, so
+  // copying it lets them add the written result too.
   const shareOnLinkedIn = async () => {
     try {
       await navigator.clipboard.writeText(caption)
@@ -59,7 +71,7 @@ export const ThankYouPage: React.FC = () => {
     } catch {
       /* clipboard blocked - they can still copy the caption manually below */
     }
-    window.open(LINKEDIN_SHARE_URL, '_blank', 'noopener,noreferrer')
+    window.open(linkedInShareUrl, '_blank', 'noopener,noreferrer')
   }
 
   // Native share sheet (mobile / supported browsers) pre-fills the caption for
@@ -67,7 +79,7 @@ export const ThankYouPage: React.FC = () => {
   const shareNative = async () => {
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
       try {
-        await navigator.share({ text: caption, url: ASSESSMENT_URL })
+        await navigator.share({ text: caption, url: shareUrl })
         return
       } catch {
         /* user cancelled - do nothing */
