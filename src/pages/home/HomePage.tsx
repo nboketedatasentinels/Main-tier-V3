@@ -41,7 +41,7 @@ export const HomePage: React.FC = () => {
 
       <main>
         <HeroSection
-          ctaTo="/signup"
+          ctaTo="/login"
           ctaLabel="Get started"
           secondaryTo="/assessment"
           secondaryLabel="Take the assessment"
