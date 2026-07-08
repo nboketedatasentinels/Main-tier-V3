@@ -134,6 +134,18 @@ const PROGRESS_COLS =
   'id, full_name, first_name, last_name, email, role, organization_id, ' +
   'journey_type, journey_start_date, current_week, total_points'
 
+/**
+ * Internal / test accounts that should not count as real learners: anyone on
+ * the @t4leader.com domain (staff) or whose name/email looks like a test or
+ * demo account. Keeps the learner numbers honest without hiding real users.
+ */
+const isInternalOrTest = (row: ProgressRow): boolean => {
+  const email = (row.email ?? '').toLowerCase()
+  if (email.endsWith('@t4leader.com')) return true
+  const haystack = `${email} ${[row.full_name, row.first_name, row.last_name].filter(Boolean).join(' ')}`.toLowerCase()
+  return haystack.includes('test') || haystack.includes('demo')
+}
+
 const emptyJourneyProgress = (): JourneyProgressAggregate => ({
   total: 0,
   completed: 0,
@@ -179,6 +191,7 @@ export const listenToJourneyProgress = (
       for (const raw of (profilesRes.data ?? []) as unknown as ProgressRow[]) {
         const role = raw.role ?? undefined
         if (role && NON_LEARNER_ROLES.has(role)) continue
+        if (isInternalOrTest(raw)) continue
 
         agg.total += 1
 
