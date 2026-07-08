@@ -14,6 +14,7 @@ import { FeedbackInboxPage } from '@/pages/super-admin/FeedbackInboxPage'
 import {
   listenToDashboardMetrics,
   listenToEngagementRiskAggregates,
+  listenToJourneyProgress,
   listenToRegistrationTrend,
   listenToUserGrowthTrend,
   listenToRegistrations,
@@ -23,6 +24,7 @@ import {
 } from '@/services/supabaseSuperAdminService'
 import {
   EngagementRiskAggregate,
+  JourneyProgressAggregate,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
   SystemAlertRecord,
@@ -62,6 +64,16 @@ export const SuperAdminDashboard: React.FC = () => {
   const [activePage, setActivePage] = useState<string>('overview')
   const [metrics, setMetrics] = useState<SuperAdminDashboardMetrics>(defaultMetrics)
   const [riskAggregate, setRiskAggregate] = useState<EngagementRiskAggregate>({ total: 0, riskBuckets: {} })
+  const [journeyProgress, setJourneyProgress] = useState<JourneyProgressAggregate>({
+    total: 0,
+    completed: 0,
+    onTrack: 0,
+    needsNudge: 0,
+    behind: 0,
+    critical: 0,
+    notStarted: 0,
+    attention: [],
+  })
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([])
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([])
   const [systemAlerts, setSystemAlerts] = useState<SystemAlertRecord[]>([])
@@ -164,6 +176,13 @@ export const SuperAdminDashboard: React.FC = () => {
           markCoreStreamLoaded('risk')
         },
         (err) => handleError('Unable to load engagement risk data from Firebase', err),
+      ),
+    )
+
+    unsubscribers.push(
+      listenToJourneyProgress(
+        (aggregate) => setJourneyProgress(aggregate),
+        (err) => handleError('Unable to load learner journey progress', err),
       ),
     )
 
@@ -461,6 +480,7 @@ export const SuperAdminDashboard: React.FC = () => {
             streamsLoading={streamsLoading}
             onNavigate={handleNavigate}
             healthItems={healthItems}
+            journeyProgress={journeyProgress}
           />
         )
     }

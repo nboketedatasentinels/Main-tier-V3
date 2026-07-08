@@ -30,6 +30,7 @@ import { AdminNotificationsList } from '@/components/admin/AdminNotificationsLis
 import { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import type { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
 import {
+  JourneyProgressAggregate,
   RegistrationRecord,
   SuperAdminDashboardMetrics,
   SystemAlertRecord,
@@ -40,7 +41,7 @@ import {
 // Command Center Components
 import { CommandCenterHeader } from './components/CommandCenterHeader'
 import { CriticalActionInbox, ActionItem } from './components/CriticalActionInbox'
-import { SystemHealthStrip, HealthKPI } from './components/SystemHealthStrip'
+import { LearnerJourneyHealth } from './components/LearnerJourneyHealth'
 import { CollapsibleMetrics } from './components/CollapsibleMetrics'
 
 type TrendPoint = { label: string; value: number }
@@ -93,11 +94,11 @@ type OverviewPageProps = {
   streamsLoading: boolean
   onNavigate: (key: string) => void
   healthItems: AdminHealthItem[]
+  journeyProgress: JourneyProgressAggregate
 }
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
   adminName,
-  metrics,
   registrationTrend,
   userGrowthTrend,
   systemAlerts,
@@ -107,7 +108,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   loading,
   error,
   onNavigate,
-  healthItems,
+  journeyProgress,
 }) => {
   const notificationsDrawer = useDisclosure()
 
@@ -201,43 +202,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
     return items
   }, [systemAlerts, verificationRequests, taskNotifications, registrations, onNavigate])
 
-  const healthKPIs: HealthKPI[] = React.useMemo(() => {
-    const isIncident = healthItems.some((i) => i.status === 'error')
-    const isDegraded = healthItems.some((i) => i.status === 'warning')
-
-    return [
-      {
-        label: 'Platform Status',
-        value: isIncident ? 'Incident' : isDegraded ? 'Degraded' : 'Stable',
-        status: isIncident ? 'incident' : isDegraded ? 'degraded' : 'stable',
-      },
-      {
-        label: 'Active Orgs',
-        value: metrics.managedCompanies.toString(),
-        status: 'stable',
-        trend: 'up',
-        trendValue: '+2',
-      },
-      {
-        label: 'User Activity Health',
-        value: `${Math.round(metrics.engagementRate * 100)}%`,
-        status: metrics.engagementRate >= 0.7 ? 'stable' : 'degraded',
-        trend: metrics.engagementRate >= 0.7 ? 'up' : 'down',
-        trendValue: '5%',
-      },
-      {
-        label: 'Security Events',
-        value: systemAlerts.length.toString(),
-        status: systemAlerts.length > 5 ? 'degraded' : 'stable',
-      },
-      {
-        label: 'Automation Failures',
-        value: '0',
-        status: 'stable',
-      },
-    ]
-  }, [healthItems, metrics, systemAlerts])
-
   return (
     <Stack spacing={8}>
       <CommandCenterHeader
@@ -272,8 +236,8 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
           {/* ZONE 1 - CRITICAL ATTENTION */}
           <CriticalActionInbox items={criticalActionItems} />
 
-          {/* ZONE 2 - SYSTEM HEALTH SNAPSHOT */}
-          <SystemHealthStrip kpis={healthKPIs} />
+          {/* ZONE 2 - LEARNER JOURNEY HEALTH */}
+          <LearnerJourneyHealth aggregate={journeyProgress} onReviewUsers={() => onNavigate('users')} />
 
           {/* ZONE 6 - SYSTEM METRICS (Collapsible) */}
           <CollapsibleMetrics>

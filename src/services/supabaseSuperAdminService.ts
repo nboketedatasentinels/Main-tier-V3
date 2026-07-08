@@ -19,6 +19,8 @@ import { supabase } from '@/services/supabase'
 import type {
   AdminUserRecord,
   EngagementRiskAggregate,
+  JourneyProgressAggregate,
+  JourneyProgressLearner,
   OrganizationLead,
   OrganizationRecord,
   RegistrationRecord,
@@ -27,6 +29,8 @@ import type {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+import { calculateUserRiskStatus, getProgramWeekNumber } from '@/utils/partnerProgress'
+import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
 type TrendPoint = { label: string; value: number }
 type Unsub = () => void
@@ -91,6 +95,156 @@ export const listenToDashboardMetrics = (
       })
     } catch (err) {
       if (!cancelled) onError?.(toErr(err, 'Failed to load dashboard metrics'))
+    }
+  })()
+  return () => {
+    cancelled = true
+  }
+}
+
+/** Roles that are not learners and so are excluded from journey progress. */
+const NON_LEARNER_ROLES = new Set([
+  'partner',
+  'super_admin',
+  'admin',
+  'company_admin',
+  'mentor',
+  'ambassador',
+])
+
+type ProgressRow = {
+  id: string
+  full_name?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  email?: string | null
+  role?: string | null
+  organization_id?: string | null
+  journey_type?: string | null
+  journey_start_date?: string | null
+  current_week?: number | null
+  total_points?: number | null
+}
+
+const PROGRESS_COLS =
+  'id, full_name, first_name, last_name, email, role, organization_id, ' +
+  'journey_type, journey_start_date, current_week, total_points'
+
+const emptyJourneyProgress = (): JourneyProgressAggregate => ({
+  total: 0,
+  completed: 0,
+  onTrack: 0,
+  needsNudge: 0,
+  behind: 0,
+  critical: 0,
+  notStarted: 0,
+  attention: [],
+})
+
+/**
+ * Classifies every learner into a single journey-progress bucket using the same
+ * pace-ratio rules partners see, then returns the counts plus a "needs
+ * attention" list of the most-delayed learners (org name joined in).
+ *
+ * Reads Supabase `profiles` + `organizations` once (admin metrics don't need
+ * realtime) and returns a cancel function, matching the other listeners here.
+ */
+export const listenToJourneyProgress = (
+  onChange: (aggregate: JourneyProgressAggregate) => void,
+  onError?: ErrCb,
+): Unsub => {
+  let cancelled = false
+  void (async () => {
+    try {
+      const [profilesRes, orgsRes] = await Promise.all([
+        supabase.from('profiles').select(PROGRESS_COLS),
+        supabase.from('organizations').select('id, name'),
+      ])
+      if (profilesRes.error) throw new Error(profilesRes.error.message)
+      if (cancelled) return
+
+      const orgNames = new Map<string, string>()
+      ;(orgsRes.data ?? []).forEach((o) => {
+        const row = o as { id?: string; name?: string }
+        if (row.id) orgNames.set(row.id, row.name ?? '')
+      })
+
+      const agg = emptyJourneyProgress()
+      const attention: JourneyProgressLearner[] = []
+
+      for (const raw of (profilesRes.data ?? []) as unknown as ProgressRow[]) {
+        const role = raw.role ?? undefined
+        if (role && NON_LEARNER_ROLES.has(role)) continue
+
+        agg.total += 1
+
+        const journeyType = raw.journey_type ?? undefined
+        const totalPoints = raw.total_points ?? 0
+        const currentWeek = raw.current_week ?? getProgramWeekNumber(raw.journey_start_date ?? undefined)
+
+        // Not started: no journey assigned, or no progress at the very start.
+        if (!journeyType || (totalPoints === 0 && currentWeek <= 1)) {
+          agg.notStarted += 1
+          continue
+        }
+
+        const meta = JOURNEY_META[journeyType as JourneyType]
+        const passMark = meta?.passMarkPoints ?? 0
+        if (passMark && totalPoints >= passMark) {
+          agg.completed += 1
+          continue
+        }
+
+        const risk = calculateUserRiskStatus(currentWeek, {}, {}, undefined, {
+          journeyType,
+          totalPoints,
+        })
+
+        switch (risk.level) {
+          case 'critical':
+            agg.critical += 1
+            break
+          case 'behind':
+            agg.behind += 1
+            break
+          case 'warning':
+            agg.needsNudge += 1
+            break
+          default:
+            agg.onTrack += 1
+        }
+
+        if (risk.level === 'critical' || risk.level === 'behind') {
+          const name =
+            raw.full_name ||
+            [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
+            raw.email ||
+            'Unknown learner'
+          attention.push({
+            id: raw.id,
+            name,
+            email: raw.email ?? undefined,
+            organization: raw.organization_id ? orgNames.get(raw.organization_id) || undefined : undefined,
+            journeyType,
+            currentWeek,
+            totalPoints,
+            level: risk.level,
+            deficit: risk.points_deficit ?? 0,
+            reason: risk.reason,
+          })
+        }
+      }
+
+      // Most severe first: critical before behind, then largest deficit.
+      attention.sort((a, b) => {
+        if (a.level !== b.level) return a.level === 'critical' ? -1 : 1
+        return b.deficit - a.deficit
+      })
+      agg.attention = attention.slice(0, 6)
+
+      if (!cancelled) onChange(agg)
+    } catch (err) {
+      if (!cancelled) onError?.(toErr(err, 'Failed to load learner journey progress'))
     }
   })()
   return () => {
