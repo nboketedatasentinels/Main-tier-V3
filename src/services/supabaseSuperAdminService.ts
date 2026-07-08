@@ -19,6 +19,7 @@ import { supabase } from '@/services/supabase'
 import type {
   AdminUserRecord,
   EngagementRiskAggregate,
+  JourneyBucket,
   JourneyProgressAggregate,
   JourneyProgressLearner,
   OrganizationLead,
@@ -138,7 +139,7 @@ const emptyJourneyProgress = (): JourneyProgressAggregate => ({
   behind: 0,
   critical: 0,
   notStarted: 0,
-  attention: [],
+  learners: [],
 })
 
 /**
@@ -170,7 +171,7 @@ export const listenToJourneyProgress = (
       })
 
       const agg = emptyJourneyProgress()
-      const attention: JourneyProgressLearner[] = []
+      const learners: JourneyProgressLearner[] = []
 
       for (const raw of (profilesRes.data ?? []) as unknown as ProgressRow[]) {
         const role = raw.role ?? undefined
@@ -182,65 +183,57 @@ export const listenToJourneyProgress = (
         const totalPoints = raw.total_points ?? 0
         const currentWeek = raw.current_week ?? getProgramWeekNumber(raw.journey_start_date ?? undefined)
 
-        // Not started: no journey assigned, or no progress at the very start.
+        let bucket: JourneyBucket
+        let deficit = 0
+
         if (!journeyType || (totalPoints === 0 && currentWeek <= 1)) {
-          agg.notStarted += 1
-          continue
+          // Not started: no journey assigned, or no progress at the very start.
+          bucket = 'notStarted'
+        } else {
+          const meta = JOURNEY_META[journeyType as JourneyType]
+          const passMark = meta?.passMarkPoints ?? 0
+          if (passMark && totalPoints >= passMark) {
+            bucket = 'completed'
+          } else {
+            const risk = calculateUserRiskStatus(currentWeek, {}, {}, undefined, {
+              journeyType,
+              totalPoints,
+            })
+            deficit = risk.points_deficit ?? 0
+            bucket =
+              risk.level === 'critical'
+                ? 'critical'
+                : risk.level === 'behind'
+                  ? 'behind'
+                  : risk.level === 'warning'
+                    ? 'needsNudge'
+                    : 'onTrack'
+          }
         }
 
-        const meta = JOURNEY_META[journeyType as JourneyType]
-        const passMark = meta?.passMarkPoints ?? 0
-        if (passMark && totalPoints >= passMark) {
-          agg.completed += 1
-          continue
-        }
+        agg[bucket] += 1
 
-        const risk = calculateUserRiskStatus(currentWeek, {}, {}, undefined, {
+        const name =
+          raw.full_name ||
+          [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
+          raw.email ||
+          'Unknown learner'
+        learners.push({
+          id: raw.id,
+          name,
+          email: raw.email ?? undefined,
+          organization: raw.organization_id ? orgNames.get(raw.organization_id) || undefined : undefined,
           journeyType,
+          currentWeek,
           totalPoints,
+          bucket,
+          deficit,
         })
-
-        switch (risk.level) {
-          case 'critical':
-            agg.critical += 1
-            break
-          case 'behind':
-            agg.behind += 1
-            break
-          case 'warning':
-            agg.needsNudge += 1
-            break
-          default:
-            agg.onTrack += 1
-        }
-
-        if (risk.level === 'critical' || risk.level === 'behind') {
-          const name =
-            raw.full_name ||
-            [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
-            raw.email ||
-            'Unknown learner'
-          attention.push({
-            id: raw.id,
-            name,
-            email: raw.email ?? undefined,
-            organization: raw.organization_id ? orgNames.get(raw.organization_id) || undefined : undefined,
-            journeyType,
-            currentWeek,
-            totalPoints,
-            level: risk.level,
-            deficit: risk.points_deficit ?? 0,
-            reason: risk.reason,
-          })
-        }
       }
 
-      // Most severe first: critical before behind, then largest deficit.
-      attention.sort((a, b) => {
-        if (a.level !== b.level) return a.level === 'critical' ? -1 : 1
-        return b.deficit - a.deficit
-      })
-      agg.attention = attention.slice(0, 6)
+      // Most-behind first within any group, so an opened list leads with the worst.
+      learners.sort((a, b) => b.deficit - a.deficit)
+      agg.learners = learners
 
       if (!cancelled) onChange(agg)
     } catch (err) {

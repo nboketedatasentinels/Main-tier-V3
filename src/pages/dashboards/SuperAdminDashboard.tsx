@@ -72,7 +72,7 @@ export const SuperAdminDashboard: React.FC = () => {
     behind: 0,
     critical: 0,
     notStarted: 0,
-    attention: [],
+    learners: [],
   })
   const [registrations, setRegistrations] = useState<RegistrationRecord[]>([])
   const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([])

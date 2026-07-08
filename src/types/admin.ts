@@ -123,7 +123,16 @@ export interface EngagementRiskAggregate {
   riskBuckets: Record<string, number>
 }
 
-/** A learner surfaced in the "needs attention" list, most-delayed first. */
+/** The single progress bucket a learner falls into. */
+export type JourneyBucket =
+  | 'completed'
+  | 'onTrack'
+  | 'needsNudge'
+  | 'behind'
+  | 'critical'
+  | 'notStarted'
+
+/** A single classified learner, tagged with the bucket they fall into. */
 export interface JourneyProgressLearner {
   id: string
   name: string
@@ -132,16 +141,15 @@ export interface JourneyProgressLearner {
   journeyType?: string
   currentWeek: number
   totalPoints: number
-  level: 'critical' | 'behind'
-  /** Points below the expected pace for where they are in the journey. */
+  bucket: JourneyBucket
+  /** Points below the expected pace (0 unless behind/critical). */
   deficit: number
-  reason?: string
 }
 
 /**
  * Platform-wide learner journey progress, classified with the same pace-ratio
- * logic partners see (src/utils/partnerProgress.ts). Every enrolled learner
- * lands in exactly one bucket, so the buckets sum to `total`.
+ * logic partners see (src/utils/partnerProgress.ts). Every learner lands in
+ * exactly one bucket, so the bucket counts sum to `total`.
  */
 export interface JourneyProgressAggregate {
   /** All learners (enrolled + not started). */
@@ -158,8 +166,8 @@ export interface JourneyProgressAggregate {
   critical: number
   /** Enrolled records with no meaningful progress yet. */
   notStarted: number
-  /** Most-delayed learners for the action list. */
-  attention: JourneyProgressLearner[]
+  /** Every learner, tagged with their bucket, so a card click can list exactly its group. */
+  learners: JourneyProgressLearner[]
 }
 
 export interface VerificationRequest {

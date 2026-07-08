@@ -8,126 +8,168 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Tooltip,
 } from '@chakra-ui/react'
-import { ArrowRight, TrendingUp } from 'lucide-react'
-import type { JourneyProgressAggregate, JourneyProgressLearner } from '@/types/admin'
+import { ArrowRight } from 'lucide-react'
+import type { JourneyBucket, JourneyProgressAggregate, JourneyProgressLearner } from '@/types/admin'
 
 /**
- * The learner-journey story for the super admin overview: who is progressing,
- * who is slipping, and who needs a hand right now. Replaces the old vanity
- * "System Health" strip. All numbers come from real pace-ratio classification
- * (see listenToJourneyProgress / partnerProgress.calculateUserRiskStatus).
+ * The learner-journey story for the super admin overview, in plain language:
+ * how many learners are keeping up, slipping, at risk, or haven't begun.
+ * Clicking a card shows ONLY that group's learners right below - so the admin
+ * sees exactly who the card is talking about, no cross-page guessing.
+ *
+ * Numbers come from real pace-ratio classification (listenToJourneyProgress /
+ * partnerProgress.calculateUserRiskStatus).
  */
 
-type Segment = {
-  key: keyof Omit<JourneyProgressAggregate, 'total' | 'attention'>
+type GroupId = 'onTrack' | 'needsNudge' | 'atRisk' | 'notStarted'
+
+type Group = {
+  id: GroupId
   label: string
+  caption: string
   color: string
-  hint: string
+  buckets: JourneyBucket[]
+  /** Shown as the panel line when this group is empty. */
+  emptyText: string
 }
 
-// Full breakdown, best-to-worst. Drives both the segmented bar and its legend.
-const SEGMENTS: Segment[] = [
-  { key: 'completed', label: 'Completed', color: 'green.500', hint: 'Hit the pass mark' },
-  { key: 'onTrack', label: 'On track', color: 'teal.400', hint: 'On pace to pass' },
-  { key: 'needsNudge', label: 'Needs a nudge', color: 'yellow.400', hint: 'Slightly off pace' },
-  { key: 'behind', label: 'Falling behind', color: 'orange.400', hint: 'Behind pace, still recoverable' },
-  { key: 'critical', label: 'At risk', color: 'red.500', hint: 'May not pass at current pace' },
-  { key: 'notStarted', label: 'Not started', color: 'gray.300', hint: 'No progress yet' },
+// The four plain-English groups. Each maps to one or more raw buckets.
+const GROUPS: Group[] = [
+  {
+    id: 'onTrack',
+    label: 'On track',
+    caption: 'Keeping up or already finished',
+    color: 'green.500',
+    buckets: ['completed', 'onTrack'],
+    emptyText: 'No one is on track yet.',
+  },
+  {
+    id: 'needsNudge',
+    label: 'Slightly behind',
+    caption: 'A small push will help',
+    color: 'yellow.400',
+    buckets: ['needsNudge'],
+    emptyText: 'No one is slightly behind. Nice.',
+  },
+  {
+    id: 'atRisk',
+    label: 'At risk',
+    caption: 'Falling behind, may not finish',
+    color: 'red.500',
+    buckets: ['behind', 'critical'],
+    emptyText: 'No one is at risk right now. 🎉',
+  },
+  {
+    id: 'notStarted',
+    label: 'Not started',
+    caption: "Haven't begun yet",
+    color: 'gray.400',
+    buckets: ['notStarted'],
+    emptyText: 'Everyone has started. 🎉',
+  },
 ]
+
+// Per-learner badge shown in the opened list (distinguishes the raw bucket).
+const BUCKET_BADGE: Record<JourneyBucket, { label: string; scheme: string }> = {
+  completed: { label: 'Finished', scheme: 'green' },
+  onTrack: { label: 'On track', scheme: 'teal' },
+  needsNudge: { label: 'Slightly behind', scheme: 'yellow' },
+  behind: { label: 'Behind', scheme: 'orange' },
+  critical: { label: 'At risk', scheme: 'red' },
+  notStarted: { label: 'Not started', scheme: 'gray' },
+}
 
 const pct = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 100) : 0)
 
-type HeadlineTile = {
-  label: string
-  value: number
-  total: number
-  color: string
-  caption: string
-}
+const groupCount = (agg: JourneyProgressAggregate, group: Group) =>
+  group.buckets.reduce((sum, b) => sum + agg[b], 0)
 
-const HeadlineCard: React.FC<HeadlineTile & { onClick?: () => void }> = ({
-  label,
-  value,
-  total,
-  color,
-  caption,
-  onClick,
-}) => (
+const journeySubline = (learner: JourneyProgressLearner) =>
+  [learner.organization, learner.journeyType, learner.currentWeek ? `Week ${learner.currentWeek}` : null]
+    .filter(Boolean)
+    .join(' · ') || 'No organization'
+
+const GroupCard: React.FC<{
+  group: Group
+  count: number
+  total: number
+  selected: boolean
+  onSelect: () => void
+}> = ({ group, count, total, selected, onSelect }) => (
   <Box
+    as="button"
+    textAlign="left"
     p={4}
     bg="white"
     borderRadius="xl"
     border="1px solid"
-    borderColor="border.control"
+    borderColor={selected ? group.color : 'border.control'}
     borderLeftWidth="4px"
-    borderLeftColor={color}
-    cursor={onClick ? 'pointer' : 'default'}
-    onClick={onClick}
-    transition="all 0.2s"
-    _hover={onClick ? { shadow: 'md', transform: 'translateY(-2px)' } : {}}
+    borderLeftColor={group.color}
+    boxShadow={selected ? 'md' : 'none'}
+    outline={selected ? '2px solid' : 'none'}
+    outlineColor={selected ? group.color : 'transparent'}
+    onClick={onSelect}
+    transition="all 0.15s"
+    _hover={{ shadow: 'md', transform: 'translateY(-2px)' }}
+    aria-pressed={selected}
   >
     <Stack spacing={1}>
       <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="wide">
-        {label}
+        {group.label}
       </Text>
       <Flex align="baseline" gap={2}>
         <Text fontSize="3xl" fontWeight="extrabold" color="gray.800" lineHeight="1">
-          {value}
+          {count}
         </Text>
         <Text fontSize="sm" fontWeight="bold" color="gray.400">
-          {pct(value, total)}%
+          {pct(count, total)}%
         </Text>
       </Flex>
       <Text fontSize="xs" color="text.muted">
-        {caption}
+        {group.caption}
+      </Text>
+      <Text fontSize="xs" fontWeight="semibold" color={selected ? group.color : 'gray.400'}>
+        {selected ? 'Showing below' : 'Click to see who'}
       </Text>
     </Stack>
   </Box>
 )
 
-const journeyLabel = (learner: JourneyProgressLearner) =>
-  [learner.journeyType, learner.currentWeek ? `Week ${learner.currentWeek}` : null]
-    .filter(Boolean)
-    .join(' · ')
-
-const AttentionRow: React.FC<{ learner: JourneyProgressLearner }> = ({ learner }) => (
-  <Flex
-    align="center"
-    justify="space-between"
-    gap={3}
-    py={3}
-    borderBottomWidth="1px"
-    borderColor="gray.100"
-    _last={{ borderBottomWidth: 0 }}
-  >
-    <Box minW={0}>
-      <Text fontSize="sm" fontWeight="semibold" color="gray.800" noOfLines={1}>
-        {learner.name}
-      </Text>
-      <Text fontSize="xs" color="gray.500" noOfLines={1}>
-        {[learner.organization, journeyLabel(learner)].filter(Boolean).join(' · ') || 'No organization'}
-      </Text>
-    </Box>
-    <HStack spacing={3} flexShrink={0}>
-      {learner.deficit > 0 && (
-        <Text fontSize="xs" color="gray.500" whiteSpace="nowrap">
-          {learner.deficit.toLocaleString()} pts behind
+const LearnerRow: React.FC<{ learner: JourneyProgressLearner }> = ({ learner }) => {
+  const badge = BUCKET_BADGE[learner.bucket]
+  return (
+    <Flex
+      align="center"
+      justify="space-between"
+      gap={3}
+      py={3}
+      borderBottomWidth="1px"
+      borderColor="gray.100"
+      _last={{ borderBottomWidth: 0 }}
+    >
+      <Box minW={0}>
+        <Text fontSize="sm" fontWeight="semibold" color="gray.800" noOfLines={1}>
+          {learner.name}
         </Text>
-      )}
-      <Badge
-        colorScheme={learner.level === 'critical' ? 'red' : 'orange'}
-        variant="subtle"
-        borderRadius="full"
-        px={2}
-        textTransform="none"
-      >
-        {learner.level === 'critical' ? 'At risk' : 'Behind'}
-      </Badge>
-    </HStack>
-  </Flex>
-)
+        <Text fontSize="xs" color="gray.500" noOfLines={1}>
+          {journeySubline(learner)}
+        </Text>
+      </Box>
+      <HStack spacing={3} flexShrink={0}>
+        {learner.deficit > 0 && (
+          <Text fontSize="xs" color="gray.500" whiteSpace="nowrap">
+            {learner.deficit.toLocaleString()} pts behind
+          </Text>
+        )}
+        <Badge colorScheme={badge.scheme} variant="subtle" borderRadius="full" px={2} textTransform="none">
+          {badge.label}
+        </Badge>
+      </HStack>
+    </Flex>
+  )
+}
 
 type LearnerJourneyHealthProps = {
   aggregate: JourneyProgressAggregate
@@ -135,29 +177,22 @@ type LearnerJourneyHealthProps = {
 }
 
 export const LearnerJourneyHealth: React.FC<LearnerJourneyHealthProps> = ({ aggregate, onReviewUsers }) => {
-  const { total } = aggregate
-  const progressing = aggregate.completed + aggregate.onTrack
-  const atRisk = aggregate.behind + aggregate.critical
-
-  const headlines: HeadlineTile[] = [
-    { label: 'Progressing', value: progressing, total, color: 'green.500', caption: 'On pace to pass or done' },
-    { label: 'Needs a nudge', value: aggregate.needsNudge, total, color: 'yellow.400', caption: 'Slightly off pace' },
-    { label: 'At risk', value: atRisk, total, color: 'red.500', caption: 'Behind and may not pass' },
-    { label: 'Not started', value: aggregate.notStarted, total, color: 'gray.400', caption: 'No progress yet' },
-  ]
+  const { total, learners } = aggregate
+  // Start focused on the most urgent group so the admin sees who needs help first.
+  const [selectedId, setSelectedId] = React.useState<GroupId>('atRisk')
+  const selectedGroup = GROUPS.find((g) => g.id === selectedId) ?? GROUPS[0]
+  const selectedBuckets = new Set<JourneyBucket>(selectedGroup.buckets)
+  const shown = learners.filter((l) => selectedBuckets.has(l.bucket))
 
   return (
     <Stack spacing={4}>
       <Flex align="center" justify="space-between" wrap="wrap" gap={2}>
         <Stack spacing={0}>
-          <HStack spacing={2}>
-            <TrendingUp size={16} />
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="wider">
-              Learner Journey Health
-            </Text>
-          </HStack>
+          <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="wider">
+            How your learners are doing
+          </Text>
           <Text fontSize="sm" color="text.muted">
-            {total.toLocaleString()} learners, measured against their journey pace
+            {total.toLocaleString()} learners. Click a box to see exactly who is in it.
           </Text>
         </Stack>
         <Button
@@ -167,72 +202,54 @@ export const LearnerJourneyHealth: React.FC<LearnerJourneyHealthProps> = ({ aggr
           onClick={onReviewUsers}
           colorScheme="purple"
         >
-          Review learners
+          Manage all learners
         </Button>
       </Flex>
 
       {total === 0 ? (
         <Box p={6} bg="white" borderRadius="xl" border="1px solid" borderColor="border.control">
           <Text fontSize="sm" color="text.muted">
-            No learners enrolled yet. Progress will appear here once learners start their journeys.
+            No learners enrolled yet. This fills in once learners start their journeys.
           </Text>
         </Box>
       ) : (
         <>
           <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4}>
-            {headlines.map((tile) => (
-              <HeadlineCard key={tile.label} {...tile} onClick={onReviewUsers} />
+            {GROUPS.map((group) => (
+              <GroupCard
+                key={group.id}
+                group={group}
+                count={groupCount(aggregate, group)}
+                total={total}
+                selected={group.id === selectedId}
+                onSelect={() => setSelectedId(group.id)}
+              />
             ))}
           </SimpleGrid>
 
-          {/* Full distribution bar */}
+          {/* Focused list: ONLY the selected group's learners. */}
           <Box p={5} bg="white" borderRadius="xl" border="1px solid" borderColor="border.control">
-            <Flex h="12px" borderRadius="full" overflow="hidden" bg="gray.100">
-              {SEGMENTS.map((seg) => {
-                const value = aggregate[seg.key]
-                if (value <= 0) return null
-                return (
-                  <Tooltip key={seg.key} label={`${seg.label}: ${value} (${pct(value, total)}%)`} hasArrow>
-                    <Box flex={`${value} 0 0`} bg={seg.color} h="full" />
-                  </Tooltip>
-                )
-              })}
+            <Flex align="center" gap={2} mb={shown.length ? 3 : 0} wrap="wrap">
+              <Box w={3} h={3} borderRadius="sm" bg={selectedGroup.color} />
+              <Text fontSize="sm" fontWeight="bold" color="gray.800">
+                {selectedGroup.label}
+              </Text>
+              <Text fontSize="sm" color="gray.500">
+                {shown.length} {shown.length === 1 ? 'learner' : 'learners'} - {selectedGroup.caption.toLowerCase()}
+              </Text>
             </Flex>
-            <SimpleGrid columns={{ base: 2, md: 3, lg: 6 }} spacing={3} mt={4}>
-              {SEGMENTS.map((seg) => (
-                <HStack key={seg.key} spacing={2} align="start">
-                  <Box w={3} h={3} borderRadius="sm" bg={seg.color} mt={1} flexShrink={0} />
-                  <Stack spacing={0}>
-                    <Text fontSize="sm" fontWeight="bold" color="gray.800">
-                      {aggregate[seg.key]}
-                    </Text>
-                    <Text fontSize="xs" color="gray.500" lineHeight="1.2">
-                      {seg.label}
-                    </Text>
-                  </Stack>
-                </HStack>
-              ))}
-            </SimpleGrid>
-          </Box>
-
-          {/* Needs attention now */}
-          {aggregate.attention.length > 0 && (
-            <Box p={5} bg="white" borderRadius="xl" border="1px solid" borderColor="border.control">
-              <Flex align="center" justify="space-between" mb={1}>
-                <Text fontSize="sm" fontWeight="bold" color="gray.800">
-                  Needs attention now
-                </Text>
-                <Text fontSize="xs" color="gray.500">
-                  Most-delayed learners
-                </Text>
-              </Flex>
+            {shown.length === 0 ? (
+              <Text fontSize="sm" color="text.muted">
+                {selectedGroup.emptyText}
+              </Text>
+            ) : (
               <Stack spacing={0}>
-                {aggregate.attention.map((learner) => (
-                  <AttentionRow key={learner.id} learner={learner} />
+                {shown.map((learner) => (
+                  <LearnerRow key={learner.id} learner={learner} />
                 ))}
               </Stack>
-            </Box>
-          )}
+            )}
+          </Box>
         </>
       )}
     </Stack>
