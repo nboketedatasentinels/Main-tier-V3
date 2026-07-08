@@ -287,11 +287,11 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
             position="relative"
             borderRadius="2xl"
             p={{ base: 6, md: 8 }}
-            bgGradient={`linear(to-br, ${PLUM}, ${ROYAL})`}
-            color="white"
+            bg="white"
+            color={PLUM}
             boxShadow="2xl"
             borderWidth="1px"
-            borderColor="whiteAlpha.200"
+            borderColor="gray.200"
           >
             <VStack align="stretch" spacing={4}>
               <Text
@@ -299,7 +299,7 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                 fontWeight="bold"
                 letterSpacing="0.16em"
                 textTransform="uppercase"
-                color={GOLD}
+                color="#9c6f15"
                 textAlign="center"
               >
                 🔒 Your full breakdown is ready
@@ -309,11 +309,11 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                 fontWeight="extrabold"
                 lineHeight="1.2"
                 textAlign="center"
-                color="white"
+                color={PLUM}
               >
                 You&rsquo;ve seen your score. You haven&rsquo;t seen what it means.
               </Text>
-              <Text color="whiteAlpha.900" lineHeight="1.7" textAlign="center">
+              <Text color="gray.600" lineHeight="1.7" textAlign="center">
                 The score is the easy part. Below is the real read: where you&rsquo;ll quietly stall, the strength
                 to build a career on, and the one move that shifts your trajectory. We&rsquo;ll walk you through it
                 on a short call.
@@ -322,11 +322,13 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
               <VStack
                 align="stretch"
                 spacing={2}
-                bg="whiteAlpha.100"
+                bg="#fffaf0"
+                borderWidth="1px"
+                borderColor="#f3e2b3"
                 borderRadius="xl"
                 p={4}
                 fontSize="sm"
-                color="whiteAlpha.900"
+                color="gray.700"
               >
                 {[
                   'Your four pillars, scored and ranked',
@@ -335,10 +337,10 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                   'The most valuable thing to build next',
                 ].map((line) => (
                   <HStack key={line} align="start" spacing={2}>
-                    <Text as="span" color={GOLD} fontWeight="bold" lineHeight="1.6">
+                    <Text as="span" color="#9c6f15" fontWeight="bold" lineHeight="1.6">
                       ✓
                     </Text>
-                    <Text color="whiteAlpha.900" lineHeight="1.6">
+                    <Text color="gray.700" lineHeight="1.6">
                       {line}
                     </Text>
                   </HStack>
@@ -351,28 +353,28 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 size="lg"
-                bg={GOLD}
-                color={PLUM}
+                bg={PLUM}
+                color="white"
                 fontWeight="bold"
-                _hover={{ bg: '#f9db59', transform: 'translateY(-1px)' }}
-                _active={{ bg: GOLD }}
+                _hover={{ bg: '#3a0d44', transform: 'translateY(-1px)' }}
+                _active={{ bg: PLUM }}
                 boxShadow="lg"
               >
                 Book my call
               </Button>
 
-              <Text fontSize="xs" color="whiteAlpha.800" textAlign="center">
+              <Text fontSize="xs" color="gray.500" textAlign="center">
                 No pressure. Bring your questions.
               </Text>
 
               {onContinue && (
                 <Button
                   variant="link"
-                  color="whiteAlpha.800"
+                  color="gray.500"
                   fontSize="sm"
                   fontWeight="medium"
                   onClick={onContinue}
-                  _hover={{ color: 'white' }}
+                  _hover={{ color: PLUM }}
                 >
                   Continue with just my score
                 </Button>
