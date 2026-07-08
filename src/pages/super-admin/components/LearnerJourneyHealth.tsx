@@ -80,8 +80,6 @@ const BUCKET_BADGE: Record<JourneyBucket, { label: string; scheme: string }> = {
   notStarted: { label: 'Not started', scheme: 'gray' },
 }
 
-const pct = (value: number, total: number) => (total > 0 ? Math.round((value / total) * 100) : 0)
-
 const groupCount = (agg: JourneyProgressAggregate, group: Group) =>
   group.buckets.reduce((sum, b) => sum + agg[b], 0)
 
@@ -119,12 +117,12 @@ const GroupCard: React.FC<{
       <Text fontSize="xs" fontWeight="bold" color="gray.500" textTransform="uppercase" letterSpacing="wide">
         {group.label}
       </Text>
-      <Flex align="baseline" gap={2}>
+      <Flex align="baseline" gap={1.5}>
         <Text fontSize="3xl" fontWeight="extrabold" color="gray.800" lineHeight="1">
           {count}
         </Text>
-        <Text fontSize="sm" fontWeight="bold" color="gray.400">
-          {pct(count, total)}%
+        <Text fontSize="sm" fontWeight="semibold" color="gray.400">
+          out of {total}
         </Text>
       </Flex>
       <Text fontSize="xs" color="text.muted">
