@@ -72,13 +72,14 @@ export const listenToDashboardMetrics = (
   void (async () => {
     try {
       const since30 = windowStart(30).toISOString()
-      const [orgs, total, paid, recent] = await Promise.all([
+      const [orgs, total, paid, recent, engaged] = await Promise.all([
         supabase.from('organizations').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('membership_status', 'paid'),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', since30),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }).gt('total_points', 0),
       ])
-      const firstError = orgs.error || total.error || paid.error || recent.error
+      const firstError = orgs.error || total.error || paid.error || recent.error || engaged.error
       if (firstError) throw new Error(firstError.message)
       if (cancelled) return
 
@@ -86,12 +87,14 @@ export const listenToDashboardMetrics = (
       // No suspension/status column on profiles yet, so "active" = the full
       // registered user base (best available signal until a status column lands).
       const totalMembers = total.count ?? 0
+      // Real engagement: the share of users who have earned any points.
+      const engagementRate = totalMembers > 0 ? (engaged.count ?? 0) / totalMembers : 0
       onChange({
         organizationCount,
         managedCompanies: organizationCount,
         paidMembers: paid.count ?? 0,
         activeMembers: totalMembers,
-        engagementRate: 0.76,
+        engagementRate,
         newRegistrations: recent.count ?? 0,
       })
     } catch (err) {

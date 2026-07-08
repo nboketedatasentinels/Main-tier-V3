@@ -210,9 +210,9 @@ export const ReportsAnalyticsPage: React.FC<ReportsAnalyticsPageProps> = ({ metr
       const today = format(new Date(), 'yyyy-MM-dd')
       const rows: string[] = []
       rows.push(['metric', 'value', 'notes'].map(csvEscape).join(','))
-      rows.push(['Active members', metrics.activeMembers, 'Across all organizations'].map(csvEscape).join(','))
-      rows.push(['Engagement rate (platform)', `${Math.round(metrics.engagementRate * 100)}%`, `Rolling ${rangeDays}d`].map(csvEscape).join(','))
-      rows.push(['New registrations', metrics.newRegistrations, 'Profiles with registrationDate'].map(csvEscape).join(','))
+      rows.push(['Total members', metrics.activeMembers, 'All registered users'].map(csvEscape).join(','))
+      rows.push(['Engagement rate (platform)', `${Math.round(metrics.engagementRate * 100)}%`, 'Share who earned any points'].map(csvEscape).join(','))
+      rows.push(['New registrations', metrics.newRegistrations, 'Registered in the last 30 days'].map(csvEscape).join(','))
       rows.push(['Organizations', metrics.organizationCount, 'Total'].map(csvEscape).join(','))
       rows.push(['Watchlist organizations', insights.watchlistOrgs, 'watch/paused/inactive/suspended'].map(csvEscape).join(','))
       rows.push(['High-risk users', insights.highRiskUsers, 'critical + high'].map(csvEscape).join(','))
@@ -324,9 +324,9 @@ export const ReportsAnalyticsPage: React.FC<ReportsAnalyticsPageProps> = ({ metr
             </Flex>
 
             <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-              <MetricTile label="Active members" value={metrics.activeMembers.toLocaleString()} helper="Across all organizations" />
-              <MetricTile label="Engagement rate" value={`${Math.round(metrics.engagementRate * 100)}%`} helper={`Rolling ${rangeDays}d`} />
-              <MetricTile label="New registrations" value={metrics.newRegistrations.toLocaleString()} helper="Profiles with registrationDate" />
+              <MetricTile label="Total members" value={metrics.activeMembers.toLocaleString()} helper="All registered users" />
+              <MetricTile label="Engagement rate" value={`${Math.round(metrics.engagementRate * 100)}%`} helper="Share who earned any points" />
+              <MetricTile label="New registrations" value={metrics.newRegistrations.toLocaleString()} helper="Registered in the last 30 days" />
             </SimpleGrid>
 
             <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
