@@ -18,13 +18,6 @@ import {
   Stack,
   useDisclosure,
 } from '@chakra-ui/react'
-import { formatDistanceToNow } from 'date-fns'
-import {
-  AlertTriangle,
-  Sparkles,
-  ShieldAlert,
-  Users,
-} from 'lucide-react'
 import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AdminNotificationsList } from '@/components/admin/AdminNotificationsList'
 import { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
@@ -40,43 +33,10 @@ import {
 
 // Command Center Components
 import { CommandCenterHeader } from './components/CommandCenterHeader'
-import { CriticalActionInbox, ActionItem } from './components/CriticalActionInbox'
 import { LearnerJourneyHealth } from './components/LearnerJourneyHealth'
 import { CollapsibleMetrics } from './components/CollapsibleMetrics'
 
 type TrendPoint = { label: string; value: number }
-
-const toDate = (value?: unknown): Date | null => {
-  if (!value) return null
-  if (value instanceof Date) return value
-  if (typeof value === 'number') return new Date(value)
-  if (typeof (value as { toDate?: () => Date }).toDate === 'function') {
-    return (value as { toDate: () => Date }).toDate()
-  }
-  if (typeof value === 'string') {
-    const parsed = new Date(value)
-    return Number.isNaN(parsed.getTime()) ? null : parsed
-  }
-  return null
-}
-
-const formatRelativeTimestamp = (value: unknown, fallback: string) => {
-  const parsed = toDate(value)
-  return parsed ? formatDistanceToNow(parsed, { addSuffix: true }) : fallback
-}
-
-const isWithinPastHours = (value: unknown, hours: number) => {
-  const parsed = toDate(value)
-  if (!parsed) return false
-  return Date.now() - parsed.getTime() <= hours * 60 * 60 * 1000
-}
-
-const mapSeverity = (value?: string): ActionItem['severity'] => {
-  const normalized = value?.toLowerCase()
-  if (normalized === 'critical' || normalized === 'error') return 'critical'
-  if (normalized === 'high' || normalized === 'warning' || normalized === 'urgent') return 'high'
-  return 'medium'
-}
 
 type OverviewPageProps = {
   adminName: string
@@ -102,105 +62,12 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
   registrationTrend,
   userGrowthTrend,
   systemAlerts,
-  registrations,
-  verificationRequests,
-  taskNotifications,
   loading,
   error,
   onNavigate,
   journeyProgress,
 }) => {
   const notificationsDrawer = useDisclosure()
-
-  // Data mapping for Command Center
-  const criticalActionItems: ActionItem[] = React.useMemo(() => {
-    const items: ActionItem[] = []
-
-    const pendingVerificationRequests = verificationRequests.filter((request) => {
-      const status = request.status
-      return !status || status === 'pending'
-    })
-
-    const urgentAlerts = systemAlerts.filter((alert) => {
-      const level = alert.level?.toLowerCase()
-      return level === 'critical' || level === 'high' || level === 'warning' || level === 'error'
-    })
-
-    const urgentTasks = taskNotifications.filter((task) => {
-      const severity = task.severity?.toLowerCase()
-      return severity === 'critical' || severity === 'high' || severity === 'warning' || severity === 'urgent'
-    })
-
-    const recentRegistrations = registrations.filter((registration) =>
-      isWithinPastHours(registration.createdAt ?? registration.registrationDate, 24),
-    )
-
-    // Map urgent system alerts
-    urgentAlerts
-      .slice(0, 3)
-      .forEach((a) => {
-        items.push({
-          id: `alert-${a.id}`,
-          severity: mapSeverity(a.level),
-          title: `System alert: ${a.component || 'Platform service'}`,
-          description: a.message || 'Review the latest incident details and mitigation status.',
-          timestamp: formatRelativeTimestamp(a.created_at, 'Timestamp unavailable'),
-          actionLabel: 'Open oversight',
-          onAction: () => onNavigate('admin-oversight'),
-          icon: <ShieldAlert size={20} />,
-        })
-      })
-
-    // Map pending verification requests
-    if (pendingVerificationRequests.length > 0) {
-      items.push({
-        id: 'verifications',
-        severity: 'high',
-        title: `${pendingVerificationRequests.length} pending verification request${pendingVerificationRequests.length === 1 ? '' : 's'}`,
-        description: 'These approval requests are waiting for a super admin decision.',
-        timestamp: formatRelativeTimestamp(
-          pendingVerificationRequests[0]?.created_at,
-          'Awaiting review',
-        ),
-        actionLabel: 'Review now',
-        onAction: () => onNavigate('approvals'),
-        icon: <Sparkles size={20} />,
-      })
-    }
-
-    // Map urgent task notifications
-    urgentTasks.slice(0, 2).forEach((task) => {
-      items.push({
-        id: `task-${task.id}`,
-        severity: mapSeverity(task.severity),
-        title: task.title || 'High-priority task notification',
-        description: task.message || 'A high-priority task needs follow-up.',
-        timestamp: formatRelativeTimestamp(task.created_at, 'Queued'),
-        actionLabel: 'Open oversight',
-        onAction: () => onNavigate('admin-oversight'),
-        icon: <AlertTriangle size={20} />,
-      })
-    })
-
-    // Map only recent registrations for actionability
-    if (recentRegistrations.length > 0) {
-      items.push({
-        id: 'registrations',
-        severity: 'medium',
-        title: `${recentRegistrations.length} new registration${recentRegistrations.length === 1 ? '' : 's'} in the last 24h`,
-        description: 'New profile records that may need role or access review.',
-        timestamp: formatRelativeTimestamp(
-          recentRegistrations[0]?.createdAt ?? recentRegistrations[0]?.registrationDate,
-          'Last 24h',
-        ),
-        actionLabel: 'Review users',
-        onAction: () => onNavigate('users'),
-        icon: <Users size={20} />,
-      })
-    }
-
-    return items
-  }, [systemAlerts, verificationRequests, taskNotifications, registrations, onNavigate])
 
   return (
     <Stack spacing={8}>
@@ -233,10 +100,7 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         </Stack>
       ) : (
         <>
-          {/* ZONE 1 - CRITICAL ATTENTION */}
-          <CriticalActionInbox items={criticalActionItems} />
-
-          {/* ZONE 2 - LEARNER JOURNEY HEALTH */}
+          {/* ZONE 1 - LEARNER JOURNEY HEALTH */}
           <LearnerJourneyHealth aggregate={journeyProgress} onReviewUsers={() => onNavigate('users')} />
 
           {/* ZONE 6 - SYSTEM METRICS (Collapsible) */}
