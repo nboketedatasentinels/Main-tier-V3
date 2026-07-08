@@ -1,0 +1,8 @@
+# Supabase project config.
+# (Add `project_id` with `supabase link` if you manage the project via CLI.)
+
+# The zoho-lead-sync function is called by a Database Webhook, not by an
+# end-user, so it does NOT carry a Supabase user JWT. We authenticate the caller
+# ourselves with ZOHO_WEBHOOK_SECRET (see the function), so disable JWT checks.
+[functions.zoho-lead-sync]
+verify_jwt = false
