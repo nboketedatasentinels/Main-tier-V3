@@ -6,14 +6,17 @@
  * a Vite SPA can't expose per-result Open Graph tags: social crawlers don't run
  * JS, so they only ever saw the one static card in index.html. This endpoint is
  * server-rendered, so LinkedIn/WhatsApp/Slack read OG tags that carry the
- * person's ACTUAL result, and the card image (api/og.tsx) shows it too.
+ * person's ACTUAL result, and the card image (api/og.ts) shows it too.
  *
  * Humans who click the shared link get a small branded landing page with the
  * result and a clear call to take the assessment themselves.
  *
- * Wired to the clean /r path via a rewrite in vercel.json.
+ * Edge runtime (matches api/og.ts) so it runs reliably under this project's ESM
+ * setup. Wired to the clean /r path via a rewrite in vercel.json.
  */
 import { resolveArchetype, clampIndex, PLUM, GOLD, SOFT_GOLD } from './_archetypes'
+
+export const config = { runtime: 'edge' }
 
 const ASSESSMENT_PATH = '/assessment'
 
@@ -33,13 +36,13 @@ const escapeHtml = (s: string): string =>
     }
   })
 
-export default function handler(req: any, res: any): void {
-  const host = (req.headers['x-forwarded-host'] || req.headers.host || 'app.t4leader.com') as string
+export default function handler(req: Request): Response {
+  const url = new URL(req.url)
+  const host = req.headers.get('x-forwarded-host') || url.host || 'app.t4leader.com'
   const origin = `https://${host}`
 
-  const query = req.query ?? {}
-  const { key, meta } = resolveArchetype(query.a)
-  const index = clampIndex(query.i)
+  const { key, meta } = resolveArchetype(url.searchParams.get('a'))
+  const index = clampIndex(url.searchParams.get('i'))
 
   const shareUrl = `${origin}/r?a=${encodeURIComponent(key)}${index !== null ? `&i=${index}` : ''}`
   const imageUrl = `${origin}/api/og?a=${encodeURIComponent(key)}${index !== null ? `&i=${index}` : ''}`
@@ -130,8 +133,11 @@ export default function handler(req: any, res: any): void {
   </body>
 </html>`
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8')
-  // Cache the crawler-facing page briefly; result content is deterministic per URL.
-  res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=3600')
-  res.status(200).send(html)
+  return new Response(html, {
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      // Cache the crawler-facing page briefly; result content is deterministic per URL.
+      'cache-control': 'public, max-age=300, s-maxage=3600',
+    },
+  })
 }
