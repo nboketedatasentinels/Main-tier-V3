@@ -174,12 +174,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           <Text fontWeight="bold" color="brand.text">
             {adminName}
           </Text>
-          <HStack spacing={2}>
-            <Badge colorScheme="purple">Super Admin</Badge>
-            <Badge colorScheme="green" variant="subtle">
-              Elevated
-            </Badge>
-          </HStack>
         </Box>
       </HStack>
 
