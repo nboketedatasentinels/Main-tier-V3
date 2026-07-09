@@ -55,6 +55,7 @@ import { OrganizationRecord } from '@/types/admin'
 import { AccountStatus, TransformationTier } from '@/types'
 import type { JourneyType } from '@/config/pointsConfig'
 import { normalizeRole } from '@/utils/role'
+import { isFreeUser } from '@/utils/membership'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador']
 const roleDescriptions: Record<ManagedUserRole, string> = {
@@ -157,6 +158,21 @@ const roleFilterKey = (role?: ManagedUserRole | string | null): ManagedUserRole 
   return normalized as ManagedUserRole
 }
 
+// Derives the effective membership (free/paid/inactive) from the full signal
+// rather than trusting the raw membership_status field, which is often stale or
+// empty on seeded/legacy rows. A user is paid when role/tier says so (via the
+// shared isFreeUser rule), so "Paid membership" catches genuine paid members and
+// the badge stays consistent with the filter.
+const membershipFilterKey = (user: ManagedUserRecord): MembershipStatus => {
+  if (normalizeValue(user.membershipStatus) === 'inactive') return 'inactive'
+  const looksFree = isFreeUser({
+    role: user.role,
+    membershipStatus: user.membershipStatus,
+    transformationTier: user.transformationTier,
+  } as Parameters<typeof isFreeUser>[0])
+  return looksFree ? 'free' : 'paid'
+}
+
 const formatRoleLabel = (role?: ManagedUserRole | string, membershipStatus?: MembershipStatus) => {
   if (!role) return 'Unknown'
   if (role === 'user') {
@@ -216,7 +232,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     search: '',
     role: 'all',
     membershipStatus: 'all',
-    accountStatus: 'all',
     transformationTier: 'all',
     organization: 'all',
     timeframe: 'all',
@@ -237,7 +252,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     filters.search,
     filters.role,
     filters.membershipStatus,
-    filters.accountStatus,
     filters.transformationTier,
     filters.organization,
     filters.timeframe,
@@ -271,13 +285,11 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         (user.email || '').toLowerCase().includes(searchText) ||
         (user.companyCode || '').toLowerCase().includes(searchText)
 
-      const normalizedAccountStatus = normalizeValue(user.accountStatus) || 'active'
       const normalizedTier = normalizeValue(user.transformationTier)
 
       const matchesRole = filters.role === 'all' || roleFilterKey(user.role) === filters.role
       const matchesMembership =
-        filters.membershipStatus === 'all' || normalizeValue(user.membershipStatus) === filters.membershipStatus
-      const matchesAccountStatus = filters.accountStatus === 'all' || normalizedAccountStatus === filters.accountStatus
+        filters.membershipStatus === 'all' || membershipFilterKey(user) === filters.membershipStatus
       const matchesTier = filters.transformationTier === 'all' || normalizedTier === filters.transformationTier
       const matchesOrg = filters.organization === 'all' || user.companyId === filters.organization
 
@@ -293,7 +305,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         matchesSearch &&
         matchesRole &&
         matchesMembership &&
-        matchesAccountStatus &&
         matchesTier &&
         matchesOrg &&
         matchesTimeframe
@@ -301,7 +312,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     })
   }, [
     accessibleUsers,
-    filters.accountStatus,
     filters.membershipStatus,
     filters.organization,
     filters.role,
@@ -836,19 +846,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 </Select>
 
                 <Select
-                  maxW="190px"
-                  value={filters.accountStatus}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, accountStatus: e.target.value }))}
-                >
-                  <option value="all">All account status</option>
-                  {accountStatusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {formatAccountStatusLabel(status)}
-                    </option>
-                  ))}
-                </Select>
-
-                <Select
                   maxW="210px"
                   value={filters.transformationTier}
                   onChange={(e) => setFilters((prev) => ({ ...prev, transformationTier: e.target.value }))}
@@ -895,7 +892,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                       search: '',
                       role: 'all',
                       membershipStatus: 'all',
-                      accountStatus: 'all',
                       transformationTier: 'all',
                       organization: 'all',
                       timeframe: 'all',
@@ -1052,13 +1048,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
                           <Box flex="1 1 100px">
                             <Badge
-                              colorScheme={membershipBadgeColor[user.membershipStatus]}
+                              colorScheme={membershipBadgeColor[membershipFilterKey(user)]}
                               textTransform="capitalize"
                               borderRadius="full"
                               px={3}
                               py={1}
                             >
-                              {formatMembershipLabel(user.membershipStatus)}
+                              {formatMembershipLabel(membershipFilterKey(user))}
                             </Badge>
                           </Box>
 
