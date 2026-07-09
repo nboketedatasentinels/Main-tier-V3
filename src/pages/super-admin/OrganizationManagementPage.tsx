@@ -39,11 +39,6 @@ import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
 import {
-  assignAmbassadorToOrganization,
-  assignMentorToOrganization,
-  unassignLeadershipRole,
-} from '@/services/organizationService'
-import {
   deleteOrganization,
   logAdminAction,
 } from '@/services/superAdminService'
@@ -54,7 +49,12 @@ import {
   listenToMentors,
   listenToPartners,
 } from '@/services/supabaseSuperAdminService'
-import { assignPartnerToOrg, removePartnerFromOrg } from '@/services/supabaseOrgService'
+import {
+  assignLeadershipToOrg,
+  assignPartnerToOrg,
+  removeLeadershipFromOrg,
+  removePartnerFromOrg,
+} from '@/services/supabaseOrgService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
 type SortKey = 'name' | 'code' | 'teamSize' | 'status' | 'partnerName'
@@ -276,28 +276,37 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     if (!selectedOrg?.id) return
     try {
       if (mentorId) {
-        await assignMentorToOrganization(selectedOrg.id, mentorId)
+        await assignLeadershipToOrg(selectedOrg.id, mentorId, 'mentor', {
+          code: selectedOrg.code,
+          name: selectedOrg.name,
+        })
       } else {
-        await unassignLeadershipRole(selectedOrg.id, 'mentor')
+        await removeLeadershipFromOrg(selectedOrg.id, 'mentor')
       }
       setOrganizations((prev) =>
         prev.map((org) =>
           org.id === selectedOrg.id ? { ...org, assignedMentorId: mentorId } : org,
         ),
       )
-      await logAdminAction({
-        action: 'Mentor assignment updated',
-        organizationName: selectedOrg.name,
-        organizationCode: selectedOrg.code,
-        adminId,
-        adminName,
-        metadata: { mentorId },
-      })
-      toast({ title: 'Mentor updated', status: 'success' })
+      // Best-effort audit (Firestore); must not fail the Supabase assignment.
+      try {
+        await logAdminAction({
+          action: 'Mentor assignment updated',
+          organizationName: selectedOrg.name,
+          organizationCode: selectedOrg.code,
+          adminId,
+          adminName,
+          metadata: { mentorId },
+        })
+      } catch (auditError) {
+        console.warn('[OrgManagement] mentor audit log failed', auditError)
+      }
+      toast({ title: mentorId ? 'Mentor assigned' : 'Mentor removed', status: 'success' })
       assignMentorModal.onClose()
     } catch (error) {
       console.error(error)
-      toast({ title: 'Unable to update mentor assignment', status: 'error' })
+      const message = error instanceof Error ? error.message : 'Unexpected error'
+      toast({ title: 'Unable to update mentor assignment', description: message, status: 'error' })
       return
     }
   }
@@ -306,28 +315,37 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     if (!selectedOrg?.id) return
     try {
       if (ambassadorId) {
-        await assignAmbassadorToOrganization(selectedOrg.id, ambassadorId)
+        await assignLeadershipToOrg(selectedOrg.id, ambassadorId, 'ambassador', {
+          code: selectedOrg.code,
+          name: selectedOrg.name,
+        })
       } else {
-        await unassignLeadershipRole(selectedOrg.id, 'ambassador')
+        await removeLeadershipFromOrg(selectedOrg.id, 'ambassador')
       }
       setOrganizations((prev) =>
         prev.map((org) =>
           org.id === selectedOrg.id ? { ...org, assignedAmbassadorId: ambassadorId } : org,
         ),
       )
-      await logAdminAction({
-        action: 'Ambassador assignment updated',
-        organizationName: selectedOrg.name,
-        organizationCode: selectedOrg.code,
-        adminId,
-        adminName,
-        metadata: { ambassadorId },
-      })
-      toast({ title: 'Ambassador updated', status: 'success' })
+      // Best-effort audit (Firestore); must not fail the Supabase assignment.
+      try {
+        await logAdminAction({
+          action: 'Ambassador assignment updated',
+          organizationName: selectedOrg.name,
+          organizationCode: selectedOrg.code,
+          adminId,
+          adminName,
+          metadata: { ambassadorId },
+        })
+      } catch (auditError) {
+        console.warn('[OrgManagement] ambassador audit log failed', auditError)
+      }
+      toast({ title: ambassadorId ? 'Ambassador assigned' : 'Ambassador removed', status: 'success' })
       assignAmbassadorModal.onClose()
     } catch (error) {
       console.error(error)
-      toast({ title: 'Unable to update ambassador assignment', status: 'error' })
+      const message = error instanceof Error ? error.message : 'Unexpected error'
+      toast({ title: 'Unable to update ambassador assignment', description: message, status: 'error' })
       return
     }
   }

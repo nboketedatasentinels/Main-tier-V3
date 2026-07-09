@@ -311,6 +311,56 @@ export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
   if (data !== 'ok') throw new Error(`Removal failed: ${data}`)
 }
 
+/**
+ * Assign a mentor/ambassador to an organization. There is no dedicated org
+ * column for these (unlike transformation_partner_id for partners), so the link
+ * lives on the assigned user's profile via company_id/organization_id - the same
+ * keys fetchOrganizationMembers reads. Enforces a single holder per role per org
+ * by unlinking any previous same-role holder first. Relies on the super_admin
+ * UPDATE policy on profiles (migration 0015).
+ */
+export const assignLeadershipToOrg = async (
+  orgId: string,
+  userId: string,
+  role: 'mentor' | 'ambassador',
+  org?: { code?: string | null; name?: string | null },
+): Promise<void> => {
+  // Unlink any other same-role holder currently attached to this org so the org
+  // has at most one mentor / one ambassador.
+  const { error: clearError } = await supabase
+    .from('profiles')
+    .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
+    .eq('organization_id', orgId)
+    .eq('role', role)
+    .neq('id', userId)
+  if (clearError) throw new Error(`Assignment failed: ${clearError.message}`)
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      organization_id: orgId,
+      company_id: orgId,
+      company_code: org?.code ?? null,
+      company_name: org?.name ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+  if (error) throw new Error(`Assignment failed: ${error.message}`)
+}
+
+/** Unlink whoever currently holds the given leadership role for this org. */
+export const removeLeadershipFromOrg = async (
+  orgId: string,
+  role: 'mentor' | 'ambassador',
+): Promise<void> => {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
+    .eq('organization_id', orgId)
+    .eq('role', role)
+  if (error) throw new Error(`Unassignment failed: ${error.message}`)
+}
+
 export interface ClaimOrgResult {
   ok: boolean
   error?: string
