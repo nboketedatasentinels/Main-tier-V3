@@ -278,6 +278,10 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   const filteredUsers = useMemo(() => {
     const now = new Date()
+    // The org dropdown value is the org id, but a user's org can be stored as the
+    // org id (company_id/organization_id) or the org code, so match on either.
+    const selectedOrg =
+      filters.organization === 'all' ? null : organizations.find((org) => org.id === filters.organization) ?? null
     return accessibleUsers.filter((user) => {
       const searchText = filters.search.toLowerCase()
       const matchesSearch =
@@ -291,7 +295,12 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       const matchesMembership =
         filters.membershipStatus === 'all' || membershipFilterKey(user) === filters.membershipStatus
       const matchesTier = filters.transformationTier === 'all' || normalizedTier === filters.transformationTier
-      const matchesOrg = filters.organization === 'all' || user.companyId === filters.organization
+      const matchesOrg =
+        filters.organization === 'all' ||
+        user.companyId === filters.organization ||
+        (user.assignedOrganizations?.includes(filters.organization) ?? false) ||
+        (!!selectedOrg?.code &&
+          (user.companyCode === selectedOrg.code || user.companyId === selectedOrg.code))
 
       const matchesTimeframe = (() => {
         if (filters.timeframe === 'all') return true
@@ -318,6 +327,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     filters.search,
     filters.timeframe,
     filters.transformationTier,
+    organizations,
   ])
 
   const paginatedUsers = useMemo(() => {

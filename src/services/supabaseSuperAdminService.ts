@@ -426,16 +426,38 @@ type ProfileRow = {
   created_at?: string | null
   company_id?: string | null
   organization_id?: string | null
+  company_code?: string | null
+  company_name?: string | null
+  membership_status?: string | null
+  transformation_tier?: string | null
+  account_status?: string | null
+  journey_type?: string | null
+  assigned_organizations?: unknown
   data?: Record<string, unknown> | null
+}
+
+// The Users Management tab needs the org/membership/tier fields to filter and
+// display rows. mapAdminUser returns this superset (assignable to
+// AdminUserRecord for the admin-oversight consumer) so the tab's mapper can read
+// companyId/membershipStatus/etc. instead of getting undefined for every user.
+type ManagedProfileRecord = AdminUserRecord & {
+  companyId?: string | null
+  companyCode?: string | null
+  companyName?: string | null
+  membershipStatus?: string | null
+  transformationTier?: string | null
+  journeyType?: string | null
 }
 
 const ADMIN_ROLES = ['super_admin', 'partner', 'mentor', 'ambassador']
 
-const mapAdminUser = (row: ProfileRow): AdminUserRecord => {
+const mapAdminUser = (row: ProfileRow): ManagedProfileRecord => {
   const data = row.data ?? {}
-  const assignedOrganizations = Array.isArray((data as { assignedOrganizations?: unknown }).assignedOrganizations)
-    ? ((data as { assignedOrganizations?: string[] }).assignedOrganizations as string[])
-    : undefined
+  const assignedOrganizations = Array.isArray(row.assigned_organizations)
+    ? (row.assigned_organizations.filter(Boolean) as string[])
+    : Array.isArray((data as { assignedOrganizations?: unknown }).assignedOrganizations)
+      ? ((data as { assignedOrganizations?: string[] }).assignedOrganizations as string[])
+      : undefined
   const fullName =
     row.full_name ||
     [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
@@ -449,6 +471,15 @@ const mapAdminUser = (row: ProfileRow): AdminUserRecord => {
     role: (row.role ?? 'partner') as AdminUserRecord['role'],
     assignedOrganizations,
     createdAt: row.created_at ?? undefined,
+    // Org/membership/tier fields the Users Management tab filters and displays.
+    // company_id is the org FK the org filter matches; fall back to
+    // organization_id for rows stamped by the join RPC.
+    companyId: row.company_id ?? row.organization_id ?? null,
+    companyCode: row.company_code ?? null,
+    companyName: row.company_name ?? null,
+    membershipStatus: row.membership_status ?? null,
+    transformationTier: row.transformation_tier ?? null,
+    journeyType: row.journey_type ?? null,
   }
 }
 
@@ -462,7 +493,7 @@ const mapLead = (row: ProfileRow): OrganizationLead => ({
   email: row.email ?? undefined,
 })
 
-const PROFILE_COLS = 'id, full_name, first_name, last_name, email, role, created_at, company_id, organization_id, data'
+const PROFILE_COLS = 'id, full_name, first_name, last_name, email, role, created_at, company_id, organization_id, company_code, company_name, membership_status, transformation_tier, account_status, journey_type, assigned_organizations, data'
 
 export const listenToAdminUsers = (
   onChange: (admins: AdminUserRecord[]) => void,

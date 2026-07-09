@@ -59,6 +59,7 @@ function useManagedUsers() {
             createdAt: userData.createdAt instanceof Date ? userData.createdAt : null,
             accountStatus: userData.accountStatus || 'active',
             transformationTier: userData.transformationTier || null,
+            journeyType: userData.journeyType || null,
             assignedOrganizations: Array.isArray(userData.assignedOrganizations)
               ? userData.assignedOrganizations
               : undefined,
