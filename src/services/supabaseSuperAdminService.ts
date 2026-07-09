@@ -571,7 +571,55 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     pillar: (settings.pillar as OrganizationRecord['pillar']) ?? undefined,
     teamSize: (settings.teamSize as number) ?? undefined,
     assignedPartnerEmail: (settings.partnerEmail as string) ?? undefined,
+    // Course assignments + description live in the settings jsonb. Read them
+    // back so the Edit Organization modal can show which courses were selected
+    // per window instead of "Unassigned".
+    description: (settings.description as string) ?? undefined,
+    courseAssignments: (settings.courseAssignments as string[]) ?? undefined,
+    monthlyCourseAssignments: (settings.monthlyCourseAssignments as Record<string, string>) ?? undefined,
+    courseAssignmentStructure:
+      (settings.courseAssignmentStructure as OrganizationRecord['courseAssignmentStructure']) ?? undefined,
   }
+}
+
+export interface OrgMemberRecord {
+  id: string
+  name: string
+  email?: string
+  role: string
+}
+
+// Members of an organization: profiles linked by company_id / organization_id /
+// company_code. Used by the Edit Organization modal to show who belongs to it.
+export const fetchOrganizationMembers = async (org: {
+  id?: string | null
+  code?: string | null
+}): Promise<OrgMemberRecord[]> => {
+  const orClauses: string[] = []
+  if (org.id) orClauses.push(`company_id.eq.${org.id}`, `organization_id.eq.${org.id}`)
+  if (org.code) orClauses.push(`company_code.eq.${org.code}`)
+  if (!orClauses.length) return []
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, first_name, last_name, email, role')
+    .or(orClauses.join(','))
+    .order('full_name', { ascending: true })
+  if (error) throw new Error(error.message)
+
+  const seen = new Set<string>()
+  const members: OrgMemberRecord[] = []
+  for (const raw of (data ?? []) as unknown as ProfileRow[]) {
+    if (!raw.id || seen.has(raw.id)) continue
+    seen.add(raw.id)
+    const name =
+      raw.full_name ||
+      [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
+      raw.email ||
+      'Unknown'
+    members.push({ id: raw.id, name, email: raw.email ?? undefined, role: raw.role ?? 'free_user' })
+  }
+  return members
 }
 
 export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {

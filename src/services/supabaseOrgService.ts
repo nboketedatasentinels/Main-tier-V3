@@ -70,6 +70,8 @@ export interface OrgWriteExtras {
   courseAssignments?: string[] | null
   /** Which assignment shape the org uses. */
   courseAssignmentStructure?: 'monthly' | 'array' | null
+  /** Free-text organization description. */
+  description?: string | null
 }
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
@@ -79,6 +81,7 @@ const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   teamSize: e.teamSize ?? null,
   programDurationMonths: e.programDurationMonths ?? null,
   partnerEmail: e.partnerEmail ? e.partnerEmail.trim().toLowerCase() : null,
+  description: e.description ?? null,
   // Course assignments live in the settings jsonb (the org table has no column
   // for them). Read back by useOrganizationProgramCourses + monthlyCoursesService.
   monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,

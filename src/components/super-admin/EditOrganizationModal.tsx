@@ -47,8 +47,9 @@ import {
 import { InfoIcon } from '@chakra-ui/icons'
 import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
-import { determineClusterFromTeamSize } from '@/services/organizationService'
+import { determineClusterFromTeamSize, fetchAvailableCourses } from '@/services/organizationService'
 import { updateOrganization as updateSupabaseOrganization } from '@/services/supabaseOrgService'
+import { fetchOrganizationMembers, type OrgMemberRecord } from '@/services/supabaseSuperAdminService'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
@@ -109,6 +110,8 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
   const [, setOriginalCohortStartDate] = useState<string | null>(null)
+  const [members, setMembers] = useState<OrgMemberRecord[]>([])
+  const [membersLoading, setMembersLoading] = useState(false)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -225,6 +228,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setCourses([])
       setMonthlyAssignments({})
       setOriginalCohortStartDate(null)
+      setMembers([])
       return
     }
 
@@ -235,11 +239,39 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       )
       setMonthlyAssignments(organization.monthlyCourseAssignments ?? {})
     }
-    // The course list + extended org details used to be loaded from Firebase,
-    // which is gone now - so the form is populated directly from the org row
-    // above and the modal opens immediately (no spinner hang).
-    setCourses([])
-    setIsLoading(false)
+    // Load the course catalog so the per-window "Select course" dropdowns have
+    // options (previously hardcoded to [] here, which showed "No courses
+    // available yet"). fetchAvailableCourses falls back to the local mapping.
+    let active = true
+    setIsLoading(true)
+    fetchAvailableCourses()
+      .then((options) => {
+        if (active) setCourses(options)
+      })
+      .catch(() => {
+        if (active) setCourses([])
+      })
+      .finally(() => {
+        if (active) setIsLoading(false)
+      })
+    // Load who belongs to this org (learners + any leadership linked by
+    // company_id / organization_id / company_code) for the read-only overview.
+    if (organization?.id || organization?.code) {
+      setMembersLoading(true)
+      fetchOrganizationMembers({ id: organization.id, code: organization.code })
+        .then((rows) => {
+          if (active) setMembers(rows)
+        })
+        .catch(() => {
+          if (active) setMembers([])
+        })
+        .finally(() => {
+          if (active) setMembersLoading(false)
+        })
+    }
+    return () => {
+      active = false
+    }
   }, [isOpen, organization])
 
   useEffect(() => {
@@ -335,6 +367,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: monthlyAssignments,
         courseAssignments: orderedCourseAssignments,
         courseAssignmentStructure: 'monthly',
+        description: form.description ?? null,
       })
 
       toast({
@@ -355,6 +388,24 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     }
   }
 
+  const roleLabelMap: Record<string, string> = {
+    super_admin: 'Super Admin',
+    partner: 'Partner',
+    mentor: 'Mentor',
+    ambassador: 'Ambassador',
+    paid_member: 'Paid Member',
+    free_user: 'Free User',
+    user: 'User',
+  }
+  const formatMemberRole = (role: string) => roleLabelMap[(role || '').toLowerCase()] || role
+  const leadershipRoles = new Set(['super_admin', 'partner', 'mentor', 'ambassador'])
+  const leadership = members.filter((m) => leadershipRoles.has((m.role || '').toLowerCase()))
+  const learners = members.filter((m) => !leadershipRoles.has((m.role || '').toLowerCase()))
+  const programLabel =
+    programDurations.find((d) => d.value === form.programDuration)?.label ||
+    (form.programDurationWeeks ? `${form.programDurationWeeks} weeks` : 'Not set')
+  const partnerDisplay = form.assignedPartnerEmail || 'Unassigned'
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
       <ModalOverlay />
@@ -374,6 +425,85 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 <Text color="gray.600" fontSize="sm">
                   Update organization details and program configuration.
                 </Text>
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="lg" p={4} bg="gray.50">
+                <Text fontWeight="semibold" mb={3}>
+                  Overview
+                </Text>
+                <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500" textTransform="uppercase">
+                      Journey / Program
+                    </Text>
+                    <Text fontWeight="medium">{programLabel}</Text>
+                    {form.organizationJourneyType && (
+                      <Text fontSize="sm" color="gray.600">
+                        Journey type: {form.organizationJourneyType}
+                      </Text>
+                    )}
+                  </Box>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500" textTransform="uppercase">
+                      Transformation partner
+                    </Text>
+                    <Text fontWeight="medium">{partnerDisplay}</Text>
+                  </Box>
+                </Grid>
+
+                <Box mt={4}>
+                  <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
+                    Members ({membersLoading ? '…' : members.length})
+                  </Text>
+                  {membersLoading ? (
+                    <Spinner size="sm" />
+                  ) : members.length ? (
+                    <Stack spacing={3}>
+                      {leadership.length > 0 && (
+                        <Box>
+                          <Text fontSize="sm" fontWeight="semibold" color="gray.700">
+                            Leadership
+                          </Text>
+                          <Flex wrap="wrap" gap={2} mt={1}>
+                            {leadership.map((m) => (
+                              <Badge key={m.id} colorScheme="purple" variant="subtle">
+                                {m.name} · {formatMemberRole(m.role)}
+                              </Badge>
+                            ))}
+                          </Flex>
+                        </Box>
+                      )}
+                      <Box>
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.700">
+                          Learners ({learners.length})
+                        </Text>
+                        {learners.length ? (
+                          <Box maxH="180px" overflowY="auto" mt={1} borderWidth="1px" borderRadius="md">
+                            <Table size="sm" variant="simple">
+                              <Tbody>
+                                {learners.map((m) => (
+                                  <Tr key={m.id}>
+                                    <Td>{m.name}</Td>
+                                    <Td color="gray.600">{m.email}</Td>
+                                    <Td>{formatMemberRole(m.role)}</Td>
+                                  </Tr>
+                                ))}
+                              </Tbody>
+                            </Table>
+                          </Box>
+                        ) : (
+                          <Text fontSize="sm" color="gray.500">
+                            No learners enrolled yet.
+                          </Text>
+                        )}
+                      </Box>
+                    </Stack>
+                  ) : (
+                    <Text fontSize="sm" color="gray.500">
+                      No members belong to this organization yet.
+                    </Text>
+                  )}
+                </Box>
               </Box>
 
               <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
