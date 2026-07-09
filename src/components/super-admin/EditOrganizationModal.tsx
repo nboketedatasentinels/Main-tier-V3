@@ -45,7 +45,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
-import { ChevronDown, ChevronUp, Eye } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import { determineClusterFromTeamSize, fetchAvailableCourses } from '@/services/organizationService'
 import { updateOrganization as updateSupabaseOrganization } from '@/services/supabaseOrgService'
@@ -53,7 +53,6 @@ import { fetchOrganizationMembers, type OrgMemberRecord } from '@/services/supab
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
-  buildMonthlyAssignmentsSummary,
   formatMonthRange,
   getAssignedCourseIdsFromMonthlyAssignments,
   getProgramSegmentAvailabilityStatus,
@@ -121,7 +120,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
   const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
   const assignmentSectionLabel = programCadence === 'biweekly' ? '3-week window course assignments' : 'Monthly course assignments'
-  const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Cycle breakdown summary' : 'Monthly breakdown summary'
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
   const codeLength = form.code.trim().length
@@ -129,16 +127,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const cohortStartDate = useMemo(
     () => (form.cohortStartDate ? new Date(String(form.cohortStartDate)) : null),
     [form.cohortStartDate],
-  )
-  const monthlySummary = useMemo(
-    () =>
-      buildMonthlyAssignmentsSummary({
-        monthlyAssignments,
-        totalMonths: courseLimit,
-        courseTitleLookup: (courseId) =>
-          courses.find((course) => course.id === courseId)?.title || courseId,
-      }),
-    [monthlyAssignments, courseLimit, courses],
   )
   const duplicateCourses = useMemo(() => {
     const seen = new Set<string>()
@@ -842,28 +830,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <AlertIcon />
                     {emptyMonths.length} {assignmentUnit}(s) still need course assignments.
                   </Alert>
-                )}
-                {courseLimit > 0 && (
-                  <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="white">
-                    <HStack justify="space-between" mb={2}>
-                      <Text fontWeight="semibold">{assignmentBreakdownLabel}</Text>
-                      <HStack spacing={2} color="purple.600">
-                        <Eye size={16} />
-                        <Text fontSize="sm">Admin preview</Text>
-                      </HStack>
-                    </HStack>
-                    <Text fontSize="sm" color="gray.600" mb={3}>
-                      Cluster assignment: {clusterDisplayName}
-                    </Text>
-                    <Stack spacing={2}>
-                      {monthlySummary.map((entry) => (
-                        <Flex key={entry.month} justify="space-between" align="center">
-                          <Text fontWeight="medium">{getProgramSegmentLabel(entry.month, programCadence)}</Text>
-                          <Text color={entry.courseId ? 'gray.700' : 'red.500'}>{entry.title}</Text>
-                        </Flex>
-                      ))}
-                    </Stack>
-                  </Box>
                 )}
                 {courseLimit > 0 && (
                   <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
