@@ -37,7 +37,6 @@ import {
   Tbody,
   Td,
   Text,
-  Textarea,
   Th,
   Thead,
   Tooltip,
@@ -604,15 +603,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       type="date"
                       value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
                       onChange={(e) => updateField('cohortStartDate', e.target.value)}
-                    />
-                  </FormControl>
-                </GridItem>
-                <GridItem colSpan={2}>
-                  <FormControl>
-                    <FormLabel>Description</FormLabel>
-                    <Textarea
-                      value={(form as { description?: string }).description || ''}
-                      onChange={(e) => updateField('description', e.target.value)}
                     />
                   </FormControl>
                 </GridItem>
