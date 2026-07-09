@@ -106,6 +106,34 @@ export const getUserJourney = async (userId: string): Promise<UserJourney> => {
   return journey
 }
 
+// Reassigns the learner to a new journey (e.g. when an admin flips a user
+// between free and paid). Resets the timeline to Window 1 with a fresh start
+// date so the new journey begins cleanly, while preserving already-earned
+// points and badges (a membership change should not delete progress).
+export const resetUserJourney = async (
+  userId: string,
+  journeyType: JourneyType,
+  journeyStartDateISO: string,
+): Promise<void> => {
+  const ref = doc(db, 'user_journeys', userId)
+  const snap = await getDoc(ref)
+  const existing = snap.exists() ? (snap.data() as Partial<UserJourney>) : null
+  const meta = JOURNEY_META[journeyType]
+
+  const journey: UserJourney = {
+    userId,
+    journeyType: mapJourneyTypeToLabel(journeyType),
+    journeyStartDate: journeyStartDateISO,
+    currentWindow: 1,
+    windowTarget: meta?.windowTarget ?? 12500,
+    totalPoints: existing?.totalPoints ?? 0,
+    status: 'ON_TRACK',
+    badges: existing?.badges ?? [],
+  }
+
+  await setDoc(ref, { ...journey })
+}
+
 export const updateUserJourneyPoints = async (userId: string, deltaPoints: number): Promise<void> => {
   if (!deltaPoints) return
   const ref = doc(db, 'user_journeys', userId)

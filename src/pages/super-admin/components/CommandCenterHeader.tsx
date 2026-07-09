@@ -52,9 +52,6 @@ export const CommandCenterHeader: React.FC<CommandCenterHeaderProps> = ({
           <Text fontSize="2xl" fontWeight="bold" color="brand.text">
             Welcome back, {adminName}
           </Text>
-          <Text color="brand.subtleText">
-            Real-time system health, risks, and interventions
-          </Text>
         </Stack>
 
         <HStack spacing={3} wrap="wrap">

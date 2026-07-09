@@ -12,6 +12,8 @@ import { ORG_COLLECTION } from '@/constants/organizations'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { normalizeEmail } from '@/utils/email'
 import { normalizeRole } from '@/utils/role'
+import { resetUserJourney } from './userJourneyService'
+import type { JourneyType } from '@/config/pointsConfig'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -35,6 +37,7 @@ export interface ManagedUserRecord {
   createdAt?: Date | null
   accountStatus?: string
   transformationTier?: string | null
+  journeyType?: JourneyType | null
   mentorId?: string | null
   ambassadorId?: string | null
   isActiveAmbassador?: boolean
@@ -149,6 +152,7 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
     createdAt: parseDateValue(data.createdAt),
     accountStatus: data.accountStatus || 'active',
     transformationTier: data.transformationTier || null,
+    journeyType: (data.journeyType as JourneyType) || null,
     mentorId: data.mentorId,
     ambassadorId: data.ambassadorId,
     isActiveAmbassador: data.isActiveAmbassador,
@@ -314,6 +318,62 @@ export const updateMembershipStatus = async (userId: string, membershipStatus: M
     })
     .eq('id', userId)
   throwIfSupabaseError(error, 'updateMembershipStatus')
+}
+
+// Reassigns a learner's journey when their membership changes (free <-> paid).
+// Writes the journey fields the learner app reads from Supabase profiles
+// (journey_type / journey_start_date / current_week) AND refreshes the Firestore
+// user_journeys doc the points/windows system reads, so the change reflects on
+// both the weekly checklist and the points dashboard. Resets the timeline to
+// Week 1 / Window 1 with a fresh start date.
+export const assignUserJourney = async (params: {
+  userId: string
+  journeyType: JourneyType
+  journeyStartDateISO: string
+  actorId?: string | null
+  actorName?: string | null
+  reason?: string | null
+}) => {
+  const { userId, journeyType, journeyStartDateISO, actorId, actorName, reason } = params
+  const nowISO = new Date().toISOString()
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      journey_type: journeyType,
+      journey_start_date: journeyStartDateISO,
+      current_week: 1,
+      updated_at: nowISO,
+    })
+    .eq('id', userId)
+  throwIfSupabaseError(error, 'assignUserJourney')
+
+  // Keep the Firestore user_journeys doc (points dashboard / windows) in sync.
+  // Best-effort: a failure here must not undo the profile write above.
+  try {
+    await resetUserJourney(userId, journeyType, journeyStartDateISO)
+  } catch (journeyDocError) {
+    console.warn('[assignUserJourney] failed to sync user_journeys doc', journeyDocError)
+  }
+
+  // Best-effort audit row so the journey reassignment is traceable alongside the
+  // access change that triggered it.
+  const auditEntry = removeUndefinedFields({
+    action: 'user_journey_reassigned',
+    user_id: userId,
+    admin_id: actorId || undefined,
+    admin_name: actorName || undefined,
+    created_at: nowISO,
+    metadata: {
+      reason: reason || null,
+      journeyType,
+      journeyStartDate: journeyStartDateISO,
+    },
+  })
+  const { error: auditError } = await supabase.from('admin_activity_log').insert(auditEntry)
+  if (auditError) {
+    console.warn('[assignUserJourney] failed to write audit log', auditError.message)
+  }
 }
 
 export const deleteUserAccount = async (userId: string) => {

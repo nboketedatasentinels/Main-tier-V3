@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -40,6 +40,7 @@ import {
   ManagedUserRecord,
   ManagedUserRole,
   MembershipStatus,
+  assignUserJourney,
   bulkUpdateMembershipStatus,
   bulkUpdateRole,
   deleteUserAccount,
@@ -52,6 +53,8 @@ import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 import { assignOrganizations as assignAdminOrganizations } from '@/services/superAdminService'
 import { OrganizationRecord } from '@/types/admin'
 import { AccountStatus, TransformationTier } from '@/types'
+import type { JourneyType } from '@/config/pointsConfig'
+import { normalizeRole } from '@/utils/role'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador']
 const roleDescriptions: Record<ManagedUserRole, string> = {
@@ -94,6 +97,35 @@ const transformationTierLabels: Record<string, string> = {
   [TransformationTier.CORPORATE_MEMBER]: 'Corporate Member',
   [TransformationTier.CORPORATE_LEADER]: 'Corporate Leader',
 }
+// Journey a learner is placed on. Free membership always maps to the 4-Week
+// Intro; paid members are placed on one of the paid journey lengths chosen by
+// the admin. Corporate members instead follow their organization's program.
+const FREE_JOURNEY_TYPE: JourneyType = '4W'
+const DEFAULT_PAID_JOURNEY_TYPE: JourneyType = '6W'
+const paidJourneyOptions: JourneyType[] = ['6W', '3M', '6M', '9M']
+const journeyLabels: Record<JourneyType, string> = {
+  '4W': '4-Week Intro',
+  '6W': '6-Week Power',
+  '3M': '3-Month',
+  '6M': '6-Month',
+  '9M': '9-Month',
+}
+const isPaidJourney = (journey: JourneyType) => paidJourneyOptions.includes(journey)
+
+// The learner's effective journey given their role/membership. Only individual
+// learners (role 'user') sit on a journey; free -> 4W, paid -> their stored paid
+// journey or the paid default. Returns null when a journey does not apply.
+const inferJourneyType = (
+  role?: ManagedUserRole | string | null,
+  membershipStatus?: MembershipStatus | string | null,
+  storedJourney?: JourneyType | null,
+): JourneyType | null => {
+  if (role && role !== 'user') return null
+  const paid = normalizeValue(membershipStatus) === 'paid'
+  if (!paid) return FREE_JOURNEY_TYPE
+  return storedJourney && isPaidJourney(storedJourney) ? storedJourney : DEFAULT_PAID_JOURNEY_TYPE
+}
+
 const PAGE_SIZE = 25
 
 type PromotionChange = {
@@ -112,6 +144,17 @@ const formatTokenLabel = (value?: string | null) => {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ')
+}
+
+// Buckets a stored role into one of the role-filter options. Stored roles use
+// DB values (a learner is 'free_user' or 'paid_member', never 'user') and legacy
+// values ('admin' -> partner), so a raw equality check against the dropdown
+// value would miss most rows. This maps free_user/paid_member -> 'user' and
+// legacy admin -> 'partner' so the filter selects what the label promises.
+const roleFilterKey = (role?: ManagedUserRole | string | null): ManagedUserRole => {
+  const normalized = normalizeRole(role)
+  if (normalized === 'free_user' || normalized === 'paid_member') return 'user'
+  return normalized as ManagedUserRole
 }
 
 const formatRoleLabel = (role?: ManagedUserRole | string, membershipStatus?: MembershipStatus) => {
@@ -163,6 +206,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const [promotionStatusSelection, setPromotionStatusSelection] = useState<MembershipStatus>('free')
   const [promotionAccountStatusSelection, setPromotionAccountStatusSelection] = useState<string>(AccountStatus.ACTIVE)
   const [promotionTierSelection, setPromotionTierSelection] = useState<string>(TransformationTier.INDIVIDUAL_FREE)
+  const [promotionJourneySelection, setPromotionJourneySelection] = useState<JourneyType>(DEFAULT_PAID_JOURNEY_TYPE)
   const [promotionAuditReason, setPromotionAuditReason] = useState('')
   const [promotionOrgIds, setPromotionOrgIds] = useState<string[]>([])
   const [isCreatingOrganization, setIsCreatingOrganization] = useState(false)
@@ -230,8 +274,9 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       const normalizedAccountStatus = normalizeValue(user.accountStatus) || 'active'
       const normalizedTier = normalizeValue(user.transformationTier)
 
-      const matchesRole = filters.role === 'all' || user.role === filters.role
-      const matchesMembership = filters.membershipStatus === 'all' || user.membershipStatus === filters.membershipStatus
+      const matchesRole = filters.role === 'all' || roleFilterKey(user.role) === filters.role
+      const matchesMembership =
+        filters.membershipStatus === 'all' || normalizeValue(user.membershipStatus) === filters.membershipStatus
       const matchesAccountStatus = filters.accountStatus === 'all' || normalizedAccountStatus === filters.accountStatus
       const matchesTier = filters.transformationTier === 'all' || normalizedTier === filters.transformationTier
       const matchesOrg = filters.organization === 'all' || user.companyId === filters.organization
@@ -306,11 +351,38 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     return Array.from(deduped)
   }, [promotionOrgIds])
 
-  const formatOrganizationLabelFromIds = (ids: string[]) => {
-    if (!ids.length) return 'Independent'
-    const names = ids.map((id) => organizations.find((org) => org.id === id)?.name || id)
-    return names.join(', ')
-  }
+  const formatOrganizationLabelFromIds = useCallback(
+    (ids: string[]) => {
+      if (!ids.length) return 'Independent'
+      const names = ids.map((id) => organizations.find((org) => org.id === id)?.name || id)
+      return names.join(', ')
+    },
+    [organizations],
+  )
+
+  // Journey handling. Only individual learners (role 'user') sit on a journey.
+  // A learner assigned to an organization follows that org's program, so the
+  // picker is shown but locked in that case.
+  const journeyControlApplies = currentPromotionRole === 'user'
+  // A learner is org-driven only when they end up assigned to an organization,
+  // which for a learner happens exactly in the paid + org case (see submit).
+  const journeyFollowsOrganization = isPaidUserRole && selectedPromotionOrgIds.length > 0
+  const nextJourneyType: JourneyType | null = !journeyControlApplies
+    ? null
+    : currentPromotionStatus === 'paid'
+      ? promotionJourneySelection
+      : FREE_JOURNEY_TYPE
+  const currentJourneyType = promotionTarget
+    ? inferJourneyType(promotionTarget.role, promotionTarget.membershipStatus, promotionTarget.journeyType)
+    : null
+  // Whether Apply should re-stamp the journey. Skip when the org drives it or
+  // when nothing about the journey actually changes (so unrelated edits don't
+  // needlessly reset a learner's timeline to Week 1).
+  const journeyWillChange =
+    journeyControlApplies &&
+    !journeyFollowsOrganization &&
+    nextJourneyType !== null &&
+    nextJourneyType !== currentJourneyType
 
   const promotionChanges = useMemo<PromotionChange[]>(() => {
     if (!promotionTarget) return []
@@ -353,10 +425,20 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     if (currentOrgLabel !== nextOrgLabel) {
       nextChanges.push({ label: 'Organization scope', before: currentOrgLabel, after: nextOrgLabel })
     }
+    if (journeyWillChange && nextJourneyType) {
+      nextChanges.push({
+        label: 'Journey',
+        before: currentJourneyType ? journeyLabels[currentJourneyType] : 'Not set',
+        after: journeyLabels[nextJourneyType],
+      })
+    }
     return nextChanges
   }, [
+    currentJourneyType,
+    formatOrganizationLabelFromIds,
     isLeadershipRole,
-    organizations,
+    journeyWillChange,
+    nextJourneyType,
     promotionAccountStatusSelection,
     promotionRequiresOrganization,
     promotionRoleSelection,
@@ -392,6 +474,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     setPromotionTierSelection(
       normalizeValue(user.transformationTier) ||
         (user.membershipStatus === 'paid' ? TransformationTier.INDIVIDUAL_PAID : TransformationTier.INDIVIDUAL_FREE),
+    )
+    // Seed the paid-journey picker from the learner's current paid journey (if
+    // any) so it round-trips; otherwise fall back to the paid default, ready for
+    // a free -> paid switch.
+    const inferredJourney = inferJourneyType(user.role, user.membershipStatus, user.journeyType)
+    setPromotionJourneySelection(
+      inferredJourney && isPaidJourney(inferredJourney) ? inferredJourney : DEFAULT_PAID_JOURNEY_TYPE,
     )
     setPromotionAuditReason('')
     const assignedOrganizations = user.assignedOrganizations?.filter((id) => Boolean(id)) ?? []
@@ -551,6 +640,32 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
           throw new Error(
             `role updated but org assignment failed: userId=${promotionTarget.id}, adminId=${adminId || 'unknown'}. ${assignmentMessage}`,
           )
+        }
+      }
+
+      // Membership change -> journey change. Re-stamp the learner's journey and
+      // reset their timeline to Week 1 so the switch actually reflects on both
+      // the weekly checklist and the points dashboard. Best-effort: the access
+      // change above already succeeded, so a journey failure only warns.
+      if (journeyWillChange && nextJourneyType) {
+        try {
+          await assignUserJourney({
+            userId: promotionTarget.id,
+            journeyType: nextJourneyType,
+            journeyStartDateISO: new Date().toISOString(),
+            actorId: adminId,
+            actorName,
+            reason: auditReason,
+          })
+        } catch (journeyError) {
+          console.error('[AdminUsers] journey reassignment failed after access update', journeyError)
+          toast({
+            title: 'Access updated, but journey change failed',
+            description: 'The membership change was saved. Re-open and apply again to update the journey.',
+            status: 'warning',
+          })
+          closePromotionModal()
+          return
         }
       }
 
@@ -925,13 +1040,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
                           <Box flex="1 1 120px">
                             <Badge
-                              colorScheme={roleBadgeColor[user.role]}
+                              colorScheme={roleBadgeColor[roleFilterKey(user.role)]}
                               textTransform="capitalize"
                               borderRadius="full"
                               px={3}
                               py={1}
                             >
-                              {formatRoleLabel(user.role, user.membershipStatus)}
+                              {formatRoleLabel(roleFilterKey(user.role), user.membershipStatus)}
                             </Badge>
                           </Box>
 
@@ -1110,6 +1225,34 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     </Select>
                     <FormHelperText>Defines learner experience and dashboard routing context.</FormHelperText>
                   </FormControl>
+
+                  {journeyControlApplies && (
+                    <FormControl>
+                      <FormLabel>Journey</FormLabel>
+                      {currentPromotionStatus === 'paid' ? (
+                        <Select
+                          value={promotionJourneySelection}
+                          onChange={(event) => setPromotionJourneySelection(event.target.value as JourneyType)}
+                          isDisabled={journeyFollowsOrganization}
+                        >
+                          {paidJourneyOptions.map((journey) => (
+                            <option key={journey} value={journey}>
+                              {journeyLabels[journey]}
+                            </option>
+                          ))}
+                        </Select>
+                      ) : (
+                        <Input value={journeyLabels[FREE_JOURNEY_TYPE]} isReadOnly isDisabled />
+                      )}
+                      <FormHelperText>
+                        {journeyFollowsOrganization
+                          ? "This member follows their organization's program; the journey is set by the organization."
+                          : currentPromotionStatus === 'paid'
+                            ? 'Paid members are placed on this journey. Switching membership resets the learner to Week 1.'
+                            : 'Free members are always placed on the 4-Week Intro journey.'}
+                      </FormHelperText>
+                    </FormControl>
+                  )}
                 </Stack>
               </Box>
 
