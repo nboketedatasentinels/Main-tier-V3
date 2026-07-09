@@ -452,11 +452,18 @@ type ManagedProfileRecord = AdminUserRecord & {
 const ADMIN_ROLES = ['super_admin', 'partner', 'mentor', 'ambassador']
 
 const mapAdminUser = (row: ProfileRow): ManagedProfileRecord => {
-  const data = row.data ?? {}
+  const data = (row.data ?? {}) as Record<string, unknown>
+  // Read a field from its snake_case column, else the camelCase key in `data`.
+  const str = (col: unknown, key: string): string | null => {
+    if (typeof col === 'string' && col) return col
+    const fromData = data[key]
+    return typeof fromData === 'string' && fromData ? fromData : null
+  }
+
   const assignedOrganizations = Array.isArray(row.assigned_organizations)
     ? (row.assigned_organizations.filter(Boolean) as string[])
-    : Array.isArray((data as { assignedOrganizations?: unknown }).assignedOrganizations)
-      ? ((data as { assignedOrganizations?: string[] }).assignedOrganizations as string[])
+    : Array.isArray(data.assignedOrganizations)
+      ? (data.assignedOrganizations as string[])
       : undefined
   const fullName =
     row.full_name ||
@@ -473,13 +480,13 @@ const mapAdminUser = (row: ProfileRow): ManagedProfileRecord => {
     createdAt: row.created_at ?? undefined,
     // Org/membership/tier fields the Users Management tab filters and displays.
     // company_id is the org FK the org filter matches; fall back to
-    // organization_id for rows stamped by the join RPC.
-    companyId: row.company_id ?? row.organization_id ?? null,
-    companyCode: row.company_code ?? null,
-    companyName: row.company_name ?? null,
-    membershipStatus: row.membership_status ?? null,
-    transformationTier: row.transformation_tier ?? null,
-    journeyType: row.journey_type ?? null,
+    // organization_id for rows stamped by the join RPC, then the data jsonb.
+    companyId: row.company_id ?? row.organization_id ?? str(undefined, 'companyId') ?? str(undefined, 'organizationId'),
+    companyCode: str(row.company_code, 'companyCode'),
+    companyName: str(row.company_name, 'companyName'),
+    membershipStatus: str(row.membership_status, 'membershipStatus'),
+    transformationTier: str(row.transformation_tier, 'transformationTier'),
+    journeyType: str(row.journey_type, 'journeyType'),
   }
 }
 
@@ -493,7 +500,10 @@ const mapLead = (row: ProfileRow): OrganizationLead => ({
   email: row.email ?? undefined,
 })
 
-const PROFILE_COLS = 'id, full_name, first_name, last_name, email, role, created_at, company_id, organization_id, company_code, company_name, membership_status, transformation_tier, account_status, journey_type, assigned_organizations, data'
+// Select every column so this never 400s on a column that isn't in the profiles
+// schema (e.g. account_status does not exist). mapAdminUser then reads each field
+// from its column when present, or from the `data` jsonb as a fallback.
+const PROFILE_COLS = '*'
 
 export const listenToAdminUsers = (
   onChange: (admins: AdminUserRecord[]) => void,
