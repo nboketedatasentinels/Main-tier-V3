@@ -479,15 +479,17 @@ const mapManagedUserUpdatesToProfileColumns = (updates: Partial<ManagedUserRecor
   if (typeof updates.transformationTier !== 'undefined') {
     columns.transformation_tier = updates.transformationTier
   }
-  if (typeof updates.accountStatus !== 'undefined') columns.account_status = updates.accountStatus
+  // NOTE: account_status and assigned_organizations are intentionally NOT
+  // written here - they are not columns on public.profiles (account_status does
+  // not exist; assigned_organizations is mirrored in the `data` jsonb / handled
+  // by the separate org-assignment path). Including them made every access
+  // update 400 ("column profiles.account_status does not exist"), silently
+  // failing the whole Edit Access save (role/membership/tier included).
   if (typeof updates.notes !== 'undefined') columns.notes = updates.notes
   if (typeof updates.mentorId !== 'undefined') columns.mentor_id = updates.mentorId
   if (typeof updates.ambassadorId !== 'undefined') columns.ambassador_id = updates.ambassadorId
   if (typeof updates.isActiveAmbassador !== 'undefined') {
     columns.is_active_ambassador = updates.isActiveAmbassador
-  }
-  if (typeof updates.assignedOrganizations !== 'undefined') {
-    columns.assigned_organizations = updates.assignedOrganizations
   }
   return columns
 }
