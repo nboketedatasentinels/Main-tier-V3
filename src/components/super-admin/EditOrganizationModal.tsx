@@ -401,10 +401,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const leadershipRoles = new Set(['super_admin', 'partner', 'mentor', 'ambassador'])
   const leadership = members.filter((m) => leadershipRoles.has((m.role || '').toLowerCase()))
   const learners = members.filter((m) => !leadershipRoles.has((m.role || '').toLowerCase()))
-  const programLabel =
-    programDurations.find((d) => d.value === form.programDuration)?.label ||
-    (form.programDurationWeeks ? `${form.programDurationWeeks} weeks` : 'Not set')
-  const partnerDisplay = form.assignedPartnerEmail || 'Unassigned'
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
@@ -428,30 +424,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               </Box>
 
               <Box borderWidth="1px" borderRadius="lg" p={4} bg="gray.50">
-                <Text fontWeight="semibold" mb={3}>
-                  Overview
-                </Text>
-                <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                  <Box>
-                    <Text fontSize="xs" color="gray.500" textTransform="uppercase">
-                      Journey / Program
-                    </Text>
-                    <Text fontWeight="medium">{programLabel}</Text>
-                    {form.organizationJourneyType && (
-                      <Text fontSize="sm" color="gray.600">
-                        Journey type: {form.organizationJourneyType}
-                      </Text>
-                    )}
-                  </Box>
-                  <Box>
-                    <Text fontSize="xs" color="gray.500" textTransform="uppercase">
-                      Transformation partner
-                    </Text>
-                    <Text fontWeight="medium">{partnerDisplay}</Text>
-                  </Box>
-                </Grid>
-
-                <Box mt={4}>
+                <Box>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
                     Members ({membersLoading ? '…' : members.length})
                   </Text>
@@ -935,24 +908,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   </Box>
                 )}
               </Box>
-
-              <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      value={form.status}
-                      onChange={(e) => updateField('status', e.target.value as OrganizationRecord['status'])}
-                    >
-                      <option value="active">Active</option>
-                      <option value="pending">Pending</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="suspended">Suspended</option>
-                      <option value="watch">Watch</option>
-                    </Select>
-                  </FormControl>
-                </GridItem>
-              </Grid>
             </Stack>
           )}
         </ModalBody>
