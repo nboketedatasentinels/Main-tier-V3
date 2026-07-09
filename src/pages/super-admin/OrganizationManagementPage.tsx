@@ -423,17 +423,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const statusOptions = ['all', 'active', 'inactive', 'pending', 'suspended', 'watch']
 
-  const renderStatusBadge = (status: OrganizationRecord['status']) => {
-    const mapping: Record<string, string> = {
-      active: 'green',
-      pending: 'orange',
-      inactive: 'gray',
-      suspended: 'red',
-      watch: 'yellow',
-    }
-    return <Badge colorScheme={mapping[status] || 'gray'} textTransform="capitalize">{status}</Badge>
-  }
-
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'))
@@ -561,7 +550,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                           Code
                         </Th>
                         <Th>Team size</Th>
-                        <Th>Status</Th>
                         <Th cursor="pointer" onClick={() => handleSort('partnerName')}>
                           Transformation partner
                         </Th>
@@ -582,14 +570,25 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                           (org.assignedPartnerEmail
                             ? `Pending: ${org.assignedPartnerEmail}`
                             : 'Unassigned')
-                        const createdAt =
+                        // Resolve the raw value (Supabase ISO string, Date, or
+                        // Firestore Timestamp) to a Date, then show a clean
+                        // date + time with no seconds/milliseconds.
+                        const createdDate =
                           typeof org.createdAt === 'string'
-                            ? org.createdAt
+                            ? new Date(org.createdAt)
                             : org.createdAt instanceof Date
-                              ? org.createdAt.toLocaleDateString()
-                              : org.createdAt?.toDate?.()
-                                ? org.createdAt.toDate().toLocaleDateString()
-                                : 'Not set'
+                              ? org.createdAt
+                              : org.createdAt?.toDate?.() ?? null
+                        const createdAt =
+                          createdDate && !Number.isNaN(createdDate.getTime())
+                            ? createdDate.toLocaleString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Not set'
 
                         return (
                           <Tr key={org.id || org.code || `fallback-${index}`} _hover={{ bg: 'brand.accent' }}>
@@ -618,7 +617,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                             <Td fontWeight="semibold">{safeName}</Td>
                             <Td>{safeCode}</Td>
                             <Td>{safeTeamSize}</Td>
-                            <Td>{renderStatusBadge(org.status)}</Td>
                             <Td>{safePartner}</Td>
                             <Td>{createdAt}</Td>
                           </Tr>
