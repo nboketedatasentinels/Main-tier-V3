@@ -335,7 +335,7 @@ export const OrganizationDetailPage: React.FC = () => {
     return (
       <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
         <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
+          <CardBody py={4}>
             <Alert status="error" borderRadius="md" bg="red.50">
               <AlertIcon />
               <Box flex="1">
@@ -368,55 +368,45 @@ export const OrganizationDetailPage: React.FC = () => {
         </Breadcrumb>
 
         <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={4}>
-              <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={4}>
-                <HStack spacing={3}>
-                  <IconButton
-                    aria-label="Back to organizations"
-                    icon={<ArrowLeft size={18} />}
-                    variant="outline"
-                    onClick={handleBack}
-                  />
-                  <Stack spacing={1}>
-                    <Text fontSize="sm" color="brand.subtleText">
-                      Organization detail
-                    </Text>
-                    <Text fontSize={{ base: '2xl', md: '3xl' }} fontWeight="bold" color="brand.text">
-                      {organization?.name || 'Loading organization'}
-                    </Text>
-                    <HStack spacing={2}>
-                      <Badge colorScheme="purple">
-                        Code: {organization?.code || 'N/A'}
-                      </Badge>
-                      {organization?.status && <StatusBadge status={organization.status} />}
-                    </HStack>
-                  </Stack>
-                </HStack>
-                <Button variant="outline" leftIcon={<ArrowLeft size={16} />} onClick={handleBack}>
-                  Back to organizations
-                </Button>
+          <CardBody py={4}>
+            <HStack justify="space-between" align="center" wrap="wrap" spacing={4}>
+              <HStack spacing={3}>
+                <IconButton
+                  aria-label="Back to organizations"
+                  icon={<ArrowLeft size={18} />}
+                  variant="outline"
+                  onClick={handleBack}
+                />
+                <Stack spacing={1.5}>
+                  <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="brand.text" lineHeight="1.1">
+                    {organization?.name || 'Loading organization'}
+                  </Text>
+                  <HStack spacing={2}>
+                    <Badge colorScheme="purple">
+                      Code: {organization?.code || 'N/A'}
+                    </Badge>
+                    {organization?.status && <StatusBadge status={organization.status} />}
+                  </HStack>
+                </Stack>
               </HStack>
-              {organization?.description ? (
-                <Text color="brand.subtleText">{organization.description}</Text>
-              ) : (
-                <Text color="brand.subtleText">View-only details for this organization.</Text>
-              )}
-            </Stack>
+              <Button variant="outline" leftIcon={<ArrowLeft size={16} />} onClick={handleBack}>
+                Back to organizations
+              </Button>
+            </HStack>
           </CardBody>
         </Card>
 
         <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} alignItems="stretch">
           <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody>
-              <Stack spacing={4}>
+            <CardBody py={4}>
+              <Stack spacing={3}>
                 <Text fontWeight="bold" color="brand.text">
                   Organization overview
                 </Text>
                 {loading ? (
                   <SkeletonText noOfLines={5} spacing={3} />
                 ) : (
-                  <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={4}>
+                  <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={3}>
                     {[
                       { label: 'Team size', value: `${organization?.teamSize ?? 0}` },
                       { label: 'Village', value: organization?.village || 'Not assigned' },
@@ -443,8 +433,8 @@ export const OrganizationDetailPage: React.FC = () => {
           </Card>
 
           <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody>
-              <Stack spacing={4}>
+            <CardBody py={4}>
+              <Stack spacing={3}>
                 <Text fontWeight="bold" color="brand.text">
                   Leadership & support
                 </Text>
@@ -469,7 +459,7 @@ export const OrganizationDetailPage: React.FC = () => {
                         email: organization?.assignedAmbassadorEmail,
                       },
                     ].map((person) => (
-                      <HStack key={person.role} justify="space-between" align="center" py={3} spacing={4}>
+                      <HStack key={person.role} justify="space-between" align="center" py={2} spacing={4}>
                         <Text fontSize="sm" color="brand.subtleText">{person.role}</Text>
                         <Stack spacing={0} align="flex-end" minW={0}>
                           <Text
@@ -493,8 +483,8 @@ export const OrganizationDetailPage: React.FC = () => {
         </SimpleGrid>
 
         <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={4}>
+          <CardBody py={4}>
+            <Stack spacing={3}>
               <HStack justify="space-between" align="center">
                 <Text fontWeight="bold" color="brand.text">
                   Course assignments
@@ -543,8 +533,8 @@ export const OrganizationDetailPage: React.FC = () => {
         </Card>
 
         <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={4}>
+          <CardBody py={4}>
+            <Stack spacing={3}>
               <Text fontWeight="bold" color="brand.text">
                 Organization statistics
               </Text>
@@ -582,8 +572,8 @@ export const OrganizationDetailPage: React.FC = () => {
         </Card>
 
         <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={4}>
+          <CardBody py={4}>
+            <Stack spacing={3}>
               <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
                 <Stack spacing={1}>
                   <Text fontWeight="bold" color="brand.text">
@@ -749,8 +739,8 @@ export const OrganizationDetailPage: React.FC = () => {
         </Card>
 
         <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody>
-            <Stack spacing={4}>
+          <CardBody py={4}>
+            <Stack spacing={3}>
               <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
                 <Stack spacing={1}>
                   <Text fontWeight="bold" color="brand.text">
@@ -1024,7 +1014,7 @@ export const OrganizationDetailPage: React.FC = () => {
           <ModalHeader>Ask partner to follow up</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Stack spacing={4}>
+            <Stack spacing={3}>
               <Text fontSize="sm" color="brand.subtleText">
                 This adds <b>{followUpUser?.name}</b> to the intervention queue for{' '}
                 {organization?.assignedPartnerName
