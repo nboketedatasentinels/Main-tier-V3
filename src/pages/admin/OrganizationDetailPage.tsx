@@ -406,7 +406,7 @@ export const OrganizationDetailPage: React.FC = () => {
           </CardBody>
         </Card>
 
-        <SimpleGrid columns={{ base: 1, xl: 2 }} spacing={6}>
+        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} alignItems="stretch">
           <Card bg="white" border="1px solid" borderColor="brand.border">
             <CardBody>
               <Stack spacing={4}>
@@ -416,7 +416,7 @@ export const OrganizationDetailPage: React.FC = () => {
                 {loading ? (
                   <SkeletonText noOfLines={5} spacing={3} />
                 ) : (
-                  <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={3}>
+                  <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={4}>
                     {[
                       { label: 'Team size', value: `${organization?.teamSize ?? 0}` },
                       { label: 'Village', value: organization?.village || 'Not assigned' },
@@ -431,8 +431,8 @@ export const OrganizationDetailPage: React.FC = () => {
                       { label: 'Created', value: formatDate(organization?.createdAt) },
                       { label: 'Updated', value: formatDate(organization?.updatedAt) },
                     ].map((field) => (
-                      <Stack key={field.label} spacing={0.5}>
-                        <Text fontSize="xs" color="brand.subtleText">{field.label}</Text>
+                      <Stack key={field.label} spacing={0.5} minW={0}>
+                        <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{field.label}</Text>
                         <Text fontSize="sm" fontWeight="semibold" color="brand.text">{field.value}</Text>
                       </Stack>
                     ))}
@@ -442,101 +442,105 @@ export const OrganizationDetailPage: React.FC = () => {
             </CardBody>
           </Card>
 
-          <Stack spacing={6}>
-            <Card bg="white" border="1px solid" borderColor="brand.border">
-              <CardBody>
-                <Stack spacing={4}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Leadership & support
-                  </Text>
-                  {loading ? (
-                    <SkeletonText noOfLines={5} spacing={3} />
-                  ) : (
-                    <Stack spacing={3}>
-                      <HStack justify="space-between">
-                        <Text fontSize="sm" color="brand.subtleText">Transformation partner</Text>
-                        <Text fontWeight="semibold" color="brand.text">
-                          {organization?.assignedPartnerName || 'Not assigned'}
-                        </Text>
-                      </HStack>
-                      <Divider />
-                      <HStack justify="space-between">
-                        <Text fontSize="sm" color="brand.subtleText">Mentor</Text>
-                        <Stack spacing={0} align="flex-end">
-                          <Text fontWeight="semibold" color="brand.text">
-                            {organization?.assignedMentorName || 'Not assigned'}
+          <Card bg="white" border="1px solid" borderColor="brand.border">
+            <CardBody>
+              <Stack spacing={4}>
+                <Text fontWeight="bold" color="brand.text">
+                  Leadership & support
+                </Text>
+                {loading ? (
+                  <SkeletonText noOfLines={5} spacing={3} />
+                ) : (
+                  <Stack spacing={0} divider={<Divider />}>
+                    {[
+                      {
+                        role: 'Transformation partner',
+                        name: organization?.assignedPartnerName,
+                        email: organization?.assignedPartnerEmail,
+                      },
+                      {
+                        role: 'Mentor',
+                        name: organization?.assignedMentorName,
+                        email: organization?.assignedMentorEmail,
+                      },
+                      {
+                        role: 'Ambassador',
+                        name: organization?.assignedAmbassadorName,
+                        email: organization?.assignedAmbassadorEmail,
+                      },
+                    ].map((person) => (
+                      <HStack key={person.role} justify="space-between" align="center" py={3} spacing={4}>
+                        <Text fontSize="sm" color="brand.subtleText">{person.role}</Text>
+                        <Stack spacing={0} align="flex-end" minW={0}>
+                          <Text
+                            fontWeight="semibold"
+                            color={person.name ? 'brand.text' : 'brand.subtleText'}
+                            noOfLines={1}
+                          >
+                            {person.name || 'Not assigned'}
                           </Text>
-                          {organization?.assignedMentorEmail && (
-                            <Text fontSize="xs" color="brand.subtleText">{organization.assignedMentorEmail}</Text>
+                          {person.email && (
+                            <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{person.email}</Text>
                           )}
                         </Stack>
                       </HStack>
-                      <Divider />
-                      <HStack justify="space-between">
-                        <Text fontSize="sm" color="brand.subtleText">Ambassador</Text>
-                        <Stack spacing={0} align="flex-end">
-                          <Text fontWeight="semibold" color="brand.text">
-                            {organization?.assignedAmbassadorName || 'Not assigned'}
-                          </Text>
-                          {organization?.assignedAmbassadorEmail && (
-                            <Text fontSize="xs" color="brand.subtleText">{organization.assignedAmbassadorEmail}</Text>
-                          )}
-                        </Stack>
-                      </HStack>
-                      <Divider />
-                      <HStack justify="space-between">
-                        <Text fontSize="sm" color="brand.subtleText">Partner</Text>
-                        <Stack spacing={0} align="flex-end">
-                          <Text fontWeight="semibold" color="brand.text">
-                            {organization?.assignedPartnerName || 'Not assigned'}
-                          </Text>
-                          {organization?.assignedPartnerEmail && (
-                            <Text fontSize="xs" color="brand.subtleText">{organization.assignedPartnerEmail}</Text>
-                          )}
-                        </Stack>
-                      </HStack>
-                    </Stack>
-                  )}
-                </Stack>
-              </CardBody>
-            </Card>
-
-            <Card bg="white" border="1px solid" borderColor="brand.border">
-              <CardBody>
-                <Stack spacing={4}>
-                  <HStack justify="space-between" align="center">
-                    <Text fontWeight="bold" color="brand.text">
-                      Course assignments
-                    </Text>
-                    <Badge colorScheme="purple">{courseTitles.length} courses</Badge>
-                  </HStack>
-                  {loading ? (
-                    <SkeletonText noOfLines={4} spacing={3} />
-                  ) : courseTitles.length ? (
-                    <Stack spacing={2}>
-                      {courseTitles.map((course) => (
-                        <Box
-                          key={course}
-                          p={3}
-                          borderRadius="md"
-                          border="1px solid"
-                          borderColor="brand.border"
-                          bg="brand.accent"
-                        >
-                          <Text fontWeight="semibold" color="brand.text">{course}</Text>
-                        </Box>
-                      ))}
-                    </Stack>
-                  ) : (
-                    <Box p={3} borderRadius="md" border="1px dashed" borderColor="brand.border">
-                      <Text color="brand.subtleText">No courses assigned yet.</Text>
-                    </Box>
-                  )}
-                </Stack>
-              </CardBody>
-            </Card>
-          </Stack>
+                    ))}
+                  </Stack>
+                )}
+              </Stack>
+            </CardBody>
+          </Card>
         </SimpleGrid>
+
+        <Card bg="white" border="1px solid" borderColor="brand.border">
+          <CardBody>
+            <Stack spacing={4}>
+              <HStack justify="space-between" align="center">
+                <Text fontWeight="bold" color="brand.text">
+                  Course assignments
+                </Text>
+                <Badge colorScheme="purple">{courseTitles.length} courses</Badge>
+              </HStack>
+              {loading ? (
+                <SkeletonText noOfLines={2} spacing={3} />
+              ) : courseTitles.length ? (
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                  {courseTitles.map((course, index) => (
+                    <HStack
+                      key={course}
+                      p={3}
+                      spacing={3}
+                      borderRadius="md"
+                      border="1px solid"
+                      borderColor="brand.border"
+                      bg="brand.accent"
+                      align="center"
+                    >
+                      <Flex
+                        flexShrink={0}
+                        w={7}
+                        h={7}
+                        borderRadius="md"
+                        bg="white"
+                        border="1px solid"
+                        borderColor="brand.border"
+                        align="center"
+                        justify="center"
+                      >
+                        <Text fontSize="xs" fontWeight="bold" color="brand.subtleText">{index + 1}</Text>
+                      </Flex>
+                      <Text fontSize="sm" fontWeight="semibold" color="brand.text">{course}</Text>
+                    </HStack>
+                  ))}
+                </SimpleGrid>
+              ) : (
+                <Box p={3} borderRadius="md" border="1px dashed" borderColor="brand.border">
+                  <Text color="brand.subtleText">No courses assigned yet.</Text>
+                </Box>
+              )}
+            </Stack>
+          </CardBody>
+        </Card>
 
         <Card bg="white" border="1px solid" borderColor="brand.border">
           <CardBody>
