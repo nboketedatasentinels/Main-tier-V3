@@ -129,6 +129,12 @@ const inferJourneyType = (
 
 const PAGE_SIZE = 25
 
+// Shared grid track sizing so the header and every row align column-for-column
+// (checkbox · user · role · membership · tier · organization · actions).
+// Fixed px for the badge columns so wide badges don't distort alignment; the
+// user and organization columns flex and truncate.
+const USERS_GRID_COLUMNS = '32px minmax(0, 2.2fr) 116px 150px 150px minmax(0, 1.5fr) 150px'
+
 type PromotionChange = {
   label: string
   before: string
@@ -376,6 +382,30 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       if (!ids.length) return 'Independent'
       const names = ids.map((id) => organizations.find((org) => org.id === id)?.name || id)
       return names.join(', ')
+    },
+    [organizations],
+  )
+
+  // Resolve the organization to show in the table. companyName is only stamped
+  // for some users; partners (assigned via the RPC) instead carry the link on
+  // company_id / organization_id / assignedOrganizations, so resolve the org
+  // name from the org list before falling back to "Independent".
+  const resolveUserOrg = useCallback(
+    (user: ManagedUserRecord): { name: string; code: string | null } | null => {
+      if (user.companyName) return { name: user.companyName, code: user.companyCode ?? null }
+      const candidateId = user.companyId || user.assignedOrganizations?.find((id) => Boolean(id)) || null
+      if (candidateId) {
+        const org = organizations.find((o) => o.id === candidateId || o.code === candidateId)
+        if (org) return { name: org.name, code: org.code ?? null }
+        return { name: user.companyCode || candidateId, code: user.companyCode ?? null }
+      }
+      if (user.companyCode) {
+        const org = organizations.find((o) => o.code === user.companyCode)
+        return org
+          ? { name: org.name, code: org.code ?? null }
+          : { name: user.companyCode, code: user.companyCode }
+      }
+      return null
     },
     [organizations],
   )
@@ -982,13 +1012,14 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     px={6}
                     py={3}
                     mb={2}
-                    align="center"
+                    alignItems="center"
                     gap={4}
                     fontSize="xs"
                     fontWeight="semibold"
                     textTransform="uppercase"
                     letterSpacing="wider"
-                    display={{ base: 'none', md: 'flex' }}
+                    display={{ base: 'none', md: 'grid' }}
+                    gridTemplateColumns={{ md: USERS_GRID_COLUMNS }}
                   >
                     <Box w="32px">
                       <Checkbox
@@ -1017,11 +1048,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                           borderRadius="xl"
                           px={6}
                           py={4}
-                          align="center"
+                          alignItems="center"
                           gap={4}
                           boxShadow="0 1px 2px rgba(15, 23, 42, 0.04)"
                           transition="all 0.15s ease"
                           _hover={{ boxShadow: '0 6px 16px rgba(15, 23, 42, 0.08)', transform: 'translateY(-1px)' }}
+                          display={{ base: 'flex', md: 'grid' }}
+                          gridTemplateColumns={{ md: USERS_GRID_COLUMNS }}
                           flexWrap={{ base: 'wrap', md: 'nowrap' }}
                         >
                           <Box w="32px" flexShrink={0}>
@@ -1086,20 +1119,23 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                           </Box>
 
                           <Box flex="1 1 140px" minW={0}>
-                            {user.companyName ? (
-                              <Stack spacing={0} minW={0}>
-                                <Text fontWeight="medium" color="gray.800" noOfLines={1}>
-                                  {user.companyName}
-                                </Text>
-                                <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                                  {user.companyCode || '-'}
-                                </Text>
-                              </Stack>
-                            ) : (
-                              <Badge colorScheme="purple" borderRadius="full" px={3} py={1}>
-                                Independent
-                              </Badge>
-                            )}
+                            {(() => {
+                              const org = resolveUserOrg(user)
+                              return org ? (
+                                <Stack spacing={0} minW={0}>
+                                  <Text fontWeight="medium" color="gray.800" noOfLines={1}>
+                                    {org.name}
+                                  </Text>
+                                  <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                                    {org.code || '-'}
+                                  </Text>
+                                </Stack>
+                              ) : (
+                                <Badge colorScheme="purple" borderRadius="full" px={3} py={1}>
+                                  Independent
+                                </Badge>
+                              )
+                            })()}
                           </Box>
 
                           <HStack flex="0 0 auto" spacing={2} minW="140px" justify="flex-end">
