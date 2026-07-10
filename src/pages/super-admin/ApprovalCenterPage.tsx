@@ -59,9 +59,8 @@ import {
 } from '@/services/upgradeApprovalService'
 import { ApprovalRecord, ApprovalStatus, ApprovalWorkflowType } from '@/types/approvals'
 import { getApprovalTypeMeta } from '@/utils/approvalTypeMapper'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
+import { supabase } from '@/services/supabase'
+import { getDisplayName } from '@/utils/displayName'
 import type { UpgradeRequest } from '@/types/upgrade'
 
 const toDate = (value?: unknown): Date | null => {
@@ -290,45 +289,40 @@ const ApprovalCenterPage: React.FC = () => {
         profileMap.set(upgrade.user_id, { name: prefillName, email })
       })
 
-      // Fetch profiles in parallel (batch of 10 to avoid Firestore limits)
-      for (let i = 0; i < userIds.length; i += 10) {
-        const batch = userIds.slice(i, i + 10)
-        const results = await Promise.all(
-          batch.map(async (userId) => {
-            const fallbackName = formatUserIdFallback(userId)
-            try {
-              const [profileSnap, userSnap] = await Promise.all([
-                getDoc(doc(db, 'profiles', userId)),
-                getDoc(doc(db, 'users', userId)),
-              ])
-              const profileData = profileSnap.exists() ? (profileSnap.data() as Record<string, unknown>) : {}
-              const userData = userSnap.exists() ? (userSnap.data() as Record<string, unknown>) : {}
-              const displayData = { ...userData, ...profileData } as Record<string, unknown>
-              if (Object.keys(displayData).length) {
-                const displayNameInput: DisplayNameInput = {
-                  displayName: typeof displayData.displayName === 'string' ? displayData.displayName : undefined,
-                  name: typeof displayData.name === 'string' ? displayData.name : undefined,
-                  fullName: typeof displayData.fullName === 'string' ? displayData.fullName : undefined,
-                  full_name: typeof displayData.full_name === 'string' ? displayData.full_name : undefined,
-                  firstName: typeof displayData.firstName === 'string' ? displayData.firstName : undefined,
-                  lastName: typeof displayData.lastName === 'string' ? displayData.lastName : undefined,
-                  email: typeof displayData.email === 'string' ? displayData.email : undefined,
-                }
-                const computedName = getDisplayName(displayNameInput, fallbackName)
-                const isFallback = computedName === fallbackName
-                const email = displayNameInput.email ?? null
-                return [userId, { name: computedName, email }, isFallback] as [string, { name: string; email?: string | null }, boolean]
-              }
-            } catch {
-              // Ignore errors for individual profiles
+      // Resolve display names from Supabase profiles (the source of truth; the
+      // old Firestore profiles/users lookup is dead and left every name blank).
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, first_name, last_name, email')
+          .in('id', userIds)
+        if (!error) {
+          const rows = data ?? []
+          rows.forEach((row) => {
+            const r = row as {
+              id: string
+              full_name?: string | null
+              first_name?: string | null
+              last_name?: string | null
+              email?: string | null
             }
-            return [userId, { name: fallbackName, email: null }, true] as [string, { name: string; email?: string | null }, boolean]
+            const fallbackName = formatUserIdFallback(r.id)
+            const computedName = getDisplayName(
+              {
+                full_name: r.full_name ?? undefined,
+                firstName: r.first_name ?? undefined,
+                lastName: r.last_name ?? undefined,
+                email: r.email ?? undefined,
+              },
+              fallbackName,
+            )
+            const isFallback = computedName === fallbackName
+            if (isFallback && profileMap.has(r.id)) return
+            profileMap.set(r.id, { name: computedName, email: r.email ?? null })
           })
-        )
-        results.forEach(([id, entry, isFallback]) => {
-          if (isFallback && profileMap.has(id)) return
-          profileMap.set(id, entry)
-        })
+        }
+      } catch {
+        // Leave prefilled/fallback names in place on lookup failure.
       }
 
       setUserProfiles(profileMap)

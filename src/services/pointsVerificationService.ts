@@ -2,13 +2,8 @@ import {
   FieldValue,
   Timestamp,
   collection,
-  doc,
-  getDoc,
   onSnapshot,
   query,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
@@ -261,21 +256,18 @@ export const approvePointsVerificationRequest = async (params: {
   request: PointsVerificationRequest
   approver?: ApproverInfo
 }) => {
-  const requestRef = doc(db, 'points_verification_requests', params.request.id)
+  // Resolve the learner's journey type from the Supabase profile so we can look
+  // up the activity's point value.
+  const { data: profileRow, error: profileError } = await supabase
+    .from('profiles')
+    .select('journey_type')
+    .eq('id', params.request.user_id)
+    .maybeSingle()
+  if (profileError) throw new Error(profileError.message)
 
-  // Get user profile for journey type
-  const userProfileRef = doc(db, 'profiles', params.request.user_id)
-  const userProfileSnap = await getDoc(userProfileRef)
-  if (!userProfileSnap.exists()) {
-    throw new Error('User profile not found')
-  }
-
-  const profileData = userProfileSnap.data()
   const journeyType =
     resolveJourneyType({
-      journeyType: profileData.journeyType,
-      programDurationWeeks: profileData.programDurationWeeks,
-      programDuration: profileData.programDuration,
+      journeyType: (profileRow as { journey_type?: string | null } | null)?.journey_type ?? undefined,
     }) ?? '6W'
   const activity = getActivityDefinitionById({
     journeyType,
@@ -287,15 +279,17 @@ export const approvePointsVerificationRequest = async (params: {
     throw new Error('Activity not found')
   }
 
-  const approverPayload = {
-    status: 'approved',
-    approved_by: params.approver?.id ?? null,
-    approved_by_name: params.approver?.name ?? null,
-    approved_at: serverTimestamp(),
-  }
-
-  // Update request status before awarding to keep locks in place
-  await updateDoc(requestRef, approverPayload)
+  // Mark approved in the Supabase queue (the store the admin/partner UI reads).
+  const { error: approveError } = await supabase
+    .from('point_verifications')
+    .update({
+      status: 'approved',
+      approved_by: params.approver?.id ?? null,
+      approved_by_name: params.approver?.name ?? null,
+      approved_at: new Date().toISOString(),
+    })
+    .eq('id', params.request.id)
+  if (approveError) throw new Error(approveError.message)
 
   try {
     await awardChecklistPoints({
@@ -308,36 +302,12 @@ export const approvePointsVerificationRequest = async (params: {
     })
   } catch (error) {
     console.error('[pointsVerificationService] Failed to award checklist points after approval:', error)
+    // Roll the queue row back to pending so the request can be retried.
     try {
-      await updateDoc(requestRef, {
-        status: 'pending',
-        approved_by: null,
-        approved_by_name: null,
-        approved_at: null,
-      })
-      await setDoc(
-        doc(db, 'approvals', params.request.id),
-        {
-          userId: params.request.user_id,
-          organizationId: params.request.organizationId ?? null,
-          type: 'points_verification',
-          approvalType: 'partner_approved',
-          title: params.request.activity_title || params.request.activity_id,
-          source: {
-            ...params.request,
-            id: params.request.id,
-          },
-          summary: params.request.notes ?? null,
-          points: params.request.points ?? null,
-          status: 'pending',
-          reviewedBy: null,
-          reviewedAt: null,
-          rejectionReason: null,
-          updatedAt: serverTimestamp(),
-          searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
-        },
-        { merge: true },
-      )
+      await supabase
+        .from('point_verifications')
+        .update({ status: 'pending', approved_by: null, approved_by_name: null, approved_at: null })
+        .eq('id', params.request.id)
     } catch (revertError) {
       console.error('[pointsVerificationService] Failed to revert approval status after award failure:', revertError)
     }
@@ -379,34 +349,6 @@ export const approvePointsVerificationRequest = async (params: {
   }
 
   try {
-    await setDoc(
-      doc(db, 'approvals', params.request.id),
-      {
-        userId: params.request.user_id,
-        organizationId: params.request.organizationId ?? null,
-        type: 'points_verification',
-        approvalType: 'partner_approved',
-        title: params.request.activity_title || params.request.activity_id,
-        source: {
-          ...params.request,
-          id: params.request.id,
-        },
-        summary: params.request.notes ?? null,
-        points: activity.points,
-        status: 'approved',
-        reviewedBy: params.approver?.id ?? null,
-        reviewedAt: serverTimestamp(),
-        rejectionReason: null,
-        updatedAt: serverTimestamp(),
-        searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
-      },
-      { merge: true },
-    )
-  } catch (error) {
-    console.error('[pointsVerificationService] Failed to mirror approved status to approvals:', error)
-  }
-
-  try {
     await createInAppNotification({
       userId: params.request.user_id,
       title: 'Activity Submission Approved',
@@ -436,43 +378,18 @@ export const rejectPointsVerificationRequest = async (params: {
   approver?: ApproverInfo
   reason?: string
 }) => {
-  const requestRef = doc(db, 'points_verification_requests', params.request.id)
-
-  await updateDoc(requestRef, {
-    status: 'rejected',
-    rejected_by: params.approver?.id ?? null,
-    rejected_by_name: params.approver?.name ?? null,
-    rejected_at: serverTimestamp(),
-    rejection_reason: params.reason ?? null,
-  })
-
-  try {
-    await setDoc(
-      doc(db, 'approvals', params.request.id),
-      {
-        userId: params.request.user_id,
-        organizationId: params.request.organizationId ?? null,
-        type: 'points_verification',
-        approvalType: 'partner_approved',
-        title: params.request.activity_title || params.request.activity_id,
-        source: {
-          ...params.request,
-          id: params.request.id,
-        },
-        summary: params.request.notes ?? null,
-        points: params.request.points ?? null,
-        status: 'rejected',
-        reviewedBy: params.approver?.id ?? null,
-        reviewedAt: serverTimestamp(),
-        rejectionReason: params.reason ?? null,
-        updatedAt: serverTimestamp(),
-        searchText: `${(params.request.activity_title || params.request.activity_id || '').toLowerCase()} ${params.request.user_id.toLowerCase()} partner_approved`,
-      },
-      { merge: true },
-    )
-  } catch (error) {
-    console.error('[pointsVerificationService] Failed to mirror rejected status to approvals:', error)
-  }
+  // Mark rejected in the Supabase queue (the store the admin/partner UI reads).
+  const { error: rejectError } = await supabase
+    .from('point_verifications')
+    .update({
+      status: 'rejected',
+      rejected_by: params.approver?.id ?? null,
+      rejected_by_name: params.approver?.name ?? null,
+      rejected_at: new Date().toISOString(),
+      rejection_reason: params.reason ?? null,
+    })
+    .eq('id', params.request.id)
+  if (rejectError) throw new Error(rejectError.message)
 
   try {
     await upsertChecklistActivity({
@@ -509,20 +426,24 @@ export const rejectPointsVerificationRequest = async (params: {
     console.error('[pointsVerificationService] Failed to log admin action:', error)
   }
 
-  // Notify user of rejection
-  await createInAppNotification({
-    userId: params.request.user_id,
-    title: 'Activity Submission Rejected',
-    message: `Your submission for "${params.request.activity_title || params.request.activity_id}" was rejected.${params.reason ? ` Reason: ${params.reason}` : ''}`,
-    type: 'approval',
-    relatedId: params.request.id,
-    metadata: {
-      actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id)}&openProof=1`,
-      week: params.request.week,
-      activityId: resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id,
-      requestId: params.request.id,
-    },
-  })
+  // Notify user of rejection (best-effort).
+  try {
+    await createInAppNotification({
+      userId: params.request.user_id,
+      title: 'Activity Submission Rejected',
+      message: `Your submission for "${params.request.activity_title || params.request.activity_id}" was rejected.${params.reason ? ` Reason: ${params.reason}` : ''}`,
+      type: 'approval',
+      relatedId: params.request.id,
+      metadata: {
+        actionUrl: `/app/weekly-checklist?week=${encodeURIComponent(String(params.request.week))}&activityId=${encodeURIComponent(resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id)}&openProof=1`,
+        week: params.request.week,
+        activityId: resolveCanonicalActivityId(params.request.activity_id) ?? params.request.activity_id,
+        requestId: params.request.id,
+      },
+    })
+  } catch (error) {
+    console.error('[pointsVerificationService] Failed to notify user after rejection:', error)
+  }
 
   return { data: { success: true } }
 }

@@ -1,8 +1,5 @@
-import { db } from '@/services/firebase'
-import { doc, runTransaction, serverTimestamp } from 'firebase/firestore'
-import { removeUndefinedFields } from '@/utils/firestore'
+import { supabase } from '@/services/supabase'
 import type { ApprovalType } from '@/config/pointsConfig'
-import type { PointsVerificationRequest } from './pointsVerificationService'
 
 export class PendingRequestExistsError extends Error {
   constructor() {
@@ -11,6 +8,17 @@ export class PendingRequestExistsError extends Error {
   }
 }
 
+/**
+ * Submit a points-verification request to the approval queue.
+ *
+ * Writes to the Supabase `point_verifications` table - the SAME store the admin
+ * Approval Center and partner queues read from. (This previously wrote to the
+ * Firestore `points_verification_requests` collection, which nothing reads
+ * anymore, so submissions never reached partners/admins.)
+ *
+ * The user column is `uid`. A learner may only have one PENDING request per
+ * (week, activity); a rejected request can be resubmitted (a new row).
+ */
 export async function submitPointsVerificationRequestAtomic(params: {
   userId: string
   organizationId?: string | null
@@ -23,82 +31,35 @@ export async function submitPointsVerificationRequestAtomic(params: {
   approvalType: ApprovalType
   attemptNumber?: number
 }) {
-  const baseId = `${params.userId}__w${params.week}__${params.activityId}`
-  const requestId = params.attemptNumber && params.attemptNumber > 1
-    ? `${baseId}__a${params.attemptNumber}`
-    : baseId
-  const verificationRef = doc(db, 'points_verification_requests', requestId)
-  const approvalRef = doc(db, 'approvals', requestId)
+  const { data: existing, error: existingError } = await supabase
+    .from('point_verifications')
+    .select('id')
+    .eq('uid', params.userId)
+    .eq('week', params.week)
+    .eq('activity_id', params.activityId)
+    .eq('status', 'pending')
+    .limit(1)
+  if (existingError) throw new Error(existingError.message)
+  if (existing && existing.length > 0) {
+    throw new PendingRequestExistsError()
+  }
 
-  await runTransaction(db, async (tx) => {
-    const existingVerification = await tx.get(verificationRef)
-    const existingStatus = existingVerification.exists()
-      ? (existingVerification.data()?.status ?? 'pending')
-      : null
-
-    if (existingStatus === 'pending') {
-      throw new PendingRequestExistsError()
-    }
-
-    const preservedCreatedAt = existingVerification.exists()
-      ? (existingVerification.data()?.created_at ?? serverTimestamp())
-      : serverTimestamp()
-
-    const sourcePayload: PointsVerificationRequest = {
-      id: requestId,
-      user_id: params.userId,
-      organizationId: params.organizationId ?? null,
+  const { data, error } = await supabase
+    .from('point_verifications')
+    .insert({
+      uid: params.userId,
+      organization_id: params.organizationId ?? null,
       week: params.week,
       activity_id: params.activityId,
       activity_title: params.activityTitle,
       points: params.activityPoints,
       proof_url: params.proofUrl,
-      notes: params.notes,
+      notes: params.notes ?? null,
       status: 'pending',
-      created_at: preservedCreatedAt,
-    }
+    })
+    .select('id')
+    .single()
+  if (error) throw new Error(error.message)
 
-    tx.set(
-      verificationRef,
-      removeUndefinedFields({
-        user_id: params.userId,
-        organizationId: params.organizationId ?? null,
-        week: params.week,
-        activity_id: params.activityId,
-        activity_title: params.activityTitle,
-        points: params.activityPoints,
-        proof_url: params.proofUrl,
-        notes: params.notes,
-        status: 'pending',
-        created_at: preservedCreatedAt,
-        updated_at: serverTimestamp(),
-        approval_id: requestId,
-      }),
-      { merge: true },
-    )
-
-    tx.set(
-      approvalRef,
-      removeUndefinedFields({
-        userId: params.userId,
-        organizationId: params.organizationId ?? null,
-        type: 'points_verification',
-        approvalType: params.approvalType,
-        title: params.activityTitle,
-        source: sourcePayload,
-        summary: params.notes || null,
-        points: params.activityPoints,
-        status: 'pending',
-        createdAt: preservedCreatedAt,
-        updatedAt: serverTimestamp(),
-        reviewedAt: null,
-        reviewedBy: null,
-        rejectionReason: null,
-        searchText: `${params.activityTitle.toLowerCase()} ${params.userId.toLowerCase()} ${params.approvalType.toLowerCase()}`,
-      }),
-      { merge: true },
-    )
-  })
-
-  return { requestId }
+  return { requestId: (data as { id: string }).id }
 }
