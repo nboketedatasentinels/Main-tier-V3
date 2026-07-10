@@ -587,10 +587,13 @@ export interface OrgMemberRecord {
   name: string
   email?: string
   role: string
+  membershipStatus?: string | null
+  createdAt?: string | null
 }
 
 // Members of an organization: profiles linked by company_id / organization_id /
-// company_code. Used by the Edit Organization modal to show who belongs to it.
+// company_code. Used by the Edit Organization modal and the org detail page to
+// show who belongs to it.
 export const fetchOrganizationMembers = async (org: {
   id?: string | null
   code?: string | null
@@ -602,7 +605,7 @@ export const fetchOrganizationMembers = async (org: {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, first_name, last_name, email, role')
+    .select('id, full_name, first_name, last_name, email, role, membership_status, created_at')
     .or(orClauses.join(','))
     .order('full_name', { ascending: true })
   if (error) throw new Error(error.message)
@@ -617,7 +620,14 @@ export const fetchOrganizationMembers = async (org: {
       [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
       raw.email ||
       'Unknown'
-    members.push({ id: raw.id, name, email: raw.email ?? undefined, role: raw.role ?? 'free_user' })
+    members.push({
+      id: raw.id,
+      name,
+      email: raw.email ?? undefined,
+      role: raw.role ?? 'free_user',
+      membershipStatus: raw.membership_status ?? null,
+      createdAt: raw.created_at ?? null,
+    })
   }
   return members
 }

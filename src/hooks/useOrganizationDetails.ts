@@ -1,17 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import {
-  fetchAvailableCourses,
-  fetchOrganizationByCode,
-  fetchOrganizationEngagementStats,
-  fetchOrganizationInvitations,
-  fetchOrganizationUsers,
-  logOrganizationAccessAttempt,
-} from '@/services/organizationService'
-import { canAccessOrganization } from '@/services/organizationAccessService'
-import { fetchUserProfileById } from '@/services/userProfileService'
+import { fetchAvailableCourses } from '@/services/organizationService'
+import { fetchOrganizations, fetchOrganizationMembers } from '@/services/supabaseSuperAdminService'
+import type { OrgMemberRecord } from '@/services/supabaseSuperAdminService'
 import { normalizeEmail } from '@/utils/email'
 import type {
+  AdminRole,
   OrganizationAccountStatusFilter,
   OrganizationDetailView,
   OrganizationInvitationProfile,
@@ -91,10 +85,44 @@ const buildDetailView = (organization: {
   courseAssignments: organization.courseAssignments || [],
 })
 
+const toProfileRole = (role?: string | null): AdminRole | 'user' => {
+  const r = (role || '').toLowerCase()
+  if (r === 'super_admin' || r === 'partner' || r === 'mentor' || r === 'ambassador') {
+    return r as AdminRole
+  }
+  return 'user'
+}
+
+const toMembershipStatus = (member: OrgMemberRecord): 'free' | 'paid' | 'inactive' => {
+  const status = (member.membershipStatus || '').toLowerCase()
+  if (status === 'paid' || status === 'inactive') return status
+  const role = (member.role || '').toLowerCase()
+  if (['paid_member', 'partner', 'mentor', 'ambassador', 'super_admin'].includes(role)) return 'paid'
+  return 'free'
+}
+
+const mapMemberToProfile = (
+  member: OrgMemberRecord,
+  orgId: string,
+  orgCode?: string | null,
+): OrganizationUserProfile => ({
+  id: member.id,
+  name: member.name,
+  email: member.email,
+  role: toProfileRole(member.role),
+  membershipStatus: toMembershipStatus(member),
+  accountStatus: 'active',
+  lastActive: null,
+  createdAt: member.createdAt ? new Date(member.createdAt) : null,
+  avatarUrl: null,
+  organizationId: orgId,
+  companyCode: orgCode ?? null,
+})
+
 const pageSize = 50
 
 export const useOrganizationDetails = (organizationId?: string) => {
-  const { user, isAdmin, isSuperAdmin, profile } = useAuth()
+  const { user, isAdmin } = useAuth()
   const [organization, setOrganization] = useState<OrganizationDetailView | null>(null)
   const [users, setUsers] = useState<OrganizationUserProfile[]>([])
   const [invitationRecords, setInvitationRecords] = useState<OrganizationInvitationProfile[]>([])
@@ -132,94 +160,70 @@ export const useOrganizationDetails = (organizationId?: string) => {
     setLoading(true)
     setError(null)
     try {
-      const orgRecord = await fetchOrganizationByCode(organizationId)
+      // Resolve the org from Supabase (the route param is the org code, id as
+      // fallback). Firestore is no longer readable under Supabase auth.
+      const orgs = await fetchOrganizations()
+      const key = organizationId.trim()
+      const keyLower = key.toLowerCase()
+      const orgRecord =
+        orgs.find((o) => o.id === key) ||
+        orgs.find((o) => (o.code || '').toLowerCase() === keyLower) ||
+        null
       if (!orgRecord) {
         setError('not_found')
         setLoading(false)
         return
       }
 
-      const accessAllowed = await canAccessOrganization({
-        role: profile?.role || '',
-        userId: user.uid,
-        organizationId: orgRecord.id || organizationId,
-      })
+      const orgKey = orgRecord.id || key
 
-      if (!isSuperAdmin && !accessAllowed) {
-        if (user?.uid) {
-          void logOrganizationAccessAttempt({
-            userId: user.uid,
-            organizationId: orgRecord.id,
-            organizationCode: orgRecord.code,
-            reason: 'organization_details',
-          })
-        }
-        setError('unauthorized')
-        setLoading(false)
-        return
-      }
+      // Members (learners + leadership) linked to the org in Supabase profiles.
+      const memberRecords = await fetchOrganizationMembers({ id: orgRecord.id, code: orgRecord.code })
+      const userList = memberRecords.map((m) => mapMemberToProfile(m, orgKey, orgRecord.code))
 
-      const orgKey = orgRecord.id || organizationId
-      const orgLeadership = (orgRecord as unknown as { leadership?: Record<string, unknown> }).leadership
-      const resolvedMentorId =
-        orgRecord.assignedMentorId ??
-        (typeof orgLeadership === 'object' && orgLeadership
-          ? ((orgLeadership as { assignedMentorId?: unknown }).assignedMentorId as string | null | undefined)
-          : null) ??
-        null
-      const resolvedAmbassadorId =
-        orgRecord.assignedAmbassadorId ??
-        (typeof orgLeadership === 'object' && orgLeadership
-          ? ((orgLeadership as { assignedAmbassadorId?: unknown }).assignedAmbassadorId as string | null | undefined)
-          : null) ??
-        null
-      const resolvedPartnerId =
-        orgRecord.transformationPartnerId ??
-        (typeof orgLeadership === 'object' && orgLeadership
-          ? ((orgLeadership as { transformationPartnerId?: unknown }).transformationPartnerId as
-              | string
-              | null
-              | undefined)
-          : null) ??
-        null
-      const [userList, invitationList, stats, mentorProfile, ambassadorProfile, partnerProfile] = await Promise.all([
-        fetchOrganizationUsers(orgKey),
-        fetchOrganizationInvitations(orgKey),
-        fetchOrganizationEngagementStats(orgKey),
-        resolvedMentorId ? fetchUserProfileById(resolvedMentorId) : Promise.resolve(null),
-        resolvedAmbassadorId ? fetchUserProfileById(resolvedAmbassadorId) : Promise.resolve(null),
-        resolvedPartnerId ? fetchUserProfileById(resolvedPartnerId) : Promise.resolve(null),
-      ])
+      const partnerMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'partner') ?? null
+      const mentorMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'mentor') ?? null
+      const ambassadorMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'ambassador') ?? null
 
-      const getDisplayName = (profile: typeof mentorProfile) => {
-        if (!profile) return null
-        const fullName = profile.fullName || `${profile.firstName ?? ''} ${profile.lastName ?? ''}`.trim()
-        return fullName || profile.email || null
-      }
-
+      // Course titles from the org's assignments (mapping-driven catalog).
       let titleList: string[] = []
-      if (orgRecord.courseAssignments?.length) {
-        const courses = await fetchAvailableCourses()
-        const courseMap = new Map(courses.map((course) => [course.id, course.title]))
-        titleList = orgRecord.courseAssignments.map((courseId) => courseMap.get(courseId) || courseId)
+      const courseIds = orgRecord.courseAssignments?.filter(Boolean) ?? []
+      if (courseIds.length) {
+        try {
+          const courses = await fetchAvailableCourses()
+          const courseMap = new Map(courses.map((course) => [course.id, course.title]))
+          titleList = courseIds.map((courseId) => courseMap.get(courseId) || courseId)
+        } catch {
+          titleList = courseIds
+        }
+      }
+
+      const now = Date.now()
+      const weekMs = 7 * 24 * 60 * 60 * 1000
+      const stats: OrganizationStatistics = {
+        totalMembers: userList.length,
+        activeMembers: userList.filter((u) => u.accountStatus === 'active').length,
+        paidMembers: userList.filter((u) => u.membershipStatus === 'paid').length,
+        newMembersThisWeek: userList.filter((u) => u.createdAt && now - u.createdAt.getTime() <= weekMs).length,
+        averageEngagementRate: 0,
       }
 
       setOrganization(
         buildDetailView({
           ...orgRecord,
-          assignedMentorId: resolvedMentorId,
-          assignedAmbassadorId: resolvedAmbassadorId,
-          transformationPartnerId: resolvedPartnerId,
-          assignedMentorName: getDisplayName(mentorProfile),
-          assignedMentorEmail: mentorProfile?.email ?? null,
-          assignedAmbassadorName: getDisplayName(ambassadorProfile),
-          assignedAmbassadorEmail: ambassadorProfile?.email ?? null,
-          assignedPartnerName: getDisplayName(partnerProfile),
-          assignedPartnerEmail: partnerProfile?.email ?? null,
+          assignedMentorId: mentorMember?.id ?? null,
+          assignedAmbassadorId: ambassadorMember?.id ?? null,
+          transformationPartnerId: partnerMember?.id ?? orgRecord.transformationPartnerId ?? null,
+          assignedMentorName: mentorMember?.name ?? null,
+          assignedMentorEmail: mentorMember?.email ?? null,
+          assignedAmbassadorName: ambassadorMember?.name ?? null,
+          assignedAmbassadorEmail: ambassadorMember?.email ?? null,
+          assignedPartnerName: partnerMember?.name ?? null,
+          assignedPartnerEmail: partnerMember?.email ?? orgRecord.assignedPartnerEmail ?? null,
         }),
       )
       setUsers(userList)
-      setInvitationRecords(invitationList)
+      setInvitationRecords([])
       setStatistics(stats)
       setCourseTitles(titleList)
     } catch (err) {
@@ -228,13 +232,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
     } finally {
       setLoading(false)
     }
-  }, [
-    profile?.role,
-    isAdmin,
-    isSuperAdmin,
-    organizationId,
-    user?.uid,
-  ])
+  }, [isAdmin, organizationId, user?.uid])
 
   useEffect(() => {
     loadDetails()
