@@ -5,7 +5,6 @@ import {
   CalendarClock,
   ClipboardCheck,
   ClipboardList,
-  Gauge,
   Gift,
   Inbox,
   LayoutDashboard,
@@ -47,9 +46,7 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'approvals', label: 'Approval Center', icon: ClipboardCheck },
       { key: 'admin-oversight', label: 'Admin Oversight', icon: ShieldCheck },
-      { key: 'lift', label: 'LIFT Assessments', icon: Gauge },
       { key: 'feedback', label: 'Feedback Inbox', icon: Inbox },
-      { key: 'reports', label: 'Reports & Analytics', icon: BarChart3 },
     ],
   },
 ]
