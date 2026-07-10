@@ -424,6 +424,7 @@ type ProfileRow = {
   email?: string | null
   role?: string | null
   created_at?: string | null
+  total_points?: number | null
   company_id?: string | null
   organization_id?: string | null
   company_code?: string | null
@@ -589,6 +590,8 @@ export interface OrgMemberRecord {
   role: string
   membershipStatus?: string | null
   createdAt?: string | null
+  totalPoints?: number | null
+  lastActiveAt?: string | null
 }
 
 // Members of an organization: profiles linked by company_id / organization_id /
@@ -605,7 +608,7 @@ export const fetchOrganizationMembers = async (org: {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, first_name, last_name, email, role, membership_status, created_at')
+    .select('id, full_name, first_name, last_name, email, role, membership_status, created_at, total_points, data')
     .or(orClauses.join(','))
     .order('full_name', { ascending: true })
   if (error) throw new Error(error.message)
@@ -620,6 +623,10 @@ export const fetchOrganizationMembers = async (org: {
       [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
       raw.email ||
       'Unknown'
+    // Activity isn't a first-class column; it's tracked inside the `data` jsonb
+    // (lastActiveAt / last_active_at), the same source the partner dashboard reads.
+    const jsonb = (raw.data ?? {}) as Record<string, unknown>
+    const lastActiveRaw = jsonb.lastActiveAt ?? jsonb.last_active_at
     members.push({
       id: raw.id,
       name,
@@ -627,6 +634,8 @@ export const fetchOrganizationMembers = async (org: {
       role: raw.role ?? 'free_user',
       membershipStatus: raw.membership_status ?? null,
       createdAt: raw.created_at ?? null,
+      totalPoints: raw.total_points ?? null,
+      lastActiveAt: typeof lastActiveRaw === 'string' ? lastActiveRaw : null,
     })
   }
   return members

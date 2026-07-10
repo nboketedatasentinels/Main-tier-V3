@@ -112,7 +112,8 @@ const mapMemberToProfile = (
   role: toProfileRole(member.role),
   membershipStatus: toMembershipStatus(member),
   accountStatus: 'active',
-  lastActive: null,
+  lastActive: member.lastActiveAt ? new Date(member.lastActiveAt) : null,
+  points: member.totalPoints ?? 0,
   createdAt: member.createdAt ? new Date(member.createdAt) : null,
   avatarUrl: null,
   organizationId: orgId,
@@ -284,6 +285,11 @@ export const useOrganizationDetails = (organizationId?: string) => {
         const timeA = valueA instanceof Date ? valueA.getTime() : 0
         const timeB = valueB instanceof Date ? valueB.getTime() : 0
         return timeA > timeB ? direction : timeA < timeB ? -direction : 0
+      }
+      if (typeof valueA === 'number' || typeof valueB === 'number') {
+        const numA = typeof valueA === 'number' ? valueA : 0
+        const numB = typeof valueB === 'number' ? valueB : 0
+        return numA > numB ? direction : numA < numB ? -direction : 0
       }
       const safeA = (valueA || '').toString().toLowerCase()
       const safeB = (valueB || '').toString().toLowerCase()

@@ -21,6 +21,15 @@ import {
   Input,
   InputGroup,
   InputLeftElement,
+  FormControl,
+  FormLabel,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
   Select,
   SimpleGrid,
   Skeleton,
@@ -29,14 +38,18 @@ import {
   Tag,
   TagLabel,
   Text,
+  Textarea,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { ArrowLeft, ChevronDown, ChevronUp, Search, User } from 'lucide-react'
+import { ArrowLeft, BellRing, ChevronDown, ChevronUp, Search, User } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationDetails } from '@/hooks/useOrganizationDetails'
 import { logAdminAction } from '@/services/superAdminService'
+import { createIntervention } from '@/services/partnerInterventionsService'
+import type { OrganizationUserProfile } from '@/types/admin'
 import { getProgramDurationLabel } from '@/utils/monthlyCourseAssignments'
 
 const formatDate = (value?: string) => {
@@ -141,6 +154,64 @@ export const OrganizationDetailPage: React.FC = () => {
   const handleViewUser = (userId: string) => {
     const base = isPartnerView ? '/partner' : '/admin'
     navigate(`${base}/user/${userId}`)
+  }
+
+  const followUp = useDisclosure()
+  const [followUpUser, setFollowUpUser] = useState<OrganizationUserProfile | null>(null)
+  const [followUpReason, setFollowUpReason] = useState('')
+  const [followUpDeadline, setFollowUpDeadline] = useState('')
+  const [followUpSubmitting, setFollowUpSubmitting] = useState(false)
+
+  const openFollowUp = (userRow: OrganizationUserProfile) => {
+    setFollowUpUser(userRow)
+    setFollowUpReason('')
+    // Default the follow-up deadline to one week out (yyyy-mm-dd for the date input).
+    const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
+    followUp.onOpen()
+  }
+
+  const submitFollowUp = async () => {
+    if (!followUpUser) return
+    setFollowUpSubmitting(true)
+    try {
+      await createIntervention({
+        name: followUpUser.name,
+        target: organization?.name || organization?.code || 'Organization',
+        reason: followUpReason.trim() || 'Follow-up requested by admin',
+        status: 'watch',
+        deadline: followUpDeadline
+          ? new Date(followUpDeadline).toISOString()
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        organizationCode: organization?.code ?? null,
+        userId: followUpUser.id,
+        partnerId: organization?.transformationPartnerId ?? null,
+      })
+      logAdminAction({
+        action: 'Requested partner follow-up on learner',
+        organizationName: organization?.name,
+        organizationCode: organization?.code || organizationId,
+        adminId: user?.uid,
+        adminName: profile?.fullName || profile?.email,
+        metadata: { userId: followUpUser.id, userName: followUpUser.name, reason: followUpReason.trim() },
+      })
+      toast({
+        title: 'Follow-up requested',
+        description: organization?.assignedPartnerName
+          ? `${organization.assignedPartnerName} will see ${followUpUser.name} in their intervention queue.`
+          : `${followUpUser.name} has been added to the partner intervention queue for this organization.`,
+        status: 'success',
+      })
+      followUp.onClose()
+    } catch (err) {
+      toast({
+        title: 'Could not request follow-up',
+        description: err instanceof Error ? err.message : 'Please try again.',
+        status: 'error',
+      })
+    } finally {
+      setFollowUpSubmitting(false)
+    }
   }
 
   const clearInvitationFilters = () => {
@@ -742,8 +813,8 @@ export const OrganizationDetailPage: React.FC = () => {
                 </Stack>
               ) : paginatedUsers.length ? (
                 <Box overflowX="auto">
-                  <Box minW="900px">
-                    <Grid templateColumns="2fr 2fr 1fr 1fr 1fr 1fr 0.8fr" gap={2} pb={2}>
+                  <Box minW="1080px">
+                    <Grid templateColumns="2fr 2fr 1fr 1fr 1fr 1fr 1fr 1.6fr" gap={2} pb={2}>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -793,6 +864,15 @@ export const OrganizationDetailPage: React.FC = () => {
                         variant="ghost"
                         size="sm"
                         justifyContent="flex-start"
+                        onClick={() => handleSort('points')}
+                        rightIcon={sortKey === 'points' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
+                      >
+                        Score
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        justifyContent="flex-start"
                         onClick={() => handleSort('lastActive')}
                         rightIcon={sortKey === 'lastActive' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
                       >
@@ -807,7 +887,7 @@ export const OrganizationDetailPage: React.FC = () => {
                       {paginatedUsers.map((userRow) => (
                         <Grid
                           key={userRow.id}
-                          templateColumns="2fr 2fr 1fr 1fr 1fr 1fr 0.8fr"
+                          templateColumns="2fr 2fr 1fr 1fr 1fr 1fr 1fr 1.6fr"
                           gap={2}
                           p={3}
                           borderRadius="md"
@@ -847,16 +927,30 @@ export const OrganizationDetailPage: React.FC = () => {
                           <Badge colorScheme={userRow.accountStatus === 'active' ? 'green' : 'red'} textTransform="capitalize">
                             {userRow.accountStatus}
                           </Badge>
+                          <Text fontSize="sm" fontWeight="semibold" color="brand.text">
+                            {(userRow.points ?? 0).toLocaleString()}
+                          </Text>
                           <Text fontSize="sm" color="brand.subtleText">
                             {formatDateTime(userRow.lastActive)}
                           </Text>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewUser(userRow.id)}
-                          >
-                            View user
-                          </Button>
+                          <HStack spacing={2}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleViewUser(userRow.id)}
+                            >
+                              View user
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              colorScheme="orange"
+                              leftIcon={<BellRing size={14} />}
+                              onClick={() => openFollowUp(userRow)}
+                            >
+                              Follow-up
+                            </Button>
+                          </HStack>
                         </Grid>
                       ))}
                     </Stack>
@@ -911,6 +1005,55 @@ export const OrganizationDetailPage: React.FC = () => {
           </CardBody>
         </Card>
       </Stack>
+
+      <Modal isOpen={followUp.isOpen} onClose={followUp.onClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Ask partner to follow up</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={4}>
+              <Text fontSize="sm" color="brand.subtleText">
+                This adds <b>{followUpUser?.name}</b> to the intervention queue for{' '}
+                {organization?.assignedPartnerName
+                  ? `${organization.assignedPartnerName} (this organization's partner)`
+                  : "this organization's partner"}
+                .
+              </Text>
+              <FormControl>
+                <FormLabel fontSize="sm">Reason / note</FormLabel>
+                <Textarea
+                  value={followUpReason}
+                  onChange={(event) => setFollowUpReason(event.target.value)}
+                  placeholder="e.g. Low engagement this fortnight — please check in."
+                  rows={3}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Follow-up by</FormLabel>
+                <Input
+                  type="date"
+                  value={followUpDeadline}
+                  onChange={(event) => setFollowUpDeadline(event.target.value)}
+                />
+              </FormControl>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={followUp.onClose}>
+              Cancel
+            </Button>
+            <Button
+              colorScheme="orange"
+              onClick={submitFollowUp}
+              isLoading={followUpSubmitting}
+              leftIcon={<BellRing size={16} />}
+            >
+              Request follow-up
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   )
 }

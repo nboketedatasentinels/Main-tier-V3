@@ -408,6 +408,7 @@ export interface OrganizationUserProfile {
   membershipStatus: 'free' | 'paid' | 'inactive'
   accountStatus: 'active' | 'suspended'
   lastActive?: Date | null
+  points?: number
   createdAt?: Date | null
   avatarUrl?: string | null
   organizationId?: string | null
@@ -449,5 +450,6 @@ export type OrganizationUserSortKey =
   | 'role'
   | 'membershipStatus'
   | 'accountStatus'
+  | 'points'
   | 'lastActive'
 export type OrganizationUserSortDirection = 'asc' | 'desc'
