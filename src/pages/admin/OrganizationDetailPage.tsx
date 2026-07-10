@@ -50,7 +50,13 @@ import { useOrganizationDetails } from '@/hooks/useOrganizationDetails'
 import { logAdminAction } from '@/services/superAdminService'
 import { createIntervention } from '@/services/partnerInterventionsService'
 import type { OrganizationUserProfile } from '@/types/admin'
-import { getProgramDurationLabel } from '@/utils/monthlyCourseAssignments'
+import {
+  addDays,
+  addMonths,
+  getProgramDurationLabel,
+  resolveProgramCadence,
+  resolveProgramMonthCount,
+} from '@/utils/monthlyCourseAssignments'
 
 const formatDate = (value?: string) => {
   if (!value) return 'Not available'
@@ -66,6 +72,30 @@ const formatDateTime = (value?: Date | null) => {
     day: 'numeric',
     year: 'numeric',
   }).format(value)
+}
+
+// Program start/end are often left blank on the org record, but they can always
+// be derived: start defaults to the cohort start, and end is start + the program
+// duration (6 weeks for the biweekly journey, else N months). Keeps the overview
+// from showing a careless "Not available" when the data is inferable.
+const deriveProgramDates = (org?: {
+  programStart?: string
+  programEnd?: string
+  cohortStartDate?: unknown
+  programDuration?: number
+}): { start?: string; end?: string } => {
+  const startIso =
+    org?.programStart ||
+    (typeof org?.cohortStartDate === 'string' ? org.cohortStartDate : undefined)
+  if (!startIso) return { start: undefined, end: undefined }
+  const startDate = new Date(startIso)
+  if (Number.isNaN(startDate.getTime())) return { start: startIso, end: org?.programEnd }
+  if (org?.programEnd) return { start: startIso, end: org.programEnd }
+  const endDate =
+    resolveProgramCadence(org?.programDuration) === 'biweekly'
+      ? addDays(startDate, 6 * 7)
+      : addMonths(startDate, resolveProgramMonthCount(org?.programDuration))
+  return { start: startIso, end: endDate.toISOString() }
 }
 
 const getInvitationStatusColor = (status?: string) => {
@@ -220,6 +250,21 @@ export const OrganizationDetailPage: React.FC = () => {
     setInvitationMethodFilter('all')
   }
 
+  const programDates = useMemo(
+    () =>
+      deriveProgramDates(
+        organization
+          ? {
+              programStart: organization.programStart,
+              programEnd: organization.programEnd,
+              cohortStartDate: organization.cohortStartDate,
+              programDuration: organization.programDuration,
+            }
+          : undefined,
+      ),
+    [organization],
+  )
+
   const matchRegex = useMemo(() => {
     if (!debouncedSearch) return null
     return new RegExp(`(${escapeRegExp(debouncedSearch)})`, 'ig')
@@ -369,65 +414,28 @@ export const OrganizationDetailPage: React.FC = () => {
                   Organization overview
                 </Text>
                 {loading ? (
-                  <SkeletonText noOfLines={6} spacing={3} />
+                  <SkeletonText noOfLines={5} spacing={3} />
                 ) : (
-                  <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Name</Text>
-                      <Text fontWeight="semibold" color="brand.text">{organization?.name}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Code</Text>
-                      <Text fontWeight="semibold" color="brand.text">{organization?.code}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Status</Text>
-                      <Text fontWeight="semibold" color="brand.text">{organization?.status}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Team size</Text>
-                      <Text fontWeight="semibold" color="brand.text">{organization?.teamSize ?? 0}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Village</Text>
-                      <Text fontWeight="semibold" color="brand.text">{organization?.village || 'Not assigned'}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Cluster</Text>
-                      <Text fontWeight="semibold" color="brand.text">{organization?.cluster || 'Not assigned'}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Program start</Text>
-                      <Text fontWeight="semibold" color="brand.text">{formatDate(organization?.programStart)}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Program end</Text>
-                      <Text fontWeight="semibold" color="brand.text">{formatDate(organization?.programEnd)}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Cohort start</Text>
-                      <Text fontWeight="semibold" color="brand.text">{formatDate(organization?.cohortStartDate)}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Program duration</Text>
-                      <Text fontWeight="semibold" color="brand.text">
-                        {getProgramDurationLabel(organization?.programDuration) || 'Not set'}
-                      </Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Description</Text>
-                      <Text fontWeight="semibold" color="brand.text">
-                        {organization?.description || 'No description provided'}
-                      </Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Created</Text>
-                      <Text fontWeight="semibold" color="brand.text">{formatDate(organization?.createdAt)}</Text>
-                    </Stack>
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" color="brand.subtleText">Updated</Text>
-                      <Text fontWeight="semibold" color="brand.text">{formatDate(organization?.updatedAt)}</Text>
-                    </Stack>
+                  <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={3}>
+                    {[
+                      { label: 'Team size', value: `${organization?.teamSize ?? 0}` },
+                      { label: 'Village', value: organization?.village || 'Not assigned' },
+                      { label: 'Cluster', value: organization?.cluster || 'Not assigned' },
+                      { label: 'Program start', value: formatDate(programDates.start) },
+                      { label: 'Program end', value: formatDate(programDates.end) },
+                      { label: 'Cohort start', value: formatDate(organization?.cohortStartDate) },
+                      {
+                        label: 'Program duration',
+                        value: getProgramDurationLabel(organization?.programDuration) || 'Not set',
+                      },
+                      { label: 'Created', value: formatDate(organization?.createdAt) },
+                      { label: 'Updated', value: formatDate(organization?.updatedAt) },
+                    ].map((field) => (
+                      <Stack key={field.label} spacing={0.5}>
+                        <Text fontSize="xs" color="brand.subtleText">{field.label}</Text>
+                        <Text fontSize="sm" fontWeight="semibold" color="brand.text">{field.value}</Text>
+                      </Stack>
+                    ))}
                   </SimpleGrid>
                 )}
               </Stack>
