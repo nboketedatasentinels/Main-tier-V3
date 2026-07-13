@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { BadgeProps } from '@chakra-ui/react'
 import {
   Badge,
   Box,
@@ -17,7 +16,6 @@ import {
   MenuItem,
   MenuList,
   Select,
-  SimpleGrid,
   Spinner,
   Stack,
   Table,
@@ -350,15 +348,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }
   }
 
-  const statusCounts = useMemo(() => {
-    return organizations.reduce(
-      (acc, org) => {
-        acc[org.status] = (acc[org.status] || 0) + 1
-        return acc
-      },
-      { active: 0, inactive: 0, pending: 0, suspended: 0, watch: 0 } as Record<string, number>,
-    )
-  }, [organizations])
 
   const partnerLookup = useMemo(() => {
     // Resolve from ALL users (not just the current partners list) so a newly
@@ -537,13 +526,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
               </Flex>
             ) : (
               <Stack spacing={6}>
-                <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={4}>
-                  <StatusSummary label="Active" value={statusCounts.active} color="green" />
-                  <StatusSummary label="Pending" value={statusCounts.pending} color="orange" />
-                  <StatusSummary label="Suspended" value={statusCounts.suspended} color="red" />
-                  <StatusSummary label="Watch" value={statusCounts.watch} color="yellow" />
-                </SimpleGrid>
-
                 <Box border="1px solid" borderColor="brand.border" borderRadius="md" overflowX="auto">
                   <Table
                     size="sm"
@@ -755,16 +737,3 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   )
 }
 
-const StatusSummary = ({ label, value, color }: { label: string; value: number; color: NonNullable<BadgeProps['colorScheme']> }) => (
-  <Box p={4} border="1px solid" borderColor="brand.border" borderRadius="md" bg="brand.accent">
-    <Text fontSize="sm" color="brand.subtleText">
-      {label}
-    </Text>
-    <HStack spacing={2} mt={2}>
-      <Badge colorScheme={color}>{label}</Badge>
-      <Text fontWeight="bold" color="brand.text">
-        {value}
-      </Text>
-    </HStack>
-  </Box>
-)

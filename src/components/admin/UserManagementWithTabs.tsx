@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from '@chakra-ui/react'
 import { UsersManagementTab } from './tabs/UsersManagementTab'
-import { UserEngagementMonitoringTab } from './tabs/UserEngagementMonitoringTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
 import { listenToUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { OrganizationOption, ManagedUserRecord } from '@/services/userManagementService'
@@ -185,9 +184,6 @@ export const UserManagementWithTabs = () => {
             <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
           </Tab>
           <Tab whiteSpace="nowrap">
-            User Engagement
-          </Tab>
-          <Tab whiteSpace="nowrap">
             Leadership Council
             <Badge ml={2} colorScheme="gray" fontSize="xs">{mentorCount + ambassadorCount}</Badge>
           </Tab>
@@ -197,10 +193,6 @@ export const UserManagementWithTabs = () => {
           <TabPanel px={0}>
             {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
             <UsersManagementTab users={memo.users} loading={loading} />
-          </TabPanel>
-
-          <TabPanel px={0}>
-            <UserEngagementMonitoringTab users={memo.users} organizations={memo.organizations} />
           </TabPanel>
 
           <TabPanel px={0}>

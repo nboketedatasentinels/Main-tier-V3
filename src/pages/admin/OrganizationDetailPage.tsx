@@ -136,7 +136,6 @@ export const OrganizationDetailPage: React.FC = () => {
 
   const {
     organization,
-    statistics,
     courseTitles,
     loading,
     error,
@@ -166,7 +165,6 @@ export const OrganizationDetailPage: React.FC = () => {
   } = useOrganizationDetails(organizationId)
   const [invitationSearchQuery, setInvitationSearchQuery] = useState('')
   const [invitationStatusFilter, setInvitationStatusFilter] = useState('pending')
-  const [invitationMethodFilter, setInvitationMethodFilter] = useState<'all' | 'email' | 'one_time_code'>('all')
   const [invitationPage, setInvitationPage] = useState(1)
 
   useEffect(() => {
@@ -283,7 +281,6 @@ export const OrganizationDetailPage: React.FC = () => {
   const clearInvitationFilters = () => {
     setInvitationSearchQuery('')
     setInvitationStatusFilter('pending')
-    setInvitationMethodFilter('all')
   }
 
   const programDates = useMemo(
@@ -335,10 +332,9 @@ export const OrganizationDetailPage: React.FC = () => {
         (invite.email || '').toLowerCase().includes(search) ||
         (invite.code || '').toLowerCase().includes(search)
       const matchesStatus = invitationStatusFilter === 'all' || (invite.status || '').toLowerCase() === invitationStatusFilter
-      const matchesMethod = invitationMethodFilter === 'all' || invite.method === invitationMethodFilter
-      return matchesSearch && matchesStatus && matchesMethod
+      return matchesSearch && matchesStatus
     })
-  }, [invitationMethodFilter, invitationSearchQuery, invitationStatusFilter, invitations])
+  }, [invitationSearchQuery, invitationStatusFilter, invitations])
   const invitationPageCount = Math.max(1, Math.ceil(filteredInvitations.length / invitationPageSize))
   const currentInvitationPage = Math.min(invitationPage, invitationPageCount)
   const paginatedInvitations = useMemo(() => {
@@ -348,11 +344,11 @@ export const OrganizationDetailPage: React.FC = () => {
   const invitationStartIndex = Math.min((currentInvitationPage - 1) * invitationPageSize + 1, filteredInvitations.length || 0)
   const invitationEndIndex = Math.min(currentInvitationPage * invitationPageSize, filteredInvitations.length || 0)
   const invitationFiltersActive =
-    invitationSearchQuery.trim().length > 0 || invitationStatusFilter !== 'pending' || invitationMethodFilter !== 'all'
+    invitationSearchQuery.trim().length > 0 || invitationStatusFilter !== 'pending'
 
   useEffect(() => {
     setInvitationPage(1)
-  }, [invitationMethodFilter, invitationSearchQuery, invitationStatusFilter])
+  }, [invitationSearchQuery, invitationStatusFilter])
 
   if (error && error !== 'unauthorized') {
     const title =
@@ -571,45 +567,6 @@ export const OrganizationDetailPage: React.FC = () => {
         <Card bg="white" border="1px solid" borderColor="brand.border">
           <CardBody py={4}>
             <Stack spacing={3}>
-              <Text fontWeight="bold" color="brand.text">
-                Organization statistics
-              </Text>
-              {loading ? (
-                <SimpleGrid columns={{ base: 1, sm: 2, xl: 5 }} spacing={4}>
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <Skeleton key={index} height="80px" borderRadius="md" />
-                  ))}
-                </SimpleGrid>
-              ) : (
-                <SimpleGrid columns={{ base: 1, sm: 2, xl: 5 }} spacing={4}>
-                  {[
-                    { label: 'Total members', value: statistics?.totalMembers ?? 0 },
-                    { label: 'Active (30d)', value: statistics?.activeMembers ?? 0 },
-                    { label: 'Paid members', value: statistics?.paidMembers ?? 0 },
-                    { label: 'New this week', value: statistics?.newMembersThisWeek ?? 0 },
-                    { label: 'Avg engagement', value: `${statistics?.averageEngagementRate ?? 0}%` },
-                  ].map((stat) => (
-                    <Box
-                      key={stat.label}
-                      p={4}
-                      borderRadius="md"
-                      border="1px solid"
-                      borderColor="brand.border"
-                      bg="brand.accent"
-                    >
-                      <Text fontSize="sm" color="brand.subtleText">{stat.label}</Text>
-                      <Text fontSize="2xl" fontWeight="bold" color="brand.text">{stat.value}</Text>
-                    </Box>
-                  ))}
-                </SimpleGrid>
-              )}
-            </Stack>
-          </CardBody>
-        </Card>
-
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody py={4}>
-            <Stack spacing={3}>
               <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
                 <Stack spacing={1}>
                   <Text fontWeight="bold" color="brand.text">
@@ -633,7 +590,7 @@ export const OrganizationDetailPage: React.FC = () => {
                 </HStack>
               </HStack>
 
-              <Grid templateColumns={{ base: '1fr', md: '2fr 1fr 1fr' }} gap={3}>
+              <Grid templateColumns={{ base: '1fr', md: '2fr 1fr' }} gap={3}>
                 <GridItem colSpan={{ base: 1, md: 1 }}>
                   <InputGroup>
                     <InputLeftElement pointerEvents="none">
@@ -652,14 +609,6 @@ export const OrganizationDetailPage: React.FC = () => {
                   onChange={(event) => setInvitationStatusFilter(event.target.value)}
                 >
                   <option value="pending">Pending</option>
-                </Select>
-                <Select
-                  value={invitationMethodFilter}
-                  onChange={(event) => setInvitationMethodFilter(event.target.value as typeof invitationMethodFilter)}
-                >
-                  <option value="all">All methods</option>
-                  <option value="email">Email</option>
-                  <option value="one_time_code">One-time code</option>
                 </Select>
               </Grid>
 

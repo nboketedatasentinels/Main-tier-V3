@@ -133,7 +133,7 @@ const PAGE_SIZE = 25
 // (checkbox · user · role · membership · tier · organization · actions).
 // Fixed px for the badge columns so wide badges don't distort alignment; the
 // user and organization columns flex and truncate.
-const USERS_GRID_COLUMNS = '32px minmax(0, 2.2fr) 116px 150px 150px minmax(0, 1.5fr) 150px'
+const USERS_GRID_COLUMNS = '32px minmax(0, 2.2fr) 116px 150px minmax(0, 1.5fr) 150px'
 
 type PromotionChange = {
   label: string
@@ -357,13 +357,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     team_leader: 'orange',
     mentor: 'blue',
     ambassador: 'green',
-  }
-
-  const tierBadgeColor: Record<string, string> = {
-    [TransformationTier.INDIVIDUAL_FREE]: 'orange',
-    [TransformationTier.INDIVIDUAL_PAID]: 'blue',
-    [TransformationTier.CORPORATE_MEMBER]: 'purple',
-    [TransformationTier.CORPORATE_LEADER]: 'teal',
   }
 
   const currentPromotionRole = (promotionRoleSelection || 'user') as ManagedUserRole
@@ -1032,7 +1025,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     <Box flex="2 1 240px">User</Box>
                     <Box flex="1 1 120px">Role</Box>
                     <Box flex="1 1 100px">Membership</Box>
-                    <Box flex="1 1 100px">Tier</Box>
                     <Box flex="1 1 140px">Organization</Box>
                     <Box flex="0 0 auto" minW="140px" textAlign="right">Actions</Box>
                   </Flex>
@@ -1040,7 +1032,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                   {/* User cards */}
                   <Stack spacing={2}>
                     {paginatedUsers.map((user) => {
-                      const normalizedTier = normalizeValue(user.transformationTier)
                       return (
                         <Flex
                           key={user.id}
@@ -1099,23 +1090,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                             >
                               {formatMembershipLabel(membershipFilterKey(user))}
                             </Badge>
-                          </Box>
-
-                          <Box flex="1 1 100px">
-                            {normalizedTier ? (
-                              <Badge
-                                colorScheme={tierBadgeColor[normalizedTier] || 'gray'}
-                                borderRadius="full"
-                                px={3}
-                                py={1}
-                              >
-                                {formatTierLabel(normalizedTier)}
-                              </Badge>
-                            ) : (
-                              <Text fontSize="xs" color="gray.400">
-                                Not set
-                              </Text>
-                            )}
                           </Box>
 
                           <Box flex="1 1 140px" minW={0}>
