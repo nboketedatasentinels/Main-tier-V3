@@ -312,6 +312,20 @@ export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
 }
 
 /**
+ * Delete an organization. Goes through the SECURITY DEFINER function
+ * admin_delete_organization (migration 0030), which also detaches members
+ * (organization_id / company_id / company_code) and removes the org from any
+ * partner's assignedOrganizations list before deleting the row.
+ */
+export const deleteOrganization = async (orgId: string): Promise<void> => {
+  const { data, error } = await supabase.rpc('admin_delete_organization', { org_id: orgId })
+  if (error) throw new Error(error.message)
+  if (data === 'forbidden') throw new Error('You do not have permission to delete this organization.')
+  if (data === 'org_not_found') throw new Error('Organization not found.')
+  if (data !== 'ok') throw new Error(`Delete failed: ${data}`)
+}
+
+/**
  * Assign a mentor/ambassador to an organization. There is no dedicated org
  * column for these (unlike transformation_partner_id for partners), so the link
  * lives on the assigned user's profile via company_id/organization_id - the same

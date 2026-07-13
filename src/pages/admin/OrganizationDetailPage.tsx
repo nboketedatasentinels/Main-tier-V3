@@ -51,6 +51,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationDetails } from '@/hooks/useOrganizationDetails'
 import { logAdminAction } from '@/services/superAdminService'
 import { createIntervention } from '@/services/partnerInterventionsService'
+import { notifySupabaseUser } from '@/services/notificationService'
 import type { OrganizationUserProfile } from '@/types/admin'
 import {
   addDays,
@@ -231,9 +232,10 @@ export const OrganizationDetailPage: React.FC = () => {
     const summary =
       [followUpIssues.join(', '), note].filter(Boolean).join(' — ') ||
       'Follow-up requested by admin'
+    const partnerId = organization?.transformationPartnerId ?? null
     setFollowUpSubmitting(true)
     try {
-      await createIntervention({
+      const interventionId = await createIntervention({
         name: followUpUser.name,
         target: organization?.name || organization?.code || 'Organization',
         reason: summary,
@@ -243,9 +245,36 @@ export const OrganizationDetailPage: React.FC = () => {
           : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         organizationCode: organization?.code ?? null,
         userId: followUpUser.id,
-        partnerId: organization?.transformationPartnerId ?? null,
+        partnerId,
         riskVerdicts: followUpIssues,
       })
+      // Notify the assigned partner directly so it shows in their in-app bell
+      // (not just the intervention queue). Non-fatal if it fails.
+      if (partnerId) {
+        try {
+          const adminName = profile?.fullName || profile?.email || 'An admin'
+          await notifySupabaseUser({
+            userId: partnerId,
+            type: 'partner_follow_up',
+            category: 'intervention',
+            title: 'Follow-up requested',
+            message: `${adminName} asked you to follow up with ${followUpUser.name}${
+              followUpIssues.length ? `: ${followUpIssues.join(', ')}` : ''
+            }${note ? ` — ${note}` : ''}`,
+            relatedId: interventionId || followUpUser.id,
+            data: {
+              learnerId: followUpUser.id,
+              learnerName: followUpUser.name,
+              organizationCode: organization?.code ?? null,
+              organizationName: organization?.name ?? null,
+              issues: followUpIssues,
+              note,
+            },
+          })
+        } catch (notifyErr) {
+          console.error('Follow-up partner notification failed', notifyErr)
+        }
+      }
       logAdminAction({
         action: 'Requested partner follow-up on learner',
         organizationName: organization?.name,
@@ -261,10 +290,10 @@ export const OrganizationDetailPage: React.FC = () => {
       })
       toast({
         title: 'Follow-up requested',
-        description: organization?.assignedPartnerName
-          ? `${organization.assignedPartnerName} will see ${followUpUser.name} in their intervention queue.`
-          : `${followUpUser.name} has been added to the partner intervention queue for this organization.`,
-        status: 'success',
+        description: partnerId
+          ? `${organization?.assignedPartnerName || 'The partner'} has been notified to follow up with ${followUpUser.name}.`
+          : `${followUpUser.name} was added to the intervention queue, but this organization has no partner assigned to notify.`,
+        status: partnerId ? 'success' : 'warning',
       })
       followUp.onClose()
     } catch (err) {

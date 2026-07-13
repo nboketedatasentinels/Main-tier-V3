@@ -180,7 +180,12 @@ export const useOrganizationDetails = (organizationId?: string) => {
 
       // Members (learners + leadership) linked to the org in Supabase profiles.
       const memberRecords = await fetchOrganizationMembers({ id: orgRecord.id, code: orgRecord.code })
-      const userList = memberRecords.map((m) => mapMemberToProfile(m, orgKey, orgRecord.code))
+      // The users table drives follow-ups, which are routed TO the partner - so a
+      // partner must never appear as a follow-up target. Exclude partners from
+      // the list (they still feed the Leadership & support derivation below).
+      const userList = memberRecords
+        .filter((m) => (m.role || '').toLowerCase() !== 'partner')
+        .map((m) => mapMemberToProfile(m, orgKey, orgRecord.code))
 
       const partnerMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'partner') ?? null
       const mentorMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'mentor') ?? null

@@ -36,10 +36,7 @@ import { AssignPartnerModal } from '@/components/super-admin/AssignPartnerModal'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { EditOrganizationModal } from '@/components/super-admin/EditOrganizationModal'
 import { CreateOrganizationModal } from '@/components/super-admin/CreateOrganizationModal'
-import {
-  deleteOrganization,
-  logAdminAction,
-} from '@/services/superAdminService'
+import { logAdminAction } from '@/services/superAdminService'
 import {
   fetchOrganizations,
   listenToAllUsers,
@@ -50,6 +47,7 @@ import {
 import {
   assignLeadershipToOrg,
   assignPartnerToOrg,
+  deleteOrganization,
   removeLeadershipFromOrg,
   removePartnerFromOrg,
 } from '@/services/supabaseOrgService'
@@ -230,7 +228,11 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       confirmDialog.onClose()
     } catch (error) {
       console.error(error)
-      toast({ title: 'Unable to delete organization', status: 'error' })
+      toast({
+        title: 'Unable to delete organization',
+        description: error instanceof Error ? error.message : undefined,
+        status: 'error',
+      })
       return
     }
   }

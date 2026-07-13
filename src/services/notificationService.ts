@@ -119,6 +119,37 @@ export const listenToUserNotifications = (
   }
 }
 
+/**
+ * Create a notification in the Supabase `notifications` table (keyed on `uid`),
+ * which is what the in-app bell (listenToUserNotifications / useNotifications)
+ * actually reads. Use this to reach a specific user - e.g. alerting the assigned
+ * partner when an admin requests a follow-up. Unlike createInAppNotification
+ * (Firestore) and the admin_notifications helpers, this lands in the bell.
+ */
+export const notifySupabaseUser = async (params: {
+  userId: string
+  type: string
+  title: string
+  message: string
+  relatedId?: string | null
+  category?: string
+  data?: Record<string, unknown>
+}): Promise<void> => {
+  const { error } = await supabase.from('notifications').insert({
+    uid: params.userId,
+    type: params.type,
+    notification_type: params.type,
+    category: params.category ?? null,
+    title: params.title,
+    message: params.message,
+    is_read: false,
+    related_id: params.relatedId ?? null,
+    created_at: new Date().toISOString(),
+    data: params.data ?? {},
+  })
+  if (error) throw error
+}
+
 export const markNotificationRead = async (notificationId: string) => {
   const { error } = await supabase
     .from('notifications')

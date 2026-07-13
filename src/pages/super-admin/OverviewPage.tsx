@@ -3,8 +3,6 @@ import {
   Alert,
   AlertDescription,
   AlertIcon,
-  Card,
-  CardBody,
   Drawer,
   DrawerBody,
   DrawerCloseButton,
@@ -18,7 +16,6 @@ import {
   Stack,
   useDisclosure,
 } from '@chakra-ui/react'
-import { EngagementChart } from '@/components/admin/EngagementChart'
 import { AdminNotificationsList } from '@/components/admin/AdminNotificationsList'
 import { AdminHealthItem } from '@/components/admin/AdminDataHealthPanel'
 import type { RiskLevel, RiskReason } from '@/components/admin/RiskAnalysisCard'
@@ -34,7 +31,6 @@ import {
 // Command Center Components
 import { CommandCenterHeader } from './components/CommandCenterHeader'
 import { LearnerJourneyHealth } from './components/LearnerJourneyHealth'
-import { CollapsibleMetrics } from './components/CollapsibleMetrics'
 
 type TrendPoint = { label: string; value: number }
 
@@ -59,8 +55,6 @@ type OverviewPageProps = {
 
 export const OverviewPage: React.FC<OverviewPageProps> = ({
   adminName,
-  registrationTrend,
-  userGrowthTrend,
   systemAlerts,
   loading,
   error,
@@ -102,28 +96,6 @@ export const OverviewPage: React.FC<OverviewPageProps> = ({
         <>
           {/* ZONE 1 - LEARNER JOURNEY HEALTH */}
           <LearnerJourneyHealth aggregate={journeyProgress} onReviewUsers={() => onNavigate('users')} />
-
-          {/* ZONE 6 - SYSTEM METRICS (Collapsible) */}
-          <CollapsibleMetrics>
-            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6}>
-              <Card bg="white" border="1px solid" borderColor="border.control" borderRadius="2xl" shadow="sm">
-                <CardBody>
-                  <EngagementChart data={registrationTrend} title="Registration Trends" subtitle="Last 14 days" valueLabel="Registrations" />
-                </CardBody>
-              </Card>
-              <Card bg="white" border="1px solid" borderColor="border.control" borderRadius="2xl" shadow="sm">
-                <CardBody>
-                  <EngagementChart
-                    data={userGrowthTrend}
-                    title="User Growth"
-                    subtitle="Rolling 30-day view"
-                    strokeColor="var(--chakra-colors-brand-primary)"
-                    valueLabel="Users"
-                  />
-                </CardBody>
-              </Card>
-            </SimpleGrid>
-          </CollapsibleMetrics>
         </>
       )}
 
