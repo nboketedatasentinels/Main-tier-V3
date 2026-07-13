@@ -30,6 +30,7 @@ import type {
   TaskNotificationRecord,
   VerificationRequest,
 } from '@/types/admin'
+import type { UserProfileExtended } from '@/services/userProfileService'
 import { calculateUserRiskStatus, getProgramWeekNumber } from '@/utils/partnerProgress'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -551,6 +552,75 @@ export const listenToUsers = (
   return () => {
     cancelled = true
   }
+}
+
+// Single profile by id for the User Profile page. Replaces the Firestore
+// fetchUserProfileById (which throws "Missing or insufficient permissions" under
+// Supabase auth). Spreads the `data` jsonb first so long-tail keys (coreValues,
+// notes, socialLinks, milestonesProgress, personalityType, ...) flow through,
+// then overlays the first-class columns.
+export const fetchUserProfileById = async (
+  userId: string,
+): Promise<UserProfileExtended | null> => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return null
+
+  const row = data as Record<string, unknown>
+  const jsonb = (row.data as Record<string, unknown> | null) ?? {}
+  const str = (col: unknown, key: string): string | undefined => {
+    if (typeof col === 'string' && col) return col
+    const v = jsonb[key]
+    return typeof v === 'string' && v ? v : undefined
+  }
+  const num = (col: unknown, key: string): number | undefined => {
+    if (typeof col === 'number') return col
+    const v = jsonb[key]
+    return typeof v === 'number' ? v : undefined
+  }
+  const fullName =
+    (row.full_name as string) ||
+    [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+    (jsonb.fullName as string) ||
+    undefined
+  const assignedOrganizations = Array.isArray(row.assigned_organizations)
+    ? (row.assigned_organizations as string[]).filter(Boolean)
+    : Array.isArray(jsonb.assignedOrganizations)
+      ? (jsonb.assignedOrganizations as string[])
+      : undefined
+
+  const nowIso = new Date().toISOString()
+  return {
+    ...(jsonb as Partial<UserProfileExtended>),
+    id: row.id as string,
+    firstName: str(row.first_name, 'firstName') ?? '',
+    lastName: str(row.last_name, 'lastName') ?? '',
+    fullName: fullName ?? '',
+    email: (row.email as string) ?? '',
+    role: (row.role as UserProfileExtended['role']) ?? (jsonb.role as UserProfileExtended['role']),
+    membershipStatus: str(row.membership_status, 'membershipStatus') as UserProfileExtended['membershipStatus'],
+    accountStatus: str(row.account_status, 'accountStatus'),
+    transformationTier: str(row.transformation_tier, 'transformationTier'),
+    companyId: str(row.company_id, 'companyId') ?? str(row.organization_id, 'organizationId') ?? null,
+    companyCode: str(row.company_code, 'companyCode') ?? null,
+    companyName: str(row.company_name, 'companyName') ?? null,
+    organizationId: str(row.organization_id, 'organizationId') ?? null,
+    journeyType: (str(row.journey_type, 'journeyType') ?? '') as UserProfileExtended['journeyType'],
+    currentWeek: num(row.current_week, 'currentWeek'),
+    programDurationWeeks: num(row.program_duration_weeks, 'programDurationWeeks'),
+    totalPoints: num(row.total_points, 'totalPoints') ?? 0,
+    level: num(row.level, 'level') ?? 0,
+    assignedOrganizations,
+    createdAt: (row.created_at as string) ?? nowIso,
+    updatedAt: (row.updated_at as string) ?? nowIso,
+    registrationDate: (row.created_at as string) ?? (jsonb.registrationDate as string) ?? undefined,
+    lastActive: (jsonb.lastActiveAt as string) ?? (jsonb.last_active_at as string) ?? undefined,
+    lastActiveAt: (jsonb.lastActiveAt as string) ?? (jsonb.last_active_at as string) ?? undefined,
+  } as UserProfileExtended
 }
 
 const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {

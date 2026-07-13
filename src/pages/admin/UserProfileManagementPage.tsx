@@ -48,13 +48,13 @@ import {
   fetchImpactLogSummary,
   fetchOrganizationDetails,
   fetchUserBadges,
-  fetchUserProfileById,
   logUserProfileAccess,
   updateUserProfile,
   type BadgeRecord,
   type ImpactLogSummary,
   type UserProfileExtended,
 } from '@/services/userProfileService'
+import { fetchUserProfileById } from '@/services/supabaseSuperAdminService'
 import { deleteUserAccount, fetchOrganizationsList, type OrganizationOption } from '@/services/userManagementService'
 
 type ViewContext = 'partner' | 'mentor'
@@ -214,11 +214,10 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
       setLoading(true)
       setError(null)
       try {
-        const [profile, badgeRecords, impactData] = await Promise.all([
-          fetchUserProfileById(userId),
-          fetchUserBadges(userId),
-          fetchImpactLogSummary(userId),
-        ])
+        // The profile itself (Supabase) is the only critical fetch. Badges,
+        // impact, and org details are still Firestore-backed and will fail under
+        // Supabase auth - load them best-effort so they never block the page.
+        const profile = await fetchUserProfileById(userId)
         if (!profile) {
           setError('not_found')
           setLoading(false)
@@ -228,14 +227,15 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
         setEditedProfile(profile)
         setCoreValuesInput((profile.coreValues || []).join(', '))
         setNotesInput(profile.notes || '')
-        setBadges(badgeRecords)
-        setImpactSummary(impactData)
-        if (profile.companyId) {
-          const org = await fetchOrganizationDetails(profile.companyId)
-          setOrganization(org)
-        } else {
-          setOrganization(null)
-        }
+
+        const [badgeResult, impactResult, orgResult] = await Promise.allSettled([
+          fetchUserBadges(userId),
+          fetchImpactLogSummary(userId),
+          profile.companyId ? fetchOrganizationDetails(profile.companyId) : Promise.resolve(null),
+        ])
+        setBadges(badgeResult.status === 'fulfilled' ? badgeResult.value : [])
+        setImpactSummary(impactResult.status === 'fulfilled' ? impactResult.value : null)
+        setOrganization(orgResult.status === 'fulfilled' ? orgResult.value : null)
       } catch (err) {
         console.error(err)
         setError('Unable to load profile')
