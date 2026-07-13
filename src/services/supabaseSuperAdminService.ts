@@ -64,6 +64,19 @@ const buildDayBuckets = (days: number) => {
 const toErr = (err: unknown, fallback: string): Error =>
   err instanceof Error ? err : new Error(fallback)
 
+// Learner counts by role for the Admin Oversight cards. free_user / paid_member
+// are the two learner roles (see CLAUDE.md role list); admins load the
+// partner/mentor/ambassador counts from their own list.
+export const fetchUserRoleCounts = async (): Promise<{ free: number; paid: number }> => {
+  const [free, paid] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'free_user'),
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'paid_member'),
+  ])
+  if (free.error) throw new Error(free.error.message)
+  if (paid.error) throw new Error(paid.error.message)
+  return { free: free.count ?? 0, paid: paid.count ?? 0 }
+}
+
 export const listenToDashboardMetrics = (
   onChange: (metrics: SuperAdminDashboardMetrics) => void,
   _filters?: unknown,

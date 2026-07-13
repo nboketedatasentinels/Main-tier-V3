@@ -297,6 +297,8 @@ export type AdminFormData = {
 export interface AdminMetrics {
   total: number
   active: number
+  freeUsers: number
+  paidUsers: number
   partners: number
   mentors: number
   ambassadors: number

@@ -42,7 +42,7 @@ import {
   toggleAdminStatus,
   updateAdminUser,
 } from '@/services/superAdminService'
-import { listenToAdminUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
+import { fetchUserRoleCounts, listenToAdminUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { fetchAssignedOrganizations } from '@/services/organizationService'
 import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
 import { getDisplayName } from '@/utils/displayName'
@@ -85,6 +85,8 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const [metrics, setMetrics] = useState<AdminMetrics>({
     total: 0,
     active: 0,
+    freeUsers: 0,
+    paidUsers: 0,
     partners: 0,
     mentors: 0,
     ambassadors: 0,
@@ -110,7 +112,22 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
     const partners = adminList.filter((admin) => admin.role === 'partner').length
     const mentors = adminList.filter((admin) => admin.role === 'mentor').length
     const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
-    setMetrics({ total, active, partners, mentors, ambassadors })
+    // Preserve free/paid learner counts (loaded separately - they aren't in the
+    // admin list).
+    setMetrics((prev) => ({ ...prev, total, active, partners, mentors, ambassadors }))
+  }, [])
+
+  // Free/paid learner counts come from all profiles, not the admin list.
+  useEffect(() => {
+    let cancelled = false
+    fetchUserRoleCounts()
+      .then(({ free, paid }) => {
+        if (!cancelled) setMetrics((prev) => ({ ...prev, freeUsers: free, paidUsers: paid }))
+      })
+      .catch((error) => console.error('Failed to load learner counts', error))
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const adminUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -497,12 +514,17 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
 
       <SimpleGrid columns={[1, 2, 3, 5]} spacing={4} mb={6}>
         <MetricCard
-          label="Users With Admin Access"
-          value={metrics.total}
+          label="Free Users"
+          value={metrics.freeUsers}
           icon={ShieldCheck}
-          helper="Includes Super Admin, Partner, Mentor, and Ambassador roles."
+          helper="Learners on the free tier."
         />
-        <MetricCard label="Active (Admin Access)" value={metrics.active} icon={ShieldCheck} helper="Not suspended." />
+        <MetricCard
+          label="Paid Users"
+          value={metrics.paidUsers}
+          icon={ShieldCheck}
+          helper="Learners on a paid membership."
+        />
         <MetricCard label="Partners" value={metrics.partners} icon={ShieldCheck} helper="Organization-scoped access." />
         <MetricCard label="Mentors" value={metrics.mentors} icon={ShieldCheck} helper="Mentor role access." />
         <MetricCard label="Ambassadors" value={metrics.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
