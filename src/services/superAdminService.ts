@@ -748,13 +748,21 @@ export const listenToAdminActivityLog = (
 }
 
 export const logAdminAction = async (entry: Omit<AdminActivityLogEntry, 'id' | 'createdAt'>) => {
-  const actorId = getActorId() || entry.adminId
-  const sanitizedEntry = removeUndefinedFields({
-    ...entry,
-    createdBy: actorId,
-    createdAt: serverTimestamp(),
-  })
-  await addDoc(auditCollection, sanitizedEntry)
+  // Best-effort audit log. It writes to Firestore, which is denied under
+  // Supabase auth (no Firebase session) - but an audit-trail failure must never
+  // break the admin action that triggered it (delete org, assign partner, etc.).
+  // Swallow the error so callers that `await` this don't fall into their catch.
+  try {
+    const actorId = getActorId() || entry.adminId
+    const sanitizedEntry = removeUndefinedFields({
+      ...entry,
+      createdBy: actorId,
+      createdAt: serverTimestamp(),
+    })
+    await addDoc(auditCollection, sanitizedEntry)
+  } catch (error) {
+    console.warn('logAdminAction failed (non-fatal):', error)
+  }
 }
 
 export const fetchAdminUsers = async (): Promise<AdminUserRecord[]> => {
