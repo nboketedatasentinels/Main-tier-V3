@@ -41,6 +41,8 @@ import {
   Textarea,
   useDisclosure,
   useToast,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react'
 import { ArrowLeft, BellRing, ChevronDown, ChevronUp, Search, User } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -105,6 +107,21 @@ const getInvitationStatusColor = (status?: string) => {
   if (normalized === 'declined' || normalized === 'revoked') return 'red'
   return 'gray'
 }
+
+// Preset issues an admin can flag when asking a partner to follow up on a
+// learner. Mirrors the at-risk signals the partner dashboard already tracks
+// (inactivity, points shortfall, stalled progress) so the two sides speak the
+// same language. Selections are stored on the intervention's riskVerdicts.
+const FOLLOW_UP_ISSUES = [
+  'Not active',
+  'Slow progress',
+  'Below points target',
+  'Missed check-ins',
+  'Incomplete onboarding',
+  'Low engagement',
+  'Membership lapsed',
+  'Needs encouragement',
+]
 
 const invitationPageSize = 10
 
@@ -188,12 +205,14 @@ export const OrganizationDetailPage: React.FC = () => {
 
   const followUp = useDisclosure()
   const [followUpUser, setFollowUpUser] = useState<OrganizationUserProfile | null>(null)
+  const [followUpIssues, setFollowUpIssues] = useState<string[]>([])
   const [followUpReason, setFollowUpReason] = useState('')
   const [followUpDeadline, setFollowUpDeadline] = useState('')
   const [followUpSubmitting, setFollowUpSubmitting] = useState(false)
 
   const openFollowUp = (userRow: OrganizationUserProfile) => {
     setFollowUpUser(userRow)
+    setFollowUpIssues([])
     setFollowUpReason('')
     // Default the follow-up deadline to one week out (yyyy-mm-dd for the date input).
     const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -201,14 +220,25 @@ export const OrganizationDetailPage: React.FC = () => {
     followUp.onOpen()
   }
 
+  const toggleFollowUpIssue = (issue: string) => {
+    setFollowUpIssues((prev) =>
+      prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue],
+    )
+  }
+
   const submitFollowUp = async () => {
     if (!followUpUser) return
+    // Compose a human-readable reason from the selected issues plus any note.
+    const note = followUpReason.trim()
+    const summary =
+      [followUpIssues.join(', '), note].filter(Boolean).join(' — ') ||
+      'Follow-up requested by admin'
     setFollowUpSubmitting(true)
     try {
       await createIntervention({
         name: followUpUser.name,
         target: organization?.name || organization?.code || 'Organization',
-        reason: followUpReason.trim() || 'Follow-up requested by admin',
+        reason: summary,
         status: 'watch',
         deadline: followUpDeadline
           ? new Date(followUpDeadline).toISOString()
@@ -216,6 +246,7 @@ export const OrganizationDetailPage: React.FC = () => {
         organizationCode: organization?.code ?? null,
         userId: followUpUser.id,
         partnerId: organization?.transformationPartnerId ?? null,
+        riskVerdicts: followUpIssues,
       })
       logAdminAction({
         action: 'Requested partner follow-up on learner',
@@ -223,7 +254,12 @@ export const OrganizationDetailPage: React.FC = () => {
         organizationCode: organization?.code || organizationId,
         adminId: user?.uid,
         adminName: profile?.fullName || profile?.email,
-        metadata: { userId: followUpUser.id, userName: followUpUser.name, reason: followUpReason.trim() },
+        metadata: {
+          userId: followUpUser.id,
+          userName: followUpUser.name,
+          issues: followUpIssues,
+          note,
+        },
       })
       toast({
         title: 'Follow-up requested',
@@ -1023,12 +1059,33 @@ export const OrganizationDetailPage: React.FC = () => {
                 .
               </Text>
               <FormControl>
-                <FormLabel fontSize="sm">Reason / note</FormLabel>
+                <FormLabel fontSize="sm">What's the issue?</FormLabel>
+                <Wrap spacing={2}>
+                  {FOLLOW_UP_ISSUES.map((issue) => {
+                    const selected = followUpIssues.includes(issue)
+                    return (
+                      <WrapItem key={issue}>
+                        <Button
+                          size="sm"
+                          borderRadius="full"
+                          variant={selected ? 'solid' : 'outline'}
+                          colorScheme={selected ? 'orange' : 'gray'}
+                          onClick={() => toggleFollowUpIssue(issue)}
+                        >
+                          {issue}
+                        </Button>
+                      </WrapItem>
+                    )
+                  })}
+                </Wrap>
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Additional note (optional)</FormLabel>
                 <Textarea
                   value={followUpReason}
                   onChange={(event) => setFollowUpReason(event.target.value)}
-                  placeholder="e.g. Low engagement this fortnight — please check in."
-                  rows={3}
+                  placeholder="Any extra context for the partner…"
+                  rows={2}
                 />
               </FormControl>
               <FormControl>
@@ -1049,6 +1106,7 @@ export const OrganizationDetailPage: React.FC = () => {
               colorScheme="orange"
               onClick={submitFollowUp}
               isLoading={followUpSubmitting}
+              isDisabled={!followUpIssues.length && !followUpReason.trim()}
               leftIcon={<BellRing size={16} />}
             >
               Request follow-up
