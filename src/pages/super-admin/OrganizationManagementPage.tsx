@@ -28,7 +28,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { Filter, MoreHorizontal, Search, Sparkles } from 'lucide-react'
+import { MoreHorizontal, Search, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { AssignAmbassadorModal } from '@/components/super-admin/AssignAmbassadorModal'
 import { AssignMentorModal } from '@/components/super-admin/AssignMentorModal'
@@ -402,20 +402,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }, {} as Record<string, number>)
   }, [organizations])
 
-  const villageOptions = useMemo(
-    () =>
-      Array.from(new Set(organizations.map((org) => (org.village || '').trim()).filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b)),
-    [organizations],
-  )
-
-  const clusterOptions = useMemo(
-    () =>
-      Array.from(new Set(organizations.map((org) => (org.cluster || '').trim()).filter(Boolean)))
-        .sort((a, b) => a.localeCompare(b)),
-    [organizations],
-  )
-
   const paginatedOrganizations = useMemo(() => {
     const start = (page - 1) * pageSize
     return sortedOrganizations.slice(start, start + pageSize)
@@ -429,8 +415,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     const maxPage = Math.max(1, Math.ceil(sortedOrganizations.length / pageSize))
     setPage((currentPage) => (currentPage > maxPage ? maxPage : currentPage))
   }, [pageSize, sortedOrganizations.length])
-
-  const statusOptions = ['all', 'active', 'inactive', 'pending', 'suspended', 'watch']
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -475,9 +459,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                 <Text fontWeight="bold" color="brand.text">
                   Organization management
                 </Text>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Filter by status, village, and cluster. Client-side filtering and sorting keep the experience fast.
-                </Text>
               </Stack>
               <HStack spacing={3} flexWrap="wrap">
                 <InputGroup maxW="260px">
@@ -490,32 +471,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                     onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                   />
                 </InputGroup>
-                <Select w="150px" value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}>
-                  {statusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {status === 'all' ? 'All statuses' : status}
-                    </option>
-                  ))}
-                </Select>
-                <Select w="180px" value={filters.village} onChange={(e) => setFilters((prev) => ({ ...prev, village: e.target.value }))}>
-                  <option value="all">All villages</option>
-                  {villageOptions.map((village) => (
-                    <option key={village} value={village}>
-                      {village}
-                    </option>
-                  ))}
-                </Select>
-                <Select w="180px" value={filters.cluster} onChange={(e) => setFilters((prev) => ({ ...prev, cluster: e.target.value }))}>
-                  <option value="all">All clusters</option>
-                  {clusterOptions.map((cluster) => (
-                    <option key={cluster} value={cluster}>
-                      {cluster}
-                    </option>
-                  ))}
-                </Select>
-                <Button leftIcon={<Filter size={16} />} variant="outline" onClick={() => setFilters({ search: '', status: 'all', village: 'all', cluster: 'all' })}>
-                  Clear filters
-                </Button>
                 <Button colorScheme="purple" onClick={createModal.onOpen} leftIcon={<Sparkles size={16} />}>
                   Create organization
                 </Button>
