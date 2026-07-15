@@ -20,6 +20,11 @@ import { supabase } from '@/services/supabase'
 import { claimPartnerAccess } from '@/services/supabaseOrgService'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 
+// Shared partner access code (also included in the partner welcome email).
+// Required to create a partner account; the real authorization is still the
+// admin having assigned this email to an organization (claimPartnerAccess).
+const PARTNER_ACCESS_CODE = 't4l.ds.Admin.2025#'
+
 /**
  * Partner signup/signin. No company code (a partner can manage several orgs).
  * A partner can only get in if an admin has assigned their email to an
@@ -40,6 +45,7 @@ export const PartnerSignupPage: React.FC<{ initialMode?: 'signup' | 'signin' }> 
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState(seeded?.email ?? '')
   const [password, setPassword] = useState('')
+  const [accessCode, setAccessCode] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -79,6 +85,10 @@ export const PartnerSignupPage: React.FC<{ initialMode?: 'signup' | 'signin' }> 
     setInfo(null)
     if (!email.trim() || !password) {
       setError('Email and password are required.')
+      return
+    }
+    if (accessCode.trim() !== PARTNER_ACCESS_CODE) {
+      setError('Invalid partner access code. Please use the code from your invitation email.')
       return
     }
     setLoading(true)
@@ -239,6 +249,14 @@ export const PartnerSignupPage: React.FC<{ initialMode?: 'signup' | 'signin' }> 
                   <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@org.com" />
                 </FormControl>
                 {passwordField}
+                <FormControl isRequired>
+                  <FormLabel color="text.primary">Partner access code</FormLabel>
+                  <Input
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value)}
+                    placeholder="Enter your partner access code"
+                  />
+                </FormControl>
                 <Button type="submit" variant="primary" size="lg" isLoading={loading} loadingText="Creating...">
                   Create partner account
                 </Button>

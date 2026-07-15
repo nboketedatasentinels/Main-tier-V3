@@ -22,6 +22,9 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 const FUNCTION_VERSION = "2026-07-15-initial";
 
 const APP_NAME = "Transformation Tier";
+// Access code partners enter on the sign-up page (kept in sync with
+// src/pages/partner/PartnerSignupPage.tsx). Shown only in the partner email.
+const PARTNER_ACCESS_CODE = "t4l.ds.Admin.2025#";
 const PLUM = "#27062e"; // primary dark purple (header band, button, accents)
 const GOLD = "#eab130"; // brand gold (logo, accents)
 const SOFT_GOLD = "#f9db59"; // lighter gold (gradient, badge text)
@@ -150,6 +153,19 @@ function buildWelcomeHtml(data: WelcomePayload): string {
   const name = escapeHtml((data.recipientName || "").trim() || "there");
   const preview = `Welcome to ${APP_NAME} — you're now a ${copy.label}.`;
 
+  const accessCodeBlock =
+    data.role === "partner"
+      ? `<tr><td class="px-content" style="padding:18px 36px 0;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#FBF6E7;border:1px solid #F0E2B8;border-radius:10px;">
+            <tr><td style="padding:16px 18px;">
+              <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${PLUM};">Your partner access code</p>
+              <p style="margin:0 0 6px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:1px;color:${PLUM};">${PARTNER_ACCESS_CODE}</p>
+              <p style="margin:0;font-size:12px;line-height:1.5;color:#8A7B4E;">Enter this code on the partner sign-up page to activate your account.</p>
+            </td></tr>
+          </table>
+        </td></tr>`
+      : "";
+
   const bullets = copy.points
     .map(
       (point) =>
@@ -211,6 +227,9 @@ function buildWelcomeHtml(data: WelcomePayload): string {
           )}</p>
         </td></tr>
 
+        <!-- Partner access code (partners only) -->
+        ${accessCodeBlock}
+
         <!-- What you can do -->
         <tr><td class="px-content" style="padding:20px 36px 8px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5FB;border:1px solid #EDEBF3;border-radius:10px;padding:6px 18px;">
@@ -257,10 +276,19 @@ function buildWelcomeText(data: WelcomePayload): string {
   const name = (data.recipientName || "").trim() || "there";
   const intro = copy.intro(org).replace(/<[^>]+>/g, "");
   const points = copy.points.map((p) => `  - ${p}`).join("\n");
+  const accessCodeLines =
+    data.role === "partner"
+      ? [
+          "",
+          `Your partner access code: ${PARTNER_ACCESS_CODE}`,
+          "(Enter this code on the partner sign-up page to activate your account.)",
+        ]
+      : [];
   return [
     `Hi ${name},`,
     "",
     intro,
+    ...accessCodeLines,
     "",
     "Here's what you can do:",
     points,
