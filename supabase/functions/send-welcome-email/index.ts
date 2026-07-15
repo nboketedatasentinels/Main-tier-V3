@@ -21,12 +21,20 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 // ---------------------------------------------------------------------------
 const FUNCTION_VERSION = "2026-07-15-initial";
 
-const APP_URL = "https://app.t4leader.com/";
 const APP_NAME = "Transformation Tier";
 const PURPLE = "#350e6f"; // secondary colour (dark purple)
 const PLUM = "#27062e"; // deeper accent for the footer band
 
 type WelcomeRole = "partner" | "mentor" | "ambassador" | "user";
+
+// Role-specific CTA destination. Partners land on the partner signup flow; all
+// other roles open the main app.
+const CTA_LINK: Record<WelcomeRole, string> = {
+  partner: "https://app.t4leader.com/partner-signup",
+  mentor: "https://app.t4leader.com/",
+  ambassador: "https://app.t4leader.com/",
+  user: "https://app.t4leader.com/",
+};
 
 interface WelcomePayload {
   to: string;
@@ -201,7 +209,7 @@ function buildWelcomeHtml(data: WelcomePayload): string {
         <tr><td class="px-content" style="padding:26px 36px 8px;">
           <table cellpadding="0" cellspacing="0"><tr>
             <td style="background:${PURPLE};border-radius:10px;">
-              <a href="${APP_URL}" style="display:inline-block;padding:14px 34px;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;">${copy.cta}</a>
+              <a href="${CTA_LINK[data.role]}" style="display:inline-block;padding:14px 34px;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;">${copy.cta}</a>
             </td>
           </tr></table>
         </td></tr>
@@ -241,7 +249,7 @@ function buildWelcomeText(data: WelcomePayload): string {
     "Here's what you can do:",
     points,
     "",
-    `${copy.cta}: ${APP_URL}`,
+    `${copy.cta}: ${CTA_LINK[data.role]}`,
     "",
     "We're glad to have you on board.",
     `- The ${APP_NAME} Team`,
