@@ -22,8 +22,9 @@ import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 const FUNCTION_VERSION = "2026-07-15-initial";
 
 const APP_NAME = "Transformation Tier";
-const PURPLE = "#350e6f"; // secondary colour (dark purple)
-const PLUM = "#27062e"; // deeper accent for the footer band
+const PLUM = "#27062e"; // primary dark purple (header band, button, accents)
+const GOLD = "#eab130"; // brand gold (logo, accents)
+const SOFT_GOLD = "#f9db59"; // lighter gold (gradient, badge text)
 
 type WelcomeRole = "partner" | "mentor" | "ambassador" | "user";
 
@@ -153,7 +154,7 @@ function buildWelcomeHtml(data: WelcomePayload): string {
     .map(
       (point) =>
         `<tr>
-          <td valign="top" style="padding:4px 12px 4px 0;font-size:15px;line-height:1.5;color:${PURPLE};font-weight:700;">&bull;</td>
+          <td valign="top" style="padding:4px 12px 4px 0;font-size:15px;line-height:1.5;color:${GOLD};font-weight:700;">&bull;</td>
           <td style="padding:4px 0;font-size:14px;line-height:1.6;color:#4A5568;">${point}</td>
         </tr>`,
     )
@@ -180,15 +181,30 @@ function buildWelcomeHtml(data: WelcomePayload): string {
     <tr><td align="center">
       <table class="container" width="600" cellpadding="0" cellspacing="0" style="background:#FFFFFF;border:1px solid #EDEBF3;border-radius:14px;overflow:hidden;">
 
-        <!-- Header -->
-        <tr><td style="background:${PURPLE};padding:32px 24px;text-align:center;">
-          <p style="margin:0 0 6px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#C9B8E8;">${APP_NAME}</p>
-          <h1 style="margin:0;font-size:24px;color:#FFFFFF;font-weight:700;">${copy.heading}</h1>
-          <p style="margin:10px auto 0;display:inline-block;background:rgba(255,255,255,0.14);border-radius:100px;padding:5px 16px;font-size:12px;font-weight:600;letter-spacing:0.5px;color:#FFFFFF;text-transform:uppercase;">${copy.label}</p>
+        <!-- Header: brand logo lockup (gold play-circle + wordmark) on deep plum -->
+        <tr><td style="background:${PLUM};padding:26px 24px;text-align:center;">
+          <table align="center" cellpadding="0" cellspacing="0" role="presentation"><tr>
+            <td valign="middle" style="padding-right:13px;">
+              <table width="46" height="46" cellpadding="0" cellspacing="0" role="presentation" style="width:46px;height:46px;background:${GOLD};background:linear-gradient(135deg,${SOFT_GOLD},${GOLD});border-radius:50%;">
+                <tr><td align="center" valign="middle" style="text-align:center;">
+                  <span style="display:inline-block;width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-left:13px solid #FFFFFF;margin-left:4px;"></span>
+                </td></tr>
+              </table>
+            </td>
+            <td valign="middle" style="font-size:22px;font-weight:800;letter-spacing:1.5px;">
+              <span style="color:${GOLD};">TRANSFORMATION </span><span style="color:#FFFFFF;">LEADER</span>
+            </td>
+          </tr></table>
+        </td></tr>
+
+        <!-- Role heading + badge -->
+        <tr><td class="px-content" style="padding:30px 36px 0;text-align:center;">
+          <h1 style="margin:0 0 12px;font-size:23px;color:${PLUM};font-weight:700;">${copy.heading}</h1>
+          <span style="display:inline-block;background:${PLUM};border-radius:100px;padding:5px 16px;font-size:12px;font-weight:700;letter-spacing:0.6px;color:${SOFT_GOLD};text-transform:uppercase;">${copy.label}</span>
         </td></tr>
 
         <!-- Greeting + intro -->
-        <tr><td class="px-content" style="padding:30px 36px 8px;">
+        <tr><td class="px-content" style="padding:24px 36px 8px;">
           <p style="margin:0 0 16px;font-size:16px;color:#1A202C;">Hi <strong>${name}</strong>,</p>
           <p style="margin:0;font-size:15px;line-height:1.7;color:#4A5568;">${copy.intro(
             org,
@@ -198,7 +214,7 @@ function buildWelcomeHtml(data: WelcomePayload): string {
         <!-- What you can do -->
         <tr><td class="px-content" style="padding:20px 36px 8px;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#F7F5FB;border:1px solid #EDEBF3;border-radius:10px;padding:6px 18px;">
-            <tr><td style="padding:12px 4px 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${PURPLE};">Here's what you can do</td></tr>
+            <tr><td style="padding:12px 4px 4px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${PLUM};">Here's what you can do</td></tr>
             <tr><td style="padding:4px;">
               <table width="100%" cellpadding="0" cellspacing="0">${bullets}</table>
             </td></tr>
@@ -208,7 +224,7 @@ function buildWelcomeHtml(data: WelcomePayload): string {
         <!-- CTA -->
         <tr><td class="px-content" style="padding:26px 36px 8px;">
           <table cellpadding="0" cellspacing="0"><tr>
-            <td style="background:${PURPLE};border-radius:10px;">
+            <td style="background:${PLUM};border-radius:10px;">
               <a href="${CTA_LINK[data.role]}" style="display:inline-block;padding:14px 34px;color:#FFFFFF;text-decoration:none;font-size:15px;font-weight:700;">${copy.cta}</a>
             </td>
           </tr></table>
