@@ -658,9 +658,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                   {viewMode === 'active' ? (
                                     <>
                                       <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
-                                      <MenuItem onClick={() => { setSelectedOrg(org); assignMentorModal.onOpen() }}>Assign mentor</MenuItem>
-                                      <MenuItem onClick={() => { setSelectedOrg(org); assignAmbassadorModal.onOpen() }}>Assign ambassador</MenuItem>
-                                      <MenuItem onClick={() => { setSelectedOrg(org); assignPartnerModal.onOpen() }}>Assign partner</MenuItem>
                                       <MenuItem onClick={() => handleArchiveOrg(org)} color="orange.500">
                                         Archive
                                       </MenuItem>
