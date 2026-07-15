@@ -6,3 +6,9 @@
 # ourselves with ZOHO_WEBHOOK_SECRET (see the function), so disable JWT checks.
 [functions.zoho-lead-sync]
 verify_jwt = false
+
+# send-welcome-email is invoked from the browser (supabase.functions.invoke). We
+# keep verify_jwt = false to avoid the CORS-preflight 401 and instead verify the
+# caller's JWT + partner/admin role inside the function (see authorizeCaller).
+[functions.send-welcome-email]
+verify_jwt = false

@@ -643,6 +643,8 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     name: (row.name as string) ?? '',
     code: (row.code as string) ?? '',
     status: ((row.status as string) ?? 'active') as OrganizationRecord['status'],
+    archived: Boolean(settings.archived),
+    archivedAt: (settings.archivedAt as string) ?? undefined,
     createdAt: (row.created_at as string) ?? undefined,
     transformationPartnerId: (row.transformation_partner_id as string) ?? undefined,
     organizationJourneyType: (row.journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,

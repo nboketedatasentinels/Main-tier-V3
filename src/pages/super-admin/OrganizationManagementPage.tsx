@@ -50,6 +50,7 @@ import {
   deleteOrganization,
   removeLeadershipFromOrg,
   removePartnerFromOrg,
+  setOrganizationArchived,
 } from '@/services/supabaseOrgService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
@@ -81,6 +82,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
+  const [viewMode, setViewMode] = useState<'active' | 'archived'>('active')
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [partnersError, setPartnersError] = useState<string | null>(null)
@@ -208,6 +210,62 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     createModal.onClose()
   }
 
+  const handleArchiveOrg = async (org: OrganizationRecord) => {
+    if (!org.id) return
+    try {
+      await setOrganizationArchived(org.id, true)
+      setOrganizations((prev) =>
+        prev.map((o) =>
+          o.id === org.id ? { ...o, archived: true, archivedAt: new Date().toISOString() } : o,
+        ),
+      )
+      await logAdminAction({
+        action: 'Organization archived',
+        organizationName: org.name,
+        organizationCode: org.code,
+        adminId,
+        adminName,
+      })
+      toast({
+        title: 'Organization archived',
+        description: 'Moved to Archived. You can restore it any time from the Archived view.',
+        status: 'info',
+      })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: 'Unable to archive organization',
+        description: error instanceof Error ? error.message : undefined,
+        status: 'error',
+      })
+    }
+  }
+
+  const handleRestoreOrg = async (org: OrganizationRecord) => {
+    if (!org.id) return
+    try {
+      await setOrganizationArchived(org.id, false)
+      setOrganizations((prev) =>
+        prev.map((o) => (o.id === org.id ? { ...o, archived: false, archivedAt: undefined } : o)),
+      )
+      await logAdminAction({
+        action: 'Organization restored',
+        organizationName: org.name,
+        organizationCode: org.code,
+        adminId,
+        adminName,
+      })
+      toast({ title: 'Organization restored', status: 'success' })
+    } catch (error) {
+      console.error(error)
+      toast({
+        title: 'Unable to restore organization',
+        description: error instanceof Error ? error.message : undefined,
+        status: 'error',
+      })
+    }
+  }
+
   const handleDeleteOrg = async () => {
     if (!pendingDelete?.id) return
     try {
@@ -246,6 +304,8 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       // Supabase RPC: assignPartnerToOrg promotes the chosen user to partner AND
       // links them to the org in one call; removePartnerFromOrg clears it.
       if (partnerId) {
+        // Welcome email is sent inside assignPartnerToOrg (covers this modal and
+        // the create-org auto-link path in one place).
         await assignPartnerToOrg(selectedOrg.id, partnerId)
       } else {
         await removePartnerFromOrg(selectedOrg.id)
@@ -276,6 +336,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     if (!selectedOrg?.id) return
     try {
       if (mentorId) {
+        // Welcome email is sent inside assignLeadershipToOrg.
         await assignLeadershipToOrg(selectedOrg.id, mentorId, 'mentor', {
           code: selectedOrg.code,
           name: selectedOrg.name,
@@ -315,6 +376,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     if (!selectedOrg?.id) return
     try {
       if (ambassadorId) {
+        // Welcome email is sent inside assignLeadershipToOrg.
         await assignLeadershipToOrg(selectedOrg.id, ambassadorId, 'ambassador', {
           code: selectedOrg.code,
           name: selectedOrg.name,
@@ -366,15 +428,17 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const filteredOrganizations = useMemo(() => {
     return organizations.filter((org) => {
+      // Active view shows non-archived orgs; Archived (history) view shows archived ones.
+      const matchesView = viewMode === 'archived' ? Boolean(org.archived) : !org.archived
       const matchesSearch = `${org.name} ${org.code} ${org.village || ''} ${org.cluster || ''}`
         .toLowerCase()
         .includes(filters.search.toLowerCase())
       const matchesStatus = filters.status === 'all' || org.status === filters.status
       const matchesVillage = filters.village === 'all' || org.village === filters.village
       const matchesCluster = filters.cluster === 'all' || org.cluster === filters.cluster
-      return matchesSearch && matchesStatus && matchesVillage && matchesCluster
+      return matchesView && matchesSearch && matchesStatus && matchesVillage && matchesCluster
     })
-  }, [filters, organizations])
+  }, [filters, organizations, viewMode])
 
   const sortedOrganizations = useMemo(() => {
     return [...filteredOrganizations].sort((a, b) => {
@@ -391,6 +455,12 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       return aVal < bVal ? 1 : -1
     })
   }, [filteredOrganizations, partnerLookup, sortDir, sortKey])
+
+  const archivedOrgCount = useMemo(
+    () => organizations.filter((org) => org.archived).length,
+    [organizations],
+  )
+  const activeOrgCount = organizations.length - archivedOrgCount
 
   const partnerAssignmentCounts = useMemo(() => {
     return organizations.reduce((acc, org) => {
@@ -409,7 +479,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   useEffect(() => {
     setPage(1)
-  }, [filters.cluster, filters.search, filters.status, filters.village, pageSize])
+  }, [filters.cluster, filters.search, filters.status, filters.village, pageSize, viewMode])
 
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(sortedOrganizations.length / pageSize))
@@ -460,7 +530,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                   Organization management
                 </Text>
               </Stack>
-              <HStack spacing={3} flexWrap="wrap">
+              <HStack spacing={3} flexWrap="nowrap" align="center">
                 <InputGroup maxW="260px">
                   <InputLeftElement pointerEvents="none">
                     <Search size={16} />
@@ -471,10 +541,34 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                     onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                   />
                 </InputGroup>
-                <Button colorScheme="purple" onClick={createModal.onOpen} leftIcon={<Sparkles size={16} />}>
+                <Button
+                  colorScheme="purple"
+                  onClick={createModal.onOpen}
+                  leftIcon={<Sparkles size={16} />}
+                  flexShrink={0}
+                >
                   Create organization
                 </Button>
               </HStack>
+            </HStack>
+
+            <HStack spacing={2}>
+              <Button
+                size="sm"
+                variant={viewMode === 'active' ? 'solid' : 'ghost'}
+                colorScheme={viewMode === 'active' ? 'purple' : 'gray'}
+                onClick={() => setViewMode('active')}
+              >
+                Active ({activeOrgCount})
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'archived' ? 'solid' : 'ghost'}
+                colorScheme={viewMode === 'archived' ? 'purple' : 'gray'}
+                onClick={() => setViewMode('archived')}
+              >
+                Archived ({archivedOrgCount})
+              </Button>
             </HStack>
 
             {loading ? (
@@ -561,13 +655,26 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                 />
                                 <MenuList>
                                   <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
-                                  <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
-                                  <MenuItem onClick={() => { setSelectedOrg(org); assignMentorModal.onOpen() }}>Assign mentor</MenuItem>
-                                  <MenuItem onClick={() => { setSelectedOrg(org); assignAmbassadorModal.onOpen() }}>Assign ambassador</MenuItem>
-                                  <MenuItem onClick={() => { setSelectedOrg(org); assignPartnerModal.onOpen() }}>Assign partner</MenuItem>
-                                  <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
-                                    Delete
-                                  </MenuItem>
+                                  {viewMode === 'active' ? (
+                                    <>
+                                      <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
+                                      <MenuItem onClick={() => { setSelectedOrg(org); assignMentorModal.onOpen() }}>Assign mentor</MenuItem>
+                                      <MenuItem onClick={() => { setSelectedOrg(org); assignAmbassadorModal.onOpen() }}>Assign ambassador</MenuItem>
+                                      <MenuItem onClick={() => { setSelectedOrg(org); assignPartnerModal.onOpen() }}>Assign partner</MenuItem>
+                                      <MenuItem onClick={() => handleArchiveOrg(org)} color="orange.500">
+                                        Archive
+                                      </MenuItem>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MenuItem onClick={() => handleRestoreOrg(org)} color="green.600">
+                                        Restore
+                                      </MenuItem>
+                                      <MenuItem onClick={() => { setPendingDelete(org); confirmDialog.onOpen() }} color="red.500">
+                                        Delete permanently
+                                      </MenuItem>
+                                    </>
+                                  )}
                                 </MenuList>
                               </Menu>
                             </Td>

@@ -6,6 +6,68 @@
  * functions (migration 0013) because it writes another user's profile.
  */
 import { supabase } from '@/services/supabase'
+import { sendRoleWelcomeEmail, toWelcomeRole, type WelcomeRole } from '@/services/welcomeEmailService'
+
+/**
+ * Look up a user's contact details (for addressing a welcome email). Returns
+ * nulls on any failure — a welcome email is best-effort and must never break the
+ * assignment that triggered it.
+ */
+const fetchProfileContact = async (
+  userId: string,
+): Promise<{ email: string | null; name: string | null }> => {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', userId)
+      .maybeSingle()
+    return {
+      email: (data?.email as string) ?? null,
+      name: (data?.full_name as string) ?? null,
+    }
+  } catch {
+    return { email: null, name: null }
+  }
+}
+
+/** Look up an organization's display name (best-effort, for welcome emails). */
+const fetchOrgName = async (orgId: string): Promise<string | null> => {
+  try {
+    const { data } = await supabase
+      .from('organizations')
+      .select('name')
+      .eq('id', orgId)
+      .maybeSingle()
+    return (data?.name as string) ?? null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Fire a role-specific welcome email for a freshly assigned/added member.
+ * Fully best-effort: swallows its own errors so a delivery problem can never
+ * roll back the assignment. Fire-and-forget (`void`) from the callers.
+ */
+const dispatchWelcomeEmail = async (params: {
+  to: string | null
+  name: string | null
+  role: WelcomeRole
+  organizationName: string | null
+}): Promise<void> => {
+  if (!params.to) return
+  try {
+    await sendRoleWelcomeEmail({
+      to: params.to,
+      recipientName: params.name || params.to,
+      role: params.role,
+      organizationName: params.organizationName,
+    })
+  } catch (error) {
+    console.warn('[supabaseOrgService] welcome email dispatch failed', error)
+  }
+}
 
 export interface OrgRecord {
   id: string
@@ -277,6 +339,36 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
   return mapOrg(data as Raw)
 }
 
+/**
+ * Archive / restore an organization. Archiving is a reversible, non-destructive
+ * alternative to deletion: the org is hidden from the active list but kept in
+ * the "Archived" (history) view. The flag lives in the settings jsonb (no schema
+ * migration required); we read-merge so other settings keys are preserved.
+ * RLS: is_partner_or_admin (organizations_write).
+ */
+export const setOrganizationArchived = async (
+  orgId: string,
+  archived: boolean,
+): Promise<void> => {
+  const { data: current, error: readError } = await supabase
+    .from('organizations')
+    .select('settings')
+    .eq('id', orgId)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
+
+  const settings = {
+    ...((current?.settings as Record<string, unknown> | null) ?? {}),
+    archived,
+    archivedAt: archived ? new Date().toISOString() : null,
+  }
+  const { error } = await supabase
+    .from('organizations')
+    .update({ settings, updated_at: new Date().toISOString() })
+    .eq('id', orgId)
+  if (error) throw new Error(error.message)
+}
+
 /** Candidate users for the partner picker (any user can be promoted). */
 export const listPartnerCandidates = async (): Promise<PartnerCandidate[]> => {
   const { data, error } = await supabase
@@ -303,6 +395,15 @@ export const assignPartnerToOrg = async (orgId: string, partnerUid: string): Pro
   })
   if (error) throw new Error(error.message)
   if (data !== 'ok') throw new Error(`Assignment failed: ${data}`)
+
+  // Welcome the newly assigned partner (best-effort). Runs for BOTH entry points:
+  // the "Assign partner" modal AND the create-org auto-link, so partners set at
+  // org creation are welcomed too.
+  const [{ email, name }, organizationName] = await Promise.all([
+    fetchProfileContact(partnerUid),
+    fetchOrgName(orgId),
+  ])
+  void dispatchWelcomeEmail({ to: email, name, role: 'partner', organizationName })
 }
 
 export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
@@ -360,6 +461,11 @@ export const assignLeadershipToOrg = async (
     })
     .eq('id', userId)
   if (error) throw new Error(`Assignment failed: ${error.message}`)
+
+  // Welcome the newly assigned mentor / ambassador (best-effort).
+  const organizationName = org?.name ?? (await fetchOrgName(orgId))
+  const { email, name } = await fetchProfileContact(userId)
+  void dispatchWelcomeEmail({ to: email, name, role, organizationName })
 }
 
 /** Unlink whoever currently holds the given leadership role for this org. */
@@ -416,13 +522,26 @@ export const inviteOrgMember = async (
   email: string,
   role: string = 'user',
 ): Promise<InviteMemberResult> => {
+  const normalizedEmail = email.trim().toLowerCase()
   const { data, error } = await supabase.rpc('admin_invite_org_member', {
     p_org_id: orgId,
-    p_email: email.trim().toLowerCase(),
+    p_email: normalizedEmail,
     p_role: role || 'user',
   })
   if (error) return { ok: false, error: error.message }
-  return (data ?? { ok: false, error: 'no_result' }) as InviteMemberResult
+  const result = (data ?? { ok: false, error: 'no_result' }) as InviteMemberResult
+
+  // Welcome the added member (best-effort) whether enrolled now or pending signup.
+  if (result.ok) {
+    const organizationName = await fetchOrgName(orgId)
+    void dispatchWelcomeEmail({
+      to: normalizedEmail,
+      name: null,
+      role: toWelcomeRole(role),
+      organizationName,
+    })
+  }
+  return result
 }
 
 /**

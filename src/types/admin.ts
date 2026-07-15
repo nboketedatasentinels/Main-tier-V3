@@ -66,6 +66,13 @@ export interface OrganizationRecord {
    */
   availableLicenses?: number
   status: OrganizationStatus
+  /**
+   * Reversible soft-delete. When true the org is hidden from the active list and
+   * shown only in the "Archived" (history) view. Stored in the org settings jsonb.
+   */
+  archived?: boolean
+  /** ISO timestamp of when the org was archived (cleared on restore). */
+  archivedAt?: string
   createdAt?: Timestamp | string | Date
   updatedAt?: Timestamp | string | Date
   leadershipUpdatedAt?: Timestamp | string | Date
