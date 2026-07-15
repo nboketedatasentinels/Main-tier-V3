@@ -1,7 +1,9 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+// nodemailer (via npm) builds correct MIME + header encoding. denomailer 1.6.0
+// produced malformed multipart/encoded-word output that Gmail showed as raw source.
+import nodemailer from "npm:nodemailer@6.9.16";
 
 // ---------------------------------------------------------------------------
 // send-welcome-email  (Supabase Edge Function)
@@ -340,28 +342,28 @@ async function authorizeCaller(req: Request): Promise<Response | null> {
   return null;
 }
 
-let smtpClient: SMTPClient | null = null;
+// deno-lint-ignore no-explicit-any
+let transporter: any = null;
 
-function getSmtpClient(): SMTPClient {
-  if (smtpClient) return smtpClient;
-  const hostname = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
-  const port = parseInt(Deno.env.get("SMTP_PORT") || "587", 10);
-  const secure = (Deno.env.get("SMTP_SECURE") || "").toLowerCase() === "true";
-  const username = Deno.env.get("SMTP_USER");
-  const password = Deno.env.get("SMTP_PASS");
-  if (!username || !password) {
+// deno-lint-ignore no-explicit-any
+function getTransporter(): any {
+  if (transporter) return transporter;
+  const host = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
+  const port = parseInt(Deno.env.get("SMTP_PORT") || "465", 10);
+  const secure = (Deno.env.get("SMTP_SECURE") || "true").toLowerCase() === "true";
+  const user = Deno.env.get("SMTP_USER");
+  const pass = Deno.env.get("SMTP_PASS");
+  if (!user || !pass) {
     throw new Error("SMTP credentials are not configured (SMTP_USER / SMTP_PASS).");
   }
-  smtpClient = new SMTPClient({
-    connection: {
-      hostname,
-      port,
-      // Implicit TLS on 465; STARTTLS is negotiated automatically on 587.
-      tls: secure,
-      auth: { username, password },
-    },
+  transporter = nodemailer.createTransport({
+    host,
+    port,
+    // Implicit TLS on 465; STARTTLS on 587.
+    secure,
+    auth: { user, pass },
   });
-  return smtpClient;
+  return transporter;
 }
 
 Deno.serve(async (req) => {
@@ -405,12 +407,12 @@ Deno.serve(async (req) => {
       payload.organizationName ? String(payload.organizationName).trim() : undefined,
     );
 
-    const client = getSmtpClient();
-    await client.send({
-      from: `${APP_NAME} <${fromAddress}>`,
+    const transport = getTransporter();
+    await transport.sendMail({
+      from: `"${APP_NAME}" <${fromAddress}>`,
       to,
       subject,
-      content: buildWelcomeText(payload),
+      text: buildWelcomeText(payload),
       html: buildWelcomeHtml(payload),
     });
 
