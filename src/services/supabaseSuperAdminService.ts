@@ -77,6 +77,36 @@ export const fetchUserRoleCounts = async (): Promise<{ free: number; paid: numbe
   return { free: free.count ?? 0, paid: paid.count ?? 0 }
 }
 
+// Full role breakdown for the User Management summary cards
+// (free / paid / partners / mentors / ambassadors), counted from profiles.role.
+export const fetchRoleBreakdownCounts = async (): Promise<{
+  free: number
+  paid: number
+  partners: number
+  mentors: number
+  ambassadors: number
+}> => {
+  const countByRole = (role: string) =>
+    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', role)
+  const [free, paid, partners, mentors, ambassadors] = await Promise.all([
+    countByRole('free_user'),
+    countByRole('paid_member'),
+    countByRole('partner'),
+    countByRole('mentor'),
+    countByRole('ambassador'),
+  ])
+  const firstError =
+    free.error || paid.error || partners.error || mentors.error || ambassadors.error
+  if (firstError) throw new Error(firstError.message)
+  return {
+    free: free.count ?? 0,
+    paid: paid.count ?? 0,
+    partners: partners.count ?? 0,
+    mentors: mentors.count ?? 0,
+    ambassadors: ambassadors.count ?? 0,
+  }
+}
+
 export const listenToDashboardMetrics = (
   onChange: (metrics: SuperAdminDashboardMetrics) => void,
   _filters?: unknown,

@@ -15,7 +15,6 @@ import {
   MenuItem,
   MenuList,
   Select,
-  SimpleGrid,
   Skeleton,
   Spacer,
   Table,
@@ -30,9 +29,8 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react'
-import { MoreHorizontal, Plus, ShieldCheck } from 'lucide-react'
+import { MoreHorizontal, Plus } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { MetricCard } from '@/components/admin/MetricCard'
 import { ConfirmationDialog } from '@/components/super-admin/ConfirmationDialog'
 import { AdminFormModal } from '@/components/super-admin/AdminFormModal'
 import {
@@ -42,9 +40,9 @@ import {
   toggleAdminStatus,
   updateAdminUser,
 } from '@/services/superAdminService'
-import { fetchUserRoleCounts, listenToAdminUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
+import { listenToAdminUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { fetchAssignedOrganizations } from '@/services/organizationService'
-import { AdminFormData, AdminMetrics, AdminUserRecord, OrganizationRecord } from '@/types/admin'
+import { AdminFormData, AdminUserRecord, OrganizationRecord } from '@/types/admin'
 import { getDisplayName } from '@/utils/displayName'
 
 interface AdminOversightPageProps {
@@ -82,16 +80,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
-  const [metrics, setMetrics] = useState<AdminMetrics>({
-    total: 0,
-    active: 0,
-    freeUsers: 0,
-    paidUsers: 0,
-    partners: 0,
-    mentors: 0,
-    ambassadors: 0,
-  })
-
   const partnerAssignmentSummary = useMemo(() => {
     const partnerAdmins = admins.filter((admin) => admin.role === 'partner')
     const unassignedPartners = partnerAdmins.filter((admin) => !(admin.assignedOrganizations || []).length)
@@ -105,30 +93,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       totalAssignments,
     }
   }, [admins])
-
-  const updateMetrics = useCallback((adminList: AdminUserRecord[]) => {
-    const total = adminList.length
-    const active = adminList.filter((admin) => admin.accountStatus !== 'suspended').length
-    const partners = adminList.filter((admin) => admin.role === 'partner').length
-    const mentors = adminList.filter((admin) => admin.role === 'mentor').length
-    const ambassadors = adminList.filter((admin) => admin.role === 'ambassador').length
-    // Preserve free/paid learner counts (loaded separately - they aren't in the
-    // admin list).
-    setMetrics((prev) => ({ ...prev, total, active, partners, mentors, ambassadors }))
-  }, [])
-
-  // Free/paid learner counts come from all profiles, not the admin list.
-  useEffect(() => {
-    let cancelled = false
-    fetchUserRoleCounts()
-      .then(({ free, paid }) => {
-        if (!cancelled) setMetrics((prev) => ({ ...prev, freeUsers: free, paidUsers: paid }))
-      })
-      .catch((error) => console.error('Failed to load learner counts', error))
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const adminUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const orgUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -145,11 +109,10 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
       }
       adminUpdateTimeout.current = setTimeout(() => {
         setAdmins(adminList)
-        updateMetrics(adminList)
         setLoadingAdmins(false)
       }, 120)
     },
-    [updateMetrics],
+    [],
   )
 
   useEffect(() => {
@@ -511,24 +474,6 @@ export const AdminOversightPage: React.FC<AdminOversightPageProps> = ({ adminNam
           Add Admin Access
         </Button>
       </Flex>
-
-      <SimpleGrid columns={[1, 2, 3, 5]} spacing={4} mb={6}>
-        <MetricCard
-          label="Free Users"
-          value={metrics.freeUsers}
-          icon={ShieldCheck}
-          helper="Learners on the free tier."
-        />
-        <MetricCard
-          label="Paid Users"
-          value={metrics.paidUsers}
-          icon={ShieldCheck}
-          helper="Learners on a paid membership."
-        />
-        <MetricCard label="Partners" value={metrics.partners} icon={ShieldCheck} helper="Organization-scoped access." />
-        <MetricCard label="Mentors" value={metrics.mentors} icon={ShieldCheck} helper="Mentor role access." />
-        <MetricCard label="Ambassadors" value={metrics.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
-      </SimpleGrid>
 
       <Box borderWidth="1px" borderRadius="lg" p={4} mb={6} bg="gray.50">
         <Flex align="center" flexWrap="wrap" gap={4}>
