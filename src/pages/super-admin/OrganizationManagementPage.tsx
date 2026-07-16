@@ -61,6 +61,9 @@ type OrganizationManagementPageProps = {
   adminId?: string
   openCreateOnMount?: boolean
   onCreateIntentConsumed?: () => void
+  /** When true, this instance is the "Organization Archive" view: shows only
+   *  archived orgs (Restore / Delete permanently) and hides create/toggle. */
+  archivedOnly?: boolean
 }
 
 export const OrganizationManagementPage: React.FC<OrganizationManagementPageProps> = ({
@@ -68,6 +71,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   adminId,
   openCreateOnMount = false,
   onCreateIntentConsumed,
+  archivedOnly = false,
 }) => {
   const navigate = useNavigate()
   const toast = useToast()
@@ -82,7 +86,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
 
   const [selectedOrg, setSelectedOrg] = useState<OrganizationRecord | null>(null)
   const [pendingDelete, setPendingDelete] = useState<OrganizationRecord | null>(null)
-  const [viewMode, setViewMode] = useState<'active' | 'archived'>('active')
+  // The view is driven by which sidebar page mounted this component: Organization
+  // Management shows active orgs; Organization Archive shows archived ones.
+  const viewMode: 'active' | 'archived' = archivedOnly ? 'archived' : 'active'
   const [partners, setPartners] = useState<OrganizationLead[]>([])
   const [isLoadingPartners, setIsLoadingPartners] = useState(false)
   const [partnersError, setPartnersError] = useState<string | null>(null)
@@ -228,7 +234,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       })
       toast({
         title: 'Organization archived',
-        description: 'Moved to Archived. You can restore it any time from the Archived view.',
+        description: 'Moved to Organization Archive. You can restore it any time from there.',
         status: 'info',
       })
     } catch (error) {
@@ -456,12 +462,6 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     })
   }, [filteredOrganizations, partnerLookup, sortDir, sortKey])
 
-  const archivedOrgCount = useMemo(
-    () => organizations.filter((org) => org.archived).length,
-    [organizations],
-  )
-  const activeOrgCount = organizations.length - archivedOrgCount
-
   const partnerAssignmentCounts = useMemo(() => {
     return organizations.reduce((acc, org) => {
       const key = (org.transformationPartnerId || '').trim()
@@ -527,8 +527,13 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
             <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} flexDir={{ base: 'column', md: 'row' }} gap={3}>
               <Stack spacing={1}>
                 <Text fontWeight="bold" color="brand.text">
-                  Organization management
+                  {archivedOnly ? 'Organization archive' : 'Organization management'}
                 </Text>
+                {archivedOnly && (
+                  <Text fontSize="sm" color="brand.muted">
+                    Archived organizations. Restore them or delete permanently.
+                  </Text>
+                )}
               </Stack>
               <HStack spacing={3} flexWrap="nowrap" align="center">
                 <InputGroup maxW="260px">
@@ -536,39 +541,22 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                     <Search size={16} />
                   </InputLeftElement>
                   <Input
-                    placeholder="Search organizations"
+                    placeholder={archivedOnly ? 'Search archived' : 'Search organizations'}
                     value={filters.search}
                     onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                   />
                 </InputGroup>
-                <Button
-                  colorScheme="purple"
-                  onClick={createModal.onOpen}
-                  leftIcon={<Sparkles size={16} />}
-                  flexShrink={0}
-                >
-                  Create organization
-                </Button>
+                {!archivedOnly && (
+                  <Button
+                    colorScheme="purple"
+                    onClick={createModal.onOpen}
+                    leftIcon={<Sparkles size={16} />}
+                    flexShrink={0}
+                  >
+                    Create organization
+                  </Button>
+                )}
               </HStack>
-            </HStack>
-
-            <HStack spacing={2}>
-              <Button
-                size="sm"
-                variant={viewMode === 'active' ? 'solid' : 'ghost'}
-                colorScheme={viewMode === 'active' ? 'purple' : 'gray'}
-                onClick={() => setViewMode('active')}
-              >
-                Active ({activeOrgCount})
-              </Button>
-              <Button
-                size="sm"
-                variant={viewMode === 'archived' ? 'solid' : 'ghost'}
-                colorScheme={viewMode === 'archived' ? 'purple' : 'gray'}
-                onClick={() => setViewMode('archived')}
-              >
-                Archived ({archivedOrgCount})
-              </Button>
             </HStack>
 
             {loading ? (

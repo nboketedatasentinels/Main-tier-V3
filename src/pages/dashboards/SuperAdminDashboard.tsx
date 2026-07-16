@@ -449,6 +449,14 @@ export const SuperAdminDashboard: React.FC = () => {
             onCreateIntentConsumed={handleCreateIntentConsumed}
           />
         )
+      case 'archived-organizations':
+        return (
+          <OrganizationManagementPage
+            adminName={adminName}
+            adminId={profile?.id}
+            archivedOnly
+          />
+        )
       case 'users':
         return <UserManagementPage />
       case 'approvals':

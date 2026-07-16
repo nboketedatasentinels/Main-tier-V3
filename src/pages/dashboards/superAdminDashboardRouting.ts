@@ -1,6 +1,7 @@
 export const DASHBOARD_TABS = new Set([
   'overview',
   'organizations',
+  'archived-organizations',
   'users',
   'approvals',
   'admin-oversight',
