@@ -43,10 +43,10 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
     items: [
       { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
       { key: 'organizations', label: 'Organization Management', icon: Workflow },
-      { key: 'archived-organizations', label: 'Organization Archive', icon: Archive },
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'approvals', label: 'Approval Center', icon: ClipboardCheck },
       { key: 'feedback', label: 'Feedback Inbox', icon: Inbox },
+      { key: 'archived-organizations', label: 'Organization Archive', icon: Archive },
     ],
   },
 ]
