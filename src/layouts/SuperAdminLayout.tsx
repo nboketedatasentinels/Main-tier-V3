@@ -24,10 +24,10 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { LogOut, Menu as MenuIcon, Shield, Sparkles, X } from 'lucide-react'
+import { LogOut, Menu as MenuIcon, Shield, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
-import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
+import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationSection } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 const MOBILE_NAV_HEIGHT = 68
@@ -95,27 +95,6 @@ const SidebarNav = ({
   </VStack>
 )
 
-const AccountMenu = ({
-  items,
-  onNavigate,
-}: {
-  items: NavigationItem[]
-  onNavigate?: (key: string) => void
-}) => (
-  <Menu>
-    <MenuButton as={Button} rightIcon={<Icon as={Sparkles} />} variant="outline">
-      Account
-    </MenuButton>
-    <MenuList>
-      {items.map((item) => (
-        <MenuItem key={item.key} icon={item.icon ? <Icon as={item.icon} /> : undefined} onClick={() => onNavigate?.(item.key)}>
-          {item.label}
-        </MenuItem>
-      ))}
-    </MenuList>
-  </Menu>
-)
-
 export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
   children,
   activeItem = 'overview',
@@ -179,10 +158,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
       <Divider />
 
       <SidebarNav sections={sections} activeItem={activeItem} onNavigate={onNavigate} />
-
-      <Divider />
-
-      <AccountMenu items={accountItems} onNavigate={handleAccountNavigate} />
     </VStack>
   )
 
@@ -231,13 +206,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                 onNavigate={(key) => {
                   drawer.onClose()
                   onNavigate?.(key)
-                }}
-              />
-              <AccountMenu
-                items={accountItems}
-                onNavigate={(key) => {
-                  drawer.onClose()
-                  handleAccountNavigate(key)
                 }}
               />
             </VStack>
