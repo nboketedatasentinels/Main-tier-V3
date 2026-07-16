@@ -63,59 +63,118 @@ const mapNotificationRow = (row: NotificationRow): NotificationRecord => ({
 // (see the comment at the channel() call below for why this is required).
 let notificationChannelSeq = 0
 
+// ---------------------------------------------------------------------------
+// Shared, reference-counted notifications subscription (flood-proof).
+//
+// Every consumer for a given user shares ONE Supabase channel + ONE in-flight
+// fetch. New subscribers get the cached data instantly (no network). A single
+// `loading` guard collapses concurrent load() calls into one, and a keep-alive
+// delay on teardown means a component that unmounts+remounts (or a buggy effect
+// that re-subscribes every render) reuses the existing channel instead of
+// hammering the REST endpoint. This makes it IMPOSSIBLE for any consumer to
+// produce the ERR_INSUFFICIENT_RESOURCES request storm, regardless of how often
+// it (re)subscribes.
+// ---------------------------------------------------------------------------
+type NotificationSub = {
+  onChange: (notifications: NotificationRecord[]) => void
+  onError?: (error: unknown) => void
+}
+
+type NotificationEntry = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  channel: any
+  subs: Set<NotificationSub>
+  latest: NotificationRecord[] | null
+  loading: boolean
+  teardownTimer: ReturnType<typeof setTimeout> | null
+}
+
+const notificationRegistry = new Map<string, NotificationEntry>()
+const NOTIF_KEEPALIVE_MS = 10_000
+
+const loadNotificationsFor = async (userId: string) => {
+  const entry = notificationRegistry.get(userId)
+  if (!entry || entry.loading) return // collapse concurrent loads into one
+  entry.loading = true
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('uid', userId)
+      .order('created_at', { ascending: false })
+    const current = notificationRegistry.get(userId)
+    if (!current) return
+    current.loading = false
+    if (error) {
+      current.subs.forEach((s) => s.onError?.(error))
+      return
+    }
+    const mapped = (data ?? []).map((row) => mapNotificationRow(row as NotificationRow))
+    current.latest = mapped
+    current.subs.forEach((s) => s.onChange(mapped))
+  } catch (err) {
+    const current = notificationRegistry.get(userId)
+    if (current) {
+      current.loading = false
+      current.subs.forEach((s) => s.onError?.(err))
+    }
+  }
+}
+
 /**
- * Subscribes to a user's notifications.
- *
- * Supabase-backed: initial fetch from `notifications` (keyed on `uid`) plus a
- * realtime channel scoped to that user. Returns an unsubscribe that tears the
- * channel down, preserving the original listener contract. (The Firestore
- * onSnapshot version failed with "Missing or insufficient permissions" once
- * auth moved to Supabase - the user has no Firebase session.)
+ * Subscribes to a user's notifications (Supabase-backed, keyed on `uid`).
+ * Consumers for the same user share one channel + one fetch; the returned
+ * unsubscribe just detaches this consumer. See the block comment above.
  */
 export const listenToUserNotifications = (
   userId: string,
   onChange: (notifications: NotificationRecord[]) => void,
   onError?: (error: unknown) => void,
 ) => {
-  let cancelled = false
+  const sub: NotificationSub = { onChange, onError }
+  let entry = notificationRegistry.get(userId)
 
-  const load = async () => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('uid', userId)
-      .order('created_at', { ascending: false })
-    if (cancelled) return
-    if (error) {
-      onError?.(error)
-      return
+  if (entry) {
+    if (entry.teardownTimer) {
+      clearTimeout(entry.teardownTimer)
+      entry.teardownTimer = null
     }
-    onChange((data ?? []).map((row) => mapNotificationRow(row as NotificationRow)))
+    entry.subs.add(sub)
+    if (entry.latest) {
+      onChange(entry.latest) // instant cached data — no new fetch
+    } else {
+      void loadNotificationsFor(userId)
+    }
+  } else {
+    const channel = supabase
+      .channel(`notifications_${userId}_${++notificationChannelSeq}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'notifications', filter: `uid=eq.${userId}` },
+        () => {
+          void loadNotificationsFor(userId)
+        },
+      )
+      .subscribe()
+    entry = { channel, subs: new Set([sub]), latest: null, loading: false, teardownTimer: null }
+    notificationRegistry.set(userId, entry)
+    void loadNotificationsFor(userId)
   }
 
-  void load()
-
-  // Each subscription needs its OWN channel. supabase.channel(topic) returns an
-  // existing channel when the topic matches (RealtimeClient.channel), so two
-  // components subscribing to the same user (e.g. ProgrammePushPopup +
-  // NotificationsList) would share one channel - and the second `.on()` after
-  // the first `.subscribe()` throws "cannot add postgres_changes callbacks
-  // after subscribe()". A unique topic per call guarantees a fresh, unsubscribed
-  // channel every time.
-  const channel = supabase
-    .channel(`notifications_${userId}_${++notificationChannelSeq}`)
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'notifications', filter: `uid=eq.${userId}` },
-      () => {
-        void load()
-      },
-    )
-    .subscribe()
-
   return () => {
-    cancelled = true
-    void supabase.removeChannel(channel)
+    const current = notificationRegistry.get(userId)
+    if (!current) return
+    current.subs.delete(sub)
+    if (current.subs.size === 0 && !current.teardownTimer) {
+      // Keep the channel alive briefly so a remount / re-subscribe reuses it.
+      current.teardownTimer = setTimeout(() => {
+        const c = notificationRegistry.get(userId)
+        if (c && c.subs.size === 0) {
+          void supabase.removeChannel(c.channel)
+          notificationRegistry.delete(userId)
+        }
+      }, NOTIF_KEEPALIVE_MS)
+    }
   }
 }
 
