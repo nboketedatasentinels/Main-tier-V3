@@ -265,7 +265,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
 
       const authUser = toAuthUser(supaUser)
-      setUser(authUser)
+      // Keep a STABLE `user` reference across background auth events (e.g.
+      // TOKEN_REFRESHED) for the same account. Returning a fresh object on every
+      // auth event churned `user`'s identity, which re-ran every [user]-object
+      // effect/subscription (Supabase notifications listeners, etc.) in a loop.
+      setUser((prev) => (prev && prev.uid === authUser.uid ? prev : authUser))
 
       // Background refresh (e.g. TOKEN_REFRESHED when you switch back to the tab)
       // for a user we've ALREADY loaded: do NOT flip global loading. Flipping it

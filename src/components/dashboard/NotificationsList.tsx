@@ -189,10 +189,14 @@ export const NotificationsList = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
+    // Depend on user.uid (a stable string), NOT the user object — the auth user
+    // object gets a fresh identity each render, which re-subscribed the Supabase
+    // notifications listener on every render and looped (ERR_INSUFFICIENT_RESOURCES).
+    const uid = user?.uid
+    if (!uid) return
 
     setLoading(true)
-    const unsubscribe = listenToUserNotifications(user.uid, (items) => {
+    const unsubscribe = listenToUserNotifications(uid, (items) => {
       setNotifications(items)
       setLoading(false)
     }, (error) => {
@@ -202,7 +206,7 @@ export const NotificationsList = () => {
     })
 
     return () => unsubscribe()
-  }, [user])
+  }, [user?.uid])
 
   const unreadCount = notifications.filter((n) => !n.is_read && !n.read).length
 
