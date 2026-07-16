@@ -690,7 +690,14 @@ export const logOrganizationAccessAttempt = async ({
     createdAt: serverTimestamp(),
   }) as Record<string, unknown>
 
-  await addDoc(adminActivityCollection, auditEntry)
+  // Best-effort audit only. This legacy write targets Firestore, which denies
+  // under Supabase-only auth ("Missing or insufficient permissions"). Swallow it
+  // so it never surfaces as an uncaught promise rejection in the console.
+  try {
+    await addDoc(adminActivityCollection, auditEntry)
+  } catch (err) {
+    console.warn('[organizationService] access-attempt audit skipped', err)
+  }
 }
 
 export const fetchOrganizationByCode = async (organizationCode: string): Promise<OrganizationRecord | null> => {

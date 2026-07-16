@@ -37,8 +37,8 @@ type InterventionRow = {
   status: string | null
   deadline: string | null
   organization_code: string | null
-  user_id: string | null
-  partner_id: string | null
+  uid: string | null
+  partner_uid: string | null
   opened_at: string | null
   status_changed_at: string | null
   risk_verdicts: unknown
@@ -47,8 +47,8 @@ type InterventionRow = {
 }
 
 const SELECT_COLUMNS =
-  'id, name, target, reason, status, deadline, organization_code, user_id, ' +
-  'partner_id, opened_at, status_changed_at, risk_verdicts, assigned_admin_name, ' +
+  'id, name, target, reason, status, deadline, organization_code, uid, ' +
+  'partner_uid, opened_at, status_changed_at, risk_verdicts, assigned_admin_name, ' +
   'escalation_reason'
 
 let interventionsChannelSeq = 0
@@ -65,8 +65,8 @@ const mapRow = (row: InterventionRow): PartnerInterventionSummary => {
     status: (row.status as PartnerInterventionSummary['status']) || 'active',
     deadline: row.deadline || row.opened_at || new Date().toISOString(),
     organizationCode: row.organization_code ?? undefined,
-    userId: row.user_id ?? undefined,
-    partnerId: row.partner_id ?? undefined,
+    userId: row.uid ?? undefined,
+    partnerId: row.partner_uid ?? undefined,
     openedAt: row.opened_at ?? undefined,
     statusChangedAt: row.status_changed_at ?? row.opened_at ?? undefined,
     riskVerdicts: verdicts && verdicts.length ? verdicts : ['Behind on engagement targets'],
@@ -151,8 +151,8 @@ export async function createIntervention(input: CreateInterventionInput): Promis
       status: input.status,
       deadline: input.deadline,
       organization_code: input.organizationCode ?? null,
-      user_id: input.userId ?? null,
-      partner_id: input.partnerId ?? null,
+      uid: input.userId ?? null,
+      partner_uid: input.partnerId ?? null,
       opened_at: nowIso,
       status_changed_at: nowIso,
       risk_verdicts: input.riskVerdicts ?? [],
