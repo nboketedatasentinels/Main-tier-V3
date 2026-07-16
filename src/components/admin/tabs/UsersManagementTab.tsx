@@ -851,13 +851,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
-      <Stack spacing={1}>
-        <Text fontSize="3xl" fontWeight="semibold" color="gray.800">
-          User Management
-        </Text>
-        <Text color="gray.600">Search, filter, and manage user access across the platform.</Text>
-      </Stack>
-
       <Stack spacing={4}>
             <Stack spacing={3}>
               <InputGroup maxW={{ base: '100%', lg: '360px' }}>
