@@ -851,6 +851,14 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
+      <SimpleGrid columns={[1, 2, 3, 5]} spacing={4}>
+        <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
+        <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
+        <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
+        <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
+        <MetricCard label="Ambassadors" value={roleCounts.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
+      </SimpleGrid>
+
       <Stack spacing={4}>
             <Stack spacing={3}>
               <InputGroup maxW={{ base: '100%', lg: '360px' }}>
@@ -944,14 +952,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 </Button>
               </Flex>
             </Stack>
-
-            <SimpleGrid columns={[1, 2, 3, 5]} spacing={4}>
-              <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
-              <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
-              <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
-              <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
-              <MetricCard label="Ambassadors" value={roleCounts.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
-            </SimpleGrid>
 
             {selectedIds.length > 0 && (
               <Flex align="center" justify="space-between" bg="purple.50" border="1px solid" borderColor="purple.100" borderRadius="lg" p={3}>
