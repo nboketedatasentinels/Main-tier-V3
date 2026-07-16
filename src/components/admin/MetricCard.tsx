@@ -75,7 +75,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           </Flex>
         </HStack>
         <VStack align="flex-start" spacing={1}>
-          <Text fontSize="4xl" fontWeight="extrabold" color="brand.text" lineHeight="1.05">
+          <Text fontSize="3xl" fontWeight="bold" color="brand.text" lineHeight="1.1">
             {value}
           </Text>
           {guidanceText && (
