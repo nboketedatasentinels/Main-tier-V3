@@ -57,11 +57,18 @@ const SidebarNav = ({
     {sections.map((section) => (
       <VStack key={section.title || 'default'} align="stretch" spacing={3}>
         {section.title && (
-          <Text fontSize="xs" fontWeight="bold" color="brand.subtleText" letterSpacing="0.08em">
+          <Text
+            fontSize="xs"
+            fontWeight="semibold"
+            color="gray.400"
+            letterSpacing="0.12em"
+            textTransform="uppercase"
+            px={3}
+          >
             {section.title}
           </Text>
         )}
-        <VStack align="stretch" spacing={2}>
+        <VStack align="stretch" spacing={1}>
           {section.items.map((item) => {
             const isActive = activeItem === item.key
             return (
@@ -70,11 +77,14 @@ const SidebarNav = ({
                 justifyContent="flex-start"
                 leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
                 fontSize="sm"
+                fontWeight={isActive ? 'semibold' : 'medium'}
                 variant={isActive ? 'primary' : 'ghost'}
                 minH="44px"
                 px={3}
+                borderRadius="xl"
                 bg={isActive ? 'brand.primary' : 'transparent'}
                 color={isActive ? 'white' : 'brand.text'}
+                boxShadow={isActive ? 'sm' : 'none'}
                 _hover={{ bg: isActive ? 'brand.primary' : 'brand.primaryMuted' }}
                 onClick={() => onNavigate?.(item.key)}
               >

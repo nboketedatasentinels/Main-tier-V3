@@ -1,5 +1,5 @@
 import React from 'react'
-import { Card, CardBody, HStack, Text, Box, Stack, Icon, Badge, VStack } from '@chakra-ui/react'
+import { Card, CardBody, HStack, Text, Flex, Stack, Icon, Badge, VStack } from '@chakra-ui/react'
 
 interface MetricCardProps {
   icon: React.ElementType
@@ -26,39 +26,56 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => (
   <Card
     bg="white"
+    h="full"
+    borderRadius="2xl"
+    boxShadow="card"
     border="1px solid"
-    borderColor="brand.border"
+    borderColor="border.card"
     cursor={onClick ? 'pointer' : 'default'}
     onClick={onClick}
-    transition="all 0.2s"
-    _hover={onClick ? { shadow: 'md', borderColor: 'brand.primary' } : {}}
+    transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
+    _hover={{
+      transform: 'translateY(-3px)',
+      boxShadow: 'card-elevated',
+      borderColor: onClick ? 'brand.primary' : 'border.card',
+    }}
   >
-    <CardBody>
-      <Stack spacing={3}>
-        <HStack justify="space-between">
-          <VStack align="flex-start" spacing={0}>
-            <Text fontSize="sm" color="brand.subtleText" fontWeight="medium">
+    <CardBody p={6}>
+      <Stack spacing={4}>
+        <HStack justify="space-between" align="flex-start" spacing={3}>
+          <VStack align="flex-start" spacing={1.5}>
+            <Text
+              fontSize="xs"
+              letterSpacing="0.06em"
+              textTransform="uppercase"
+              color="brand.subtleText"
+              fontWeight="semibold"
+            >
               {label}
             </Text>
             {statusLabel && (
-              <Badge colorScheme={statusColor || (statusLabel.toLowerCase().includes('action') ? 'red' : 'green')} fontSize="xs">
+              <Badge
+                colorScheme={statusColor || (statusLabel.toLowerCase().includes('action') ? 'red' : 'green')}
+                fontSize="xs"
+              >
                 {statusLabel}
               </Badge>
             )}
           </VStack>
-          <Box
-            p={2}
+          <Flex
+            boxSize={10}
+            flexShrink={0}
             bg={accent || 'brand.primaryMuted'}
-            borderRadius="md"
+            borderRadius="xl"
             color="brand.primary"
-            display="grid"
-            placeItems="center"
+            align="center"
+            justify="center"
           >
-            <Icon as={icon} size={18} />
-          </Box>
+            <Icon as={icon} boxSize={5} />
+          </Flex>
         </HStack>
         <VStack align="flex-start" spacing={1}>
-          <Text fontSize="2xl" fontWeight="bold" color="brand.text">
+          <Text fontSize="4xl" fontWeight="extrabold" color="brand.text" lineHeight="1.05">
             {value}
           </Text>
           {guidanceText && (
@@ -68,7 +85,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           )}
         </VStack>
         {helper && (
-          <Text fontSize="sm" color="brand.subtleText">
+          <Text fontSize="sm" color="brand.subtleText" lineHeight="1.5">
             {helper}
           </Text>
         )}

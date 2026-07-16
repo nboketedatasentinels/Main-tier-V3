@@ -305,10 +305,10 @@ const components = {
     baseStyle: {
       container: {
         bg: 'surface.default',
-        borderRadius: 'xl',
+        borderRadius: '2xl',
         boxShadow: 'card',
         border: '1px solid',
-        borderColor: 'border.control',
+        borderColor: 'border.card',
       },
     },
     variants: {
