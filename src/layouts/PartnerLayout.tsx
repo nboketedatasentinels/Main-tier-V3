@@ -75,13 +75,6 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   )
 
   const orgOptions = organizations.length ? organizations : []
-  // DIAG: confirm what the layout actually receives. Remove after dropdown bug is fixed.
-  console.log('[PartnerLayout DIAG] organizations prop:', {
-    count: organizations.length,
-    items: organizations.map(o => ({ id: o.id, code: o.code, name: o.name })),
-    selectedOrg,
-    assignedOrganizationIds,
-  })
 
   const formatLastUpdated = (timestamp?: string | null) => {
     if (!timestamp) return 'Not yet loaded'

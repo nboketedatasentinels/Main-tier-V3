@@ -37,8 +37,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     setSelectedOrg(options.selectedOrg || 'all')
   }, [options?.selectedOrg, selectedOrg])
 
-  const [notificationCount, setNotificationCount] = useState<number>(0)
-  const [notifications, setNotifications] = useState<NotificationRecord[]>([])
+  const [rawNotifications, setRawNotifications] = useState<NotificationRecord[]>([])
   const [notificationsLoading, setNotificationsLoading] = useState<boolean>(true)
   const [notificationsError, setNotificationsError] = useState<string | null>(null)
   const lastAccessAttempt = useRef<string | null>(null)
@@ -229,37 +228,18 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     [selectedOrg, organizationLookup],
   )
 
-  // Unread count subscription. We fetch all unread for this partner and
-  // narrow client-side by selectedOrg so the bell badge matches what the
-  // notifications drawer will actually display.
-  useEffect(() => {
-    if (profileStatus !== 'ready') return
-    if (!profile?.id) return
-
-    // Supabase: listenToUserNotifications returns the full set (created_at desc);
-    // narrow to unread + selectedOrg client-side so the bell badge matches the
-    // drawer. (Was a Firestore onSnapshot on `notifications` keyed on user_id.)
-    const unsubscribe = listenToUserNotifications(
-      profile.id,
-      (all) => {
-        const visible = all.filter((n) => n.is_read === false).filter(matchesSelectedOrg)
-        setNotificationCount(visible.length)
-      },
-      (error) => {
-        logger.error('[PartnerDashboard] Failed to load unread notifications', error)
-      },
-    )
-
-    return () => unsubscribe()
-  }, [profile?.id, profileStatus, matchesSelectedOrg])
-
-  // Recent notifications for the partner dashboard. The Supabase listener
-  // returns the user's notifications newest-first; after the org filter we
-  // surface the most recent 5 for the selected org.
+  // ONE stable notifications subscription per user. It must NOT depend on
+  // matchesSelectedOrg (which changes when the org dropdown / org list changes):
+  // re-subscribing on every filter change tore down + recreated the Supabase
+  // channel and re-fetched on each render, flooding the browser
+  // (ERR_INSUFFICIENT_RESOURCES). We store the raw set and derive the filtered
+  // list + unread count with memos below, so changing the filter never touches
+  // the subscription.
   useEffect(() => {
     if (profileStatus !== 'ready' || !profile?.id) {
-      setNotifications([])
+      setRawNotifications([])
       setNotificationsLoading(false)
+      setNotificationsError(null)
       return
     }
 
@@ -269,20 +249,30 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     const unsubscribe = listenToUserNotifications(
       profile.id,
       (all) => {
-        const items = all.filter(matchesSelectedOrg).slice(0, 5)
-        setNotifications(items)
+        setRawNotifications(all)
         setNotificationsLoading(false)
       },
       (error) => {
-        console.error('[PartnerDashboard] Failed to load notifications', error)
-        setNotifications([])
+        logger.error('[PartnerDashboard] Failed to load notifications', error)
+        setRawNotifications([])
         setNotificationsLoading(false)
         setNotificationsError('Unable to load recent notifications.')
       },
     )
 
     return () => unsubscribe()
-  }, [profile?.id, profileStatus, matchesSelectedOrg])
+  }, [profile?.id, profileStatus])
+
+  // Derived (org-filtered) views — recompute cheaply when the filter or data
+  // changes, without re-subscribing.
+  const notifications = useMemo(
+    () => rawNotifications.filter(matchesSelectedOrg).slice(0, 5),
+    [rawNotifications, matchesSelectedOrg],
+  )
+  const notificationCount = useMemo(
+    () => rawNotifications.filter((n) => n.is_read === false).filter(matchesSelectedOrg).length,
+    [rawNotifications, matchesSelectedOrg],
+  )
 
   // ============================================================================
   // FIX #9: updateUserPoints now properly persists to Firestore
