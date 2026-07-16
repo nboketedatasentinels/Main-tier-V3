@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { formatAdminFirestoreError } from '@/services/admin/adminErrors'
 
 // ============================================================================
@@ -101,11 +101,14 @@ export const useRetryLogic = (options: UseRetryOptions = {}) => {
     setMounted(false)
   }, [setMounted])
 
-  return {
-    reset,
-    setMounted,
-    scheduleRetry,
-    cleanup,
-    getAttempts: () => stateRef.current.attempts,
-  }
+  const getAttempts = useCallback(() => stateRef.current.attempts, [])
+
+  // IMPORTANT: return a STABLE object. Consumers put this in useEffect dependency
+  // arrays (e.g. usePartnerOrganizations); a fresh object literal each render made
+  // those effects re-run every render, re-subscribing listeners in an infinite
+  // loop (ERR_INSUFFICIENT_RESOURCES / repeated permission errors).
+  return useMemo(
+    () => ({ reset, setMounted, scheduleRetry, cleanup, getAttempts }),
+    [reset, setMounted, scheduleRetry, cleanup, getAttempts],
+  )
 }
