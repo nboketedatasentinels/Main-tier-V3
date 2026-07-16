@@ -51,6 +51,7 @@ import {
   removeLeadershipFromOrg,
   removePartnerFromOrg,
   setOrganizationArchived,
+  archiveExpiredOrganizations,
 } from '@/services/supabaseOrgService'
 import { OrganizationLead, OrganizationRecord } from '@/types/admin'
 
@@ -111,6 +112,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const loadOrganizations = useCallback(async () => {
     setLoading(true)
     try {
+      // Auto-archive any org whose end date has passed, then load so the list is
+      // already clean (a daily pg_cron job also does this in the background).
+      await archiveExpiredOrganizations()
       const orgs = await fetchOrganizations()
       setOrganizations(orgs)
     } catch (err) {

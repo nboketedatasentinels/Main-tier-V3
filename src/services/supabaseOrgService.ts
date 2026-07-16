@@ -369,6 +369,27 @@ export const setOrganizationArchived = async (
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Auto-archive organizations whose program end date (cohort start + duration)
+ * has passed. Server-side logic lives in the SECURITY DEFINER SQL function
+ * archive_expired_organizations() (also run daily by pg_cron). Calling it here
+ * on the admin console load keeps the list clean immediately, not just at 02:00.
+ * Best-effort: returns the count archived, or 0 on any failure.
+ */
+export const archiveExpiredOrganizations = async (): Promise<number> => {
+  try {
+    const { data, error } = await supabase.rpc('archive_expired_organizations')
+    if (error) {
+      console.warn('[supabaseOrgService] archiveExpiredOrganizations failed', error.message)
+      return 0
+    }
+    return typeof data === 'number' ? data : 0
+  } catch (error) {
+    console.warn('[supabaseOrgService] archiveExpiredOrganizations threw', error)
+    return 0
+  }
+}
+
 /** Candidate users for the partner picker (any user can be promoted). */
 export const listPartnerCandidates = async (): Promise<PartnerCandidate[]> => {
   const { data, error } = await supabase
