@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
-import { collection, onSnapshot, query, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { useRetryLogic } from '@/hooks/useRetryLogic'
-import { listenToOrganizationsByIds } from '@/services/organizationService'
 import {
-  listenToOrganizationStatsUpdates,
-  updateOrganizationStatisticsBatch,
-} from '@/services/organizationStatsService'
-import { logger, createOrgKeySet } from '@/utils/partnerDashboardUtils'
+  listenToActiveOrganizations,
+  listenToOrganizationsByIds,
+} from '@/services/organizationService'
+import { listenToPartnerOrgStats, type OrgStatCounts } from '@/services/partnerSupabaseReads'
+import { logger, createOrgKeySet, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { OrganizationRecord } from '@/types/admin'
 
 export interface PartnerOrganization {
@@ -45,8 +42,10 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
   const [lastSuccessAt, setLastSuccessAt] = useState<Date | null>(null)
   const [refreshIndex, setRefreshIndex] = useState(0)
 
-  // FIX #2: Track active listeners to prevent memory leaks
-  const statsListenersRef = useRef<(() => void)[]>([])
+  // Per-org member stats, computed from Supabase profiles. Held separately from
+  // `organizations` so refreshing stats never mutates the org list (which would
+  // re-key the subscription effect and churn - see prior re-subscribe-loop fixes).
+  const [orgStats, setOrgStats] = useState<Map<string, OrgStatCounts>>(new Map())
 
   const retry = useRetryLogic({
     maxRetries: 3,
@@ -147,18 +146,17 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
       }
 
       if (isSuperAdmin) {
-        unsubscribe = onSnapshot(
-          query(collection(db, ORG_COLLECTION), where('status', '==', 'active')),
-          (snapshot) => {
+        unsubscribe = listenToActiveOrganizations(
+          (activeOrgs: OrganizationRecord[]) => {
             logger.debug('[PartnerOrganizations] Super admin organizations loaded', {
-              count: snapshot.size,
+              count: activeOrgs.length,
             })
-            const scoped = snapshot.docs.map((docSnap) => {
-              const data = docSnap.data() as Partial<PartnerOrganization>
+            const scoped = activeOrgs.map((org: OrganizationRecord) => {
+              const data = org as OrganizationRecord & Partial<PartnerOrganization>
               return {
-                id: docSnap.id,
-                code: data.code || docSnap.id,
-                name: data.name || docSnap.id,
+                id: data.id,
+                code: data.code || data.id || '',
+                name: data.name || data.code || data.id || 'Unknown organization',
                 status: (data.status as PartnerOrganization['status']) || 'active',
                 activeUsers: data.activeUsers ?? 0,
                 newThisWeek: data.newThisWeek ?? 0,
@@ -169,7 +167,7 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
             })
             handleSnapshot(scoped)
           },
-          handleError
+          handleError,
         )
       } else {
         if (!assignedOrganizationIds.length) {
@@ -223,51 +221,51 @@ export const usePartnerOrganizations = (options: UsePartnerOrganizationsOptions 
     assignedOrganizationIds,
   ])
 
-  // FIX #2: Organization stats listeners with proper cleanup
+  // Stable signature of the org id/code set. The stats subscription re-keys on
+  // this (not the `organizations` array reference), so it only re-subscribes
+  // when the set of orgs actually changes - never on a stats-only update.
+  const orgStatKeysSig = useMemo(() => {
+    const keys: string[] = []
+    organizations.forEach((org) => {
+      if (org.id) keys.push(org.id.trim())
+      if (org.code) keys.push(org.code.trim())
+    })
+    return Array.from(new Set(keys.filter(Boolean))).sort().join('|')
+  }, [organizations])
+
+  // Organization stats from Supabase profiles (replaces the old Firestore path).
   useEffect(() => {
-    if (profileStatus !== 'ready' || !organizations.length) {
+    if (profileStatus !== 'ready') {
+      setOrgStats(new Map())
+      return
+    }
+    const keys = orgStatKeysSig.split('|').filter(Boolean)
+    if (!keys.length) {
+      setOrgStats(new Map())
       return
     }
 
-    // Clean up previous listeners before creating new ones
-    statsListenersRef.current.forEach((unsub) => unsub())
-    statsListenersRef.current = []
+    const unsubscribe = listenToPartnerOrgStats(keys, setOrgStats, (err) => {
+      logger.error('Failed to refresh organization stats', err)
+    })
 
-    let isMounted = true
+    return () => unsubscribe()
+  }, [orgStatKeysSig, profileStatus])
 
-    const updateStats = async () => {
-      try {
-        await updateOrganizationStatisticsBatch(organizations)
-      } catch (err) {
-        logger.error('Failed to update organization statistics', err)
-      }
-    }
-
-    void updateStats()
-
-    // Create new listeners and track them
-    statsListenersRef.current = organizations.map((org) =>
-      listenToOrganizationStatsUpdates(
-        { id: org.id, code: org.code || org.id || '' },
-        {
-          onError: (err) => {
-            if (!isMounted) return
-            logger.error('Failed to refresh organization stats', err)
-          },
-        }
-      )
-    )
-
-    return () => {
-      isMounted = false
-      // Clean up all listeners on unmount
-      statsListenersRef.current.forEach((unsub) => unsub())
-      statsListenersRef.current = []
-    }
-  }, [organizations, profileStatus])
+  // Merge live Supabase stats into the org list for display.
+  const organizationsWithStats = useMemo(() => {
+    if (orgStats.size === 0) return organizations
+    return organizations.map((org) => {
+      const counts =
+        orgStats.get(normalizeOrgKey(org.id) ?? '') ?? orgStats.get(normalizeOrgKey(org.code) ?? '')
+      return counts
+        ? { ...org, activeUsers: counts.activeUsers, newThisWeek: counts.newThisWeek }
+        : org
+    })
+  }, [organizations, orgStats])
 
   return {
-    organizations,
+    organizations: organizationsWithStats,
     loading,
     error,
     ready,
