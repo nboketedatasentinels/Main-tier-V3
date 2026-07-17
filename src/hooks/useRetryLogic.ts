@@ -33,6 +33,15 @@ export const useRetryLogic = (options: UseRetryOptions = {}) => {
     isMounted: true,
   })
 
+  // Hold the latest onMaxRetriesExceeded in a ref so `scheduleRetry` (and thus
+  // the returned object) stays stable even when the caller passes a fresh inline
+  // function each render. Without this, callers like usePartnerOrganizations /
+  // usePartnerAdminData (which pass `onMaxRetriesExceeded: () => setX([])`)
+  // re-created `retry` every render, re-running their subscription effects in an
+  // infinite loop that hammered Supabase (ERR_INSUFFICIENT_RESOURCES).
+  const onMaxRetriesExceededRef = useRef(onMaxRetriesExceeded)
+  onMaxRetriesExceededRef.current = onMaxRetriesExceeded
+
   const reset = useCallback(() => {
     stateRef.current.attempts = 0
     if (stateRef.current.timeoutId) {
@@ -67,7 +76,7 @@ export const useRetryLogic = (options: UseRetryOptions = {}) => {
         )
         setError(errorMessage)
         setLoading(false)
-        onMaxRetriesExceeded?.(error)
+        onMaxRetriesExceededRef.current?.(error)
         return false
       }
 
@@ -94,7 +103,7 @@ export const useRetryLogic = (options: UseRetryOptions = {}) => {
 
       return true
     },
-    [maxRetries, baseDelay, maxDelay, onMaxRetriesExceeded]
+    [maxRetries, baseDelay, maxDelay]
   )
 
   const cleanup = useCallback(() => {

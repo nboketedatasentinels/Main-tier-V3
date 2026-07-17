@@ -629,6 +629,27 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
   return { id: docSnap.id, ...(docSnap.data() as Omit<OrganizationRecord, 'id'>) }
 }
 
+/**
+ * One-shot read of an organization's journeyType from Supabase. Used where the
+ * dashboard needs just the journey (e.g. deciding whether to show mentor /
+ * ambassador columns) without holding a full org subscription. Supabase-backed
+ * so it works after the auth cutover - the old Firestore getDoc had no Firebase
+ * session and failed with "Missing or insufficient permissions".
+ */
+export const fetchOrganizationJourneyType = async (
+  organizationId: string,
+): Promise<string | null> => {
+  if (!organizationId) return null
+  const { data, error } = await supabase
+    .from('organizations')
+    .select('journey_type')
+    .eq('id', organizationId)
+    .maybeSingle()
+  if (error) throw error
+  const journeyType = (data as { journey_type?: string | null } | null)?.journey_type
+  return typeof journeyType === 'string' && journeyType.length > 0 ? journeyType : null
+}
+
 export const validateOrganizationPartner = async (organizationId: string): Promise<OrganizationPartnerValidationResult> => {
   if (!organizationId) {
     return { isValid: false, message: 'Organization is missing.' }

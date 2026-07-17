@@ -19,6 +19,7 @@ import { supabase } from '@/services/supabase'
 // Monotonic suffixes so every subscription gets a distinct channel topic.
 let assignedOrgsChannelSeq = 0
 let membersChannelSeq = 0
+let orgStatsChannelSeq = 0
 
 const ASSIGNMENT_STATUSES = ['active', 'watch', 'paused']
 const PAGE_SIZE = 1000
@@ -114,6 +115,115 @@ export const listenToPartnerAssignedOrgIds = (
   const channel = supabase
     .channel(`partner_assigned_orgs_${++assignedOrgsChannelSeq}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'organizations' }, () => {
+      void load()
+    })
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
+}
+
+// ============================================================================
+// Partner -> per-organization member stats (activeUsers, newThisWeek)
+// ============================================================================
+
+export interface OrgStatCounts {
+  activeUsers: number
+  newThisWeek: number
+}
+
+type OrgStatProfileRow = {
+  id: string
+  organization_id: string | null
+  company_code: string | null
+  created_at: string | null
+}
+
+const lowerKey = (value: string | null | undefined): string | null => {
+  const trimmed = (value ?? '').trim().toLowerCase()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+/**
+ * Per-organization member counts, computed from Supabase `profiles`. Replaces
+ * the old Firestore `organizationStatsService` path: after the auth cutover the
+ * React app has no Firebase session, so those `onSnapshot(users)` listeners
+ * failed on every (re)subscribe and churned the Firestore SDK into the
+ * `FIRESTORE INTERNAL ASSERTION FAILED (b815)` crash that made the dashboard
+ * twitch.
+ *
+ * `activeUsers` is the member count for the org (profiles has no status column
+ * yet - matches the super-admin metrics definition in supabaseSuperAdminService).
+ * `newThisWeek` counts profiles created in the last 7 days. Results are keyed by
+ * BOTH the org id and the org code (lowercased) so the caller can resolve stats
+ * by whichever key its org record carries.
+ */
+export const listenToPartnerOrgStats = (
+  orgKeys: string[],
+  onChange: (stats: Map<string, OrgStatCounts>) => void,
+  onError?: (error: unknown) => void,
+): (() => void) => {
+  const keys = normalizeKeys(orgKeys)
+  if (keys.length === 0) {
+    onChange(new Map())
+    return () => {}
+  }
+
+  let cancelled = false
+
+  const load = async () => {
+    try {
+      const weekAgo = new Date()
+      weekAgo.setDate(weekAgo.getDate() - 7)
+      const weekAgoIso = weekAgo.toISOString()
+
+      const rows = await selectAllPages<OrgStatProfileRow>(() => {
+        return supabase
+          .from('profiles')
+          .select('id, organization_id, company_code, created_at')
+          .or(buildOrFilter(keys))
+          .order('id', { ascending: true }) as unknown as {
+          range: (
+            from: number,
+            to: number,
+          ) => PromiseLike<{ data: OrgStatProfileRow[] | null; error: unknown }>
+        }
+      })
+
+      if (cancelled) return
+
+      const stats = new Map<string, OrgStatCounts>()
+      const bump = (key: string | null, isNew: boolean) => {
+        if (!key) return
+        const current = stats.get(key) ?? { activeUsers: 0, newThisWeek: 0 }
+        current.activeUsers += 1
+        if (isNew) current.newThisWeek += 1
+        stats.set(key, current)
+      }
+
+      rows.forEach((row) => {
+        const isNew = Boolean(row.created_at && row.created_at >= weekAgoIso)
+        // A profile belongs to one org; bump both its id- and code-keyed buckets
+        // so the caller can look up stats by either key (id and code buckets hold
+        // the same per-org count, and the caller only reads one of them).
+        bump(lowerKey(row.organization_id), isNew)
+        bump(lowerKey(row.company_code), isNew)
+      })
+
+      onChange(stats)
+    } catch (error) {
+      if (cancelled) return
+      onError?.(error)
+    }
+  }
+
+  void load()
+
+  const channel = supabase
+    .channel(`partner_org_stats_${++orgStatsChannelSeq}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
       void load()
     })
     .subscribe()
