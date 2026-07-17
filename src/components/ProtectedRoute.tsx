@@ -69,8 +69,12 @@ export const ProtectedRoute: React.FC<Props> = ({
     }
   }, [canAccessOrganization, profile, requireOrganization, user])
 
-  // Block render until auth + profile are known
-  if (loading || profileLoading) return <AppLoader />
+  // Block render until auth + profile are known — but ONLY on the initial load
+  // (before we have a profile). Once a profile exists, background refreshes flip
+  // profileLoading true again; swapping in the loader then would unmount and
+  // remount the whole page repeatedly (the "twitch"/flicker) and re-subscribe
+  // every listener. So keep the page mounted during background refreshes.
+  if ((loading || profileLoading) && !profile) return <AppLoader />
 
   if (!user) {
     const redirectPath = `${location.pathname}${location.search}`
