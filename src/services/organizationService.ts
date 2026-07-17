@@ -716,8 +716,10 @@ export const logOrganizationAccessAttempt = async ({
   // so it never surfaces as an uncaught promise rejection in the console.
   try {
     await addDoc(adminActivityCollection, auditEntry)
-  } catch (err) {
-    console.warn('[organizationService] access-attempt audit skipped', err)
+  } catch {
+    // Best-effort audit only; the legacy Firestore target is denied under
+    // Supabase-only auth. Swallow silently so it never spams the console.
+    // (Migrate to the Supabase `admin_activity_log` table if audit is needed.)
   }
 }
 

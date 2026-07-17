@@ -243,6 +243,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   /* 🔹 Auth State Listener                                              */
   /* ------------------------------------------------------------------ */
   const loadedUidRef = useRef<string | null>(null)
+  // Last (event, uid) we actually logged - so repeated SIGNED_IN emits (token
+  // refresh, tab focus, cross-tab session sync) don't spam the console.
+  const lastAuthLogRef = useRef<string>('')
 
   useEffect(() => {
     let isActive = true
@@ -354,7 +357,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('🟠 [Auth] Auth state changed', event, session?.user?.email)
+      // Supabase re-emits SIGNED_IN on token refresh, tab focus, and cross-tab
+      // session sync (multiple open tabs echo each other). applySession already
+      // bails on an already-loaded user, so the repeats are cheap - but the raw
+      // log used to spam the console. Log only genuine (event, user) transitions.
+      const signature = `${event}:${session?.user?.id ?? ''}`
+      if (signature !== lastAuthLogRef.current) {
+        lastAuthLogRef.current = signature
+        console.log('🟠 [Auth] Auth state changed', event, session?.user?.email)
+      }
       void applySession(session, event)
     })
 
