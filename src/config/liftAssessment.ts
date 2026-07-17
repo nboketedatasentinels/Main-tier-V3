@@ -134,15 +134,13 @@ export const INTAKE_FIELDS: IntakeField[] = [
     id: 'role',
     label: 'Which best describes your role?',
     options: [
-      { value: 'c_suite', label: 'C-suite (CEO, CTO, CFO, etc.)' },
-      { value: 'vp_head', label: 'VP / Head of function' },
-      { value: 'director', label: 'Director' },
+      { value: 'c_suite', label: 'C-suite / Managing Director' },
+      { value: 'vp_head', label: 'VP / Head of Function / Department' },
       { value: 'senior_manager', label: 'Senior Manager' },
       { value: 'manager', label: 'Manager' },
-      { value: 'team_lead', label: 'Team Lead' },
-      { value: 'individual_contributor', label: 'Individual contributor' },
-      { value: 'consultant', label: 'Consultant' },
-      { value: 'other', label: 'Other' },
+      { value: 'team_lead', label: 'Team lead' },
+      { value: 'early_career', label: 'Early Career Professional' },
+      { value: 'student', label: 'Student' },
     ],
   },
   {
@@ -175,9 +173,10 @@ export const INTAKE_FIELDS: IntakeField[] = [
   },
 ]
 
-// Role groupings for lead-tier logic
+// Role groupings for lead-tier logic. Roles NOT listed here (early_career,
+// student) fall through to Tier C (community & coaching).
 export const TIER_A_SENIORITY = new Set(['c_suite', 'vp_head'])
-export const TIER_B_ROLES = new Set(['director', 'senior_manager', 'manager', 'team_lead'])
+export const TIER_B_ROLES = new Set(['senior_manager', 'manager', 'team_lead'])
 
 // ── Contact capture (lead details collected AFTER the questions) ──────────────
 // Shown once the assessment is answered, just before results are revealed. The

@@ -141,10 +141,10 @@ const INTAKE_FIELDS: { id: string; label: string; options: Record<string, string
     id: "role",
     label: "Which best describes your role?",
     options: {
-      c_suite: "C-suite (CEO, CTO, CFO, etc.)", vp_head: "VP / Head of function",
-      director: "Director", senior_manager: "Senior Manager", manager: "Manager",
-      team_lead: "Team Lead", individual_contributor: "Individual contributor",
-      consultant: "Consultant", other: "Other",
+      c_suite: "C-suite / Managing Director",
+      vp_head: "VP / Head of Function / Department",
+      senior_manager: "Senior Manager", manager: "Manager", team_lead: "Team lead",
+      early_career: "Early Career Professional", student: "Student",
     },
   },
   { id: "teamSize", label: "How many people do you lead?", options: { "0": "None", "1_10": "1-10", "11_49": "11-49", "50_plus": "50+" } },
@@ -251,14 +251,20 @@ function edgePillar(lead: any): string | null {
 const SENIORITY_MAP: Record<string, string> = {
   c_suite: "VP or C-suite",
   vp_head: "VP or C-suite",
-  director: "Head or Director",
   senior_manager: "Manager",
   manager: "Manager",
   team_lead: "Manager",
-  individual_contributor: "IC",
-  consultant: "IC",
-  // other -> omitted
+  early_career: "IC",
+  // student -> omitted (no seniority)
 };
+
+// Human-readable label for the selected role, sent verbatim to the dedicated
+// Zoho role field. Kept in sync with INTAKE_FIELDS' role options above.
+function roleLabel(role: unknown): string | null {
+  if (!role) return null;
+  const field = INTAKE_FIELDS.find((f) => f.id === "role");
+  return field?.options[role as string] ?? (role as string);
+}
 
 // Cadence Track (confirmed): coaching flag wins; else tier A/B -> A/B, C -> Nurture.
 // deno-lint-ignore no-explicit-any
@@ -331,6 +337,13 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
     set(CF.completedAt, toZohoDateTime(lead.completed_at)); // Zoho-strict datetime (no microseconds, +00:00)
     set(CF.seniority, lead.intake?.role ? SENIORITY_MAP[lead.intake.role] : null);
     set(CF.cadence, cadenceTrack(lead));
+    // Exact selected role -> a dedicated Zoho field. Gated by env so it only
+    // sends once the field exists in Zoho: set ZOHO_ROLE_FIELD to its confirmed
+    // API name (e.g. "LIFT_Role"). Left unset, no unknown field is sent and the
+    // create is never at risk. The value is the human label (matches the Zoho
+    // picklist values you create, or any single-line text field).
+    const roleField = Deno.env.get("ZOHO_ROLE_FIELD");
+    if (roleField) set(roleField, roleLabel(lead.intake?.role));
     // Gateway URL is a fixed marketing link supplied via env (optional).
     set(CF.gatewayUrl, Deno.env.get("ZOHO_GATEWAY_URL") || null);
     // resultUrl / LinkedIn / Booking_* intentionally omitted — no source yet.
