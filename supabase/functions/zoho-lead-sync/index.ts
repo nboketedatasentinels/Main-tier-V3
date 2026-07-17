@@ -141,8 +141,8 @@ const INTAKE_FIELDS: { id: string; label: string; options: Record<string, string
     id: "role",
     label: "Which best describes your role?",
     options: {
-      c_suite: "C-suite / Managing Director",
-      vp_head: "VP / Head of Function / Department",
+      c_suite: "C-suite/ Managing Director",
+      vp_head: "VP/ Head of Function/ Department",
       senior_manager: "Senior Manager", manager: "Manager", team_lead: "Team lead",
       early_career: "Early Career Professional", student: "Student",
     },

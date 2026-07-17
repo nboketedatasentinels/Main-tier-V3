@@ -134,8 +134,8 @@ export const INTAKE_FIELDS: IntakeField[] = [
     id: 'role',
     label: 'Which best describes your role?',
     options: [
-      { value: 'c_suite', label: 'C-suite / Managing Director' },
-      { value: 'vp_head', label: 'VP / Head of Function / Department' },
+      { value: 'c_suite', label: 'C-suite/ Managing Director' },
+      { value: 'vp_head', label: 'VP/ Head of Function/ Department' },
       { value: 'senior_manager', label: 'Senior Manager' },
       { value: 'manager', label: 'Manager' },
       { value: 'team_lead', label: 'Team lead' },
