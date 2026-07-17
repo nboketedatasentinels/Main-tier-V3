@@ -35,12 +35,13 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { AlertTriangle, RefreshCcw, Search, Users } from 'lucide-react'
+import { doc, getDoc } from 'firebase/firestore'
 import { PartnerLayout } from '@/layouts/PartnerLayout'
+import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { useLearnerOverview, type LearnerOverviewRow } from '@/hooks/useLearnerOverview'
-import { fetchOrganizationJourneyType } from '@/services/organizationService'
 import {
   assignMentorToLearner,
   fetchMentorsForOrg,
@@ -130,10 +131,11 @@ export const LearnerAssignmentsPage: React.FC = () => {
       return
     }
     let cancelled = false
-    fetchOrganizationJourneyType(selectedOrgId)
-      .then((journeyType) => {
+    getDoc(doc(db, 'organizations', selectedOrgId))
+      .then((snap) => {
         if (cancelled) return
-        setOrgJourneyType(journeyType)
+        const data = snap.data()
+        setOrgJourneyType(typeof data?.journeyType === 'string' ? data.journeyType : null)
       })
       .catch(() => {
         if (cancelled) return

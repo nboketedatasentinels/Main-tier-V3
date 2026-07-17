@@ -1,4 +1,16 @@
-import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getDoc,
+  onSnapshot,
+  query,
+  serverTimestamp,
+  Timestamp,
+  updateDoc,
+  where,
+  type DocumentData,
+  type QuerySnapshot,
+} from 'firebase/firestore'
 import { db } from './firebase'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints } from './pointsService'
@@ -46,31 +58,115 @@ export interface ProgrammeComponentSubmission {
   score: number | null
 }
 
+const toDate = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (value instanceof Timestamp) return value.toDate()
+  if (typeof value === 'object' && value !== null && 'toDate' in value) {
+    const candidate = value as { toDate?: () => Date }
+    if (typeof candidate.toDate === 'function') return candidate.toDate()
+  }
+  return null
+}
+
+const sanitizeAnswers = (raw: unknown): Record<string, string> => {
+  if (!raw || typeof raw !== 'object') return {}
+  const out: Record<string, string> = {}
+  Object.entries(raw as Record<string, unknown>).forEach(([k, v]) => {
+    if (typeof v === 'string') out[k] = v
+    else if (v !== null && v !== undefined) out[k] = String(v)
+  })
+  return out
+}
+
+const fromSnapshot = (id: string, data: DocumentData): ProgrammeComponentSubmission => ({
+  id,
+  uid: typeof data.uid === 'string' ? data.uid : id.split('__')[0] ?? '',
+  email: typeof data.email === 'string' ? data.email : null,
+  displayName: typeof data.displayName === 'string' ? data.displayName : null,
+  organizationId: typeof data.organizationId === 'string' ? data.organizationId : null,
+  componentId: typeof data.componentId === 'string' ? data.componentId : '',
+  componentType: (['capstone', 'case_study', 'practical'] as const).includes(data.componentType)
+    ? (data.componentType as ProgrammeComponentType)
+    : null,
+  componentTitle: typeof data.componentTitle === 'string' ? data.componentTitle : null,
+  pillar: typeof data.pillar === 'string' ? data.pillar : null,
+  partId: typeof data.partId === 'string' ? data.partId : null,
+  partTitle: typeof data.partTitle === 'string' ? data.partTitle : null,
+  answers: sanitizeAnswers(data.answers),
+  answerCount: typeof data.answerCount === 'number' ? data.answerCount : 0,
+  status:
+    data.status === 'in_review' ||
+    data.status === 'approved' ||
+    data.status === 'needs_revision'
+      ? (data.status as ProgrammeSubmissionStatus)
+      : 'submitted',
+  submittedAt: toDate(data.submittedAt),
+  lastUpdatedAt: toDate(data.lastUpdatedAt),
+  resubmittedAt: toDate(data.resubmittedAt),
+  sourcePage: typeof data.sourcePage === 'string' ? data.sourcePage : null,
+  reviewedAt: toDate(data.reviewedAt),
+  reviewedBy: typeof data.reviewedBy === 'string' ? data.reviewedBy : null,
+  reviewerName: typeof data.reviewerName === 'string' ? data.reviewerName : null,
+  partnerNotes: typeof data.partnerNotes === 'string' ? data.partnerNotes : null,
+  score: typeof data.score === 'number' ? data.score : null,
+})
+
+const sortByLastUpdatedDesc = (
+  a: ProgrammeComponentSubmission,
+  b: ProgrammeComponentSubmission,
+): number => {
+  const aT = (a.lastUpdatedAt ?? a.submittedAt)?.getTime() ?? 0
+  const bT = (b.lastUpdatedAt ?? b.submittedAt)?.getTime() ?? 0
+  return bT - aT
+}
+
 /**
- * Subscribe to all submissions for a set of organization ids.
- *
- * TEMPORARILY DISABLED - returns an empty result without subscribing.
- *
- * Programme submissions are still a Firestore-only feature: learners write them
- * from the static capstone runtime (public/capstones/_capstone-runtime.js) using
- * a Firebase auth session. After the app's auth cutover (Firebase -> Supabase)
- * the React dashboard has no Firebase session, so the old
- * `onSnapshot(programmeComponentSubmissions)` listener failed with "Missing or
- * insufficient permissions" on every (re)subscribe and flooded the console.
- *
- * Rather than churn a dead Firestore listener, we no-op here and let the page
- * render its empty state. The follow-up is to move this collection to Supabase
- * (new table + RLS via `is_partner_or_admin()`, and migrate the capstone writer)
- * - mirror partnerSupabaseReads / the interventions migration (0024). The write
- * helpers below are left intact for that migration.
+ * Subscribe to all submissions for a set of organization ids. Firestore
+ * `in` queries cap at 30 values per request; we chunk and merge.
  */
 export function subscribeToSubmissionsByOrgIds(
-  _organizationIds: string[],
+  organizationIds: string[],
   onUpdate: (rows: ProgrammeComponentSubmission[]) => void,
-  _onError?: (err: Error) => void,
+  onError?: (err: Error) => void,
 ): () => void {
-  onUpdate([])
-  return () => undefined
+  const ids = Array.from(new Set(organizationIds.filter((id) => Boolean(id))))
+  if (ids.length === 0) {
+    onUpdate([])
+    return () => undefined
+  }
+
+  const CHUNK = 30
+  const chunks: string[][] = []
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    chunks.push(ids.slice(i, i + CHUNK))
+  }
+
+  const buffers: ProgrammeComponentSubmission[][] = chunks.map(() => [])
+  const colRef = collection(db, 'programmeComponentSubmissions')
+
+  const emit = () => {
+    const merged = new Map<string, ProgrammeComponentSubmission>()
+    buffers.flat().forEach((row) => merged.set(row.id, row))
+    onUpdate(Array.from(merged.values()).sort(sortByLastUpdatedDesc))
+  }
+
+  const unsubscribers = chunks.map((chunk, index) => {
+    const q = query(colRef, where('organizationId', 'in', chunk))
+    return onSnapshot(
+      q,
+      (snap: QuerySnapshot<DocumentData>) => {
+        buffers[index] = snap.docs.map((d) => fromSnapshot(d.id, d.data()))
+        emit()
+      },
+      (err) => {
+        console.error('[programmeComponentSubmissionService] subscribe failed', err)
+        onError?.(err)
+      },
+    )
+  })
+
+  return () => unsubscribers.forEach((u) => u())
 }
 
 export interface ReviewUpdate {
