@@ -239,9 +239,15 @@ export const PartnerDashboard: React.FC = () => {
   // the platform's last-active timestamp (the only sign-in signal we track);
   // learners with no recorded activity sort last and render as "Never".
   const loginTableRef = useRef<HTMLDivElement>(null)
-  const scrollToLogins = useCallback(() => {
-    loginTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const [showLoginsTable, setShowLoginsTable] = useState(false)
+  const toggleLoginsTable = useCallback(() => {
+    setShowLoginsTable((prev) => !prev)
   }, [])
+  useEffect(() => {
+    if (showLoginsTable) {
+      loginTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [showLoginsTable])
 
   const recentLoginRows = useMemo(() => {
     const parse = (value?: string | null): Date | null => {
@@ -272,9 +278,15 @@ export const PartnerDashboard: React.FC = () => {
   // assessment — shows each one's per-assessment status so a partner can see who
   // has done one, the other, or neither.
   const assessmentsTableRef = useRef<HTMLDivElement>(null)
-  const scrollToAssessments = useCallback(() => {
-    assessmentsTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const [showAssessmentsTable, setShowAssessmentsTable] = useState(false)
+  const toggleAssessmentsTable = useCallback(() => {
+    setShowAssessmentsTable((prev) => !prev)
   }, [])
+  useEffect(() => {
+    if (showAssessmentsTable) {
+      assessmentsTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }, [showAssessmentsTable])
 
   const pendingAssessmentRows = useMemo(() => {
     return overviewUsers
@@ -697,12 +709,13 @@ export const PartnerDashboard: React.FC = () => {
           {...surfaceCardProps}
           role="button"
           tabIndex={0}
+          aria-expanded={showLoginsTable}
           cursor="pointer"
-          onClick={scrollToLogins}
+          onClick={toggleLoginsTable}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              scrollToLogins()
+              toggleLoginsTable()
             }
           }}
           transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
@@ -733,9 +746,15 @@ export const PartnerDashboard: React.FC = () => {
               </HStack>
               <HStack spacing={1} color="brand.primary" flexShrink={0}>
                 <Text fontSize="sm" fontWeight="semibold" display={{ base: 'none', sm: 'block' }}>
-                  View
+                  {showLoginsTable ? 'Hide' : 'View'}
                 </Text>
-                <ChevronDown size={18} />
+                <ChevronDown
+                  size={18}
+                  style={{
+                    transform: showLoginsTable ? 'rotate(180deg)' : undefined,
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
               </HStack>
             </HStack>
           </CardBody>
@@ -745,12 +764,13 @@ export const PartnerDashboard: React.FC = () => {
           {...surfaceCardProps}
           role="button"
           tabIndex={0}
+          aria-expanded={showAssessmentsTable}
           cursor="pointer"
-          onClick={scrollToAssessments}
+          onClick={toggleAssessmentsTable}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              scrollToAssessments()
+              toggleAssessmentsTable()
             }
           }}
           transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
@@ -780,9 +800,15 @@ export const PartnerDashboard: React.FC = () => {
               </HStack>
               <HStack spacing={1} color="brand.primary" flexShrink={0}>
                 <Text fontSize="sm" fontWeight="semibold" display={{ base: 'none', sm: 'block' }}>
-                  View
+                  {showAssessmentsTable ? 'Hide' : 'View'}
                 </Text>
-                <ChevronDown size={18} />
+                <ChevronDown
+                  size={18}
+                  style={{
+                    transform: showAssessmentsTable ? 'rotate(180deg)' : undefined,
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
               </HStack>
             </HStack>
           </CardBody>
@@ -1394,6 +1420,7 @@ export const PartnerDashboard: React.FC = () => {
           </CardBody>
         </Card>
 
+        {showLoginsTable && (
         <Card {...surfaceCardProps} ref={loginTableRef} scrollMarginTop={4}>
           <CardBody>
             <Stack spacing={4}>
@@ -1465,7 +1492,9 @@ export const PartnerDashboard: React.FC = () => {
             </Stack>
           </CardBody>
         </Card>
+        )}
 
+        {showAssessmentsTable && (
         <Card {...surfaceCardProps} ref={assessmentsTableRef} scrollMarginTop={4}>
           <CardBody>
             <Stack spacing={4}>
@@ -1541,6 +1570,7 @@ export const PartnerDashboard: React.FC = () => {
             </Stack>
           </CardBody>
         </Card>
+        )}
       </Stack>
     )
   }
