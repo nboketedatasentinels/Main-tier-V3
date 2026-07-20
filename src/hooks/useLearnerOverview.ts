@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchLearnerSessionStats,
   subscribeToLearnersInOrg,
@@ -35,7 +35,10 @@ export const useLearnerOverview = (companyId?: string | null): UseLearnerOvervie
   const [statsLoading, setStatsLoading] = useState<boolean>(false)
   const [statsError, setStatsError] = useState<string | null>(null)
   const [statsKey, setStatsKey] = useState(0)
-  const [lastFetchedAt, setLastFetchedAt] = useState<number>(0)
+  // Throttle timestamp lives in a ref, not state: it is both read and written
+  // by the stats effect, so keeping it in state (and thus in the dep array)
+  // would make the effect retrigger itself.
+  const lastFetchedAtRef = useRef<number>(0)
 
   // Subscribe to learners in org
   useEffect(() => {
@@ -64,11 +67,16 @@ export const useLearnerOverview = (companyId?: string | null): UseLearnerOvervie
   // Fetch session stats whenever the learner list changes or a refresh is triggered
   useEffect(() => {
     if (!companyId || learners.length === 0) {
-      setStats({})
+      // Reuse the existing empty object when it is already empty. Returning a
+      // fresh {} here would change the `stats` reference and — because this
+      // effect used to depend on `stats` — retrigger itself forever for any
+      // org with no matching learners (tight render loop + realtime resubscribe
+      // storm + DevTools "form field" flood). See course-approvals bug.
+      setStats((prev) => (Object.keys(prev).length === 0 ? prev : {}))
       return
     }
     const now = Date.now()
-    if (statsKey === 0 && now - lastFetchedAt < SESSIONS_STALE_MS && Object.keys(stats).length > 0) {
+    if (statsKey === 0 && now - lastFetchedAtRef.current < SESSIONS_STALE_MS) {
       return
     }
 
@@ -80,7 +88,7 @@ export const useLearnerOverview = (companyId?: string | null): UseLearnerOvervie
       .then((next) => {
         if (cancelled) return
         setStats(next)
-        setLastFetchedAt(Date.now())
+        lastFetchedAtRef.current = Date.now()
         setStatsLoading(false)
       })
       .catch((err) => {
@@ -92,7 +100,7 @@ export const useLearnerOverview = (companyId?: string | null): UseLearnerOvervie
     return () => {
       cancelled = true
     }
-  }, [companyId, learners, statsKey, lastFetchedAt, stats])
+  }, [companyId, learners, statsKey])
 
   const rows = useMemo<LearnerOverviewRow[]>(() => {
     return learners.map((learner) => {
