@@ -169,11 +169,21 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   const assignmentsError = adminDataError
   const lastOrganizationsSuccessAt = null
   const lastUsersSuccessAt = adminSnapshot?.usersFetchedAt ?? null
-  // Reset selected org when it becomes invalid
+  // Reset selected org when it becomes invalid.
+  //
+  // Guard on `organizations.length`: an EMPTY list means "not resolved yet /
+  // partner has no assignment", NOT "the selection is invalid". Without this
+  // guard, a partner landing on ?org=<id> they aren't assigned to hit an
+  // infinite ping-pong: this effect reset selectedOrg to 'all', the sync effect
+  // above forced it back to the URL id, and round it went — re-rendering the
+  // whole dashboard on every tick (visible twitch + "form field id/name" flood).
+  // Only treat a selection as invalid when we actually have an org list to
+  // validate it against.
   useEffect(() => {
     if (profileStatus !== 'ready') return
     if (selectedOrg === 'all') return
     if (organizationsLoading) return
+    if (organizations.length === 0) return
     const selected = selectedOrg.toLowerCase()
     const stillValid = organizations.some(
       (org) =>
