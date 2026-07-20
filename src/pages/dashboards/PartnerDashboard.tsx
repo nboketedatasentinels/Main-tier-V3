@@ -29,8 +29,8 @@ import {
   Tr,
   useToast,
 } from '@chakra-ui/react'
-import { format, formatDistanceToNow, isValid } from 'date-fns'
-import { AlertTriangle, Bell, CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/services/supabase'
 import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
@@ -116,10 +116,6 @@ export const PartnerDashboard: React.FC = () => {
     usersError,
     usersLoading,
     interventions,
-    notificationCount,
-    notifications,
-    notificationsLoading,
-    notificationsError,
     debugInfo,
     snapshot,
     adminDataLoading,
@@ -158,7 +154,6 @@ export const PartnerDashboard: React.FC = () => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
-  const [showAllNotifications, setShowAllNotifications] = useState(false)
 
   // Profile page state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -189,17 +184,6 @@ export const PartnerDashboard: React.FC = () => {
     snapshotOrganizations.forEach((org) => {
       if (org.code) lookup.set(org.code.toLowerCase(), org.code.toLowerCase())
       if (org.id) lookup.set(org.id.toLowerCase(), org.code?.toLowerCase() ?? org.id.toLowerCase())
-    })
-    return lookup
-  }, [snapshotOrganizations])
-
-  const organizationRouteLookup = useMemo(() => {
-    const lookup = new Map<string, string>()
-    snapshotOrganizations.forEach((org) => {
-      const routeValue = org.id || org.code
-      if (!routeValue) return
-      if (org.id) lookup.set(org.id.toLowerCase(), routeValue)
-      if (org.code) lookup.set(org.code.toLowerCase(), routeValue)
     })
     return lookup
   }, [snapshotOrganizations])
@@ -379,7 +363,7 @@ export const PartnerDashboard: React.FC = () => {
     }
   }, [overviewOrganizations, scopedOrgKey])
 
-  const { metrics: overviewMetrics, riskLevels: overviewRiskLevels } = usePartnerMetrics({
+  const { metrics: overviewMetrics } = usePartnerMetrics({
     users: overviewUsers,
     organizations: overviewOrganizations,
   })
@@ -415,30 +399,6 @@ export const PartnerDashboard: React.FC = () => {
   const snapshotLoading = adminDataLoading
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'
-  const formatDistanceToNowSafe = (
-    value: Date | string | number | null | undefined,
-    fallback: string,
-    options?: Parameters<typeof formatDistanceToNow>[1],
-  ) => {
-    if (!value) {
-      return fallback
-    }
-
-    const dateValue = value instanceof Date ? value : new Date(value)
-    if (!isValid(dateValue)) {
-      return fallback
-    }
-
-    return formatDistanceToNow(dateValue, options)
-  }
-
-  const sanitizeRouteParam = (value?: string | null) => {
-    if (!value || typeof value !== 'string') return null
-    const trimmed = value.trim()
-    if (!trimmed) return null
-    const segments = trimmed.split('/').filter(Boolean)
-    return segments.length ? segments[segments.length - 1] : null
-  }
 
   const [refreshingOrganizations, setRefreshingOrganizations] = useState(false)
   const initialRefreshRef = useRef(false)
@@ -521,49 +481,6 @@ export const PartnerDashboard: React.FC = () => {
 
   const navSections = useMemo(() => buildPartnerNavItems(), [])
 
-  const groupedNotifications = useMemo(() => {
-    const groups = new Map<string, {
-      id: string
-      title: string
-      message: string
-      count: number
-      unreadCount: number
-      latestNotification: typeof notifications[number]
-      latestTimestamp: number
-    }>()
-
-    notifications.forEach((notification) => {
-      const title = notification.title || 'General'
-      const message = notification.message || ''
-      const key = `${title}::${message}`
-      const createdAt = notification.created_at ? new Date(notification.created_at).getTime() : Date.now()
-      const isUnread = !notification.is_read && !notification.read
-
-      if (!groups.has(key)) {
-        groups.set(key, {
-          id: notification.id,
-          title,
-          message,
-          count: 1,
-          unreadCount: isUnread ? 1 : 0,
-          latestNotification: notification,
-          latestTimestamp: createdAt,
-        })
-        return
-      }
-
-      const existing = groups.get(key)
-      if (!existing) return
-      existing.count += 1
-      existing.unreadCount += isUnread ? 1 : 0
-      if (createdAt >= existing.latestTimestamp) {
-        existing.latestNotification = notification
-        existing.latestTimestamp = createdAt
-      }
-    })
-
-    return Array.from(groups.values()).sort((a, b) => b.latestTimestamp - a.latestTimestamp)
-  }, [notifications])
   const overviewOrgCards = useMemo(
     () =>
       overviewOrganizations.map((org) => ({
@@ -619,7 +536,6 @@ export const PartnerDashboard: React.FC = () => {
   }
 
   const renderOverview = () => {
-    const learnersAtRiskCount = overviewRiskLevels.critical + overviewRiskLevels.concern
     const pendingApprovalsCount = scopedPendingApprovals.length
     const overviewUserCount = overviewUsers.length
 
@@ -674,22 +590,6 @@ export const PartnerDashboard: React.FC = () => {
       && overviewMetrics.engagementRate === 0
       && overviewMetrics.newRegistrations === 0
       && overviewMetrics.managedCompanies === 0
-    const alertCards = [
-      {
-        key: 'risk',
-        count: learnersAtRiskCount,
-        label: learnersAtRiskCount === 1 ? 'Learner at risk' : 'Learners at risk',
-        color: 'red',
-        icon: Users,
-        onClick: () => {
-          setUserManagementTab('risk')
-          setActivePage('users')
-        },
-      },
-    ]
-
-    const visibleNotifications = showAllNotifications ? groupedNotifications : groupedNotifications.slice(0, 4)
-
     return (
       <Stack spacing={8}>
         <Card
@@ -1029,68 +929,6 @@ export const PartnerDashboard: React.FC = () => {
           </Card>
         </SimpleGrid>
 
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-          {alertCards.map((card) => {
-            const isLoading = usersLoading || adminDataLoading
-            const isMuted = !isLoading && card.count === 0
-            const accentColor = isLoading ? 'gray' : (isMuted ? 'gray' : card.color)
-            const Icon = card.icon
-            return (
-              <Card
-                key={card.key}
-                borderRadius="2xl"
-                boxShadow="card"
-                bg={isLoading ? 'gray.50' : (isMuted ? 'gray.50' : `${accentColor}.50`)}
-                border="1px solid"
-                borderColor={isLoading ? 'gray.200' : (isMuted ? 'border.control' : `${accentColor}.200`)}
-                cursor={isLoading ? 'default' : 'pointer'}
-                transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
-                _hover={isLoading ? {} : { transform: 'translateY(-3px)', boxShadow: 'card-elevated', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
-                onClick={isLoading ? undefined : card.onClick}
-                minH="150px"
-                h="100%"
-              >
-                <CardBody p={5} h="100%">
-                  <Stack spacing={3} h="100%" justify="space-between">
-                    <HStack spacing={3} align="center">
-                      <Box color={isLoading ? 'gray.400' : `${accentColor}.500`}>
-                        <Icon size={20} />
-                      </Box>
-                      {isLoading ? (
-                        <Skeleton height="36px" width="50px" borderRadius="md" />
-                      ) : (
-                        <Text fontSize="3xl" fontWeight="bold" color={`${accentColor}.700`}>
-                          {card.count}
-                        </Text>
-                      )}
-                    </HStack>
-                    {isLoading ? (
-                      <Skeleton height="20px" width="120px" borderRadius="md" />
-                    ) : (
-                      <Text fontWeight="semibold" color={`${accentColor}.700`}>
-                        {card.label}
-                      </Text>
-                    )}
-                    {isLoading ? (
-                      <Skeleton height="16px" width="70px" borderRadius="md" />
-                    ) : (
-                      <Button
-                        size="sm"
-                        variant="link"
-                        colorScheme={accentColor === 'gray' ? 'gray' : accentColor}
-                        onClick={card.onClick}
-                        alignSelf="flex-start"
-                      >
-                        View all →
-                      </Button>
-                    )}
-                  </Stack>
-                </CardBody>
-              </Card>
-            )
-          })}
-        </SimpleGrid>
-
         {(organizationsLoading || usersLoading) && !organizationsError && !usersError && (
           <Card bg="blue.50" border="1px solid" borderColor="blue.200">
             <CardBody>
@@ -1233,179 +1071,6 @@ export const PartnerDashboard: React.FC = () => {
             </Card>
           </SimpleGrid>
         </Stack>
-
-        <Card {...surfaceCardProps}>
-          <CardBody>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
-                <HStack spacing={3}>
-                  <IconTile><Bell size={18} /></IconTile>
-                  <Text fontWeight="bold" color="brand.text">Recent Activity</Text>
-                </HStack>
-                <Badge colorScheme={notificationCount > 0 ? 'red' : 'gray'}>
-                  {notificationCount} unread
-                </Badge>
-              </HStack>
-              <Divider />
-              {notificationsLoading ? (
-                <Stack spacing={3}>
-                  {[1, 2, 3].map((item) => (
-                    <HStack
-                      key={item}
-                      justify="space-between"
-                      p={3}
-                      borderRadius="md"
-                      border="1px solid"
-                      borderColor="brand.border"
-                      bg="brand.accent"
-                    >
-                      <HStack spacing={3} flex={1}>
-                        <Skeleton height="32px" width="32px" borderRadius="md" />
-                        <Box flex={1}>
-                          <Skeleton height="14px" width="40%" />
-                          <SkeletonText mt="2" noOfLines={2} spacing="2" />
-                        </Box>
-                      </HStack>
-                      <Skeleton height="20px" width="70px" borderRadius="full" />
-                    </HStack>
-                  ))}
-                </Stack>
-              ) : notificationsError ? (
-                <Box p={3} borderRadius="md" border="1px solid" borderColor="red.200" bg="red.50">
-                  <Stack spacing={2}>
-                    <Text fontWeight="semibold" color="red.700">Notifications unavailable</Text>
-                    <Text fontSize="sm" color="red.700">{notificationsError}</Text>
-                  </Stack>
-                </Box>
-              ) : notifications.length === 0 ? (
-                <Box p={3} borderRadius="md" border="1px dashed" borderColor="border.control" bg="gray.50">
-                  <Text fontSize="sm" color="gray.600">
-                    You are all caught up. New partner alerts will appear here.
-                  </Text>
-                </Box>
-              ) : (
-                <Stack spacing={4}>
-                  {visibleNotifications.map((group) => {
-                    const notification = group.latestNotification
-                    // Extract learner ID only from explicit metadata fields (not from generic related_id)
-                    const rawLearnerId =
-                      (notification.metadata as { learnerId?: string } | undefined)?.learnerId
-                    const learnerId = sanitizeRouteParam(rawLearnerId)
-                    // Extract organization ID from metadata or fall back to related_id
-                    const rawOrganizationId =
-                      (notification.metadata as { organizationId?: string } | undefined)?.organizationId
-                      ?? notification.related_id
-                    const sanitizedOrganizationId = sanitizeRouteParam(rawOrganizationId)
-                    const organizationRoute =
-                      sanitizedOrganizationId
-                        ? organizationRouteLookup.get(sanitizedOrganizationId.toLowerCase())
-                        : null
-                    // Only link to user if we have an explicit learnerId
-                    const actionLink = learnerId
-                      ? `/partner/user/${learnerId}`
-                      : organizationRoute
-                        ? `/partner/organization/${organizationRoute}`
-                        : null
-                    const actionLabel = learnerId ? 'View learner' : organizationRoute ? 'View organization' : null
-                    const timestamp = formatDistanceToNowSafe(notification.created_at, 'Just now', { addSuffix: true })
-                    const isUnread = group.unreadCount > 0
-                    const lowerTitle = group.title.toLowerCase()
-                    const notificationType = lowerTitle.includes('challenge')
-                      ? { icon: Sparkles, color: 'purple' }
-                      : lowerTitle.includes('assignment') || lowerTitle.includes('approval')
-                        ? { icon: ClipboardCheck, color: 'blue' }
-                        : lowerTitle.includes('alert') || lowerTitle.includes('overdue')
-                          ? { icon: AlertTriangle, color: 'red' }
-                          : { icon: Bell, color: 'gray' }
-                    const NotificationIcon = notificationType.icon
-
-                    return (
-                      <HStack
-                        key={group.id}
-                        justify="space-between"
-                        p={4}
-                        borderRadius="lg"
-                        border="1px solid"
-                        borderColor={notificationType.color === 'red' ? 'red.200' : 'brand.border'}
-                        bg={notificationType.color === 'red' ? 'red.50' : 'brand.accent'}
-                        align="flex-start"
-                        transition="all 0.2s"
-                        _hover={{ shadow: 'sm' }}
-                        cursor={actionLink ? 'pointer' : 'default'}
-                        onClick={actionLink ? () => navigate(actionLink) : undefined}
-                      >
-                        <HStack spacing={4} flex={1} align="flex-start">
-                          <Box
-                            p={2}
-                            borderRadius="md"
-                            bg="white"
-                            border="1px solid"
-                            borderColor="brand.border"
-                            color={`${notificationType.color}.500`}
-                          >
-                            <NotificationIcon size={18} />
-                          </Box>
-                          <VStack align="flex-start" spacing={1} flex={1}>
-                            <HStack spacing={2} align="center">
-                              <Text fontWeight="bold" color="brand.text">
-                                {group.count > 1 ? `${group.count} new ${group.title}` : group.title}
-                              </Text>
-                              {isUnread && (
-                                <Badge colorScheme={notificationType.color === 'gray' ? 'purple' : notificationType.color} variant="solid">
-                                  {group.unreadCount > 1 ? `${group.unreadCount} new` : 'New'}
-                                </Badge>
-                              )}
-                            </HStack>
-                            <Text fontSize="sm" color="brand.subtleText">
-                              {group.message}
-                            </Text>
-                            <Text fontSize="xs" fontWeight="medium" color="brand.subtleText">
-                              {timestamp}
-                            </Text>
-                            {actionLink && actionLabel ? (
-                              <Button
-                                size="sm"
-                                colorScheme={notificationType.color === 'gray' ? 'purple' : notificationType.color}
-                                variant="solid"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  navigate(actionLink)
-                                }}
-                                mt={2}
-                              >
-                                {actionLabel}
-                              </Button>
-                            ) : null}
-                          </VStack>
-                        </HStack>
-                      </HStack>
-                    )
-                  })}
-                  {groupedNotifications.length > 4 && !showAllNotifications && (
-                    <Button
-                      variant="link"
-                      colorScheme="purple"
-                      alignSelf="flex-start"
-                      onClick={() => setShowAllNotifications(true)}
-                    >
-                      View all notifications →
-                    </Button>
-                  )}
-                  {showAllNotifications && groupedNotifications.length > 4 && (
-                    <Button
-                      variant="link"
-                      colorScheme="purple"
-                      alignSelf="flex-start"
-                      onClick={() => setShowAllNotifications(false)}
-                    >
-                      Show fewer notifications
-                    </Button>
-                  )}
-                </Stack>
-              )}
-            </Stack>
-          </CardBody>
-        </Card>
 
         {showLoginsTable && (
         <Card {...surfaceCardProps} ref={loginTableRef} scrollMarginTop={4}>
