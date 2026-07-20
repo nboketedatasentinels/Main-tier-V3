@@ -21,10 +21,16 @@ import {
   VStack,
   Skeleton,
   SkeletonText,
+  Table,
+  Tbody,
+  Td,
+  Th,
+  Thead,
+  Tr,
   useToast,
 } from '@chakra-ui/react'
 import { format, formatDistanceToNow, isValid } from 'date-fns'
-import { AlertTriangle, Bell, CalendarClock, ClipboardCheck, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
+import { AlertTriangle, Bell, CalendarClock, ChevronDown, ClipboardCheck, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/services/supabase'
 import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
@@ -229,6 +235,39 @@ export const PartnerDashboard: React.FC = () => {
       )
     })
   }, [snapshotUsers, scopedOrgKey, selectedOrg])
+
+  // Learner sign-in history for the selected org, most-recent first. Backed by
+  // the platform's last-active timestamp (the only sign-in signal we track);
+  // learners with no recorded activity sort last and render as "Never".
+  const loginTableRef = useRef<HTMLDivElement>(null)
+  const scrollToLogins = useCallback(() => {
+    loginTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const recentLoginRows = useMemo(() => {
+    const parse = (value?: string | null): Date | null => {
+      if (!value) return null
+      const parsed = new Date(value)
+      return Number.isNaN(parsed.getTime()) ? null : parsed
+    }
+    return overviewUsers
+      .map((u) => ({
+        id: u.id,
+        name: getDisplayName(u, 'Learner'),
+        email: u.email || '—',
+        lastLogin: parse(u.lastActiveAt || u.lastActive),
+      }))
+      .sort((a, b) => {
+        const at = a.lastLogin ? a.lastLogin.getTime() : -Infinity
+        const bt = b.lastLogin ? b.lastLogin.getTime() : -Infinity
+        return bt - at
+      })
+  }, [overviewUsers])
+
+  const mostRecentLoginLabel = useMemo(() => {
+    const latest = recentLoginRows.find((r) => r.lastLogin)?.lastLogin
+    return latest ? formatDistanceToNow(latest, { addSuffix: true }) : null
+  }, [recentLoginRows])
 
   // Journey progress for the currently selected org. Computes day-level
   // precision so a cohort that started today shows "1 day done · 5 weeks 6
@@ -675,6 +714,54 @@ export const PartnerDashboard: React.FC = () => {
             <Text fontSize="sm" color="brand.subtleText">
               {scopeSummary}
             </Text>
+          </CardBody>
+        </Card>
+
+        <Card
+          {...surfaceCardProps}
+          role="button"
+          tabIndex={0}
+          cursor="pointer"
+          onClick={scrollToLogins}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              scrollToLogins()
+            }
+          }}
+          transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
+          _hover={{ transform: 'translateY(-3px)', boxShadow: 'card-elevated', borderColor: 'brand.primary' }}
+        >
+          <CardBody p={6}>
+            <HStack justify="space-between" align="center" spacing={4}>
+              <HStack spacing={4} align="center">
+                <IconTile><Clock size={18} /></IconTile>
+                <Stack spacing={0.5}>
+                  <Text
+                    fontSize="xs"
+                    letterSpacing="0.06em"
+                    textTransform="uppercase"
+                    color="brand.subtleText"
+                    fontWeight="semibold"
+                  >
+                    Learner logins
+                  </Text>
+                  <Text fontWeight="bold" color="brand.text">
+                    {recentLoginRows.length} learner{recentLoginRows.length === 1 ? '' : 's'}
+                    {mostRecentLoginLabel ? ` · latest ${mostRecentLoginLabel}` : ''}
+                  </Text>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    See when each learner last signed in
+                  </Text>
+                </Stack>
+              </HStack>
+              <HStack spacing={1} color="brand.primary" flexShrink={0}>
+                <Text fontSize="sm" fontWeight="semibold" display={{ base: 'none', sm: 'block' }}>
+                  View
+                </Text>
+                <ChevronDown size={18} />
+              </HStack>
+            </HStack>
           </CardBody>
         </Card>
 
@@ -1288,6 +1375,78 @@ export const PartnerDashboard: React.FC = () => {
                     </Button>
                   )}
                 </Stack>
+              )}
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Card {...surfaceCardProps} ref={loginTableRef} scrollMarginTop={4}>
+          <CardBody>
+            <Stack spacing={4}>
+              <HStack spacing={3} align="center" justify="space-between" wrap="wrap">
+                <HStack spacing={3} align="center">
+                  <IconTile><Clock size={18} /></IconTile>
+                  <Stack spacing={0}>
+                    <Text fontWeight="bold" color="brand.text">Learner logins</Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Most recent sign-ins first
+                      {selectedOrg && selectedOrg !== 'all' ? ' · this organization' : ''}
+                    </Text>
+                  </Stack>
+                </HStack>
+                <Badge colorScheme="purple" variant="subtle">
+                  {recentLoginRows.length} learner{recentLoginRows.length === 1 ? '' : 's'}
+                </Badge>
+              </HStack>
+
+              {usersLoading ? (
+                <SkeletonText noOfLines={6} spacing="3" />
+              ) : recentLoginRows.length === 0 ? (
+                <Box
+                  p={4}
+                  borderRadius="lg"
+                  border="1px dashed"
+                  borderColor="border.control"
+                  bg="gray.50"
+                >
+                  <Text fontSize="sm" color="brand.subtleText">
+                    No learners in scope yet.
+                  </Text>
+                </Box>
+              ) : (
+                <Box
+                  overflowX="auto"
+                  maxH="440px"
+                  overflowY="auto"
+                  borderRadius="xl"
+                  border="1px solid"
+                  borderColor="border.card"
+                >
+                  <Table size="sm" variant="simple">
+                    <Thead position="sticky" top={0} zIndex={1} bg="surface.subtle">
+                      <Tr>
+                        <Th>Learner</Th>
+                        <Th>Email</Th>
+                        <Th whiteSpace="nowrap">Last login</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {recentLoginRows.map((row) => (
+                        <Tr key={row.id} transition="background 0.15s ease" _hover={{ bg: 'surface.subtle' }}>
+                          <Td fontWeight="semibold" color="brand.text">{row.name}</Td>
+                          <Td color="brand.subtleText">{row.email}</Td>
+                          <Td
+                            whiteSpace="nowrap"
+                            color={row.lastLogin ? 'brand.text' : 'brand.subtleText'}
+                            fontStyle={row.lastLogin ? undefined : 'italic'}
+                          >
+                            {row.lastLogin ? format(row.lastLogin, 'd MMM yyyy, h:mm a') : 'Never'}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
               )}
             </Stack>
           </CardBody>
