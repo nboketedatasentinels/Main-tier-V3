@@ -7,6 +7,7 @@ import {
   Card,
   CardBody,
   Divider,
+  Flex,
   FormControl,
   FormLabel,
   HStack,
@@ -25,8 +26,7 @@ import {
 import { format, formatDistanceToNow, isValid } from 'date-fns'
 import { AlertTriangle, Bell, CalendarClock, ClipboardCheck, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth'
-import { auth } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
 import { OrganizationCard } from '@/components/admin/OrganizationCard'
 import PartnerLayout from '@/layouts/PartnerLayout'
@@ -52,6 +52,36 @@ const PARTNER_PAGE_KEY_SET = new Set<string>([
   'organization-management',
   'profile',
 ])
+
+// Shared refined-surface styling for the overview cards: soft layered shadow, a
+// light hairline border, and a generous radius so every card reads as one
+// cohesive, premium system (matches the MetricCard treatment). A gentle
+// shadow-deepen on hover keeps it minimal, not busy.
+const surfaceCardProps = {
+  bg: 'white',
+  borderRadius: '2xl',
+  border: '1px solid',
+  borderColor: 'border.card',
+  boxShadow: 'card',
+  transition: 'box-shadow 0.2s ease, border-color 0.2s ease',
+  _hover: { boxShadow: 'card-elevated' },
+} as const
+
+// Subtle brand-tinted rounded tile for section-header icons — a small,
+// consistent flourish that lifts the header hierarchy without adding color noise.
+const IconTile: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <Flex
+    boxSize={9}
+    flexShrink={0}
+    align="center"
+    justify="center"
+    borderRadius="lg"
+    bg="brand.primaryMuted"
+    color="brand.primary"
+  >
+    {children}
+  </Flex>
+)
 
 export const PartnerDashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -640,7 +670,7 @@ export const PartnerDashboard: React.FC = () => {
 
     return (
       <Stack spacing={8}>
-        <Card bg="white" border="1px solid" borderColor="brand.border">
+        <Card {...surfaceCardProps}>
           <CardBody py={3}>
             <Text fontSize="sm" color="brand.subtleText">
               {scopeSummary}
@@ -701,11 +731,11 @@ export const PartnerDashboard: React.FC = () => {
         )}
 
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-          <Card bg="white" border="1px solid" borderColor="brand.border" h="100%">
+          <Card {...surfaceCardProps} h="100%">
             <CardBody>
               <Stack spacing={3} h="100%">
                 <HStack spacing={3} align="center">
-                  <Box color="brand.primary"><CalendarClock size={20} /></Box>
+                  <IconTile><CalendarClock size={18} /></IconTile>
                   <Text fontWeight="bold" color="brand.text">Journey & week</Text>
                 </HStack>
                 {journeyProgress && !journeyProgress.unconfigured ? (
@@ -757,11 +787,11 @@ export const PartnerDashboard: React.FC = () => {
             </CardBody>
           </Card>
 
-          <Card bg="white" border="1px solid" borderColor="brand.border" h="100%">
+          <Card {...surfaceCardProps} h="100%">
             <CardBody>
               <Stack spacing={3} h="100%">
                 <HStack spacing={3} align="center">
-                  <Box color="brand.primary"><UserCheck size={20} /></Box>
+                  <IconTile><UserCheck size={18} /></IconTile>
                   <Text fontWeight="bold" color="brand.text">Learner readiness</Text>
                 </HStack>
                 {readinessTotal === 0 ? (
@@ -824,12 +854,12 @@ export const PartnerDashboard: React.FC = () => {
             </CardBody>
           </Card>
 
-          <Card bg="white" border="1px solid" borderColor="brand.border" h="100%">
+          <Card {...surfaceCardProps} h="100%">
             <CardBody>
               <Stack spacing={3} h="100%">
                 <HStack spacing={3} align="center" justify="space-between">
                   <HStack spacing={3} align="center">
-                    <Box color="brand.primary"><MailQuestion size={20} /></Box>
+                    <IconTile><MailQuestion size={18} /></IconTile>
                     <Text fontWeight="bold" color="brand.text">Pending invitations</Text>
                   </HStack>
                   {pendingInvitationsLoading ? (
@@ -894,12 +924,14 @@ export const PartnerDashboard: React.FC = () => {
             return (
               <Card
                 key={card.key}
+                borderRadius="2xl"
+                boxShadow="card"
                 bg={isLoading ? 'gray.50' : (isMuted ? 'gray.50' : `${accentColor}.50`)}
                 border="1px solid"
                 borderColor={isLoading ? 'gray.200' : (isMuted ? 'border.control' : `${accentColor}.200`)}
                 cursor={isLoading ? 'default' : 'pointer'}
-                transition="all 0.2s"
-                _hover={isLoading ? {} : { shadow: 'sm', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
+                transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
+                _hover={isLoading ? {} : { transform: 'translateY(-3px)', boxShadow: 'card-elevated', borderColor: isMuted ? 'border.control' : `${accentColor}.300` }}
                 onClick={isLoading ? undefined : card.onClick}
                 minH="150px"
                 h="100%"
@@ -1018,7 +1050,7 @@ export const PartnerDashboard: React.FC = () => {
           )}
 
           <SimpleGrid columns={{ base: 1 }} spacing={4}>
-            <Card bg="white" border="1px solid" borderColor="brand.border">
+            <Card {...surfaceCardProps}>
               <CardBody>
                 <Stack spacing={4}>
                   <HStack justify="space-between" align="center">
@@ -1088,12 +1120,12 @@ export const PartnerDashboard: React.FC = () => {
           </SimpleGrid>
         </Stack>
 
-        <Card bg="white" border="1px solid" borderColor="brand.border">
+        <Card {...surfaceCardProps}>
           <CardBody>
             <Stack spacing={3}>
               <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
-                <HStack spacing={2}>
-                  <Bell size={18} />
+                <HStack spacing={3}>
+                  <IconTile><Bell size={18} /></IconTile>
                   <Text fontWeight="bold" color="brand.text">Recent Activity</Text>
                 </HStack>
                 <Badge colorScheme={notificationCount > 0 ? 'red' : 'gray'}>
@@ -1701,7 +1733,8 @@ export const PartnerDashboard: React.FC = () => {
   )
 
   const handlePasswordChange = async () => {
-    if (!auth.currentUser) {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser?.email) {
       toast({
         title: 'Not authenticated',
         description: 'Please sign in again to change your password.',
@@ -1736,12 +1769,20 @@ export const PartnerDashboard: React.FC = () => {
 
     setIsChangingPassword(true)
     try {
-      const credential = EmailAuthProvider.credential(
-        auth.currentUser.email || '',
-        currentPassword
-      )
-      await reauthenticateWithCredential(auth.currentUser, credential)
-      await updatePassword(auth.currentUser, newPassword)
+      // Supabase has no direct reauthenticate call, so verify the current
+      // password by re-signing in with it (this refreshes the session), then
+      // update to the new password.
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: authUser.email,
+        password: currentPassword,
+      })
+      if (reauthError) {
+        throw new Error('Current password is incorrect.')
+      }
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword })
+      if (updateError) {
+        throw new Error(updateError.message)
+      }
 
       toast({
         title: 'Password updated',
@@ -1817,6 +1858,9 @@ export const PartnerDashboard: React.FC = () => {
                 <FormLabel fontSize="sm">Current Password</FormLabel>
                 <InputGroup>
                   <Input
+                    id="partner-current-password"
+                    name="current-password"
+                    autoComplete="current-password"
                     type={showCurrentPassword ? 'text' : 'password'}
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
@@ -1837,6 +1881,9 @@ export const PartnerDashboard: React.FC = () => {
                 <FormLabel fontSize="sm">New Password</FormLabel>
                 <InputGroup>
                   <Input
+                    id="partner-new-password"
+                    name="new-password"
+                    autoComplete="new-password"
                     type={showNewPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
@@ -1857,6 +1904,9 @@ export const PartnerDashboard: React.FC = () => {
                 <FormLabel fontSize="sm">Confirm New Password</FormLabel>
                 <InputGroup>
                   <Input
+                    id="partner-confirm-password"
+                    name="confirm-password"
+                    autoComplete="new-password"
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
