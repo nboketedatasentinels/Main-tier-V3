@@ -69,7 +69,7 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
   {
     title: 'Administration',
     items: [
-      { key: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { key: 'overview', label: 'Program management', icon: LayoutDashboard },
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'partner-assignment', label: 'Issue Activities', icon: ClipboardCheck },
       { key: 'course-approvals', label: 'Course Approvals', icon: BookOpen },

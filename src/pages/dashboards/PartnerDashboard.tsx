@@ -621,10 +621,6 @@ export const PartnerDashboard: React.FC = () => {
   const renderOverview = () => {
     const learnersAtRiskCount = overviewRiskLevels.critical + overviewRiskLevels.concern
     const pendingApprovalsCount = scopedPendingApprovals.length
-    const overviewOrgCount =
-      selectedOrg === 'all'
-        ? assignedOrgCount
-        : Math.max(overviewOrganizations.length, selectedOrg ? 1 : 0)
     const overviewUserCount = overviewUsers.length
 
     // Readiness aggregates across the in-scope users (single org or all).
@@ -673,7 +669,6 @@ export const PartnerDashboard: React.FC = () => {
           count,
         }))
     })()
-    const scopeSummary = `${overviewOrgCount} organization${overviewOrgCount === 1 ? '' : 's'} · ${overviewUserCount} learner${overviewUserCount === 1 ? '' : 's'} in scope · Transformation Partner · Engagement tracking active`
     const isEmptyState =
       overviewMetrics.activeMembers === 0
       && overviewMetrics.engagementRate === 0
@@ -697,14 +692,6 @@ export const PartnerDashboard: React.FC = () => {
 
     return (
       <Stack spacing={8}>
-        <Card {...surfaceCardProps}>
-          <CardBody py={3}>
-            <Text fontSize="sm" color="brand.subtleText">
-              {scopeSummary}
-            </Text>
-          </CardBody>
-        </Card>
-
         <Card
           {...surfaceCardProps}
           role="button"
