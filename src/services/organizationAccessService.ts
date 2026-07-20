@@ -1,5 +1,4 @@
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { canPartnerAccessOrganization } from '@/services/partnerAccessService'
 
 const getNormalizedRole = (role: string) =>
@@ -14,10 +13,13 @@ const companyAdminCheck = async (
   organizationId: string
 ): Promise<boolean> => {
   if (!userId || !organizationId) return false
-  const profileSnap = await getDoc(doc(db, 'profiles', userId))
-  if (!profileSnap.exists()) return false
-  const data = profileSnap.data() as { companyId?: string | null }
-  return data.companyId?.trim() === organizationId.trim()
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('company_id')
+    .eq('id', userId)
+    .maybeSingle()
+  if (error || !data) return false
+  return (data.company_id as string | null)?.trim() === organizationId.trim()
 }
 
 export const canAccessOrganization = async ({
