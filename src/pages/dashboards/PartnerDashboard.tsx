@@ -30,7 +30,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { format, formatDistanceToNow, isValid } from 'date-fns'
-import { AlertTriangle, Bell, CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
+import { AlertTriangle, Bell, CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/services/supabase'
 import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
@@ -42,7 +42,6 @@ import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { usePartnerDashboardData, type PartnerUser } from '@/hooks/usePartnerDashboardData'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
-import { usePartnerPendingInvitations } from '@/hooks/partner/usePartnerPendingInvitations'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 import { getJourneyLabel } from '@/utils/journeyType'
 import { useAuth } from '@/hooks/useAuth'
@@ -379,27 +378,6 @@ export const PartnerDashboard: React.FC = () => {
     [snapshotOrganizations],
   )
 
-  // Pending invitations live-listened across the partner's assigned orgs.
-  // When the partner has filtered to a single org, narrow the listener to it.
-  const invitationOrgIds = useMemo(() => {
-    if (selectedOrg && selectedOrg !== 'all') {
-      const scopedOrg = snapshotOrganizations.find((org) => {
-        const lower = selectedOrg.toLowerCase()
-        return org.id?.toLowerCase() === lower || org.code?.toLowerCase() === lower
-      })
-      return scopedOrg?.id ? [scopedOrg.id] : []
-    }
-    return partnerOrganizationIds
-  }, [partnerOrganizationIds, selectedOrg, snapshotOrganizations])
-
-  const {
-    invitations: pendingInvitations,
-    loading: pendingInvitationsLoading,
-  } = usePartnerPendingInvitations({
-    organizationIds: invitationOrgIds,
-    enabled: profileStatus === 'ready',
-  })
-
   const { approvalQueue: pendingApprovals } = usePointsApprovalQueue(
     snapshotUsers,
     activePage === 'overview' || activePage === 'users',
@@ -630,7 +608,6 @@ export const PartnerDashboard: React.FC = () => {
 
   const renderOverview = () => {
     const learnersAtRiskCount = overviewRiskLevels.critical + overviewRiskLevels.concern
-    const overdueCheckinsCount = interventions.length
     const pendingApprovalsCount = scopedPendingApprovals.length
     const overviewOrgCount =
       selectedOrg === 'all'
@@ -699,28 +676,6 @@ export const PartnerDashboard: React.FC = () => {
         icon: Users,
         onClick: () => {
           setUserManagementTab('risk')
-          setActivePage('users')
-        },
-      },
-      {
-        key: 'checkins',
-        count: overdueCheckinsCount,
-        label: overdueCheckinsCount === 1 ? 'Overdue check-in' : 'Overdue check-ins',
-        color: 'yellow',
-        icon: Bell,
-        onClick: () => {
-          setUserManagementTab('risk')
-          setActivePage('users')
-        },
-      },
-      {
-        key: 'approvals',
-        count: pendingApprovalsCount,
-        label: pendingApprovalsCount === 1 ? 'Approval pending' : 'Approvals pending',
-        color: 'green',
-        icon: ClipboardCheck,
-        onClick: () => {
-          setUserManagementTab('approvals')
           setActivePage('users')
         },
       },
@@ -1009,62 +964,53 @@ export const PartnerDashboard: React.FC = () => {
             </CardBody>
           </Card>
 
-          <Card {...surfaceCardProps} h="100%">
+          <Card
+            {...surfaceCardProps}
+            h="100%"
+            role="button"
+            tabIndex={0}
+            cursor="pointer"
+            onClick={() => {
+              setUserManagementTab('approvals')
+              setActivePage('users')
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setUserManagementTab('approvals')
+                setActivePage('users')
+              }
+            }}
+            transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
+            _hover={{ transform: 'translateY(-3px)', boxShadow: 'card-elevated', borderColor: 'brand.primary' }}
+          >
             <CardBody>
               <Stack spacing={3} h="100%">
-                <HStack spacing={3} align="center" justify="space-between">
-                  <HStack spacing={3} align="center">
-                    <IconTile><MailQuestion size={18} /></IconTile>
-                    <Text fontWeight="bold" color="brand.text">Pending invitations</Text>
-                  </HStack>
-                  {pendingInvitationsLoading ? (
-                    <Skeleton height="22px" width="40px" borderRadius="md" />
-                  ) : (
-                    <Badge
-                      colorScheme={pendingInvitations.length > 0 ? 'orange' : 'gray'}
-                      variant={pendingInvitations.length > 0 ? 'solid' : 'subtle'}
-                    >
-                      {pendingInvitations.length}
-                    </Badge>
-                  )}
+                <HStack spacing={3} align="center">
+                  <IconTile><ClipboardCheck size={18} /></IconTile>
+                  <Text fontWeight="bold" color="brand.text">Approvals pending</Text>
                 </HStack>
-                {pendingInvitationsLoading ? (
-                  <Stack spacing={2}>
-                    <SkeletonText noOfLines={3} spacing="2" />
-                  </Stack>
-                ) : pendingInvitations.length === 0 ? (
-                  <Text fontSize="sm" color="brand.subtleText">
-                    No outstanding invitations.
-                  </Text>
-                ) : (
-                  <Stack spacing={2}>
-                    {pendingInvitations.slice(0, 3).map((invite) => (
-                      <Box
-                        key={invite.id}
-                        p={2}
-                        borderRadius="md"
-                        border="1px solid"
-                        borderColor="brand.border"
-                        bg="brand.accent"
-                      >
-                        <Text fontSize="sm" fontWeight="semibold" color="brand.text" noOfLines={1}>
-                          {invite.email || invite.name || 'Invited learner'}
-                        </Text>
-                        <Text fontSize="xs" color="brand.subtleText">
-                          {invite.createdAt
-                            ? `Sent ${formatDistanceToNow(invite.createdAt, { addSuffix: true })}`
-                            : 'Sent recently'}
-                          {invite.role ? ` · ${invite.role}` : ''}
-                        </Text>
-                      </Box>
-                    ))}
-                    {pendingInvitations.length > 3 && (
-                      <Text fontSize="xs" color="brand.subtleText">
-                        +{pendingInvitations.length - 3} more pending
-                      </Text>
-                    )}
-                  </Stack>
-                )}
+                <Text fontSize="3xl" fontWeight="bold" color="brand.text" lineHeight="1.1">
+                  {pendingApprovalsCount}
+                </Text>
+                <Text fontSize="sm" color="brand.subtleText">
+                  {pendingApprovalsCount === 0
+                    ? 'No approvals waiting on you.'
+                    : `${pendingApprovalsCount} submission${pendingApprovalsCount === 1 ? '' : 's'} awaiting your review.`}
+                </Text>
+                <Button
+                  size="sm"
+                  variant="link"
+                  colorScheme="purple"
+                  alignSelf="flex-start"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setUserManagementTab('approvals')
+                    setActivePage('users')
+                  }}
+                >
+                  View all →
+                </Button>
               </Stack>
             </CardBody>
           </Card>
