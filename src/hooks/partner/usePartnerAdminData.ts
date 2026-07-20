@@ -339,8 +339,13 @@ export const usePartnerAdminData = (
     return createOrgKeySet(keys)
   }, [assignedOrganizationIds, organizations, organizationsReady])
 
-  // FIX: Track if organizations effect has initialized to prevent re-running
-  const orgsInitializedRef = useRef(false)
+  // Track WHICH assignment key the organizations effect last resolved for. Keyed
+  // (not a boolean) so a late-arriving assignment — assignedOrganizationIds going
+  // from [] to [orgId] after an initial empty resolve — actually re-fetches the
+  // org records instead of being skipped. The boolean version left the dashboard
+  // org dropdown permanently blank while course-approvals (usePartnerOrganizations,
+  // which has no such guard) showed the same org fine.
+  const orgsInitializedKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (profileStatus !== 'ready' || !enabled) {
@@ -348,12 +353,14 @@ export const usePartnerAdminData = (
       setOrganizationsLoading(true)
       setOrganizationsError(null)
       setOrganizationsReady(false)
-      orgsInitializedRef.current = false
+      orgsInitializedKeyRef.current = null
       return
     }
 
-    // FIX: Skip if already initialized with same assignment key
-    if (orgsInitializedRef.current && orgRefreshIndex === 0) {
+    // Skip only when we've already resolved orgs for THIS exact assignment key
+    // (and no manual refresh is pending). A changed key must fall through so a
+    // newly-arrived assignment actually loads.
+    if (orgsInitializedKeyRef.current === assignmentKey && orgRefreshIndex === 0) {
       return
     }
 
@@ -378,7 +385,7 @@ export const usePartnerAdminData = (
       const handleSnapshot = (orgs: PartnerOrganization[]) => {
         if (!isMounted) return
         retryOrganizationsHandler.reset()
-        orgsInitializedRef.current = true
+        orgsInitializedKeyRef.current = assignmentKey
         setOrganizations(orgs)
         setOrganizationsLoading(false)
         setOrganizationsReady(true)

@@ -42,7 +42,6 @@ import {
   listenToCourseCompletionsForLearners,
   markCourseCompleted,
 } from '@/services/courseCompletionService'
-import { getCourseDocuments } from '@/services/courseService'
 import {
   getCourseDetailsFromMapping,
   resolveCourseTitleFromMapping,
@@ -125,7 +124,11 @@ const CourseApprovalsPage: React.FC = () => {
   const [savingKey, setSavingKey] = useState<string | null>(null)
   const [completions, setCompletions] = useState<CourseCompletionRecord[]>([])
   const [completionsLoading, setCompletionsLoading] = useState(false)
-  const [liveCourseDocs, setLiveCourseDocs] = useState<
+  // Course title/description enrichment used to come from Firestore `courses`
+  // docs (dead under Supabase-only auth). buildCourseRows falls back to the
+  // static courseMappings, so we keep an empty map here until course docs are
+  // migrated to Supabase.
+  const [liveCourseDocs] = useState<
     Map<string, { title?: string; description?: string; externalUrl?: string; content_url?: string }>
   >(new Map())
 
@@ -138,7 +141,7 @@ const CourseApprovalsPage: React.FC = () => {
     if (profile?.companyId) {
       setSelectedOrgId(profile.companyId)
     }
-  }, [orgOptions, profile?.companyId, selectedOrgId])
+  }, [orgOptions, profile?.companyId, selectedOrgId, setSelectedOrgId])
 
   const selectedOrg = useMemo(
     () => orgOptions.find(o => o.id === selectedOrgId),
@@ -149,44 +152,6 @@ const CourseApprovalsPage: React.FC = () => {
     useLearnerOverview(selectedOrgId || null)
 
   const { program, loading: programLoading } = useOrganizationProgramCourses(selectedOrgId || null)
-
-  // When the program loads, fetch the latest course documents to enrich titles/descriptions.
-  useEffect(() => {
-    let cancelled = false
-    const courseIds = program?.orderedCourseIds ?? []
-    if (!courseIds.length) {
-      setLiveCourseDocs(new Map())
-      return
-    }
-    getCourseDocuments(courseIds)
-      .then(snapshots => {
-        if (cancelled) return
-        const next = new Map<
-          string,
-          { title?: string; description?: string; externalUrl?: string; content_url?: string }
-        >()
-        snapshots.forEach((snap, index) => {
-          const requestedCourseId = courseIds[index]
-          if (snap.exists()) {
-            const data = snap.data() as Record<string, unknown>
-            next.set(requestedCourseId, {
-              title: typeof data.title === 'string' ? (data.title as string) : undefined,
-              description: typeof data.description === 'string' ? (data.description as string) : undefined,
-              externalUrl: typeof data.externalUrl === 'string' ? (data.externalUrl as string) : undefined,
-              content_url: typeof data.content_url === 'string' ? (data.content_url as string) : undefined,
-            })
-          }
-        })
-        setLiveCourseDocs(next)
-      })
-      .catch(error => {
-        console.error('[CourseApprovals] Failed to load course documents', error)
-        if (!cancelled) setLiveCourseDocs(new Map())
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [program])
 
   const courseRows = useMemo(() => {
     const ids = program?.orderedCourseIds ?? []

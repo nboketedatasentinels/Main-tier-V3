@@ -1,18 +1,63 @@
-import {
-  collection,
-  getCountFromServer,
-  getDocs,
-  onSnapshot,
-  query,
-  where,
-  type Unsubscribe,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { updateUserProfile } from '@/services/userProfileService'
 import { normalizeRole } from '@/utils/role'
 import type { UserProfile } from '@/types'
 
-const USERS = 'users'
+// Monotonic suffix so each learner subscription gets a distinct channel topic.
+let learnersChannelSeq = 0
+
+// Columns read when listing org mentors/ambassadors from `profiles`; the `data`
+// jsonb carries long-tail identity fields not promoted to columns.
+const MEMBER_OPTION_COLUMNS =
+  'id, email, first_name, last_name, full_name, company_id, company_code, data'
+
+const mapProfileToMemberOption = (
+  row: Record<string, unknown>,
+  fallbackName: string,
+): OrgMentorOption => {
+  const data = (row.data as Record<string, unknown>) || {}
+  const fullName =
+    (row.full_name as string) ||
+    [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+    extractName(data, '') ||
+    (row.email as string) ||
+    fallbackName
+  return {
+    id: row.id as string,
+    fullName,
+    email: (row.email as string) ?? (data.email as string) ?? null,
+    companyId: (row.company_id as string) ?? (data.companyId as string) ?? null,
+    companyCode: (row.company_code as string) ?? (data.companyCode as string) ?? null,
+  }
+}
+
+/**
+ * Maps a Supabase `profiles` row to the loosely-typed UserProfile the partner
+ * learner views read (mirrors the canonical mapper in AuthContext). The `data`
+ * jsonb is spread first so long-tail keys flow through; typed columns win.
+ */
+const mapProfileRowToLearner = (row: Record<string, unknown>): UserProfile => {
+  const data = (row.data as Record<string, unknown>) || {}
+  return {
+    ...data,
+    id: row.id,
+    email: (row.email as string) ?? data.email ?? '',
+    firstName: row.first_name ?? data.firstName,
+    lastName: row.last_name ?? data.lastName,
+    fullName: row.full_name ?? data.fullName,
+    role: normalizeRole((row.role as string) ?? data.role),
+    membershipStatus: row.membership_status ?? data.membershipStatus,
+    organizationId: row.organization_id ?? data.organizationId ?? null,
+    companyId: row.company_id ?? data.companyId ?? null,
+    companyCode: row.company_code ?? data.companyCode ?? null,
+    journeyType: row.journey_type ?? data.journeyType,
+    mentorId: row.mentor_id ?? data.mentorId ?? null,
+    ambassadorId: row.ambassador_id ?? data.ambassadorId ?? null,
+    totalPoints: (row.total_points as number) ?? data.totalPoints ?? 0,
+    createdAt: row.created_at ?? data.createdAt,
+    updatedAt: row.updated_at ?? data.updatedAt,
+  } as unknown as UserProfile
+}
 
 export interface OrgMentorOption {
   id: string
@@ -45,19 +90,15 @@ export const fetchMentorsForOrg = async (params: {
   const { companyId, companyCode } = params
   if (!companyId) return []
 
-  const mentorRoleQuery = query(collection(db, USERS), where('role', '==', 'mentor'))
-  const snapshot = await getDocs(mentorRoleQuery)
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(MEMBER_OPTION_COLUMNS)
+    .eq('role', 'mentor')
+  if (error) throw new Error(error.message)
 
-  const allMentors: OrgMentorOption[] = snapshot.docs.map((docSnap) => {
-    const data = docSnap.data() as Record<string, unknown>
-    return {
-      id: docSnap.id,
-      fullName: extractName(data, 'Unknown mentor'),
-      email: typeof data.email === 'string' ? data.email : null,
-      companyId: typeof data.companyId === 'string' ? data.companyId : null,
-      companyCode: typeof data.companyCode === 'string' ? data.companyCode : null,
-    }
-  })
+  const allMentors: OrgMentorOption[] = (data ?? []).map((row) =>
+    mapProfileToMemberOption(row as Record<string, unknown>, 'Unknown mentor'),
+  )
 
   // Prefer mentors whose companyId or companyCode matches the target org;
   // fall back to the full mentor list if none match (for orgs still being bootstrapped).
@@ -91,19 +132,15 @@ export const fetchAmbassadorsForOrg = async (params: {
   const { companyId, companyCode } = params
   if (!companyId) return []
 
-  const ambassadorRoleQuery = query(collection(db, USERS), where('role', '==', 'ambassador'))
-  const snapshot = await getDocs(ambassadorRoleQuery)
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(MEMBER_OPTION_COLUMNS)
+    .eq('role', 'ambassador')
+  if (error) throw new Error(error.message)
 
-  const allAmbassadors: OrgAmbassadorOption[] = snapshot.docs.map((docSnap) => {
-    const data = docSnap.data() as Record<string, unknown>
-    return {
-      id: docSnap.id,
-      fullName: extractName(data, 'Unknown ambassador'),
-      email: typeof data.email === 'string' ? data.email : null,
-      companyId: typeof data.companyId === 'string' ? data.companyId : null,
-      companyCode: typeof data.companyCode === 'string' ? data.companyCode : null,
-    }
-  })
+  const allAmbassadors: OrgAmbassadorOption[] = (data ?? []).map((row) =>
+    mapProfileToMemberOption(row as Record<string, unknown>, 'Unknown ambassador'),
+  )
 
   const orgMatched = allAmbassadors.filter((ambassador) => {
     if (ambassador.companyId && ambassador.companyId === companyId) return true
@@ -140,8 +177,11 @@ export interface LearnerSessionStats {
 }
 
 /**
- * Batched per-learner session count. Uses getCountFromServer for efficiency.
- * Runs queries in parallel. Handles Firestore's 10-item limit on 'in' queries by chunking.
+ * Per-learner session counts. The source tables (`mentorship_sessions`,
+ * `ambassador_slot_bookings`) are Firestore-only and denied under Supabase-only
+ * auth - they have no Supabase home yet - so the counts can never resolve. Return
+ * zeros without a dead round-trip (previously this warned per learner). Migrate
+ * to Supabase tables if these session counts are needed on the partner views.
  */
 export const fetchLearnerSessionStats = async (
   learnerIds: string[],
@@ -158,70 +198,61 @@ export const fetchLearnerSessionStats = async (
       ambassadorSessionsBooked: 0,
     }
   }
-
-  // Run per-learner queries in parallel - each learner gets 4 counts (pending/completed mentor, attended/booked ambassador)
-  await Promise.all(
-    learnerIds.map(async (learnerId) => {
-      try {
-        const mentorCompletedQ = query(
-          collection(db, 'mentorship_sessions'),
-          where('learner_id', '==', learnerId),
-          where('status', '==', 'completed'),
-        )
-        const mentorPendingQ = query(
-          collection(db, 'mentorship_sessions'),
-          where('learner_id', '==', learnerId),
-          where('status', 'in', ['requested', 'scheduled']),
-        )
-        const ambassadorAttendedQ = query(
-          collection(db, 'ambassador_slot_bookings'),
-          where('learner_id', '==', learnerId),
-          where('status', '==', 'attended'),
-        )
-        const ambassadorBookedQ = query(
-          collection(db, 'ambassador_slot_bookings'),
-          where('learner_id', '==', learnerId),
-          where('status', '==', 'booked'),
-        )
-        const [completed, pending, attended, booked] = await Promise.all([
-          getCountFromServer(mentorCompletedQ),
-          getCountFromServer(mentorPendingQ),
-          getCountFromServer(ambassadorAttendedQ),
-          getCountFromServer(ambassadorBookedQ),
-        ])
-        results[learnerId] = {
-          learnerId,
-          mentorSessionsCompleted: completed.data().count,
-          mentorSessionsPending: pending.data().count,
-          ambassadorSessionsAttended: attended.data().count,
-          ambassadorSessionsBooked: booked.data().count,
-        }
-      } catch (err) {
-        console.warn(`[learnerAssignmentService] count failed for ${learnerId}:`, err)
-      }
-    }),
-  )
-
   return results
 }
 
+/**
+ * Learners in an organization, from Supabase `profiles` (replaces the dead
+ * Firestore `onSnapshot(users)` that failed post auth-cutover with "Missing or
+ * insufficient permissions"). `companyId` is the org id (UUID); match it against
+ * either organization_id or company_id, then keep only learner roles.
+ */
 export const subscribeToLearnersInOrg = (
   companyId: string,
   onUpdate: (learners: UserProfile[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe => {
-  const q = query(collection(db, USERS), where('companyId', '==', companyId))
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const learners = snapshot.docs.map((d) => ({ ...(d.data() as UserProfile), id: d.id }))
-      // Only include free_user / paid_member roles (learners)
-      const filtered = learners.filter((learner) => {
-        const role = normalizeRole(learner.role)
-        return role === 'free_user' || role === 'paid_member'
-      })
-      onUpdate(filtered)
-    },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
-  )
+): (() => void) => {
+  if (!companyId) {
+    onUpdate([])
+    return () => {}
+  }
+
+  let cancelled = false
+
+  const load = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .or(`organization_id.eq.${companyId},company_id.eq.${companyId}`)
+
+      if (cancelled) return
+      if (error) throw new Error(error.message)
+
+      const learners = (data ?? [])
+        .map((row) => mapProfileRowToLearner(row as Record<string, unknown>))
+        .filter((learner) => {
+          const role = normalizeRole(learner.role)
+          return role === 'free_user' || role === 'paid_member'
+        })
+      onUpdate(learners)
+    } catch (err) {
+      if (cancelled) return
+      onError?.(err instanceof Error ? err : new Error(String(err)))
+    }
+  }
+
+  void load()
+
+  const channel = supabase
+    .channel(`learners_in_org_${++learnersChannelSeq}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+      void load()
+    })
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
 }
