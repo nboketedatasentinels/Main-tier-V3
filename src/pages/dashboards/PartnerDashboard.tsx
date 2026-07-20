@@ -971,23 +971,6 @@ export const PartnerDashboard: React.FC = () => {
         )}
 
         <Stack spacing={4}>
-          <HStack justify="space-between" align="center" wrap="wrap" spacing={3}>
-            <VStack align="flex-start" spacing={0}>
-              <Text fontWeight="bold" color="brand.text">Performance Snapshot</Text>
-              <Text fontSize="sm" color="brand.subtleText">
-                A quick read on activity and organization health.
-              </Text>
-            </VStack>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={refreshOrganizations}
-              isLoading={refreshingOrganizations}
-            >
-              Refresh data
-            </Button>
-          </HStack>
-
           {isEmptyState && (
             <Card bg="purple.50" border="1px solid" borderColor="purple.200">
               <CardBody>
