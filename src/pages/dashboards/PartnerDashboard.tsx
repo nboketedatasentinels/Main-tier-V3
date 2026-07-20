@@ -30,7 +30,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { format, formatDistanceToNow, isValid } from 'date-fns'
-import { AlertTriangle, Bell, CalendarClock, ChevronDown, ClipboardCheck, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
+import { AlertTriangle, Bell, CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, MailQuestion, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/services/supabase'
 import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
@@ -268,6 +268,27 @@ export const PartnerDashboard: React.FC = () => {
     const latest = recentLoginRows.find((r) => r.lastLogin)?.lastLogin
     return latest ? formatDistanceToNow(latest, { addSuffix: true }) : null
   }, [recentLoginRows])
+
+  // Learners (for the selected org) with an outstanding personality and/or values
+  // assessment — shows each one's per-assessment status so a partner can see who
+  // has done one, the other, or neither.
+  const assessmentsTableRef = useRef<HTMLDivElement>(null)
+  const scrollToAssessments = useCallback(() => {
+    assessmentsTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const pendingAssessmentRows = useMemo(() => {
+    return overviewUsers
+      .filter((u) => !u.hasCompletedPersonalityTest || !u.hasCompletedValuesTest)
+      .map((u) => ({
+        id: u.id,
+        name: getDisplayName(u, 'Learner'),
+        email: u.email || '—',
+        personalityDone: Boolean(u.hasCompletedPersonalityTest),
+        valuesDone: Boolean(u.hasCompletedValuesTest),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [overviewUsers])
 
   // Journey progress for the currently selected org. Computes day-level
   // precision so a cohort that started today shows "1 day done · 5 weeks 6
@@ -752,6 +773,53 @@ export const PartnerDashboard: React.FC = () => {
                   </Text>
                   <Text fontSize="sm" color="brand.subtleText">
                     See when each learner last signed in
+                  </Text>
+                </Stack>
+              </HStack>
+              <HStack spacing={1} color="brand.primary" flexShrink={0}>
+                <Text fontSize="sm" fontWeight="semibold" display={{ base: 'none', sm: 'block' }}>
+                  View
+                </Text>
+                <ChevronDown size={18} />
+              </HStack>
+            </HStack>
+          </CardBody>
+        </Card>
+
+        <Card
+          {...surfaceCardProps}
+          role="button"
+          tabIndex={0}
+          cursor="pointer"
+          onClick={scrollToAssessments}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              scrollToAssessments()
+            }
+          }}
+          transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
+          _hover={{ transform: 'translateY(-3px)', boxShadow: 'card-elevated', borderColor: 'brand.primary' }}
+        >
+          <CardBody p={6}>
+            <HStack justify="space-between" align="center" spacing={4}>
+              <HStack spacing={4} align="center">
+                <IconTile><ClipboardList size={18} /></IconTile>
+                <Stack spacing={0.5}>
+                  <Text
+                    fontSize="xs"
+                    letterSpacing="0.06em"
+                    textTransform="uppercase"
+                    color="brand.subtleText"
+                    fontWeight="semibold"
+                  >
+                    Assessments pending
+                  </Text>
+                  <Text fontWeight="bold" color="brand.text">
+                    {pendingAssessmentRows.length} learner{pendingAssessmentRows.length === 1 ? '' : 's'} to complete
+                  </Text>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Personality and/or values assessment not yet done
                   </Text>
                 </Stack>
               </HStack>
@@ -1441,6 +1509,82 @@ export const PartnerDashboard: React.FC = () => {
                             fontStyle={row.lastLogin ? undefined : 'italic'}
                           >
                             {row.lastLogin ? format(row.lastLogin, 'd MMM yyyy, h:mm a') : 'Never'}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </Tbody>
+                  </Table>
+                </Box>
+              )}
+            </Stack>
+          </CardBody>
+        </Card>
+
+        <Card {...surfaceCardProps} ref={assessmentsTableRef} scrollMarginTop={4}>
+          <CardBody>
+            <Stack spacing={4}>
+              <HStack spacing={3} align="center" justify="space-between" wrap="wrap">
+                <HStack spacing={3} align="center">
+                  <IconTile><ClipboardList size={18} /></IconTile>
+                  <Stack spacing={0}>
+                    <Text fontWeight="bold" color="brand.text">Assessments pending</Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Learners with an outstanding personality or values assessment
+                      {selectedOrg && selectedOrg !== 'all' ? ' · this organization' : ''}
+                    </Text>
+                  </Stack>
+                </HStack>
+                <Badge colorScheme="orange" variant="subtle">
+                  {pendingAssessmentRows.length} pending
+                </Badge>
+              </HStack>
+
+              {usersLoading ? (
+                <SkeletonText noOfLines={6} spacing="3" />
+              ) : pendingAssessmentRows.length === 0 ? (
+                <Box
+                  p={4}
+                  borderRadius="lg"
+                  border="1px dashed"
+                  borderColor="border.control"
+                  bg="green.50"
+                >
+                  <Text fontSize="sm" color="green.700" fontWeight="medium">
+                    🎉 All learners in scope have completed both assessments.
+                  </Text>
+                </Box>
+              ) : (
+                <Box
+                  overflowX="auto"
+                  maxH="440px"
+                  overflowY="auto"
+                  borderRadius="xl"
+                  border="1px solid"
+                  borderColor="border.card"
+                >
+                  <Table size="sm" variant="simple">
+                    <Thead position="sticky" top={0} zIndex={1} bg="surface.subtle">
+                      <Tr>
+                        <Th>Learner</Th>
+                        <Th>Email</Th>
+                        <Th whiteSpace="nowrap">Personality</Th>
+                        <Th whiteSpace="nowrap">Values</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {pendingAssessmentRows.map((row) => (
+                        <Tr key={row.id} transition="background 0.15s ease" _hover={{ bg: 'surface.subtle' }}>
+                          <Td fontWeight="semibold" color="brand.text">{row.name}</Td>
+                          <Td color="brand.subtleText">{row.email}</Td>
+                          <Td>
+                            <Badge colorScheme={row.personalityDone ? 'green' : 'orange'} variant="subtle">
+                              {row.personalityDone ? 'Done' : 'Pending'}
+                            </Badge>
+                          </Td>
+                          <Td>
+                            <Badge colorScheme={row.valuesDone ? 'green' : 'orange'} variant="subtle">
+                              {row.valuesDone ? 'Done' : 'Pending'}
+                            </Badge>
                           </Td>
                         </Tr>
                       ))}
