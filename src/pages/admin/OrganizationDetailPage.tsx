@@ -233,6 +233,11 @@ export const OrganizationDetailPage: React.FC = () => {
       [followUpIssues.join(', '), note].filter(Boolean).join(' — ') ||
       'Follow-up requested by admin'
     const partnerId = organization?.transformationPartnerId ?? null
+    // Who should get the "follow up" reminder in their bell: the org's assigned
+    // partner, or — when a partner is the one requesting it and the org has no
+    // partner on record yet — the acting partner themselves. This guarantees the
+    // partner who sends a follow-up always gets a reminder to act on it.
+    const recipientId = partnerId ?? (isPartnerView ? user?.uid ?? null : null)
     setFollowUpSubmitting(true)
     try {
       const interventionId = await createIntervention({
@@ -245,16 +250,16 @@ export const OrganizationDetailPage: React.FC = () => {
           : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         organizationCode: organization?.code ?? null,
         userId: followUpUser.id,
-        partnerId,
+        partnerId: recipientId,
         riskVerdicts: followUpIssues,
       })
-      // Notify the assigned partner directly so it shows in their in-app bell
+      // Notify the responsible partner directly so it shows in their in-app bell
       // (not just the intervention queue). Non-fatal if it fails.
-      if (partnerId) {
+      if (recipientId) {
         try {
           const adminName = profile?.fullName || profile?.email || 'An admin'
           await notifySupabaseUser({
-            userId: partnerId,
+            userId: recipientId,
             type: 'partner_follow_up',
             category: 'intervention',
             title: 'Follow-up requested',
@@ -290,10 +295,10 @@ export const OrganizationDetailPage: React.FC = () => {
       })
       toast({
         title: 'Follow-up requested',
-        description: partnerId
-          ? `${organization?.assignedPartnerName || 'The partner'} has been notified to follow up with ${followUpUser.name}.`
-          : `${followUpUser.name} was added to the intervention queue, but this organization has no partner assigned to notify.`,
-        status: partnerId ? 'success' : 'warning',
+        description: recipientId
+          ? `A follow-up reminder was sent to ${organization?.assignedPartnerName || 'the partner'} for ${followUpUser.name}.`
+          : `${followUpUser.name} was added to the intervention queue, but there is no partner to notify.`,
+        status: recipientId ? 'success' : 'warning',
       })
       followUp.onClose()
     } catch (err) {
