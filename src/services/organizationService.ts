@@ -183,7 +183,19 @@ const mapOrganizationRow = (row: SupabaseOrgRow): OrganizationRecord =>
     createdAt: row.created_at ?? undefined,
     updatedAt: row.updated_at ?? undefined,
     // Extra fields read by the partner dashboard (PartnerOrganization shape):
-    journeyType: row.journey_type ?? undefined,
+    // Derive journeyType from the program duration when the explicit column is
+    // empty (an org configured only with program_duration_weeks / a duration in
+    // settings still has a well-defined journey). Mirrors useOrganizationProgramCourses
+    // so the dashboard progress bar and the course list agree instead of the
+    // dashboard falsely reporting "missing journey type".
+    journeyType:
+      resolveJourneyType({
+        journeyType: row.journey_type,
+        programDurationWeeks: row.program_duration_weeks,
+        programDuration:
+          (row.settings as { programDuration?: number | string | null } | null)
+            ?.programDuration ?? null,
+      }) ?? undefined,
     cohortStartDate: row.cohort_start_date ?? undefined,
   }) as OrganizationRecord & {
     journeyType?: string
