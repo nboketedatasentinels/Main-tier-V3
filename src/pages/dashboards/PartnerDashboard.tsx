@@ -1494,15 +1494,8 @@ export const PartnerDashboard: React.FC = () => {
                   Summary of scoped organizations and active learner engagement.
                 </Text>
               </VStack>
-              <HStack spacing={3}>
-                <Badge colorScheme="purple">Scoped access</Badge>
-                <Badge colorScheme="green">Real-time data</Badge>
-                <Button size="sm" variant="outline" onClick={refreshOrganizations} isLoading={refreshingOrganizations}>
-                  Refresh organizations
-                </Button>
-              </HStack>
             </HStack>
-            <SimpleGrid columns={{ base: 1, md: 2, xl: 5 }} spacing={3}>
+            <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
               <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
                 <Text fontSize="xs" color="brand.subtleText">
                   Total assigned
@@ -1510,28 +1503,6 @@ export const PartnerDashboard: React.FC = () => {
                 <Text fontWeight="bold" color="brand.text" fontSize="2xl">
                   {organizations.length}
                 </Text>
-              </Box>
-              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                <Text fontSize="xs" color="brand.subtleText">
-                  Active organizations
-                </Text>
-                <HStack justify="space-between" align="center">
-                  <Text fontWeight="bold" color="brand.text" fontSize="2xl">
-                    {organizationSummary.active}
-                  </Text>
-                  <Badge colorScheme="green">Active</Badge>
-                </HStack>
-              </Box>
-              <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                <Text fontSize="xs" color="brand.subtleText">
-                  Watch organizations
-                </Text>
-                <HStack justify="space-between" align="center">
-                  <Text fontWeight="bold" color="brand.text" fontSize="2xl">
-                    {organizationSummary.watch}
-                  </Text>
-                  <Badge colorScheme="orange">Watch</Badge>
-                </HStack>
               </Box>
               <Box p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
                 <Text fontSize="xs" color="brand.subtleText">
