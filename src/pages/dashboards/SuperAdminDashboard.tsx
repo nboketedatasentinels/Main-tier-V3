@@ -7,6 +7,7 @@ import { OverviewPage } from '@/pages/super-admin/OverviewPage'
 import { OrganizationManagementPage } from '@/pages/super-admin/OrganizationManagementPage'
 import { ReportsAnalyticsPage } from '@/pages/super-admin/ReportsAnalyticsPage'
 import { UserManagementPage } from '@/pages/super-admin/UserManagementPage'
+import { AdminMessagingPage } from '@/pages/admin/AdminMessagingPage'
 import { LiftAssessmentsAdminPage } from '@/pages/super-admin/LiftAssessmentsAdminPage'
 import { ApprovalCenterPage } from '@/pages/super-admin/ApprovalCenterPage'
 import { FeedbackInboxPage } from '@/pages/super-admin/FeedbackInboxPage'
@@ -458,6 +459,8 @@ export const SuperAdminDashboard: React.FC = () => {
         )
       case 'users':
         return <UserManagementPage />
+      case 'messaging':
+        return <AdminMessagingPage adminName={adminName} />
       case 'approvals':
         return <ApprovalCenterPage />
       case 'lift':
