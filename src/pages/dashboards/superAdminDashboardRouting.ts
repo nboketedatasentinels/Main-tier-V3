@@ -3,6 +3,7 @@ export const DASHBOARD_TABS = new Set([
   'organizations',
   'archived-organizations',
   'users',
+  'messaging',
   'approvals',
   'lift',
   'feedback',

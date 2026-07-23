@@ -35,6 +35,7 @@ const notificationCategoryMap: Record<NotificationType, NotificationCategory> = 
   referral_success: 'important_updates',
   referral_reward: 'important_updates',
   programme_day: 'important_updates',
+  admin_message: 'important_updates',
   unknown: 'other',
 }
 

@@ -69,6 +69,29 @@ const dispatchWelcomeEmail = async (params: {
   }
 }
 
+/**
+ * Best-effort welcome email to the CURRENT signed-in user after a self-join
+ * (org-code claim or accepted invitation). Unlike the admin-driven dispatches
+ * above, the caller here is the member themselves, so the edge function only
+ * permits sending a welcome to the caller's OWN address (see authorizeCaller).
+ */
+const dispatchSelfJoinWelcomeEmail = async (organizationName: string | null): Promise<void> => {
+  try {
+    const { data } = await supabase.auth.getUser()
+    const user = data?.user
+    if (!user?.email) return
+    const { name } = await fetchProfileContact(user.id)
+    void dispatchWelcomeEmail({
+      to: user.email,
+      name,
+      role: 'user',
+      organizationName,
+    })
+  } catch (error) {
+    console.warn('[supabaseOrgService] self-join welcome email skipped', error)
+  }
+}
+
 export interface OrgRecord {
   id: string
   code: string | null
@@ -212,6 +235,17 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
           .eq('id', id)
           .single()
         if (fresh) return mapOrg(fresh as Raw)
+      } else {
+        // No account yet: the partner stays a pending claim (claimed on signup),
+        // so assignPartnerToOrg — and its welcome email — never runs. Still send
+        // the partner invite email so they know they've been made partner and
+        // get the access code + signup link. Best-effort (fire-and-forget).
+        void dispatchWelcomeEmail({
+          to: partnerEmail,
+          name: null,
+          role: 'partner',
+          organizationName: input.name.trim(),
+        })
       }
     } catch (linkError) {
       // Non-fatal: the org is created either way and the partner can be
@@ -523,7 +557,10 @@ export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResul
     p_code: code.trim().toUpperCase(),
   })
   if (error) return { ok: false, error: error.message }
-  return (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
+  const result = (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
+  // Welcome the member into the org they just joined (best-effort, self-addressed).
+  if (result.ok) void dispatchSelfJoinWelcomeEmail(result.organizationName ?? null)
+  return result
 }
 
 export interface InviteMemberResult {
@@ -573,5 +610,29 @@ export const inviteOrgMember = async (
 export const acceptOrgInvitations = async (): Promise<{ ok: boolean; error?: string }> => {
   const { data, error } = await supabase.rpc('accept_org_invitations')
   if (error) return { ok: false, error: error.message }
-  return (data ?? { ok: false, error: 'no_result' }) as { ok: boolean; error?: string }
+  const result = (data ?? { ok: false, error: 'no_result' }) as { ok: boolean; error?: string }
+  // Only welcome the member if an org membership actually resulted — accept can
+  // be called on load for any org-less user, and we must not fire a spurious
+  // email when there was nothing to accept.
+  if (result.ok) {
+    try {
+      const { data: userData } = await supabase.auth.getUser()
+      const uid = userData?.user?.id
+      if (uid) {
+        const { data: prof } = await supabase
+          .from('profiles')
+          .select('organization_id, company_id')
+          .eq('id', uid)
+          .maybeSingle()
+        const orgId = (prof?.organization_id as string) || (prof?.company_id as string) || null
+        if (orgId) {
+          const organizationName = await fetchOrgName(orgId)
+          void dispatchSelfJoinWelcomeEmail(organizationName)
+        }
+      }
+    } catch (err) {
+      console.warn('[supabaseOrgService] accept-invite welcome email skipped', err)
+    }
+  }
+  return result
 }

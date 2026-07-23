@@ -34,6 +34,7 @@ export type NotificationType =
   | 'referral_success'
   | 'referral_reward'
   | 'programme_day'
+  | 'admin_message'
   | 'unknown'
 
 export interface NotificationRecord {

@@ -21,7 +21,7 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // avoid the CORS-preflight 401; we verify the caller's JWT + role in-function.
 // Transport: SMTP (reuses the existing info@t4leader.com mailbox).
 // ---------------------------------------------------------------------------
-const FUNCTION_VERSION = "2026-07-15-initial";
+const FUNCTION_VERSION = "2026-07-23-self-welcome";
 
 const APP_NAME = "Transformation Tier";
 // Access code partners enter on the sign-up page (kept in sync with
@@ -309,12 +309,21 @@ function json(status: number, body: unknown): Response {
   });
 }
 
+interface CallerAuth {
+  email: string;
+  isPrivileged: boolean;
+}
+
 /**
- * Verify the caller is an authenticated partner/admin. We run verify_jwt=false,
- * so we validate the bearer token ourselves and look up the caller's role with
- * the service role. Returns null when authorized, or an error Response.
+ * Authenticate the caller. We run verify_jwt=false, so we validate the bearer
+ * token ourselves and look up the caller's role with the service role.
+ *
+ * Returns the caller's email + whether they are privileged (partner/admin), or
+ * an error Response. Privileged callers may welcome anyone; a non-privileged
+ * caller (a regular member self-joining an org) may only welcome THEIR OWN
+ * address — enforced in the handler once the recipient is known.
  */
-async function authorizeCaller(req: Request): Promise<Response | null> {
+async function authorizeCaller(req: Request): Promise<CallerAuth | Response> {
   const authHeader = req.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return json(401, { error: "missing_token" });
@@ -335,11 +344,11 @@ async function authorizeCaller(req: Request): Promise<Response | null> {
     .maybeSingle();
 
   const role = (profile?.role as string) || "";
-  const allowed = ["partner", "super_admin", "admin", "company_admin"];
-  if (!allowed.includes(role)) {
-    return json(403, { error: "forbidden", detail: "partner/admin role required" });
-  }
-  return null;
+  const privileged = ["partner", "super_admin", "admin", "company_admin"];
+  return {
+    email: (userData.user.email || "").trim().toLowerCase(),
+    isPrivileged: privileged.includes(role),
+  };
 }
 
 // deno-lint-ignore no-explicit-any
@@ -375,8 +384,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const authError = await authorizeCaller(req);
-    if (authError) return authError;
+    const auth = await authorizeCaller(req);
+    if (auth instanceof Response) return auth;
 
     const body = (await req.json().catch(() => ({}))) as Partial<WelcomePayload>;
     const to = (body.to || "").trim();
@@ -392,6 +401,17 @@ Deno.serve(async (req) => {
     }
     if (!ROLE_COPY[role]) {
       return json(400, { error: "unsupported_role", role, version: FUNCTION_VERSION });
+    }
+
+    // A non-privileged caller (a member self-joining an org) may only send a
+    // welcome to their own address. Privileged callers (partner/admin) may
+    // welcome anyone they onboard.
+    if (!auth.isPrivileged && to.toLowerCase() !== auth.email) {
+      return json(403, {
+        error: "forbidden",
+        detail: "partner/admin role required to message another recipient",
+        version: FUNCTION_VERSION,
+      });
     }
 
     const payload: WelcomePayload = {

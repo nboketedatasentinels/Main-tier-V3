@@ -12,6 +12,7 @@ import {
   BellRing,
   CheckCheck,
   ExternalLink,
+  Megaphone,
   MessageCircle,
   MessageSquare,
   ShieldAlert,
@@ -71,6 +72,8 @@ const notificationIcon = (type: NotificationRecord['type']) => {
     case 'direct_message':
     case 'mention':
       return MessageCircle
+    case 'admin_message':
+      return Megaphone
     case 'important_update':
     case 'product_update':
     case 'progress_report':
