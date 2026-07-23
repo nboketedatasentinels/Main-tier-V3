@@ -32,6 +32,7 @@ import type {
 } from '@/types/admin'
 import type { UserProfileExtended } from '@/services/userProfileService'
 import { calculateUserRiskStatus, getProgramWeekNumber } from '@/utils/partnerProgress'
+import { normalizeRole } from '@/utils/role'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
 type TrendPoint = { label: string; value: number }
@@ -77,34 +78,56 @@ export const fetchUserRoleCounts = async (): Promise<{ free: number; paid: numbe
   return { free: free.count ?? 0, paid: paid.count ?? 0 }
 }
 
-// Full role breakdown for the User Management summary cards
-// (free / paid / partners / mentors / ambassadors), counted from profiles.role.
+// Full role breakdown for the User Management summary cards. Every profile is
+// bucketed by its NORMALIZED role (via normalizeRole) rather than an exact
+// `.eq('role', ...)` match, so legacy/variant strings (admin, company_admin,
+// mixed case, etc.) are counted correctly instead of silently dropped — which
+// was making the cards under-report. `superAdmins` + `total` are returned too so
+// no user is invisible and the cards reconcile to the real headcount.
 export const fetchRoleBreakdownCounts = async (): Promise<{
   free: number
   paid: number
   partners: number
   mentors: number
   ambassadors: number
+  superAdmins: number
+  total: number
 }> => {
-  const countByRole = (role: string) =>
-    supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', role)
-  const [free, paid, partners, mentors, ambassadors] = await Promise.all([
-    countByRole('free_user'),
-    countByRole('paid_member'),
-    countByRole('partner'),
-    countByRole('mentor'),
-    countByRole('ambassador'),
-  ])
-  const firstError =
-    free.error || paid.error || partners.error || mentors.error || ambassadors.error
-  if (firstError) throw new Error(firstError.message)
-  return {
-    free: free.count ?? 0,
-    paid: paid.count ?? 0,
-    partners: partners.count ?? 0,
-    mentors: mentors.count ?? 0,
-    ambassadors: ambassadors.count ?? 0,
+  const { data, error } = await supabase.from('profiles').select('role')
+  if (error) throw new Error(error.message)
+  const rows = (data ?? []) as { role: string | null }[]
+  const counts = {
+    free: 0,
+    paid: 0,
+    partners: 0,
+    mentors: 0,
+    ambassadors: 0,
+    superAdmins: 0,
+    total: rows.length,
   }
+  for (const row of rows) {
+    switch (normalizeRole(row.role ?? '')) {
+      case 'free_user':
+        counts.free++
+        break
+      case 'paid_member':
+        counts.paid++
+        break
+      case 'partner':
+        counts.partners++
+        break
+      case 'mentor':
+        counts.mentors++
+        break
+      case 'ambassador':
+        counts.ambassadors++
+        break
+      case 'super_admin':
+        counts.superAdmins++
+        break
+    }
+  }
+  return counts
 }
 
 export const listenToDashboardMetrics = (

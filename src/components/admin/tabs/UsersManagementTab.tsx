@@ -222,7 +222,15 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin && !isSuperAdmin })
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [error, setError] = useState<string | null>(null)
-  const [roleCounts, setRoleCounts] = useState({ free: 0, paid: 0, partners: 0, mentors: 0, ambassadors: 0 })
+  const [roleCounts, setRoleCounts] = useState({
+    free: 0,
+    paid: 0,
+    partners: 0,
+    mentors: 0,
+    ambassadors: 0,
+    superAdmins: 0,
+    total: 0,
+  })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkLoading, setBulkLoading] = useState(false)
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null)
@@ -851,12 +859,14 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
-      <SimpleGrid columns={[1, 2, 3, 5]} spacing={4}>
+      <SimpleGrid columns={[2, 3, 4, 7]} spacing={4}>
+        <MetricCard label="Total Users" value={roleCounts.total} icon={ShieldCheck} helper="All registered accounts." />
         <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
         <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
         <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
         <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
         <MetricCard label="Ambassadors" value={roleCounts.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
+        <MetricCard label="Super Admins" value={roleCounts.superAdmins} icon={ShieldCheck} helper="Platform administrators." />
       </SimpleGrid>
 
       <Stack spacing={4}>
