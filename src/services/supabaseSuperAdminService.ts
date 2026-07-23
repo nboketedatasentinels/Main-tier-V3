@@ -82,22 +82,19 @@ export const fetchUserRoleCounts = async (): Promise<{ free: number; paid: numbe
 // bucketed by its NORMALIZED role (via normalizeRole) rather than an exact
 // `.eq('role', ...)` match, so legacy/variant strings (admin, company_admin,
 // mixed case, etc.) are counted correctly instead of silently dropped — which
-// was making the cards under-report. `total` is the real user headcount
-// EXCLUDING platform admins (super_admins), so the cards reconcile to the user
-// base people actually think of as "users".
+// was making the cards under-report. Platform admins (super_admins) are not a
+// card and are simply not bucketed.
 export const fetchRoleBreakdownCounts = async (): Promise<{
   free: number
   paid: number
   partners: number
   mentors: number
   ambassadors: number
-  total: number
 }> => {
   const { data, error } = await supabase.from('profiles').select('role')
   if (error) throw new Error(error.message)
   const rows = (data ?? []) as { role: string | null }[]
   const counts = { free: 0, paid: 0, partners: 0, mentors: 0, ambassadors: 0 }
-  let superAdmins = 0
   for (const row of rows) {
     switch (normalizeRole(row.role ?? '')) {
       case 'free_user':
@@ -115,13 +112,9 @@ export const fetchRoleBreakdownCounts = async (): Promise<{
       case 'ambassador':
         counts.ambassadors++
         break
-      case 'super_admin':
-        superAdmins++
-        break
     }
   }
-  // Total users excluding platform admins.
-  return { ...counts, total: rows.length - superAdmins }
+  return counts
 }
 
 export const listenToDashboardMetrics = (
