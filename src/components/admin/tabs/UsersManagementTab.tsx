@@ -290,14 +290,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     })
   }, [assignedOrganizationIds, isSuperAdmin, propUsers])
 
-  const visibleTierOptions = useMemo(() => {
-    const known = new Set(transformationTierOptions)
-    const extras = accessibleUsers
-      .map((user) => normalizeValue(user.transformationTier))
-      .filter((value) => value.length > 0 && !known.has(value))
-    return [...transformationTierOptions, ...Array.from(new Set(extras))]
-  }, [accessibleUsers])
-
   const filteredUsers = useMemo(() => {
     const now = new Date()
     // The org dropdown value is the org id, but a user's org can be stored as the
@@ -891,19 +883,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                   {membershipOptions.map((status) => (
                     <option key={status} value={status}>
                       {formatMembershipLabel(status)}
-                    </option>
-                  ))}
-                </Select>
-
-                <Select
-                  maxW="210px"
-                  value={filters.transformationTier}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, transformationTier: e.target.value }))}
-                >
-                  <option value="all">All transformation tiers</option>
-                  {visibleTierOptions.map((tier) => (
-                    <option key={tier} value={tier}>
-                      {formatTierLabel(tier)}
                     </option>
                   ))}
                 </Select>
