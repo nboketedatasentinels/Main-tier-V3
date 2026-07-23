@@ -5,6 +5,7 @@ import { LeadershipCouncil } from './LeadershipCouncil'
 import { listenToUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
 import { OrganizationOption, ManagedUserRecord } from '@/services/userManagementService'
 import { getDisplayName } from '@/utils/displayName'
+import { normalizeRole } from '@/utils/role'
 
 const TAB_STORAGE_KEY = 'user-management-active-tab'
 
@@ -149,9 +150,11 @@ export const UserManagementWithTabs = () => {
   const { organizations, loading: loadingOrgs } = useManagedOrganizations()
 
   // Computed counts for tab badges
-  const userCount = users.length
-  const mentorCount = users.filter(u => u.role === 'mentor').length
-  const ambassadorCount = users.filter(u => u.role === 'ambassador').length
+  // Exclude platform admins so the badge matches the role cards below (which
+  // don't count super_admins). Normalized so legacy admin strings don't slip in.
+  const userCount = users.filter(u => normalizeRole(u.role) !== 'super_admin').length
+  const mentorCount = users.filter(u => normalizeRole(u.role) === 'mentor').length
+  const ambassadorCount = users.filter(u => normalizeRole(u.role) === 'ambassador').length
 
   // Optional: derived subsets per tab (keeps tab components simpler)
   const memo = useMemo(() => {
