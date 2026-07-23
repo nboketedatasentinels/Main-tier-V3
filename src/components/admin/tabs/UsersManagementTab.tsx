@@ -33,7 +33,7 @@ import {
   Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { ChevronLeft, ChevronRight, Eye, Filter, Pencil, Search, ShieldCheck, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Eye, Pencil, Search, ShieldCheck, Trash2 } from 'lucide-react'
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { MetricCard } from '@/components/admin/MetricCard'
@@ -912,23 +912,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                     <option value="90">Last 90 days</option>
                   </Select>
                 )}
-
-                <Button
-                  leftIcon={<Icon as={Filter} boxSize={4} />}
-                  variant="outline"
-                  onClick={() =>
-                    setFilters({
-                      search: '',
-                      role: 'all',
-                      membershipStatus: 'all',
-                      transformationTier: 'all',
-                      organization: 'all',
-                      timeframe: 'all',
-                    })
-                  }
-                >
-                  Reset filters
-                </Button>
               </Flex>
             </Stack>
 
