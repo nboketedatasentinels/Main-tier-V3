@@ -228,7 +228,6 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     partners: 0,
     mentors: 0,
     ambassadors: 0,
-    superAdmins: 0,
     total: 0,
   })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -859,14 +858,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
-      <SimpleGrid columns={[2, 3, 4, 7]} spacing={4}>
-        <MetricCard label="Total Users" value={roleCounts.total} icon={ShieldCheck} helper="All registered accounts." />
+      <SimpleGrid columns={[2, 3, 3, 6]} spacing={4}>
+        <MetricCard label="Total Users" value={roleCounts.total} icon={ShieldCheck} helper="Registered users, excluding admins." />
         <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
         <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
         <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
         <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
         <MetricCard label="Ambassadors" value={roleCounts.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
-        <MetricCard label="Super Admins" value={roleCounts.superAdmins} icon={ShieldCheck} helper="Platform administrators." />
       </SimpleGrid>
 
       <Stack spacing={4}>
