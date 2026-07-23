@@ -117,6 +117,32 @@ export const fetchRoleBreakdownCounts = async (): Promise<{
   return counts
 }
 
+// Count of people INVITED to an org who have not yet signed up. We exclude any
+// invite whose email already has a profile, so the moment an invitee logs in
+// they drop out of this count and appear in the role cards instead — the count
+// stays accurate across sign-up. Deduped by email (a person invited to several
+// orgs is one pending person).
+export const fetchPendingInviteCount = async (): Promise<number> => {
+  const [invites, profiles] = await Promise.all([
+    supabase.from('invitations').select('email').eq('status', 'pending'),
+    supabase.from('profiles').select('email'),
+  ])
+  if (invites.error) throw new Error(invites.error.message)
+  if (profiles.error) throw new Error(profiles.error.message)
+
+  const registered = new Set(
+    ((profiles.data ?? []) as { email: string | null }[])
+      .map((r) => (r.email ?? '').trim().toLowerCase())
+      .filter(Boolean),
+  )
+  const outstanding = new Set<string>()
+  for (const row of (invites.data ?? []) as { email: string | null }[]) {
+    const email = (row.email ?? '').trim().toLowerCase()
+    if (email && !registered.has(email)) outstanding.add(email)
+  }
+  return outstanding.size
+}
+
 export const listenToDashboardMetrics = (
   onChange: (metrics: SuperAdminDashboardMetrics) => void,
   _filters?: unknown,

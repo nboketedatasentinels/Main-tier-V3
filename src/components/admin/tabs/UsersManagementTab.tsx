@@ -37,7 +37,7 @@ import { ChevronLeft, ChevronRight, Eye, Pencil, Search, ShieldCheck, Trash2 } f
 import { Link as RouterLink } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { MetricCard } from '@/components/admin/MetricCard'
-import { fetchRoleBreakdownCounts } from '@/services/supabaseSuperAdminService'
+import { fetchRoleBreakdownCounts, fetchPendingInviteCount } from '@/services/supabaseSuperAdminService'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import {
   ManagedUserRecord,
@@ -223,6 +223,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [error, setError] = useState<string | null>(null)
   const [roleCounts, setRoleCounts] = useState({ free: 0, paid: 0, partners: 0, mentors: 0, ambassadors: 0 })
+  const [pendingInvites, setPendingInvites] = useState(0)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkLoading, setBulkLoading] = useState(false)
   const [statusChangingId, setStatusChangingId] = useState<string | null>(null)
@@ -263,6 +264,11 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         if (!cancelled) setRoleCounts(result)
       })
       .catch((err) => console.error('Failed to load role counts', err))
+    fetchPendingInviteCount()
+      .then((count) => {
+        if (!cancelled) setPendingInvites(count)
+      })
+      .catch((err) => console.error('Failed to load pending invite count', err))
     return () => {
       cancelled = true
     }
@@ -843,12 +849,13 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
-      <SimpleGrid columns={[1, 2, 3, 5]} spacing={4}>
+      <SimpleGrid columns={[2, 3, 3, 6]} spacing={4}>
         <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
         <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
         <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
         <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
         <MetricCard label="Ambassadors" value={roleCounts.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
+        <MetricCard label="Pending Invites" value={pendingInvites} icon={ShieldCheck} helper="Invited, not yet signed up." />
       </SimpleGrid>
 
       <Stack spacing={4}>
