@@ -235,11 +235,20 @@ export const ActivityList = ({
           activity.status === 'rejected' ||
           activity.availability.state === 'available'
         if (isTodo) {
+          // A one-time activity may allow more than one claim (e.g. Case Study
+          // and Capstone: maxTotal = 2). Surface one To-do row per REMAINING
+          // claim so the checklist total reflects the full configured points,
+          // not just a single claim (which under-counted these activities).
+          const totalCap = activity.activityPolicy?.maxTotal ?? 1
+          const used = (activity.completedCount ?? 0) + pendingWeeks.size
+          const remaining = Math.max(1, totalCap - used)
           const list = todoByWeek.get(startWeek) ?? []
-          list.push({ activity, weekOverride: startWeek })
+          for (let i = 0; i < remaining; i++) {
+            list.push({ activity, weekOverride: startWeek })
+            todoTotalCount += 1
+            todoPointsTotal += activity.points ?? 0
+          }
           todoByWeek.set(startWeek, list)
-          todoTotalCount += 1
-          todoPointsTotal += activity.points ?? 0
           return
         }
         locked.push(activity)
@@ -283,15 +292,30 @@ export const ActivityList = ({
       const policyType = activity.activityPolicy?.type
       const maxPerWindow = activity.activityPolicy?.maxPerWindow ?? null
       const maxPerWeek = activity.activityPolicy?.maxPerWeek ?? null
+      const maxTotal = activity.activityPolicy?.maxTotal ?? Infinity
 
-      // Cache window-completion counts so we filter per-window correctly.
-      const completionsByWindow = new Map<number, number>()
-      completedWeeks.forEach((cw) => {
-        const win = getWindowNumber(cw, PARALLEL_WINDOW_SIZE_WEEKS)
-        completionsByWindow.set(win, (completionsByWindow.get(win) ?? 0) + 1)
-      })
+      // Slots already committed (completed or in review) consume the activity's
+      // total-frequency budget. The remaining To-do rows MUST be capped at
+      // maxTotal - used; without this cap the loop emitted one row per eligible
+      // week, inflating the checklist total far past the journey maximum — the
+      // cause of "+84,000 pts available" instead of the configured 60,000.
+      const usedTotal = completedWeeks.size + pendingWeeks.size
+      let remainingTotal =
+        maxTotal === Infinity ? Infinity : Math.max(0, maxTotal - usedTotal)
+
+      // Committed (completed + pending) AND freshly-generated rows both count
+      // toward per-window caps, so track them together rather than looking at
+      // prior completions alone.
+      const usedByWindow = new Map<number, number>()
+      const bumpWindow = (week: number) => {
+        const win = getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS)
+        usedByWindow.set(win, (usedByWindow.get(win) ?? 0) + 1)
+      }
+      completedWeeks.forEach(bumpWindow)
+      pendingWeeks.forEach(bumpWindow)
 
       for (let w = startWeek; w <= totalWeeks; w++) {
+        if (remainingTotal <= 0) break
         if (completedWeeks.has(w)) continue
         // A pending submission already owns this week - it lives in the
         // In Review bucket, not To-do. Avoid offering a re-submit.
@@ -303,13 +327,15 @@ export const ActivityList = ({
         }
         if (policyType === 'window_limited' && maxPerWindow !== null) {
           const win = getWindowNumber(w, PARALLEL_WINDOW_SIZE_WEEKS)
-          if ((completionsByWindow.get(win) ?? 0) >= maxPerWindow) continue
+          if ((usedByWindow.get(win) ?? 0) >= maxPerWindow) continue
+          usedByWindow.set(win, (usedByWindow.get(win) ?? 0) + 1)
         }
         const list = todoByWeek.get(w) ?? []
         list.push({ activity, weekOverride: w })
         todoByWeek.set(w, list)
         todoTotalCount += 1
         todoPointsTotal += activity.points ?? 0
+        remainingTotal -= 1
       }
     })
 
