@@ -89,7 +89,7 @@ const SidebarNav = ({
               >
                 <HStack align="flex-start" spacing={3} w="full">
                   {item.icon && <Icon as={item.icon} boxSize={5} flexShrink={0} mt="1px" />}
-                  <Text color="inherit" flex="1" lineHeight="short">
+                  <Text color="inherit" flex="1" lineHeight="short" whiteSpace="nowrap">
                     {item.label}
                   </Text>
                   {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
@@ -167,7 +167,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
     <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
-        w={{ base: '0', lg: '256px' }}
+        w={{ base: '0', lg: '284px' }}
         bg="white"
         borderRight="1px solid"
         borderColor="brand.border"
