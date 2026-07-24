@@ -522,9 +522,12 @@ export const WeeklyGlancePage = () => {
 
   const currentWeek = journeyTiming?.currentWeek ?? data.weekNumber
   const totalWeeks = effectiveDurationWeeks
-  const daysRemaining = journeyTiming?.daysRemaining ?? 0
-  const cycleNumber = Math.ceil(currentWeek / 2)
-  const totalCycles = Math.max(1, Math.ceil(totalWeeks / 2))
+  const notStarted = journeyTiming?.notStarted ?? false
+  const daysUntilStart = journeyTiming?.daysUntilStart ?? 0
+  // "Cycle" = 2-week window; use the window countdown, not the 7-day week value.
+  const daysRemaining = journeyTiming?.cycleDaysRemaining ?? 0
+  const cycleNumber = journeyTiming?.currentCycle ?? Math.ceil(currentWeek / 2)
+  const totalCycles = journeyTiming?.totalCycles ?? Math.max(1, Math.ceil(totalWeeks / 2))
 
   const journeyMax = JOURNEY_META[effectiveJourneyType]?.maxPossiblePoints ?? 0
   const passMark = JOURNEY_META[effectiveJourneyType]?.passMarkPoints ?? 0
@@ -817,11 +820,17 @@ export const WeeklyGlancePage = () => {
             />
           </Skeleton>
           <KpiTile
-            label="Days left in cycle"
-            value={daysRemaining}
-            sub={daysRemaining <= 2 ? 'Closing soon' : 'Time remaining'}
+            label={notStarted ? 'Days until start' : 'Days left in cycle'}
+            value={notStarted ? daysUntilStart : daysRemaining}
+            sub={
+              notStarted
+                ? 'Journey not started'
+                : daysRemaining <= 2
+                  ? 'Closing soon'
+                  : 'Time remaining'
+            }
             icon={Clock}
-            theme={daysRemaining <= 2 ? 'red' : 'orange'}
+            theme={!notStarted && daysRemaining <= 2 ? 'red' : 'orange'}
           />
           <Skeleton isLoaded={!data.loading.points} rounded="xl">
             <KpiTile

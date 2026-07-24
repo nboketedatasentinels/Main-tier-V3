@@ -56,7 +56,21 @@ export interface JourneyTimingInfo {
   journeyEnd: Date
   totalDaysElapsed: number
   progressLabel: string
+  // Not-started (future cohort start) awareness
+  notStarted: boolean
+  daysUntilStart: number
+  // Cycle = one 2-week window (the unit the dashboard labels "Cycle")
+  currentCycle: number
+  totalCycles: number
+  cycleStart: Date
+  cycleEnd: Date
+  cycleDaysRemaining: number
+  // Whole-journey countdown
+  journeyDaysRemaining: number
 }
+
+/** Length of one cycle (window) in weeks. Journeys are measured in 2-week windows. */
+const CYCLE_WEEKS = 2
 
 export const getJourneyTiming = (
   journeyStartDate: string | Date | null | undefined,
@@ -70,7 +84,14 @@ export const getJourneyTiming = (
   const startDate = typeof journeyStartDate === 'string' ? parseISO(journeyStartDate) : journeyStartDate
   const journeyEnd = addDays(startDate, programDurationWeeks * 7)
 
-  const totalDaysElapsed = differenceInCalendarDays(today, startDate)
+  // Raw offset can be negative when the cohort starts in the future. Clamp all
+  // "elapsed" math to >= 0 so a not-yet-started journey never yields negative
+  // weeks/days (which previously inflated "days left in cycle" to a bogus 14).
+  const rawOffset = differenceInCalendarDays(today, startDate)
+  const notStarted = rawOffset < 0
+  const daysUntilStart = notStarted ? -rawOffset : 0
+
+  const totalDaysElapsed = Math.max(0, rawOffset)
   const weeksElapsed = Math.floor(totalDaysElapsed / 7)
   const daysIntoWeek = totalDaysElapsed % 7
 
@@ -81,12 +102,27 @@ export const getJourneyTiming = (
   const weekStart = addDays(startDate, (currentWeek - 1) * 7)
   const weekEnd = addDays(weekStart, 7)
 
-  // Days remaining in current week
-  const daysRemaining = Math.max(0, differenceInCalendarDays(weekEnd, today))
+  // Days remaining in current week. Measure from the later of today/weekStart so
+  // a future start never reports more than a full week.
+  const weekRef = notStarted ? weekStart : today
+  const daysRemaining = Math.max(0, differenceInCalendarDays(weekEnd, weekRef))
+
+  // Cycle = one 2-week window. currentCycle/totalCycles + days left in the window.
+  const totalCycles = Math.max(1, Math.ceil(programDurationWeeks / CYCLE_WEEKS))
+  const currentCycle = Math.max(1, Math.min(totalCycles, Math.ceil(currentWeek / CYCLE_WEEKS)))
+  const cycleStart = addDays(startDate, (currentCycle - 1) * CYCLE_WEEKS * 7)
+  const cycleEnd = addDays(cycleStart, CYCLE_WEEKS * 7)
+  const cycleRef = notStarted ? cycleStart : today
+  const cycleDaysRemaining = Math.max(0, differenceInCalendarDays(cycleEnd, cycleRef))
+
+  // Whole-journey countdown (0 once the program window has fully elapsed).
+  const journeyDaysRemaining = Math.max(0, differenceInCalendarDays(journeyEnd, notStarted ? startDate : today))
 
   // Progress label: "X weeks, Y days"
   let progressLabel: string
-  if (totalDaysElapsed >= programDurationWeeks * 7) {
+  if (notStarted) {
+    progressLabel = `Starts in ${daysUntilStart} day${daysUntilStart === 1 ? '' : 's'}`
+  } else if (totalDaysElapsed >= programDurationWeeks * 7) {
     progressLabel = `${programDurationWeeks} weeks`
   } else if (weeksElapsed === 0) {
     progressLabel = `${daysIntoWeek} day${daysIntoWeek === 1 ? '' : 's'}`
@@ -108,6 +144,14 @@ export const getJourneyTiming = (
     journeyEnd,
     totalDaysElapsed,
     progressLabel,
+    notStarted,
+    daysUntilStart,
+    currentCycle,
+    totalCycles,
+    cycleStart,
+    cycleEnd,
+    cycleDaysRemaining,
+    journeyDaysRemaining,
   }
 }
 
