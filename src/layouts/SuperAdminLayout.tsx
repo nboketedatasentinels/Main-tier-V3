@@ -165,7 +165,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
     <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
-        w={{ base: '0', lg: '200px' }}
+        w={{ base: '0', lg: '256px' }}
         bg="white"
         borderRight="1px solid"
         borderColor="brand.border"
@@ -215,7 +215,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
 
       <Flex flex="1" direction="column" minW={0} h={APP_VIEWPORT_HEIGHT} overflow="hidden" minH={0}>
         <Flex
-          px={{ base: 4, md: 6, lg: 10 }}
+          px={{ base: 4, md: 5, lg: 6 }}
           py={{ base: 3, md: 4 }}
           align={{ base: 'flex-start', md: 'center' }}
           justify="space-between"
@@ -257,7 +257,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         </Flex>
 
         <Box
-          px={{ base: 4, md: 6, lg: 10 }}
+          px={{ base: 4, md: 5, lg: 6 }}
           pt={{ base: 5, md: 8 }}
           pb={{ base: MOBILE_NAV_HEIGHT_WITH_SAFE_AREA, lg: 8 }}
           flex="1"
