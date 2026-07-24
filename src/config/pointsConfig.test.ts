@@ -7,6 +7,7 @@ import {
   getJourneyPointsCrossReference,
   resolveCanonicalActivityId,
 } from './pointsConfig'
+import { PILLAR_OPTIONS } from '@/types/pillar'
 
 describe('pointsConfig module activities', () => {
   it('uses lift_module as the canonical module activity', () => {
@@ -60,6 +61,19 @@ describe('pointsConfig module activities', () => {
       const crossRef = getJourneyPointsCrossReference(journeyType)
       expect(crossRef.computedMaxPoints).toBe(JOURNEY_META[journeyType].maxPossiblePoints)
       expect(crossRef.maxPossiblePoints).toBe(JOURNEY_META[journeyType].maxPossiblePoints)
+    })
+  })
+
+  it('6-week journey totals exactly 60,000 points for every pillar', () => {
+    // Pillars only change the week split (3+3, 1+5, 2+4) and course names, not
+    // the point values — the 6W activity table (capstone x2, case_study x2,
+    // lift_module x2 @ 7,000, etc.) is identical across pillars. This locks the
+    // invariant that the weekly-checklist total is 60,000 no matter the pillar.
+    const sixWeekTotal = getJourneyPointsCrossReference('6W').computedMaxPoints
+    expect(sixWeekTotal).toBe(60000)
+
+    PILLAR_OPTIONS.forEach((pillar) => {
+      expect(sixWeekTotal, `6W total must be 60,000 for pillar "${pillar}"`).toBe(60000)
     })
   })
 
