@@ -51,6 +51,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
               textTransform="uppercase"
               color="brand.subtleText"
               fontWeight="semibold"
+              overflowWrap="anywhere"
+              w="full"
             >
               {label}
             </Text>
