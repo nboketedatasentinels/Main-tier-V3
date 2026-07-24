@@ -1,46 +1,28 @@
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  limit,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  where,
-  type Transaction,
-} from "./firestoreDebug";
-import { db } from "@/services/firebase";
+import { supabase } from "@/services/supabase";
 import pointsConfig from "@/config/pointsConfig";
 import type { ActivityDef, JourneyType } from "@/config/pointsConfig";
-import { calculateLevel } from "@/utils/points";
-import { awardBadge } from "./badgeService";
-import { updateWindowOnAward, updateWindowOnRevoke } from "./windowProgressService";
 import { checkAndHandleJourneyCompletion } from "./journeyCompletionService";
 import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 import { recordUserActivity } from "./userProfileService";
 
+/**
+ * Checklist points award/revoke/reconcile.
+ *
+ * These now delegate to the Supabase SECURITY DEFINER RPCs
+ * (`award_checklist_points`, `revoke_checklist_points`, `reconcile_user_points`)
+ * which do the whole operation atomically server-side: authz, idempotency
+ * (deterministic ledger id), per-week/window/total caps + cooldown, the
+ * `points_ledger` row, `weekly_progress`, the profile total/level mirror,
+ * optional parallel window tracking and challenge metrics.
+ *
+ * They replace the old Firestore transactions, which failed with "Missing or
+ * insufficient permissions" after the Supabase auth cutover (no Firebase
+ * session), silently breaking every points award. The deterministic ledger id
+ * below is preserved verbatim so it matches the rows backfilled from Firestore
+ * — that is what keeps awards idempotent across the two eras.
+ */
+
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
-
-// Helper to parse Firestore dates robustly
-const parseDate = (val: unknown): Date | null => {
-  if (!val) return null;
-  if (val instanceof Date) return val;
-  if (val && typeof val === 'object' && 'toDate' in val && typeof (val as { toDate: unknown }).toDate === 'function') {
-    return (val as { toDate: () => Date }).toDate();
-  }
-  if (typeof val === 'string') {
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
-};
-
-const RETRYABLE_TRANSACTION_CODES = new Set(["aborted", "failed-precondition", "unavailable"]);
-const FIRESTORE_DOCUMENT_ID_MAX_BYTES = 1500;
-const textEncoder = new TextEncoder();
 
 const getActivityLimits = (activity: ActivityDef) => ({
   maxPerWeek: activity.activityPolicy?.maxPerWeek ?? activity.maxPerWeek ?? null,
@@ -48,10 +30,15 @@ const getActivityLimits = (activity: ActivityDef) => ({
   maxTotal: activity.activityPolicy?.maxTotal ?? null,
 });
 
+// ─── Deterministic ledger id (unchanged from the Firestore era) ──────────────
+// The backfilled rows carry ids in this exact shape, so regenerating the same
+// id is what makes `award_checklist_points` idempotent (it no-ops on conflict).
+const LEDGER_ID_MAX_BYTES = 1500;
+const textEncoder = new TextEncoder();
 const getUtf8ByteLength = (value: string) => textEncoder.encode(value).length;
 
 const shortDeterministicHash = (input: string) => {
-  // FNV-1a 32-bit hash; deterministic and compact for document-id suffixes.
+  // FNV-1a 32-bit hash; deterministic and compact for id suffixes.
   let hash = 0x811c9dc5;
   for (let i = 0; i < input.length; i += 1) {
     hash ^= input.charCodeAt(i);
@@ -71,10 +58,7 @@ const truncateToUtf8ByteBudget = (value: string, budget: number) => {
   return result;
 };
 
-const normalizeClaimRef = (params: {
-  claimRef: string;
-  byteBudget: number;
-}) => {
+const normalizeClaimRef = (params: { claimRef: string; byteBudget: number }) => {
   const { claimRef, byteBudget } = params;
   if (byteBudget <= 0) return "";
 
@@ -105,49 +89,27 @@ const buildLedgerDocumentId = (params: {
   const baseId = `${uid}__w${weekNumber}__${activityId}`;
 
   if (!claimRef) {
-    if (getUtf8ByteLength(baseId) > FIRESTORE_DOCUMENT_ID_MAX_BYTES) {
-      throw new Error("Ledger document ID exceeds Firestore 1500-byte limit");
+    if (getUtf8ByteLength(baseId) > LEDGER_ID_MAX_BYTES) {
+      throw new Error("Ledger id exceeds 1500-byte limit");
     }
     return baseId;
   }
 
   const baseWithClaimSeparator = `${baseId}__`;
-  const remainingByteBudget =
-    FIRESTORE_DOCUMENT_ID_MAX_BYTES - getUtf8ByteLength(baseWithClaimSeparator);
-  const normalizedClaimRef = normalizeClaimRef({
-    claimRef,
-    byteBudget: remainingByteBudget,
-  });
+  const remainingByteBudget = LEDGER_ID_MAX_BYTES - getUtf8ByteLength(baseWithClaimSeparator);
+  const normalizedClaimRef = normalizeClaimRef({ claimRef, byteBudget: remainingByteBudget });
 
   const finalId = `${baseWithClaimSeparator}${normalizedClaimRef}`;
-  if (getUtf8ByteLength(finalId) > FIRESTORE_DOCUMENT_ID_MAX_BYTES) {
-    throw new Error("Ledger document ID exceeds Firestore 1500-byte limit after claimRef normalization");
+  if (getUtf8ByteLength(finalId) > LEDGER_ID_MAX_BYTES) {
+    throw new Error("Ledger id exceeds 1500-byte limit after claimRef normalization");
   }
   return finalId;
 };
 
-const runTransactionWithRetry = async <T>(
-  operation: (transaction: Transaction) => Promise<T>,
-  maxAttempts = 3
-): Promise<T> => {
-  let attempt = 0;
+const isWindowTrackingEnabled = () =>
+  import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === "true";
 
-  while (attempt < maxAttempts) {
-    try {
-      return await runTransaction(db, operation);
-    } catch (error) {
-      attempt += 1;
-      const code = (error as { code?: string }).code;
-      const shouldRetry = code ? RETRYABLE_TRANSACTION_CODES.has(code) : false;
-      if (!shouldRetry || attempt >= maxAttempts) {
-        throw error;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 150 * attempt));
-    }
-  }
-
-  throw new Error("Transaction failed after retries");
-};
+// ─── Public API ──────────────────────────────────────────────────────────────
 
 export async function awardChecklistPoints(params: {
   uid: string;
@@ -156,279 +118,79 @@ export async function awardChecklistPoints(params: {
   activity: ActivityDef;
   source?: string;
   claimRef?: string;
-}): Promise<{ awarded: boolean; reason?: 'already_awarded' }> {
+}): Promise<{ awarded: boolean; reason?: "already_awarded" }> {
   const { uid, journeyType, weekNumber, activity, source = "weekly_checklist", claimRef } = params;
 
-  if (!uid) throw new Error('[PointsService] uid is required')
-  if (!journeyType) throw new Error('[PointsService] journeyType is required')
-  if (typeof weekNumber !== 'number') throw new Error('[PointsService] weekNumber is required')
+  if (!uid) throw new Error("[PointsService] uid is required");
+  if (!journeyType) throw new Error("[PointsService] journeyType is required");
+  if (typeof weekNumber !== "number") throw new Error("[PointsService] weekNumber is required");
   if (!activity || !activity.id) {
-    throw new Error(
-      `[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`
-    )
+    throw new Error(`[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`);
   }
 
   const monthNumber = getMonthNumber(weekNumber);
-  const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
+  const meta = JOURNEY_META[journeyType];
   const limits = getActivityLimits(activity);
-
-  const ledgerRef = doc(
-    db,
-    "pointsLedger",
-    buildLedgerDocumentId({ uid, weekNumber, activityId: activity.id, claimRef })
-  );
-  const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
-  const ledgerQuery = query(
-    collection(db, "pointsLedger"),
-    where("uid", "==", uid),
-    where("weekNumber", "==", weekNumber)
-  );
-  const weeklyActivityQuery = query(
-    collection(db, "pointsLedger"),
-    where("uid", "==", uid),
-    where("weekNumber", "==", weekNumber),
-    where("activityId", "==", activity.id)
-  );
-  const windowActivityQuery = query(
-    collection(db, "pointsLedger"),
-    where("uid", "==", uid),
-    where("monthNumber", "==", monthNumber),
-    where("activityId", "==", activity.id)
-  );
-  const lastActivityQuery = query(
-    collection(db, "pointsLedger"),
-    where("uid", "==", uid),
-    where("activityId", "==", activity.id),
-    orderBy("weekNumber", "desc"),
-    limit(1)
-  );
-  const totalActivityQuery = query(
-    collection(db, "pointsLedger"),
-    where("uid", "==", uid),
-    where("activityId", "==", activity.id)
-  );
-
-  const activeChallengesQuery = query(
-    collection(db, "challenges"),
-    where("participants", "array-contains", uid)
-  );
+  const trackWindow = isWindowTrackingEnabled();
+  const ledgerId = buildLedgerDocumentId({ uid, weekNumber, activityId: activity.id, claimRef });
 
   try {
-    const [
-      ledgerSnapshot,
-      weeklyActivitySnapshot,
-      windowActivitySnapshot,
-      lastActivitySnapshot,
-      totalActivitySnapshot,
-      activeChallengesSnapshot,
-      profileSnap,
-    ] = await Promise.all([
-      getDocs(ledgerQuery),
-      getDocs(weeklyActivityQuery),
-      getDocs(windowActivityQuery),
-      getDocs(lastActivityQuery),
-      getDocs(totalActivityQuery),
-      getDocs(activeChallengesQuery),
-      getDoc(doc(db, "profiles", uid)),
-    ]);
-
-    const profileData = profileSnap.exists() ? profileSnap.data() : null;
-    const companyId = profileData?.companyId || null;
-    const companyCode = profileData?.companyCode || null;
-    const villageId = profileData?.villageId || null;
-    const clusterId = profileData?.clusterId || null;
-
-    // Partner-issued awards bypass activity-frequency caps and cooldown:
-    // the partner's verification is the authoritative signal, and idempotency
-    // is still preserved by the deterministic ledger doc id below.
-    const bypassLimits = source === 'partner_issued';
-
-    const awarded = await runTransactionWithRetry<boolean>(async (tx) => {
-      const [ledgerDoc, progressDoc, userDoc, profileDoc] = await Promise.all([
-        tx.get(ledgerRef),
-        tx.get(progressRef),
-        tx.get(doc(db, "users", uid)),
-        tx.get(doc(db, "profiles", uid)),
-      ]);
-
-      if (ledgerDoc.exists()) return false;
-
-      if (!bypassLimits) {
-        if (limits.maxPerWeek && weeklyActivitySnapshot.size >= limits.maxPerWeek) {
-          throw new Error("Weekly activity limit reached");
-        }
-
-        if (limits.maxPerWindow && windowActivitySnapshot.size >= limits.maxPerWindow) {
-          throw new Error("Window activity limit reached");
-        }
-
-        if (limits.maxTotal && totalActivitySnapshot.size >= limits.maxTotal) {
-          throw new Error("Total activity limit reached");
-        }
-
-        if (activity.cooldownWeeks && lastActivitySnapshot.size > 0) {
-          const lastWeekNumber = lastActivitySnapshot.docs[0]?.data()?.weekNumber as number | undefined;
-          if (lastWeekNumber && weekNumber - lastWeekNumber <= activity.cooldownWeeks) {
-            throw new Error("Activity cooldown in effect");
-          }
-        }
-      }
-
-      const currentProgress = progressDoc.exists()
-        ? progressDoc.data()
-        : { pointsEarned: 0, status: "alert" };
-      const newPoints = currentProgress.pointsEarned + activity.points;
-      const engagementCount = ledgerSnapshot.size + 1;
-
-      const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
-      let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-      if (ratio >= 1) {
-        status = currentProgress.status === "alert" ? "recovery" : "on_track";
-      } else if (ratio >= 0.75) {
-        status = "warning";
-      } else {
-        status = "alert";
-      }
-
-      // CRITICAL: never derive an absolute totalPoints from a single mirror doc
-      // and write it back - that clobbers the other mirror if the two have
-      // drifted (e.g., users.totalPoints stale at 0 while profiles.totalPoints
-      // is the reconciled 3500 from the ledger). pointsLedger is canonical;
-      // both mirrors are best-effort projections of the ledger sum. We adjust
-      // each mirror by the delta atomically via increment() so neither can
-      // overwrite the other's value.
-      const userTotalBaseline = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
-      const profileTotalBaseline = profileDoc.exists() ? (profileDoc.data()?.totalPoints ?? 0) : 0;
-      const projectedTotal = Math.max(userTotalBaseline, profileTotalBaseline, 0) + activity.points;
-      const level = calculateLevel(projectedTotal);
-
-      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
-        await updateWindowOnAward(tx, { uid, journeyType, weekNumber, activity });
-      }
-
-      tx.set(ledgerRef, {
+    const { data, error } = await supabase.rpc("award_checklist_points", {
+      p: {
         uid,
-        weekNumber,
-        monthNumber,
-        activityId: activity.id,
+        ledger_id: ledgerId,
+        week: weekNumber,
+        month: monthNumber,
+        activity_id: activity.id,
         points: activity.points,
-        createdAt: serverTimestamp(),
         source,
-        claimRef: claimRef ?? null,
-        approvalType: activity.approvalType,
-      });
-
-      tx.set(
-        progressRef,
-        {
-          uid,
-          weekNumber,
-          monthNumber,
-          weeklyTarget,
-          pointsEarned: newPoints,
-          engagementCount,
-          status,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      // Trigger nudges asynchronously after transaction
-      // Note: We use setTimeout to ensure it happens after tx completes
-      setTimeout(() => {
-        detectStatusChangeAndNudge({
-          uid,
-          journeyType,
-          previousStatus: currentProgress.status,
-          currentStatus: status,
-          pointsEarned: newPoints,
-          windowTarget: weeklyTarget,
-        }).catch(err => console.error('[PointsService] Nudge trigger failed:', err));
-      }, 100);
-
-      const profileUpdate = {
-        totalPoints: increment(activity.points),
-        level,
-        pointsVersion: increment(1),
-        updatedAt: serverTimestamp(),
-      };
-
-      // Mirror writes: only touch docs that already exist. For partner-issued
-      // awards the partner cannot create users/profiles docs (rules require
-      // owner/super_admin), so a missing mirror doc would otherwise fail the
-      // whole transaction. pointsLedger remains canonical; reconcile rehydrates.
-      if (userDoc.exists()) {
-        tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
-      }
-      if (profileDoc.exists()) {
-        tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
-      }
-
-      // Record transaction for leaderboard and activity feeds
-      tx.set(doc(collection(db, "points_transactions")), {
-        userId: uid,
-        points: activity.points,
-        category: activity.category || "Other",
-        reason: activity.title,
-        createdAt: serverTimestamp(),
-        companyId: companyId || null,
-        companyCode: companyCode || null,
-        villageId: villageId || null,
-        clusterId: clusterId || null,
-      });
-
-      // Update active/pending challenges metrics
-      activeChallengesSnapshot.docs.forEach((challengeDoc) => {
-        const challengeData = challengeDoc.data();
-
-        // Process both active and pending challenges to ensure points start counting immediately
-        if (challengeData.status !== 'active' && challengeData.status !== 'pending') return;
-
-        const start = parseDate(challengeData.start_date);
-        const end = parseDate(challengeData.end_date);
-        const now = new Date();
-
-        if (start && end && now >= start && now <= end) {
-          const isChallenger = challengeData.challenger_id === uid;
-          const field = isChallenger ? "metrics.challenger.total" : "metrics.challenged.total";
-          tx.update(challengeDoc.ref, {
-            [field]: increment(activity.points),
-            updatedAt: serverTimestamp(),
-          });
-        }
-      });
-
-      return true;
+        claim_ref: claimRef ?? null,
+        approval_type: activity.approvalType ?? null,
+        category: activity.category ?? "Other",
+        reason: activity.title ?? null,
+        weekly_target: meta.weeklyTarget,
+        max_per_week: limits.maxPerWeek,
+        max_per_window: limits.maxPerWindow,
+        max_total: limits.maxTotal,
+        cooldown_weeks: activity.cooldownWeeks ?? null,
+        // Partner-issued awards bypass frequency caps + cooldown: the partner's
+        // verification is authoritative; idempotency still holds via ledger_id.
+        bypass_limits: source === "partner_issued",
+        track_window: trackWindow,
+        journey_type: journeyType,
+        window_number: trackWindow ? Math.ceil(weekNumber / 2) : null,
+        window_target: meta.windowTarget ?? 0,
+      },
     });
 
-    if (!awarded) {
-      return { awarded: false, reason: 'already_awarded' };
+    if (error) throw new Error(error.message);
+
+    const result = (data ?? {}) as {
+      awarded?: boolean;
+      reason?: string;
+      previous_status?: string;
+      status?: string;
+      points_earned?: number;
+    };
+
+    if (!result.awarded) {
+      return { awarded: false, reason: "already_awarded" };
     }
 
-    // Post-transaction logic
-    // Record user activity for accurate "last active" tracking
-    recordUserActivity(uid).catch(err =>
-      console.warn('[PointsService] Failed to record activity:', err)
-    );
-
-    // Check for journey completion after points are awarded
+    // Best-effort side-effects — must never fail the award. (Some still target
+    // the not-yet-migrated Firestore services and will no-op until migrated.)
+    void recordUserActivity(uid).catch(() => {});
     setTimeout(() => {
-      checkAndHandleJourneyCompletion(uid, journeyType).catch(err =>
-        console.error('Error checking journey completion:', err)
-      );
+      void detectStatusChangeAndNudge({
+        uid,
+        journeyType,
+        previousStatus: result.previous_status ?? "alert",
+        currentStatus: result.status ?? "alert",
+        pointsEarned: result.points_earned ?? activity.points,
+        windowTarget: meta.weeklyTarget,
+      }).catch(() => {});
+      void checkAndHandleJourneyCompletion(uid, journeyType).catch(() => {});
     }, 100);
-
-    if (activity.id.includes('peer')) {
-      const peerActivitiesQuery = query(
-        collection(db, 'pointsLedger'),
-        where('uid', '==', uid),
-        where('activityId', 'in', ['peer_matching', 'peer_to_peer'])
-      );
-      const peerActivitiesSnapshot = await getDocs(peerActivitiesQuery);
-      if (peerActivitiesSnapshot.size >= 5) {
-        await awardBadge(uid, 'peer-collaborator');
-      }
-    }
 
     return { awarded: true };
   } catch (error) {
@@ -443,52 +205,21 @@ export async function reconcileUserPointsFromLedger(uid: string): Promise<{
 }> {
   if (!uid) throw new Error("[PointsService] uid is required");
 
-  const ledgerSnapshot = await getDocs(
-    query(collection(db, "pointsLedger"), where("uid", "==", uid))
-  );
+  const { error } = await supabase.rpc("reconcile_user_points", { p_uid: uid });
+  if (error) throw new Error(error.message);
 
-  const totalPoints = ledgerSnapshot.docs.reduce((sum, docSnap) => {
-    const rawPoints = docSnap.data()?.points;
-    return sum + (typeof rawPoints === "number" ? rawPoints : 0);
-  }, 0);
+  // Read back the reconciled mirror the RPC just wrote.
+  const { data: row, error: readError } = await supabase
+    .from("profiles")
+    .select("total_points, level")
+    .eq("id", uid)
+    .maybeSingle();
+  if (readError) throw new Error(readError.message);
 
-  const level = calculateLevel(totalPoints);
-
-  await runTransactionWithRetry(async (tx) => {
-    const userRef = doc(db, "users", uid);
-    const profileRef = doc(db, "profiles", uid);
-    const [userDoc, profileDoc] = await Promise.all([tx.get(userRef), tx.get(profileRef)]);
-
-    const basePayload = {
-      totalPoints,
-      level,
-      updatedAt: serverTimestamp(),
-    };
-
-    if (userDoc.exists()) {
-      tx.set(
-        userRef,
-        {
-          ...basePayload,
-          pointsVersion: increment(1),
-        },
-        { merge: true }
-      );
-    }
-
-    if (profileDoc.exists()) {
-      tx.set(
-        profileRef,
-        {
-          ...basePayload,
-          pointsVersion: increment(1),
-        },
-        { merge: true }
-      );
-    }
-  });
-
-  return { totalPoints, level };
+  return {
+    totalPoints: typeof row?.total_points === "number" ? row.total_points : 0,
+    level: typeof row?.level === "number" ? row.level : 1,
+  };
 }
 
 export async function revokeChecklistPoints(params: {
@@ -497,164 +228,59 @@ export async function revokeChecklistPoints(params: {
   weekNumber: number;
   activity: ActivityDef;
   claimRef?: string;
-}) {
+}): Promise<void> {
   const { uid, journeyType, weekNumber, activity, claimRef } = params;
 
-  if (!uid) throw new Error('[PointsService] uid is required')
-  if (!journeyType) throw new Error('[PointsService] journeyType is required')
-  if (typeof weekNumber !== 'number') throw new Error('[PointsService] weekNumber is required')
+  if (!uid) throw new Error("[PointsService] uid is required");
+  if (!journeyType) throw new Error("[PointsService] journeyType is required");
+  if (typeof weekNumber !== "number") throw new Error("[PointsService] weekNumber is required");
   if (!activity || !activity.id) {
-    throw new Error(
-      `[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`
-    )
+    throw new Error(`[PointsService] activity.id is required. Got: ${JSON.stringify(activity)}`);
   }
 
   const monthNumber = getMonthNumber(weekNumber);
-  const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
-
-  const ledgerRef = doc(
-    db,
-    "pointsLedger",
-    buildLedgerDocumentId({ uid, weekNumber, activityId: activity.id, claimRef })
-  );
-  const progressRef = doc(db, "weeklyProgress", `${uid}__${weekNumber}`);
-  const ledgerQuery = query(
-    collection(db, "pointsLedger"),
-    where("uid", "==", uid),
-    where("weekNumber", "==", weekNumber)
-  );
-
-  const activeChallengesQuery = query(
-    collection(db, "challenges"),
-    where("participants", "array-contains", uid)
-  );
+  const meta = JOURNEY_META[journeyType];
+  const trackWindow = isWindowTrackingEnabled();
+  const ledgerId = buildLedgerDocumentId({ uid, weekNumber, activityId: activity.id, claimRef });
 
   try {
-    const [ledgerSnapshot, activeChallengesSnapshot, profileSnap] = await Promise.all([
-      getDocs(ledgerQuery),
-      getDocs(activeChallengesQuery),
-      getDoc(doc(db, "profiles", uid)),
-    ]);
-
-    const profileData = profileSnap.exists() ? profileSnap.data() : null;
-    const companyId = profileData?.companyId || null;
-    const companyCode = profileData?.companyCode || null;
-    const villageId = profileData?.villageId || null;
-    const clusterId = profileData?.clusterId || null;
-
-    await runTransactionWithRetry(async (tx) => {
-      const [ledgerDoc, progressDoc, userDoc, profileDoc] = await Promise.all([
-        tx.get(ledgerRef),
-        tx.get(progressRef),
-        tx.get(doc(db, "users", uid)),
-        tx.get(doc(db, "profiles", uid)),
-      ]);
-
-      if (!ledgerDoc.exists()) return;
-
-      const ledgerPoints = ledgerDoc.data()?.points ?? activity.points;
-      const currentPoints = progressDoc.exists()
-        ? progressDoc.data().pointsEarned ?? 0
-        : 0;
-      const newPoints = Math.max(0, currentPoints - ledgerPoints);
-      const engagementCount = Math.max(0, ledgerSnapshot.size - 1);
-
-      const ratio = weeklyTarget > 0 ? newPoints / weeklyTarget : 0;
-      let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-      if (ratio >= 1) status = "on_track";
-      else if (ratio >= 0.75) status = "warning";
-      else status = "alert";
-
-      // See note in awardChecklistPoints: never overwrite an absolute totalPoints
-      // computed from one mirror doc - it clobbers the other if they have drifted.
-      // Adjust by the delta via increment(); compute level optimistically from the
-      // higher of the two mirrors so it reflects post-revoke best-estimate.
-      const userTotalBaseline = userDoc.exists() ? (userDoc.data()?.totalPoints ?? 0) : 0;
-      const profileTotalBaseline = profileDoc.exists() ? (profileDoc.data()?.totalPoints ?? 0) : 0;
-      const projectedTotal = Math.max(0, Math.max(userTotalBaseline, profileTotalBaseline) - ledgerPoints);
-      const level = calculateLevel(projectedTotal);
-
-      if (import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true') {
-        await updateWindowOnRevoke(tx, { uid, journeyType, weekNumber, activity });
-      }
-
-      tx.delete(ledgerRef);
-
-      tx.set(
-        progressRef,
-        {
-          uid,
-          weekNumber,
-          monthNumber,
-          weeklyTarget,
-          pointsEarned: newPoints,
-          engagementCount,
-          status,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
-
-      // Trigger nudges asynchronously after transaction
-      setTimeout(() => {
-        detectStatusChangeAndNudge({
-          uid,
-          journeyType,
-          previousStatus: progressDoc.data()?.status || 'alert',
-          currentStatus: status,
-          pointsEarned: newPoints,
-          windowTarget: weeklyTarget,
-        }).catch(err => console.error('[PointsService] Revoke nudge trigger failed:', err));
-      }, 100);
-
-      const profileUpdate = {
-        totalPoints: increment(-ledgerPoints),
-        level,
-        pointsVersion: increment(1),
-        updatedAt: serverTimestamp(),
-      };
-
-      if (userDoc.exists()) {
-        tx.set(doc(db, "users", uid), profileUpdate, { merge: true });
-      }
-      if (profileDoc.exists()) {
-        tx.set(doc(db, "profiles", uid), profileUpdate, { merge: true });
-      }
-
-      // Record transaction for leaderboard and activity feeds
-      tx.set(doc(collection(db, "points_transactions")), {
-        userId: uid,
-        points: -ledgerPoints,
-        category: activity.category || "Other",
-        reason: activity.title,
-        createdAt: serverTimestamp(),
-        companyId: companyId || null,
-        companyCode: companyCode || null,
-        villageId: villageId || null,
-        clusterId: clusterId || null,
-      });
-
-      // Update active/pending challenges metrics
-      activeChallengesSnapshot.docs.forEach((challengeDoc) => {
-        const challengeData = challengeDoc.data();
-
-        // Process both active and pending challenges to ensure points start counting immediately
-        if (challengeData.status !== 'active' && challengeData.status !== 'pending') return;
-
-        const start = parseDate(challengeData.start_date);
-        const end = parseDate(challengeData.end_date);
-        const now = new Date();
-
-        if (start && end && now >= start && now <= end) {
-          const isChallenger = challengeData.challenger_id === uid;
-          const field = isChallenger ? "metrics.challenger.total" : "metrics.challenged.total";
-          tx.update(challengeDoc.ref, {
-            [field]: increment(-ledgerPoints),
-            updatedAt: serverTimestamp(),
-          });
-        }
-      });
+    const { data, error } = await supabase.rpc("revoke_checklist_points", {
+      p: {
+        uid,
+        ledger_id: ledgerId,
+        week: weekNumber,
+        month: monthNumber,
+        points: activity.points,
+        weekly_target: meta.weeklyTarget,
+        track_window: trackWindow,
+        journey_type: journeyType,
+        window_number: trackWindow ? Math.ceil(weekNumber / 2) : null,
+        window_target: meta.windowTarget ?? 0,
+      },
     });
+
+    if (error) throw new Error(error.message);
+
+    const result = (data ?? {}) as {
+      revoked?: boolean;
+      previous_status?: string;
+      status?: string;
+      points_earned?: number;
+    };
+
+    // Nothing to revoke (row already gone) — no-op.
+    if (result.revoked === false) return;
+
+    setTimeout(() => {
+      void detectStatusChangeAndNudge({
+        uid,
+        journeyType,
+        previousStatus: result.previous_status ?? "alert",
+        currentStatus: result.status ?? "alert",
+        pointsEarned: result.points_earned ?? 0,
+        windowTarget: meta.weeklyTarget,
+      }).catch(() => {});
+    }, 100);
   } catch (error) {
     console.error("🔴 [Points] Failed to revoke checklist points", error);
     throw error;
