@@ -71,13 +71,12 @@ const SidebarNav = ({
               <Button
                 key={item.key}
                 justifyContent="flex-start"
-                leftIcon={item.icon ? <Icon as={item.icon} /> : undefined}
                 fontSize="sm"
                 fontWeight={isActive ? 'semibold' : 'medium'}
                 variant={isActive ? 'primary' : 'ghost'}
                 minH="44px"
                 h="auto"
-                py={2}
+                py={2.5}
                 whiteSpace="normal"
                 textAlign="left"
                 px={3}
@@ -88,10 +87,13 @@ const SidebarNav = ({
                 _hover={{ bg: isActive ? 'brand.primary' : 'brand.primaryMuted' }}
                 onClick={() => onNavigate?.(item.key)}
               >
-                <HStack justify="space-between" flex="1">
-                  <Text color="inherit">{item.label}</Text>
+                <HStack align="flex-start" spacing={3} w="full">
+                  {item.icon && <Icon as={item.icon} boxSize={5} flexShrink={0} mt="1px" />}
+                  <Text color="inherit" flex="1" lineHeight="short">
+                    {item.label}
+                  </Text>
                   {typeof item.badgeCount === 'number' && item.badgeCount > 0 && (
-                    <Badge colorScheme="red" borderRadius="full">
+                    <Badge colorScheme="red" borderRadius="full" flexShrink={0}>
                       {item.badgeCount}
                     </Badge>
                   )}
