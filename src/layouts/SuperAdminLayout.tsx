@@ -13,10 +13,6 @@ import {
   HStack,
   Icon,
   IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Stack,
   Text,
   VStack,
@@ -27,7 +23,7 @@ import {
 import { LogOut, Menu as MenuIcon, Shield, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
-import { buildCommonAccountItems, buildSuperAdminNavItems, NavigationSection } from '@/utils/navigationItems'
+import { buildSuperAdminNavItems, NavigationSection } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 const MOBILE_NAV_HEIGHT = 68
@@ -128,7 +124,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
     }),
     [],
   )
-  const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
 
@@ -143,15 +138,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         isClosable: true,
       })
     }
-  }
-
-  const handleAccountNavigate = (key: string) => {
-    if (key === 'logout') {
-      handleLogout()
-      return
-    }
-
-    onNavigate?.(key)
   }
 
   const navContent = (
@@ -263,30 +249,6 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
 
           <HStack spacing={3} align="center" w={{ base: 'full', sm: 'auto' }} justify={{ base: 'space-between', sm: 'flex-end' }}>
             <NotificationDropdown />
-            <Menu>
-              <MenuButton
-                as={Button}
-                leftIcon={<Avatar size="sm" name={adminName} src={avatarUrl} />}
-                variant="outline"
-                size="sm"
-                px={{ base: 2, md: 3 }}
-                flexShrink={0}
-              >
-                <Text display={{ base: 'none', md: 'block' }} noOfLines={1} maxW="180px">
-                  {adminName}
-                </Text>
-              </MenuButton>
-              <MenuList>
-                {accountItems.map((item) => (
-                  <MenuItem key={item.key} icon={item.icon ? <Icon as={item.icon} /> : undefined} onClick={() => handleAccountNavigate(item.key)}>
-                    {item.label}
-                  </MenuItem>
-                ))}
-                <MenuItem icon={<Icon as={LogOut} />} onClick={handleLogout} isDisabled={signingOut}>
-                  Logout
-                </MenuItem>
-              </MenuList>
-            </Menu>
           </HStack>
         </Flex>
 
