@@ -76,6 +76,10 @@ const SidebarNav = ({
                 fontWeight={isActive ? 'semibold' : 'medium'}
                 variant={isActive ? 'primary' : 'ghost'}
                 minH="44px"
+                h="auto"
+                py={2}
+                whiteSpace="normal"
+                textAlign="left"
                 px={3}
                 borderRadius="xl"
                 bg={isActive ? 'brand.primary' : 'transparent'}
@@ -161,7 +165,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
     <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
       <Box
         as="nav"
-        w={{ base: '0', lg: '280px' }}
+        w={{ base: '0', lg: '200px' }}
         bg="white"
         borderRight="1px solid"
         borderColor="brand.border"
@@ -169,7 +173,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         flexDirection="column"
         h={APP_VIEWPORT_HEIGHT}
         overflowY="auto"
-        p={5}
+        p={4}
         gap={6}
       >
         {navContent}
@@ -259,7 +263,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
           flex="1"
           overflowY="auto"
         >
-          <Stack spacing={6} maxW="1600px" mx="auto">
+          <Stack spacing={6} maxW="full" mx="auto">
             {children}
           </Stack>
         </Box>

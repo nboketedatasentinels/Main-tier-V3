@@ -33,6 +33,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     borderColor="border.card"
     cursor={onClick ? 'pointer' : 'default'}
     onClick={onClick}
+    overflow="hidden"
     transition="transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
     _hover={{
       transform: 'translateY(-3px)',
@@ -43,7 +44,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     <CardBody p={6}>
       <Stack spacing={4}>
         <HStack justify="space-between" align="flex-start" spacing={3}>
-          <VStack align="flex-start" spacing={1.5}>
+          <VStack align="flex-start" spacing={1.5} flex="1" minW={0}>
             <Text
               fontSize="xs"
               letterSpacing="0.06em"
