@@ -26,6 +26,13 @@ import { removeUndefinedFields } from '@/utils/firestore'
  */
 
 export const APPROVALS_COLLECTION = 'approvals'
+
+// Course-approval reads/writes still target Firestore (the `approvals` collection
+// and Firestore pointsLedger), which is denied under Supabase-only auth. Until
+// this feature is migrated to Supabase, writes are gated off and the partner-side
+// listener is a no-op. Explicit `: boolean` so the guarded code stays reachable
+// for the type checker. Flip to true (and restore the listener) after migration.
+const COURSE_APPROVAL_WRITES_ENABLED: boolean = false
 export const COURSE_COMPLETION_APPROVAL_TYPE = 'course_completion'
 export const COURSE_LIFT_ACTIVITY_ID = 'lift_module'
 
@@ -131,6 +138,16 @@ export const markCourseCompleted = async (
   if (!learnerId) throw new Error('Learner identity is required')
   if (!course?.id) throw new Error('Course id is required')
   if (!course?.title) throw new Error('Course title is required')
+
+  // Course-completion approvals (and their point award) still write to Firestore
+  // (`approvals` collection + Firestore pointsLedger), which is denied under
+  // Supabase-only auth. Until this feature is migrated to Supabase, fail fast
+  // with a clear, user-safe message instead of surfacing a raw FirebaseError.
+  if (!COURSE_APPROVAL_WRITES_ENABLED) {
+    throw new Error(
+      'Course approvals are being migrated to the new system and are temporarily unavailable.',
+    )
+  }
 
   const completionDocId = buildCompletionDocId(learnerId, course.id)
   const completionRef = doc(db, APPROVALS_COLLECTION, completionDocId)
@@ -337,50 +354,16 @@ export const listenToUserCourseCompletions = (
  * Used by the partner UI.
  */
 export const listenToCourseCompletionsForLearners = (
-  learnerIds: string[],
+  _learnerIds: string[],
   onData: (records: CourseCompletionRecord[]) => void,
-  onError?: (error: Error) => void,
-): Unsubscribe => {
-  if (!learnerIds.length) {
-    onData([])
-    return () => {}
-  }
-
-  const chunks: string[][] = []
-  for (let i = 0; i < learnerIds.length; i += 30) {
-    chunks.push(learnerIds.slice(i, i + 30))
-  }
-
-  const recordsByChunk = new Map<number, CourseCompletionRecord[]>()
-  const emit = () => {
-    const flat: CourseCompletionRecord[] = []
-    recordsByChunk.forEach(records => {
-      flat.push(...records)
-    })
-    onData(flat)
-  }
-
-  const unsubscribers = chunks.map((chunk, chunkIndex) => {
-    const q = query(collection(db, APPROVALS_COLLECTION), where('userId', 'in', chunk))
-    return onSnapshot(
-      q,
-      snapshot => {
-        recordsByChunk.set(
-          chunkIndex,
-          snapshot.docs
-            .map(snap => mapApprovalToCompletion(snap.id, snap.data()))
-            .filter((r): r is CourseCompletionRecord => r !== null),
-        )
-        emit()
-      },
-      error => {
-        console.error('[CourseCompletion] Listener error (chunk)', error)
-        onError?.(error as Error)
-      },
-    )
-  })
-
-  return () => {
-    unsubscribers.forEach(unsub => unsub())
-  }
+  _onError?: (error: Error) => void,
+): (() => void) => {
+  // TEMPORARILY DISABLED pending the Supabase migration of course approvals.
+  // Completions live in the Firestore `approvals` collection, denied under
+  // Supabase-only auth, so the old `onSnapshot(approvals)` flooded the console
+  // with "Missing or insufficient permissions" whenever a learner was selected.
+  // Return no records instead of churning a dead listener (mirrors the
+  // programme-submissions no-op).
+  onData([])
+  return () => {}
 }

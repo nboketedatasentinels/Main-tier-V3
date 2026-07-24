@@ -1,5 +1,3 @@
-import { db } from "@/services/firebase";
-import { doc, getDoc } from "firebase/firestore";
 import { supabase } from "@/services/supabase";
 import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
@@ -89,16 +87,24 @@ export async function assignActivityToLearner(params: {
       throw new Error("Partner identity is missing");
     }
 
-    // 1. Fetch learner profile to get journeyType
-    const profileRef = doc(db, "profiles", learnerId);
-    const profileSnap = await getDoc(profileRef);
+    // 1. Fetch learner profile to get journeyType (Supabase `profiles`; the
+    // journey lives on the typed `journey_type` column, with a `data` jsonb
+    // fallback for older rows).
+    const { data: profileRow, error: profileError } = await supabase
+      .from("profiles")
+      .select("journey_type, data")
+      .eq("id", learnerId)
+      .maybeSingle();
 
-    if (!profileSnap.exists()) {
+    if (profileError) throw new Error(profileError.message);
+    if (!profileRow) {
       throw new Error("Learner profile not found");
     }
 
-    const profile = profileSnap.data() as UserProfile;
-    const journeyType = (profile.journeyType || "6W") as JourneyType;
+    const profileData = (profileRow.data as Record<string, unknown>) || {};
+    const journeyType = ((profileRow.journey_type as string) ||
+      (profileData.journeyType as string) ||
+      "6W") as JourneyType;
 
     // 2. Find activity definition (applies journey-specific points overrides)
     const activity = getActivityDefinitionById({ activityId, journeyType });

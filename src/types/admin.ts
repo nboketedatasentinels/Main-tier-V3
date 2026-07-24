@@ -1,3 +1,6 @@
+// Type-only import (erased at build - pulls no firebase runtime code). Kept on
+// firebase types until the not-yet-migrated services that still produce real
+// Firestore Timestamp/FieldValue values are moved to Supabase.
 import type { FieldValue, Timestamp } from 'firebase/firestore'
 import type { JourneyType } from '@/config/pointsConfig'
 import type { Pillar } from '@/types/pillar'

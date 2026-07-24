@@ -1,3 +1,4 @@
+// Type-only import (erased at build - no firebase runtime code).
 import type { Timestamp } from 'firebase/firestore'
 
 export type NudgeTemplateCategory =

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { subDays, differenceInDays } from 'date-fns'
 import type { PartnerUser, PartnerRiskLevel, PartnerOrganization } from '@/hooks/partner/usePartnerAdminData'
 import { build14DayRegistrationTrend } from '@/utils/partnerProgress'
@@ -81,14 +81,23 @@ export const usePartnerMetrics = (options: UsePartnerMetricsOptions) => {
     return { active, inactive }
   }, [organizations])
 
-  const daysUntil = (date: string) => differenceInDays(new Date(date), new Date())
+  const daysUntil = useCallback(
+    (date: string) => differenceInDays(new Date(date), new Date()),
+    [],
+  )
 
-  return {
-    metrics,
-    engagementTrend,
-    riskLevels,
-    atRiskUsers,
-    managedBreakdown,
-    daysUntil,
-  }
+  // Memoize the returned object so consumers (e.g. the partner snapshot memo in
+  // usePartnerAdminData) get a stable reference across renders instead of a new
+  // object every render, which would defeat their own memoization.
+  return useMemo(
+    () => ({
+      metrics,
+      engagementTrend,
+      riskLevels,
+      atRiskUsers,
+      managedBreakdown,
+      daysUntil,
+    }),
+    [metrics, engagementTrend, riskLevels, atRiskUsers, managedBreakdown, daysUntil],
+  )
 }

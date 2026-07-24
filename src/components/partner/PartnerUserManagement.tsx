@@ -43,11 +43,13 @@ import {
 } from '@chakra-ui/react'
 import { CheckCircle2, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { addDoc, collection, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import {
+  mergeUserProfileData,
+  recordPartnerEngagementAction,
+} from '@/services/partnerUserMetadataService'
 import { PartnerUser, PartnerOrganization, PartnerRiskLevel } from '@/hooks/usePartnerDashboardData'
 import { useAuth } from '@/hooks/useAuth'
 import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
-import { db } from '@/services/firebase'
 import UserNudgeHistoryPanel from '@/components/partner/nudges/UserNudgeHistoryPanel'
 import { type PointsVerificationRequest } from '@/services/pointsVerificationService'
 import { getDisplayName } from '@/utils/displayName'
@@ -283,12 +285,9 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   }
 
   const persistProfileMetadata = async (userId: string, updates: Record<string, unknown>) => {
-    const timestamp = serverTimestamp()
-    await updateDoc(doc(db, 'profiles', userId), {
-      ...updates,
-      updatedAt: timestamp,
-      updated_at: timestamp,
-    })
+    // nudgeEnabled / adminNotes are `data` jsonb fields (not columns), so this
+    // merges them into profiles.data via Supabase. See partnerUserMetadataService.
+    await mergeUserProfileData(userId, updates)
   }
 
   const handleNudgePreferenceToggle = async (enabled: boolean) => {
@@ -457,13 +456,12 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     try {
       const results = await Promise.allSettled(
         selection.map((userId) =>
-          addDoc(collection(db, 'users', userId, 'engagement_actions'), {
-            action_type: actionToApply.toLowerCase().replace(/\s+/g, '_'),
-            action_label: actionToApply,
-            actor_id: profile?.id ?? null,
-            actor_name: profile?.fullName ?? null,
-            timestamp: serverTimestamp(),
-            user_id: userId,
+          recordPartnerEngagementAction({
+            learnerId: userId,
+            actionType: actionToApply.toLowerCase().replace(/\s+/g, '_'),
+            actionLabel: actionToApply,
+            actorId: profile?.id ?? null,
+            actorName: profile?.fullName ?? null,
           }),
         ),
       )

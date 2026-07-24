@@ -1,4 +1,5 @@
-import { Timestamp } from 'firebase/firestore'
+// Type-only import (erased at build - no firebase runtime code).
+import type { Timestamp } from 'firebase/firestore'
 
 export type UpgradeRequestType = 'individual' | 'corporate_approval' | 'tier_change'
 export type UpgradeRequestStatus = 'pending' | 'approved' | 'rejected' | 'completed'

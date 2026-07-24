@@ -65,7 +65,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   const primaryNavItems = React.useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
   const mobileLabelByKey = React.useMemo<Record<string, string>>(
     () => ({
-      overview: 'Overview',
+      overview: 'Program',
       users: 'Users',
       'partner-assignment': 'Issue',
       'course-approvals': 'Approvals',
@@ -216,7 +216,13 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     </Stack>
   )
 
-  const ProfileSection = () => (
+  // Rendered as an inline JSX value (used at {profileSection}) rather than a
+  // component declared in the render body. Declaring `const ProfileSection = () => ...`
+  // and rendering `<ProfileSection />` gives React a NEW component type every
+  // render, which unmounts+remounts the whole subtree each time — remounting the
+  // org <Select> and <NotificationDropdown> (re-subscribing realtime) on every
+  // render. A plain element value keeps a stable identity across renders.
+  const profileSection = (
     <HStack spacing={3} p={3} borderRadius="lg" bg="brand.accent" align="flex-start">
       <Avatar name={displayName} size="sm" />
       <VStack align="flex-start" spacing={0} flex={1}>
@@ -256,9 +262,14 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     </HStack>
   )
 
-  const HeaderControls = () => (
+  // Inline JSX value (see profileSection note above) — not a render-body
+  // component — so the org <Select> and <NotificationDropdown> keep a stable
+  // identity and are not remounted on every render.
+  const headerControls = (
     <HStack spacing={3} align="center" wrap={{ base: 'wrap', md: 'nowrap' }} justify="flex-end" flexShrink={0}>
       <Select
+        id="partner-org-filter"
+        name="partner-org-filter"
         w={{ base: 'full', md: '240px' }}
         minW={{ base: 'full', md: '200px' }}
         maxW="280px"
@@ -321,7 +332,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
 
           <Box flex={1} />
 
-          <ProfileSection />
+          {profileSection}
         </VStack>
       </Box>
 
@@ -332,7 +343,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           <DrawerHeader>Navigation</DrawerHeader>
           <DrawerBody>
             <Stack spacing={6}>
-              <ProfileSection />
+              {profileSection}
               {renderNav()}
               <Button
                 leftIcon={<LogOut size={16} />}
@@ -372,7 +383,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
                 Your partner workspace for learners, organizations, and interventions.
               </Text>
             </VStack>
-            <HeaderControls />
+            {headerControls}
           </Flex>
 
           {children}
