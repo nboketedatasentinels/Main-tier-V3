@@ -115,17 +115,22 @@ export const ActivityRow = ({
 }: ActivityRowProps) => {
   const navigate = useNavigate()
 
-  const requiresPartnerApproval = Boolean(
-    activity.approvalType === 'partner_approved' || activity.requiresApproval,
-  )
   const isExternalAiToolSubmission =
     activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
-  const awaitingPartnerIssue =
-    isPartnerIssued &&
-    !activity.issuedByPartner &&
-    !isAdmin &&
-    activity.status !== 'completed'
+  const requiresPartnerApproval = Boolean(
+    activity.approvalType === 'partner_approved' ||
+      activity.requiresApproval ||
+      // Pillar deliverables (Capstone / Case Study) are partner_issued, but the
+      // learner submits the deliverable first. Route them through the same
+      // proof -> pending -> partner-reward flow as partner_approved so they land
+      // In Review immediately instead of passively "awaiting partner" (which
+      // dead-ended on the disabled programme-components submission service).
+      (isPartnerIssued && !activity.issuedByPartner),
+  )
+  // No longer a passive state: non-issued partner_issued items are now
+  // submittable via proof (see requiresPartnerApproval above).
+  const awaitingPartnerIssue = false
 
   const lockedByInteraction =
     Boolean(activity.hasInteracted) && activity.status !== 'rejected' && !isAdmin

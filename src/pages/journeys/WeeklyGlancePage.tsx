@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc, FirestoreError } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import { resolveJourneyType } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
@@ -522,12 +523,49 @@ export const WeeklyGlancePage = () => {
 
   const currentWeek = journeyTiming?.currentWeek ?? data.weekNumber
   const totalWeeks = effectiveDurationWeeks
-  const notStarted = journeyTiming?.notStarted ?? false
-  const daysUntilStart = journeyTiming?.daysUntilStart ?? 0
-  // "Cycle" = 2-week window; use the window countdown, not the 7-day week value.
-  const daysRemaining = journeyTiming?.cycleDaysRemaining ?? 0
   const cycleNumber = journeyTiming?.currentCycle ?? Math.ceil(currentWeek / 2)
   const totalCycles = journeyTiming?.totalCycles ?? Math.max(1, Math.ceil(totalWeeks / 2))
+
+  // Pending items awaiting partner reward: everything the learner has submitted
+  // (capstone/case study/any partner-approved activity) that the partner hasn't
+  // actioned yet. Source of truth is the Supabase `point_verifications` store
+  // (status = 'pending'). Live-refreshed so a fresh submission shows up at once.
+  const [pending, setPending] = useState<{ count: number; points: number }>({ count: 0, points: 0 })
+  useEffect(() => {
+    const uid = profile?.id
+    if (!uid) {
+      setPending({ count: 0, points: 0 })
+      return
+    }
+    let active = true
+    const load = async () => {
+      const { data: rows, error } = await supabase
+        .from('point_verifications')
+        .select('points')
+        .eq('uid', uid)
+        .eq('status', 'pending')
+      if (!active || error) return
+      const list = rows ?? []
+      const points = list.reduce((sum, r) => {
+        const p = typeof r.points === 'number' ? r.points : Number(r.points)
+        return sum + (Number.isFinite(p) ? p : 0)
+      }, 0)
+      setPending({ count: list.length, points })
+    }
+    void load()
+    const channel = supabase
+      .channel(`glance_pending_${uid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'point_verifications', filter: `uid=eq.${uid}` },
+        () => void load(),
+      )
+      .subscribe()
+    return () => {
+      active = false
+      void supabase.removeChannel(channel)
+    }
+  }, [profile?.id])
 
   const journeyMax = JOURNEY_META[effectiveJourneyType]?.maxPossiblePoints ?? 0
   const passMark = JOURNEY_META[effectiveJourneyType]?.passMarkPoints ?? 0
@@ -820,17 +858,15 @@ export const WeeklyGlancePage = () => {
             />
           </Skeleton>
           <KpiTile
-            label={notStarted ? 'Days until start' : 'Days left in cycle'}
-            value={notStarted ? daysUntilStart : daysRemaining}
+            label="Pending items"
+            value={pending.count}
             sub={
-              notStarted
-                ? 'Journey not started'
-                : daysRemaining <= 2
-                  ? 'Closing soon'
-                  : 'Time remaining'
+              pending.count === 0
+                ? 'Nothing awaiting review'
+                : `+${pending.points.toLocaleString()} pts awaiting partner`
             }
             icon={Clock}
-            theme={!notStarted && daysRemaining <= 2 ? 'red' : 'orange'}
+            theme={pending.count > 0 ? 'yellow' : 'orange'}
           />
           <Skeleton isLoaded={!data.loading.points} rounded="xl">
             <KpiTile
