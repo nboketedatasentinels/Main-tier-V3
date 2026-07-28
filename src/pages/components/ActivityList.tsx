@@ -237,18 +237,26 @@ export const ActivityList = ({
         if (isTodo) {
           // A one-time activity may allow more than one claim (e.g. Case Study
           // and Capstone: maxTotal = 2). Surface one To-do row per REMAINING
-          // claim so the checklist total reflects the full configured points,
-          // not just a single claim (which under-counted these activities).
+          // claim so the checklist total reflects the full configured points -
+          // but SPREAD the claims across the journey (one per 2-week window)
+          // instead of stacking identical rows on the same week. Stacking gave
+          // duplicate rows (and colliding React keys) under Week 1.
           const totalCap = activity.activityPolicy?.maxTotal ?? 1
           const used = (activity.completedCount ?? 0) + pendingWeeks.size
           const remaining = Math.max(1, totalCap - used)
-          const list = todoByWeek.get(startWeek) ?? []
+          const usedWeeks = new Set<number>([...completedWeeks, ...pendingWeeks])
           for (let i = 0; i < remaining; i++) {
-            list.push({ activity, weekOverride: startWeek })
+            // One claim per successive 2-week window, clamped to the journey.
+            let targetWeek = Math.min(totalWeeks, startWeek + i * PARALLEL_WINDOW_SIZE_WEEKS)
+            // Never collide with a week that already holds this activity.
+            while (usedWeeks.has(targetWeek) && targetWeek < totalWeeks) targetWeek += 1
+            usedWeeks.add(targetWeek)
+            const list = todoByWeek.get(targetWeek) ?? []
+            list.push({ activity, weekOverride: targetWeek })
+            todoByWeek.set(targetWeek, list)
             todoTotalCount += 1
             todoPointsTotal += activity.points ?? 0
           }
-          todoByWeek.set(startWeek, list)
           return
         }
         locked.push(activity)
