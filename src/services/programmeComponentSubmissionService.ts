@@ -1,5 +1,4 @@
-import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
-import { db } from './firebase'
+import { supabase } from './supabase'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints } from './pointsService'
 import { createInAppNotification } from './notificationService'
@@ -64,13 +63,116 @@ export interface ProgrammeComponentSubmission {
  * - mirror partnerSupabaseReads / the interventions migration (0024). The write
  * helpers below are left intact for that migration.
  */
+type Raw = Record<string, unknown>
+
+const toDate = (v: unknown): Date | null => {
+  if (!v || typeof v !== 'string') return null
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+const mapRow = (
+  row: Raw,
+  nameByUid: Map<string, { email: string | null; fullName: string | null }>,
+): ProgrammeComponentSubmission => {
+  const uid = String(row.user_id ?? '')
+  const who = nameByUid.get(uid)
+  return {
+    id: String(row.id ?? ''),
+    uid,
+    email: who?.email ?? null,
+    displayName: who?.fullName ?? null,
+    organizationId: (row.organization_id as string) ?? null,
+    componentId: (row.component_id as string) ?? '',
+    componentType: (row.component_type as ProgrammeComponentType | null) ?? null,
+    componentTitle: (row.component_title as string) ?? null,
+    pillar: (row.pillar as string) ?? null,
+    partId: (row.part_id as string) ?? null,
+    partTitle: (row.part_title as string) ?? null,
+    answers: (row.answers as Record<string, string>) ?? {},
+    answerCount: typeof row.answer_count === 'number' ? row.answer_count : 0,
+    status: (row.status as ProgrammeSubmissionStatus) ?? 'submitted',
+    submittedAt: toDate(row.submitted_at),
+    lastUpdatedAt: toDate(row.last_updated_at),
+    resubmittedAt: toDate(row.resubmitted_at),
+    sourcePage: (row.source_page as string) ?? null,
+    reviewedAt: toDate(row.reviewed_at),
+    reviewedBy: (row.reviewed_by as string) ?? null,
+    reviewerName: (row.reviewer_name as string) ?? null,
+    partnerNotes: (row.partner_notes as string) ?? null,
+    score: typeof row.score === 'number' ? row.score : null,
+  }
+}
+
+// Unique realtime topic per subscription (supabase.channel reuses a channel with
+// the same topic, which throws on a fast remount).
+let pcsChannelSeq = 0
+
+/**
+ * Live submissions for a set of organization ids, read from Supabase
+ * `programme_component_submissions` (RLS `pcs_select`: partners of the org can
+ * read). Learner email/name are resolved from `profiles`. Replaces the disabled
+ * Firestore `onSnapshot(programmeComponentSubmissions)` listener.
+ */
 export function subscribeToSubmissionsByOrgIds(
-  _organizationIds: string[],
+  organizationIds: string[],
   onUpdate: (rows: ProgrammeComponentSubmission[]) => void,
-  _onError?: (err: Error) => void,
+  onError?: (err: Error) => void,
 ): () => void {
-  onUpdate([])
-  return () => undefined
+  const orgIds = (organizationIds ?? []).filter(Boolean)
+  if (orgIds.length === 0) {
+    onUpdate([])
+    return () => undefined
+  }
+
+  let active = true
+
+  const load = async () => {
+    const { data: rows, error } = await supabase
+      .from('programme_component_submissions')
+      .select('*')
+      .in('organization_id', orgIds)
+      .order('last_updated_at', { ascending: false })
+    if (!active) return
+    if (error) {
+      console.error('[programmeComponentSubmissionService] load failed', error)
+      onError?.(new Error(error.message))
+      return
+    }
+    const list = (rows ?? []) as Raw[]
+    const uids = Array.from(new Set(list.map((r) => String(r.user_id)).filter(Boolean)))
+    const nameByUid = new Map<string, { email: string | null; fullName: string | null }>()
+    if (uids.length) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('id, email, full_name')
+        .in('id', uids)
+      ;(profs ?? []).forEach((p) =>
+        nameByUid.set(String(p.id), {
+          email: (p.email as string) ?? null,
+          fullName: (p.full_name as string) ?? null,
+        }),
+      )
+    }
+    if (!active) return
+    onUpdate(list.map((r) => mapRow(r, nameByUid)))
+  }
+
+  void load()
+
+  const channel = supabase
+    .channel(`pcs_partner_${++pcsChannelSeq}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'programme_component_submissions' },
+      () => void load(),
+    )
+    .subscribe()
+
+  return () => {
+    active = false
+    void supabase.removeChannel(channel)
+  }
 }
 
 export interface ReviewUpdate {
@@ -85,16 +187,20 @@ export async function updateSubmissionReview(
   submissionId: string,
   update: ReviewUpdate,
 ): Promise<void> {
-  const ref = doc(db, 'programmeComponentSubmissions', submissionId)
-  await updateDoc(ref, {
-    status: update.status,
-    partnerNotes: update.partnerNotes,
-    score: update.score,
-    reviewedBy: update.reviewerId,
-    reviewerName: update.reviewerName,
-    reviewedAt: serverTimestamp(),
-    lastUpdatedAt: serverTimestamp(),
-  })
+  const nowIso = new Date().toISOString()
+  const { error } = await supabase
+    .from('programme_component_submissions')
+    .update({
+      status: update.status,
+      partner_notes: update.partnerNotes,
+      score: update.score,
+      reviewed_by: update.reviewerId,
+      reviewer_name: update.reviewerName,
+      reviewed_at: nowIso,
+      last_updated_at: nowIso,
+    })
+    .eq('id', submissionId)
+  if (error) throw new Error(error.message)
 }
 
 /**
@@ -138,10 +244,14 @@ export async function approveSubmissionAndAward(params: {
 
   // Resolve the learner's journey so progress is attributed correctly; pillar
   // components only exist on 6W, so fall back to 6W to resolve the points.
-  const profileSnap = await getDoc(doc(db, 'profiles', submission.uid))
-  const journeyType = ((profileSnap.exists()
-    ? (profileSnap.data() as { journeyType?: string }).journeyType
-    : null) || '6W') as JourneyType
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('journey_type, data')
+    .eq('id', submission.uid)
+    .maybeSingle()
+  const journeyType = ((profileRow?.journey_type as string) ||
+    ((profileRow?.data as { journeyType?: string } | null)?.journeyType) ||
+    '6W') as JourneyType
 
   const activity =
     getActivityDefinitionById({ activityId: submission.componentType, journeyType }) ??

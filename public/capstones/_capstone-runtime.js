@@ -1,40 +1,30 @@
 /*
- * Shared submission runtime for /capstones/*.html.
+ * Shared submission runtime for /capstones/*.html (Capstone / Case Study /
+ * Practical deliverables).
  *
  * What this does:
  *  1. Reads <meta name="programme-component-*"> tags from the page.
- *  2. Loads Firebase using the config the React app published to localStorage.
- *  3. Picks up the learner's existing auth session (same origin).
+ *  2. Reads the Supabase project config (URL + anon key) the React app
+ *     published to localStorage as `t4l_sb_config` (see src/services/supabase.ts).
+ *  3. Picks up the learner's existing Supabase session from localStorage
+ *     (`sb-<ref>-auth-token`, written by supabase-js on the same origin),
+ *     refreshing the access token if it has expired.
  *  4. On Submit (window.submitCapstone / submitCaseStudy / submitPractical),
- *     collects every named input/textarea, builds a submission doc, and
- *     writes it to Firestore at
- *       programmeComponentSubmissions/{uid}__{componentId}.
+ *     collects every named input/textarea and UPSERTs the submission into the
+ *     Supabase `programme_component_submissions` table via the REST API
+ *     (unique on user_id + component_id, so resubmits update in place).
  *  5. Shows a small status banner with success / error.
  *
- * The React app's Firestore rules enforce that a learner can only write
- * their own submission. Partners + admins of the learner's org can read.
+ * Row-Level Security enforces that a learner can only write their own row
+ * (pcs_insert: user_id = auth.uid()); partners/admins of the org can read.
+ *
+ * This replaces the old Firebase/Firestore runtime, which broke after the
+ * Firebase -> Supabase auth cutover ("You need to be signed in") because the
+ * app no longer holds a Firebase session.
  */
 
-import {
-  initializeApp,
-  getApps,
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js'
-import {
-  getAuth,
-  onAuthStateChanged,
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-auth.js'
-import {
-  getFirestore,
-  doc,
-  getDoc,
-  setDoc,
-  collection,
-  addDoc,
-  serverTimestamp,
-} from 'https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js'
-
 const APP_BASE = '/app/courses#programme-components'
-const CONFIG_KEY = 't4l_fb_config'
+const CONFIG_KEY = 't4l_sb_config'
 
 function readMeta(name) {
   const el = document.querySelector(`meta[name="${name}"]`)
@@ -45,7 +35,28 @@ function readConfig() {
   try {
     const raw = window.localStorage?.getItem(CONFIG_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    if (!parsed?.url || !parsed?.anonKey) return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+/** Read the supabase-js persisted session for this project (same origin). */
+function readSession(url) {
+  try {
+    const ref = new URL(url).hostname.split('.')[0]
+    if (!ref) return null
+    const raw = window.localStorage?.getItem(`sb-${ref}-auth-token`)
+    if (!raw) return null
+    // supabase-js may store the session as raw JSON or base64-prefixed JSON.
+    const json = raw.startsWith('base64-')
+      ? atob(raw.slice('base64-'.length))
+      : raw
+    const parsed = JSON.parse(json)
+    // Some versions wrap it as { currentSession: {...} }.
+    return parsed?.access_token ? parsed : parsed?.currentSession ?? null
   } catch {
     return null
   }
@@ -64,7 +75,7 @@ function showBanner(kind, message) {
       'z-index:9999',
       'padding:12px 18px',
       'border-radius:10px',
-      'font-family:\'DM Sans\',system-ui,sans-serif',
+      "font-family:'DM Sans',system-ui,sans-serif",
       'font-size:14px',
       'font-weight:600',
       'box-shadow:0 8px 24px rgba(0,0,0,0.18)',
@@ -152,39 +163,65 @@ if (!META.componentId) {
 }
 
 const config = readConfig()
-let firebaseApp = null
-let firestore = null
-let firebaseAuth = null
-let authUser = null
-let authResolved = false
-
-if (config?.apiKey && config?.projectId) {
-  firebaseApp = getApps().length ? getApps()[0] : initializeApp(config)
-  firebaseAuth = getAuth(firebaseApp)
-  firestore = getFirestore(firebaseApp)
-
-  onAuthStateChanged(firebaseAuth, (user) => {
-    authUser = user
-    authResolved = true
-    if (!user) {
-      console.warn('[capstone-runtime] no signed-in user detected')
-    }
-  })
-} else {
-  console.error('[capstone-runtime] Firebase config not found in localStorage. Was the main app loaded on this origin?')
+if (!config) {
+  console.error('[capstone-runtime] Supabase config not found in localStorage. Was the main app loaded on this origin?')
 }
 
-function waitForAuth(timeoutMs = 4000) {
-  return new Promise((resolve) => {
-    if (authResolved) return resolve(authUser)
-    const startedAt = Date.now()
-    const id = setInterval(() => {
-      if (authResolved || Date.now() - startedAt > timeoutMs) {
-        clearInterval(id)
-        resolve(authUser)
-      }
-    }, 100)
-  })
+/** REST helper against the Supabase project, with the learner's bearer token. */
+async function sbFetch(path, token, init = {}) {
+  const headers = {
+    apikey: config.anonKey,
+    Authorization: `Bearer ${token}`,
+    ...(init.headers || {}),
+  }
+  return fetch(`${config.url}${path}`, { ...init, headers })
+}
+
+/** Ensure a non-expired access token, refreshing via the token endpoint if needed. */
+async function getAccessToken() {
+  const session = readSession(config.url)
+  if (!session?.access_token) return null
+
+  const expiresAt = typeof session.expires_at === 'number' ? session.expires_at : 0
+  const nowSec = Math.floor(Date.now() / 1000)
+  // Valid for at least another minute -> use as-is.
+  if (expiresAt - nowSec > 60) {
+    return { token: session.access_token, user: session.user ?? null }
+  }
+
+  // Expired/expiring: refresh with the stored refresh token.
+  if (!session.refresh_token) {
+    return { token: session.access_token, user: session.user ?? null }
+  }
+  try {
+    const res = await fetch(`${config.url}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: config.anonKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session.refresh_token }),
+    })
+    if (!res.ok) {
+      // Refresh failed -> fall back to the (possibly stale) token; submit may 401.
+      return { token: session.access_token, user: session.user ?? null }
+    }
+    const refreshed = await res.json()
+    return { token: refreshed.access_token, user: refreshed.user ?? session.user ?? null }
+  } catch {
+    return { token: session.access_token, user: session.user ?? null }
+  }
+}
+
+async function fetchOrganizationId(uid, token) {
+  try {
+    const res = await sbFetch(
+      `/rest/v1/profiles?id=eq.${uid}&select=organization_id`,
+      token,
+    )
+    if (!res.ok) return null
+    const rows = await res.json()
+    return rows?.[0]?.organization_id ?? null
+  } catch {
+    return null
+  }
 }
 
 async function submit() {
@@ -192,13 +229,16 @@ async function submit() {
     showBanner('error', 'This page is missing its component id. Refresh; if it persists, contact your partner.')
     return
   }
-  if (!firestore || !firebaseAuth) {
+  if (!config) {
     showBanner('error', "We couldn't connect to your account. Open this page from the main app and try again.")
     return
   }
+
   showBanner('info', 'Submitting your work...')
-  const user = await waitForAuth()
-  if (!user) {
+
+  const auth = await getAccessToken()
+  const uid = auth?.user?.id
+  if (!auth?.token || !uid) {
     showBanner(
       'error',
       'You need to be signed in. Open the main app, sign in, then click "Begin part" again from your courses page.',
@@ -207,95 +247,84 @@ async function submit() {
   }
 
   const answers = collectAnswers()
-  const answeredCount = Object.values(answers).filter((v) => typeof v === 'string' && v.trim().length > 0).length
-
+  const answeredCount = Object.values(answers).filter(
+    (v) => typeof v === 'string' && v.trim().length > 0,
+  ).length
   if (answeredCount === 0) {
     showBanner('error', 'Nothing to submit yet. Fill in the fields and try again.')
     return
   }
 
-  const submissionId = `${user.uid}__${META.componentId}`
-  const ref = doc(firestore, 'programmeComponentSubmissions', submissionId)
+  const organizationId = await fetchOrganizationId(uid, auth.token)
 
-  // Look up learner profile so the submission records its organizationId.
-  // Without it the partner dashboard can't scope submissions to their orgs.
-  let organizationId = null
+  // Detect resubmission for the success message (best-effort).
+  let isResubmission = false
   try {
-    const profileSnap = await getDoc(doc(firestore, 'profiles', user.uid))
-    if (profileSnap.exists()) {
-      const data = profileSnap.data() || {}
-      organizationId = data.organizationId ?? data.orgId ?? data.companyId ?? null
+    const existingRes = await sbFetch(
+      `/rest/v1/programme_component_submissions?user_id=eq.${uid}&component_id=eq.${encodeURIComponent(META.componentId)}&select=id`,
+      auth.token,
+    )
+    if (existingRes.ok) {
+      const rows = await existingRes.json()
+      isResubmission = Array.isArray(rows) && rows.length > 0
     }
-  } catch (err) {
-    console.warn('[capstone-runtime] could not read learner profile for orgId', err)
+  } catch {
+    // non-fatal
+  }
+
+  const payload = {
+    user_id: uid,
+    organization_id: organizationId,
+    component_id: META.componentId,
+    component_type: META.componentType ?? null,
+    component_title: META.componentTitle ?? null,
+    pillar: META.pillar ?? null,
+    part_id: META.partId ?? null,
+    part_title: META.partTitle ?? null,
+    answers,
+    answer_count: answeredCount,
+    status: 'submitted',
+    last_updated_at: new Date().toISOString(),
+    ...(isResubmission ? { resubmitted_at: new Date().toISOString() } : {}),
+    source_page: typeof window !== 'undefined' ? window.location.pathname : null,
   }
 
   try {
-    // Read existing doc to preserve original submittedAt + capture resubmissions.
-    const existing = await getDoc(ref)
-    const isResubmission = existing.exists()
-
-    await setDoc(
-      ref,
+    // Upsert on (user_id, component_id): first submit inserts, resubmit updates
+    // in place (submitted_at is preserved because we don't send it).
+    const res = await sbFetch(
+      `/rest/v1/programme_component_submissions?on_conflict=user_id,component_id`,
+      auth.token,
       {
-        uid: user.uid,
-        email: user.email ?? null,
-        displayName: user.displayName ?? null,
-        organizationId,
-        componentId: META.componentId,
-        componentType: META.componentType ?? null,
-        componentTitle: META.componentTitle ?? null,
-        pillar: META.pillar ?? null,
-        partId: META.partId ?? null,
-        partTitle: META.partTitle ?? null,
-        answers,
-        answerCount: answeredCount,
-        status: 'submitted',
-        submittedAt: isResubmission ? existing.data().submittedAt : serverTimestamp(),
-        lastUpdatedAt: serverTimestamp(),
-        resubmittedAt: isResubmission ? serverTimestamp() : null,
-        sourcePage: typeof window !== 'undefined' ? window.location.pathname : null,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=minimal',
+        },
+        body: JSON.stringify(payload),
       },
-      { merge: true },
     )
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      console.error('[capstone-runtime] save failed', res.status, detail)
+      if (res.status === 401 || res.status === 403) {
+        showBanner(
+          'error',
+          'Your session expired. Open the main app, sign in again, then reopen this page.',
+        )
+      } else {
+        showBanner('error', "We couldn't save your submission. Check your connection and try again.")
+      }
+      return
+    }
+
     showBanner(
       'success',
-      isResubmission ? 'Resubmitted. Your partner will see the updated answers.' : 'Submitted. Your partner can now review.',
+      isResubmission
+        ? 'Resubmitted. Your partner will see the updated answers.'
+        : 'Submitted. Your partner can now review.',
     )
-
-    // Notify the learner's partner so the submission lands in their review
-    // queue / notifications. admin_notifications is readable by partners +
-    // admins of the org (target_roles), and rules allow any signed-in user to
-    // create one. Non-fatal: the submission already saved if this fails.
-    if (organizationId) {
-      try {
-        const verb = isResubmission ? 'resubmitted' : 'submitted'
-        await addDoc(collection(firestore, 'admin_notifications'), {
-          type: 'system_event',
-          category: 'action_required',
-          title: 'New programme submission to review',
-          message: `${user.displayName || user.email || 'A learner'} ${verb} "${META.componentTitle || META.componentId}" for review.`,
-          severity: 'info',
-          target_roles: ['partner', 'super_admin'],
-          related_id: organizationId,
-          is_read: false,
-          metadata: {
-            kind: 'programme_submission',
-            submissionId,
-            uid: user.uid,
-            organizationId,
-            componentId: META.componentId,
-            componentType: META.componentType ?? null,
-            componentTitle: META.componentTitle ?? null,
-            pillar: META.pillar ?? null,
-            resubmission: isResubmission,
-          },
-          created_at: serverTimestamp(),
-        })
-      } catch (notifyErr) {
-        console.warn('[capstone-runtime] partner notification failed', notifyErr)
-      }
-    }
   } catch (err) {
     console.error('[capstone-runtime] save failed', err)
     showBanner('error', "We couldn't save your submission. Check your connection and try again.")
@@ -326,3 +355,5 @@ try {
 } catch {
   // sessionStorage unavailable; non-fatal.
 }
+
+void APP_BASE

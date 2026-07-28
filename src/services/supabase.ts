@@ -49,3 +49,17 @@ export const supabase: SupabaseClient = createClient(url ?? '', anonKey ?? '', {
     flowType: 'pkce',
   },
 })
+
+// Publish the minimal Supabase config (project URL + anon key) for the static
+// capstone/case-study/practical runtime at public/capstones/_capstone-runtime.js.
+// That page runs OUTSIDE the React bundle, so it can't import this client; it
+// reads this blob + the learner's supabase-js session from localStorage to
+// submit deliverables via the REST API. Mirrors how firebase.ts published
+// `t4l_fb_config` for the old Firestore-based runtime.
+try {
+  if (typeof window !== 'undefined' && url && anonKey) {
+    window.localStorage.setItem('t4l_sb_config', JSON.stringify({ url, anonKey }))
+  }
+} catch {
+  // localStorage unavailable (SSR / privacy mode); non-fatal.
+}
