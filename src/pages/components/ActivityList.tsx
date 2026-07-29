@@ -14,10 +14,10 @@ import {
 import { ChevronDown, ChevronRight, PartyPopper } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getVisibleActivities } from '@/utils/activityStateManager'
-import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
+import { PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { ActivityRow } from './ActivityRow'
 
-type TodoRow = { activity: ActivityState; weekOverride: number }
+type TodoRow = { activity: ActivityState; weekOverride: number; occurrence?: number }
 
 type Bucket = 'todo' | 'pending' | 'done' | 'locked'
 
@@ -252,7 +252,7 @@ export const ActivityList = ({
             while (usedWeeks.has(targetWeek) && targetWeek < totalWeeks) targetWeek += 1
             usedWeeks.add(targetWeek)
             const list = todoByWeek.get(targetWeek) ?? []
-            list.push({ activity, weekOverride: targetWeek })
+            list.push({ activity, weekOverride: targetWeek, occurrence: i })
             todoByWeek.set(targetWeek, list)
             todoTotalCount += 1
             todoPointsTotal += activity.points ?? 0
@@ -297,53 +297,33 @@ export const ActivityList = ({
         return
       }
 
-      const policyType = activity.activityPolicy?.type
-      const maxPerWindow = activity.activityPolicy?.maxPerWindow ?? null
-      const maxPerWeek = activity.activityPolicy?.maxPerWeek ?? null
       const maxTotal = activity.activityPolicy?.maxTotal ?? Infinity
-
-      // Slots already committed (completed or in review) consume the activity's
-      // total-frequency budget. The remaining To-do rows MUST be capped at
-      // maxTotal - used; without this cap the loop emitted one row per eligible
-      // week, inflating the checklist total far past the journey maximum — the
-      // cause of "+84,000 pts available" instead of the configured 60,000.
       const usedTotal = completedWeeks.size + pendingWeeks.size
-      let remainingTotal =
-        maxTotal === Infinity ? Infinity : Math.max(0, maxTotal - usedTotal)
+      const remaining = maxTotal === Infinity ? 0 : Math.max(0, maxTotal - usedTotal)
+      if (remaining === 0) return
 
-      // Committed (completed + pending) AND freshly-generated rows both count
-      // toward per-window caps, so track them together rather than looking at
-      // prior completions alone.
-      const usedByWindow = new Map<number, number>()
-      const bumpWindow = (week: number) => {
-        const win = getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS)
-        usedByWindow.set(win, (usedByWindow.get(win) ?? 0) + 1)
-      }
-      completedWeeks.forEach(bumpWindow)
-      pendingWeeks.forEach(bumpWindow)
-
+      // Surface EVERY remaining claim so the To-do total always equals the
+      // journey max. Distribute one claim per eligible week from the activity's
+      // start week; if there are more claims than weeks left (e.g. Impact log:
+      // 4 claims but only weeks 4-6 remain), the extra claims WRAP and stack on
+      // earlier weeks rather than being dropped. Dropping slots is why the total
+      // came out at 57,000 instead of the configured 60,000. The occurrence
+      // index keeps stacked rows' React keys unique.
+      const eligibleWeeks: number[] = []
       for (let w = startWeek; w <= totalWeeks; w++) {
-        if (remainingTotal <= 0) break
-        if (completedWeeks.has(w)) continue
-        // A pending submission already owns this week - it lives in the
-        // In Review bucket, not To-do. Avoid offering a re-submit.
-        if (pendingWeeks.has(w)) continue
-        if (maxPerWeek !== null) {
-          // Already at per-week cap for this specific week.
-          const inWeek = completedWeeks.has(w) ? 1 : 0
-          if (inWeek >= maxPerWeek) continue
-        }
-        if (policyType === 'window_limited' && maxPerWindow !== null) {
-          const win = getWindowNumber(w, PARALLEL_WINDOW_SIZE_WEEKS)
-          if ((usedByWindow.get(win) ?? 0) >= maxPerWindow) continue
-          usedByWindow.set(win, (usedByWindow.get(win) ?? 0) + 1)
-        }
+        if (completedWeeks.has(w) || pendingWeeks.has(w)) continue
+        eligibleWeeks.push(w)
+      }
+      if (eligibleWeeks.length === 0) {
+        eligibleWeeks.push(Math.min(totalWeeks, Math.max(1, startWeek)))
+      }
+      for (let i = 0; i < remaining; i++) {
+        const w = eligibleWeeks[i % eligibleWeeks.length]
         const list = todoByWeek.get(w) ?? []
-        list.push({ activity, weekOverride: w })
+        list.push({ activity, weekOverride: w, occurrence: i })
         todoByWeek.set(w, list)
         todoTotalCount += 1
         todoPointsTotal += activity.points ?? 0
-        remainingTotal -= 1
       }
     })
 
@@ -609,8 +589,8 @@ export const ActivityList = ({
                   )}
                 </Flex>
                 <Collapse in={!isWeekCollapsed} animateOpacity>
-                  {weekRows.map(({ activity, weekOverride }) => {
-                    const rowKey = `${activity.id}-week-${weekOverride}`
+                  {weekRows.map(({ activity, weekOverride, occurrence }) => {
+                    const rowKey = `${activity.id}-week-${weekOverride}-${occurrence ?? 0}`
                     const rowActivity = projectForWeek(activity)
                     return (
                       <ActivityRow
