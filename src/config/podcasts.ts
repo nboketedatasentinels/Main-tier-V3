@@ -362,7 +362,7 @@ const LEADING_SELF: PodcastPillarCatalogue = {
       module: 'module_1',
       youtubeUrl: 'https://youtu.be/HixZzJmodJo',
       assessment: {
-        passingScore: 2,
+        passingScore: 3,
         questions: [
           {
             id: 'q1',
@@ -378,25 +378,48 @@ const LEADING_SELF: PodcastPillarCatalogue = {
           },
           {
             id: 'q2',
-            prompt: 'What does the episode recommend instead of fear-based productivity?',
+            prompt:
+              "What is the guest's view on where the capacity for motivation comes from?",
             options: [
-              'More frequent performance reviews',
-              'Building intrinsic motivation through purpose, autonomy, and mastery',
-              'Stricter deadlines with bigger consequences',
-              'Larger financial bonuses',
+              'Only high performers are born with it',
+              'It must be installed through incentives',
+              'We are all born with a capacity for motivation, but experiences and workplaces can reduce it',
+              'It comes almost entirely from financial rewards',
+            ],
+            correctIndex: 2,
+          },
+          {
+            id: 'q3',
+            prompt: 'Why does the guest use running a marathon as an example?',
+            options: [
+              'It shows people are motivated by hard, meaningful challenges even when it is not "fun"',
+              'It shows that money is the strongest motivator',
+              'It shows deadlines reliably drive performance',
+              'It shows rewards make people happier in the moment',
+            ],
+            correctIndex: 0,
+          },
+          {
+            id: 'q4',
+            prompt: 'According to the episode, what should organizations reward?',
+            options: [
+              'The outcome only, regardless of how it was achieved',
+              'The process and the right behavior, not just the outcome',
+              'Speed over safety',
+              'Only easily measurable KPIs',
             ],
             correctIndex: 1,
           },
           {
-            id: 'q3',
-            prompt: 'What happens when leaders rely on rewards to drive performance?',
+            id: 'q5',
+            prompt: 'How does the guest describe the effect of bureaucracy on motivation?',
             options: [
-              'Performance becomes transactional and fades once rewards stop',
-              'Teams develop deeper customer empathy',
-              'Engagement increases year over year',
-              'Retention improves indefinitely',
+              'It boosts motivation by adding helpful structure',
+              'It has no real effect on motivation',
+              'It signals distrust and tells people to do the minimum, which kills motivation',
+              'It only matters in government organizations',
             ],
-            correctIndex: 0,
+            correctIndex: 2,
           },
         ],
       },
