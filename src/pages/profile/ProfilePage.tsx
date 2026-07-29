@@ -93,6 +93,7 @@ import {
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
 import { supabase } from '@/services/supabase'
+import { mergeUserProfileData } from '@/services/partnerUserMetadataService'
 import { useAuth } from '@/hooks/useAuth'
 import type { StandardRole, Organization, DashboardPreferences } from '@/types'
 import { TransformationTier, UserRole } from '@/types'
@@ -274,7 +275,7 @@ const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, profile, refreshProfile, updateProfile } = useAuth()
   const toast = useToast()
 
   const [loading, setLoading] = useState(true)
@@ -691,37 +692,40 @@ export const ProfilePage: React.FC = () => {
       return
     }
     try {
-      const uploadedUrl = await uploadProfilePicture()
-      const payload = {
+      // Profile picture still uploads to Firebase Storage; best-effort so a dead
+      // Storage session never blocks saving the profile / test results. Falls
+      // back to the existing URL when it can't run.
+      let uploadedUrl: string | undefined
+      try {
+        uploadedUrl = await uploadProfilePicture()
+      } catch (uploadErr) {
+        console.warn('[ProfilePage] profile picture upload skipped', uploadErr)
+        uploadedUrl = editedData.profilePictureUrl
+      }
+
+      // Persist via the Supabase-backed AuthContext updater, which splits
+      // canonical columns from the `data` jsonb. Replaces the Firestore
+      // updateDoc(profiles/users) writes that failed after the auth cutover.
+      const { error: saveError } = await updateProfile({
         fullName: editedData.fullName,
-        email: editedData.email,
-        personalityType: editedData.personalityType || null,
+        avatarUrl: uploadedUrl || editedData.profilePictureUrl || undefined,
+        bio: editedData.bio || '',
+        personalityType: editedData.personalityType || undefined,
         coreValues: editedData.coreValues,
         hasCompletedPersonalityTest: editedData.hasCompletedPersonalityTest ?? false,
         hasCompletedValuesTest: editedData.hasCompletedValuesTest ?? false,
         personalityTestResultUrl: (editedData.personalityTestResultUrl ?? '').trim(),
         valuesTestResultUrl: (editedData.valuesTestResultUrl ?? '').trim(),
-        profilePictureUrl: uploadedUrl || editedData.profilePictureUrl || null,
-        bio: editedData.bio || '',
-        socialLinks: editedData.socialLinks,
         leaderboardVisibility: editedData.leaderboardVisibility,
-        'privacySettings.showOnLeaderboard': editedData.leaderboardVisibility !== 'private',
-        updatedAt: serverTimestamp(),
+      })
+      if (saveError) throw saveError
+
+      // socialLinks isn't a typed UserProfile column; merge it into profiles.data
+      // jsonb directly (runs after updateProfile so it reads the fresh row).
+      if (editedData.socialLinks && Object.keys(editedData.socialLinks).length) {
+        await mergeUserProfileData(user.uid, { socialLinks: editedData.socialLinks })
       }
-      await Promise.all([
-        updateDoc(doc(db, 'profiles', user.uid), payload),
-        updateDoc(doc(db, 'users', user.uid), {
-          personalityType: payload.personalityType,
-          coreValues: payload.coreValues,
-          hasCompletedPersonalityTest: payload.hasCompletedPersonalityTest,
-          hasCompletedValuesTest: payload.hasCompletedValuesTest,
-          personalityTestResultUrl: payload.personalityTestResultUrl,
-          valuesTestResultUrl: payload.valuesTestResultUrl,
-          leaderboardVisibility: payload.leaderboardVisibility,
-          'privacySettings.showOnLeaderboard': payload['privacySettings.showOnLeaderboard'],
-          updatedAt: serverTimestamp(),
-        }),
-      ])
+
       const updatedProfile = { ...editedData, profilePictureUrl: uploadedUrl || editedData.profilePictureUrl }
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
