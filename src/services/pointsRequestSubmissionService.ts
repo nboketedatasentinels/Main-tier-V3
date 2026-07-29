@@ -47,6 +47,14 @@ export async function submitPointsVerificationRequestAtomic(params: {
   const { data, error } = await supabase
     .from('point_verifications')
     .insert({
+      // `id` is a NOT NULL text column with no DB default, so it MUST be
+      // supplied - omitting it was a not-null violation that surfaced as
+      // "Could not submit proof. Please try again." Dedup is handled by the
+      // pending-row pre-check above, so a random uuid is fine here.
+      id:
+        typeof crypto !== 'undefined' && 'randomUUID' in crypto
+          ? crypto.randomUUID()
+          : `pv_${Date.now()}_${Math.round(Math.random() * 1e9)}`,
       uid: params.userId,
       organization_id: params.organizationId ?? null,
       week: params.week,
