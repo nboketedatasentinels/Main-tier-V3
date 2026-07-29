@@ -453,33 +453,15 @@ export const WeeklyGlancePage = () => {
         return
       }
 
-      // Best-effort: notify the org's transformation partner (Supabase).
-      void (async () => {
-        try {
-          if (!profile.companyId) return
-          const { data: org } = await supabase
-            .from('organizations')
-            .select('transformation_partner_id')
-            .eq('id', profile.companyId)
-            .maybeSingle()
-          const partnerId = (org?.transformation_partner_id as string | null) ?? null
-          if (!partnerId) return
-          const learnerName = profile.firstName || profile.fullName || profile.email || 'A learner'
-          const testLabel = kind === 'personality' ? '16Personalities' : 'Personal Values'
-          await supabase.from('notifications').insert({
-            uid: partnerId,
-            type: 'engagement_alert',
-            title: `${learnerName} shared ${testLabel} results`,
-            message: `${learnerName} shared their ${testLabel} results link. Open it from their profile to verify.`,
-            metadata: { learnerId: profile.id, learnerName, kind, resultsUrl: parsed.toString() },
-            read: false,
-            is_read: false,
-            created_at: new Date().toISOString(),
-          })
-        } catch (notifyError) {
-          console.warn('[WeeklyGlance] partner notification failed (non-fatal)', notifyError)
-        }
-      })()
+      // Notify the org's transformation partner via a SECURITY DEFINER RPC.
+      // A direct insert is blocked by RLS (notifications_insert requires
+      // is_partner_or_admin), so the RPC resolves the caller's org partner and
+      // writes the notification server-side. Best-effort; non-fatal.
+      void supabase
+        .rpc('notify_partner_test_result', { p_kind: kind, p_results_url: parsed.toString() })
+        .then(({ error }) => {
+          if (error) console.warn('[WeeklyGlance] partner notification failed (non-fatal)', error)
+        })
       toast({
         title: 'Link saved',
         description: 'Your partner has been notified to verify your results.',
