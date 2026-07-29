@@ -6,6 +6,10 @@ import {
   Heading,
   HStack,
   Input,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   Progress,
   SimpleGrid,
   Skeleton,
@@ -604,10 +608,6 @@ export const WeeklyGlancePage = () => {
     return !hasPersonalityType || !hasCoreValues
   }, [data.loading.profile, data.personality, profile?.hasCompletedPersonalityTest, profile?.hasCompletedValuesTest])
 
-  const handleNavigateProfile = useCallback(() => {
-    navigate('/app/profile')
-  }, [navigate])
-
   const firstName = useMemo(() => {
     const name = profile?.firstName ?? profile?.fullName ?? profile?.email ?? ''
     return name.split(' ')[0] || 'there'
@@ -805,17 +805,40 @@ export const WeeklyGlancePage = () => {
                     </Text>
                   </Stack>
                 </HStack>
-                <Button
-                  onClick={handleNavigateProfile}
-                  bg="brand.primary"
-                  color="white"
-                  _hover={{ bg: 'brand.dark' }}
-                  rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-                  size="md"
-                  flexShrink={0}
-                >
-                  Complete now
-                </Button>
+                <Menu placement="bottom-end">
+                  <MenuButton
+                    as={Button}
+                    bg="brand.primary"
+                    color="white"
+                    _hover={{ bg: 'brand.dark' }}
+                    _active={{ bg: 'brand.dark' }}
+                    rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+                    size="md"
+                    flexShrink={0}
+                  >
+                    Complete now
+                  </MenuButton>
+                  <MenuList>
+                    <MenuItem
+                      onClick={() =>
+                        window.open(
+                          'https://www.16personalities.com/free-personality-test',
+                          '_blank',
+                          'noopener,noreferrer',
+                        )
+                      }
+                    >
+                      16Personalities test
+                    </MenuItem>
+                    <MenuItem
+                      onClick={() =>
+                        window.open('https://personalvalu.es/', '_blank', 'noopener,noreferrer')
+                      }
+                    >
+                      Personal Values test
+                    </MenuItem>
+                  </MenuList>
+                </Menu>
               </Flex>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
