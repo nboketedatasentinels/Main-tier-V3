@@ -20,10 +20,8 @@ import {
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
-import { addDoc, collection, doc, getDoc, serverTimestamp, updateDoc, FirestoreError } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { FirestoreError } from 'firebase/firestore'
 import { supabase } from '@/services/supabase'
-import { ORG_COLLECTION } from '@/constants/organizations'
 import { resolveJourneyType } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
 import {
@@ -397,7 +395,7 @@ const ProofUploadSlot = ({
 export const WeeklyGlancePage = () => {
   const navigate = useNavigate()
   const toast = useToast()
-  const { profile, refreshProfile } = useAuth()
+  const { profile, refreshProfile, updateProfile } = useAuth()
   const data = useWeeklyGlanceData()
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
@@ -437,46 +435,46 @@ export const WeeklyGlancePage = () => {
       }
       setProofError(null)
       setSubmittingProof(kind)
-      const urlField = kind === 'personality' ? 'personalityTestResultUrl' : 'valuesTestResultUrl'
-      const completedFlag = kind === 'personality' ? 'hasCompletedPersonalityTest' : 'hasCompletedValuesTest'
-      try {
-        await updateDoc(doc(db, 'profiles', profile.id), {
-          [urlField]: parsed.toString(),
-          [completedFlag]: true,
-          updatedAt: new Date().toISOString(),
-        })
-      } catch (error) {
-        console.error('[WeeklyGlance] profile update on url save failed', error)
+
+      // Persist to Supabase via the AuthContext updater. The old Firestore
+      // updateDoc(profiles) silently failed after the auth cutover (no Firebase
+      // session), so nothing was saved. updateProfile also merges the result
+      // into local profile state, so the proof slot + the "Complete now" ->
+      // "Completed" button update immediately.
+      const updates: Partial<UserProfile> =
+        kind === 'personality'
+          ? { personalityTestResultUrl: parsed.toString(), hasCompletedPersonalityTest: true }
+          : { valuesTestResultUrl: parsed.toString(), hasCompletedValuesTest: true }
+      const { error: saveErr } = await updateProfile(updates)
+      if (saveErr) {
+        console.error('[WeeklyGlance] profile update on url save failed', saveErr)
         setProofError('Could not save the link. Please try again.')
         setSubmittingProof(null)
         return
       }
+
+      // Best-effort: notify the org's transformation partner (Supabase).
       void (async () => {
         try {
           if (!profile.companyId) return
-          const orgSnapshot = await getDoc(doc(db, ORG_COLLECTION, profile.companyId))
-          if (!orgSnapshot.exists()) return
-          const orgData = orgSnapshot.data() as Record<string, unknown>
-          const partnerId =
-            (orgData.transformation_partner_id as string | null | undefined) ||
-            (orgData.partnerId as string | null | undefined) ||
-            null
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('transformation_partner_id')
+            .eq('id', profile.companyId)
+            .maybeSingle()
+          const partnerId = (org?.transformation_partner_id as string | null) ?? null
           if (!partnerId) return
           const learnerName = profile.firstName || profile.fullName || profile.email || 'A learner'
           const testLabel = kind === 'personality' ? '16Personalities' : 'Personal Values'
-          await addDoc(collection(db, 'notifications'), {
-            user_id: partnerId,
+          await supabase.from('notifications').insert({
+            uid: partnerId,
             type: 'engagement_alert',
             title: `${learnerName} shared ${testLabel} results`,
             message: `${learnerName} shared their ${testLabel} results link. Open it from their profile to verify.`,
-            metadata: {
-              learnerId: profile.id,
-              learnerName,
-              kind,
-              resultsUrl: parsed.toString(),
-            },
+            metadata: { learnerId: profile.id, learnerName, kind, resultsUrl: parsed.toString() },
             read: false,
-            created_at: serverTimestamp(),
+            is_read: false,
+            created_at: new Date().toISOString(),
           })
         } catch (notifyError) {
           console.warn('[WeeklyGlance] partner notification failed (non-fatal)', notifyError)
@@ -490,7 +488,12 @@ export const WeeklyGlancePage = () => {
       })
       setSubmittingProof(null)
     },
-    [profile?.id, profile?.companyId, profile?.firstName, profile?.fullName, profile?.email, toast],
+    [profile?.id, profile?.companyId, profile?.firstName, profile?.fullName, profile?.email, toast, updateProfile],
+  )
+
+  // Both personality assessments done -> the "Complete now" CTA becomes "Completed".
+  const bothTestsCompleted = Boolean(
+    profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
   )
 
   useEffect(() => {
@@ -805,40 +808,58 @@ export const WeeklyGlancePage = () => {
                     </Text>
                   </Stack>
                 </HStack>
-                <Menu placement="bottom-end">
-                  <MenuButton
-                    as={Button}
-                    bg="brand.primary"
+                {bothTestsCompleted ? (
+                  <Button
+                    bg="green.500"
                     color="white"
-                    _hover={{ bg: 'brand.dark' }}
-                    _active={{ bg: 'brand.dark' }}
-                    rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+                    _hover={{ bg: 'green.500' }}
+                    _active={{ bg: 'green.500' }}
+                    leftIcon={<Box as={CheckCircle2} w={4} h={4} />}
                     size="md"
                     flexShrink={0}
+                    isDisabled
+                    cursor="default"
+                    opacity={1}
+                    _disabled={{ bg: 'green.500', color: 'white', opacity: 1, cursor: 'default' }}
                   >
-                    Complete now
-                  </MenuButton>
-                  <MenuList>
-                    <MenuItem
-                      onClick={() =>
-                        window.open(
-                          'https://www.16personalities.com/free-personality-test',
-                          '_blank',
-                          'noopener,noreferrer',
-                        )
-                      }
+                    Completed
+                  </Button>
+                ) : (
+                  <Menu placement="bottom-end">
+                    <MenuButton
+                      as={Button}
+                      bg="brand.primary"
+                      color="white"
+                      _hover={{ bg: 'brand.dark' }}
+                      _active={{ bg: 'brand.dark' }}
+                      rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+                      size="md"
+                      flexShrink={0}
                     >
-                      16Personalities test
-                    </MenuItem>
-                    <MenuItem
-                      onClick={() =>
-                        window.open('https://personalvalu.es/', '_blank', 'noopener,noreferrer')
-                      }
-                    >
-                      Personal Values test
-                    </MenuItem>
-                  </MenuList>
-                </Menu>
+                      Complete now
+                    </MenuButton>
+                    <MenuList>
+                      <MenuItem
+                        onClick={() =>
+                          window.open(
+                            'https://www.16personalities.com/free-personality-test',
+                            '_blank',
+                            'noopener,noreferrer',
+                          )
+                        }
+                      >
+                        16Personalities test
+                      </MenuItem>
+                      <MenuItem
+                        onClick={() =>
+                          window.open('https://personalvalu.es/', '_blank', 'noopener,noreferrer')
+                        }
+                      >
+                        Personal Values test
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                )}
               </Flex>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
