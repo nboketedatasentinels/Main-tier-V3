@@ -87,12 +87,12 @@ import {
 } from 'firebase/auth'
 import {
   doc,
-  getDoc,
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
 import { auth, db, storage } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import type { StandardRole, Organization, DashboardPreferences } from '@/types'
 import { TransformationTier, UserRole } from '@/types'
@@ -406,13 +406,25 @@ export const ProfilePage: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      const profileDoc = await getDoc(doc(db, 'profiles', user.uid))
-      if (!profileDoc.exists()) {
+      // Read from Supabase (the Firestore `getDoc(profiles)` failed with
+      // "Missing or insufficient permissions" after the Supabase auth cutover —
+      // no Firebase session — which surfaced as "Failed to load your profile").
+      const { data: row, error: readError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.uid)
+        .maybeSingle()
+      if (readError) throw new Error(readError.message)
+      if (!row) {
         setError('Profile not found. Please contact support.')
         setLoading(false)
         return
       }
-      const data = buildProfileFromDoc({ id: user.uid, ...profileDoc.data() })
+      // Long-tail profile fields live in the `data` jsonb; lift them to the top
+      // level so buildProfileFromDoc (which already reads both camelCase and
+      // snake_case) finds them alongside the canonical columns.
+      const jsonb = (row.data as Record<string, unknown>) ?? {}
+      const data = buildProfileFromDoc({ ...jsonb, ...row, id: user.uid })
       setProfileData(data)
       setEditedData(data)
       setLoading(false)
