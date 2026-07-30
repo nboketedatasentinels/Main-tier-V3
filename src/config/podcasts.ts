@@ -501,39 +501,62 @@ const LEADING_SELF: PodcastPillarCatalogue = {
       module: 'module_1',
       youtubeUrl: 'https://youtu.be/R9Redgz4T7w',
       assessment: {
-        passingScore: 2,
+        passingScore: 3,
         questions: [
           {
             id: 'q1',
-            prompt:
-              'What does the episode identify as the most common form of self-sabotage in leaders?',
+            prompt: 'How does the episode say self-sabotage typically shows up?',
             options: [
-              'Working too few hours',
-              'Avoiding decisions or hiding behind busywork to avoid visible risk',
-              'Refusing to delegate',
-              'Overdelegating critical work',
+              'As plain laziness and a lack of drive',
+              'As missed deadlines, ghosting opportunities, and quitting before a breakthrough - not laziness',
+              'Only as poor time management',
+              'Always as a deliberate, conscious choice',
             ],
             correctIndex: 1,
           },
           {
             id: 'q2',
-            prompt: 'What is the first step to overcoming self-sabotage?',
+            prompt:
+              'What surprising fear does the episode (citing Dr. Gay Hendricks) say can trigger self-sabotage?',
             options: [
-              'Hire a new coach',
-              'Recognise the pattern and name what you are avoiding',
-              'Change your job title',
-              'Read another leadership book',
+              'Fear of technology',
+              'Fear of feedback',
+              'Fear of success, not just fear of failure',
+              'Fear of deadlines',
+            ],
+            correctIndex: 2,
+          },
+          {
+            id: 'q3',
+            prompt: 'What is the first tool Nono recommends for catching self-sabotage?',
+            options: [
+              'Ignore the inner voice and push through',
+              'Name your inner critic and question it ("why?") to get to the actual facts',
+              'Collect more certificates first',
+              'Avoid anything that feels risky',
             ],
             correctIndex: 1,
           },
           {
-            id: 'q3',
-            prompt: 'What does Nono identify as the underlying driver of most self-sabotage?',
+            id: 'q4',
+            prompt:
+              'What is the point of the "five-minute rule" (echoing Mel Robbins\' 5-second rule)?',
             options: [
-              'Bad nutrition',
-              'An unspoken fear that success will expose a deeper insecurity',
-              'A lack of mentorship',
-              'Insufficient compensation',
+              'To finish any task within five minutes',
+              'To commit to a tiny action that overrides resistance and builds momentum',
+              'To limit yourself to five minutes of work a day',
+              'To schedule meetings faster',
+            ],
+            correctIndex: 1,
+          },
+          {
+            id: 'q5',
+            prompt: "What is this week's challenge from the episode?",
+            options: [
+              'Earn another certificate before acting',
+              'Notice when you hesitate, ask "what am I afraid will happen if I succeed?", then take a five-minute action',
+              'Stop asking others for help',
+              'Only act once you feel completely ready',
             ],
             correctIndex: 1,
           },
