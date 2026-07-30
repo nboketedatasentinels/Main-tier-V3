@@ -431,39 +431,63 @@ const LEADING_SELF: PodcastPillarCatalogue = {
       module: 'module_1',
       youtubeUrl: 'https://youtu.be/tmG9TEQyApU',
       assessment: {
-        passingScore: 2,
+        passingScore: 3,
         questions: [
           {
             id: 'q1',
             prompt:
-              'What is the trigger the episode identifies as actually making leaders transform?',
+              'According to the episode, what is the real trigger that makes leaders transform (the "spoiler")?',
             options: [
-              'A leadership certificate',
-              'A moment of personal stakes - when the status quo starts costing them something they care about',
-              'A new performance review system',
-              'A bigger team budget',
+              'Sheer willpower and discipline',
+              'Redesigning the system and shifting from a reactive to a responsive state',
+              'Working longer hours',
+              'Setting stricter deadlines',
             ],
             correctIndex: 1,
           },
           {
             id: 'q2',
-            prompt: 'Why do most behaviour-change attempts fail?',
+            prompt:
+              'What single practical technique does Dylan recommend to move from reacting to responding?',
             options: [
-              'They focus on theory and skip the personal stake',
-              'They are not approved by HR',
-              'They lack a steering committee',
-              'They use the wrong calendar tool',
+              'Immediately reply so nothing is forgotten',
+              'Take a deep breath (about 4 seconds in, 4 seconds out) before you respond',
+              'Always ask a colleague before acting',
+              'Sleep on every decision for a day',
             ],
-            correctIndex: 0,
+            correctIndex: 1,
           },
           {
             id: 'q3',
-            prompt: 'What does sustained behaviour change actually require?',
+            prompt: 'What does the episode call the "first step" and the best medicine for change?',
             options: [
-              'A new title',
-              'Repeated practice tied to a meaningful outcome',
-              'A longer employment contract',
-              'A new direct report',
+              'Hiring a coach',
+              'Raising more capital',
+              'Awareness',
+              'Setting bigger goals',
+            ],
+            correctIndex: 2,
+          },
+          {
+            id: 'q4',
+            prompt:
+              "Which is one of the 'Four Agreements' (Don Miguel Ruiz) the business built into its foundation?",
+            options: [
+              'Always put work before family',
+              'Be impeccable with your word',
+              'Never ask for help',
+              'Avoid vulnerability at all costs',
+            ],
+            correctIndex: 1,
+          },
+          {
+            id: 'q5',
+            prompt: 'Which set best captures the ingredients Dylan gives for building a business?',
+            options: [
+              'Raise maximum funding, hire early, copy competitors, scale fast, exit',
+              'Solve a real problem, build recurring revenue, systematize ruthlessly, prioritize alignment, and listen more than you pitch',
+              'Work 16-hour days, out-hustle rivals, avoid delegation, and never pivot',
+              'Focus only on marketing, ignore support, and chase every new tool',
             ],
             correctIndex: 1,
           },
