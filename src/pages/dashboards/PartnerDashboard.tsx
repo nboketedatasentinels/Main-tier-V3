@@ -382,20 +382,36 @@ export const PartnerDashboard: React.FC = () => {
       enabled: true,
     },
   )
-  const scopedPendingApprovals = useMemo(() => {
-    if (!scopedOrgKey) return pendingApprovals
+  /**
+   * Every identifier that means "the selected organization". A pending request
+   * carries organization_id (a UUID) while scopedOrgKey is an org CODE
+   * (organizationCodeLookup maps id -> code), so comparing those two directly
+   * never matched and picking a single org emptied the approval queue. Collect
+   * the org's id AND code so either side of the comparison resolves.
+   */
+  const scopedApprovalKeys = useMemo(() => {
+    if (!scopedOrgKey) return null
     const normalized = selectedOrg.toLowerCase()
+    const keys = new Set<string>([scopedOrgKey, normalized])
+    const match = snapshotOrganizations.find((org) =>
+      [org.id, org.code].some((value) => value?.toLowerCase() === normalized),
+    )
+    if (match?.id) keys.add(match.id.toLowerCase())
+    if (match?.code) keys.add(match.code.toLowerCase())
+    return keys
+  }, [scopedOrgKey, selectedOrg, snapshotOrganizations])
+
+  const scopedPendingApprovals = useMemo(() => {
+    if (!scopedApprovalKeys) return pendingApprovals
     return pendingApprovals.filter(({ request, user }) => {
       const requestOrg = request.organizationId?.toLowerCase()
       const userOrg = user.companyCode?.toLowerCase()
       return (
-        requestOrg === scopedOrgKey ||
-        requestOrg === normalized ||
-        userOrg === scopedOrgKey ||
-        userOrg === normalized
+        (Boolean(requestOrg) && scopedApprovalKeys.has(requestOrg!)) ||
+        (Boolean(userOrg) && scopedApprovalKeys.has(userOrg!))
       )
     })
-  }, [pendingApprovals, scopedOrgKey, selectedOrg])
+  }, [pendingApprovals, scopedApprovalKeys])
   const snapshotLoading = adminDataLoading
   const enableProfileRealtime = import.meta.env.VITE_ENABLE_PROFILE_REALTIME === 'true'
   const supportEmail = 'support@transformation4leaders.com'

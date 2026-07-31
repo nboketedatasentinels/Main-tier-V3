@@ -24,10 +24,13 @@ import {
   getDocs,
   onSnapshot,
   query,
-  serverTimestamp,
-  setDoc,
   where,
 } from 'firebase/firestore'
+import {
+  saveChecklistActivities,
+  subscribeToChecklist,
+  type ChecklistActivityEntry,
+} from '@/services/checklistService'
 import type { WeeklyProgress } from '@/types'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { normalizeRole } from '@/utils/role'
@@ -244,25 +247,26 @@ export function useWeeklyChecklistViewModel() {
   const persistChecklist = useCallback(
     async (updated: ActivityState[]) => {
       if (!user) return
-      const checklistState = removeUndefinedFields({
-        activities: updated.map(a =>
-          removeUndefinedFields({
-            id: a.id,
-            status: a.status,
-            proofUrl: a.proofUrl,
-            notes: a.notes,
-            rejectionReason: a.rejectionReason,
-            hasInteracted: a.hasInteracted,
-            issuedByPartner: a.issuedByPartner,
-            issuedBy: a.issuedBy,
-            issuedAt: a.issuedAt,
-          }),
-        ),
-        updatedAt: serverTimestamp(),
-      })
+      const activities = updated.map(a =>
+        removeUndefinedFields({
+          id: a.id,
+          status: a.status,
+          proofUrl: a.proofUrl,
+          notes: a.notes,
+          rejectionReason: a.rejectionReason,
+          hasInteracted: a.hasInteracted,
+          issuedByPartner: a.issuedByPartner,
+          issuedBy: a.issuedBy,
+          issuedAt: a.issuedAt,
+        }),
+      ) as ChecklistActivityEntry[]
 
       try {
-        await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
+        await saveChecklistActivities({
+          userId: user.uid,
+          weekNumber: selectedWeek,
+          activities,
+        })
       } catch (e) {
         console.error(e)
         toast({
@@ -726,14 +730,14 @@ export function useWeeklyChecklistViewModel() {
   /* ------------------------------------------------------------------ */
   useEffect(() => {
     if (!user) return;
-    const ref = doc(db, 'checklists', `${user.uid}_${selectedWeek}`);
-    return onSnapshot(ref, snap => {
-      if (snap.exists()) {
-        const data = snap.data() as { activities?: Array<Partial<ActivityState> & { id: string }> };
-        if (Array.isArray(data.activities)) {
+    return subscribeToChecklist(
+      { userId: user.uid, weekNumber: selectedWeek },
+      snapshot => {
+        const remoteActivities = snapshot.activities as Array<Partial<ActivityState> & { id: string }>
+        if (Array.isArray(remoteActivities)) {
           setActivities(prev => {
             return prev.map(activity => {
-              const remote = data.activities?.find((a) => a.id === activity.id);
+              const remote = remoteActivities.find((a) => a.id === activity.id);
               if (!remote) return activity
 
               const next = {
@@ -770,8 +774,9 @@ export function useWeeklyChecklistViewModel() {
             });
           });
         }
-      }
-    });
+      },
+      error => console.error('[WeeklyChecklist] checklist subscription error:', error),
+    );
   }, [user, selectedWeek]);
 
   /* ------------------------------------------------------------------ */

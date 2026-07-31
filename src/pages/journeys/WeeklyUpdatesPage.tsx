@@ -38,6 +38,10 @@ import { addDays, format, differenceInDays } from 'date-fns'
 import { useLocation } from 'react-router-dom'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { db } from '@/services/firebase'
+import {
+  saveChecklistActivities,
+  type ChecklistActivityEntry,
+} from '@/services/checklistService'
 import { useAuth } from '@/hooks/useAuth'
 import { createApprovalRequest } from '@/services/approvalsService'
 import { PointsVerificationRequest } from '@/services/pointsVerificationService'
@@ -159,20 +163,21 @@ const WeeklyChecklistPage: React.FC = () => {
 
   const persistChecklist = async (updatedActivities: ActivityState[]) => {
     if (!user) return
-    const checklistState = removeUndefinedFields({
-      activities: updatedActivities.map(({ id, status, proofUrl, notes, hasInteracted }) =>
-        removeUndefinedFields({
-          id,
-          status,
-          proofUrl,
-          notes,
-          hasInteracted,
-        }),
-      ),
-      updatedAt: serverTimestamp(),
-    })
+    const activities = updatedActivities.map(({ id, status, proofUrl, notes, hasInteracted }) =>
+      removeUndefinedFields({
+        id,
+        status,
+        proofUrl,
+        notes,
+        hasInteracted,
+      }),
+    ) as ChecklistActivityEntry[]
     try {
-      await setDoc(doc(db, 'checklists', `${user.uid}_${selectedWeek}`), checklistState, { merge: true })
+      await saveChecklistActivities({
+        userId: user.uid,
+        weekNumber: selectedWeek,
+        activities,
+      })
     } catch (error) {
       console.error('Failed to persist checklist state:', error)
       toast({
