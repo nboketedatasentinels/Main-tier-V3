@@ -1,4 +1,3 @@
-import { ReactNode, useState } from 'react'
 import {
   Box,
   Button,
@@ -8,108 +7,22 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import {
-  BellRing,
-  CheckCheck,
-  ExternalLink,
-  Megaphone,
-  MessageCircle,
-  MessageSquare,
-  ShieldAlert,
-  Star,
-  Trophy,
-  UserCheck,
-  X,
-} from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { Link as RouterLink } from 'react-router-dom'
+import { CheckCheck, ExternalLink, X } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { NotificationRecord } from '@/types/notifications'
-import { NotificationDetailModal } from './NotificationDetailModal'
+import { getNotificationDetailPath } from '@/utils/notificationRouting'
+import {
+  isNotificationRead,
+  notificationIcon,
+  resolveNotificationDestination,
+  resolveTimestamp,
+} from './notificationMeta'
 
 interface NotificationItemProps {
   notification: NotificationRecord
   onMarkRead: () => void
   onAction?: (action: NotificationRecord['action_response']) => void
   onClose?: () => void
-}
-
-interface NotificationDestination {
-  kind: 'external' | 'internal' | 'modal'
-  url?: string
-}
-
-const resolveNotificationDestination = (
-  notification: NotificationRecord,
-): NotificationDestination | null => {
-  const md = (notification.metadata ?? {}) as Record<string, unknown>
-
-  const externalUrl = typeof md.externalUrl === 'string' ? md.externalUrl : null
-  if (externalUrl) return { kind: 'external', url: externalUrl }
-
-  const actionUrl = typeof md.actionUrl === 'string' ? md.actionUrl : null
-  if (actionUrl) {
-    return /^https?:\/\//i.test(actionUrl)
-      ? { kind: 'external', url: actionUrl }
-      : { kind: 'internal', url: actionUrl }
-  }
-
-  if (notification.type === 'programme_day') {
-    return { kind: 'modal' }
-  }
-
-  return null
-}
-
-const notificationIcon = (type: NotificationRecord['type']) => {
-  switch (type) {
-    case 'challenge_request':
-    case 'challenge_invite':
-    case 'challenge_response':
-      return Trophy
-    case 'session_request':
-    case 'mentee_checkin':
-      return UserCheck
-    case 'direct_message':
-    case 'mention':
-      return MessageCircle
-    case 'admin_message':
-      return Megaphone
-    case 'important_update':
-    case 'product_update':
-    case 'progress_report':
-    case 'engagement_alert':
-    case 'intervention_reminder':
-    case 'escalation_notice':
-      return BellRing
-    case 'system_alert':
-    case 'maintenance':
-    case 'downtime':
-      return ShieldAlert
-    case 'milestone':
-    case 'achievement':
-    case 'badge_awarded':
-      return Star
-    default:
-      return MessageSquare
-  }
-}
-
-const resolveTimestamp = (value?: unknown): string => {
-  if (!value) return ''
-
-  const date = typeof value === 'object' && value && 'toDate' in (value as Record<string, unknown>)
-    ? (value as { toDate: () => Date }).toDate()
-    : new Date(String(value))
-
-  if (Number.isNaN(date.getTime())) return ''
-
-  return formatDistanceToNow(date, { addSuffix: true })
-}
-
-const linkStyle: React.CSSProperties = {
-  display: 'block',
-  textDecoration: 'none',
-  color: 'inherit',
 }
 
 const stopClick = (e: React.MouseEvent) => {
@@ -123,42 +36,39 @@ export const NotificationItem = ({
   onAction,
   onClose,
 }: NotificationItemProps) => {
-  const isRead = notification.is_read || notification.read
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const isRead = isNotificationRead(notification)
   const timestamp = resolveTimestamp(notification.created_at)
   const hasAction =
     notification.type === 'challenge_request' && !notification.action_response
 
+  // The dropdown is a preview only - every notification opens on the full
+  // notifications page, which shows the whole message instead of two clamped
+  // lines. Any link the notification carries is offered there as an action.
   const destination = resolveNotificationDestination(notification)
-  const [modalOpen, setModalOpen] = useState(false)
 
-  const handleNavigate = () => {
-    if (!isRead) onMarkRead()
+  const handleOpen = () => {
     onClose?.()
+    navigate(getNotificationDetailPath(location.pathname, notification.id))
   }
 
-  const handleOpenModal = (e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (!isRead) onMarkRead()
-    onClose?.()
-    setModalOpen(true)
-  }
-
-  const clickable = destination !== null
-
-  const cardBody = (
+  return (
     <Box
+      as="button"
+      type="button"
+      onClick={handleOpen}
+      textAlign="left"
+      w="full"
       borderWidth="1px"
       borderColor="border.control"
       borderRadius="lg"
       bg="white"
       p={4}
       transition="all 0.15s ease"
-      cursor={clickable ? 'pointer' : 'default'}
-      _hover={{
-        shadow: clickable ? 'md' : 'sm',
-        borderColor: clickable ? 'brand.primary' : 'border.control',
-      }}
+      cursor="pointer"
+      _hover={{ shadow: 'md', borderColor: 'brand.primary' }}
     >
       <HStack align="start" spacing={4}>
         <Box
@@ -202,19 +112,16 @@ export const NotificationItem = ({
             {notification.message}
           </Text>
 
-          {destination?.kind === 'modal' && (
-            <Text
-              as="span"
-              color="brand.primary"
-              fontSize="xs"
-              fontWeight="semibold"
-              mt={1}
-              _hover={{ textDecoration: 'underline' }}
-              alignSelf="flex-start"
-            >
-              View more →
-            </Text>
-          )}
+          <Text
+            as="span"
+            color="brand.primary"
+            fontSize="xs"
+            fontWeight="semibold"
+            mt={1}
+            alignSelf="flex-start"
+          >
+            Read message →
+          </Text>
 
           {timestamp && (
             <Text color="text.muted" fontSize="xs" mt={1}>
@@ -250,6 +157,9 @@ export const NotificationItem = ({
         </Stack>
 
         <IconButton
+          as="div"
+          role="button"
+          tabIndex={0}
           aria-label={isRead ? 'Dismiss' : 'Mark as read'}
           icon={isRead ? <X size={16} /> : <CheckCheck size={16} />}
           variant="ghost"
@@ -263,68 +173,6 @@ export const NotificationItem = ({
           flexShrink={0}
         />
       </HStack>
-    </Box>
-  )
-
-  return (
-    <>
-      <NotificationLinkWrapper
-        destination={destination}
-        onNavigate={handleNavigate}
-        onOpenModal={handleOpenModal}
-      >
-        {cardBody}
-      </NotificationLinkWrapper>
-      <NotificationDetailModal
-        notification={notification}
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-      />
-    </>
-  )
-}
-
-interface NotificationLinkWrapperProps {
-  destination: NotificationDestination | null
-  onNavigate: () => void
-  onOpenModal: (e: React.MouseEvent) => void
-  children: ReactNode
-}
-
-const NotificationLinkWrapper = ({
-  destination,
-  onNavigate,
-  onOpenModal,
-  children,
-}: NotificationLinkWrapperProps) => {
-  if (!destination) return <>{children}</>
-
-  if (destination.kind === 'external' && destination.url) {
-    return (
-      <a
-        href={destination.url}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={onNavigate}
-        style={linkStyle}
-      >
-        {children}
-      </a>
-    )
-  }
-
-  if (destination.kind === 'internal' && destination.url) {
-    return (
-      <RouterLink to={destination.url} onClick={onNavigate} style={linkStyle}>
-        {children}
-      </RouterLink>
-    )
-  }
-
-  // Modal case: plain clickable wrapper
-  return (
-    <Box as="div" onClick={onOpenModal} style={{ cursor: 'pointer' }}>
-      {children}
     </Box>
   )
 }

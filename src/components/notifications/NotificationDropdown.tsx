@@ -15,8 +15,11 @@ import {
 } from '@chakra-ui/react'
 import { Bell, Sparkles } from 'lucide-react'
 import { useMemo } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { NotificationItem } from './NotificationItem'
+import { sortNotificationsByDate } from './notificationMeta'
 import { useNotifications } from '@/hooks/useNotifications'
+import { getNotificationsPath } from '@/utils/notificationRouting'
 
 export const NotificationDropdown = () => {
   const {
@@ -30,26 +33,18 @@ export const NotificationDropdown = () => {
 
   const hasUnread = unreadCount > 0
   const { isOpen, onOpen, onClose } = useDisclosure()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const sortedNotifications = useMemo(
-    () =>
-      [...notifications].sort((a, b) => {
-        const aDate = (a.created_at as { toDate?: () => Date } | string | undefined)
-        const bDate = (b.created_at as { toDate?: () => Date } | string | undefined)
-
-        const aValue =
-          typeof aDate === 'object' && aDate && 'toDate' in aDate && typeof aDate.toDate === 'function'
-            ? aDate.toDate().getTime()
-            : new Date(String(aDate || '')).getTime()
-        const bValue =
-          typeof bDate === 'object' && bDate && 'toDate' in bDate && typeof bDate.toDate === 'function'
-            ? bDate.toDate().getTime()
-            : new Date(String(bDate || '')).getTime()
-
-        return (bValue || 0) - (aValue || 0)
-      }),
+    () => sortNotificationsByDate(notifications),
     [notifications],
   )
+
+  const openNotificationsPage = () => {
+    onClose()
+    navigate(getNotificationsPath(location.pathname))
+  }
 
   return (
     <Popover
@@ -153,6 +148,24 @@ export const NotificationDropdown = () => {
                   />
                 ))}
               </VStack>
+            </Box>
+
+            {/* Footer - the dropdown is a preview, the page is the full inbox */}
+            <Box px={4} py={3} borderTopWidth="1px" borderColor="border.control">
+              <Text
+                as="button"
+                type="button"
+                w="full"
+                textAlign="center"
+                fontSize="sm"
+                fontWeight="semibold"
+                color="brand.primary"
+                cursor="pointer"
+                _hover={{ textDecoration: 'underline' }}
+                onClick={openNotificationsPage}
+              >
+                View all notifications
+              </Text>
             </Box>
           </VStack>
         </PopoverBody>

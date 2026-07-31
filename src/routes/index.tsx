@@ -77,6 +77,21 @@ const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSub
 const LiftResultsPage = lazy(() => import('@/pages/journeys/LiftResultsPage'))
 const LiftAssessmentsAdminPage = lazy(() => import('@/pages/super-admin/LiftAssessmentsAdminPage'))
 const OrganizationsAdminPage = lazy(() => import('@/pages/super-admin/OrganizationsAdminPage'))
+// The notifications inbox exists once per layout - each role variant wraps the
+// shared page in its own shell so the bell never drops the user's sidebar.
+const NotificationsPage = lazy(() => import('@/pages/notifications/NotificationsPage'))
+const PartnerNotificationsPage = lazy(() =>
+  import('@/pages/notifications/RoleNotificationsPages').then(m => ({ default: m.PartnerNotificationsPage }))
+)
+const AdminNotificationsPage = lazy(() =>
+  import('@/pages/notifications/RoleNotificationsPages').then(m => ({ default: m.AdminNotificationsPage }))
+)
+const MentorNotificationsPage = lazy(() =>
+  import('@/pages/notifications/RoleNotificationsPages').then(m => ({ default: m.MentorNotificationsPage }))
+)
+const AmbassadorNotificationsPage = lazy(() =>
+  import('@/pages/notifications/RoleNotificationsPages').then(m => ({ default: m.AmbassadorNotificationsPage }))
+)
 import BadgeGalleryPage from '@/pages/badges/BadgeGalleryPage';
 import { VillageInvitePage } from '@/pages/villages/VillageInvitePage'
 import { AcceptVillageInvitePage } from '@/pages/villages/AcceptVillageInvitePage'
@@ -192,6 +207,7 @@ export const AppRoutes = () => {
         >
           <Route path="dashboard" element={<MentorDashboard />} />
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="mentor" />} />
+          <Route path="notifications" element={<MentorNotificationsPage />} />
           <Route index element={<Navigate to="/mentor/dashboard" replace />} />
         </Route>
 
@@ -205,6 +221,7 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<AmbassadorDashboard />} />
+          <Route path="notifications" element={<AmbassadorNotificationsPage />} />
           <Route index element={<Navigate to="/ambassador/dashboard" replace />} />
         </Route>
 
@@ -224,6 +241,7 @@ export const AppRoutes = () => {
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
+          <Route path="notifications" element={<PartnerNotificationsPage />} />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
 
@@ -245,6 +263,7 @@ export const AppRoutes = () => {
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="lift-assessments" element={<LiftAssessmentsAdminPage />} />
           <Route path="organizations" element={<OrganizationsAdminPage />} />
+          <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />
         </Route>
 
@@ -315,6 +334,7 @@ export const AppRoutes = () => {
           <Route path="referral-rewards" element={<ReferralRewardsPage />} />
           <Route path="book-club" element={<BookClubPage />} />
           <Route path="shameless-circle" element={<ShamelessCirclePage />} />
+          <Route path="notifications" element={<NotificationsPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="badge-gallery" element={<BadgeGalleryPage />} />
           <Route path="villages/join/:invitationCode" element={<AcceptVillageInvitePage />} />
