@@ -21,7 +21,7 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // avoid the CORS-preflight 401; we verify the caller's JWT + role in-function.
 // Transport: SMTP (reuses the existing info@t4leader.com mailbox).
 // ---------------------------------------------------------------------------
-const FUNCTION_VERSION = "2026-07-24-mono-header";
+const FUNCTION_VERSION = "2026-07-31-company-code";
 
 const APP_NAME = "Transformation Tier";
 // Access code partners enter on the sign-up page (kept in sync with
@@ -40,13 +40,14 @@ const HEADER_IMAGE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAtgAAACYCAYAAADeFJ5AAAAMP2l
 
 type WelcomeRole = "partner" | "mentor" | "ambassador" | "user";
 
-// Role-specific CTA destination. Partners land on the partner signup flow; all
-// other roles open the main app.
+// Role-specific CTA destination. Partners and members land on their sign-up
+// flow (they are emailed before an account exists, so a dashboard link would
+// bounce them to login); mentors and ambassadors open the main app.
 const CTA_LINK: Record<WelcomeRole, string> = {
   partner: "https://app.t4leader.com/partner-signup",
   mentor: "https://app.t4leader.com/",
   ambassador: "https://app.t4leader.com/",
-  user: "https://app.t4leader.com/",
+  user: "https://app.t4leader.com/signup",
 };
 
 interface WelcomePayload {
@@ -54,6 +55,8 @@ interface WelcomePayload {
   recipientName: string;
   role: WelcomeRole;
   organizationName?: string | null;
+  /** Org join code — members enter it in the company-code field on sign-up. */
+  organizationCode?: string | null;
 }
 
 const CORS_HEADERS = {
@@ -143,7 +146,7 @@ const ROLE_COPY: Record<WelcomeRole, RoleCopy> = {
       "Earn points, badges and climb the leaderboard",
       "Track your real-world impact as you go",
     ],
-    cta: "Open My Dashboard",
+    cta: "Signup here",
   },
 };
 
@@ -162,18 +165,37 @@ function buildWelcomeHtml(data: WelcomePayload): string {
   const name = escapeHtml((data.recipientName || "").trim() || "there");
   const preview = `Welcome to ${APP_NAME} — you're now a ${copy.label}.`;
 
-  const accessCodeBlock =
-    data.role === "partner"
-      ? `<tr><td class="px-content" style="padding:18px 36px 0;">
+  // Monospace code card. Partners get the platform access code; everyone else
+  // gets their organization's join code, which the sign-up page asks for.
+  const codeCard = (label: string, code: string, hint: string): string =>
+    `<tr><td class="px-content" style="padding:18px 36px 0;">
           <table width="100%" cellpadding="0" cellspacing="0" style="background:${WASH};border:1px solid ${HAIR};border-radius:10px;">
             <tr><td style="padding:16px 18px;">
-              <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${MUTE};">Your partner access code</p>
-              <p style="margin:0 0 6px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:1px;color:${INK};">${PARTNER_ACCESS_CODE}</p>
-              <p style="margin:0;font-size:12px;line-height:1.5;color:${MUTE};">Enter this code on the partner sign-up page to activate your account.</p>
+              <p style="margin:0 0 8px;font-size:12px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:${MUTE};">${label}</p>
+              <p style="margin:0 0 6px;font-family:'Courier New',Courier,monospace;font-size:19px;font-weight:700;letter-spacing:1px;color:${INK};">${code}</p>
+              <p style="margin:0;font-size:12px;line-height:1.5;color:${MUTE};">${hint}</p>
             </td></tr>
           </table>
-        </td></tr>`
-      : "";
+        </td></tr>`;
+
+  const orgCode = data.organizationCode
+    ? escapeHtml(String(data.organizationCode).trim())
+    : undefined;
+
+  const accessCodeBlock =
+    data.role === "partner"
+      ? codeCard(
+          "Your partner access code",
+          PARTNER_ACCESS_CODE,
+          "Enter this code on the partner sign-up page to activate your account.",
+        )
+      : orgCode
+        ? codeCard(
+            org ? `Your ${org} company code` : "Your company code",
+            orgCode,
+            "Enter this code in the Company Code field when you sign up.",
+          )
+        : "";
 
   const bullets = copy.points
     .map(
@@ -225,7 +247,7 @@ function buildWelcomeHtml(data: WelcomePayload): string {
           )}</p>
         </td></tr>
 
-        <!-- Partner access code (partners only) -->
+        <!-- Partner access code, or the member's company code -->
         ${accessCodeBlock}
 
         <!-- What you can do -->
@@ -274,6 +296,9 @@ function buildWelcomeText(data: WelcomePayload): string {
   const name = (data.recipientName || "").trim() || "there";
   const intro = copy.intro(org).replace(/<[^>]+>/g, "");
   const points = copy.points.map((p) => `  - ${p}`).join("\n");
+  const orgCode = data.organizationCode
+    ? String(data.organizationCode).trim()
+    : undefined;
   const accessCodeLines =
     data.role === "partner"
       ? [
@@ -281,7 +306,13 @@ function buildWelcomeText(data: WelcomePayload): string {
           `Your partner access code: ${PARTNER_ACCESS_CODE}`,
           "(Enter this code on the partner sign-up page to activate your account.)",
         ]
-      : [];
+      : orgCode
+        ? [
+            "",
+            `Your${org ? ` ${org}` : ""} company code: ${orgCode}`,
+            "(Enter this code in the Company Code field when you sign up.)",
+          ]
+        : [];
   return [
     `Hi ${name},`,
     "",
@@ -415,6 +446,7 @@ Deno.serve(async (req) => {
       recipientName,
       role,
       organizationName: body.organizationName ?? null,
+      organizationCode: body.organizationCode ?? null,
     };
 
     const fromAddress =

@@ -31,17 +31,26 @@ const fetchProfileContact = async (
   }
 }
 
-/** Look up an organization's display name (best-effort, for welcome emails). */
-const fetchOrgName = async (orgId: string): Promise<string | null> => {
+/**
+ * Look up an organization's display name and join code (best-effort, for welcome
+ * emails). The code is what a member types into the company-code field on the
+ * sign-up page, so members are emailed their org's code alongside its name.
+ */
+const fetchOrgSummary = async (
+  orgId: string,
+): Promise<{ name: string | null; code: string | null }> => {
   try {
     const { data } = await supabase
       .from('organizations')
-      .select('name')
+      .select('name, code')
       .eq('id', orgId)
       .maybeSingle()
-    return (data?.name as string) ?? null
+    return {
+      name: (data?.name as string) ?? null,
+      code: (data?.code as string) ?? null,
+    }
   } catch {
-    return null
+    return { name: null, code: null }
   }
 }
 
@@ -55,6 +64,7 @@ const dispatchWelcomeEmail = async (params: {
   name: string | null
   role: WelcomeRole
   organizationName: string | null
+  organizationCode?: string | null
 }): Promise<void> => {
   if (!params.to) return
   try {
@@ -63,6 +73,7 @@ const dispatchWelcomeEmail = async (params: {
       recipientName: params.name || params.to,
       role: params.role,
       organizationName: params.organizationName,
+      organizationCode: params.organizationCode ?? null,
     })
   } catch (error) {
     console.warn('[supabaseOrgService] welcome email dispatch failed', error)
@@ -75,7 +86,10 @@ const dispatchWelcomeEmail = async (params: {
  * above, the caller here is the member themselves, so the edge function only
  * permits sending a welcome to the caller's OWN address (see authorizeCaller).
  */
-const dispatchSelfJoinWelcomeEmail = async (organizationName: string | null): Promise<void> => {
+const dispatchSelfJoinWelcomeEmail = async (
+  organizationName: string | null,
+  organizationCode: string | null = null,
+): Promise<void> => {
   try {
     const { data } = await supabase.auth.getUser()
     const user = data?.user
@@ -86,6 +100,7 @@ const dispatchSelfJoinWelcomeEmail = async (organizationName: string | null): Pr
       name,
       role: 'user',
       organizationName,
+      organizationCode,
     })
   } catch (error) {
     console.warn('[supabaseOrgService] self-join welcome email skipped', error)
@@ -454,11 +469,17 @@ export const assignPartnerToOrg = async (orgId: string, partnerUid: string): Pro
   // Welcome the newly assigned partner (best-effort). Runs for BOTH entry points:
   // the "Assign partner" modal AND the create-org auto-link, so partners set at
   // org creation are welcomed too.
-  const [{ email, name }, organizationName] = await Promise.all([
+  const [{ email, name }, org] = await Promise.all([
     fetchProfileContact(partnerUid),
-    fetchOrgName(orgId),
+    fetchOrgSummary(orgId),
   ])
-  void dispatchWelcomeEmail({ to: email, name, role: 'partner', organizationName })
+  void dispatchWelcomeEmail({
+    to: email,
+    name,
+    role: 'partner',
+    organizationName: org.name,
+    organizationCode: org.code,
+  })
 }
 
 export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
@@ -518,9 +539,15 @@ export const assignLeadershipToOrg = async (
   if (error) throw new Error(`Assignment failed: ${error.message}`)
 
   // Welcome the newly assigned mentor / ambassador (best-effort).
-  const organizationName = org?.name ?? (await fetchOrgName(orgId))
+  const summary = org?.name && org?.code ? null : await fetchOrgSummary(orgId)
   const { email, name } = await fetchProfileContact(userId)
-  void dispatchWelcomeEmail({ to: email, name, role, organizationName })
+  void dispatchWelcomeEmail({
+    to: email,
+    name,
+    role,
+    organizationName: org?.name ?? summary?.name ?? null,
+    organizationCode: org?.code ?? summary?.code ?? null,
+  })
 }
 
 /** Unlink whoever currently holds the given leadership role for this org. */
@@ -559,7 +586,13 @@ export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResul
   if (error) return { ok: false, error: error.message }
   const result = (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
   // Welcome the member into the org they just joined (best-effort, self-addressed).
-  if (result.ok) void dispatchSelfJoinWelcomeEmail(result.organizationName ?? null)
+  // The code they just claimed is the org code — echo it back in the welcome.
+  if (result.ok) {
+    void dispatchSelfJoinWelcomeEmail(
+      result.organizationName ?? null,
+      result.code ?? code.trim().toUpperCase(),
+    )
+  }
   return result
 }
 
@@ -591,12 +624,13 @@ export const inviteOrgMember = async (
 
   // Welcome the added member (best-effort) whether enrolled now or pending signup.
   if (result.ok) {
-    const organizationName = await fetchOrgName(orgId)
+    const org = await fetchOrgSummary(orgId)
     void dispatchWelcomeEmail({
       to: normalizedEmail,
       name: null,
       role: toWelcomeRole(role),
-      organizationName,
+      organizationName: org.name,
+      organizationCode: org.code,
     })
   }
   return result
@@ -626,8 +660,8 @@ export const acceptOrgInvitations = async (): Promise<{ ok: boolean; error?: str
           .maybeSingle()
         const orgId = (prof?.organization_id as string) || (prof?.company_id as string) || null
         if (orgId) {
-          const organizationName = await fetchOrgName(orgId)
-          void dispatchSelfJoinWelcomeEmail(organizationName)
+          const org = await fetchOrgSummary(orgId)
+          void dispatchSelfJoinWelcomeEmail(org.name, org.code)
         }
       }
     } catch (err) {

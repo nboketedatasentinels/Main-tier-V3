@@ -22,6 +22,8 @@ export interface RoleWelcomeEmailParams {
   recipientName: string
   role: WelcomeRole
   organizationName?: string | null
+  /** Org join code, shown to members so they can enter it on the sign-up page. */
+  organizationCode?: string | null
 }
 
 interface SendWelcomeEmailPayload {
@@ -29,6 +31,7 @@ interface SendWelcomeEmailPayload {
   recipientName: string
   role: WelcomeRole
   organizationName?: string
+  organizationCode?: string
 }
 
 const WELCOME_EMAIL_FUNCTION = 'send-welcome-email'
@@ -59,6 +62,8 @@ export const sendRoleWelcomeEmail = async (
   }
   const org = params.organizationName?.trim()
   if (org) payload.organizationName = org
+  const orgCode = params.organizationCode?.trim()
+  if (orgCode) payload.organizationCode = orgCode
 
   try {
     const { data, error } = await supabase.functions.invoke<{ success: boolean }>(
