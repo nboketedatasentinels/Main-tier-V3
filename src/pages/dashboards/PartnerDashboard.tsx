@@ -50,6 +50,13 @@ import { recordEngagementAction } from '@/services/engagementService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
 import { logger } from '@/utils/partnerDashboardUtils'
 import { getDisplayName } from '@/utils/displayName'
+import { PERSONALITY_TYPES } from '@/config/personality-data'
+
+/** 'INTJ' -> 'INTJ - The Architect', so partners read a name, not a code. */
+const resolvePersonalityLabel = (type: string): string => {
+  const match = PERSONALITY_TYPES.find((pt) => pt.type === type)
+  return match ? `${match.type} - ${match.name}` : type
+}
 
 const PARTNER_PAGE_KEY_SET = new Set<string>([
   'overview',
@@ -272,18 +279,39 @@ export const PartnerDashboard: React.FC = () => {
     }
   }, [showAssessmentsTable])
 
-  const pendingAssessmentRows = useMemo(() => {
+  /**
+   * Every learner in scope with their assessment results. Previously this
+   * filtered to outstanding assessments only, which meant a learner's results
+   * disappeared from the partner's view the moment they completed both - so
+   * the partner could never actually read what anyone scored. Outstanding rows
+   * sort first, and the badge still counts only those.
+   */
+  const assessmentRows = useMemo(() => {
     return overviewUsers
-      .filter((u) => !u.hasCompletedPersonalityTest || !u.hasCompletedValuesTest)
-      .map((u) => ({
-        id: u.id,
-        name: getDisplayName(u, 'Learner'),
-        email: u.email || '—',
-        personalityDone: Boolean(u.hasCompletedPersonalityTest),
-        valuesDone: Boolean(u.hasCompletedValuesTest),
-      }))
-      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((u) => {
+        const personalityDone = Boolean(u.hasCompletedPersonalityTest)
+        const valuesDone = Boolean(u.hasCompletedValuesTest)
+        return {
+          id: u.id,
+          name: getDisplayName(u, 'Learner'),
+          email: u.email || '—',
+          personalityDone,
+          valuesDone,
+          personalityType: u.personalityType || null,
+          coreValues: u.coreValues ?? [],
+          isPending: !personalityDone || !valuesDone,
+        }
+      })
+      .sort((a, b) => {
+        if (a.isPending !== b.isPending) return a.isPending ? -1 : 1
+        return a.name.localeCompare(b.name)
+      })
   }, [overviewUsers])
+
+  const pendingAssessmentCount = useMemo(
+    () => assessmentRows.filter((row) => row.isPending).length,
+    [assessmentRows],
+  )
 
   // Journey progress for the currently selected org. Computes day-level
   // precision so a cohort that started today shows "1 day done · 5 weeks 6
@@ -694,7 +722,7 @@ export const PartnerDashboard: React.FC = () => {
                     Assessments pending
                   </Text>
                   <Text fontWeight="bold" color="brand.text">
-                    {pendingAssessmentRows.length} learner{pendingAssessmentRows.length === 1 ? '' : 's'} to complete
+                    {pendingAssessmentCount} learner{pendingAssessmentCount === 1 ? '' : 's'} to complete
                   </Text>
                   <Text fontSize="sm" color="brand.subtleText">
                     Personality and/or values assessment not yet done
@@ -1153,30 +1181,30 @@ export const PartnerDashboard: React.FC = () => {
                 <HStack spacing={3} align="center">
                   <IconTile><ClipboardList size={18} /></IconTile>
                   <Stack spacing={0}>
-                    <Text fontWeight="bold" color="brand.text">Assessments pending</Text>
+                    <Text fontWeight="bold" color="brand.text">Assessment results</Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      Learners with an outstanding personality or values assessment
+                      Personality type and core values for each learner
                       {selectedOrg && selectedOrg !== 'all' ? ' · this organization' : ''}
                     </Text>
                   </Stack>
                 </HStack>
-                <Badge colorScheme="orange" variant="subtle">
-                  {pendingAssessmentRows.length} pending
+                <Badge colorScheme={pendingAssessmentCount ? 'orange' : 'green'} variant="subtle">
+                  {pendingAssessmentCount} pending
                 </Badge>
               </HStack>
 
               {usersLoading ? (
                 <SkeletonText noOfLines={6} spacing="3" />
-              ) : pendingAssessmentRows.length === 0 ? (
+              ) : assessmentRows.length === 0 ? (
                 <Box
                   p={4}
                   borderRadius="lg"
                   border="1px dashed"
                   borderColor="border.control"
-                  bg="green.50"
+                  bg="surface.subtle"
                 >
-                  <Text fontSize="sm" color="green.700" fontWeight="medium">
-                    🎉 All learners in scope have completed both assessments.
+                  <Text fontSize="sm" color="brand.subtleText" fontWeight="medium">
+                    No learners in scope yet.
                   </Text>
                 </Box>
               ) : (
@@ -1198,19 +1226,35 @@ export const PartnerDashboard: React.FC = () => {
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {pendingAssessmentRows.map((row) => (
+                      {assessmentRows.map((row) => (
                         <Tr key={row.id} transition="background 0.15s ease" _hover={{ bg: 'surface.subtle' }}>
                           <Td fontWeight="semibold" color="brand.text">{row.name}</Td>
                           <Td color="brand.subtleText">{row.email}</Td>
                           <Td>
-                            <Badge colorScheme={row.personalityDone ? 'green' : 'orange'} variant="subtle">
-                              {row.personalityDone ? 'Done' : 'Pending'}
-                            </Badge>
+                            {row.personalityType ? (
+                              <Badge colorScheme="green" variant="subtle">
+                                {resolvePersonalityLabel(row.personalityType)}
+                              </Badge>
+                            ) : (
+                              <Badge colorScheme="orange" variant="subtle">
+                                Pending
+                              </Badge>
+                            )}
                           </Td>
                           <Td>
-                            <Badge colorScheme={row.valuesDone ? 'green' : 'orange'} variant="subtle">
-                              {row.valuesDone ? 'Done' : 'Pending'}
-                            </Badge>
+                            {row.coreValues.length ? (
+                              <HStack spacing={1} wrap="wrap">
+                                {row.coreValues.map((value) => (
+                                  <Badge key={value} colorScheme="purple" variant="subtle">
+                                    {value}
+                                  </Badge>
+                                ))}
+                              </HStack>
+                            ) : (
+                              <Badge colorScheme="orange" variant="subtle">
+                                Pending
+                              </Badge>
+                            )}
                           </Td>
                         </Tr>
                       ))}

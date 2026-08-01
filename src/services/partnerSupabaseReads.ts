@@ -261,6 +261,8 @@ type SupabaseProfileRow = {
   total_points: number | null
   has_completed_personality_test: boolean | null
   has_completed_values_test: boolean | null
+  personality_type: string | null
+  core_values: string[] | null
   data: Record<string, unknown> | null
   created_at: string | null
   updated_at: string | null
@@ -270,7 +272,8 @@ const PROFILE_COLUMNS =
   'id, email, first_name, last_name, full_name, role, membership_status, ' +
   'organization_id, company_id, company_code, journey_type, journey_start_date, ' +
   'current_week, total_points, has_completed_personality_test, ' +
-  'has_completed_values_test, data, created_at, updated_at'
+  'has_completed_values_test, personality_type, core_values, ' +
+  'data, created_at, updated_at'
 
 /**
  * Maps a Supabase profile row to the loosely-typed object the partner dashboard
@@ -304,6 +307,10 @@ const mapMemberRow = (row: SupabaseProfileRow): Record<string, unknown> => {
     total_points: row.total_points ?? 0,
     hasCompletedPersonalityTest: row.has_completed_personality_test ?? undefined,
     hasCompletedValuesTest: row.has_completed_values_test ?? undefined,
+    // The actual results, so partners see WHAT a learner scored, not just that
+    // they finished. Falls back to the `data` jsonb for pre-column profiles.
+    personalityType: (row.personality_type as string) ?? undefined,
+    coreValues: (row.core_values as string[]) ?? undefined,
     createdAt: row.created_at ?? undefined,
     created_at: row.created_at ?? undefined,
     updatedAt: row.updated_at ?? undefined,

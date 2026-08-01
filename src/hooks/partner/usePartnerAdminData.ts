@@ -69,6 +69,9 @@ export interface PartnerUser {
   onboardingSkipped?: boolean
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
+  /** The learner's actual results, so partners can read what they scored. */
+  personalityType?: string
+  coreValues?: string[]
   // Inferred from the raw profile role: 'free_user' → 'free', everything else
   // (paid_member, mentor, ambassador) → 'paid'. Used for paid/free tab split.
   membershipTier?: 'free' | 'paid'
@@ -108,6 +111,8 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   onboardingSkipped?: boolean
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
+  personalityType?: string
+  coreValues?: string[]
 }
 
 export interface PartnerAdminAnalytics {
@@ -934,6 +939,10 @@ export const usePartnerAdminData = (
                 onboardingSkipped: data.onboardingSkipped === true,
                 hasCompletedPersonalityTest: data.hasCompletedPersonalityTest === true,
                 hasCompletedValuesTest: data.hasCompletedValuesTest === true,
+                personalityType: (data.personalityType as string) || undefined,
+                coreValues: Array.isArray(data.coreValues)
+                  ? (data.coreValues as string[])
+                  : undefined,
                 // Raw profile role can be 'free_user' / 'paid_member' / etc. -
                 // wider than the narrow PartnerUser.role enum on the type.
                 membershipTier: (data.role as string | undefined) === 'free_user' ? 'free' : 'paid',
