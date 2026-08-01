@@ -1,17 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Box,
-  Button,
   Flex,
+  Input,
+  InputGroup,
+  InputRightElement,
   Popover,
+  PopoverAnchor,
   PopoverBody,
   PopoverContent,
-  PopoverTrigger,
   Portal,
-  Select,
   Stack,
   Text,
-  useDisclosure,
 } from '@chakra-ui/react'
 import { Check, ChevronDown } from 'lucide-react'
 
@@ -24,7 +24,7 @@ export interface ResultOption {
 }
 
 interface TestResultPickerProps {
-  /** 'single' is a plain dropdown; 'multi' accumulates up to maxSelections. */
+  /** 'single' replaces the selection; 'multi' accumulates up to maxSelections. */
   mode: 'single' | 'multi'
   options: ResultOption[]
   /** Current selection - one value for 'single', many for 'multi'. */
@@ -36,22 +36,11 @@ interface TestResultPickerProps {
   isSaving?: boolean
 }
 
-/** Preserve source ordering while grouping options for display. */
-const groupOptions = (options: ResultOption[]) => {
-  const groups: Array<{ name: string | undefined; items: ResultOption[] }> = []
-  options.forEach(option => {
-    const last = groups[groups.length - 1]
-    if (last && last.name === option.group) last.items.push(option)
-    else groups.push({ name: option.group, items: [option] })
-  })
-  return groups
-}
-
 /**
- * Dropdown of every possible outcome of a test, so learners select the score
- * they got. Single-result tests use a native select (options read as the full
- * name, e.g. `INTJ - The Architect`); tests that yield a set of results use a
- * checkbox dropdown capped at maxSelections.
+ * Typeahead dropdown of every possible outcome of a test. Typing filters from
+ * the first character against BOTH the code and the full name, so "i" narrows
+ * to the I-types and "arch" finds `INTJ - The Architect`. Clicking the field
+ * with no text shows the whole list, so it still works as a plain dropdown.
  */
 export const TestResultPicker = ({
   mode,
@@ -63,93 +52,114 @@ export const TestResultPicker = ({
   isDisabled,
   isSaving,
 }: TestResultPickerProps) => {
-  const { isOpen, onOpen, onClose } = useDisclosure()
+  const [isOpen, setIsOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [isTyping, setIsTyping] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   const labelByValue = useMemo(
     () => new Map(options.map(option => [option.value, option.label])),
     [options]
   )
-  const grouped = useMemo(() => groupOptions(options), [options])
-
-  if (mode === 'single') {
-    return (
-      <Select
-        size="xs"
-        bg="white"
-        borderColor="gray.300"
-        fontSize="2xs"
-        placeholder={placeholder}
-        value={selected[0] ?? ''}
-        onChange={event => onChange(event.target.value ? [event.target.value] : [])}
-        isDisabled={isDisabled || isSaving}
-      >
-        {grouped.map(group =>
-          group.name ? (
-            <optgroup key={group.name} label={group.name}>
-              {group.items.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </optgroup>
-          ) : (
-            group.items.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))
-          )
-        )}
-      </Select>
-    )
-  }
 
   const atLimit = maxSelections !== undefined && selected.length >= maxSelections
 
-  const triggerLabel = selected.length
-    ? selected.length === 1
-      ? (labelByValue.get(selected[0]) ?? selected[0])
-      : `${selected.length} selected`
-    : placeholder
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase()
+    if (!term) return options
+    return options.filter(
+      option =>
+        option.value.toLowerCase().includes(term) || option.label.toLowerCase().includes(term)
+    )
+  }, [options, query])
 
-  const toggle = (value: string) => {
+  /** What the closed field reads as: the picked result, or a count for sets. */
+  const settledLabel = useMemo(() => {
+    if (!selected.length) return ''
+    if (selected.length === 1) return (labelByValue.get(selected[0]) ?? selected[0])
+    return `${selected.length} selected`
+  }, [labelByValue, selected])
+
+  const open = () => {
+    if (isDisabled || isSaving) return
+    setIsOpen(true)
+    // Highlight whatever is already showing so the first keystroke replaces it.
+    // Without this, typing appends to "INTJ - The Architect" and matches nothing.
+    inputRef.current?.select()
+  }
+
+  const close = () => {
+    setIsOpen(false)
+    setIsTyping(false)
+    setQuery('')
+  }
+
+  const commit = (value: string) => {
+    if (mode === 'single') {
+      onChange([value])
+      close()
+      return
+    }
     if (selected.includes(value)) {
       onChange(selected.filter(entry => entry !== value))
       return
     }
     if (atLimit) return
     onChange([...selected, value])
+    // Clear the term so the next value can be typed straight away, but keep the
+    // list open - a set of 5 is picked in one sitting.
+    setQuery('')
+    setIsTyping(false)
+    inputRef.current?.focus()
   }
 
   return (
-    <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} placement="bottom-start" matchWidth>
-      <PopoverTrigger>
-        <Button
-          size="xs"
-          w="full"
-          bg="white"
-          variant="outline"
-          borderColor="gray.300"
-          fontWeight="normal"
-          fontSize="2xs"
-          justifyContent="space-between"
-          rightIcon={<Box as={ChevronDown} w={3} h={3} />}
-          isDisabled={isDisabled}
-          isLoading={isSaving}
-        >
-          <Text
-            noOfLines={1}
-            color={selected.length ? 'gray.800' : 'gray.400'}
+    <Popover
+      isOpen={isOpen}
+      onClose={close}
+      placement="bottom-start"
+      matchWidth
+      autoFocus={false}
+      closeOnBlur
+    >
+      <PopoverAnchor>
+        <InputGroup size="xs">
+          <Input
+            ref={inputRef}
+            bg="white"
+            borderColor="gray.300"
             fontSize="2xs"
-            textAlign="left"
-          >
-            {triggerLabel}
-          </Text>
-        </Button>
-      </PopoverTrigger>
-      {/* Portalled so the list escapes the surrounding card - without this the
-          dropdown is clipped by the card's overflow, unlike the native select
-          used for single-result tests, which the browser always paints on top. */}
+            pr={6}
+            placeholder={placeholder}
+            // While typing the field shows the term; otherwise it shows what is
+            // actually saved, so the full name is always visible when settled.
+            value={isTyping ? query : settledLabel}
+            isDisabled={isDisabled || isSaving}
+            onFocus={open}
+            onClick={open}
+            onChange={event => {
+              setQuery(event.target.value)
+              setIsTyping(true)
+              setIsOpen(true)
+            }}
+            onKeyDown={event => {
+              if (event.key === 'Escape') {
+                close()
+                return
+              }
+              if (event.key === 'Enter' && isOpen && filtered.length) {
+                event.preventDefault()
+                commit(filtered[0].value)
+              }
+            }}
+          />
+          <InputRightElement w={6} pointerEvents="none">
+            <Box as={ChevronDown} w={3} h={3} color="gray.500" />
+          </InputRightElement>
+        </InputGroup>
+      </PopoverAnchor>
+
+      {/* Portalled so the list escapes the surrounding card's overflow. */}
       <Portal>
         <PopoverContent w="full" maxW="320px" zIndex="popover">
           <PopoverBody p={0}>
@@ -167,12 +177,19 @@ export const TestResultPicker = ({
                   {selected.length} of {maxSelections} selected
                 </Text>
               )}
+
               <Box maxH="220px" overflowY="auto">
-                {options.map(option => {
+                {!filtered.length && (
+                  <Text px={2} py={3} fontSize="2xs" color="gray.500" textAlign="center">
+                    No match for "{query}"
+                  </Text>
+                )}
+
+                {filtered.map(option => {
                   const isSelected = selected.includes(option.value)
                   // Unselected options stop being pickable at the cap, but
                   // selected ones stay clickable so they can be removed.
-                  const isBlocked = !isSelected && atLimit
+                  const isBlocked = mode === 'multi' && !isSelected && atLimit
                   return (
                     <Flex
                       key={option.value}
@@ -188,7 +205,10 @@ export const TestResultPicker = ({
                       opacity={isBlocked ? 0.4 : 1}
                       cursor={isBlocked ? 'not-allowed' : 'pointer'}
                       _hover={{ bg: isBlocked ? 'transparent' : 'gray.50' }}
-                      onClick={() => !isBlocked && toggle(option.value)}
+                      // Keep focus in the input so the field does not blur and
+                      // close the list before the click lands.
+                      onMouseDown={event => event.preventDefault()}
+                      onClick={() => !isBlocked && commit(option.value)}
                       disabled={isBlocked}
                     >
                       <Text fontSize="2xs" color="gray.800" noOfLines={1}>
