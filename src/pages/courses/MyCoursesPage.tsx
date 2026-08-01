@@ -25,6 +25,7 @@ import { useUserCourseProgress } from '@/hooks/useUserCourseProgress'
 import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
 import type { CourseCompletionRecord } from '@/services/courseCompletionService'
 import { getCourseDocument, getCourseDocuments } from '@/services/courseService'
+import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
 import {
   COURSE_DETAILS_MAPPING,
@@ -745,12 +746,25 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       try {
         setLoadingCourses(true)
         const orderedCourseIds = program.orderedCourseIds
-        const snapshots = await getCourseDocuments(orderedCourseIds)
+
+        // Firestore `courses` reads are denied since the Supabase auth cutover
+        // (no Firebase session - see utils/firestoreMigration.ts). A REJECTED
+        // read used to skip the mapping fallback below entirely and land in the
+        // catch, which blanked courseMap and rendered "Course details
+        // unavailable" on every assigned course. The in-repo catalog
+        // (courseMappings.ts) is the same data Firestore was seeded from, so
+        // resolve from it and only consult Firestore if reads ever work again.
+        const snapshots = FIRESTORE_READS_AVAILABLE
+          ? await getCourseDocuments(orderedCourseIds).catch((readError) => {
+              console.warn('[MyCourses] course document read failed, using catalog', readError)
+              return null
+            })
+          : null
 
         const nextCourseMap: Record<string, NormalizedCourse> = {}
-        snapshots.forEach((snap, index) => {
-          const requestedCourseId = orderedCourseIds[index] ?? snap.id
-          if (snap.exists()) {
+        orderedCourseIds.forEach((requestedCourseId, index) => {
+          const snap = snapshots?.[index]
+          if (snap?.exists()) {
             const baseCourse = buildCourseFromDoc(snap.id, snap.data())
             nextCourseMap[requestedCourseId] = baseCourse
             nextCourseMap[baseCourse.id] = baseCourse

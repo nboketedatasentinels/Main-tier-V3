@@ -28,6 +28,7 @@ import {
   type CourseDifficulty,
 } from '@/utils/courseMappings'
 import { canAccessCourse, COMPLEMENTARY_COURSE_IDS } from '@/utils/membership'
+import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 
 interface NormalizedCourse {
   id: string
@@ -76,6 +77,24 @@ const buildCourseFromDoc = (courseId: string, data: Record<string, unknown>): No
   }
 }
 
+/** Course details straight from the in-repo catalog, with no Firestore round
+ *  trip - the same data `scripts/seed-courses.mjs` seeds into Firestore. */
+const buildCourseFromMapping = (courseId: string): NormalizedCourse | null => {
+  const title = resolveCourseTitleFromMapping(courseId)
+  const details = getCourseDetailsFromMapping(title)
+  if (!details) return null
+  const metadata = getCourseMetadataFromMapping(title)
+
+  return {
+    id: courseId,
+    title,
+    description: details.description,
+    link: details.link,
+    estimatedMinutes: metadata?.estimatedMinutes,
+    difficulty: metadata?.difficulty,
+  }
+}
+
 export interface ComplementaryCourseSectionProps {
   excludedCourseIds?: string[]
   progressMap: Map<string, number>
@@ -115,11 +134,25 @@ export const ComplementaryCourseSection: React.FC<ComplementaryCourseSectionProp
       try {
         setLoading(true)
         setError(null)
-        const snapshots = await Promise.all(
-          complementaryIds.map(courseId => getDoc(doc(db, 'courses', courseId)))
-        )
-        const nextCourses = snapshots
-          .map((snap, index) => (snap.exists() ? buildCourseFromDoc(complementaryIds[index], snap.data()) : null))
+        // Firestore `courses` reads are denied since the Supabase auth cutover,
+        // and a rejected read left this list empty with an error. Resolve from
+        // the in-repo catalog instead, consulting Firestore only if reads work.
+        const snapshots = FIRESTORE_READS_AVAILABLE
+          ? await Promise.all(
+              complementaryIds.map(courseId => getDoc(doc(db, 'courses', courseId))),
+            ).catch((readError) => {
+              console.warn('[ComplementaryCourses] read failed, using catalog', readError)
+              return null
+            })
+          : null
+
+        const nextCourses = complementaryIds
+          .map((courseId, index) => {
+            const snap = snapshots?.[index]
+            return snap?.exists()
+              ? buildCourseFromDoc(courseId, snap.data())
+              : buildCourseFromMapping(courseId)
+          })
           .filter(Boolean) as NormalizedCourse[]
 
         if (isActive) {
