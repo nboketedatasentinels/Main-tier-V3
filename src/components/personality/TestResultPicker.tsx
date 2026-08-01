@@ -7,6 +7,7 @@ import {
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
+  Portal,
   Select,
   Stack,
   Text,
@@ -38,7 +39,7 @@ interface TestResultPickerProps {
 /** Preserve source ordering while grouping options for display. */
 const groupOptions = (options: ResultOption[]) => {
   const groups: Array<{ name: string | undefined; items: ResultOption[] }> = []
-  options.forEach((option) => {
+  options.forEach(option => {
     const last = groups[groups.length - 1]
     if (last && last.name === option.group) last.items.push(option)
     else groups.push({ name: option.group, items: [option] })
@@ -65,8 +66,8 @@ export const TestResultPicker = ({
   const { isOpen, onOpen, onClose } = useDisclosure()
 
   const labelByValue = useMemo(
-    () => new Map(options.map((option) => [option.value, option.label])),
-    [options],
+    () => new Map(options.map(option => [option.value, option.label])),
+    [options]
   )
   const grouped = useMemo(() => groupOptions(options), [options])
 
@@ -79,25 +80,25 @@ export const TestResultPicker = ({
         fontSize="2xs"
         placeholder={placeholder}
         value={selected[0] ?? ''}
-        onChange={(event) => onChange(event.target.value ? [event.target.value] : [])}
+        onChange={event => onChange(event.target.value ? [event.target.value] : [])}
         isDisabled={isDisabled || isSaving}
       >
-        {grouped.map((group) =>
+        {grouped.map(group =>
           group.name ? (
             <optgroup key={group.name} label={group.name}>
-              {group.items.map((option) => (
+              {group.items.map(option => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </optgroup>
           ) : (
-            group.items.map((option) => (
+            group.items.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))
-          ),
+          )
         )}
       </Select>
     )
@@ -113,7 +114,7 @@ export const TestResultPicker = ({
 
   const toggle = (value: string) => {
     if (selected.includes(value)) {
-      onChange(selected.filter((entry) => entry !== value))
+      onChange(selected.filter(entry => entry !== value))
       return
     }
     if (atLimit) return
@@ -146,57 +147,64 @@ export const TestResultPicker = ({
           </Text>
         </Button>
       </PopoverTrigger>
-      <PopoverContent w="full" maxW="320px">
-        <PopoverBody p={0}>
-          <Stack spacing={0}>
-            {maxSelections !== undefined && (
-              <Text
-                px={2}
-                py={1}
-                fontSize="2xs"
-                color="gray.500"
-                bg="gray.50"
-                borderBottomWidth="1px"
-                borderColor="gray.100"
-              >
-                {selected.length} of {maxSelections} selected
-              </Text>
-            )}
-            <Box maxH="220px" overflowY="auto">
-              {options.map((option) => {
-                const isSelected = selected.includes(option.value)
-                // Unselected options stop being pickable at the cap, but
-                // selected ones stay clickable so they can be removed.
-                const isBlocked = !isSelected && atLimit
-                return (
-                  <Flex
-                    key={option.value}
-                    as="button"
-                    type="button"
-                    w="full"
-                    align="center"
-                    justify="space-between"
-                    px={2}
-                    py={1.5}
-                    textAlign="left"
-                    bg={isSelected ? 'purple.50' : 'transparent'}
-                    opacity={isBlocked ? 0.4 : 1}
-                    cursor={isBlocked ? 'not-allowed' : 'pointer'}
-                    _hover={{ bg: isBlocked ? 'transparent' : 'gray.50' }}
-                    onClick={() => !isBlocked && toggle(option.value)}
-                    disabled={isBlocked}
-                  >
-                    <Text fontSize="2xs" color="gray.800" noOfLines={1}>
-                      {option.label}
-                    </Text>
-                    {isSelected && <Box as={Check} w={3} h={3} color="purple.600" flexShrink={0} />}
-                  </Flex>
-                )
-              })}
-            </Box>
-          </Stack>
-        </PopoverBody>
-      </PopoverContent>
+      {/* Portalled so the list escapes the surrounding card - without this the
+          dropdown is clipped by the card's overflow, unlike the native select
+          used for single-result tests, which the browser always paints on top. */}
+      <Portal>
+        <PopoverContent w="full" maxW="320px" zIndex="popover">
+          <PopoverBody p={0}>
+            <Stack spacing={0}>
+              {maxSelections !== undefined && (
+                <Text
+                  px={2}
+                  py={1}
+                  fontSize="2xs"
+                  color="gray.500"
+                  bg="gray.50"
+                  borderBottomWidth="1px"
+                  borderColor="gray.100"
+                >
+                  {selected.length} of {maxSelections} selected
+                </Text>
+              )}
+              <Box maxH="220px" overflowY="auto">
+                {options.map(option => {
+                  const isSelected = selected.includes(option.value)
+                  // Unselected options stop being pickable at the cap, but
+                  // selected ones stay clickable so they can be removed.
+                  const isBlocked = !isSelected && atLimit
+                  return (
+                    <Flex
+                      key={option.value}
+                      as="button"
+                      type="button"
+                      w="full"
+                      align="center"
+                      justify="space-between"
+                      px={2}
+                      py={1.5}
+                      textAlign="left"
+                      bg={isSelected ? 'purple.50' : 'transparent'}
+                      opacity={isBlocked ? 0.4 : 1}
+                      cursor={isBlocked ? 'not-allowed' : 'pointer'}
+                      _hover={{ bg: isBlocked ? 'transparent' : 'gray.50' }}
+                      onClick={() => !isBlocked && toggle(option.value)}
+                      disabled={isBlocked}
+                    >
+                      <Text fontSize="2xs" color="gray.800" noOfLines={1}>
+                        {option.label}
+                      </Text>
+                      {isSelected && (
+                        <Box as={Check} w={3} h={3} color="purple.600" flexShrink={0} />
+                      )}
+                    </Flex>
+                  )
+                })}
+              </Box>
+            </Stack>
+          </PopoverBody>
+        </PopoverContent>
+      </Portal>
     </Popover>
   )
 }
