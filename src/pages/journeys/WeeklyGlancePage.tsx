@@ -17,7 +17,7 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, formatDistanceToNow } from 'date-fns'
 import { FirestoreError } from 'firebase/firestore'
@@ -47,6 +47,11 @@ import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
+import { CORE_VALUES, PERSONALITY_TYPES } from '@/config/personality-data'
+import {
+  TestResultPicker,
+  type ResultOption,
+} from '@/components/personality/TestResultPicker'
 
 function isCorporateUser(profile: UserProfile | null | undefined) {
   const tier = profile?.transformationTier
@@ -312,6 +317,10 @@ interface ProofUploadSlotProps {
   urlPlaceholder: string
   isSubmitting: boolean
   onUrlSave: (url: string) => void
+  /** Result picker rendered under the link row, so learners can select the
+   *  score they got instead of only pasting a link. */
+  resultPicker?: ReactNode
+  resultPickerLabel?: string
 }
 
 const ProofUploadSlot = ({
@@ -321,6 +330,8 @@ const ProofUploadSlot = ({
   urlPlaceholder,
   isSubmitting,
   onUrlSave,
+  resultPicker,
+  resultPickerLabel,
 }: ProofUploadSlotProps) => {
   const hasProof = Boolean(resultsUrl)
   const [linkInput, setLinkInput] = useState(resultsUrl ?? '')
@@ -387,6 +398,17 @@ const ProofUploadSlot = ({
             {hasProof ? 'Update' : 'Save'}
           </Button>
         </HStack>
+
+        {resultPicker && (
+          <Stack spacing={1} pt={0.5}>
+            {resultPickerLabel && (
+              <Text fontSize="2xs" color="gray.500">
+                {resultPickerLabel}
+              </Text>
+            )}
+            {resultPicker}
+          </Stack>
+        )}
       </Stack>
     </Box>
   )
@@ -408,7 +430,48 @@ export const WeeklyGlancePage = () => {
   const [orgJourneyType, setOrgJourneyType] = useState<JourneyType | null>(null)
 
   const [submittingProof, setSubmittingProof] = useState<'personality' | 'values' | null>(null)
+  const [savingResult, setSavingResult] = useState<'personality' | 'values' | null>(null)
   const [proofError, setProofError] = useState<string | null>(null)
+
+  // Every possible outcome of each test, so learners select what they got.
+  const personalityOptions = useMemo<ResultOption[]>(
+    () =>
+      PERSONALITY_TYPES.map((pt) => ({
+        value: pt.type,
+        label: `${pt.type} - ${pt.name}`,
+        group: pt.group,
+      })),
+    [],
+  )
+  const valuesOptions = useMemo<ResultOption[]>(
+    () => CORE_VALUES.map((value) => ({ value, label: value })),
+    [],
+  )
+
+  /**
+   * Persist a picked test result. Writes the same profile fields the
+   * "Complete now" modal uses (personalityType / coreValues), so the card and
+   * the modal always show the same answer.
+   */
+  const handleResultSelect = useCallback(
+    async (kind: 'personality' | 'values', next: string[]) => {
+      if (!profile?.id) {
+        setProofError('You need to be signed in to save your result.')
+        return
+      }
+      setProofError(null)
+      setSavingResult(kind)
+      const updates: Partial<UserProfile> =
+        kind === 'personality' ? { personalityType: next[0] ?? '' } : { coreValues: next }
+      const { error: saveErr } = await updateProfile(updates)
+      if (saveErr) {
+        console.error('[WeeklyGlance] result select save failed', saveErr)
+        setProofError('Could not save your result. Please try again.')
+      }
+      setSavingResult(null)
+    },
+    [profile?.id, updateProfile],
+  )
 
   const handleProofUrlSubmit = useCallback(
     async (kind: 'personality' | 'values', rawUrl: string) => {
@@ -852,6 +915,17 @@ export const WeeklyGlancePage = () => {
                   urlPlaceholder="https://www.16personalities.com/profiles/..."
                   isSubmitting={submittingProof === 'personality'}
                   onUrlSave={(url) => void handleProofUrlSubmit('personality', url)}
+                  resultPickerLabel="Or select the type you got"
+                  resultPicker={
+                    <TestResultPicker
+                      mode="single"
+                      options={personalityOptions}
+                      selected={profile?.personalityType ? [profile.personalityType] : []}
+                      onChange={(next) => void handleResultSelect('personality', next)}
+                      placeholder="Select your type"
+                      isSaving={savingResult === 'personality'}
+                    />
+                  }
                 />
                 <ProofUploadSlot
                   label="Personal Values result"
@@ -860,6 +934,18 @@ export const WeeklyGlancePage = () => {
                   urlPlaceholder="https://personalvalu.es/..."
                   isSubmitting={submittingProof === 'values'}
                   onUrlSave={(url) => void handleProofUrlSubmit('values', url)}
+                  resultPickerLabel="Or select your 5 core values"
+                  resultPicker={
+                    <TestResultPicker
+                      mode="multi"
+                      maxSelections={5}
+                      options={valuesOptions}
+                      selected={profile?.coreValues ?? []}
+                      onChange={(next) => void handleResultSelect('values', next)}
+                      placeholder="Select your values"
+                      isSaving={savingResult === 'values'}
+                    />
+                  }
                 />
               </SimpleGrid>
 
