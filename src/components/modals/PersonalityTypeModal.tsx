@@ -29,8 +29,6 @@ import {
 } from '@chakra-ui/react';
 import { Brain, Heart, Globe, ExternalLink, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { db } from '@/services/firebase';
-import { doc, getDoc, Timestamp, setDoc } from 'firebase/firestore';
 
 import {
   PERSONALITY_TYPES,
@@ -83,7 +81,7 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
   onComplete,
 }) => {
   // --- STATE MANAGEMENT ---
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, updateProfile } = useAuth();
   const toast = useToast();
 
   // Form data state
@@ -138,36 +136,32 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
     setIsValuesDropdownOpen(false);
   };
 
+  /**
+   * Read from the AuthContext profile, which is loaded from Supabase. This
+   * previously read the Firestore `users/{uid}` doc, which has returned
+   * permission-denied since the Supabase auth cutover (no Firebase session),
+   * so the modal always opened blank and silently discarded what was saved.
+   */
   const fetchExistingData = useCallback(async () => {
-    if (!user) return;
-    try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        const data = userDoc.data();
-        const currentData = {
-          personalityType: data.personalityType || '',
-          coreValues: data.coreValues || [],
-          country: data.country || '',
-          region: data.region || '',
-          hasCompletedPersonalityTest: Boolean(data.hasCompletedPersonalityTest),
-          hasCompletedValuesTest: Boolean(data.hasCompletedValuesTest),
-          personalityTestResultUrl: data.personalityTestResultUrl || '',
-          valuesTestResultUrl: data.valuesTestResultUrl || '',
-        };
-        setPersonalityType(currentData.personalityType);
-        setCoreValues(currentData.coreValues);
-        setCountry(currentData.country);
-        setRegion(currentData.region);
-        setPersonalityResultUrl(currentData.personalityTestResultUrl);
-        setValuesResultUrl(currentData.valuesTestResultUrl);
-        setExistingData(currentData);
-      }
-    } catch (err) {
-      setError("Failed to load your profile data. Please try again.");
-      console.error(err);
-    }
-  }, [user]);
+    if (!user || !profile) return;
+    const currentData = {
+      personalityType: (profile.personalityType || '') as PersonalityType | '',
+      coreValues: profile.coreValues ?? [],
+      country: profile.country || '',
+      region: profile.region || '',
+      hasCompletedPersonalityTest: Boolean(profile.hasCompletedPersonalityTest),
+      hasCompletedValuesTest: Boolean(profile.hasCompletedValuesTest),
+      personalityTestResultUrl: profile.personalityTestResultUrl || '',
+      valuesTestResultUrl: profile.valuesTestResultUrl || '',
+    };
+    setPersonalityType(currentData.personalityType);
+    setCoreValues(currentData.coreValues);
+    setCountry(currentData.country);
+    setRegion(currentData.region);
+    setPersonalityResultUrl(currentData.personalityTestResultUrl);
+    setValuesResultUrl(currentData.valuesTestResultUrl);
+    setExistingData(currentData);
+  }, [profile, user]);
 
   // --- EFFECTS ---
   useEffect(() => {
@@ -271,9 +265,11 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const userDocRef = doc(db, 'users', user.uid);
-      const profileDocRef = doc(db, 'profiles', user.uid);
-      const dataToSave = {
+      // Persist through the AuthContext updater, which writes Supabase columns
+      // (personality_type, core_values, has_completed_*) and puts the long-tail
+      // fields in the `data` jsonb. The previous Firestore setDoc pair failed
+      // with permission-denied after the auth cutover, so nothing was saved.
+      const { error: saveError } = await updateProfile({
         personalityType,
         coreValues,
         country,
@@ -282,12 +278,8 @@ export const PersonalityTypeModal: React.FC<PersonalityTypeModalProps> = ({
         hasCompletedValuesTest,
         personalityTestResultUrl: personalityResultUrl.trim(),
         valuesTestResultUrl: valuesResultUrl.trim(),
-        updatedAt: Timestamp.now(),
-      };
-      await Promise.all([
-        setDoc(userDocRef, dataToSave, { merge: true }),
-        setDoc(profileDocRef, dataToSave, { merge: true }),
-      ]);
+      });
+      if (saveError) throw saveError;
 
       // Refresh the profile to update AuthContext state with the new personality data
       await refreshProfile({ reason: 'personality-profile-saved' });

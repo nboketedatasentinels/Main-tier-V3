@@ -31,10 +31,8 @@ import {
 } from '@chakra-ui/react'
 import { Award, ExternalLink, Fingerprint } from 'lucide-react'
 import { FormEvent, useEffect, useMemo, useState } from 'react'
-import { doc, updateDoc } from 'firebase/firestore'
 import { PersonalityProfile } from '@/hooks/useWeeklyGlanceData'
 import { useAuth } from '@/hooks/useAuth'
-import { db } from '@/services/firebase'
 import { CORE_VALUES } from '@/config/personality-data'
 
 interface PersonalityProfileCardProps {
@@ -43,7 +41,7 @@ interface PersonalityProfileCardProps {
 }
 
 export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCardProps) => {
-  const { profile, user } = useAuth()
+  const { profile, user, updateProfile } = useAuth()
   const toast = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -167,14 +165,16 @@ export const PersonalityProfileCard = ({ data, loading }: PersonalityProfileCard
         coreValues,
       }
 
-      await Promise.all([
-        updateDoc(doc(db, 'profiles', profile.id), updates),
-        updateDoc(doc(db, 'users', user.uid), {
-          ...updates,
-          hasCompletedPersonalityTest,
-          hasCompletedValuesTest,
-        }),
-      ])
+      // Persist through the AuthContext updater (Supabase). The Firestore
+      // updateDoc pair this replaced failed with permission-denied after the
+      // auth cutover, so saves here were silently discarded.
+      const { error: saveError } = await updateProfile({
+        ...updates,
+        hasCompletedPersonalityTest,
+        hasCompletedValuesTest,
+      })
+      if (saveError) throw saveError
+
       setLocalProfile(prev => ({
         ...(prev ?? {}),
         ...updates,
