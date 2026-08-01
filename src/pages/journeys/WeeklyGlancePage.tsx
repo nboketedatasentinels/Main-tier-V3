@@ -5,7 +5,6 @@ import {
   Flex,
   Heading,
   HStack,
-  Input,
   Menu,
   MenuButton,
   MenuItem,
@@ -310,34 +309,17 @@ const ActivityRow = ({ entry }: ActivityRowProps) => {
   )
 }
 
-interface ProofUploadSlotProps {
+interface ResultSelectSlotProps {
   label: string
   helper: string
-  resultsUrl?: string
-  urlPlaceholder: string
-  isSubmitting: boolean
-  onUrlSave: (url: string) => void
-  /** Result picker rendered under the link row, so learners can select the
-   *  score they got instead of only pasting a link. */
-  resultPicker?: ReactNode
-  resultPickerLabel?: string
+  /** True once the learner has recorded their result for this test. */
+  hasResult: boolean
+  /** Dropdown listing every possible outcome of this test. */
+  resultPicker: ReactNode
 }
 
-const ProofUploadSlot = ({
-  label,
-  helper,
-  resultsUrl,
-  urlPlaceholder,
-  isSubmitting,
-  onUrlSave,
-  resultPicker,
-  resultPickerLabel,
-}: ProofUploadSlotProps) => {
-  const hasProof = Boolean(resultsUrl)
-  const [linkInput, setLinkInput] = useState(resultsUrl ?? '')
-  useEffect(() => {
-    setLinkInput(resultsUrl ?? '')
-  }, [resultsUrl])
+const ResultSelectSlot = ({ label, helper, hasResult, resultPicker }: ResultSelectSlotProps) => {
+  const hasProof = hasResult
   return (
     <Box
       borderWidth="1px"
@@ -372,43 +354,12 @@ const ProofUploadSlot = ({
               {label}
             </Text>
             <Text fontSize="2xs" color="gray.500" noOfLines={1}>
-              {hasProof ? 'Saved - update below' : helper}
+              {hasProof ? 'Saved - change below' : helper}
             </Text>
           </Stack>
         </HStack>
-        <HStack spacing={1.5}>
-          <Input
-            size="xs"
-            bg="white"
-            placeholder={urlPlaceholder}
-            value={linkInput}
-            onChange={(event) => setLinkInput(event.target.value)}
-            fontSize="2xs"
-          />
-          <Button
-            size="xs"
-            variant={hasProof ? 'outline' : 'solid'}
-            colorScheme={hasProof ? 'green' : 'purple'}
-            onClick={() => onUrlSave(linkInput)}
-            isLoading={isSubmitting}
-            isDisabled={isSubmitting || linkInput.trim() === (resultsUrl ?? '').trim()}
-            flexShrink={0}
-            fontSize="2xs"
-          >
-            {hasProof ? 'Update' : 'Save'}
-          </Button>
-        </HStack>
 
-        {resultPicker && (
-          <Stack spacing={1} pt={0.5}>
-            {resultPickerLabel && (
-              <Text fontSize="2xs" color="gray.500">
-                {resultPickerLabel}
-              </Text>
-            )}
-            {resultPicker}
-          </Stack>
-        )}
+        {resultPicker}
       </Stack>
     </Box>
   )
@@ -429,7 +380,6 @@ export const WeeklyGlancePage = () => {
   const [orgCohortStartDate, setOrgCohortStartDate] = useState<string | null>(null)
   const [orgJourneyType, setOrgJourneyType] = useState<JourneyType | null>(null)
 
-  const [submittingProof, setSubmittingProof] = useState<'personality' | 'values' | null>(null)
   const [savingResult, setSavingResult] = useState<'personality' | 'values' | null>(null)
   const [proofError, setProofError] = useState<string | null>(null)
 
@@ -461,79 +411,50 @@ export const WeeklyGlancePage = () => {
       }
       setProofError(null)
       setSavingResult(kind)
+      // The completion flags used to be set when a results link was saved. The
+      // link inputs are gone, so selecting a result is now what marks the test
+      // done - these flags gate the MainLayout prompt, the profile modal and
+      // partner reporting. Values needs all 5 before it counts as complete.
       const updates: Partial<UserProfile> =
-        kind === 'personality' ? { personalityType: next[0] ?? '' } : { coreValues: next }
+        kind === 'personality'
+          ? {
+              personalityType: next[0] ?? '',
+              hasCompletedPersonalityTest: Boolean(next[0]),
+            }
+          : {
+              coreValues: next,
+              hasCompletedValuesTest: next.length === 5,
+            }
       const { error: saveErr } = await updateProfile(updates)
       if (saveErr) {
         console.error('[WeeklyGlance] result select save failed', saveErr)
         setProofError('Could not save your result. Please try again.')
+        setSavingResult(null)
+        return
+      }
+
+      // Tell the org's transformation partner, exactly as saving a results link
+      // used to. A direct insert is blocked by RLS (notifications_insert
+      // requires is_partner_or_admin), so this SECURITY DEFINER RPC resolves the
+      // partner and writes server-side. Only fires once the test is actually
+      // complete, so picking values one at a time sends a single notification.
+      const isComplete = kind === 'personality' ? Boolean(next[0]) : next.length === 5
+      if (isComplete) {
+        void supabase
+          .rpc('notify_partner_test_result', { p_kind: kind, p_results_url: next.join(', ') })
+          .then(({ error }) => {
+            if (error) console.warn('[WeeklyGlance] partner notification failed (non-fatal)', error)
+          })
+        toast({
+          title: 'Result saved',
+          description: 'Your partner has been notified of your results.',
+          status: 'success',
+          duration: 3500,
+        })
       }
       setSavingResult(null)
     },
-    [profile?.id, updateProfile],
-  )
-
-  const handleProofUrlSubmit = useCallback(
-    async (kind: 'personality' | 'values', rawUrl: string) => {
-      if (!profile?.id) {
-        setProofError('You need to be signed in to save a link.')
-        return
-      }
-      const trimmed = rawUrl.trim()
-      if (!trimmed) {
-        setProofError('Paste a link to save.')
-        return
-      }
-      let parsed: URL
-      try {
-        parsed = new URL(trimmed.startsWith('http') ? trimmed : `https://${trimmed}`)
-      } catch {
-        setProofError('That does not look like a valid link.')
-        return
-      }
-      const expectedHost = kind === 'personality' ? '16personalities.com' : 'personalvalu.es'
-      if (!parsed.host.endsWith(expectedHost)) {
-        setProofError(`Link should be from ${expectedHost}.`)
-        return
-      }
-      setProofError(null)
-      setSubmittingProof(kind)
-
-      // Persist to Supabase via the AuthContext updater. The old Firestore
-      // updateDoc(profiles) silently failed after the auth cutover (no Firebase
-      // session), so nothing was saved. updateProfile also merges the result
-      // into local profile state, so the proof slot + the "Complete now" ->
-      // "Completed" button update immediately.
-      const updates: Partial<UserProfile> =
-        kind === 'personality'
-          ? { personalityTestResultUrl: parsed.toString(), hasCompletedPersonalityTest: true }
-          : { valuesTestResultUrl: parsed.toString(), hasCompletedValuesTest: true }
-      const { error: saveErr } = await updateProfile(updates)
-      if (saveErr) {
-        console.error('[WeeklyGlance] profile update on url save failed', saveErr)
-        setProofError('Could not save the link. Please try again.')
-        setSubmittingProof(null)
-        return
-      }
-
-      // Notify the org's transformation partner via a SECURITY DEFINER RPC.
-      // A direct insert is blocked by RLS (notifications_insert requires
-      // is_partner_or_admin), so the RPC resolves the caller's org partner and
-      // writes the notification server-side. Best-effort; non-fatal.
-      void supabase
-        .rpc('notify_partner_test_result', { p_kind: kind, p_results_url: parsed.toString() })
-        .then(({ error }) => {
-          if (error) console.warn('[WeeklyGlance] partner notification failed (non-fatal)', error)
-        })
-      toast({
-        title: 'Link saved',
-        description: 'Your partner has been notified to verify your results.',
-        status: 'success',
-        duration: 3500,
-      })
-      setSubmittingProof(null)
-    },
-    [profile?.id, profile?.companyId, profile?.firstName, profile?.fullName, profile?.email, toast, updateProfile],
+    [profile?.id, toast, updateProfile],
   )
 
   // Both personality assessments done -> the "Complete now" CTA becomes "Completed".
@@ -908,14 +829,10 @@ export const WeeklyGlancePage = () => {
               </Flex>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <ProofUploadSlot
+                <ResultSelectSlot
                   label="16Personalities result"
-                  helper="Paste your shareable results link"
-                  resultsUrl={profile?.personalityTestResultUrl}
-                  urlPlaceholder="https://www.16personalities.com/profiles/..."
-                  isSubmitting={submittingProof === 'personality'}
-                  onUrlSave={(url) => void handleProofUrlSubmit('personality', url)}
-                  resultPickerLabel="Or select the type you got"
+                  helper="Select the type you got"
+                  hasResult={Boolean(profile?.personalityType)}
                   resultPicker={
                     <TestResultPicker
                       mode="single"
@@ -927,14 +844,10 @@ export const WeeklyGlancePage = () => {
                     />
                   }
                 />
-                <ProofUploadSlot
+                <ResultSelectSlot
                   label="Personal Values result"
-                  helper="Paste your shareable results link"
-                  resultsUrl={profile?.valuesTestResultUrl}
-                  urlPlaceholder="https://personalvalu.es/..."
-                  isSubmitting={submittingProof === 'values'}
-                  onUrlSave={(url) => void handleProofUrlSubmit('values', url)}
-                  resultPickerLabel="Or select your 5 core values"
+                  helper="Select the 5 values you got"
+                  hasResult={(profile?.coreValues?.length ?? 0) === 5}
                   resultPicker={
                     <TestResultPicker
                       mode="multi"

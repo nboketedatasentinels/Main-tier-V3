@@ -1,19 +1,18 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo } from 'react'
 import {
   Box,
   Button,
   Flex,
-  HStack,
-  Input,
   Popover,
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
+  Select,
   Stack,
   Text,
   useDisclosure,
 } from '@chakra-ui/react'
-import { Check, ChevronDown, Search } from 'lucide-react'
+import { Check, ChevronDown } from 'lucide-react'
 
 export interface ResultOption {
   /** Stored value, e.g. 'INTJ' or 'Adventure'. */
@@ -24,10 +23,10 @@ export interface ResultOption {
 }
 
 interface TestResultPickerProps {
-  /** 'single' commits on pick; 'multi' accumulates up to maxSelections. */
+  /** 'single' is a plain dropdown; 'multi' accumulates up to maxSelections. */
   mode: 'single' | 'multi'
   options: ResultOption[]
-  /** Current selection - a value for 'single', values for 'multi'. */
+  /** Current selection - one value for 'single', many for 'multi'. */
   selected: string[]
   onChange: (next: string[]) => void
   placeholder: string
@@ -36,11 +35,22 @@ interface TestResultPickerProps {
   isSaving?: boolean
 }
 
+/** Preserve source ordering while grouping options for display. */
+const groupOptions = (options: ResultOption[]) => {
+  const groups: Array<{ name: string | undefined; items: ResultOption[] }> = []
+  options.forEach((option) => {
+    const last = groups[groups.length - 1]
+    if (last && last.name === option.group) last.items.push(option)
+    else groups.push({ name: option.group, items: [option] })
+  })
+  return groups
+}
+
 /**
- * Compact searchable picker for test results. Learners pick the score they
- * actually got rather than typing it, and typing filters by code OR full name -
- * so "intj" and "architect" both land on `INTJ - The Architect`, and the closed
- * trigger always shows the full name rather than the bare code.
+ * Dropdown of every possible outcome of a test, so learners select the score
+ * they got. Single-result tests use a native select (options read as the full
+ * name, e.g. `INTJ - The Architect`); tests that yield a set of results use a
+ * checkbox dropdown capped at maxSelections.
  */
 export const TestResultPicker = ({
   mode,
@@ -53,54 +63,55 @@ export const TestResultPicker = ({
   isSaving,
 }: TestResultPickerProps) => {
   const { isOpen, onOpen, onClose } = useDisclosure()
-  const [query, setQuery] = useState('')
-  const searchRef = useRef<HTMLInputElement>(null)
 
   const labelByValue = useMemo(
     () => new Map(options.map((option) => [option.value, option.label])),
     [options],
   )
+  const grouped = useMemo(() => groupOptions(options), [options])
 
-  const filtered = useMemo(() => {
-    const term = query.trim().toLowerCase()
-    if (!term) return options
-    // Match the code and the full name, so either half of "INTJ - The
-    // Architect" finds the option.
-    return options.filter(
-      (option) =>
-        option.value.toLowerCase().includes(term) ||
-        option.label.toLowerCase().includes(term),
+  if (mode === 'single') {
+    return (
+      <Select
+        size="xs"
+        bg="white"
+        borderColor="gray.300"
+        fontSize="2xs"
+        placeholder={placeholder}
+        value={selected[0] ?? ''}
+        onChange={(event) => onChange(event.target.value ? [event.target.value] : [])}
+        isDisabled={isDisabled || isSaving}
+      >
+        {grouped.map((group) =>
+          group.name ? (
+            <optgroup key={group.name} label={group.name}>
+              {group.items.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </optgroup>
+          ) : (
+            group.items.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))
+          ),
+        )}
+      </Select>
     )
-  }, [options, query])
+  }
 
-  /** Preserve the source ordering of groups while grouping for display. */
-  const grouped = useMemo(() => {
-    const groups: Array<{ name: string | undefined; items: ResultOption[] }> = []
-    filtered.forEach((option) => {
-      const last = groups[groups.length - 1]
-      if (last && last.name === option.group) last.items.push(option)
-      else groups.push({ name: option.group, items: [option] })
-    })
-    return groups
-  }, [filtered])
+  const atLimit = maxSelections !== undefined && selected.length >= maxSelections
 
-  const atLimit =
-    mode === 'multi' && maxSelections !== undefined && selected.length >= maxSelections
-
-  const triggerLabel = useMemo(() => {
-    if (!selected.length) return placeholder
-    if (mode === 'single') return labelByValue.get(selected[0]) ?? selected[0]
-    if (selected.length === 1) return labelByValue.get(selected[0]) ?? selected[0]
-    return `${selected.length} selected`
-  }, [labelByValue, mode, placeholder, selected])
+  const triggerLabel = selected.length
+    ? selected.length === 1
+      ? (labelByValue.get(selected[0]) ?? selected[0])
+      : `${selected.length} selected`
+    : placeholder
 
   const toggle = (value: string) => {
-    if (mode === 'single') {
-      onChange([value])
-      setQuery('')
-      onClose()
-      return
-    }
     if (selected.includes(value)) {
       onChange(selected.filter((entry) => entry !== value))
       return
@@ -110,17 +121,7 @@ export const TestResultPicker = ({
   }
 
   return (
-    <Popover
-      isOpen={isOpen}
-      onOpen={onOpen}
-      onClose={() => {
-        setQuery('')
-        onClose()
-      }}
-      placement="bottom-start"
-      initialFocusRef={searchRef}
-      matchWidth
-    >
+    <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} placement="bottom-start" matchWidth>
       <PopoverTrigger>
         <Button
           size="xs"
@@ -148,84 +149,50 @@ export const TestResultPicker = ({
       <PopoverContent w="full" maxW="320px">
         <PopoverBody p={0}>
           <Stack spacing={0}>
-            <HStack px={2} py={1.5} borderBottomWidth="1px" borderColor="gray.100" spacing={1.5}>
-              <Box as={Search} w={3} h={3} color="gray.400" flexShrink={0} />
-              <Input
-                ref={searchRef}
-                size="xs"
-                variant="unstyled"
-                placeholder="Type your result..."
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
+            {maxSelections !== undefined && (
+              <Text
+                px={2}
+                py={1}
                 fontSize="2xs"
-              />
-            </HStack>
-
-            {mode === 'multi' && maxSelections !== undefined && (
-              <Text px={2} py={1} fontSize="2xs" color="gray.500" bg="gray.50">
+                color="gray.500"
+                bg="gray.50"
+                borderBottomWidth="1px"
+                borderColor="gray.100"
+              >
                 {selected.length} of {maxSelections} selected
               </Text>
             )}
-
             <Box maxH="220px" overflowY="auto">
-              {!filtered.length && (
-                <Text px={2} py={3} fontSize="2xs" color="gray.500" textAlign="center">
-                  No match for "{query}"
-                </Text>
-              )}
-
-              {grouped.map((group) => (
-                <Box key={group.name ?? '_'}>
-                  {group.name && (
-                    <Text
-                      px={2}
-                      py={1}
-                      fontSize="2xs"
-                      fontWeight="bold"
-                      textTransform="uppercase"
-                      letterSpacing="wide"
-                      color="gray.500"
-                      bg="gray.50"
-                      position="sticky"
-                      top={0}
-                    >
-                      {group.name}
+              {options.map((option) => {
+                const isSelected = selected.includes(option.value)
+                // Unselected options stop being pickable at the cap, but
+                // selected ones stay clickable so they can be removed.
+                const isBlocked = !isSelected && atLimit
+                return (
+                  <Flex
+                    key={option.value}
+                    as="button"
+                    type="button"
+                    w="full"
+                    align="center"
+                    justify="space-between"
+                    px={2}
+                    py={1.5}
+                    textAlign="left"
+                    bg={isSelected ? 'purple.50' : 'transparent'}
+                    opacity={isBlocked ? 0.4 : 1}
+                    cursor={isBlocked ? 'not-allowed' : 'pointer'}
+                    _hover={{ bg: isBlocked ? 'transparent' : 'gray.50' }}
+                    onClick={() => !isBlocked && toggle(option.value)}
+                    disabled={isBlocked}
+                  >
+                    <Text fontSize="2xs" color="gray.800" noOfLines={1}>
+                      {option.label}
                     </Text>
-                  )}
-                  {group.items.map((option) => {
-                    const isSelected = selected.includes(option.value)
-                    // Unselected options stop being pickable once the cap is hit,
-                    // but selected ones must stay clickable to deselect.
-                    const isBlocked = !isSelected && atLimit
-                    return (
-                      <Flex
-                        key={option.value}
-                        as="button"
-                        type="button"
-                        w="full"
-                        align="center"
-                        justify="space-between"
-                        px={2}
-                        py={1.5}
-                        textAlign="left"
-                        bg={isSelected ? 'purple.50' : 'transparent'}
-                        opacity={isBlocked ? 0.4 : 1}
-                        cursor={isBlocked ? 'not-allowed' : 'pointer'}
-                        _hover={{ bg: isBlocked ? 'transparent' : 'gray.50' }}
-                        onClick={() => !isBlocked && toggle(option.value)}
-                        disabled={isBlocked}
-                      >
-                        <Text fontSize="2xs" color="gray.800" noOfLines={1}>
-                          {option.label}
-                        </Text>
-                        {isSelected && (
-                          <Box as={Check} w={3} h={3} color="purple.600" flexShrink={0} />
-                        )}
-                      </Flex>
-                    )
-                  })}
-                </Box>
-              ))}
+                    {isSelected && <Box as={Check} w={3} h={3} color="purple.600" flexShrink={0} />}
+                  </Flex>
+                )
+              })}
             </Box>
           </Stack>
         </PopoverBody>
