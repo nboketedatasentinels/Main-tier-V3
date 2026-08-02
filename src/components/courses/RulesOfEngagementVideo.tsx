@@ -34,18 +34,19 @@ export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ 
     <Box
       as="section"
       aria-label="Rules of Engagement orientation"
-      bg="white"
+      // Without the copy panel this is just the player - no card behind it.
+      bg={showCopy ? 'white' : 'transparent'}
       borderRadius="2xl"
-      border="1px solid"
+      border={showCopy ? '1px solid' : 'none'}
       borderColor="gray.200"
-      boxShadow="sm"
+      boxShadow={showCopy ? 'sm' : 'none'}
       overflow="hidden"
     >
       <Flex
         direction={{ base: 'column', lg: 'row' }}
         align="stretch"
         gap={{ base: 5, lg: 8 }}
-        p={{ base: 5, md: 6, lg: 8 }}
+        p={showCopy ? { base: 5, md: 6, lg: 8 } : 0}
       >
         {showCopy && (
         <Stack spacing={4} flex="1 1 0" maxW={{ lg: '380px' }} justify="center">
@@ -79,9 +80,7 @@ export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ 
         </Stack>
         )}
 
-        {/* Without the copy panel the player would stretch the full page width,
-            so cap it and centre it instead. */}
-        <Box flex="1 1 0" minW={0} maxW={showCopy ? undefined : '760px'} mx={showCopy ? undefined : 'auto'} w="full">
+        <Box flex="1 1 0" minW={0} w="full">
           <Box
             borderRadius="lg"
             overflow="hidden"

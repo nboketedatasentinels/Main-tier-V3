@@ -523,6 +523,11 @@ export const WeeklyGlancePage = () => {
     [totalEarned, journeyMax, daysElapsed, totalWeeks],
   )
 
+  // Courses sit beside the video; keep the column out of the layout entirely
+  // when the learner has no programme courses to show.
+  const showAssignedCourses =
+    (assignedLoading && hasCourseOrganization) || assignedCourses.length > 0
+
   const shouldShowBuildVillageCard = canCreateVillage(profile)
 
   const personalityIncomplete = useMemo(() => {
@@ -859,79 +864,92 @@ export const WeeklyGlancePage = () => {
           </Skeleton>
         </SimpleGrid>
 
-        {/* Rules of Engagement - player only, the copy lives on My Courses */}
-        <RulesOfEngagementVideo showCopy={false} />
+        {/* Rules of Engagement player on the left, assigned courses stacked
+            beside it on the right (first course on top). */}
+        <Flex
+          direction={{ base: 'column', lg: 'row' }}
+          align="flex-start"
+          gap={{ base: 6, lg: 6 }}
+        >
+          <Box flex={{ base: '1 1 auto', lg: '1 1 0' }} minW={0} w="full">
+            <RulesOfEngagementVideo showCopy={false} />
+          </Box>
 
-        {/* Assigned courses - same cards as the My Courses timeline */}
-        {((assignedLoading && hasCourseOrganization) || assignedCourses.length > 0) && (
-          <Stack spacing={4}>
-            <Flex justify="space-between" align="center" flexWrap="wrap" gap={2}>
-              <HStack spacing={3} align="center">
-                <Flex
-                  w={10}
-                  h={10}
-                  bg="#350e6f"
-                  borderRadius="xl"
-                  align="center"
-                  justify="center"
-                  boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
-                  flexShrink={0}
-                >
-                  <Box as={BookOpen} w={5} h={5} color="white" />
-                </Flex>
-                <Stack spacing={0}>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="semibold"
-                    textTransform="uppercase"
-                    letterSpacing="wide"
-                    color="gray.500"
+          {showAssignedCourses && (
+            <Stack
+              flex={{ base: '1 1 auto', lg: '1 1 0' }}
+              minW={0}
+              w="full"
+              spacing={4}
+            >
+              <Flex justify="space-between" align="center" flexWrap="wrap" gap={2}>
+                <HStack spacing={3} align="center">
+                  <Flex
+                    w={10}
+                    h={10}
+                    bg="#350e6f"
+                    borderRadius="xl"
+                    align="center"
+                    justify="center"
+                    boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+                    flexShrink={0}
                   >
-                    Your courses
-                  </Text>
-                  <Text fontSize="sm" color="gray.500">
-                    Required to complete your programme
-                  </Text>
-                </Stack>
-              </HStack>
-              <Button
-                onClick={() => navigate('/app/courses')}
-                variant="outline"
-                size="sm"
-                rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-              >
-                View all courses
-              </Button>
-            </Flex>
+                    <Box as={BookOpen} w={5} h={5} color="white" />
+                  </Flex>
+                  <Stack spacing={0}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      textTransform="uppercase"
+                      letterSpacing="wide"
+                      color="gray.500"
+                    >
+                      Your courses
+                    </Text>
+                    <Text fontSize="sm" color="gray.500">
+                      Required to complete your programme
+                    </Text>
+                  </Stack>
+                </HStack>
+                <Button
+                  onClick={() => navigate('/app/courses')}
+                  variant="outline"
+                  size="sm"
+                  rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+                >
+                  View all courses
+                </Button>
+              </Flex>
 
-            {assignedLoading && !assignedCourses.length ? (
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                <Skeleton h="260px" rounded="xl" />
-                <Skeleton h="260px" rounded="xl" />
-              </SimpleGrid>
-            ) : (
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                {assignedCourses.map((course) => (
-                  <AssignedCourseCard
-                    key={`${course.periodLabel}-${course.id}`}
-                    periodLabel={course.periodLabel}
-                    periodNoun={course.periodNoun}
-                    hasAssignment
-                    course={course}
-                    availability={course.availability}
-                    dateRange={course.dateRange}
-                    unlockDate={course.unlockDate}
-                    points={course.points}
-                    completion={resolveCourseCompletion(completionsByKey, course)}
-                    hasAccess={canAccessCourse(profile, course.title, course.id)}
-                    preAssessmentDone={preCourseSurveyState.completed}
-                    onOpenCourse={requestOpenCourse}
-                  />
-                ))}
-              </SimpleGrid>
-            )}
-          </Stack>
-        )}
+              {assignedLoading && !assignedCourses.length ? (
+                <Stack spacing={4}>
+                  <Skeleton h="240px" rounded="xl" />
+                  <Skeleton h="240px" rounded="xl" />
+                </Stack>
+              ) : (
+                <Stack spacing={4}>
+                  {assignedCourses.map((course) => (
+                    <AssignedCourseCard
+                      key={`${course.periodLabel}-${course.id}`}
+                      periodLabel={course.periodLabel}
+                      periodNoun={course.periodNoun}
+                      hasAssignment
+                      course={course}
+                      availability={course.availability}
+                      dateRange={course.dateRange}
+                      unlockDate={course.unlockDate}
+                      points={course.points}
+                      completion={resolveCourseCompletion(completionsByKey, course)}
+                      hasAccess={canAccessCourse(profile, course.title, course.id)}
+                      preAssessmentDone={preCourseSurveyState.completed}
+                      onOpenCourse={requestOpenCourse}
+                    />
+                  ))}
+                </Stack>
+              )}
+            </Stack>
+          )}
+        </Flex>
 
         {shouldShowBuildVillageCard && (
           <Box
