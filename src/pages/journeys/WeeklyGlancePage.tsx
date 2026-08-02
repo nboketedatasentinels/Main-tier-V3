@@ -23,7 +23,6 @@ import { resolveJourneyType } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
 import {
   ArrowUpRight,
-  BookOpen,
   Calendar,
   CheckCircle2,
   Clock,
@@ -39,8 +38,6 @@ import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { AssignedCourseCard } from '@/components/courses/AssignedCourseCard'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { useAssignedCourses } from '@/hooks/useAssignedCourses'
-import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
-import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
 import { resolveCourseCompletion, useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
 import { canAccessCourse } from '@/utils/membership'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
@@ -333,8 +330,6 @@ export const WeeklyGlancePage = () => {
     hasOrganization: hasCourseOrganization,
   } = useAssignedCourses()
   const { completionsByKey } = useUserCourseCompletions(profile?.id)
-  const { requestOpenCourse, surveyModal } = useCourseOpenGate()
-  const { state: preCourseSurveyState } = usePreCourseSurvey(profile?.id ?? null)
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
@@ -877,54 +872,16 @@ export const WeeklyGlancePage = () => {
 
           {showAssignedCourses && (
             <Stack
-              flex={{ base: '1 1 auto', lg: '1 1 0' }}
+              flex={{ base: '1 1 auto', lg: '0 0 360px' }}
+              maxW={{ lg: '360px' }}
               minW={0}
               w="full"
               spacing={4}
             >
-              <Flex justify="space-between" align="center" flexWrap="wrap" gap={2}>
-                <HStack spacing={3} align="center">
-                  <Flex
-                    w={10}
-                    h={10}
-                    bg="#350e6f"
-                    borderRadius="xl"
-                    align="center"
-                    justify="center"
-                    boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
-                    flexShrink={0}
-                  >
-                    <Box as={BookOpen} w={5} h={5} color="white" />
-                  </Flex>
-                  <Stack spacing={0}>
-                    <Text
-                      fontSize="xs"
-                      fontWeight="semibold"
-                      textTransform="uppercase"
-                      letterSpacing="wide"
-                      color="gray.500"
-                    >
-                      Your courses
-                    </Text>
-                    <Text fontSize="sm" color="gray.500">
-                      Required to complete your programme
-                    </Text>
-                  </Stack>
-                </HStack>
-                <Button
-                  onClick={() => navigate('/app/courses')}
-                  variant="outline"
-                  size="sm"
-                  rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-                >
-                  View all courses
-                </Button>
-              </Flex>
-
               {assignedLoading && !assignedCourses.length ? (
                 <Stack spacing={4}>
-                  <Skeleton h="240px" rounded="xl" />
-                  <Skeleton h="240px" rounded="xl" />
+                  <Skeleton h="170px" rounded="xl" />
+                  <Skeleton h="170px" rounded="xl" />
                 </Stack>
               ) : (
                 <Stack spacing={4}>
@@ -941,8 +898,8 @@ export const WeeklyGlancePage = () => {
                       points={course.points}
                       completion={resolveCourseCompletion(completionsByKey, course)}
                       hasAccess={canAccessCourse(profile, course.title, course.id)}
-                      preAssessmentDone={preCourseSurveyState.completed}
-                      onOpenCourse={requestOpenCourse}
+                      showProgress={false}
+                      showAction={false}
                     />
                   ))}
                 </Stack>
@@ -1040,8 +997,6 @@ export const WeeklyGlancePage = () => {
         isLoading={isCreatingVillage}
         error={villageError}
       />
-
-      {surveyModal}
     </Box>
   )
 }

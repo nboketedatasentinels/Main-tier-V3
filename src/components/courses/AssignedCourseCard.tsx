@@ -141,13 +141,18 @@ export interface AssignedCourseCardProps {
   completion?: CourseCompletionRecord
   /** Membership/tier access to this specific course. */
   hasAccess: boolean
-  preAssessmentDone: boolean
+  preAssessmentDone?: boolean
   postAssessmentDone?: boolean
   /** Course details are still resolving. */
   isLoading?: boolean
   /** Course details failed to resolve. */
   isMissing?: boolean
-  onOpenCourse: (link: string) => void
+  /** Pre-assessment -> Course -> Post-assessment rail. Off on the dashboard. */
+  showProgress?: boolean
+  /** Open / Unlocks-on CTA. Off on the dashboard, where space is tight. */
+  showAction?: boolean
+  /** Required whenever showAction is left on. */
+  onOpenCourse?: (link: string) => void
 }
 
 interface CardVisual {
@@ -174,10 +179,12 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
   points,
   completion,
   hasAccess,
-  preAssessmentDone,
+  preAssessmentDone = false,
   postAssessmentDone = false,
   isLoading = false,
   isMissing = false,
+  showProgress = true,
+  showAction = true,
   onOpenCourse,
 }) => {
   const isApproved = Boolean(completion)
@@ -400,7 +407,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
           )}
         </Stack>
 
-        {hasAssignment && hasCourse && (
+        {showProgress && hasAssignment && hasCourse && (
           <CourseProgressTimeline
             preDone={preAssessmentDone}
             courseDone={isApproved}
@@ -408,7 +415,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
           />
         )}
 
-        {hasAssignment && (
+        {showAction && hasAssignment && (
           <Box pt={1}>
             {isLoading ? (
               <Button
@@ -451,7 +458,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                     canOpen && course?.link
                       ? (e: React.MouseEvent) => {
                           e.preventDefault()
-                          onOpenCourse(course.link!)
+                          onOpenCourse?.(course.link!)
                         }
                       : undefined
                   }
