@@ -13,6 +13,26 @@ interface UserCourseCompletionsState {
   loading: boolean
 }
 
+/**
+ * Look a course up in the `completionsByKey` map by id first, then by title -
+ * approved completions are keyed both ways.
+ */
+export const resolveCourseCompletion = (
+  completionsByKey: Map<string, CourseCompletionRecord>,
+  course: { id?: string; title?: string } | null | undefined,
+): CourseCompletionRecord | undefined => {
+  if (!course) return undefined
+  if (course.id) {
+    const direct = completionsByKey.get(course.id) ?? completionsByKey.get(normalizeKey(course.id))
+    if (direct) return direct
+  }
+  if (course.title) {
+    const byTitle = completionsByKey.get(normalizeKey(course.title))
+    if (byTitle) return byTitle
+  }
+  return undefined
+}
+
 export const useUserCourseCompletions = (userId?: string | null): UserCourseCompletionsState => {
   const [completions, setCompletions] = useState<CourseCompletionRecord[]>([])
   const [loading, setLoading] = useState<boolean>(Boolean(userId))

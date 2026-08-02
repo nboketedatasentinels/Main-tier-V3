@@ -12,7 +12,15 @@ import { Play } from 'lucide-react'
 
 const VIDEO_SRC = '/media/rules-of-engagement.mp4'
 
-export const RulesOfEngagementVideo: React.FC = () => {
+interface RulesOfEngagementVideoProps {
+  /**
+   * Show the eyebrow / heading / description panel beside the player. The
+   * weekly glance dashboard renders the player on its own, so it passes false.
+   */
+  showCopy?: boolean
+}
+
+export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ showCopy = true }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -39,6 +47,7 @@ export const RulesOfEngagementVideo: React.FC = () => {
         gap={{ base: 5, lg: 8 }}
         p={{ base: 5, md: 6, lg: 8 }}
       >
+        {showCopy && (
         <Stack spacing={4} flex="1 1 0" maxW={{ lg: '380px' }} justify="center">
           <Text
             color="purple.700"
@@ -68,8 +77,11 @@ export const RulesOfEngagementVideo: React.FC = () => {
             your journey.
           </Text>
         </Stack>
+        )}
 
-        <Box flex="1 1 0" minW={0}>
+        {/* Without the copy panel the player would stretch the full page width,
+            so cap it and centre it instead. */}
+        <Box flex="1 1 0" minW={0} maxW={showCopy ? undefined : '760px'} mx={showCopy ? undefined : 'auto'} w="full">
           <Box
             borderRadius="lg"
             overflow="hidden"

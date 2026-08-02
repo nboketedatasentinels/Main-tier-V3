@@ -1,5 +1,4 @@
 import {
-  Badge,
   Box,
   Button,
   Flex,
@@ -9,7 +8,6 @@ import {
   MenuButton,
   MenuItem,
   MenuList,
-  Progress,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -18,26 +16,33 @@ import {
 } from '@chakra-ui/react'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { format, formatDistanceToNow } from 'date-fns'
+import { format } from 'date-fns'
 import { FirestoreError } from 'firebase/firestore'
 import { supabase } from '@/services/supabase'
 import { resolveJourneyType } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
 import {
   ArrowUpRight,
+  BookOpen,
   Calendar,
   CheckCircle2,
   Clock,
   Fingerprint,
   Star,
-  Target,
   TrendingUp,
   Upload,
   Users,
   type LucideIcon,
 } from 'lucide-react'
 
-import { useWeeklyGlanceData, type LedgerEntry } from '@/hooks/useWeeklyGlanceData'
+import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
+import { AssignedCourseCard } from '@/components/courses/AssignedCourseCard'
+import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
+import { useAssignedCourses } from '@/hooks/useAssignedCourses'
+import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
+import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
+import { resolveCourseCompletion, useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
+import { canAccessCourse } from '@/utils/membership'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
@@ -259,56 +264,6 @@ const KpiTile = ({ label, value, sub, icon, theme }: KpiTileProps) => {
   )
 }
 
-interface ActivityRowProps {
-  entry: LedgerEntry
-}
-
-const ActivityRow = ({ entry }: ActivityRowProps) => {
-  const positive = entry.points > 0
-  return (
-    <Flex
-      justify="space-between"
-      align="center"
-      py={3}
-      borderBottomWidth="1px"
-      borderColor="gray.100"
-      _last={{ borderBottomWidth: 0 }}
-    >
-      <HStack spacing={3} minW={0} flex={1}>
-        <Box
-          w={8}
-          h={8}
-          rounded="full"
-          bg={positive ? 'green.50' : 'gray.100'}
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          flexShrink={0}
-        >
-          <Box as={CheckCircle2} w={4} h={4} color={positive ? 'green.500' : 'gray.400'} />
-        </Box>
-        <Stack spacing={0} minW={0} flex={1}>
-          <Text fontSize="sm" fontWeight="medium" color="gray.800" noOfLines={1}>
-            {entry.activityTitle}
-          </Text>
-          <Text fontSize="xs" color="gray.500">
-            {formatDistanceToNow(entry.createdAt, { addSuffix: true })}
-          </Text>
-        </Stack>
-      </HStack>
-      <Text
-        fontSize="sm"
-        fontWeight="semibold"
-        color={positive ? 'green.600' : 'gray.500'}
-        ml={3}
-      >
-        {positive ? '+' : ''}
-        {entry.points.toLocaleString()}
-      </Text>
-    </Flex>
-  )
-}
-
 interface ResultSelectSlotProps {
   label: string
   helper: string
@@ -370,6 +325,16 @@ export const WeeklyGlancePage = () => {
   const toast = useToast()
   const { profile, refreshProfile, updateProfile } = useAuth()
   const data = useWeeklyGlanceData()
+
+  // Programme courses, rendered with the same card as the My Courses timeline.
+  const {
+    courses: assignedCourses,
+    loading: assignedLoading,
+    hasOrganization: hasCourseOrganization,
+  } = useAssignedCourses()
+  const { completionsByKey } = useUserCourseCompletions(profile?.id)
+  const { requestOpenCourse, surveyModal } = useCourseOpenGate()
+  const { state: preCourseSurveyState } = usePreCourseSurvey(profile?.id ?? null)
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
@@ -546,7 +511,6 @@ export const WeeklyGlancePage = () => {
     () => (data.ledgerEntries ?? []).reduce((sum, entry) => sum + (entry.points ?? 0), 0),
     [data.ledgerEntries],
   )
-  const journeyProgress = journeyMax > 0 ? Math.min(100, Math.round((totalEarned / journeyMax) * 100)) : 0
   const daysElapsed = journeyTiming?.totalDaysElapsed ?? 0
   const pace = useMemo(
     () =>
@@ -557,15 +521,6 @@ export const WeeklyGlancePage = () => {
         totalWeeks,
       }),
     [totalEarned, journeyMax, daysElapsed, totalWeeks],
-  )
-
-  const recentActivity = useMemo(
-    () =>
-      (data.ledgerEntries ?? [])
-        .slice()
-        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-        .slice(0, 5),
-    [data.ledgerEntries]
   )
 
   const shouldShowBuildVillageCard = canCreateVillage(profile)
@@ -904,36 +859,13 @@ export const WeeklyGlancePage = () => {
           </Skeleton>
         </SimpleGrid>
 
-        {/* Hero - Cycle progress */}
-        <Box
-          bg="white"
-          p={{ base: 5, md: 7 }}
-          borderRadius="xl"
-          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-          _hover={{
-            transform: 'translateY(-2px)',
-            boxShadow: '0 8px 25px rgba(139, 92, 246, 0.15)',
-          }}
-          transition="all 0.3s ease"
-          position="relative"
-          overflow="hidden"
-        >
-          <Box
-            position="absolute"
-            top={0}
-            right={0}
-            w="90px"
-            h="90px"
-            bg="purple.50"
-            borderRadius="0 0 0 100%"
-          />
-          <Stack spacing={6}>
-            <Flex
-              justify="space-between"
-              align={{ base: 'flex-start', md: 'center' }}
-              direction={{ base: 'column', md: 'row' }}
-              gap={3}
-            >
+        {/* Rules of Engagement - player only, the copy lives on My Courses */}
+        <RulesOfEngagementVideo showCopy={false} />
+
+        {/* Assigned courses - same cards as the My Courses timeline */}
+        {((assignedLoading && hasCourseOrganization) || assignedCourses.length > 0) && (
+          <Stack spacing={4}>
+            <Flex justify="space-between" align="center" flexWrap="wrap" gap={2}>
               <HStack spacing={3} align="center">
                 <Flex
                   w={10}
@@ -945,7 +877,7 @@ export const WeeklyGlancePage = () => {
                   boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
                   flexShrink={0}
                 >
-                  <Box as={Target} w={5} h={5} color="white" />
+                  <Box as={BookOpen} w={5} h={5} color="white" />
                 </Flex>
                 <Stack spacing={0}>
                   <Text
@@ -955,142 +887,51 @@ export const WeeklyGlancePage = () => {
                     letterSpacing="wide"
                     color="gray.500"
                   >
-                    Journey progress
+                    Your courses
                   </Text>
                   <Text fontSize="sm" color="gray.500">
-                    Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}
+                    Required to complete your programme
                   </Text>
                 </Stack>
               </HStack>
-              <Badge
-                colorScheme={pace.tone}
-                variant="subtle"
-                fontSize="xs"
-                px={3}
-                py={1}
-                rounded="full"
-                textTransform="none"
-                fontWeight="medium"
-                position="relative"
-                zIndex={1}
+              <Button
+                onClick={() => navigate('/app/courses')}
+                variant="outline"
+                size="sm"
+                rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
               >
-                {pace.label}
-              </Badge>
+                View all courses
+              </Button>
             </Flex>
 
-              <Skeleton isLoaded={!data.loading.points} rounded="md">
-                <Stack spacing={4}>
-                  <Flex align="baseline" gap={2}>
-                    <Text
-                      fontSize={{ base: '5xl', md: '6xl' }}
-                      fontWeight="bold"
-                      lineHeight="1"
-                      letterSpacing="-0.03em"
-                      color="gray.900"
-                    >
-                      {journeyProgress}%
-                    </Text>
-                    <Text fontSize="md" color="gray.500" fontWeight="medium">
-                      complete
-                    </Text>
-                  </Flex>
-
-                  <Progress
-                    value={journeyProgress}
-                    size="sm"
-                    rounded="full"
-                    colorScheme={journeyProgress >= 100 ? 'green' : 'purple'}
-                    bg="gray.100"
+            {assignedLoading && !assignedCourses.length ? (
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                <Skeleton h="260px" rounded="xl" />
+                <Skeleton h="260px" rounded="xl" />
+              </SimpleGrid>
+            ) : (
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                {assignedCourses.map((course) => (
+                  <AssignedCourseCard
+                    key={`${course.periodLabel}-${course.id}`}
+                    periodLabel={course.periodLabel}
+                    periodNoun={course.periodNoun}
+                    hasAssignment
+                    course={course}
+                    availability={course.availability}
+                    dateRange={course.dateRange}
+                    unlockDate={course.unlockDate}
+                    points={course.points}
+                    completion={resolveCourseCompletion(completionsByKey, course)}
+                    hasAccess={canAccessCourse(profile, course.title, course.id)}
+                    preAssessmentDone={preCourseSurveyState.completed}
+                    onOpenCourse={requestOpenCourse}
                   />
-                </Stack>
-              </Skeleton>
-            </Stack>
-        </Box>
-
-        {/* Recent activity */}
-        <SimpleGrid columns={1} spacing={6}>
-          <Box
-            bg="white"
-            p={6}
-            borderRadius="xl"
-            border="1px solid"
-            borderColor="gray.100"
-            boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-            _hover={{
-              transform: 'translateY(-2px)',
-              boxShadow: '0 8px 25px rgba(16, 185, 129, 0.15)',
-              borderColor: 'green.200',
-            }}
-            transition="all 0.3s ease"
-            position="relative"
-            overflow="hidden"
-          >
-            <Box
-              position="absolute"
-              top={0}
-              right={0}
-              w="60px"
-              h="60px"
-              bg="green.50"
-              borderRadius="0 0 0 100%"
-            />
-            <Stack spacing={4}>
-              <Flex justify="space-between" align="center">
-                <HStack spacing={3} align="center">
-                  <Flex
-                    w={10}
-                    h={10}
-                    bg="linear-gradient(135deg, #047857 0%, #065f46 100%)"
-                    borderRadius="xl"
-                    align="center"
-                    justify="center"
-                    boxShadow="0 4px 12px rgba(4, 120, 87, 0.3)"
-                    flexShrink={0}
-                  >
-                    <Box as={Users} w={5} h={5} color="white" />
-                  </Flex>
-                  <Text
-                    fontSize="xs"
-                    fontWeight="semibold"
-                    textTransform="uppercase"
-                    letterSpacing="wide"
-                    color="gray.500"
-                  >
-                    Recent activity
-                  </Text>
-                </HStack>
-                {recentActivity.length > 0 && (
-                  <Text fontSize="xs" color="gray.400">
-                    Last {recentActivity.length}
-                  </Text>
-                )}
-              </Flex>
-
-              {data.loading.ledger ? (
-                <Stack spacing={3}>
-                  <Skeleton h="40px" rounded="md" />
-                  <Skeleton h="40px" rounded="md" />
-                  <Skeleton h="40px" rounded="md" />
-                </Stack>
-              ) : recentActivity.length > 0 ? (
-                <Stack spacing={0}>
-                  {recentActivity.map((entry) => (
-                    <ActivityRow key={entry.id} entry={entry} />
-                  ))}
-                </Stack>
-              ) : (
-                <Box py={6} textAlign="center">
-                  <Text fontSize="sm" color="gray.500">
-                    No activity logged yet this cycle.
-                  </Text>
-                  <Text fontSize="xs" color="gray.400" mt={1}>
-                    Complete an activity to see it appear here.
-                  </Text>
-                </Box>
-              )}
-            </Stack>
-          </Box>
-        </SimpleGrid>
+                ))}
+              </SimpleGrid>
+            )}
+          </Stack>
+        )}
 
         {shouldShowBuildVillageCard && (
           <Box
@@ -1181,6 +1022,8 @@ export const WeeklyGlancePage = () => {
         isLoading={isCreatingVillage}
         error={villageError}
       />
+
+      {surveyModal}
     </Box>
   )
 }
