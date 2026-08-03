@@ -4,15 +4,25 @@ import {
   Badge,
   Box,
   Button,
+  Collapse,
+  Flex,
   Heading,
   HStack,
   Icon,
-  Select,
   SimpleGrid,
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { Award, BookMarked, Wrench, ArrowUpRight, type LucideIcon } from 'lucide-react'
+import {
+  Award,
+  BookMarked,
+  Wrench,
+  ArrowUpRight,
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  type LucideIcon,
+} from 'lucide-react'
 import {
   PILLAR_PROGRAMME_COMPONENTS,
   PROGRAMME_COMPONENT_LABEL,
@@ -151,19 +161,29 @@ const STATUS_BADGE: Record<ProgrammeComponentEntry['status'], { label: string; b
 
 const cleanTitle = (raw: string): string => raw.replace(/\s*\(.*?\)\s*$/, '').trim()
 
+/** Dark purple - the action colour for every part row in the dropdown. */
+const PART_BUTTON_BG = '#350e6f'
+const PART_BUTTON_BG_HOVER = '#27062e'
+
 const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ entry }) => {
+  const location = useLocation()
   const visual = TYPE_VISUALS[entry.type]
   const status = STATUS_BADGE[entry.status]
   const isDisabled = entry.status !== 'available'
   const hasParts = !!entry.parts && entry.parts.length > 0
   const partCount = entry.parts?.length ?? 0
+  const isExpandable = hasParts && !isDisabled
 
-  const [selectedPartId, setSelectedPartId] = useState<string>(
-    hasParts ? entry.parts![0].id : '',
-  )
-  const selectedPart = hasParts
-    ? entry.parts!.find((p) => p.id === selectedPartId) ?? entry.parts![0]
-    : null
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  // Deep links from the "Programme requirements" chips point at
+  // #pillar-component-<type> - open the dropdown so the learner lands on the
+  // parts, not on a card they have to click again.
+  useEffect(() => {
+    if (!isExpandable) return
+    if (location.hash !== `#pillar-component-${entry.type}`) return
+    setIsExpanded(true)
+  }, [entry.type, isExpandable, location.hash])
 
   const title = cleanTitle(entry.title)
 
@@ -199,7 +219,22 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
         flex="1"
         justify="space-between"
       >
-        <Stack spacing={4}>
+        <Stack
+          spacing={4}
+          as={isExpandable ? 'button' : undefined}
+          type={isExpandable ? 'button' : undefined}
+          onClick={isExpandable ? () => setIsExpanded((prev) => !prev) : undefined}
+          textAlign={isExpandable ? 'left' : undefined}
+          w={isExpandable ? 'full' : undefined}
+          cursor={isExpandable ? 'pointer' : undefined}
+          aria-expanded={isExpandable ? isExpanded : undefined}
+          aria-controls={isExpandable ? `pillar-component-parts-${entry.type}` : undefined}
+          _focusVisible={
+            isExpandable
+              ? { outline: '2px solid', outlineColor: visual.focusBorder, outlineOffset: '2px' }
+              : undefined
+          }
+        >
           <HStack justify="space-between" align="center">
             <HStack spacing={2.5} align="center">
               <Box
@@ -235,6 +270,14 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
                 {status.label}
               </Badge>
             )}
+            {isExpandable && (
+              <Icon
+                as={isExpanded ? ChevronDown : ChevronRight}
+                boxSize={4}
+                color="gray.400"
+                flexShrink={0}
+              />
+            )}
           </HStack>
 
           <Stack spacing={1.5}>
@@ -262,48 +305,81 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
           </Stack>
         </Stack>
 
-        {hasParts && !isDisabled && selectedPart ? (
+        {isExpandable ? (
           <Stack spacing={3}>
-            <Select
-              size="sm"
-              bg="gray.50"
-              borderColor="gray.200"
-              borderRadius="md"
-              fontWeight="medium"
-              fontSize="sm"
-              _focusVisible={{ borderColor: visual.focusBorder, boxShadow: `0 0 0 1px ${visual.focusBorder}` }}
-              value={selectedPartId}
-              onChange={(e) => setSelectedPartId(e.target.value)}
-              aria-label={`Select ${PROGRAMME_COMPONENT_LABEL[entry.type]} part`}
-            >
-              {entry.parts!.map((part) => (
-                <option key={part.id} value={part.id}>
-                  {part.title}
-                </option>
-              ))}
-            </Select>
-            {selectedPart.description && (
-              <Text fontSize="xs" color="gray.500" lineHeight="1.55" minH="2.5em">
-                {selectedPart.description}
-              </Text>
-            )}
             <Button
-              as="a"
-              href={selectedPart.href}
-              target="_blank"
-              rel="noopener noreferrer"
               size="sm"
-              bg={visual.brand}
+              bg={PART_BUTTON_BG}
               color="white"
-              _hover={{ bg: visual.brandHover }}
-              _active={{ bg: visual.brandHover }}
-              rightIcon={<Icon as={ArrowUpRight} boxSize={3.5} />}
+              _hover={{ bg: PART_BUTTON_BG_HOVER }}
+              _active={{ bg: PART_BUTTON_BG_HOVER }}
+              rightIcon={<Icon as={isExpanded ? ChevronDown : ChevronRight} boxSize={3.5} />}
               borderRadius="md"
               fontWeight="semibold"
               letterSpacing="0.01em"
+              alignSelf="flex-start"
+              onClick={() => setIsExpanded((prev) => !prev)}
+              aria-expanded={isExpanded}
+              aria-controls={`pillar-component-parts-${entry.type}`}
             >
-              Begin part
+              {isExpanded ? 'Hide parts' : `View ${partCount} parts`}
             </Button>
+
+            <Collapse in={isExpanded} animateOpacity>
+              <Stack spacing={2} id={`pillar-component-parts-${entry.type}`}>
+                {entry.parts!.map((part) => (
+                  <Box
+                    key={part.id}
+                    p={3}
+                    bg="white"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    borderLeftWidth="3px"
+                    borderLeftColor={visual.brand}
+                    rounded="md"
+                    transition="all 0.15s"
+                    _hover={{ borderColor: 'gray.300' }}
+                  >
+                    <Flex
+                      justify="space-between"
+                      align="flex-start"
+                      gap={3}
+                      direction={{ base: 'column', md: 'row' }}
+                    >
+                      <Stack spacing={1} flex={1} minW={0}>
+                        <Text fontWeight="semibold" color="#27062e" fontSize="sm" lineHeight="1.4">
+                          {part.title}
+                        </Text>
+                        {part.description && (
+                          <Text fontSize="xs" color="gray.500" lineHeight="1.55">
+                            {part.description}
+                          </Text>
+                        )}
+                      </Stack>
+
+                      <Button
+                        as="a"
+                        href={part.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="sm"
+                        flexShrink={0}
+                        bg={PART_BUTTON_BG}
+                        color="white"
+                        _hover={{ bg: PART_BUTTON_BG_HOVER, textDecoration: 'none' }}
+                        _active={{ bg: PART_BUTTON_BG_HOVER }}
+                        rightIcon={<Icon as={ExternalLink} boxSize={3} />}
+                        borderRadius="md"
+                        fontWeight="semibold"
+                        letterSpacing="0.01em"
+                      >
+                        Begin part
+                      </Button>
+                    </Flex>
+                  </Box>
+                ))}
+              </Stack>
+            </Collapse>
           </Stack>
         ) : (
           <Button

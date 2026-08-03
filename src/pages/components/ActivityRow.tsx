@@ -25,8 +25,21 @@ import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { PodcastSeriesPanel } from '@/components/courses/PodcastSeriesPanel'
+import { ProgrammeComponentPartsPanel } from '@/components/courses/ProgrammeComponentParts'
+import type { ProgrammeComponentType } from '@/config/pillarProgrammeComponents'
 
 const PROGRAMME_COMPONENTS_HREF = '/app/courses#programme-components'
+
+/**
+ * Checklist activities that are pillar programme components. Expanding one
+ * lists the actual parts to work through (same rows as the courses page)
+ * instead of only the generic description.
+ */
+const PROGRAMME_COMPONENT_ACTIVITIES: Record<string, ProgrammeComponentType> = {
+  capstone: 'capstone',
+  case_study: 'case_study',
+  practical: 'practical',
+}
 
 type VisualState =
   | 'available'
@@ -115,18 +128,20 @@ export const ActivityRow = ({
 }: ActivityRowProps) => {
   const navigate = useNavigate()
 
+  const programmeComponentType = PROGRAMME_COMPONENT_ACTIVITIES[activity.id]
+  const isProgrammeComponent = Boolean(programmeComponentType)
+
   const isExternalAiToolSubmission =
     activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
+  // Capstone / case study / practical open their parts list instead of a
+  // checklist "Submit" CTA — points are claimed from the part runtime itself.
   const requiresPartnerApproval = Boolean(
-    activity.approvalType === 'partner_approved' ||
-      activity.requiresApproval ||
-      // Pillar deliverables (Capstone / Case Study) are partner_issued, but the
-      // learner submits the deliverable first. Route them through the same
-      // proof -> pending -> partner-reward flow as partner_approved so they land
-      // In Review immediately instead of passively "awaiting partner" (which
-      // dead-ended on the disabled programme-components submission service).
-      (isPartnerIssued && !activity.issuedByPartner),
+    !isProgrammeComponent &&
+      (activity.approvalType === 'partner_approved' ||
+        activity.requiresApproval ||
+        // Non-programme partner_issued items still use proof → pending → reward.
+        (isPartnerIssued && !activity.issuedByPartner)),
   )
   // No longer a passive state: non-issued partner_issued items are now
   // submittable via proof (see requiresPartnerApproval above).
@@ -414,7 +429,11 @@ export const ActivityRow = ({
               />
             )}
 
-            {activity.id !== 'podcast_workbook' && (
+            {isProgrammeComponent && programmeComponentType && (
+              <ProgrammeComponentPartsPanel type={programmeComponentType} />
+            )}
+
+            {activity.id !== 'podcast_workbook' && !isProgrammeComponent && (
               <Flex
                 direction={{ base: 'column', sm: 'row' }}
                 gap={2}
@@ -530,6 +549,12 @@ export const ActivityRow = ({
                   )}
                 </HStack>
 
+                {exitAction}
+              </Flex>
+            )}
+
+            {isProgrammeComponent && exitAction && (
+              <Flex pt={1} justify="flex-start">
                 {exitAction}
               </Flex>
             )}
