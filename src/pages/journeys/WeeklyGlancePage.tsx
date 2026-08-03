@@ -25,6 +25,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
+import { motion, useReducedMotion } from 'framer-motion'
 import { FirestoreError } from 'firebase/firestore'
 import { supabase } from '@/services/supabase'
 import { resolveJourneyType } from '@/utils/journeyType'
@@ -62,6 +63,8 @@ import {
   TestResultPicker,
   type ResultOption,
 } from '@/components/personality/TestResultPicker'
+
+const MotionBox = motion(Box)
 
 function isCorporateUser(profile: UserProfile | null | undefined) {
   const tier = profile?.transformationTier
@@ -331,6 +334,7 @@ export const WeeklyGlancePage = () => {
   const toast = useToast()
   const { profile, refreshProfile, updateProfile } = useAuth()
   const data = useWeeklyGlanceData()
+  const prefersReducedMotion = useReducedMotion()
 
   // Programme courses, rendered with the same card as the My Courses timeline.
   const {
@@ -527,6 +531,10 @@ export const WeeklyGlancePage = () => {
     () => (data.ledgerEntries ?? []).reduce((sum, entry) => sum + (entry.points ?? 0), 0),
     [data.ledgerEntries],
   )
+  // Progress against the pass mark - the number that decides whether a learner
+  // graduates, and the same denominator the "Points earned" tile quotes.
+  const journeyProgress =
+    passMark > 0 ? Math.min(100, Math.round((totalEarned / passMark) * 100)) : 0
   const daysElapsed = journeyTiming?.totalDaysElapsed ?? 0
   const pace = useMemo(
     () =>
@@ -964,6 +972,47 @@ export const WeeklyGlancePage = () => {
             </Stack>
           </Box>
         )}
+
+        {/* Journey progress - thin bar sitting above the KPI tiles */}
+        <Stack spacing={2}>
+          <Flex justify="space-between" align="baseline" gap={3} flexWrap="wrap">
+            <HStack spacing={2} align="baseline">
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                textTransform="uppercase"
+                letterSpacing="wide"
+                color="gray.500"
+              >
+                Journey progress
+              </Text>
+              <Text fontSize="xs" color="gray.400">
+                Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}
+              </Text>
+            </HStack>
+            <Skeleton isLoaded={!data.loading.points} rounded="md">
+              <Text fontSize="xs" fontWeight="semibold" color="gray.600">
+                {journeyProgress}% of pass mark
+              </Text>
+            </Skeleton>
+          </Flex>
+          <Box h="6px" bg="gray.100" borderRadius="full" overflow="hidden">
+            <MotionBox
+              h="full"
+              borderRadius="full"
+              bgGradient={
+                journeyProgress >= 100
+                  ? 'linear(to-r, #047857, #16a34a)'
+                  : 'linear(to-r, #350e6f, #f4540c)'
+              }
+              initial={prefersReducedMotion ? false : { width: 0 }}
+              animate={{ width: `${journeyProgress}%` }}
+              transition={
+                prefersReducedMotion ? { duration: 0 } : { duration: 0.9, ease: [0.16, 1, 0.3, 1] }
+              }
+            />
+          </Box>
+        </Stack>
 
         {/* KPI Strip */}
         <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={4}>
