@@ -123,6 +123,36 @@ vi.mock('@/services/firebase', () => ({
   db: {},
 }))
 
+vi.mock('@/services/supabase', () => {
+  // Make the builder thenable so `await supabase.from(...).select(...).eq(...)` resolves.
+  const result = Promise.resolve({ data: [], error: null })
+  const builder: Record<string, unknown> = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    then: result.then.bind(result),
+    catch: result.catch.bind(result),
+  }
+  return {
+    supabase: {
+      from: vi.fn(() => builder),
+      channel: vi.fn(() => ({
+        on: vi.fn().mockReturnThis(),
+        subscribe: vi.fn().mockReturnThis(),
+      })),
+      removeChannel: vi.fn(async () => undefined),
+    },
+  }
+})
+
+vi.mock('@/services/supabaseOrgService', () => ({
+  getOrganizationJourney: vi.fn(async () => null),
+}))
+
+vi.mock('@/services/checklistService', () => ({
+  saveChecklistActivities: vi.fn(async () => undefined),
+  subscribeToChecklist: vi.fn(() => vi.fn()),
+}))
+
 const getDocsSpy = vi.fn(async () => ({ docs: [], size: 0 }))
 const getDocSpy = vi.fn(async () => ({
   exists: () => true,
@@ -248,6 +278,7 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
         userId: 'user-1',
         activityId: 'proof-activity',
         proofUrl: 'https://example.com/proof',
+        week: 1,
       }),
     )
     expect(triggerHapticSpy).toHaveBeenCalledWith('success')
@@ -258,6 +289,33 @@ describe('useWeeklyChecklistViewModel proof submission', () => {
       }),
     )
     expect(hook.result.current.proofModal.isOpen).toBe(false)
+    expect(hook.result.current.pendingWeeksByActivity['proof-activity']?.has(1)).toBe(true)
+    expect(hook.result.current.activities.find((a) => a.id === 'proof-activity')?.status).toBe(
+      'pending',
+    )
+  })
+
+  it('uses the row weekOverride when submitting proof', async () => {
+    const hook = await mountViewModel()
+    const activity = hook.result.current.activities.find((candidate) => candidate.id === 'proof-activity')
+    expect(activity).toBeTruthy()
+
+    act(() => {
+      hook.result.current.openProofModal(activity!, 3)
+      hook.result.current.updateProofModal({ proofUrl: 'https://example.com/week-3' })
+    })
+
+    await act(async () => {
+      await hook.result.current.submitProofForApproval()
+    })
+
+    expect(submitProofSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activityId: 'proof-activity',
+        week: 3,
+      }),
+    )
+    expect(hook.result.current.pendingWeeksByActivity['proof-activity']?.has(3)).toBe(true)
   })
 
   it('triggers error haptic when submission fails', async () => {

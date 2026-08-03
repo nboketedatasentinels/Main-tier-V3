@@ -72,7 +72,7 @@ interface ActivityListProps {
   onOpenCurrentWeek: () => void
   onMarkCompleted: (activity: ActivityState, weekOverride?: number) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
-  onOpenProof: (activity: ActivityState) => void
+  onOpenProof: (activity: ActivityState, weekOverride?: number) => void
   isActivityBusy?: (activityId: string) => boolean
 }
 
@@ -195,7 +195,7 @@ export const ActivityList = ({
       completedWeeks.forEach((cw) => pushDone(cw, activity))
 
       // Every pending submission goes into the In Review bucket under its
-      // submitted weekNumber. Source of truth: points_verification_requests.
+      // submitted weekNumber. Source of truth: Supabase point_verifications.
       pendingWeeks.forEach((pw) => {
         // Don't double-bucket if the request was actually approved and the
         // ledger already has an entry for that week.
@@ -613,7 +613,7 @@ export const ActivityList = ({
                         onOpenCurrentWeek={onOpenCurrentWeek}
                         onFocusAvailableActivity={focusFirstActionableActivity}
                         onMarkCompleted={(a) => onMarkCompleted(a, weekOverride)}
-                        onOpenProof={onOpenProof}
+                        onOpenProof={(a) => onOpenProof(a, weekOverride)}
                         isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                       />
                     )
@@ -817,7 +817,7 @@ export const ActivityList = ({
                         onOpenCurrentWeek={onOpenCurrentWeek}
                         onFocusAvailableActivity={focusFirstActionableActivity}
                         onMarkCompleted={(a) => onMarkCompleted(a, week)}
-                        onOpenProof={onOpenProof}
+                        onOpenProof={(a) => onOpenProof(a, week)}
                         isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                       />
                     )
@@ -977,7 +977,7 @@ export const ActivityList = ({
                         onOpenCurrentWeek={onOpenCurrentWeek}
                         onFocusAvailableActivity={focusFirstActionableActivity}
                         onMarkCompleted={(a) => onMarkCompleted(a, week)}
-                        onOpenProof={onOpenProof}
+                        onOpenProof={(a) => onOpenProof(a, week)}
                         isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                       />
                     )

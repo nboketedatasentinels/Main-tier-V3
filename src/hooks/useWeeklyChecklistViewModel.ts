@@ -81,6 +81,8 @@ export interface JourneyConfig {
 export interface ProofModalState {
   isOpen: boolean
   activityId?: string
+  /** Journey week the proof is for (row weekOverride). Falls back to selectedWeek. */
+  week?: number
   proofUrl: string
   notes: string
   rejectionReason?: string | null
@@ -476,38 +478,58 @@ export function useWeeklyChecklistViewModel() {
     }
   }, [selectedWeek, user, ledgerRefreshKey])
 
-  // Live listener for all pending verification requests (across weeks).
-  // Used by the UI to surface the "Awaiting approval" bucket and to keep the
-  // To-do view from offering a re-submit on a week that already has one in
-  // review.
+  // Live map of pending verification weeks (across the journey). Source of
+  // truth is Supabase `point_verifications` — the same store proof submit
+  // writes to. Used by ActivityList to move that week out of To-do into
+  // In Review so the learner can't keep re-submitting the same week.
   useEffect(() => {
-    if (!user) return
-    if (!FIRESTORE_READS_AVAILABLE) return
-    const q = query(
-      collection(db, 'points_verification_requests'),
-      where('user_id', '==', user.uid),
-      where('status', '==', 'pending'),
-    )
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const next: Record<string, Set<number>> = {}
-        snap.docs.forEach((d) => {
-          const row = d.data() as { activity_id?: string; week?: number }
-          if (!row.activity_id) return
-          const activityId =
-            resolveCanonicalActivityId(row.activity_id) ?? row.activity_id
-          const wk = Number(row.week ?? 0)
-          if (wk <= 0) return
-          const set = next[activityId] ?? new Set<number>()
-          set.add(wk)
-          next[activityId] = set
-        })
-        setPendingWeeksByActivity(next)
-      },
-      (e) => console.error('[pendingWeeks] listener failed', e),
-    )
-    return unsub
+    if (!user) {
+      setPendingWeeksByActivity({})
+      return
+    }
+
+    let active = true
+    const load = async () => {
+      const { data: rows, error } = await supabase
+        .from('point_verifications')
+        .select('activity_id, week')
+        .eq('uid', user.uid)
+        .eq('status', 'pending')
+
+      if (!active) return
+      if (error) {
+        console.error('[pendingWeeks] supabase fetch failed', error)
+        return
+      }
+
+      const next: Record<string, Set<number>> = {}
+      for (const row of rows ?? []) {
+        if (!row.activity_id) continue
+        const activityId =
+          resolveCanonicalActivityId(String(row.activity_id)) ?? String(row.activity_id)
+        const wk = Number(row.week ?? 0)
+        if (wk <= 0) continue
+        const set = next[activityId] ?? new Set<number>()
+        set.add(wk)
+        next[activityId] = set
+      }
+      setPendingWeeksByActivity(next)
+    }
+
+    void load()
+    const channel = supabase
+      .channel(`checklist_pending_weeks_${user.uid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'point_verifications', filter: `uid=eq.${user.uid}` },
+        () => void load(),
+      )
+      .subscribe()
+
+    return () => {
+      active = false
+      void supabase.removeChannel(channel)
+    }
   }, [user])
 
   /* ------------------------------------------------------------------ */
@@ -547,14 +569,28 @@ export function useWeeklyChecklistViewModel() {
       })
 
       // One-time activities exhausted in prior windows should present as completed.
+      // Preserve pending/rejected local state across ledger rebuilds so a just-
+      // submitted week does not snap back to an actionable To-do before the
+      // pendingWeeks map / checklist subscription catch up.
       const status: ActivityStatus =
         ledgerCache.weekCompleted.has(def.id) || availability.state === 'permanently_exhausted'
           ? 'completed'
-          : 'not_started'
+          : previous?.status === 'pending' || previous?.status === 'rejected'
+            ? previous.status
+            : 'not_started'
 
       return {
         ...effectiveDef,
         status,
+        hasInteracted:
+          status === 'completed' || status === 'pending'
+            ? true
+            : status === 'rejected'
+              ? false
+              : previous?.hasInteracted,
+        proofUrl: previous?.proofUrl,
+        notes: previous?.notes,
+        rejectionReason: previous?.rejectionReason ?? null,
         availability,
         quickActionLink: ACTIVITY_QUICK_LINKS[def.id as ActivityId],
         issuedByPartner:
@@ -896,10 +932,22 @@ export function useWeeklyChecklistViewModel() {
   /* ------------------------------------------------------------------ */
   /* Proof modal + approval flow                                          */
   /* ------------------------------------------------------------------ */
-  const openProofModal = useCallback((activity: ActivityState) => {
+  const markActivityPendingForWeek = useCallback((activityId: string, week: number) => {
+    if (!activityId || week <= 0) return
+    setPendingWeeksByActivity((prev) => {
+      const existing = prev[activityId]
+      if (existing?.has(week)) return prev
+      const nextSet = new Set(existing ?? [])
+      nextSet.add(week)
+      return { ...prev, [activityId]: nextSet }
+    })
+  }, [])
+
+  const openProofModal = useCallback((activity: ActivityState, weekOverride?: number) => {
     setProofModal({
       isOpen: true,
       activityId: activity.id,
+      week: typeof weekOverride === 'number' && weekOverride > 0 ? weekOverride : undefined,
       proofUrl: activity.proofUrl ?? '',
       notes: activity.notes ?? '',
       rejectionReason: activity.rejectionReason ?? null,
@@ -1016,7 +1064,7 @@ export function useWeeklyChecklistViewModel() {
           journeyType: journey.journeyType,
           weekNumber: targetWeek,
           activity,
-          onProofRequired: (act) => openProofModal(act),
+          onProofRequired: (act) => openProofModal(act, targetWeek),
           onSuccess: async (status) => {
             await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
             refreshLedger()
@@ -1216,11 +1264,16 @@ export function useWeeklyChecklistViewModel() {
         ? null
         : userOrganizationId
 
+      const targetWeek =
+        typeof proofModal.week === 'number' && proofModal.week > 0
+          ? proofModal.week
+          : selectedWeek
+
       const attemptNumber = (activity.completedCount ?? 0) + 1
       await submitPointsVerificationRequestAtomic({
         userId: user.uid,
         organizationId: submissionOrganizationId,
-        week: selectedWeek,
+        week: targetWeek,
         activityId: activity.id,
         activityTitle: activity.title,
         activityPoints: activity.points,
@@ -1229,6 +1282,10 @@ export function useWeeklyChecklistViewModel() {
         approvalType: activity.approvalType,
         attemptNumber,
       })
+
+      // Move this week into In Review immediately so To-do no longer offers
+      // a re-submit while the realtime pending map catches up.
+      markActivityPendingForWeek(activity.id, targetWeek)
 
       await setActivityStatusLocal(activity.id, {
         status: 'pending',
@@ -1257,6 +1314,11 @@ export function useWeeklyChecklistViewModel() {
           duration: 5000,
         })
         if (activity) {
+          const targetWeek =
+            typeof proofModal.week === 'number' && proofModal.week > 0
+              ? proofModal.week
+              : selectedWeek
+          markActivityPendingForWeek(activity.id, targetWeek)
           await setActivityStatusLocal(activity.id, {
             status: 'pending',
             rejectionReason: null,
@@ -1284,9 +1346,11 @@ export function useWeeklyChecklistViewModel() {
     isWeekLocked,
     isFreeTierMember,
     journey,
+    markActivityPendingForWeek,
     proofModal.activityId,
     proofModal.notes,
     proofModal.proofUrl,
+    proofModal.week,
     selectedWeek,
     setActivityStatusLocal,
     toast,
