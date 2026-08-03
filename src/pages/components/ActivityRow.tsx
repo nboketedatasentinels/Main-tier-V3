@@ -109,6 +109,9 @@ interface ActivityRowProps {
   onMarkCompleted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
   onRefreshLedger?: () => void
+  /** 1-based claim index for this row when the activity allows multiple. */
+  occurrenceNumber?: number
+  occurrenceTotal?: number
   isActionInFlight: boolean
 }
 
@@ -126,6 +129,8 @@ export const ActivityRow = ({
   onMarkCompleted,
   onOpenProof,
   onRefreshLedger,
+  occurrenceNumber,
+  occurrenceTotal,
   isActionInFlight,
 }: ActivityRowProps) => {
   const navigate = useNavigate()
@@ -161,9 +166,25 @@ export const ActivityRow = ({
     lockedByInteraction || activity.status === 'completed' || isActionInFlight
 
   const visualState = getVisualState(activity)
-  const totalFrequency = activity.activityPolicy?.maxTotal ?? 1
+  const totalFrequency = occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
   const completedCount = activity.completedCount ?? 0
   const hasFrequency = totalFrequency > 1
+  const isFullyComplete =
+    visualState === 'completed' ||
+    (hasFrequency && completedCount >= totalFrequency) ||
+    activity.availability.state === 'permanently_exhausted'
+  // Strikethrough for this row when the claim is done, or the whole activity is maxed.
+  const showStrike = visualState === 'completed' || isFullyComplete
+  // DONE column always shows live occurrence progress (1/3, 2/3, 3/3).
+  const displayDoneCount = hasFrequency
+    ? Math.min(
+        totalFrequency,
+        showStrike
+          ? Math.max(completedCount, occurrenceNumber ?? 0, 1)
+          : completedCount,
+      )
+    : 0
+  const occurrenceLabel = hasFrequency ? `${displayDoneCount} / ${totalFrequency}` : null
 
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
@@ -289,8 +310,8 @@ export const ActivityRow = ({
             <Text
               fontSize="sm"
               fontWeight="medium"
-              color={visualState === 'completed' ? 'gray.500' : 'gray.900'}
-              textDecoration={visualState === 'completed' ? 'line-through' : 'none'}
+              color={showStrike ? 'gray.500' : 'gray.900'}
+              textDecoration={showStrike ? 'line-through' : 'none'}
               noOfLines={1}
             >
               {activity.title}
@@ -303,28 +324,38 @@ export const ActivityRow = ({
             >
               <Text>{approvalLabel}</Text>
               <Text>·</Text>
-              <Text color="#350e6f" fontWeight="semibold">
+              <Text
+                color={showStrike ? 'gray.400' : '#350e6f'}
+                fontWeight="semibold"
+                textDecoration={showStrike ? 'line-through' : 'none'}
+              >
                 +{activity.points.toLocaleString()} pts
               </Text>
-              {hasFrequency && (
+              {occurrenceLabel && (
                 <>
                   <Text>·</Text>
-                  <Text>
-                    {completedCount}/{totalFrequency}
+                  <Text
+                    fontWeight="semibold"
+                    color={showStrike ? 'gray.400' : 'gray.600'}
+                    textDecoration={showStrike ? 'line-through' : 'none'}
+                  >
+                    {occurrenceLabel}
                   </Text>
                 </>
               )}
             </HStack>
           </Stack>
 
-          {/* Frequency (desktop) */}
+          {/* Frequency / occurrence (desktop) */}
           <Text
             fontSize="xs"
-            color="gray.600"
+            color={showStrike ? 'gray.400' : 'gray.600'}
             display={{ base: 'none', md: 'block' }}
             textAlign="left"
+            fontWeight={hasFrequency ? 'semibold' : 'normal'}
+            textDecoration={showStrike ? 'line-through' : 'none'}
           >
-            {hasFrequency ? `${completedCount} / ${totalFrequency}` : '-'}
+            {occurrenceLabel ?? '-'}
           </Text>
 
           {/* Approval type (desktop) */}
@@ -347,9 +378,10 @@ export const ActivityRow = ({
           <Text
             fontSize="xs"
             fontWeight="semibold"
-            color={visualState === 'completed' ? 'gray.400' : '#350e6f'}
+            color={showStrike ? 'gray.400' : '#350e6f'}
             display={{ base: 'none', md: 'block' }}
             textAlign="right"
+            textDecoration={showStrike ? 'line-through' : 'none'}
           >
             +{activity.points.toLocaleString()} pts
           </Text>

@@ -17,7 +17,17 @@ import { getVisibleActivities } from '@/utils/activityStateManager'
 import { PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { ActivityRow } from './ActivityRow'
 
-type TodoRow = { activity: ActivityState; weekOverride: number; occurrence?: number }
+type WeekRowKind = 'todo' | 'pending' | 'done'
+
+type TodoRow = {
+  activity: ActivityState
+  weekOverride: number
+  occurrence?: number
+  /** 1-based claim number for this row (e.g. 2 of 3). */
+  occurrenceNumber?: number
+  occurrenceTotal?: number
+  rowKind?: WeekRowKind
+}
 
 type Bucket = 'todo' | 'pending' | 'done' | 'locked'
 
@@ -167,20 +177,48 @@ export const ActivityList = ({
 
     const totalWeeks = Math.max(1, programDurationWeeks)
 
-    const pushDone = (week: number, activity: ActivityState) => {
+    const pushWeekRow = (week: number, row: TodoRow) => {
+      const list = todoByWeek.get(week) ?? []
+      list.push(row)
+      todoByWeek.set(week, list)
+    }
+
+    const pushDone = (week: number, activity: ActivityState, occurrenceNumber?: number) => {
       const list = doneByWeek.get(week) ?? []
       list.push(activity)
       doneByWeek.set(week, list)
       doneTotalCount += 1
       donePointsTotal += activity.points ?? 0
+
+      const totalCap = activity.activityPolicy?.maxTotal ?? 1
+      // Keep the completed claim visible in its week with strikethrough —
+      // do not let maxed-out activities vanish from the week list.
+      pushWeekRow(week, {
+        activity,
+        weekOverride: week,
+        occurrence: occurrenceNumber,
+        occurrenceNumber: occurrenceNumber ?? Math.min(activity.completedCount ?? 1, totalCap),
+        occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+        rowKind: 'done',
+      })
     }
 
-    const pushPending = (week: number, activity: ActivityState) => {
+    const pushPending = (week: number, activity: ActivityState, occurrenceNumber?: number) => {
       const list = pendingByWeek.get(week) ?? []
       list.push(activity)
       pendingByWeek.set(week, list)
       pendingTotalCount += 1
       pendingPointsTotal += activity.points ?? 0
+
+      const totalCap = activity.activityPolicy?.maxTotal ?? 1
+      pushWeekRow(week, {
+        activity,
+        weekOverride: week,
+        occurrence: occurrenceNumber,
+        occurrenceNumber: occurrenceNumber ?? Math.min((activity.completedCount ?? 0) + 1, totalCap),
+        occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+        rowKind: 'pending',
+      })
     }
 
     ordered.forEach((activity) => {
@@ -190,72 +228,64 @@ export const ActivityList = ({
         completedWeeksByActivity[activity.id] ?? new Set<number>()
       const pendingWeeks =
         pendingWeeksByActivity[activity.id] ?? new Set<number>()
+      const totalCap = activity.activityPolicy?.maxTotal ?? 1
+      const sortedCompleted = Array.from(completedWeeks).sort((a, b) => a - b)
 
-      // Every recorded completion goes into Done under its actual weekNumber.
-      // This works the same for one-time and recurring activities - the source
-      // of truth is the canonical pointsLedger entries.
-      completedWeeks.forEach((cw) => pushDone(cw, activity))
-
-      // Every pending submission goes into the In Review bucket under its
-      // submitted weekNumber. Source of truth: Supabase point_verifications.
-      pendingWeeks.forEach((pw) => {
-        // Don't double-bucket if the request was actually approved and the
-        // ledger already has an entry for that week.
-        if (completedWeeks.has(pw)) return
-        pushPending(pw, activity)
+      // Every recorded completion goes into Done under its actual weekNumber
+      // AND stays visible in that week row (strikethrough + occurrence).
+      sortedCompleted.forEach((cw, idx) => {
+        pushDone(cw, activity, totalCap > 1 ? idx + 1 : undefined)
       })
 
+      // Every pending submission goes into In Review and stays in its week.
+      Array.from(pendingWeeks)
+        .sort((a, b) => a - b)
+        .forEach((pw, idx) => {
+          if (completedWeeks.has(pw)) return
+          const occurrenceNumber =
+            totalCap > 1 ? sortedCompleted.length + idx + 1 : undefined
+          pushPending(pw, activity, occurrenceNumber)
+        })
+
       if (!isRecurring) {
-        // One-time activities (policy type 'one_time'). Cap is usually 1, but
-        // some - like Case Study - allow a small number of claims
-        // (maxTotal > 1). Use the ledger count vs the cap to decide "fully
-        // done", NOT the per-selectedWeek `status === 'completed'` flag (which
-        // would prematurely move a half-done multi-claim activity to Done).
         const totalDone = activity.completedCount ?? 0
-        const totalCap = activity.activityPolicy?.maxTotal ?? 1
         const isFullyDone =
           totalDone >= totalCap ||
           activity.availability.state === 'permanently_exhausted'
         if (isFullyDone) {
-          // Fallback: if completions exist but no ledger weekNumber resolved,
-          // surface under the catalog week so it does not vanish from Done.
-          if (completedWeeks.size === 0) pushDone(startWeek, activity)
+          if (completedWeeks.size === 0) pushDone(startWeek, activity, totalCap > 1 ? totalCap : undefined)
           return
         }
-        // Anything currently in review must NOT appear in To-do. The In Review
-        // bucket either already has rows (from pendingWeeks.forEach above) or
-        // we fall back to surfacing one under the catalog week so the learner
-        // still sees what they're waiting on.
         if (pendingWeeks.size > 0 || activity.status === 'pending') {
-          if (pendingWeeks.size === 0) pushPending(startWeek, activity)
+          if (pendingWeeks.size === 0) {
+            pushPending(
+              startWeek,
+              activity,
+              totalCap > 1 ? Math.min(totalDone + 1, totalCap) : undefined,
+            )
+          }
           return
         }
-        // Show one To-do row at the catalog week. For one-time-with-cap-not-hit
-        // (e.g. case_study after the first claim), `availability.state` stays
-        // 'available' because the policy isn't exhausted, so this branch fires.
         const isTodo =
           activity.status === 'rejected' ||
           activity.availability.state === 'available'
         if (isTodo) {
-          // A one-time activity may allow more than one claim (e.g. Case Study
-          // and Capstone: maxTotal = 2). Surface one To-do row per REMAINING
-          // claim so the checklist total reflects the full configured points -
-          // but SPREAD the claims across the journey (one per 2-week window)
-          // instead of stacking identical rows on the same week. Stacking gave
-          // duplicate rows (and colliding React keys) under Week 1.
-          const totalCap = activity.activityPolicy?.maxTotal ?? 1
           const used = (activity.completedCount ?? 0) + pendingWeeks.size
           const remaining = Math.max(1, totalCap - used)
           const usedWeeks = new Set<number>([...completedWeeks, ...pendingWeeks])
           for (let i = 0; i < remaining; i++) {
-            // One claim per successive 2-week window, clamped to the journey.
             let targetWeek = Math.min(totalWeeks, startWeek + i * PARALLEL_WINDOW_SIZE_WEEKS)
-            // Never collide with a week that already holds this activity.
             while (usedWeeks.has(targetWeek) && targetWeek < totalWeeks) targetWeek += 1
             usedWeeks.add(targetWeek)
-            const list = todoByWeek.get(targetWeek) ?? []
-            list.push({ activity, weekOverride: targetWeek, occurrence: i })
-            todoByWeek.set(targetWeek, list)
+            const occurrenceNumber = totalCap > 1 ? used + i + 1 : undefined
+            pushWeekRow(targetWeek, {
+              activity,
+              weekOverride: targetWeek,
+              occurrence: i,
+              occurrenceNumber,
+              occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+              rowKind: 'todo',
+            })
             todoTotalCount += 1
             todoPointsTotal += activity.points ?? 0
           }
@@ -267,30 +297,24 @@ export const ActivityList = ({
 
       // Recurring activity (window_limited or ongoing).
       const totalDone = activity.completedCount ?? 0
-      const totalCap = activity.activityPolicy?.maxTotal ?? Infinity
       const isPermExhausted =
         activity.availability.state === 'permanently_exhausted' ||
         totalDone >= totalCap
       if (isPermExhausted) {
-        // Fully consumed; no more To-do rows. Done rows were already pushed
-        // above from completedWeeks.
+        // Fully consumed — completed weeks already pushed above with
+        // strikethrough. Do not drop them from the week list.
         return
       }
 
-      // Race-window guard: an optimistic submit flips status='pending' before
-      // the pending-requests listener resolves the per-week mapping. During
-      // that gap, fall back to a single In Review row at the catalog week
-      // and skip distributing the activity across To-do entirely - never let
-      // a re-submit reach the learner while a request is in review.
       if (activity.status === 'pending' && pendingWeeks.size === 0) {
-        pushPending(startWeek, activity)
+        pushPending(
+          startWeek,
+          activity,
+          totalCap > 1 ? Math.min(totalDone + 1, totalCap) : undefined,
+        )
         return
       }
 
-      // Genuine locks (mentor missing, schedule, cooldownWeeks) keep the
-      // activity in "Coming up". A 7-day post-claim cooldown is not a genuine
-      // block here - we let the per-week duplicates surface as actionable in
-      // future weeks the user hasn't claimed yet.
       if (
         activity.availability.state === 'locked' &&
         activity.availability.reason !== 'weekly_cooldown'
@@ -304,13 +328,6 @@ export const ActivityList = ({
       const remaining = maxTotal === Infinity ? 0 : Math.max(0, maxTotal - usedTotal)
       if (remaining === 0) return
 
-      // Surface EVERY remaining claim so the To-do total always equals the
-      // journey max. Distribute one claim per eligible week from the activity's
-      // start week; if there are more claims than weeks left (e.g. Impact log:
-      // 4 claims but only weeks 4-6 remain), the extra claims WRAP and stack on
-      // earlier weeks rather than being dropped. Dropping slots is why the total
-      // came out at 57,000 instead of the configured 60,000. The occurrence
-      // index keeps stacked rows' React keys unique.
       const eligibleWeeks: number[] = []
       for (let w = startWeek; w <= totalWeeks; w++) {
         if (completedWeeks.has(w) || pendingWeeks.has(w)) continue
@@ -321,12 +338,42 @@ export const ActivityList = ({
       }
       for (let i = 0; i < remaining; i++) {
         const w = eligibleWeeks[i % eligibleWeeks.length]
-        const list = todoByWeek.get(w) ?? []
-        list.push({ activity, weekOverride: w, occurrence: i })
-        todoByWeek.set(w, list)
+        const occurrenceNumber =
+          maxTotal !== Infinity && maxTotal > 1 ? usedTotal + i + 1 : undefined
+        pushWeekRow(w, {
+          activity,
+          weekOverride: w,
+          occurrence: i,
+          occurrenceNumber,
+          occurrenceTotal: maxTotal !== Infinity && maxTotal > 1 ? maxTotal : undefined,
+          rowKind: 'todo',
+        })
         todoTotalCount += 1
         todoPointsTotal += activity.points ?? 0
       }
+    })
+
+    // Deduplicate week rows: prefer done > pending > todo for the same
+    // activity+week so a completed claim never also shows as actionable.
+    const kindRank: Record<WeekRowKind, number> = { done: 3, pending: 2, todo: 1 }
+    todoByWeek.forEach((rows, week) => {
+      const best = new Map<string, TodoRow>()
+      rows.forEach((row) => {
+        const key = `${row.activity.id}::${row.weekOverride}`
+        const prev = best.get(key)
+        const rank = kindRank[row.rowKind ?? 'todo']
+        if (!prev || rank > kindRank[prev.rowKind ?? 'todo']) {
+          best.set(key, row)
+        }
+      })
+      // Stable order: open work first, then in-review, then completed
+      // (completed stays visible with strikethrough at the bottom of the week).
+      const next = Array.from(best.values()).sort((a, b) => {
+        const rankDiff = kindRank[a.rowKind ?? 'todo'] - kindRank[b.rowKind ?? 'todo']
+        if (rankDiff !== 0) return rankDiff
+        return (a.occurrenceNumber ?? 0) - (b.occurrenceNumber ?? 0)
+      })
+      todoByWeek.set(week, next)
     })
 
     return {
@@ -351,11 +398,6 @@ export const ActivityList = ({
   const sortedTodoWeeks = useMemo(
     () => Array.from(grouped.todoByWeek.keys()).sort((a, b) => a - b),
     [grouped.todoByWeek],
-  )
-
-  const sortedDoneWeeks = useMemo(
-    () => Array.from(grouped.doneByWeek.keys()).sort((a, b) => a - b),
-    [grouped.doneByWeek],
   )
 
   const sortedPendingWeeks = useMemo(
@@ -398,7 +440,6 @@ export const ActivityList = ({
   })
   const [collapsedTodoWeeks, setCollapsedTodoWeeks] = useState<Record<number, boolean>>({})
   const [collapsedPendingWeeks, setCollapsedPendingWeeks] = useState<Record<number, boolean>>({})
-  const [collapsedDoneWeeks, setCollapsedDoneWeeks] = useState<Record<number, boolean>>({})
 
   const toggleSection = (bucket: Bucket) =>
     setCollapsedSections((prev) => ({ ...prev, [bucket]: !prev[bucket] }))
@@ -408,9 +449,6 @@ export const ActivityList = ({
 
   const togglePendingWeek = (week: number) =>
     setCollapsedPendingWeeks((prev) => ({ ...prev, [week]: !prev[week] }))
-
-  const toggleDoneWeek = (week: number) =>
-    setCollapsedDoneWeeks((prev) => ({ ...prev, [week]: !prev[week] }))
 
   if (!visibleActivities?.length) {
     return (
@@ -471,8 +509,13 @@ export const ActivityList = ({
   )
 
   const renderTodoSection = () => {
-    if (grouped.todoTotalCount === 0) return null
+    const weekKeys = Array.from(grouped.todoByWeek.keys()).sort((a, b) => a - b)
+    if (weekKeys.length === 0) return null
     const isCollapsed = collapsedSections.todo
+    const visibleRowCount = weekKeys.reduce(
+      (sum, week) => sum + (grouped.todoByWeek.get(week)?.length ?? 0),
+      0,
+    )
     return (
       <Box key="todo">
         <Flex
@@ -504,7 +547,7 @@ export const ActivityList = ({
             {SECTION_TITLES.todo}
           </Text>
           <Text fontSize="xs" color="gray.500">
-            {grouped.todoTotalCount}
+            {visibleRowCount}
           </Text>
           {grouped.todoPointsTotal > 0 && (
             <Text fontSize="xs" color="#350e6f" fontWeight="semibold" ml="auto">
@@ -515,14 +558,13 @@ export const ActivityList = ({
 
         <Collapse in={!isCollapsed} animateOpacity>
           <ColumnHeader />
-          {sortedTodoWeeks.map((week) => {
+          {weekKeys.map((week) => {
             const weekRows = grouped.todoByWeek.get(week) ?? []
             if (weekRows.length === 0) return null
             const isWeekCollapsed = Boolean(collapsedTodoWeeks[week])
-            const weekPoints = weekRows.reduce(
-              (sum, r) => sum + (r.activity.points ?? 0),
-              0,
-            )
+            const weekPoints = weekRows
+              .filter((row) => (row.rowKind ?? 'todo') === 'todo')
+              .reduce((sum, row) => sum + (row.activity.points ?? 0), 0)
             const isCurrent = week === currentWeek
             return (
               <Box key={`todo-week-${week}`}>
@@ -592,36 +634,63 @@ export const ActivityList = ({
                   )}
                 </Flex>
                 <Collapse in={!isWeekCollapsed} animateOpacity>
-                  {weekRows.map(({ activity, weekOverride, occurrence }) => {
-                    const rowKey = `${activity.id}-week-${weekOverride}-${occurrence ?? 0}`
-                    const rowActivity = projectForWeek(activity)
-                    return (
-                      <ActivityRow
-                        key={rowKey}
-                        activity={rowActivity}
-                        selectedWeek={selectedWeek}
-                        currentWeek={currentWeek}
-                        isWeekLocked={isWeekLocked}
-                        isAdmin={isAdmin}
-                        isExpanded={expandedRowKey === rowKey}
-                        hasAvailableAlternative={Boolean(
-                          firstActionableActivityId &&
-                            firstActionableActivityId !== activity.id,
-                        )}
-                        onToggleExpand={() =>
-                          setExpandedRowKey((prev) =>
-                            prev === rowKey ? null : rowKey,
-                          )
-                        }
-                        onOpenCurrentWeek={onOpenCurrentWeek}
-                        onFocusAvailableActivity={focusFirstActionableActivity}
-                        onMarkCompleted={(a) => onMarkCompleted(a, weekOverride)}
-                        onOpenProof={(a) => onOpenProof(a, weekOverride)}
-                        onRefreshLedger={onRefreshLedger}
-                        isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
-                      />
-                    )
-                  })}
+                  {weekRows.map(
+                    ({
+                      activity,
+                      weekOverride,
+                      occurrence,
+                      occurrenceNumber,
+                      occurrenceTotal,
+                      rowKind,
+                    }) => {
+                      const kind = rowKind ?? 'todo'
+                      const rowKey = `${activity.id}-week-${weekOverride}-${occurrence ?? 0}-${kind}`
+                      const rowActivity =
+                        kind === 'done'
+                          ? {
+                              ...activity,
+                              status: 'completed' as const,
+                              hasInteracted: true,
+                            }
+                          : kind === 'pending'
+                            ? {
+                                ...projectForWeek(activity),
+                                status: 'pending' as const,
+                                hasInteracted: true,
+                              }
+                            : projectForWeek(activity)
+                      const totalCap =
+                        occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
+                      return (
+                        <ActivityRow
+                          key={rowKey}
+                          activity={rowActivity}
+                          selectedWeek={selectedWeek}
+                          currentWeek={currentWeek}
+                          isWeekLocked={isWeekLocked}
+                          isAdmin={isAdmin}
+                          isExpanded={expandedRowKey === rowKey}
+                          hasAvailableAlternative={Boolean(
+                            firstActionableActivityId &&
+                              firstActionableActivityId !== activity.id,
+                          )}
+                          onToggleExpand={() =>
+                            setExpandedRowKey((prev) =>
+                              prev === rowKey ? null : rowKey,
+                            )
+                          }
+                          onOpenCurrentWeek={onOpenCurrentWeek}
+                          onFocusAvailableActivity={focusFirstActionableActivity}
+                          onMarkCompleted={(a) => onMarkCompleted(a, weekOverride)}
+                          onOpenProof={(a) => onOpenProof(a, weekOverride)}
+                          onRefreshLedger={onRefreshLedger}
+                          occurrenceNumber={occurrenceNumber}
+                          occurrenceTotal={totalCap > 1 ? totalCap : undefined}
+                          isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
+                        />
+                      )
+                    },
+                  )}
                 </Collapse>
               </Box>
             )
@@ -836,167 +905,6 @@ export const ActivityList = ({
     )
   }
 
-  const renderDoneSection = () => {
-    if (grouped.doneTotalCount === 0) return null
-    const isCollapsed = collapsedSections.done
-    return (
-      <Box key="done">
-        <Flex
-          as="button"
-          type="button"
-          align="center"
-          gap={2}
-          w="100%"
-          textAlign="left"
-          px={4}
-          py={2.5}
-          bg="white"
-          borderBottom={isCollapsed ? 'none' : '1px solid'}
-          borderColor="gray.200"
-          onClick={() => toggleSection('done')}
-          _hover={{ bg: 'gray.50' }}
-          _focusVisible={{
-            outline: '2px solid',
-            outlineColor: '#350e6f',
-            outlineOffset: '-2px',
-          }}
-        >
-          <Icon
-            as={isCollapsed ? ChevronRight : ChevronDown}
-            boxSize={4}
-            color="gray.500"
-          />
-          <Text fontSize="sm" fontWeight="semibold" color="gray.800">
-            {SECTION_TITLES.done}
-          </Text>
-          <Text fontSize="xs" color="gray.500">
-            {grouped.doneTotalCount}
-          </Text>
-          {grouped.donePointsTotal > 0 && (
-            <Text fontSize="xs" color="#eab130" fontWeight="semibold" ml="auto">
-              +{grouped.donePointsTotal.toLocaleString()} pts earned
-            </Text>
-          )}
-        </Flex>
-
-        <Collapse in={!isCollapsed} animateOpacity>
-          {sortedDoneWeeks.map((week) => {
-            const weekItems = grouped.doneByWeek.get(week) ?? []
-            if (weekItems.length === 0) return null
-            const isWeekCollapsed = Boolean(collapsedDoneWeeks[week])
-            const weekPoints = weekItems.reduce(
-              (sum, a) => sum + (a.points ?? 0),
-              0,
-            )
-            const isCurrent = week === currentWeek
-            return (
-              <Box key={`done-week-${week}`}>
-                <Flex
-                  as="button"
-                  type="button"
-                  align="center"
-                  gap={2}
-                  w="100%"
-                  textAlign="left"
-                  pl={10}
-                  pr={4}
-                  py={isCurrent ? 2.5 : 2}
-                  bg={isCurrent ? '#f7f3fb' : 'gray.50'}
-                  boxShadow={isCurrent ? 'inset 4px 0 0 #350e6f' : undefined}
-                  borderTop="1px solid"
-                  borderColor={isCurrent ? '#e8dcf4' : 'gray.100'}
-                  onClick={() => toggleDoneWeek(week)}
-                  _hover={{ bg: isCurrent ? '#f0e8f7' : 'gray.100' }}
-                  _focusVisible={{
-                    outline: '2px solid',
-                    outlineColor: '#350e6f',
-                    outlineOffset: '-2px',
-                  }}
-                >
-                  <Icon
-                    as={isWeekCollapsed ? ChevronRight : ChevronDown}
-                    boxSize={3.5}
-                    color={isCurrent ? '#350e6f' : 'gray.500'}
-                  />
-                  <Text
-                    fontSize="xs"
-                    fontWeight="bold"
-                    color={isCurrent ? '#350e6f' : 'gray.700'}
-                    textTransform="uppercase"
-                    letterSpacing="0.06em"
-                  >
-                    Week {week}
-                  </Text>
-                  {isCurrent && (
-                    <Text
-                      fontSize="2xs"
-                      fontWeight="bold"
-                      color="white"
-                      bg="#350e6f"
-                      px={2}
-                      py={0.5}
-                      borderRadius="full"
-                      textTransform="uppercase"
-                      letterSpacing="0.04em"
-                    >
-                      Current
-                    </Text>
-                  )}
-                  <Text fontSize="xs" color={isCurrent ? '#350e6f' : 'gray.500'}>
-                    {weekItems.length}
-                  </Text>
-                  {weekPoints > 0 && (
-                    <Text
-                      fontSize="xs"
-                      color="#eab130"
-                      fontWeight="semibold"
-                      ml="auto"
-                    >
-                      +{weekPoints.toLocaleString()} pts
-                    </Text>
-                  )}
-                </Flex>
-                <Collapse in={!isWeekCollapsed} animateOpacity>
-                  {weekItems.map((activity, idx) => {
-                    const rowKey = `${activity.id}-done-week-${week}-${idx}`
-                    const rowActivity: ActivityState = {
-                      ...activity,
-                      status: 'completed',
-                      hasInteracted: false,
-                    }
-                    return (
-                      <ActivityRow
-                        key={rowKey}
-                        activity={rowActivity}
-                        selectedWeek={selectedWeek}
-                        currentWeek={currentWeek}
-                        isWeekLocked={isWeekLocked}
-                        isAdmin={isAdmin}
-                        isExpanded={expandedRowKey === rowKey}
-                        hasAvailableAlternative={false}
-                        onToggleExpand={() =>
-                          setExpandedRowKey((prev) =>
-                            prev === rowKey ? null : rowKey,
-                          )
-                        }
-                        onOpenCurrentWeek={onOpenCurrentWeek}
-                        onFocusAvailableActivity={focusFirstActionableActivity}
-                        onMarkCompleted={(a) => onMarkCompleted(a, week)}
-                        onOpenProof={(a) => onOpenProof(a, week)}
-                        onRefreshLedger={onRefreshLedger}
-                        isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
-                      />
-                    )
-                  })}
-                </Collapse>
-              </Box>
-            )
-          })}
-        </Collapse>
-      </Box>
-    )
-  }
-
   return (
     <Stack spacing={3}>
       <Flex justify="space-between" align="center" px={1}>
@@ -1035,7 +943,6 @@ export const ActivityList = ({
         {renderTodoSection()}
         {renderPendingSection()}
         {renderFlatSection('locked', grouped.locked)}
-        {renderDoneSection()}
       </Box>
     </Stack>
   )

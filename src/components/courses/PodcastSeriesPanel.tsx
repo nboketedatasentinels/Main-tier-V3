@@ -125,6 +125,7 @@ export function PodcastSeriesPanel({
         passed,
         shouldAwardPoints,
         prev.bestScore,
+        prev.attempts,
       )
       patchProgress(quizPodcast.id, next)
       setLastSaveOk(true)
