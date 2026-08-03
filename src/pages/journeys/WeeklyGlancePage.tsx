@@ -780,8 +780,10 @@ export const WeeklyGlancePage = () => {
   }, [navigate])
 
   return (
-    <Box bg="gray.50" minH="100%" p={{ base: 4, md: 8 }} pt={{ base: 4, md: 6 }}>
-      <Stack spacing={8} maxW="1400px" mx="auto">
+    // MainLayout already pads the content area (px 4/8, pt 4/8), so this page
+    // adds none of its own - doubling it up cost ~32px of width per side.
+    <Box bg="gray.50" minH="100%" pb={{ base: 2, md: 4 }}>
+      <Stack spacing={8} maxW="1500px" mx="auto">
         {/* Header */}
         <Flex
           justify="space-between"
