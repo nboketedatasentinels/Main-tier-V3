@@ -23,12 +23,14 @@ import {
   getModuleForPillarAndWeek,
   type Podcast,
 } from '@/config/podcasts'
+import type { JourneyType } from '@/config/pointsConfig'
 import { usePodcastProgress } from '@/hooks/usePodcastProgress'
 import {
   markPodcastWatched,
   recordAssessmentAttempt,
   getPodcastState,
 } from '@/services/podcastProgressService'
+import { awardChecklistPoints } from '@/services/pointsService'
 import { useAuth } from '@/hooks/useAuth'
 import { useUserPillar } from '@/hooks/useUserPillar'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
@@ -37,7 +39,8 @@ import { PodcastAssessmentModal } from './PodcastAssessmentModal'
 interface PodcastSeriesPanelProps {
   activity: ActivityState
   currentWeek: number
-  onAwardPoints?: () => Promise<void> | void
+  /** Refresh checklist/ledger after a quiz awards points. */
+  onPointsAwarded?: () => Promise<void> | void
 }
 
 type PodcastStage = 'not_watched' | 'watched' | 'passed' | 'failed'
@@ -50,12 +53,13 @@ const GOLD = '#eab130'
 export function PodcastSeriesPanel({
   activity,
   currentWeek,
-  onAwardPoints,
+  onPointsAwarded,
 }: PodcastSeriesPanelProps) {
-  const { profile } = useAuth()
-  const uid = profile?.id ?? null
+  const { user, profile } = useAuth()
+  const uid = user?.uid ?? profile?.id ?? null
+  const journeyType = (profile?.journeyType as JourneyType | undefined) ?? '6W'
   const toast = useToast()
-  const { progress, loading } = usePodcastProgress(uid)
+  const { progress, loading, patchProgress } = usePodcastProgress(uid)
   const { pillar, loading: pillarLoading } = useUserPillar()
 
   const podcasts = useMemo(
@@ -70,6 +74,7 @@ export function PodcastSeriesPanel({
   const [quizPodcast, setQuizPodcast] = useState<Podcast | null>(null)
   const [submittingId, setSubmittingId] = useState<string | null>(null)
   const [watchingId, setWatchingId] = useState<string | null>(null)
+  const [lastSaveOk, setLastSaveOk] = useState(false)
 
   const getStage = (podcast: Podcast): PodcastStage => {
     const s = getPodcastState(progress, podcast.id)
@@ -88,7 +93,8 @@ export function PodcastSeriesPanel({
     }
     setWatchingId(podcast.id)
     try {
-      await markPodcastWatched(uid, podcast.id)
+      const next = await markPodcastWatched(uid, podcast.id)
+      patchProgress(podcast.id, next)
     } catch (err) {
       console.error('[PodcastSeriesPanel] markWatched failed', err)
       toast({ status: 'error', title: 'Could not save progress', description: 'Try again in a moment.' })
@@ -97,19 +103,45 @@ export function PodcastSeriesPanel({
     }
   }
 
-  const handleQuizSubmit = async ({ score, passed }: { score: number; passed: boolean }) => {
-    if (!uid || !quizPodcast) return
+  const handleQuizSubmit = async ({
+    score,
+    passed,
+  }: {
+    score: number
+    passed: boolean
+  }): Promise<boolean> => {
+    if (!uid || !quizPodcast) return false
     setSubmittingId(quizPodcast.id)
+    setLastSaveOk(false)
     try {
       const prev = getPodcastState(progress, quizPodcast.id)
       const wasAlreadyPaid = Boolean(prev.pointsAwardedAt)
       const shouldAwardPoints = passed && !wasAlreadyPaid
 
-      await recordAssessmentAttempt(uid, quizPodcast.id, score, passed, shouldAwardPoints, prev.bestScore)
+      const next = await recordAssessmentAttempt(
+        uid,
+        quizPodcast.id,
+        score,
+        passed,
+        shouldAwardPoints,
+        prev.bestScore,
+      )
+      patchProgress(quizPodcast.id, next)
+      setLastSaveOk(true)
 
-      if (shouldAwardPoints && onAwardPoints) {
+      if (shouldAwardPoints) {
         try {
-          await onAwardPoints()
+          // One ledger claim per podcast episode so retries / sibling episodes
+          // stay idempotent and the Done x/y count moves correctly.
+          await awardChecklistPoints({
+            uid,
+            journeyType,
+            weekNumber: currentWeek,
+            activity,
+            source: 'podcast_quiz',
+            claimRef: quizPodcast.id,
+          })
+          await onPointsAwarded?.()
         } catch (err) {
           console.error('[PodcastSeriesPanel] points award failed', err)
         }
@@ -123,9 +155,16 @@ export function PodcastSeriesPanel({
           duration: 3500,
         })
       }
+      return true
     } catch (err) {
       console.error('[PodcastSeriesPanel] submit failed', err)
-      toast({ status: 'error', title: 'Could not save your quiz' })
+      toast({
+        status: 'error',
+        title: 'Could not save your quiz',
+        description: err instanceof Error ? err.message : 'Please try again.',
+      })
+      setLastSaveOk(false)
+      return false
     } finally {
       setSubmittingId(null)
     }
@@ -165,7 +204,6 @@ export function PodcastSeriesPanel({
 
   return (
     <Stack spacing={4}>
-      {/* Module header */}
       {module && (
         <Flex
           justify="space-between"
@@ -180,12 +218,7 @@ export function PodcastSeriesPanel({
           rounded="md"
         >
           <Stack spacing={0.5} minW={0}>
-            <Text
-              fontSize="xs"
-              fontWeight="semibold"
-              letterSpacing="wide"
-              color="gray.500"
-            >
+            <Text fontSize="xs" fontWeight="semibold" letterSpacing="wide" color="gray.500">
               Weeks {module.weekRange[0]}–{module.weekRange[1]}
             </Text>
             <Text fontSize="sm" fontWeight="bold" color={PLUM} noOfLines={1}>
@@ -209,7 +242,6 @@ export function PodcastSeriesPanel({
         </Flex>
       )}
 
-      {/* Podcast rows */}
       <Stack spacing={2}>
         {podcasts.map((podcast) => {
           const stage = getStage(podcast)
@@ -285,7 +317,6 @@ export function PodcastSeriesPanel({
                 </Stack>
 
                 <HStack spacing={2} flexShrink={0}>
-                  {/* Watch podcast - always shown; disabled until the episode URL is live */}
                   <Button
                     size="sm"
                     variant="outline"
@@ -302,7 +333,6 @@ export function PodcastSeriesPanel({
                     {!hasUrl ? 'Coming soon' : isPassed ? 'Replay' : 'Watch podcast'}
                   </Button>
 
-                  {/* Take / retry quiz */}
                   {!isPassed && (
                     <Button
                       size="sm"
@@ -318,6 +348,7 @@ export function PodcastSeriesPanel({
                         if (!hasUrl && stage === 'not_watched') {
                           await handleWatch(podcast)
                         }
+                        setLastSaveOk(false)
                         setQuizPodcast(podcast)
                       }}
                     >
@@ -325,7 +356,6 @@ export function PodcastSeriesPanel({
                     </Button>
                   )}
 
-                  {/* Passed */}
                   {isPassed && (
                     <HStack
                       spacing={1.5}
@@ -352,7 +382,11 @@ export function PodcastSeriesPanel({
         isOpen={quizPodcast !== null}
         podcast={quizPodcast}
         isSubmitting={submittingId === quizPodcast?.id}
-        onClose={() => setQuizPodcast(null)}
+        saveSucceeded={lastSaveOk}
+        onClose={() => {
+          setQuizPodcast(null)
+          setLastSaveOk(false)
+        }}
         onSubmit={handleQuizSubmit}
       />
     </Stack>

@@ -108,6 +108,7 @@ interface ActivityRowProps {
   onFocusAvailableActivity: () => void
   onMarkCompleted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState) => void
+  onRefreshLedger?: () => void
   isActionInFlight: boolean
 }
 
@@ -124,6 +125,7 @@ export const ActivityRow = ({
   onFocusAvailableActivity,
   onMarkCompleted,
   onOpenProof,
+  onRefreshLedger,
   isActionInFlight,
 }: ActivityRowProps) => {
   const navigate = useNavigate()
@@ -425,7 +427,7 @@ export const ActivityRow = ({
               <PodcastSeriesPanel
                 activity={activity}
                 currentWeek={currentWeek}
-                onAwardPoints={() => onMarkCompleted(activity)}
+                onPointsAwarded={onRefreshLedger}
               />
             )}
 

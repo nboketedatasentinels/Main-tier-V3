@@ -23,14 +23,17 @@ interface PodcastAssessmentModalProps {
   isOpen: boolean
   podcast: Podcast | null
   isSubmitting: boolean
+  /** True only after the quiz result was persisted to the DB. */
+  saveSucceeded?: boolean
   onClose: () => void
-  onSubmit: (params: { score: number; passed: boolean }) => Promise<void> | void
+  onSubmit: (params: { score: number; passed: boolean }) => Promise<boolean> | boolean | void
 }
 
 export function PodcastAssessmentModal({
   isOpen,
   podcast,
   isSubmitting,
+  saveSucceeded = false,
   onClose,
   onSubmit,
 }: PodcastAssessmentModalProps) {
@@ -38,6 +41,7 @@ export function PodcastAssessmentModal({
   const [answers, setAnswers] = useState<Record<string, number>>({})
   const [phase, setPhase] = useState<'quiz' | 'result'>('quiz')
   const [score, setScore] = useState(0)
+  const [saveFailed, setSaveFailed] = useState(false)
 
   // Reset state every time the modal opens for a new podcast
   useEffect(() => {
@@ -46,6 +50,7 @@ export function PodcastAssessmentModal({
       setAnswers({})
       setPhase('quiz')
       setScore(0)
+      setSaveFailed(false)
     }
   }, [isOpen, podcast?.id])
 
@@ -79,10 +84,12 @@ export function PodcastAssessmentModal({
     questions.forEach((q) => {
       if (answers[q.id] === q.correctIndex) correct += 1
     })
-    const passed = correct >= passingScore
+    const didPass = correct >= passingScore
     setScore(correct)
+    setSaveFailed(false)
     setPhase('result')
-    await onSubmit({ score: correct, passed })
+    const ok = await onSubmit({ score: correct, passed: didPass })
+    if (ok === false) setSaveFailed(true)
   }
 
   const handleRetry = () => {
@@ -90,9 +97,11 @@ export function PodcastAssessmentModal({
     setAnswers({})
     setPhase('quiz')
     setScore(0)
+    setSaveFailed(false)
   }
 
   const passed = score >= passingScore
+  const pointsWereSaved = passed && saveSucceeded && !saveFailed
   const progressPct = ((currentIndex + 1) / totalQuestions) * 100
 
   return (
@@ -246,19 +255,62 @@ export function PodcastAssessmentModal({
               </Stack>
               <Box
                 p={3}
-                bg={passed ? 'yellow.50' : 'gray.50'}
+                bg={
+                  saveFailed
+                    ? 'red.50'
+                    : pointsWereSaved
+                      ? 'yellow.50'
+                      : passed
+                        ? 'orange.50'
+                        : 'gray.50'
+                }
                 border="1px solid"
-                borderColor={passed ? 'yellow.200' : 'gray.200'}
+                borderColor={
+                  saveFailed
+                    ? 'red.200'
+                    : pointsWereSaved
+                      ? 'yellow.200'
+                      : passed
+                        ? 'orange.200'
+                        : 'gray.200'
+                }
                 rounded="md"
                 fontSize="sm"
-                color={passed ? '#b45309' : 'gray.600'}
+                color={
+                  saveFailed
+                    ? 'red.700'
+                    : pointsWereSaved
+                      ? '#b45309'
+                      : passed
+                        ? 'orange.800'
+                        : 'gray.600'
+                }
                 fontWeight="medium"
               >
-                {passed
-                  ? 'Your points have been added to your total.'
-                  : `You need ${passingScore} correct to pass. Take a minute, watch the podcast again, and try once more when you're ready.`}
+                {saveFailed
+                  ? 'Your answers were scored, but progress could not be saved. Please try again so you do not have to redo this quiz.'
+                  : pointsWereSaved
+                    ? 'Saved. Your points have been added to your total.'
+                    : passed
+                      ? 'Saving your progress…'
+                      : `You need ${passingScore} correct to pass. Take a minute, watch the podcast again, and try once more when you're ready.`}
               </Box>
-              {passed ? (
+              {saveFailed ? (
+                <HStack w="full" spacing={3}>
+                  <Button variant="outline" onClick={onClose} flex={1}>
+                    Close
+                  </Button>
+                  <Button
+                    bg="#350e6f"
+                    color="white"
+                    _hover={{ bg: '#27062e' }}
+                    onClick={handleRetry}
+                    flex={1}
+                  >
+                    Try again
+                  </Button>
+                </HStack>
+              ) : passed ? (
                 <Button
                   bg="#350e6f"
                   color="white"
@@ -266,8 +318,10 @@ export function PodcastAssessmentModal({
                   size="lg"
                   onClick={onClose}
                   w="full"
+                  isDisabled={isSubmitting || !pointsWereSaved}
+                  isLoading={isSubmitting}
                 >
-                  Done
+                  {pointsWereSaved ? 'Done' : 'Saving…'}
                 </Button>
               ) : (
                 <HStack w="full" spacing={3}>

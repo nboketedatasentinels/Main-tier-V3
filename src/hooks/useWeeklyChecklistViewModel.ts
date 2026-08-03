@@ -1388,6 +1388,7 @@ export function useWeeklyChecklistViewModel() {
     // actions
     markCompleted,
     markNotStarted,
+    refreshLedger,
 
     // proof modal
     proofModal,

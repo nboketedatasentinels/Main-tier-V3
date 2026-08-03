@@ -28,6 +28,7 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         onMarkCompleted={vm.markCompleted}
         onMarkNotStarted={vm.markNotStarted}
         onOpenProof={vm.openProofModal}
+        onRefreshLedger={vm.refreshLedger}
         isActivityBusy={vm.isActivityBusy}
       />
 

@@ -21,7 +21,7 @@ interface PodcastProgressRow {
   points_awarded_at: string | null
 }
 
-const toDate = (value: string | null): Date | null => {
+const toDate = (value: string | null | undefined): Date | null => {
   if (!value) return null
   const parsed = new Date(value)
   return Number.isNaN(parsed.getTime()) ? null : parsed
@@ -43,6 +43,23 @@ const mapRow = (row: PodcastProgressRow): PodcastState => ({
   bestScore: Number(row.best_score ?? 0),
   attempts: Number(row.attempts ?? 0),
   pointsAwardedAt: toDate(row.points_awarded_at),
+})
+
+const mapRpcResult = (data: Record<string, unknown>, fallback: PodcastState): PodcastState => ({
+  watched: Boolean(data.watched ?? fallback.watched),
+  watchedAt: toDate(
+    typeof data.watched_at === 'string'
+      ? data.watched_at
+      : fallback.watchedAt?.toISOString() ?? null,
+  ),
+  passed: Boolean(data.passed ?? fallback.passed),
+  bestScore: Number(data.best_score ?? fallback.bestScore ?? 0),
+  attempts: Number(data.attempts ?? fallback.attempts ?? 0),
+  pointsAwardedAt: toDate(
+    typeof data.points_awarded_at === 'string'
+      ? data.points_awarded_at
+      : fallback.pointsAwardedAt?.toISOString() ?? null,
+  ),
 })
 
 // Each subscription needs its OWN channel. supabase.channel(topic) returns an
@@ -96,17 +113,97 @@ export function subscribeToPodcastProgress(
   }
 }
 
-export async function markPodcastWatched(uid: string, podcastId: string): Promise<void> {
-  const { error } = await supabase.from('podcast_progress').upsert(
+async function callRecordPodcastProgress(
+  payload: Record<string, unknown>,
+  fallback: PodcastState,
+): Promise<PodcastState> {
+  const { data, error } = await supabase.rpc('record_podcast_progress', { p: payload })
+  if (!error) {
+    const row = (data ?? {}) as Record<string, unknown>
+    if (row.ok === false) {
+      throw new Error(typeof row.error === 'string' ? row.error : 'podcast_progress_failed')
+    }
+    return mapRpcResult(row, fallback)
+  }
+
+  // Fallback for envs that haven't applied 0036 yet — direct upsert.
+  const message = error.message || ''
+  const missingRpc =
+    message.includes('record_podcast_progress') ||
+    message.includes('Could not find the function') ||
+    message.toLowerCase().includes('schema cache')
+  if (!missingRpc) throw new Error(message)
+
+  console.warn('[podcastProgressService] RPC missing; falling back to table upsert', message)
+  const uid = String(payload.uid ?? '')
+  const podcastId = String(payload.podcast_id ?? '')
+  const { data: existing, error: readError } = await supabase
+    .from('podcast_progress')
+    .select('attempts, points_awarded_at, passed, best_score, watched, watched_at')
+    .eq('uid', uid)
+    .eq('podcast_id', podcastId)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
+
+  const isQuizWrite = Object.prototype.hasOwnProperty.call(payload, 'score') ||
+    Object.prototype.hasOwnProperty.call(payload, 'passed')
+  const update: Record<string, unknown> = {
+    uid,
+    podcast_id: podcastId,
+    watched: Boolean(payload.watched) || Boolean(existing?.watched),
+    passed: Boolean(payload.passed) || Boolean(existing?.passed),
+    best_score: Math.max(
+      Number(existing?.best_score ?? 0),
+      Number(payload.score ?? 0),
+      fallback.bestScore,
+    ),
+  }
+  if (payload.watched && !existing?.watched_at) {
+    update.watched_at = new Date().toISOString()
+  }
+  if (isQuizWrite) {
+    update.attempts = Number(existing?.attempts ?? 0) + 1
+  }
+  if (payload.award_points && (payload.passed || existing?.passed) && !existing?.points_awarded_at) {
+    update.points_awarded_at = new Date().toISOString()
+  }
+
+  const { error: upsertError } = await supabase
+    .from('podcast_progress')
+    .upsert(update, { onConflict: 'uid,podcast_id' })
+  if (upsertError) throw new Error(upsertError.message)
+
+  return {
+    watched: Boolean(update.watched),
+    watchedAt: update.watched_at
+      ? new Date(String(update.watched_at))
+      : existing?.watched_at
+        ? new Date(String(existing.watched_at))
+        : fallback.watchedAt,
+    passed: Boolean(update.passed),
+    bestScore: Number(update.best_score ?? 0),
+    attempts: Number(update.attempts ?? existing?.attempts ?? fallback.attempts),
+    pointsAwardedAt: update.points_awarded_at
+      ? new Date(String(update.points_awarded_at))
+      : existing?.points_awarded_at
+        ? new Date(String(existing.points_awarded_at))
+        : fallback.pointsAwardedAt,
+  }
+}
+
+export async function markPodcastWatched(uid: string, podcastId: string): Promise<PodcastState> {
+  return callRecordPodcastProgress(
     {
       uid,
       podcast_id: podcastId,
       watched: true,
-      watched_at: new Date().toISOString(),
     },
-    { onConflict: 'uid,podcast_id' },
+    {
+      ...emptyState(),
+      watched: true,
+      watchedAt: new Date(),
+    },
   )
-  if (error) throw new Error(error.message)
 }
 
 export async function recordAssessmentAttempt(
@@ -116,33 +213,25 @@ export async function recordAssessmentAttempt(
   passed: boolean,
   pointsAwardedNow: boolean,
   previousBestScore: number,
-): Promise<void> {
-  // Read the current row to increment attempts (self-paced quiz, no concurrency).
-  const { data: existing, error: readError } = await supabase
-    .from('podcast_progress')
-    .select('attempts, points_awarded_at')
-    .eq('uid', uid)
-    .eq('podcast_id', podcastId)
-    .maybeSingle()
-  if (readError) throw new Error(readError.message)
-
-  const attempts = Number((existing?.attempts as number | null) ?? 0) + 1
-  const update: Record<string, unknown> = {
-    uid,
-    podcast_id: podcastId,
-    attempts,
-    passed,
-    best_score: Math.max(previousBestScore, score),
-  }
-  // Only ever stamp points_awarded_at once, the first time points are awarded.
-  if (pointsAwardedNow && !existing?.points_awarded_at) {
-    update.points_awarded_at = new Date().toISOString()
-  }
-
-  const { error } = await supabase
-    .from('podcast_progress')
-    .upsert(update, { onConflict: 'uid,podcast_id' })
-  if (error) throw new Error(error.message)
+): Promise<PodcastState> {
+  return callRecordPodcastProgress(
+    {
+      uid,
+      podcast_id: podcastId,
+      watched: true,
+      passed,
+      score,
+      award_points: pointsAwardedNow && passed,
+    },
+    {
+      watched: true,
+      watchedAt: new Date(),
+      passed,
+      bestScore: Math.max(previousBestScore, score),
+      attempts: 1,
+      pointsAwardedAt: pointsAwardedNow && passed ? new Date() : null,
+    },
+  )
 }
 
 /**

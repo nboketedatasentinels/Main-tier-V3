@@ -73,6 +73,7 @@ interface ActivityListProps {
   onMarkCompleted: (activity: ActivityState, weekOverride?: number) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState, weekOverride?: number) => void
+  onRefreshLedger?: () => void
   isActivityBusy?: (activityId: string) => boolean
 }
 
@@ -142,6 +143,7 @@ export const ActivityList = ({
   onOpenCurrentWeek,
   onMarkCompleted,
   onOpenProof,
+  onRefreshLedger,
   isActivityBusy,
 }: ActivityListProps) => {
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
@@ -463,6 +465,7 @@ export const ActivityList = ({
       onFocusAvailableActivity={focusFirstActionableActivity}
       onMarkCompleted={onMarkCompleted}
       onOpenProof={onOpenProof}
+      onRefreshLedger={onRefreshLedger}
       isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
     />
   )
@@ -614,6 +617,7 @@ export const ActivityList = ({
                         onFocusAvailableActivity={focusFirstActionableActivity}
                         onMarkCompleted={(a) => onMarkCompleted(a, weekOverride)}
                         onOpenProof={(a) => onOpenProof(a, weekOverride)}
+                        onRefreshLedger={onRefreshLedger}
                         isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                       />
                     )
@@ -818,6 +822,7 @@ export const ActivityList = ({
                         onFocusAvailableActivity={focusFirstActionableActivity}
                         onMarkCompleted={(a) => onMarkCompleted(a, week)}
                         onOpenProof={(a) => onOpenProof(a, week)}
+                        onRefreshLedger={onRefreshLedger}
                         isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                       />
                     )
@@ -978,6 +983,7 @@ export const ActivityList = ({
                         onFocusAvailableActivity={focusFirstActionableActivity}
                         onMarkCompleted={(a) => onMarkCompleted(a, week)}
                         onOpenProof={(a) => onOpenProof(a, week)}
+                        onRefreshLedger={onRefreshLedger}
                         isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                       />
                     )
