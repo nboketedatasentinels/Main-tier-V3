@@ -112,6 +112,8 @@ interface ActivityRowProps {
   /** 1-based claim index for this row when the activity allows multiple. */
   occurrenceNumber?: number
   occurrenceTotal?: number
+  /** This week's claim is consumed (submitted/approved) — not the same as fully maxed. */
+  weekClaimComplete?: boolean
   isActionInFlight: boolean
 }
 
@@ -131,6 +133,7 @@ export const ActivityRow = ({
   onRefreshLedger,
   occurrenceNumber,
   occurrenceTotal,
+  weekClaimComplete = false,
   isActionInFlight,
 }: ActivityRowProps) => {
   const navigate = useNavigate()
@@ -163,28 +166,31 @@ export const ActivityRow = ({
     activity.status === 'not_started'
 
   const primaryActionDisabled =
-    lockedByInteraction || activity.status === 'completed' || isActionInFlight
+    lockedByInteraction ||
+    weekClaimComplete ||
+    activity.status === 'completed' ||
+    isActionInFlight
 
   const visualState = getVisualState(activity)
   const totalFrequency = occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
   const completedCount = activity.completedCount ?? 0
   const hasFrequency = totalFrequency > 1
+  // Line-through ONLY when every occurrence is done (e.g. 3/3) — never at 1/3.
   const isFullyComplete =
-    visualState === 'completed' ||
-    (hasFrequency && completedCount >= totalFrequency) ||
-    activity.availability.state === 'permanently_exhausted'
-  // Strikethrough for this row when the claim is done, or the whole activity is maxed.
-  const showStrike = visualState === 'completed' || isFullyComplete
-  // DONE column always shows live occurrence progress (1/3, 2/3, 3/3).
+    activity.availability.state === 'permanently_exhausted' ||
+    (hasFrequency
+      ? completedCount >= totalFrequency
+      : visualState === 'completed' || weekClaimComplete)
+  const showStrike = isFullyComplete
   const displayDoneCount = hasFrequency
-    ? Math.min(
-        totalFrequency,
-        showStrike
-          ? Math.max(completedCount, occurrenceNumber ?? 0, 1)
-          : completedCount,
-      )
+    ? Math.min(totalFrequency, Math.max(completedCount, weekClaimComplete ? 1 : 0))
     : 0
   const occurrenceLabel = hasFrequency ? `${displayDoneCount} / ${totalFrequency}` : null
+  const statusBadgeLabel = isFullyComplete
+    ? 'Completed'
+    : weekClaimComplete
+      ? 'Done this week'
+      : STATUS_TEXT[visualState]
 
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
@@ -192,6 +198,11 @@ export const ActivityRow = ({
   const lockReason = (() => {
     if (isAdmin) return null
     if (lockedByWeek) return `This activity opens after Week ${currentWeek}.`
+    if (weekClaimComplete && !isFullyComplete) {
+      return hasFrequency
+        ? `Done for this week (${displayDoneCount} of ${totalFrequency}). More occurrences unlock in later weeks.`
+        : "You've already submitted this for the week."
+    }
     if (lockedByInteraction) return "You've already submitted this for the week."
     if (awaitingPartnerIssue) return 'Your partner will issue this when ready.'
     if (
@@ -225,7 +236,8 @@ export const ActivityRow = ({
   })()
 
   const ctaLabel = (() => {
-    if (visualState === 'completed') return 'Completed'
+    if (isFullyComplete) return 'Completed'
+    if (weekClaimComplete) return 'Done this week'
     if (visualState === 'pending_review') return 'Submitted'
     if (visualState === 'rejected') return 'Try again'
     if (requiresPartnerApproval) return `Submit · +${activity.points} pts`
@@ -304,7 +316,15 @@ export const ActivityRow = ({
           gap={{ base: 3, md: 4 }}
           alignItems="center"
         >
-          <StatusIcon state={visualState} />
+          <StatusIcon
+            state={
+              isFullyComplete
+                ? 'completed'
+                : weekClaimComplete
+                  ? 'pending_review'
+                  : visualState
+            }
+          />
 
           <Stack spacing={0.5} minW={0}>
             <Text
@@ -401,21 +421,23 @@ export const ActivityRow = ({
               <Badge
                 variant="subtle"
                 colorScheme={
-                  visualState === 'completed'
+                  isFullyComplete
                     ? 'yellow'
-                    : visualState === 'pending_review'
-                      ? 'purple'
-                      : visualState === 'rejected'
-                        ? 'red'
-                        : visualState === 'locked' || visualState === 'next_window'
-                          ? 'gray'
-                          : 'green'
+                    : weekClaimComplete
+                      ? 'green'
+                      : visualState === 'pending_review'
+                        ? 'purple'
+                        : visualState === 'rejected'
+                          ? 'red'
+                          : visualState === 'locked' || visualState === 'next_window'
+                            ? 'gray'
+                            : 'green'
                 }
                 fontSize="xs"
                 textTransform="none"
                 rounded="md"
               >
-                {STATUS_TEXT[visualState]}
+                {statusBadgeLabel}
               </Badge>
               {isAdmin && (
                 <Badge colorScheme="red" variant="subtle" fontSize="xs">
@@ -530,22 +552,29 @@ export const ActivityRow = ({
                   {!isExternalAiToolSubmission && !awaitingPartnerIssue && (
                     <Button
                       size="sm"
-                      bg={visualState === 'completed' ? 'yellow.500' : '#350e6f'}
+                      bg={isFullyComplete ? 'yellow.500' : weekClaimComplete ? 'green.500' : '#350e6f'}
                       color="white"
                       _hover={{
-                        bg: visualState === 'completed' ? 'yellow.600' : '#27062e',
+                        bg: isFullyComplete
+                          ? 'yellow.600'
+                          : weekClaimComplete
+                            ? 'green.600'
+                            : '#27062e',
                       }}
                       _disabled={{
-                        bg:
-                          visualState === 'completed'
-                            ? 'yellow.500'
+                        bg: isFullyComplete
+                          ? 'yellow.500'
+                          : weekClaimComplete
+                            ? 'green.500'
                             : visualState === 'pending_review'
                               ? '#27062e'
                               : 'gray.300',
                         color: 'white',
                         cursor: 'not-allowed',
                         opacity:
-                          visualState === 'completed' || visualState === 'pending_review'
+                          isFullyComplete ||
+                          weekClaimComplete ||
+                          visualState === 'pending_review'
                             ? 1
                             : 0.6,
                       }}
@@ -556,7 +585,7 @@ export const ActivityRow = ({
                         handlePrimaryClick()
                       }}
                       leftIcon={
-                        visualState === 'completed' ? (
+                        isFullyComplete || weekClaimComplete ? (
                           <Icon as={CheckCircle2} boxSize={4} />
                         ) : visualState === 'pending_review' ? (
                           <Icon as={ShieldCheck} boxSize={4} />

@@ -645,11 +645,21 @@ export const ActivityList = ({
                     }) => {
                       const kind = rowKind ?? 'todo'
                       const rowKey = `${activity.id}-week-${weekOverride}-${occurrence ?? 0}-${kind}`
+                      const totalCap =
+                        occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
+                      const fullyDone =
+                        (activity.completedCount ?? 0) >= totalCap ||
+                        activity.availability.state === 'permanently_exhausted'
                       const rowActivity =
                         kind === 'done'
                           ? {
                               ...activity,
-                              status: 'completed' as const,
+                              // Only mark the activity fully completed at max
+                              // occurrence (e.g. 3/3). A single week claim stays
+                              // "done this week" without strikethrough.
+                              status: fullyDone
+                                ? ('completed' as const)
+                                : ('not_started' as const),
                               hasInteracted: true,
                             }
                           : kind === 'pending'
@@ -659,8 +669,6 @@ export const ActivityList = ({
                                 hasInteracted: true,
                               }
                             : projectForWeek(activity)
-                      const totalCap =
-                        occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
                       return (
                         <ActivityRow
                           key={rowKey}
@@ -686,6 +694,7 @@ export const ActivityList = ({
                           onRefreshLedger={onRefreshLedger}
                           occurrenceNumber={occurrenceNumber}
                           occurrenceTotal={totalCap > 1 ? totalCap : undefined}
+                          weekClaimComplete={kind === 'done'}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                         />
                       )
