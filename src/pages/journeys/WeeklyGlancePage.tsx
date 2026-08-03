@@ -8,13 +8,21 @@ import {
   MenuButton,
   MenuItem,
   MenuList,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   SimpleGrid,
   Skeleton,
   Stack,
   Text,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { FirestoreError } from 'firebase/firestore'
@@ -37,7 +45,8 @@ import {
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { AssignedCourseCard } from '@/components/courses/AssignedCourseCard'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
-import { useAssignedCourses } from '@/hooks/useAssignedCourses'
+import { useAssignedCourses, type AssignedCourse } from '@/hooks/useAssignedCourses'
+import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { resolveCourseCompletion, useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
 import { canAccessCourse } from '@/utils/membership'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
@@ -330,6 +339,18 @@ export const WeeklyGlancePage = () => {
     hasOrganization: hasCourseOrganization,
   } = useAssignedCourses()
   const { completionsByKey } = useUserCourseCompletions(profile?.id)
+  const { requestOpenCourse, surveyModal } = useCourseOpenGate()
+
+  // Course a learner tried to open before finishing their personality profile,
+  // so we can offer it back to them the moment they finish.
+  const [pendingCourse, setPendingCourse] = useState<AssignedCourse | null>(null)
+  const [highlightPersonality, setHighlightPersonality] = useState(false)
+  const highlightTimer = useRef<number>()
+  const {
+    isOpen: isPersonalityPromptOpen,
+    onOpen: openPersonalityPrompt,
+    onClose: closePersonalityPrompt,
+  } = useDisclosure()
 
   const [isBuildVillageOpen, setIsBuildVillageOpen] = useState(false)
   const [villageName, setVillageName] = useState('')
@@ -523,6 +544,117 @@ export const WeeklyGlancePage = () => {
   const showAssignedCourses =
     (assignedLoading && hasCourseOrganization) || assignedCourses.length > 0
 
+  /** Scroll the personality card into view and flash a ring around it. */
+  const focusPersonalityCard = useCallback(() => {
+    closePersonalityPrompt()
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById('personality-profile-card')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+    setHighlightPersonality(true)
+    window.clearTimeout(highlightTimer.current)
+    highlightTimer.current = window.setTimeout(() => setHighlightPersonality(false), 2600)
+  }, [closePersonalityPrompt])
+
+  useEffect(() => () => window.clearTimeout(highlightTimer.current), [])
+
+  /**
+   * Card click. Courses open only once the personality profile is done - the
+   * results shape the course experience - so an unfinished profile is bounced
+   * to the card at the top of this page rather than to another route.
+   */
+  const handleCourseCardClick = useCallback(
+    (course: AssignedCourse) => {
+      if (course.availability === 'locked') {
+        toast({
+          status: 'info',
+          title: 'Not open yet',
+          description: course.unlockDate
+            ? `This course unlocks on ${format(course.unlockDate, 'MMM d')}.`
+            : 'This course is not open yet.',
+          duration: 3500,
+        })
+        return
+      }
+
+      if (!canAccessCourse(profile, course.title, course.id)) {
+        navigate('/upgrade')
+        return
+      }
+
+      if (!course.link) {
+        toast({
+          status: 'info',
+          title: 'Course link unavailable',
+          description: 'Your partner has not added the link for this course yet.',
+          duration: 3500,
+        })
+        return
+      }
+
+      if (!bothTestsCompleted) {
+        setPendingCourse(course)
+        openPersonalityPrompt()
+        return
+      }
+
+      setPendingCourse(null)
+      requestOpenCourse(course.link)
+    },
+    [bothTestsCompleted, navigate, openPersonalityPrompt, profile, requestOpenCourse, toast],
+  )
+
+  /**
+   * Finished the profile with a course waiting? Offer it straight back. The
+   * open has to come from a click (a background window.open is blocked), so
+   * the toast carries the button.
+   */
+  useEffect(() => {
+    if (!pendingCourse || !bothTestsCompleted) return
+    const course = pendingCourse
+    setPendingCourse(null)
+    setHighlightPersonality(false)
+    toast({
+      status: 'success',
+      duration: 12000,
+      isClosable: true,
+      position: 'bottom-right',
+      render: ({ onClose }) => (
+        <Box bg="white" borderWidth="1px" borderColor="green.200" borderRadius="xl" boxShadow="lg" p={4}>
+          <Stack spacing={3}>
+            <Stack spacing={0.5}>
+              <Text fontWeight="semibold" color="gray.900">
+                Profile complete
+              </Text>
+              <Text fontSize="sm" color="gray.600">
+                {course.title} is ready when you are.
+              </Text>
+            </Stack>
+            <HStack spacing={2}>
+              <Button
+                size="sm"
+                bg="brand.primary"
+                color="white"
+                _hover={{ bg: 'brand.dark' }}
+                rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+                onClick={() => {
+                  onClose()
+                  if (course.link) requestOpenCourse(course.link)
+                }}
+              >
+                Open course
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onClose}>
+                Later
+              </Button>
+            </HStack>
+          </Stack>
+        </Box>
+      ),
+    })
+  }, [bothTestsCompleted, pendingCourse, requestOpenCourse, toast])
+
   const shouldShowBuildVillageCard = canCreateVillage(profile)
 
   const personalityIncomplete = useMemo(() => {
@@ -681,10 +813,17 @@ export const WeeklyGlancePage = () => {
 
         {personalityIncomplete && (
           <Box
+            id="personality-profile-card"
             bg="white"
             p={5}
             borderRadius="xl"
-            boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+            // Flashes a ring when a course click sends the learner up here.
+            boxShadow={
+              highlightPersonality
+                ? '0 0 0 3px rgba(53, 14, 111, 0.45), 0 12px 30px rgba(53, 14, 111, 0.18)'
+                : '0 2px 8px rgba(0,0,0,0.04)'
+            }
+            transition="box-shadow 0.35s ease"
             position="relative"
             overflow="hidden"
             borderLeftWidth="4px"
@@ -900,6 +1039,7 @@ export const WeeklyGlancePage = () => {
                       hasAccess={canAccessCourse(profile, course.title, course.id)}
                       showProgress={false}
                       showAction={false}
+                      onCardClick={() => handleCourseCardClick(course)}
                     />
                   ))}
                 </Stack>
@@ -997,6 +1137,84 @@ export const WeeklyGlancePage = () => {
         isLoading={isCreatingVillage}
         error={villageError}
       />
+
+      {/* Personality profile gate - shown when a course is clicked too early. */}
+      <Modal isOpen={isPersonalityPromptOpen} onClose={closePersonalityPrompt} isCentered size="md">
+        <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
+        <ModalContent borderRadius="xl" overflow="hidden">
+          <Box h="4px" bg="brand.primary" />
+          <ModalHeader pb={2}>
+            <HStack spacing={3} align="center">
+              <Flex
+                w={10}
+                h={10}
+                bg="#350e6f"
+                borderRadius="xl"
+                align="center"
+                justify="center"
+                boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+                flexShrink={0}
+              >
+                <Box as={Fingerprint} w={5} h={5} color="white" />
+              </Flex>
+              <Stack spacing={0}>
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                  color="orange.600"
+                >
+                  One step first
+                </Text>
+                <Heading size="sm" color="gray.900">
+                  Complete your personality profile
+                </Heading>
+              </Stack>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={2}>
+            <Stack spacing={3}>
+              <Text fontSize="sm" color="gray.600">
+                Your 16Personalities type and your five Personal Values shape how the
+                programme is tailored to you, so they need to be on file before you start
+                a course.
+              </Text>
+              {pendingCourse && (
+                <Box bg="gray.50" borderWidth="1px" borderColor="gray.200" borderRadius="lg" px={3} py={2}>
+                  <Text fontSize="xs" color="gray.500">
+                    Waiting for you
+                  </Text>
+                  <Text fontSize="sm" fontWeight="semibold" color="gray.800">
+                    {pendingCourse.title}
+                  </Text>
+                </Box>
+              )}
+              <Text fontSize="sm" color="gray.600">
+                It takes a couple of minutes - finish it and we&apos;ll bring you straight
+                back to this course.
+              </Text>
+            </Stack>
+          </ModalBody>
+          <ModalFooter gap={2}>
+            <Button variant="ghost" onClick={closePersonalityPrompt}>
+              Not now
+            </Button>
+            <Button
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: 'brand.dark' }}
+              rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+              onClick={focusPersonalityCard}
+            >
+              Complete it now
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {surveyModal}
     </Box>
   )
 }

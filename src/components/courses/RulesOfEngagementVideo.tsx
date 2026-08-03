@@ -8,9 +8,36 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Play } from 'lucide-react'
 
 const VIDEO_SRC = '/media/rules-of-engagement.mp4'
+
+const MotionBox = motion(Box)
+
+/**
+ * Entrance for the player: it morphs in from a smaller, heavily rounded,
+ * out-of-focus frame into the square-cornered 16:9 stage. Runs on every mount,
+ * so it replays each time the page loads.
+ */
+const MORPH_INITIAL = {
+  opacity: 0,
+  scale: 0.94,
+  y: 14,
+  borderRadius: 56,
+  filter: 'blur(10px)',
+}
+
+const MORPH_ANIMATE = {
+  opacity: 1,
+  scale: 1,
+  y: 0,
+  borderRadius: 8,
+  filter: 'blur(0px)',
+}
+
+// Expo-out: quick to settle, no bounce - reads as deliberate rather than playful.
+const MORPH_TRANSITION = { duration: 0.85, ease: [0.16, 1, 0.3, 1] as const }
 
 interface RulesOfEngagementVideoProps {
   /**
@@ -23,6 +50,7 @@ interface RulesOfEngagementVideoProps {
 export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ showCopy = true }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const prefersReducedMotion = useReducedMotion()
 
   const handlePlay = () => {
     const v = videoRef.current
@@ -81,13 +109,18 @@ export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ 
         )}
 
         <Box flex="1 1 0" minW={0} w="full">
-          <Box
-            borderRadius="lg"
+          <MotionBox
+            initial={prefersReducedMotion ? false : MORPH_INITIAL}
+            animate={prefersReducedMotion ? undefined : MORPH_ANIMATE}
+            transition={MORPH_TRANSITION}
+            // The morph animates border-radius, so let framer own it.
+            style={{ borderRadius: prefersReducedMotion ? 8 : undefined }}
             overflow="hidden"
             border="1px solid"
             borderColor="gray.300"
             position="relative"
             bg="gray.900"
+            willChange="transform, filter, opacity"
           >
             <AspectRatio ratio={16 / 9}>
               <video
@@ -132,7 +165,7 @@ export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ 
                 </Flex>
               </Flex>
             )}
-          </Box>
+          </MotionBox>
         </Box>
       </Flex>
     </Box>

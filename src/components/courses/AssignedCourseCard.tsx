@@ -153,6 +153,11 @@ export interface AssignedCourseCardProps {
   showAction?: boolean
   /** Required whenever showAction is left on. */
   onOpenCourse?: (link: string) => void
+  /**
+   * Turns the whole card into a button - hover lift, pointer, focus ring and
+   * an arrow affordance. Used where the CTA button is hidden.
+   */
+  onCardClick?: () => void
 }
 
 interface CardVisual {
@@ -186,7 +191,9 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
   showProgress = true,
   showAction = true,
   onOpenCourse,
+  onCardClick,
 }) => {
+  const isClickable = Boolean(onCardClick)
   const isApproved = Boolean(completion)
   const hasCourse = Boolean(course)
   const hasLink = Boolean(course?.link)
@@ -257,13 +264,36 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
       display="flex"
       flexDirection="column"
       transition="all 0.2s ease"
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      aria-label={isClickable && course ? `Open ${course.title}` : undefined}
+      cursor={isClickable ? 'pointer' : undefined}
+      onClick={onCardClick}
+      onKeyDown={
+        isClickable
+          ? (event: React.KeyboardEvent) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                onCardClick?.()
+              }
+            }
+          : undefined
+      }
       _hover={
-        canOpen
+        isClickable || canOpen
           ? {
               borderColor: '#350e6f',
               boxShadow: '0 8px 24px -12px rgba(39, 6, 46, 0.2)',
               transform: 'translateY(-2px)',
             }
+          : undefined
+      }
+      _active={isClickable ? { transform: 'translateY(0)' } : undefined}
+      _focusVisible={{ outline: '2px solid #350e6f', outlineOffset: '2px' }}
+      // Arrow affordance follows the card's own hover state.
+      sx={
+        isClickable
+          ? { '&:hover .assigned-course-arrow': { color: '#350e6f', transform: 'translate(2px, -2px)' } }
           : undefined
       }
       opacity={isLocked ? 0.85 : 1}
@@ -293,20 +323,32 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                 {periodLabel}
               </Text>
             </HStack>
-            {visual.badge && (
-              <Badge
-                bg={visual.badge.bg}
-                color={visual.badge.color}
-                textTransform="none"
-                fontSize="2xs"
-                fontWeight="semibold"
-                px={2}
-                py={0.5}
-                borderRadius="full"
-              >
-                {visual.badge.label}
-              </Badge>
-            )}
+            <HStack spacing={2} align="center">
+              {visual.badge && (
+                <Badge
+                  bg={visual.badge.bg}
+                  color={visual.badge.color}
+                  textTransform="none"
+                  fontSize="2xs"
+                  fontWeight="semibold"
+                  px={2}
+                  py={0.5}
+                  borderRadius="full"
+                >
+                  {visual.badge.label}
+                </Badge>
+              )}
+              {isClickable && (
+                <Icon
+                  as={ArrowUpRight}
+                  className="assigned-course-arrow"
+                  boxSize={4}
+                  color="gray.400"
+                  transition="color 0.2s ease, transform 0.2s ease"
+                  aria-hidden
+                />
+              )}
+            </HStack>
           </HStack>
 
           <Stack spacing={1.5}>
