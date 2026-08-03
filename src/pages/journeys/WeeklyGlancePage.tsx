@@ -1088,6 +1088,7 @@ export const WeeklyGlancePage = () => {
                       hasAccess={canAccessCourse(profile, course.title, course.id)}
                       showProgress={false}
                       showAction={false}
+                      density="compact"
                       onCardClick={() => handleCourseCardClick(course)}
                     />
                   ))}

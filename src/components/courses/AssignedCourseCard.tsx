@@ -158,6 +158,11 @@ export interface AssignedCourseCardProps {
    * an arrow affordance. Used where the CTA button is hidden.
    */
   onCardClick?: () => void
+  /**
+   * 'compact' tightens the spacing and puts the points on the same row as the
+   * date range instead of in its own block. Used on the dashboard.
+   */
+  density?: 'comfortable' | 'compact'
 }
 
 interface CardVisual {
@@ -192,8 +197,10 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
   showAction = true,
   onOpenCourse,
   onCardClick,
+  density = 'comfortable',
 }) => {
   const isClickable = Boolean(onCardClick)
+  const isCompact = density === 'compact'
   const isApproved = Boolean(completion)
   const hasCourse = Boolean(course)
   const hasLink = Boolean(course?.link)
@@ -300,8 +307,13 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
     >
       <Box h="3px" bg={visual.strip} />
 
-      <Stack spacing={4} p={{ base: 4, md: 5 }} flex="1" justify="space-between">
-        <Stack spacing={4}>
+      <Stack
+        spacing={isCompact ? 3 : 4}
+        p={isCompact ? { base: 3.5, md: 4 } : { base: 4, md: 5 }}
+        flex="1"
+        justify="space-between"
+      >
+        <Stack spacing={isCompact ? 2.5 : 4}>
           <HStack justify="space-between" align="center">
             <HStack spacing={2.5} align="center">
               <Box
@@ -368,13 +380,54 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
             </Text>
           </Stack>
 
-          {dateRange && (
-            <Text fontSize="xs" color="gray.500" fontWeight="medium">
-              {dateRange}
-            </Text>
+          {/* Compact: date on the left, points chip on the right, one row. */}
+          {isCompact ? (
+            (dateRange || (hasCourse && (isApproved || points))) && (
+              <Flex justify="space-between" align="center" gap={2}>
+                <Text fontSize="xs" color="gray.500" fontWeight="medium" noOfLines={1}>
+                  {dateRange}
+                </Text>
+                {hasCourse && (isApproved || points) && (
+                  <HStack
+                    spacing={1.5}
+                    bg={isApproved ? 'green.50' : isCurrent ? 'purple.50' : 'gray.50'}
+                    border="1px solid"
+                    borderColor={isApproved ? 'green.200' : isCurrent ? 'purple.100' : 'gray.200'}
+                    borderRadius="full"
+                    px={2}
+                    py={0.5}
+                    flexShrink={0}
+                  >
+                    <Icon
+                      as={Award}
+                      boxSize={3.5}
+                      color={isApproved ? 'green.600' : isCurrent ? '#350e6f' : 'gray.500'}
+                    />
+                    <Text
+                      fontSize="2xs"
+                      fontWeight="bold"
+                      color={isApproved ? 'green.800' : isCurrent ? '#350e6f' : 'gray.700'}
+                      whiteSpace="nowrap"
+                    >
+                      {isApproved
+                        ? completion?.points
+                          ? `+${completion.points.toLocaleString()} pts`
+                          : 'Completed'
+                        : `${points?.toLocaleString()} pts`}
+                    </Text>
+                  </HStack>
+                )}
+              </Flex>
+            )
+          ) : (
+            dateRange && (
+              <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                {dateRange}
+              </Text>
+            )
           )}
 
-          {hasCourse && isApproved ? (
+          {!isCompact && hasCourse && isApproved ? (
             <HStack
               spacing={2}
               bg="green.50"
@@ -389,7 +442,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
               <Stack spacing={0} flex="1">
                 <Text fontSize="xs" fontWeight="bold" color="green.800" lineHeight="1.2">
                   {completion?.points
-                    ? `+${completion.points.toLocaleString()} points awarded`
+                    ? `+${completion.points.toLocaleString()} pts awarded`
                     : 'Course completed'}
                 </Text>
                 {awardedDateLabel && (
@@ -399,7 +452,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                 )}
               </Stack>
             </HStack>
-          ) : hasCourse && points ? (
+          ) : !isCompact && hasCourse && points ? (
             <HStack
               spacing={2}
               bg={isCurrent ? 'purple.50' : 'gray.50'}
@@ -418,7 +471,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                   color={isCurrent ? '#350e6f' : 'gray.700'}
                   lineHeight="1.2"
                 >
-                  Worth {points.toLocaleString()} points
+                  {points.toLocaleString()} pts
                 </Text>
                 <Text
                   fontSize="2xs"
