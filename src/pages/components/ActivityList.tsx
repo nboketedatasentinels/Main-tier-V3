@@ -694,6 +694,9 @@ export const ActivityList = ({
                           onRefreshLedger={onRefreshLedger}
                           occurrenceNumber={occurrenceNumber}
                           occurrenceTotal={totalCap > 1 ? totalCap : undefined}
+                          pendingCount={
+                            pendingWeeksByActivity[activity.id]?.size ?? 0
+                          }
                           weekClaimComplete={kind === 'done'}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                         />

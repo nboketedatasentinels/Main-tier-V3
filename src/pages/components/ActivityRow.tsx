@@ -112,6 +112,8 @@ interface ActivityRowProps {
   /** 1-based claim index for this row when the activity allows multiple. */
   occurrenceNumber?: number
   occurrenceTotal?: number
+  /** How many claims are awaiting partner review (count toward DONE progress). */
+  pendingCount?: number
   /** This week's claim is consumed (submitted/approved) — not the same as fully maxed. */
   weekClaimComplete?: boolean
   isActionInFlight: boolean
@@ -133,6 +135,7 @@ export const ActivityRow = ({
   onRefreshLedger,
   occurrenceNumber,
   occurrenceTotal,
+  pendingCount = 0,
   weekClaimComplete = false,
   isActionInFlight,
 }: ActivityRowProps) => {
@@ -169,31 +172,47 @@ export const ActivityRow = ({
     lockedByInteraction ||
     weekClaimComplete ||
     activity.status === 'completed' ||
+    activity.status === 'pending' ||
     isActionInFlight
 
   const visualState = getVisualState(activity)
   const totalFrequency = occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
   const completedCount = activity.completedCount ?? 0
   const hasFrequency = totalFrequency > 1
-  // Line-through ONLY when every occurrence is done (e.g. 3/3) — never at 1/3.
+  // Pending submissions count toward progress so DONE doesn't stay at 0/6
+  // while the learner is locked out of re-submitting.
+  const pendingClaims = Math.max(
+    0,
+    pendingCount,
+    visualState === 'pending_review' ? 1 : 0,
+  )
+  const consumedCount = completedCount + pendingClaims
+  // Line-through ONLY when every occurrence is fully approved (e.g. 3/3).
   const isFullyComplete =
     activity.availability.state === 'permanently_exhausted' ||
     (hasFrequency
       ? completedCount >= totalFrequency
-      : visualState === 'completed' || weekClaimComplete)
+      : visualState === 'completed' || (weekClaimComplete && visualState !== 'pending_review'))
   const showStrike = isFullyComplete
   const displayDoneCount = hasFrequency
     ? Math.min(
         totalFrequency,
-        Math.max(completedCount, weekClaimComplete ? occurrenceNumber ?? 1 : 0),
+        Math.max(
+          consumedCount,
+          weekClaimComplete || visualState === 'pending_review'
+            ? occurrenceNumber ?? 1
+            : 0,
+        ),
       )
     : 0
   const occurrenceLabel = hasFrequency ? `${displayDoneCount} / ${totalFrequency}` : null
   const statusBadgeLabel = isFullyComplete
     ? 'Completed'
-    : weekClaimComplete
-      ? 'Done this week'
-      : STATUS_TEXT[visualState]
+    : visualState === 'pending_review'
+      ? STATUS_TEXT.pending_review
+      : weekClaimComplete
+        ? 'Done this week'
+        : STATUS_TEXT[visualState]
 
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
@@ -201,6 +220,11 @@ export const ActivityRow = ({
   const lockReason = (() => {
     if (isAdmin) return null
     if (lockedByWeek) return `This activity opens after Week ${currentWeek}.`
+    if (visualState === 'pending_review' && !isFullyComplete) {
+      return hasFrequency
+        ? `Submitted for this week (${displayDoneCount} of ${totalFrequency}) — awaiting partner review.`
+        : 'Submitted for this week — awaiting partner review.'
+    }
     if (weekClaimComplete && !isFullyComplete) {
       return hasFrequency
         ? `Done for this week (${displayDoneCount} of ${totalFrequency}). More occurrences unlock in later weeks.`
