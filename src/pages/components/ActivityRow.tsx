@@ -183,7 +183,10 @@ export const ActivityRow = ({
       : visualState === 'completed' || weekClaimComplete)
   const showStrike = isFullyComplete
   const displayDoneCount = hasFrequency
-    ? Math.min(totalFrequency, Math.max(completedCount, weekClaimComplete ? 1 : 0))
+    ? Math.min(
+        totalFrequency,
+        Math.max(completedCount, weekClaimComplete ? occurrenceNumber ?? 1 : 0),
+      )
     : 0
   const occurrenceLabel = hasFrequency ? `${displayDoneCount} / ${totalFrequency}` : null
   const statusBadgeLabel = isFullyComplete
