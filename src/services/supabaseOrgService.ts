@@ -651,6 +651,112 @@ export const removeLeadershipFromOrg = async (
   if (error) throw new Error(`Unassignment failed: ${error.message}`)
 }
 
+export type OrgMemberEditableRole = 'user' | 'partner' | 'mentor' | 'ambassador'
+
+/**
+ * Edit an existing org member from the Edit Organization modal: name and/or role.
+ * Partner/mentor/ambassador changes go through the same assignment helpers used
+ * elsewhere so org linkage + assignedOrganizations stay consistent.
+ */
+export const updateOrganizationMember = async (params: {
+  orgId: string
+  userId: string
+  role: OrgMemberEditableRole
+  name?: string
+  org?: { code?: string | null; name?: string | null }
+}): Promise<void> => {
+  const { orgId, userId, role, name, org } = params
+  const now = new Date().toISOString()
+
+  if (typeof name === 'string') {
+    const trimmed = name.trim()
+    if (trimmed) {
+      const { error: nameError } = await supabase
+        .from('profiles')
+        .update({ full_name: trimmed, updated_at: now })
+        .eq('id', userId)
+      if (nameError) throw new Error(`Unable to update name: ${nameError.message}`)
+    }
+  }
+
+  if (role === 'partner') {
+    await assignPartnerToOrg(orgId, userId)
+    return
+  }
+
+  if (role === 'mentor' || role === 'ambassador') {
+    // Ensure the profile role matches, then bind them as the org's sole holder.
+    const { error: roleError } = await supabase
+      .from('profiles')
+      .update({ role, updated_at: now })
+      .eq('id', userId)
+    if (roleError) throw new Error(`Unable to update role: ${roleError.message}`)
+    await assignLeadershipToOrg(orgId, userId, role, org)
+    return
+  }
+
+  // Learner / general member inside an org is a paid_member (never free_user).
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      role: 'paid_member',
+      membership_status: 'paid',
+      organization_id: orgId,
+      company_id: orgId,
+      company_code: org?.code ?? null,
+      company_name: org?.name ?? null,
+      updated_at: now,
+    })
+    .eq('id', userId)
+  if (error) throw new Error(`Unable to update member: ${error.message}`)
+
+  // If they were the org's transformation partner, clear that link so the list
+  // does not keep showing a demoted user as the assigned partner.
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('transformation_partner_id')
+    .eq('id', orgId)
+    .maybeSingle()
+  if ((orgRow?.transformation_partner_id as string | null) === userId) {
+    await removePartnerFromOrg(orgId)
+  }
+}
+
+/**
+ * Remove a member from an organization without deleting their account.
+ */
+export const removeOrganizationMember = async (orgId: string, userId: string): Promise<void> => {
+  const { data: orgRow } = await supabase
+    .from('organizations')
+    .select('transformation_partner_id, member_count')
+    .eq('id', orgId)
+    .maybeSingle()
+
+  if ((orgRow?.transformation_partner_id as string | null) === userId) {
+    await removePartnerFromOrg(orgId)
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      organization_id: null,
+      company_id: null,
+      company_code: null,
+      company_name: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', userId)
+  if (error) throw new Error(`Unable to remove member: ${error.message}`)
+
+  const currentCount = typeof orgRow?.member_count === 'number' ? orgRow.member_count : 0
+  if (currentCount > 0) {
+    await supabase
+      .from('organizations')
+      .update({ member_count: currentCount - 1, updated_at: new Date().toISOString() })
+      .eq('id', orgId)
+  }
+}
+
 export interface ClaimOrgResult {
   ok: boolean
   error?: string

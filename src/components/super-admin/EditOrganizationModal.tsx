@@ -44,14 +44,17 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import { determineClusterFromTeamSize, fetchAvailableCourses } from '@/services/organizationService'
 import {
   assignLeadershipToOrg,
   findProfileIdByEmail,
   inviteOrgMember,
+  removeOrganizationMember,
   updateOrganization as updateSupabaseOrganization,
+  updateOrganizationMember,
+  type OrgMemberEditableRole,
 } from '@/services/supabaseOrgService'
 import { fetchOrganizationMembers, type OrgMemberRecord } from '@/services/supabaseSuperAdminService'
 import { normalizeEmail } from '@/utils/email'
@@ -159,6 +162,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [manualEmail, setManualEmail] = useState('')
   const [manualRole, setManualRole] = useState<InviteRole>('user')
   const [manualError, setManualError] = useState<string | null>(null)
+  const [editingMember, setEditingMember] = useState<OrgMemberRecord | null>(null)
+  const [editMemberName, setEditMemberName] = useState('')
+  const [editMemberRole, setEditMemberRole] = useState<OrgMemberEditableRole>('user')
+  const [editMemberSaving, setEditMemberSaving] = useState(false)
+  const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -271,6 +279,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setManualEmail('')
       setManualRole('user')
       setManualError(null)
+      setEditingMember(null)
+      setEditMemberName('')
+      setEditMemberRole('user')
+      setRemovingMemberId(null)
       return
     }
 
@@ -416,6 +428,99 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
   const removeInviteDraft = (id: string) => {
     setInviteDrafts((prev) => prev.filter((draft) => draft.id !== id))
+  }
+
+  const reloadMembers = async () => {
+    if (!organization?.id && !organization?.code) return
+    setMembersLoading(true)
+    try {
+      const rows = await fetchOrganizationMembers({ id: organization.id, code: organization.code })
+      setMembers(rows)
+      const mentor = rows.find((m) => (m.role || '').toLowerCase() === 'mentor')
+      const ambassador = rows.find((m) => (m.role || '').toLowerCase() === 'ambassador')
+      const partner = rows.find((m) => (m.role || '').toLowerCase() === 'partner')
+      setMentorEmail(mentor?.email || '')
+      setAmbassadorEmail(ambassador?.email || '')
+      if (partner?.email) {
+        setForm((prev) => ({ ...prev, assignedPartnerEmail: partner.email }))
+      }
+    } catch {
+      setMembers([])
+    } finally {
+      setMembersLoading(false)
+    }
+  }
+
+  const toEditableRole = (role?: string | null): OrgMemberEditableRole => {
+    const normalized = (role || '').toLowerCase()
+    if (normalized === 'partner') return 'partner'
+    if (normalized === 'mentor') return 'mentor'
+    if (normalized === 'ambassador') return 'ambassador'
+    return 'user'
+  }
+
+  const openEditMember = (member: OrgMemberRecord) => {
+    setEditingMember(member)
+    setEditMemberName(member.name || '')
+    setEditMemberRole(toEditableRole(member.role))
+  }
+
+  const closeEditMember = () => {
+    setEditingMember(null)
+    setEditMemberName('')
+    setEditMemberRole('user')
+  }
+
+  const handleSaveMemberEdit = async () => {
+    if (!organization?.id || !editingMember) return
+    if (!editMemberName.trim()) {
+      toast({ title: 'Name is required', status: 'warning' })
+      return
+    }
+    setEditMemberSaving(true)
+    try {
+      await updateOrganizationMember({
+        orgId: organization.id,
+        userId: editingMember.id,
+        role: editMemberRole,
+        name: editMemberName,
+        org: { code: form.code, name: form.name },
+      })
+      toast({ title: 'User updated', status: 'success' })
+      closeEditMember()
+      await reloadMembers()
+    } catch (error) {
+      toast({
+        title: 'Unable to update user',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+      })
+    } finally {
+      setEditMemberSaving(false)
+    }
+  }
+
+  const handleRemoveMember = async (member: OrgMemberRecord) => {
+    if (!organization?.id) return
+    const confirmed = window.confirm(
+      `Remove ${member.name || member.email || 'this user'} from ${form.name || 'this organization'}? Their account will not be deleted.`,
+    )
+    if (!confirmed) return
+    setRemovingMemberId(member.id)
+    try {
+      await removeOrganizationMember(organization.id, member.id)
+      toast({ title: 'User removed from organization', status: 'success' })
+      if (editingMember?.id === member.id) closeEditMember()
+      await reloadMembers()
+    } catch (error) {
+      toast({
+        title: 'Unable to remove user',
+        description: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error',
+      })
+    } finally {
+      setRemovingMemberId(null)
+    }
   }
 
   const applyLeadershipEmail = async (
@@ -567,6 +672,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const formatMemberRole = (role: string) => roleLabelMap[(role || '').toLowerCase()] || role
 
   return (
+    <>
     <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
       <ModalOverlay />
       <ModalContent>
@@ -1106,18 +1212,19 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   Existing users ({membersLoading ? '…' : members.length})
                 </Text>
                 <Text fontSize="sm" color="gray.600" mb={3}>
-                  People already linked to this organization.
+                  People already linked to this organization. Edit a role or name, or remove someone from the org.
                 </Text>
                 {membersLoading ? (
                   <Spinner size="sm" />
                 ) : members.length ? (
-                  <Box maxH="260px" overflowY="auto" borderWidth="1px" borderRadius="md">
+                  <Box maxH="280px" overflowY="auto" borderWidth="1px" borderRadius="md">
                     <Table size="sm" variant="simple">
-                      <Thead bg="gray.50" position="sticky" top={0}>
+                      <Thead bg="gray.50" position="sticky" top={0} zIndex={1}>
                         <Tr>
                           <Th>Name</Th>
                           <Th>Email</Th>
                           <Th>Role</Th>
+                          <Th textAlign="right">Actions</Th>
                         </Tr>
                       </Thead>
                       <Tbody>
@@ -1129,6 +1236,27 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                               <Badge colorScheme="purple" variant="subtle">
                                 {formatMemberRole(m.role)}
                               </Badge>
+                            </Td>
+                            <Td>
+                              <HStack spacing={1} justify="flex-end">
+                                <Button
+                                  size="xs"
+                                  variant="outline"
+                                  leftIcon={<Pencil size={12} />}
+                                  onClick={() => openEditMember(m)}
+                                >
+                                  Edit
+                                </Button>
+                                <IconButton
+                                  aria-label={`Remove ${m.name}`}
+                                  icon={<Trash2 size={14} />}
+                                  size="xs"
+                                  variant="ghost"
+                                  colorScheme="red"
+                                  isLoading={removingMemberId === m.id}
+                                  onClick={() => void handleRemoveMember(m)}
+                                />
+                              </HStack>
                             </Td>
                           </Tr>
                         ))}
@@ -1154,5 +1282,51 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         </ModalFooter>
       </ModalContent>
     </Modal>
+
+      <Modal isOpen={Boolean(editingMember)} onClose={closeEditMember} isCentered size="md">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Edit user</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Stack spacing={4}>
+              <Text fontSize="sm" color="gray.600">
+                Update this person&apos;s details for {form.name || 'the organization'}.
+              </Text>
+              <FormControl isRequired>
+                <FormLabel>Name</FormLabel>
+                <Input value={editMemberName} onChange={(e) => setEditMemberName(e.target.value)} />
+              </FormControl>
+              <FormControl>
+                <FormLabel>Email</FormLabel>
+                <Input value={editingMember?.email || ''} isReadOnly bg="gray.50" />
+                <FormHelperText>Email is managed from the user&apos;s account and cannot be changed here.</FormHelperText>
+              </FormControl>
+              <FormControl>
+                <FormLabel>Role</FormLabel>
+                <Select
+                  value={editMemberRole}
+                  onChange={(e) => setEditMemberRole(e.target.value as OrgMemberEditableRole)}
+                >
+                  {inviteRoleOptions.map((role) => (
+                    <option key={role} value={role}>
+                      {formatInviteRoleLabel(role)}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
+            </Stack>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={closeEditMember}>
+              Cancel
+            </Button>
+            <Button colorScheme="purple" onClick={() => void handleSaveMemberEdit()} isLoading={editMemberSaving}>
+              Save user
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   )
 }
