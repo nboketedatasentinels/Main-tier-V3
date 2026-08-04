@@ -194,6 +194,19 @@ export const ActivityList = ({
     [visibleActivities],
   )
 
+  // Full journey capacity (points × occurrence caps) — e.g. 60,000 for 6W.
+  // Do NOT derive the header from currently open To-do rows: partner-issued
+  // activities (weekly sessions, LIFT, webinars, pillar work) sit in Coming up
+  // until issued and were silently dropping the total (e.g. 42k instead of 60k).
+  const journeyPointsTotal = useMemo(
+    () =>
+      ordered.reduce((sum, activity) => {
+        const freq = Math.max(1, activity.activityPolicy?.maxTotal ?? 1)
+        return sum + (activity.points ?? 0) * freq
+      }, 0),
+    [ordered],
+  )
+
   const grouped = useMemo(() => {
     const todoByWeek = new Map<number, TodoRow[]>()
     const doneByWeek = new Map<number, ActivityState[]>()
@@ -606,9 +619,9 @@ export const ActivityList = ({
           <Text fontSize="xs" color="gray.500">
             {visibleRowCount}
           </Text>
-          {grouped.todoPointsTotal > 0 && (
+          {journeyPointsTotal > 0 && (
             <Text fontSize="xs" color="#350e6f" fontWeight="semibold" ml="auto">
-              +{grouped.todoPointsTotal.toLocaleString()} pts available
+              +{journeyPointsTotal.toLocaleString()} pts available
             </Text>
           )}
         </Flex>
