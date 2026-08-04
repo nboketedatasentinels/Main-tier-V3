@@ -1734,24 +1734,66 @@ export const ProfilePage: React.FC = () => {
           </TabPanel>
 
           <TabPanel px={0}>
-            <Grid templateColumns={{ base: '1fr', lg: '2fr 1fr' }} gap={6}>
-              <GridItem>
-                <VStack spacing={6}>
-                  <Card borderColor="brand.border" boxShadow="card">
-                    <CardHeader>
-                      <Box>
-                        <Text fontWeight="semibold" fontSize="lg">Account &amp; Security</Text>
-                        <Text fontSize="sm" color="brand.subtleText">
-                          Manage your login details and account status in one place.
-                        </Text>
-                      </Box>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={6}>
+            <Flex direction="column" gap={6} w="full">
+              <Flex
+                direction={{ base: 'column', lg: 'row' }}
+                align="stretch"
+                gap={6}
+                w="full"
+              >
+                  <Card
+                    flex="1"
+                    minW={0}
+                    h="full"
+                    display="flex"
+                    flexDirection="column"
+                    borderColor="brand.border"
+                    borderRadius="2xl"
+                    boxShadow="0 8px 30px rgba(39, 6, 46, 0.06)"
+                    overflow="hidden"
+                    bg="white"
+                  >
+                    <CardHeader
+                      pb={4}
+                      borderBottomWidth="1px"
+                      borderColor="blackAlpha.50"
+                      bgGradient="linear(to-r, #27062e08, transparent)"
+                    >
+                      <HStack spacing={3} align="flex-start">
+                        <Flex
+                          w={10}
+                          h={10}
+                          borderRadius="xl"
+                          align="center"
+                          justify="center"
+                          bg="#27062e"
+                          flexShrink={0}
+                          boxShadow="0 6px 16px rgba(39, 6, 46, 0.25)"
+                        >
+                          <Icon as={Shield} color="white" boxSize={5} />
+                        </Flex>
                         <Box>
+                          <Text fontWeight="bold" fontSize="lg" color="gray.900" letterSpacing="-0.01em">
+                            Account &amp; Security
+                          </Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={0.5}>
+                            Manage your login details and account status.
+                          </Text>
+                        </Box>
+                      </HStack>
+                    </CardHeader>
+                    <CardBody flex="1" display="flex" flexDirection="column">
+                      <VStack align="stretch" spacing={5} flex="1">
+                        <Box
+                          borderWidth="1px"
+                          borderColor="brand.border"
+                          borderRadius="xl"
+                          p={4}
+                          bg="gray.50"
+                        >
                           <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
                             <Box>
-                              <Text fontWeight="semibold">Email</Text>
+                              <Text fontWeight="semibold" color="gray.900">Email</Text>
                               <Text fontSize="sm" color="brand.subtleText">
                                 Keep your contact email up to date.
                               </Text>
@@ -1762,8 +1804,8 @@ export const ProfilePage: React.FC = () => {
                           </Flex>
                           {!emailFormOpen ? (
                             <HStack spacing={2} color="brand.text" mt={3}>
-                              <Icon as={MailIcon} />
-                              <Text>{profileData.email}</Text>
+                              <Icon as={MailIcon} color="brand.primary" />
+                              <Text fontWeight="medium">{profileData.email}</Text>
                             </HStack>
                           ) : (
                             <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangeEmail} mt={4}>
@@ -1814,12 +1856,16 @@ export const ProfilePage: React.FC = () => {
                           )}
                         </Box>
 
-                        <Divider borderColor="brand.border" />
-
-                        <Box>
+                        <Box
+                          borderWidth="1px"
+                          borderColor="brand.border"
+                          borderRadius="xl"
+                          p={4}
+                          bg="gray.50"
+                        >
                           <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
                             <Box>
-                              <Text fontWeight="semibold">Password</Text>
+                              <Text fontWeight="semibold" color="gray.900">Password</Text>
                               <Text fontSize="sm" color="brand.subtleText">
                                 Update your password regularly for better security.
                               </Text>
@@ -1830,8 +1876,8 @@ export const ProfilePage: React.FC = () => {
                           </Flex>
                           {!passwordFormOpen ? (
                             <HStack spacing={2} color="brand.text" mt={3}>
-                              <Icon as={Key} />
-                              <Text>••••••••</Text>
+                              <Icon as={Key} color="brand.primary" />
+                              <Text fontWeight="medium">••••••••</Text>
                             </HStack>
                           ) : (
                             <VStack align="stretch" spacing={4} as="form" onSubmit={handleChangePassword} mt={4}>
@@ -1884,18 +1930,34 @@ export const ProfilePage: React.FC = () => {
                           )}
                         </Box>
 
-                        <Divider borderColor="brand.border" />
-
-                        <Box>
-                          <Text fontWeight="semibold">Account Security</Text>
+                        <Box
+                          borderWidth="1px"
+                          borderColor="brand.border"
+                          borderRadius="xl"
+                          p={4}
+                          bg="gray.50"
+                          mt="auto"
+                        >
+                          <Text fontWeight="semibold" color="gray.900">Account Security</Text>
                           <Text fontSize="sm" color="brand.subtleText" mt={1}>
                             For support, you can share your account ID if requested.
                           </Text>
                           <HStack spacing={3} mt={3} align="center">
-                            <Icon as={Shield} color="brand.subtleText" />
+                            <Flex
+                              w={8}
+                              h={8}
+                              borderRadius="lg"
+                              align="center"
+                              justify="center"
+                              bg="white"
+                              borderWidth="1px"
+                              borderColor="brand.border"
+                            >
+                              <Icon as={Shield} color="brand.primary" boxSize={4} />
+                            </Flex>
                             <Box>
-                              <Text fontWeight="medium">Account Status</Text>
-                              <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'}>
+                              <Text fontWeight="medium" fontSize="sm">Account Status</Text>
+                              <Badge colorScheme={statusColorMap[profileData.accountStatus] || 'gray'} mt={0.5}>
                                 {profileData.accountStatus === 'active' ? 'Active' : profileData.accountStatus === 'inactive' ? 'Inactive' : 'Pending'}
                               </Badge>
                             </Box>
@@ -1913,24 +1975,63 @@ export const ProfilePage: React.FC = () => {
                     </CardBody>
                   </Card>
 
-                  <Card borderColor="brand.border" boxShadow="card">
-                    <CardHeader>
-                      <Text fontWeight="semibold" fontSize="lg">Preferences</Text>
-                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                        Manage peer matching and leaderboard visibility in one place.
-                      </Text>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={6}>
+                  <Card
+                    flex="1"
+                    minW={0}
+                    h="full"
+                    display="flex"
+                    flexDirection="column"
+                    borderColor="brand.border"
+                    borderRadius="2xl"
+                    boxShadow="0 8px 30px rgba(39, 6, 46, 0.06)"
+                    overflow="hidden"
+                    bg="white"
+                  >
+                    <CardHeader
+                      pb={4}
+                      borderBottomWidth="1px"
+                      borderColor="blackAlpha.50"
+                      bgGradient="linear(to-r, #f4540c0d, transparent)"
+                    >
+                      <HStack spacing={3} align="flex-start">
+                        <Flex
+                          w={10}
+                          h={10}
+                          borderRadius="xl"
+                          align="center"
+                          justify="center"
+                          bg="#f4540c"
+                          flexShrink={0}
+                          boxShadow="0 6px 16px rgba(244, 84, 12, 0.28)"
+                        >
+                          <Icon as={Settings} color="white" boxSize={5} />
+                        </Flex>
                         <Box>
-                          <Text fontWeight="semibold">Peer Matching</Text>
-                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                            Control how often you receive a new peer match and how we notify you.
+                          <Text fontWeight="bold" fontSize="lg" color="gray.900" letterSpacing="-0.01em">
+                            Preferences
+                          </Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={0.5}>
+                            Peer matching and leaderboard visibility.
                           </Text>
                         </Box>
+                      </HStack>
+                    </CardHeader>
+                    <CardBody flex="1" display="flex" flexDirection="column">
+                      <VStack align="stretch" spacing={5} flex="1">
+                        <Box
+                          borderWidth="1px"
+                          borderColor="brand.border"
+                          borderRadius="xl"
+                          p={4}
+                          bg="gray.50"
+                        >
+                          <Text fontWeight="semibold" color="gray.900">Peer Matching</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1} mb={4}>
+                            Control how often you receive a new peer match and how we notify you.
+                          </Text>
 
                         <FormControl display="flex" alignItems="center" justifyContent="space-between">
-                          <Box>
+                          <Box pr={4}>
                             <FormLabel mb={1}>Automatic matching</FormLabel>
                             <Text fontSize="sm" color="brand.subtleText">
                               Disable if you only want to request matches manually.
@@ -1947,16 +2048,15 @@ export const ProfilePage: React.FC = () => {
                           />
                         </FormControl>
 
-                        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                        <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4} mt={4}>
                           <FormControl>
-                            <HStack justify="space-between" align="center">
-                              <FormLabel mb={0}>Refresh frequency</FormLabel>
+                            <FormLabel mb={1} fontSize="sm">Refresh frequency</FormLabel>
                               <Select
-                                maxW="200px"
                                 value={editedData.matchRefreshPreference || 'weekly'}
                                 onChange={(event) =>
                                   handleInputChange('matchRefreshPreference', event.target.value as ProfileData['matchRefreshPreference'])
                                 }
+                                bg="white"
                               >
                                 {matchRefreshOptions.map((option) => (
                                   <option key={option.value} value={option.value}>
@@ -1964,16 +2064,14 @@ export const ProfilePage: React.FC = () => {
                                   </option>
                                 ))}
                               </Select>
-                            </HStack>
                           </FormControl>
 
                           <FormControl isDisabled={!['weekly', 'biweekly'].includes(editedData.matchRefreshPreference || '')}>
-                            <HStack justify="space-between" align="center">
-                              <FormLabel mb={0}>Preferred match day</FormLabel>
+                            <FormLabel mb={1} fontSize="sm">Preferred match day</FormLabel>
                               <Select
-                                maxW="200px"
                                 value={editedData.preferredMatchDay ?? 1}
                                 onChange={(event) => handleInputChange('preferredMatchDay', Number(event.target.value))}
+                                bg="white"
                               >
                                 {weekdayOptions.map((option) => (
                                   <option key={option.value} value={option.value}>
@@ -1981,7 +2079,6 @@ export const ProfilePage: React.FC = () => {
                                   </option>
                                 ))}
                               </Select>
-                            </HStack>
                           </FormControl>
                         </Grid>
 
@@ -1989,22 +2086,22 @@ export const ProfilePage: React.FC = () => {
                           variant="ghost"
                           size="sm"
                           alignSelf="flex-start"
+                          mt={3}
                           onClick={() => setShowAdvancedMatching((prev) => !prev)}
                         >
                           {showAdvancedMatching ? 'Hide advanced settings' : 'Advanced settings'}
                         </Button>
 
                         <Collapse in={showAdvancedMatching} animateOpacity>
-                          <VStack align="stretch" spacing={4}>
+                          <VStack align="stretch" spacing={4} mt={2}>
                             <FormControl>
-                              <HStack justify="space-between" align="center">
-                                <FormLabel mb={0}>Notification preference</FormLabel>
+                                <FormLabel mb={1} fontSize="sm">Notification preference</FormLabel>
                                 <Select
-                                  maxW="220px"
                                   value={editedData.matchNotificationPreference || 'both'}
                                   onChange={(event) =>
                                     handleInputChange('matchNotificationPreference', event.target.value as ProfileData['matchNotificationPreference'])
                                   }
+                                  bg="white"
                                 >
                                   {matchNotificationOptions.map((option) => (
                                     <option key={option.value} value={option.value}>
@@ -2012,16 +2109,14 @@ export const ProfilePage: React.FC = () => {
                                     </option>
                                   ))}
                                 </Select>
-                              </HStack>
                             </FormControl>
 
                             <FormControl>
-                              <HStack justify="space-between" align="center">
-                                <FormLabel mb={0}>Match timezone</FormLabel>
+                                <FormLabel mb={1} fontSize="sm">Match timezone</FormLabel>
                                 <Select
-                                  maxW="220px"
                                   value={editedData.timezone || ''}
                                   onChange={(event) => handleInputChange('timezone', event.target.value)}
+                                  bg="white"
                                 >
                                   {timezoneOptions.map((zone) => (
                                     <option key={zone} value={zone}>
@@ -2029,7 +2124,6 @@ export const ProfilePage: React.FC = () => {
                                     </option>
                                   ))}
                                 </Select>
-                              </HStack>
                               <FormHelperText>
                                 Match timing is calculated using this timezone.
                               </FormHelperText>
@@ -2044,6 +2138,7 @@ export const ProfilePage: React.FC = () => {
                             borderColor={matchPreferencesMessage.type === 'success' ? 'green.100' : 'red.100'}
                             p={3}
                             rounded="md"
+                            mt={3}
                           >
                             <HStack spacing={2} color={matchPreferencesMessage.type === 'success' ? 'green.600' : 'red.600'}>
                               <Icon as={matchPreferencesMessage.type === 'success' ? Check : AlertCircle} />
@@ -2051,21 +2146,26 @@ export const ProfilePage: React.FC = () => {
                             </HStack>
                           </Box>
                         )}
-
-                        <Divider borderColor="brand.border" />
-
-                        <Box>
-                          <Text fontWeight="semibold">Leaderboard Privacy</Text>
-                          <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                            Decide who can view your ranking and recent activity on leaderboards.
-                          </Text>
                         </Box>
+
+                        <Box
+                          borderWidth="1px"
+                          borderColor="brand.border"
+                          borderRadius="xl"
+                          p={4}
+                          bg="gray.50"
+                          mt="auto"
+                        >
+                          <Text fontWeight="semibold" color="gray.900">Leaderboard Privacy</Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={1} mb={4}>
+                            Decide who can view your ranking and recent activity.
+                          </Text>
 
                         <RadioGroup
                           value={editedData.leaderboardVisibility}
                           onChange={(value) => handleInputChange('leaderboardVisibility', value as ProfileData['leaderboardVisibility'])}
                         >
-                          <VStack align="stretch" spacing={4}>
+                          <VStack align="stretch" spacing={3}>
                             {[
                               {
                                 value: 'public',
@@ -2088,8 +2188,17 @@ export const ProfilePage: React.FC = () => {
                                 border="1px solid"
                                 borderColor={editedData.leaderboardVisibility === option.value ? 'brand.primary' : 'brand.border'}
                                 bg={editedData.leaderboardVisibility === option.value ? 'purple.50' : 'white'}
-                                rounded="lg"
-                                p={5}
+                                rounded="xl"
+                                p={4}
+                                transition="all 0.15s ease"
+                                cursor="pointer"
+                                onClick={() =>
+                                  handleInputChange(
+                                    'leaderboardVisibility',
+                                    option.value as ProfileData['leaderboardVisibility'],
+                                  )
+                                }
+                                _hover={{ borderColor: 'brand.primary' }}
                               >
                                 <Radio value={option.value} colorScheme="purple">
                                   <Text fontWeight="semibold">{option.title}</Text>
@@ -2109,6 +2218,7 @@ export const ProfilePage: React.FC = () => {
                             borderColor={visibilityMessage.type === 'success' ? 'green.100' : 'red.100'}
                             p={3}
                             rounded="md"
+                            mt={3}
                           >
                             <HStack spacing={2} color={visibilityMessage.type === 'success' ? 'green.600' : 'red.600'}>
                               <Icon as={visibilityMessage.type === 'success' ? Check : AlertCircle} />
@@ -2116,21 +2226,47 @@ export const ProfilePage: React.FC = () => {
                             </HStack>
                           </Box>
                         )}
+                        </Box>
                       </VStack>
                     </CardBody>
                   </Card>
-                </VStack>
-              </GridItem>
+              </Flex>
 
-              <GridItem>
-                <VStack spacing={6}>
-                  {!isPaidMember && (
-                  <Card borderColor="brand.border" boxShadow="card">
-                    <CardHeader>
-                      <Text fontWeight="semibold" fontSize="lg">Organization</Text>
-                      <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                        Company code and affiliation status.
-                      </Text>
+              {!isPaidMember && (
+                  <Card
+                    borderColor="brand.border"
+                    borderRadius="2xl"
+                    boxShadow="0 8px 30px rgba(39, 6, 46, 0.06)"
+                    overflow="hidden"
+                    bg="white"
+                  >
+                    <CardHeader
+                      pb={4}
+                      borderBottomWidth="1px"
+                      borderColor="blackAlpha.50"
+                      bgGradient="linear(to-r, #350e6f0a, transparent)"
+                    >
+                      <HStack spacing={3} align="flex-start">
+                        <Flex
+                          w={10}
+                          h={10}
+                          borderRadius="xl"
+                          align="center"
+                          justify="center"
+                          bg="#350e6f"
+                          flexShrink={0}
+                        >
+                          <Icon as={Building} color="white" boxSize={5} />
+                        </Flex>
+                        <Box>
+                          <Text fontWeight="bold" fontSize="lg" color="gray.900">
+                            Organization
+                          </Text>
+                          <Text fontSize="sm" color="brand.subtleText" mt={0.5}>
+                            Company code and affiliation status.
+                          </Text>
+                        </Box>
+                      </HStack>
                     </CardHeader>
                     <CardBody>
                       <VStack align="stretch" spacing={4}>
@@ -2242,13 +2378,21 @@ export const ProfilePage: React.FC = () => {
                       </VStack>
                     </CardBody>
                   </Card>
-                  )}
-                </VStack>
-              </GridItem>
-            </Grid>
+              )}
 
             {hasAccountSettingsChanges && (
-              <Box position="sticky" bottom={0} bg="white" pt={4} pb={2} borderTop="1px solid" borderColor="brand.border" mt={6} zIndex={1}>
+              <Box
+                position="sticky"
+                bottom={0}
+                bg="white"
+                pt={4}
+                pb={2}
+                borderTop="1px solid"
+                borderColor="brand.border"
+                zIndex={1}
+                borderRadius="xl"
+                px={2}
+              >
                 <Flex justify="flex-end">
                   <Button
                     onClick={handleSaveAccountSettings}
@@ -2260,7 +2404,9 @@ export const ProfilePage: React.FC = () => {
                 </Flex>
               </Box>
             )}
+            </Flex>
           </TabPanel>
+
 
           <TabPanel px={0}>
             <VStack spacing={6} align="stretch" maxW="700px" mx="auto">
