@@ -33,7 +33,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
         <ModalBody>
           <VStack align="start" spacing={3}>
             <Text fontSize="sm" color="gray.600">
-              Our full privacy statement is published on the Transformation 4 Leaders website.
+              Our full privacy statement is published on the Transformation Leaders website.
             </Text>
             <Link href={PRIVACY_STATEMENT_URL} isExternal color="brand.primary" fontWeight="semibold">
               Open privacy statement

@@ -98,7 +98,7 @@ function buildEmailHtml(data: FeedbackDoc, feedbackId: string): string {
 
         <tr><td style="background:#350e6f;padding:24px 24px;text-align:center;">
           <h1 style="margin:0;font-size:20px;color:#FFFFFF;font-weight:700;">New feedback received</h1>
-          <p style="margin:6px 0 0;font-size:13px;color:#E9D8FD;">Transformation 4 Leaders</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#E9D8FD;">Transformation Leaders</p>
         </td></tr>
 
         <tr><td style="padding:20px 24px 8px;">

@@ -1,7 +1,7 @@
 {
   "name": "t4l-tier-website",
   "version": "1.0.0",
-  "description": "Transformation 4 Leaders - Leadership Development Platform",
+  "description": "Transformation Leaders - Leadership Development Platform",
   "type": "module",
   "scripts": {
     "dev": "vite",

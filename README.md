@@ -1,10 +1,10 @@
-# T4L - Transformation 4 Leaders
+# T4L - Transformation Leaders
 
 A comprehensive leadership transformation and professional development platform built with modern web technologies.
 
 ## 🎯 Overview
 
-T4L (Transformation 4 Leaders) is a full-stack web application designed to facilitate leadership development through:
+T4L (Transformation Leaders) is a full-stack web application designed to facilitate leadership development through:
 
 - **Structured Learning Journeys**: 4-week to 12-month transformation programs
 - **Gamification**: Points, badges, levels, and leaderboards

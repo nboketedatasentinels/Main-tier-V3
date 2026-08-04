@@ -1,7 +1,7 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-Claude should treat this file as authoritative.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Codex should treat this file as authoritative.
 
 Project Overview
 
@@ -424,9 +424,9 @@ Run before every commit:
 
 npm run qa
 
-Claude-Specific Instructions (CRITICAL)
+Codex-Specific Instructions (CRITICAL)
 
-Claude must follow these rules when working in this repo:
+Codex must follow these rules when working in this repo:
 
 DO
 

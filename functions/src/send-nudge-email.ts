@@ -71,7 +71,7 @@ function buildEmailHtml(data: SendNudgeEmailData): string {
         <!-- Header -->
         <tr><td style="background:#350e6f;padding:28px 24px;text-align:center;">
           <h1 style="margin:0;font-size:22px;color:#FFFFFF;font-weight:700;">Journey Progress Reminder</h1>
-          <p style="margin:6px 0 0;font-size:14px;color:#E9D8FD;">Transformation 4 Leaders</p>
+          <p style="margin:6px 0 0;font-size:14px;color:#E9D8FD;">Transformation Leaders</p>
         </td></tr>
 
         <!-- Greeting -->
@@ -129,7 +129,7 @@ function buildEmailHtml(data: SendNudgeEmailData): string {
         <!-- Footer -->
         <tr><td style="padding:20px 24px;border-top:1px solid #E2E8F0;">
           <p style="margin:0;font-size:12px;color:#A0AEC0;text-align:center;">
-            Transformation 4 Leaders &bull; You received this because your organization enrolled you in a leadership journey.
+            Transformation Leaders &bull; You received this because your organization enrolled you in a leadership journey.
           </p>
         </td></tr>
 
@@ -206,7 +206,7 @@ export const sendNudgeEmail = functions
     try {
       const transport = getTransporter();
       await transport.sendMail({
-        from: `"Transformation 4 Leaders" <${fromAddress}>`,
+        from: `"Transformation Leaders" <${fromAddress}>`,
         to: data.to,
         subject: data.subject,
         html,

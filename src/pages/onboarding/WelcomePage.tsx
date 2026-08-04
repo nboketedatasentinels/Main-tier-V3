@@ -114,7 +114,7 @@ export const WelcomePage: React.FC = () => {
       <VStack spacing={8} align="stretch">
         <Box textAlign="center">
           <Heading size="2xl" mb={4}>
-            Welcome to Transformation 4 Leaders! 🎉
+            Welcome to Transformation Leaders! 🎉
           </Heading>
           <Text fontSize="lg" color="gray.600">
             Let's get you started on your transformation journey.
