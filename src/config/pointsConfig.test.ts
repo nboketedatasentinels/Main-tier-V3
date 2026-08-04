@@ -67,14 +67,43 @@ describe('pointsConfig module activities', () => {
   it('6-week journey totals exactly 60,000 points for every pillar', () => {
     // Pillars only change the week split (3+3, 1+5, 2+4) and course names, not
     // the point values — the 6W activity table (capstone x2, case_study x2,
-    // lift_module x2 @ 7,000, etc.) is identical across pillars. This locks the
-    // invariant that the weekly-checklist total is 60,000 no matter the pillar.
+    // practical x6 @ 0 pts, lift_module x2 @ 7,000, etc.) is identical across
+    // pillars. This locks the invariant that the weekly-checklist total is
+    // 60,000 no matter the pillar.
     const sixWeekTotal = getJourneyPointsCrossReference('6W').computedMaxPoints
     expect(sixWeekTotal).toBe(60000)
 
     PILLAR_OPTIONS.forEach((pillar) => {
       expect(sixWeekTotal, `6W total must be 60,000 for pillar "${pillar}"`).toBe(60000)
     })
+  })
+
+  it('matches the handwritten 6W weekly-checklist occurrence table', () => {
+    const activities = getActivitiesForJourney('6W')
+    const byId = new Map(activities.map((activity) => [activity.id, activity]))
+
+    const expectActivity = (
+      id: string,
+      points: number,
+      maxTotal: number,
+    ) => {
+      expect(byId.get(id)?.points, id).toBe(points)
+      expect(byId.get(id)?.activityPolicy?.maxTotal, id).toBe(maxTotal)
+    }
+
+    expectActivity('webinar_workbook', 4500, 1)
+    expectActivity('linkedin', 500, 3)
+    expectActivity('impact_log', 2000, 4)
+    expectActivity('peer_to_peer', 1000, 3)
+    expectActivity('case_study', 1000, 2)
+    expectActivity('capstone', 1500, 2)
+    expectActivity('podcast_workbook', 1000, 3)
+    expectActivity('weekly_session', 3000, 6)
+    expectActivity('challenger', 500, 3)
+    expectActivity('peer_matching', 500, 3)
+    expectActivity('lift_module', 7000, 2)
+    // Practicals are on the checklist like case study / capstone, but 0 pts.
+    expectActivity('practical', 0, 6)
   })
 
   it('keeps alternate pass marks/max points for journeys with optional mentor and ambassador support', () => {

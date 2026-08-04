@@ -36,6 +36,7 @@ export type ActivityId =
   // Pillar components (6W only; partner-issued - each pillar has one of each)
   | "capstone"
   | "case_study"
+  | "practical"
   // System activities
   | "referral_bonus"
   | "peer_session_confirmation"
@@ -423,10 +424,10 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   },
 
   // ── Pillar components (6W only) - partner-issued ──
-  // Each pillar has a capstone (project) and case studies (analysis). Partners
-  // award these via the Issue Activity page / submission review once the
-  // learner submits the deliverable. (Practical is a pillar deliverable that is
-  // reviewed but no longer awards checklist points - it's not defined here.)
+  // Each pillar has a capstone, case studies, and a practicals portfolio.
+  // Capstone / case study award checklist points. Practicals are reviewed the
+  // same way but contribute 0 checklist points so the 6W journey stays at
+  // exactly 60,000 max (see the handwritten weekly-checklist table).
   {
     id: "capstone",
     baseId: "capstone",
@@ -438,7 +439,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     week: 1,
     category: "Pillar",
     flexibleWeeks: true,
-    frequencyNote: "One capstone per pillar.",
+    frequencyNote: "Two capstones per 6-week journey.",
   },
   {
     id: "case_study",
@@ -451,7 +452,21 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     week: 1,
     category: "Pillar",
     flexibleWeeks: true,
-    frequencyNote: "Two case studies per pillar.",
+    frequencyNote: "Two case studies per 6-week journey.",
+  },
+  {
+    id: "practical",
+    baseId: "practical",
+    title: "Practical",
+    description:
+      "Hands-on practicals across your pillar journey. Reviewed by your partner; does not add checklist points.",
+    points: 0,
+    behaviorType: "one_time",
+    approvalType: "partner_issued",
+    week: 1,
+    category: "Pillar",
+    flexibleWeeks: true,
+    frequencyNote: "Six practicals per journey portfolio.",
   },
 ];
 
@@ -493,9 +508,11 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "linkedin", totalFrequency: 3 },
     { activityId: "peer_matching", totalFrequency: 3, pointsOverride: 500 },
     { activityId: "challenger", totalFrequency: 3, pointsOverride: 500 },
-    // Pillar components - two capstones, two case studies per 6W journey.
+    // Pillar components - two capstones, two case studies, six practicals.
+    // Practicals are 0 pts so the journey max stays exactly 60,000.
     { activityId: "capstone", totalFrequency: 2 },
     { activityId: "case_study", totalFrequency: 2 },
+    { activityId: "practical", totalFrequency: 6 },
   ],
   "3M": [
     { activityId: "podcast_workbook", totalFrequency: 9 },
@@ -560,11 +577,10 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     windowTarget: 14000,
     passMarkPoints: 40000,
     // Sum of the 6W activity table (per-activity points x frequency):
-    // podcast 3x1000, weekly_session 6x3000, webinar 1x4500, peer_to_peer
-    // 3x1000, impact_log 4x2000, lift_module 2x7000, linkedin 3x500,
-    // peer_matching 3x500, challenger 3x500, capstone 2x1500, case_study
-    // 2x1000. Pass mark stays the same so existing learners' completion
-    // logic is unaffected.
+    // webinar 1x4500, linkedin 3x500, impact_log 4x2000, peer_to_peer 3x1000,
+    // case_study 2x1000, capstone 2x1500, podcast 3x1000, weekly_session 6x3000,
+    // challenger 3x500, peer_matching 3x500, lift_module 2x7000,
+    // practical 6x0 = 60,000 exactly.
     maxPossiblePoints: 60000,
     mode: "full",
     timelineDisplay: "course-count",

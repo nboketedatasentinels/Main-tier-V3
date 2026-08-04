@@ -206,6 +206,7 @@ export async function updateSubmissionReview(
 /**
  * Points a pillar component is worth, for display before approving. Pillar
  * points live on the 6W journey config (capstone/case_study/practical).
+ * Practical is defined at 0 pts so the journey max stays 60,000.
  */
 export function getComponentPoints(componentType: ProgrammeComponentType | null): number {
   if (!componentType) return 0
@@ -218,7 +219,7 @@ export interface ApproveAndAwardResult {
   points: number
   /** True when an award already existed (idempotent re-approval, no new points). */
   alreadyAwarded: boolean
-  /** False for components that are reviewed but don't award points (e.g. practical). */
+  /** False when the activity is missing from the journey config. */
   pointsEligible: boolean
 }
 
@@ -226,9 +227,10 @@ export interface ApproveAndAwardResult {
  * Mark a submission approved AND award the learner the component's points.
  *
  * Reuses the canonical partner-issued points path (awardChecklistPoints) so the
- * ledger stays the single source of truth. `claimRef` is the componentId, which:
- *  - keeps awarding idempotent per submission (re-approving never double-awards), and
- *  - lets the two case studies (which share activityId "case_study") each award.
+ * ledger stays the single source of truth. `claimRef` is the part id when
+ * present (else componentId), which:
+ *  - keeps awarding idempotent per deliverable (re-approving never double-awards), and
+ *  - lets multi-part components (case studies, practicals) each count separately.
  */
 export async function approveSubmissionAndAward(params: {
   submission: ProgrammeComponentSubmission
@@ -257,8 +259,7 @@ export async function approveSubmissionAndAward(params: {
     getActivityDefinitionById({ activityId: submission.componentType, journeyType }) ??
     getActivityDefinitionById({ activityId: submission.componentType, journeyType: '6W' })
 
-  // Some pillar components are reviewed but don't award checklist points
-  // (e.g. practical). Record the partner's decision without awarding.
+  // Unknown component type: still record the review, but skip awarding.
   if (!activity) {
     await updateSubmissionReview(submission.id, {
       status: 'approved',
@@ -270,13 +271,15 @@ export async function approveSubmissionAndAward(params: {
     return { awarded: false, points: 0, alreadyAwarded: false, pointsEligible: false }
   }
 
+  const claimRef = submission.partId || submission.componentId
+
   const awardResult = await awardChecklistPoints({
     uid: submission.uid,
     journeyType,
     weekNumber: PILLAR_AWARD_WEEK,
     activity,
     source: 'partner_issued',
-    claimRef: submission.componentId,
+    claimRef,
   })
 
   // Record the partner's decision either way (status/notes/score/reviewer).
@@ -288,8 +291,8 @@ export async function approveSubmissionAndAward(params: {
     reviewerName,
   })
 
-  // Only notify the learner when points were actually new.
-  if (awardResult.awarded) {
+  // Only notify the learner when new points were actually awarded.
+  if (awardResult.awarded && activity.points > 0) {
     try {
       await createInAppNotification({
         userId: submission.uid,

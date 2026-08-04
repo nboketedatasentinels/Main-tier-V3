@@ -211,16 +211,10 @@ export const ActivityRow = ({
       ? completedCount >= totalFrequency
       : visualState === 'completed' || (weekClaimComplete && visualState !== 'pending_review'))
   const showStrike = isFullyComplete
+  // Journey-total progress (e.g. 1/2) must look the same in every week row —
+  // never derive the numerator from the week-local occurrence index.
   const displayDoneCount = hasFrequency
-    ? Math.min(
-        totalFrequency,
-        Math.max(
-          consumedCount,
-          weekClaimComplete || visualState === 'pending_review'
-            ? occurrenceNumber ?? 1
-            : 0,
-        ),
-      )
+    ? Math.min(totalFrequency, Math.max(0, consumedCount))
     : 0
   const occurrenceLabel = hasFrequency ? `${displayDoneCount} / ${totalFrequency}` : null
   const statusBadgeLabel = isFullyComplete
@@ -233,6 +227,11 @@ export const ActivityRow = ({
 
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
+
+  const ptsSuffix =
+    typeof activity.points === 'number' && activity.points > 0
+      ? ` · +${activity.points} pts`
+      : ''
 
   const lockReason = (() => {
     if (isAdmin) return null
@@ -293,28 +292,28 @@ export const ActivityRow = ({
     if (visualState === 'rejected') return 'Try again'
     if (requiresPartnerApproval) {
       return claimAttempt > 1
-        ? `Submit${attemptSuffix} · +${activity.points} pts`
-        : `Submit · +${activity.points} pts`
+        ? `Submit${attemptSuffix}${ptsSuffix}`
+        : `Submit${ptsSuffix}`
     }
     if (isPartnerIssued)
       return activity.issuedByPartner
         ? claimAttempt > 1
-          ? `Claim${attemptSuffix} · +${activity.points} pts`
-          : `Claim · +${activity.points} pts`
+          ? `Claim${attemptSuffix}${ptsSuffix}`
+          : `Claim${ptsSuffix}`
         : 'Awaiting partner'
     if (activity.approvalType === 'self') {
       return claimAttempt > 1
-        ? `Do it${attemptSuffix} · +${activity.points} pts`
-        : `I did this · +${activity.points} pts`
+        ? `Do it${attemptSuffix}${ptsSuffix}`
+        : `I did this${ptsSuffix}`
     }
     if (activity.id === 'impact_log') {
       return claimAttempt > 1
-        ? `Log impact${attemptSuffix} · +${activity.points} pts`
-        : `Log impact · +${activity.points} pts`
+        ? `Log impact${attemptSuffix}${ptsSuffix}`
+        : `Log impact${ptsSuffix}`
     }
     return claimAttempt > 1
-      ? `Do it${attemptSuffix} · +${activity.points} pts`
-      : `Done · +${activity.points} pts`
+      ? `Do it${attemptSuffix}${ptsSuffix}`
+      : `Done${ptsSuffix}`
   })()
 
   const exitAction = (() => {
