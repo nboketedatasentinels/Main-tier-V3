@@ -120,6 +120,24 @@ const formatInviteRoleLabel = (role: InviteRole) => {
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
 
+/** HTML date inputs need YYYY-MM-DD; Supabase often returns full ISO timestamps. */
+const toDateInputValue = (value?: string | Date | null): string => {
+  if (!value) return ''
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return ''
+    return value.toISOString().slice(0, 10)
+  }
+  const raw = String(value).trim()
+  if (!raw) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  const parsed = new Date(raw)
+  if (Number.isNaN(parsed.getTime())) {
+    const match = raw.match(/^(\d{4}-\d{2}-\d{2})/)
+    return match?.[1] ?? ''
+  }
+  return parsed.toISOString().slice(0, 10)
+}
+
 export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   isOpen,
   onClose,
@@ -257,10 +275,15 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     }
 
     if (organization) {
-      setForm({ ...emptyOrganization, ...organization })
-      setOriginalCohortStartDate(
-        organization.cohortStartDate ? String(organization.cohortStartDate) : null,
-      )
+      const cohortStart =
+        toDateInputValue(organization.cohortStartDate as string | Date | undefined) ||
+        toDateInputValue(organization.createdAt as string | Date | undefined)
+      setForm({
+        ...emptyOrganization,
+        ...organization,
+        cohortStartDate: cohortStart || undefined,
+      })
+      setOriginalCohortStartDate(cohortStart || null)
       setMonthlyAssignments(organization.monthlyCourseAssignments ?? {})
     }
     // Load the course catalog so the per-window "Select course" dropdowns have
@@ -452,7 +475,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         status: form.status,
         journeyType: form.organizationJourneyType ?? null,
         programDurationWeeks,
-        cohortStartDate: form.cohortStartDate ? String(form.cohortStartDate) : null,
+        cohortStartDate: toDateInputValue(form.cohortStartDate as string | Date | undefined) || null,
         village: form.village ?? null,
         cluster: form.cluster ?? null,
         pillar: form.pillar ?? null,
@@ -542,9 +565,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     user: 'User',
   }
   const formatMemberRole = (role: string) => roleLabelMap[(role || '').toLowerCase()] || role
-  const leadershipRoles = new Set(['super_admin', 'partner', 'mentor', 'ambassador'])
-  const leadership = members.filter((m) => leadershipRoles.has((m.role || '').toLowerCase()))
-  const learners = members.filter((m) => !leadershipRoles.has((m.role || '').toLowerCase()))
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
@@ -565,194 +585,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 <Text color="gray.600" fontSize="sm">
                   Update organization details and program configuration.
                 </Text>
-              </Box>
-
-              <Box borderWidth="1px" borderRadius="lg" p={4} bg="gray.50">
-                <Stack spacing={4}>
-                  <Box>
-                    <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
-                      Leadership team
-                    </Text>
-                    <Text fontSize="sm" color="gray.600" mb={3}>
-                      Add or change partner, mentor, and ambassador emails after the organization is created.
-                      Existing accounts are linked immediately; new emails stay as pending invites until signup.
-                    </Text>
-                    <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Transformation partner</FormLabel>
-                        <Input
-                          type="email"
-                          placeholder="partner@example.com"
-                          value={form.assignedPartnerEmail || ''}
-                          onChange={(e) => updateField('assignedPartnerEmail', e.target.value)}
-                          bg="white"
-                        />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Mentor</FormLabel>
-                        <Input
-                          type="email"
-                          placeholder="mentor@example.com"
-                          value={mentorEmail}
-                          onChange={(e) => setMentorEmail(e.target.value)}
-                          bg="white"
-                        />
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Ambassador</FormLabel>
-                        <Input
-                          type="email"
-                          placeholder="ambassador@example.com"
-                          value={ambassadorEmail}
-                          onChange={(e) => setAmbassadorEmail(e.target.value)}
-                          bg="white"
-                        />
-                      </FormControl>
-                    </Grid>
-                  </Box>
-
-                  <Box>
-                    <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
-                      Current members ({membersLoading ? '…' : members.length})
-                    </Text>
-                    {membersLoading ? (
-                      <Spinner size="sm" />
-                    ) : members.length ? (
-                      <Stack spacing={3}>
-                        {leadership.length > 0 && (
-                          <Box>
-                            <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                              Leadership
-                            </Text>
-                            <Flex wrap="wrap" gap={2} mt={1}>
-                              {leadership.map((m) => (
-                                <Badge key={m.id} colorScheme="purple" variant="subtle">
-                                  {m.name} · {formatMemberRole(m.role)}
-                                  {m.email ? ` · ${m.email}` : ''}
-                                </Badge>
-                              ))}
-                            </Flex>
-                          </Box>
-                        )}
-                        <Box>
-                          <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                            Learners ({learners.length})
-                          </Text>
-                          {learners.length ? (
-                            <Box maxH="180px" overflowY="auto" mt={1} borderWidth="1px" borderRadius="md" bg="white">
-                              <Table size="sm" variant="simple">
-                                <Tbody>
-                                  {learners.map((m) => (
-                                    <Tr key={m.id}>
-                                      <Td>{m.name}</Td>
-                                      <Td color="gray.600">{m.email}</Td>
-                                      <Td>{formatMemberRole(m.role)}</Td>
-                                    </Tr>
-                                  ))}
-                                </Tbody>
-                              </Table>
-                            </Box>
-                          ) : (
-                            <Text fontSize="sm" color="gray.500">
-                              No learners enrolled yet.
-                            </Text>
-                          )}
-                        </Box>
-                      </Stack>
-                    ) : (
-                      <Text fontSize="sm" color="gray.500">
-                        No members belong to this organization yet.
-                      </Text>
-                    )}
-                  </Box>
-
-                  <Box borderWidth="1px" borderRadius="md" p={4} bg="white">
-                    <Text fontWeight="semibold" mb={3}>
-                      Add users
-                    </Text>
-                    <Grid
-                      templateColumns={{ base: '1fr', md: '2fr 1.4fr auto' }}
-                      gap={3}
-                      alignItems="start"
-                    >
-                      <FormControl isInvalid={Boolean(manualError)}>
-                        <FormLabel fontSize="sm">Email</FormLabel>
-                        <Input
-                          value={manualEmail}
-                          onChange={(e) => {
-                            setManualEmail(e.target.value)
-                            if (manualError) setManualError(null)
-                          }}
-                          placeholder="jane.doe@example.com"
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault()
-                              handleAddManualInvite()
-                            }
-                          }}
-                        />
-                        <FormErrorMessage>{manualError}</FormErrorMessage>
-                      </FormControl>
-                      <FormControl>
-                        <FormLabel fontSize="sm">Role</FormLabel>
-                        <Select
-                          value={manualRole}
-                          onChange={(e) => setManualRole(e.target.value as InviteRole)}
-                        >
-                          {inviteRoleOptions.map((role) => (
-                            <option key={role} value={role}>
-                              {formatInviteRoleLabel(role)}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <Box>
-                        <FormLabel display={{ base: 'none', md: 'flex' }} opacity={0} aria-hidden>
-                          Add
-                        </FormLabel>
-                        <Button colorScheme="purple" onClick={handleAddManualInvite} w={{ base: 'full', md: 'auto' }}>
-                          Add user
-                        </Button>
-                      </Box>
-                    </Grid>
-
-                    {inviteDrafts.length > 0 && (
-                      <Box mt={4}>
-                        <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                          Users to add on save ({inviteDrafts.length})
-                        </Text>
-                        <Stack spacing={2}>
-                          {inviteDrafts.map((draft) => (
-                            <Flex
-                              key={draft.id}
-                              justify="space-between"
-                              align="center"
-                              borderWidth="1px"
-                              borderRadius="md"
-                              px={3}
-                              py={2}
-                            >
-                              <HStack spacing={3}>
-                                <Text fontSize="sm">{draft.email}</Text>
-                                <Badge colorScheme="blue" variant="subtle">
-                                  {formatInviteRoleLabel(draft.role)}
-                                </Badge>
-                              </HStack>
-                              <IconButton
-                                aria-label="Remove user"
-                                icon={<Trash2 size={14} />}
-                                size="sm"
-                                variant="ghost"
-                                colorScheme="red"
-                                onClick={() => removeInviteDraft(draft.id)}
-                              />
-                            </Flex>
-                          ))}
-                        </Stack>
-                      </Box>
-                    )}
-                  </Box>
-                </Stack>
               </Box>
 
               <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
@@ -879,8 +711,44 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <FormLabel>Program start date</FormLabel>
                     <Input
                       type="date"
-                      value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
+                      value={toDateInputValue(form.cohortStartDate as string | Date | undefined)}
                       onChange={(e) => updateField('cohortStartDate', e.target.value)}
+                    />
+                    <FormHelperText>
+                      The cohort start date set when this organization was created.
+                    </FormHelperText>
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Transformation partner</FormLabel>
+                    <Input
+                      type="email"
+                      placeholder="partner@example.com"
+                      value={form.assignedPartnerEmail || ''}
+                      onChange={(e) => updateField('assignedPartnerEmail', e.target.value)}
+                    />
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Mentor</FormLabel>
+                    <Input
+                      type="email"
+                      placeholder="mentor@example.com"
+                      value={mentorEmail}
+                      onChange={(e) => setMentorEmail(e.target.value)}
+                    />
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Ambassador</FormLabel>
+                    <Input
+                      type="email"
+                      placeholder="ambassador@example.com"
+                      value={ambassadorEmail}
+                      onChange={(e) => setAmbassadorEmail(e.target.value)}
                     />
                   </FormControl>
                 </GridItem>
@@ -1140,6 +1008,137 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       })}
                     </Stack>
                   </Box>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="lg" p={4} bg="gray.50">
+                <Text fontWeight="bold" mb={1}>
+                  Add users
+                </Text>
+                <Text fontSize="sm" color="gray.600" mb={3}>
+                  Invite more people to this organization. Existing accounts are enrolled now; new emails stay
+                  pending until they sign up.
+                </Text>
+                <Grid templateColumns={{ base: '1fr', md: '2fr 1.4fr auto' }} gap={3} alignItems="start">
+                  <FormControl isInvalid={Boolean(manualError)}>
+                    <FormLabel fontSize="sm">Email</FormLabel>
+                    <Input
+                      value={manualEmail}
+                      onChange={(e) => {
+                        setManualEmail(e.target.value)
+                        if (manualError) setManualError(null)
+                      }}
+                      placeholder="jane.doe@example.com"
+                      bg="white"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddManualInvite()
+                        }
+                      }}
+                    />
+                    <FormErrorMessage>{manualError}</FormErrorMessage>
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel fontSize="sm">Role</FormLabel>
+                    <Select
+                      value={manualRole}
+                      onChange={(e) => setManualRole(e.target.value as InviteRole)}
+                      bg="white"
+                    >
+                      {inviteRoleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {formatInviteRoleLabel(role)}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Box>
+                    <FormLabel display={{ base: 'none', md: 'flex' }} opacity={0} aria-hidden>
+                      Add
+                    </FormLabel>
+                    <Button colorScheme="purple" onClick={handleAddManualInvite} w={{ base: 'full', md: 'auto' }}>
+                      Add user
+                    </Button>
+                  </Box>
+                </Grid>
+
+                {inviteDrafts.length > 0 && (
+                  <Box mt={4}>
+                    <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                      Users to add on save ({inviteDrafts.length})
+                    </Text>
+                    <Stack spacing={2}>
+                      {inviteDrafts.map((draft) => (
+                        <Flex
+                          key={draft.id}
+                          justify="space-between"
+                          align="center"
+                          borderWidth="1px"
+                          borderRadius="md"
+                          px={3}
+                          py={2}
+                          bg="white"
+                        >
+                          <HStack spacing={3}>
+                            <Text fontSize="sm">{draft.email}</Text>
+                            <Badge colorScheme="blue" variant="subtle">
+                              {formatInviteRoleLabel(draft.role)}
+                            </Badge>
+                          </HStack>
+                          <IconButton
+                            aria-label="Remove user"
+                            icon={<Trash2 size={14} />}
+                            size="sm"
+                            variant="ghost"
+                            colorScheme="red"
+                            onClick={() => removeInviteDraft(draft.id)}
+                          />
+                        </Flex>
+                      ))}
+                    </Stack>
+                  </Box>
+                )}
+              </Box>
+
+              <Box borderWidth="1px" borderRadius="lg" p={4}>
+                <Text fontWeight="bold" mb={1}>
+                  Existing users ({membersLoading ? '…' : members.length})
+                </Text>
+                <Text fontSize="sm" color="gray.600" mb={3}>
+                  People already linked to this organization.
+                </Text>
+                {membersLoading ? (
+                  <Spinner size="sm" />
+                ) : members.length ? (
+                  <Box maxH="260px" overflowY="auto" borderWidth="1px" borderRadius="md">
+                    <Table size="sm" variant="simple">
+                      <Thead bg="gray.50" position="sticky" top={0}>
+                        <Tr>
+                          <Th>Name</Th>
+                          <Th>Email</Th>
+                          <Th>Role</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {members.map((m) => (
+                          <Tr key={m.id}>
+                            <Td>{m.name}</Td>
+                            <Td color="gray.600">{m.email || '—'}</Td>
+                            <Td>
+                              <Badge colorScheme="purple" variant="subtle">
+                                {formatMemberRole(m.role)}
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                ) : (
+                  <Text fontSize="sm" color="gray.500">
+                    No users belong to this organization yet. Add people above, then save.
+                  </Text>
                 )}
               </Box>
             </Stack>
