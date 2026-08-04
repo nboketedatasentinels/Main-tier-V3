@@ -233,10 +233,15 @@ function buildWelcomeHtml(data: WelcomePayload): string {
           <img src="cid:header" alt="${APP_NAME}" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
         </td></tr>
 
-        <!-- Role heading + badge -->
+        <!-- Role heading (+ member badge only — partner/mentor/ambassador
+             headings already name the role, so a second badge is redundant) -->
         <tr><td class="px-content" style="padding:30px 36px 0;text-align:center;">
           <h1 style="margin:0 0 12px;font-size:23px;color:${INK};font-weight:700;">${copy.heading}</h1>
-          <span style="display:inline-block;background:${WASH};border:1px solid ${HAIR};border-radius:100px;padding:5px 16px;font-size:12px;font-weight:700;letter-spacing:0.6px;color:${BODY};text-transform:uppercase;">${copy.label}</span>
+          ${
+            data.role === "user"
+              ? `<span style="display:inline-block;background:${WASH};border:1px solid ${HAIR};border-radius:100px;padding:5px 16px;font-size:12px;font-weight:700;letter-spacing:0.6px;color:${BODY};text-transform:uppercase;">${copy.label}</span>`
+              : ""
+          }
         </td></tr>
 
         <!-- Greeting + intro -->
