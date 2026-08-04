@@ -12,12 +12,12 @@ import {
   Tabs,
   Text,
 } from '@chakra-ui/react'
-import { Briefcase, BookMarked, Coins, MessageCircle, Sparkles } from 'lucide-react'
+import { BookMarked, MessageCircle, Sparkles } from 'lucide-react'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { JoinUs as BookClubJoinUs } from '@/components/dashboard/bookClub/JoinUs'
-import { GrantsTab, JobsTab } from '@/pages/community/AnnouncementsPage'
 
-const WHATSAPP_SHAMELESS_LINK = 'https://chat.whatsapp.com/GU834qw8x6JHYgrzDBUT5i?mode=ems_copy_t'
+const WHATSAPP_SHAMELESS_LINK =
+  'https://chat.whatsapp.com/BF2pozbxlCI1elSDkMMq3A?s=cl&p=i&ilr=2'
 
 const ShamelessCircleTab = () => (
   <Stack spacing={4}>
@@ -43,13 +43,6 @@ const ShamelessCircleTab = () => (
   </Stack>
 )
 
-const JobsAndGrantsTab = () => (
-  <Stack spacing={6}>
-    <JobsTab />
-    <GrantsTab />
-  </Stack>
-)
-
 export const WhatsAppAccessPage: React.FC = () => {
   return (
     <Stack spacing={6} pb={10}>
@@ -66,7 +59,7 @@ export const WhatsAppAccessPage: React.FC = () => {
           </Heading>
           <Text color="brand.subtleText" fontSize="md">
             Jump into the WhatsApp communities where T4L conversations happen in real time - reading
-            circles, podcast discussions, jobs, and grants.
+            circles and podcast discussions.
           </Text>
         </Stack>
       </Box>
@@ -85,13 +78,6 @@ export const WhatsAppAccessPage: React.FC = () => {
               <Text>Shameless Circle</Text>
             </HStack>
           </Tab>
-          <Tab>
-            <HStack spacing={2}>
-              <Icon as={Briefcase} boxSize={4} />
-              <Icon as={Coins} boxSize={4} />
-              <Text>Jobs &amp; Grants</Text>
-            </HStack>
-          </Tab>
         </TabList>
         <TabPanels mt={4}>
           <TabPanel px={0}>
@@ -99,9 +85,6 @@ export const WhatsAppAccessPage: React.FC = () => {
           </TabPanel>
           <TabPanel px={0}>
             <ShamelessCircleTab />
-          </TabPanel>
-          <TabPanel px={0}>
-            <JobsAndGrantsTab />
           </TabPanel>
         </TabPanels>
       </Tabs>

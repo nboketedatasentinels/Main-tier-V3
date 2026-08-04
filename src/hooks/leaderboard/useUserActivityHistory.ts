@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, query, where } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { FULL_ACTIVITIES, resolveCanonicalActivityId, type ActivityDef } from '@/config/pointsConfig'
 
 export interface ActivityHistoryEntry {
@@ -31,13 +30,6 @@ const parseCreatedAt = (raw: unknown): Date => {
     const parsed = new Date(raw)
     return Number.isNaN(parsed.getTime()) ? new Date() : parsed
   }
-  if (typeof raw === 'object' && raw && 'toDate' in raw && typeof (raw as { toDate?: unknown }).toDate === 'function') {
-    try {
-      return (raw as { toDate: () => Date }).toDate()
-    } catch {
-      return new Date()
-    }
-  }
   return new Date()
 }
 
@@ -62,65 +54,43 @@ export const useUserActivityHistory = (
       setError(null)
 
       try {
-        const [txSnap, impactSnap] = await Promise.all([
-          getDocs(query(collection(db, 'points_transactions'), where('userId', '==', userId))),
-          getDocs(query(collection(db, 'impact_logs'), where('userId', '==', userId))),
-        ])
+        // Own ledger rows are readable under RLS (uid = auth.uid()).
+        const { data, error: ledgerError } = await supabase
+          .from('points_ledger')
+          .select('id, activity_id, points, week_number, created_at')
+          .eq('uid', userId)
+          .order('created_at', { ascending: false })
 
-        const impactLogsById = new Map<string, Record<string, unknown>>()
-        impactSnap.docs.forEach((logDoc) => {
-          impactLogsById.set(logDoc.id, logDoc.data() as Record<string, unknown>)
-        })
+        if (ledgerError) throw new Error(ledgerError.message)
 
         const grouped: Record<string, ActivityHistoryEntry[]> = {}
 
-        txSnap.docs.forEach((txDoc) => {
-          const data = txDoc.data() as Record<string, unknown>
-          const pointsRaw =
-            typeof data.pointsAwarded === 'number'
-              ? data.pointsAwarded
-              : typeof data.points === 'number'
-              ? (data.points as number)
-              : 0
-          const points = Number(pointsRaw) || 0
+        ;(data ?? []).forEach((row) => {
+          const raw = row as {
+            id?: string
+            activity_id?: string | null
+            points?: number | null
+            week_number?: number | null
+            created_at?: string | null
+          }
+          const points = typeof raw.points === 'number' ? raw.points : 0
           if (points <= 0) return
 
-          const sourceType = data.sourceType as string | undefined
-          const sourceId = data.sourceId as string | undefined
-          const reason = data.reason as string | undefined
-          const rawCategory = (data.category as string | undefined)?.trim()
-          const activityIdRaw = data.activityId as string | undefined
-          const createdAt = parseCreatedAt(data.createdAt ?? data.awardedAt)
-
-          let category = rawCategory || 'Other'
-          let title = reason || 'Activity'
-          let activityId = activityIdRaw || sourceType || txDoc.id
-
-          if (sourceType === 'impact_log_entry' && sourceId) {
-            const logData = impactLogsById.get(sourceId)
-            const categoryGroup = (logData?.categoryGroup as string | undefined) || 'business'
-            category = categoryGroup === 'esg' ? 'ESG Impact' : 'Business Impact'
-            title = (logData?.title as string | undefined) || 'Impact Log Entry'
-            activityId = `impact_${sourceId}`
-          } else if (activityIdRaw) {
-            const canonical = resolveCanonicalActivityId(activityIdRaw) ?? activityIdRaw
-            const def = activityMap.get(canonical)
-            if (def) {
-              title = reason || def.title
-              category = rawCategory || def.category || category
-              activityId = canonical
-            }
-          }
+          const activityIdRaw = raw.activity_id || 'unknown'
+          const canonical = resolveCanonicalActivityId(activityIdRaw) ?? activityIdRaw
+          const def = activityMap.get(canonical)
+          const category = def?.category || 'Other'
+          const title = def?.title || activityIdRaw
 
           const entry: ActivityHistoryEntry = {
-            id: txDoc.id,
-            activityId,
+            id: String(raw.id ?? `${userId}-${canonical}-${raw.created_at ?? ''}`),
+            activityId: canonical,
             activityTitle: title,
             points,
             category,
-            weekNumber: typeof data.weekNumber === 'number' ? (data.weekNumber as number) : 0,
-            createdAt,
-            source: 'points_transactions',
+            weekNumber: typeof raw.week_number === 'number' ? raw.week_number : 0,
+            createdAt: parseCreatedAt(raw.created_at),
+            source: 'points_ledger',
           }
 
           if (!grouped[category]) grouped[category] = []
@@ -135,12 +105,13 @@ export const useUserActivityHistory = (
       } catch (err) {
         console.error('[useUserActivityHistory] Failed to fetch activity history:', err)
         setError('Failed to load activity history')
+        setActivityHistoryByCategory({})
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchActivityHistory()
+    void fetchActivityHistory()
   }, [userId])
 
   return {

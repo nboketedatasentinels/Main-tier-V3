@@ -24,6 +24,7 @@ import { PasswordChangeModal } from '@/components/PasswordChangeModal'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { PhoneNumberPromptModal } from '@/components/modals/PhoneNumberPromptModal'
+import { PRIVACY_STATEMENT_URL } from '@/config/app'
 
 export const LoginPage: React.FC = () => {
   const {
@@ -384,6 +385,14 @@ export const LoginPage: React.FC = () => {
                 Sign Up
               </Link>
             </Text>
+            <Link
+              href={PRIVACY_STATEMENT_URL}
+              isExternal
+              color="brand.primary"
+              fontSize="sm"
+            >
+              Privacy Policy
+            </Link>
           </VStack>
         </VStack>
       </form>

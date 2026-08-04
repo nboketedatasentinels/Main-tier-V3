@@ -79,6 +79,21 @@ const APPROVAL_LABEL: Record<string, string> = {
   ambassador_issued: 'Ambassador issues',
 }
 
+const ordinalLabel = (n: number) => {
+  const mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`
+  switch (n % 10) {
+    case 1:
+      return `${n}st`
+    case 2:
+      return `${n}nd`
+    case 3:
+      return `${n}rd`
+    default:
+      return `${n}th`
+  }
+}
+
 const StatusIcon = ({ state }: { state: VisualState }) => {
   if (state === 'completed') {
     return <Icon as={CheckCircle2} boxSize={4.5} color="yellow.500" />
@@ -170,6 +185,8 @@ export const ActivityRow = ({
 
   const primaryActionDisabled =
     lockedByInteraction ||
+    lockedByWeek ||
+    lockedByAvailability ||
     weekClaimComplete ||
     activity.status === 'completed' ||
     activity.status === 'pending' ||
@@ -262,19 +279,42 @@ export const ActivityRow = ({
     return null
   })()
 
+  // Which claim this row is for (2 of 3 → "Do it a 2nd time").
+  const claimAttempt =
+    occurrenceNumber ??
+    (hasFrequency ? Math.min(totalFrequency, Math.max(1, completedCount + 1)) : 1)
+  const attemptSuffix =
+    hasFrequency && claimAttempt > 1 ? ` a ${ordinalLabel(claimAttempt)} time` : ''
+
   const ctaLabel = (() => {
     if (isFullyComplete) return 'Completed'
     if (weekClaimComplete) return 'Done this week'
     if (visualState === 'pending_review') return 'Submitted'
     if (visualState === 'rejected') return 'Try again'
-    if (requiresPartnerApproval) return `Submit · +${activity.points} pts`
+    if (requiresPartnerApproval) {
+      return claimAttempt > 1
+        ? `Submit${attemptSuffix} · +${activity.points} pts`
+        : `Submit · +${activity.points} pts`
+    }
     if (isPartnerIssued)
       return activity.issuedByPartner
-        ? `Claim · +${activity.points} pts`
+        ? claimAttempt > 1
+          ? `Claim${attemptSuffix} · +${activity.points} pts`
+          : `Claim · +${activity.points} pts`
         : 'Awaiting partner'
-    if (activity.approvalType === 'self') return `I did this · +${activity.points} pts`
-    if (activity.id === 'impact_log') return `Log impact · +${activity.points} pts`
-    return `Done · +${activity.points} pts`
+    if (activity.approvalType === 'self') {
+      return claimAttempt > 1
+        ? `Do it${attemptSuffix} · +${activity.points} pts`
+        : `I did this · +${activity.points} pts`
+    }
+    if (activity.id === 'impact_log') {
+      return claimAttempt > 1
+        ? `Log impact${attemptSuffix} · +${activity.points} pts`
+        : `Log impact · +${activity.points} pts`
+    }
+    return claimAttempt > 1
+      ? `Do it${attemptSuffix} · +${activity.points} pts`
+      : `Done · +${activity.points} pts`
   })()
 
   const exitAction = (() => {
@@ -315,25 +355,38 @@ export const ActivityRow = ({
     }
   }
 
+  // Maxed activities stay collapsed — click should not open details/CTA.
+  const canExpand = !isFullyComplete
+  const showDetails = Boolean(isExpanded && canExpand)
+
   return (
     <Box
       id={`activity-${activity.id}`}
       borderTop="1px solid"
       borderColor="gray.100"
-      bg={isExpanded ? 'gray.50' : 'transparent'}
-      _hover={{ bg: 'gray.50' }}
+      bg={showDetails ? 'gray.50' : 'transparent'}
+      _hover={canExpand ? { bg: 'gray.50' } : undefined}
       transition="background-color 0.12s"
+      opacity={isFullyComplete ? 0.85 : 1}
     >
       <Box
         as="button"
         type="button"
-        onClick={onToggleExpand}
+        onClick={() => {
+          if (!canExpand) return
+          onToggleExpand()
+        }}
         w="100%"
         textAlign="left"
         px={{ base: 3, md: 4 }}
         py={3}
-        cursor="pointer"
-        _focusVisible={{ outline: '2px solid', outlineColor: '#350e6f', outlineOffset: '-2px' }}
+        cursor={canExpand ? 'pointer' : 'default'}
+        aria-disabled={!canExpand}
+        _focusVisible={
+          canExpand
+            ? { outline: '2px solid', outlineColor: '#350e6f', outlineOffset: '-2px' }
+            : { outline: 'none' }
+        }
       >
         <Grid
           templateColumns={{
@@ -434,14 +487,15 @@ export const ActivityRow = ({
           </Text>
 
           <Icon
-            as={isExpanded ? ChevronDown : ChevronRight}
+            as={showDetails ? ChevronDown : ChevronRight}
             boxSize={4}
-            color="gray.400"
+            color={canExpand ? 'gray.400' : 'gray.200'}
+            visibility={canExpand ? 'visible' : 'hidden'}
           />
         </Grid>
       </Box>
 
-      <Collapse in={isExpanded} animateOpacity>
+      <Collapse in={showDetails} animateOpacity>
         <Box px={{ base: 3, md: 4 }} pb={4} pl={{ base: 9, md: 11 }}>
           <Stack spacing={3}>
             <HStack spacing={2} fontSize="xs" color="gray.500" flexWrap="wrap">

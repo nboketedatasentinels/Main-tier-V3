@@ -1081,9 +1081,13 @@ export function useWeeklyChecklistViewModel() {
           onError: (e) => {
             console.error(e)
             triggerHaptic('error')
+            const description =
+              e instanceof Error && e.message.trim()
+                ? e.message
+                : 'Could not award points. Please try again.'
             toast({
               title: 'Update Failed',
-              description: 'Could not award points. Please try again.',
+              description,
               status: 'error',
             })
           }

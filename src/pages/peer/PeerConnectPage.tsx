@@ -60,22 +60,19 @@ import {
   X,
 } from 'lucide-react'
 import {
-  collection,
   doc,
   getDoc,
-  getDocs,
-  limit,
   onSnapshot,
-  query,
   serverTimestamp,
   updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
-import { fetchOrgMembers, getOrgScope, buildScopeQueries } from '@/utils/organizationScope'
+import { getOrgScope } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
 import { normalizeEmail } from '@/utils/email'
+import { fetchSupabasePeerById, listOrgPeers } from '@/services/supabasePeerService'
 import {
   createPeerSession,
   confirmSession,
@@ -182,11 +179,16 @@ const getUnavailableMatchMessage = (status: PeerProfileLookupResult['status']) =
 const fetchPeerProfileById = async (peerId: string): Promise<PeerProfileLookupResult> => {
   if (!peerId) return { status: 'not_found' }
   try {
-    const peerDoc = await getDoc(doc(db, 'profiles', peerId))
-    if (!peerDoc.exists()) return { status: 'not_found' }
-    const record = { id: peerDoc.id, ...(peerDoc.data() as Record<string, unknown>) }
-    if (!isEligiblePeerRecord(record)) return { status: 'ineligible' }
-    return { status: 'ok', profile: mapRecordToPeerProfile(record) }
+    const result = await fetchSupabasePeerById(peerId)
+    if (result.status === 'ok') {
+      if (!isEligiblePeerRecord(result.record)) return { status: 'ineligible' }
+      return { status: 'ok', profile: mapRecordToPeerProfile(result.record) }
+    }
+    if (result.status === 'permission_denied') {
+      return { status: 'permission_denied', code: result.code }
+    }
+    if (result.status === 'not_found') return { status: 'not_found' }
+    return { status: 'error', code: result.code }
   } catch (error) {
     const code = typeof error === 'object' && error !== null && 'code' in error
       ? String((error as { code?: unknown }).code ?? '')
@@ -272,73 +274,11 @@ type MatchPreferences = MatchPreferencesForWindow & {
   notificationPreference: MatchNotificationPreference
 }
 
-type DebugOrgProfile = {
-  id: string
-  companyId?: string | null
-  companyCode?: string | null
-  organizationId?: string | null
-  organizationCode?: string | null
-  name?: string
-  fullName?: string
-}
-
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSessionDescription =
   'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
 const ACTIVE_SESSION_WINDOW_MS = 2 * 60 * 60 * 1000
-
-const debugOrgFetch = async (dbInstance: typeof db, profile: DebugOrgProfile | null, userId: string) => {
-  const scope = getOrgScope(profile)
-
-  console.group('[DEBUG] ORG FETCH')
-  console.log('userId', userId)
-  console.log('profile.id', profile?.id)
-  console.log('profile.companyId', profile?.companyId)
-  console.log('profile.companyCode', profile?.companyCode)
-  console.log('scope', scope)
-
-  try {
-    const sanitySnap = await getDocs(query(collection(dbInstance, 'profiles'), limit(3)))
-    console.log(
-      'profiles collection readable ✅ sample:',
-      sanitySnap.docs.map((docSnap) => docSnap.id),
-    )
-  } catch (error: unknown) {
-    const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-    console.error('profiles collection NOT readable ❌', errorInfo?.code, errorInfo?.message)
-  }
-
-  if (!scope.isValid) {
-    console.warn('No valid organization scope to query')
-    console.groupEnd()
-    return
-  }
-
-  try {
-    const peersRef = collection(dbInstance, 'profiles')
-    const scopeQueries = buildScopeQueries(peersRef, scope)
-    if (!scopeQueries.length) {
-      console.warn('[OrgMembers] Debug: No queries generated for scope', scope)
-    } else {
-      const limitedQueries = scopeQueries.map((scopeQuery) => query(scopeQuery, limit(10)))
-      const snapshots = await Promise.all(limitedQueries.map((q) => getDocs(q)))
-      console.log(
-        '[OrgMembers] Scope debug queries returned',
-        snapshots.map((snapshot, index) => ({
-          queryIndex: index,
-          count: snapshot.size,
-          ids: snapshot.docs.map((docSnap) => docSnap.id),
-        })),
-      )
-    }
-  } catch (error: unknown) {
-    const errorInfo = error && typeof error === 'object' ? (error as { code?: string; message?: string }) : undefined
-    console.error('Query by org scope failed:', errorInfo?.code, errorInfo?.message)
-  }
-
-  console.groupEnd()
-}
 
 type WeeklyMatchDocument = Record<string, unknown>
 
@@ -367,7 +307,7 @@ const buildWeeklyMatchFromDoc = (matchId: string, data: WeeklyMatchDocument, pee
 })
 
 export const PeerConnectPage: React.FC = () => {
-  const { user, profile, loading, profileLoading } = useAuth()
+  const { user, profile, loading, profileLoading, updateProfile } = useAuth()
   const toast = useToast()
   const [searchParams] = useSearchParams()
   const challengeModal = useDisclosure()
@@ -706,19 +646,23 @@ export const PeerConnectPage: React.FC = () => {
           return
         }
 
-        await debugOrgFetch(db, profile, user?.uid ?? '')
-        const members = await fetchOrgMembers(db, orgScope, user?.uid ?? '')
+        const members = await listOrgPeers()
         const mappedPeers = members.map((data) => mapRecordToPeerProfile(data))
         setAvailablePeers(mappedPeers)
       } catch (error: unknown) {
         console.error('Error fetching peers', error)
-        const errorMessage = error && typeof error === 'object' && 'code' in error ? (error as { code?: string }).code : undefined
+        const errorMessage =
+          error && typeof error === 'object' && 'code' in error
+            ? (error as { code?: string }).code
+            : undefined
         toast({
           title: 'Unable to load peers',
           description:
             errorMessage === 'permission-denied'
               ? 'Permission denied. Your account cannot read peer profiles.'
-              : 'We could not fetch your organisation peers from Firestore.',
+              : errorMessage === 'no-organization'
+                ? 'You need to be linked to an organisation to see peers.'
+                : 'We could not fetch your organisation peers. If this persists, ask an admin to apply the Peer Connect migration.',
           status: 'error',
           position: 'top',
         })
@@ -1194,9 +1138,9 @@ export const PeerConnectPage: React.FC = () => {
         creatorEmail: profile.email || '',
       })
 
-      // Update timezone preference if user enabled it
+      // Update timezone preference if user enabled it (Supabase profiles.data)
       if (sessionForm.rememberTimezone) {
-        await updateDoc(doc(db, 'profiles', user.uid), { timezone: sessionForm.timezone, updatedAt: serverTimestamp() })
+        await updateProfile({ timezone: sessionForm.timezone })
       }
 
       // Note: UI will update automatically via real-time listener

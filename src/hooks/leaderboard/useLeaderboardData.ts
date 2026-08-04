@@ -13,8 +13,11 @@ import {
 import { db } from '@/services/firebase'
 import { UserProfile } from '@/types'
 import { LeaderboardContext } from './useLeaderboardContext'
-import { getOrgScope, listenToOrgMembers } from '@/utils/organizationScope'
+import { getOrgScope } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
+import { listOrgPeers, listOrgPointsLedger } from '@/services/supabasePeerService'
+import { supabase } from '@/services/supabase'
+import { FULL_ACTIVITIES, resolveCanonicalActivityId } from '@/config/pointsConfig'
 
 export interface PointsTransaction {
   id: string
@@ -320,34 +323,37 @@ export const useLeaderboardData = ({
 
   useEffect(() => {
     if (context?.type === 'organization') {
-      const orgScope = getOrgScope({
-        companyId: context.organizationId,
-        organizationId: context.organizationId,
-        companyCode: context.organizationCode,
-        organizationCode: context.organizationCode,
-      })
-      if (!orgScope.isValid) {
-        console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
-        setProfiles([])
-        setProfilesLoaded(true)
-        return undefined
-      }
-
+      let cancelled = false
       setProfilesLoaded(false)
 
-      const unsubscribe = listenToOrgMembers(
-        db,
-        orgScope,
-        (members) => {
+      void (async () => {
+        try {
+          const orgScope = getOrgScope({
+            companyId: context.organizationId,
+            organizationId: context.organizationId,
+            companyCode: context.organizationCode,
+            organizationCode: context.organizationCode,
+          })
+          if (!orgScope.isValid) {
+            console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
+            if (!cancelled) {
+              setProfiles([])
+              setProfilesLoaded(true)
+            }
+            return
+          }
+
+          const members = await listOrgPeers({ includeSelf: true })
+          if (cancelled) return
           setProfiles(members as unknown as UserProfile[])
           setProfilesLoaded(true)
           setErrorMessage(null)
-          console.log('[Leaderboard] Organization profiles updated (real-time)', {
-            contextType: context?.type,
+          console.log('[Leaderboard] Organization profiles loaded (Supabase)', {
+            contextType: context.type,
             count: members.length,
           })
-        },
-        (error) => {
+        } catch (error) {
+          if (cancelled) return
           handleSnapshotError(
             'organization_profiles',
             error,
@@ -356,11 +362,67 @@ export const useLeaderboardData = ({
             setProfilesRetry,
             profilesRetryTimeout,
           )
-        },
-      )
+        }
+      })()
 
       return () => {
-        unsubscribe()
+        cancelled = true
+        clearRetryTimeout(profilesRetryTimeout)
+      }
+    }
+
+    if (context?.type === 'admin_all') {
+      let cancelled = false
+      setProfilesLoaded(false)
+
+      void (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .order('total_points', { ascending: false })
+            .limit(500)
+          if (error) throw new Error(error.message)
+          if (cancelled) return
+          const loaded = (data ?? []).map((row) => {
+            const raw = row as Record<string, unknown>
+            const jsonb = (raw.data as Record<string, unknown> | null) ?? {}
+            return {
+              ...jsonb,
+              id: raw.id,
+              email: raw.email,
+              fullName: raw.full_name ?? jsonb.fullName,
+              firstName: raw.first_name ?? jsonb.firstName,
+              lastName: raw.last_name ?? jsonb.lastName,
+              companyId: raw.company_id ?? jsonb.companyId,
+              companyCode: raw.company_code ?? jsonb.companyCode,
+              organizationId: raw.organization_id ?? jsonb.organizationId,
+              totalPoints: raw.total_points ?? jsonb.totalPoints ?? 0,
+              level: raw.level ?? jsonb.level ?? 0,
+              membershipStatus: raw.membership_status ?? jsonb.membershipStatus,
+              journeyType: raw.journey_type ?? jsonb.journeyType,
+              privacySettings: jsonb.privacySettings,
+              leaderboardVisibility: jsonb.leaderboardVisibility,
+            } as UserProfile
+          })
+          setProfiles(loaded)
+          setProfilesLoaded(true)
+          setErrorMessage(null)
+        } catch (error) {
+          if (cancelled) return
+          handleSnapshotError(
+            'profiles',
+            error,
+            setProfilesLoaded,
+            profilesRetry,
+            setProfilesRetry,
+            profilesRetryTimeout,
+          )
+        }
+      })()
+
+      return () => {
+        cancelled = true
         clearRetryTimeout(profilesRetryTimeout)
       }
     }
@@ -376,6 +438,9 @@ export const useLeaderboardData = ({
       return undefined
     }
 
+    // Village / community / cluster still use Firestore until those scopes are
+    // migrated. Soft-fail permission errors so the page does not toast forever
+    // after the Supabase auth cutover (no Firebase session).
     setProfilesLoaded(false)
     console.log('[Leaderboard] Profiles query constraints', { contextType: context?.type, constraints })
     const profilesQuery = query(collection(db, 'profiles'), ...constraints)
@@ -392,6 +457,15 @@ export const useLeaderboardData = ({
         })
       },
       (error) => {
+        if (getErrorCode(error) === 'permission-denied' || getErrorCode(error) === 'unauthenticated') {
+          console.warn('[Leaderboard] Firestore profiles unavailable after auth cutover', error)
+          setProfiles([])
+          setProfilesLoaded(true)
+          setErrorMessage(
+            'Leaderboard scope for this account still needs a Supabase migration. Organisation boards work; village/community scopes are next.',
+          )
+          return
+        }
         handleSnapshotError(
           'profiles',
           error,
@@ -410,11 +484,53 @@ export const useLeaderboardData = ({
   }, [clearRetryTimeout, context, handleSnapshotError, profilesRetry])
 
   useEffect(() => {
-    if (context?.type === 'organization' && !context.organizationId && !context.organizationCode) {
-      console.warn('[Leaderboard] Missing organization identifier for transaction query.')
-      setTransactions([])
-      setTransactionsLoaded(true)
-      return undefined
+    if (context?.type === 'organization') {
+      let cancelled = false
+      setTransactionsLoaded(false)
+
+      void (async () => {
+        try {
+          const rows = await listOrgPointsLedger()
+          if (cancelled) return
+
+          const activityCategory = new Map<string, string>(
+            FULL_ACTIVITIES.map((activity) => [activity.id, activity.category || 'Other']),
+          )
+
+          const loadedTx: PointsTransaction[] = rows.map((row) => {
+            const canonical = row.activityId
+              ? resolveCanonicalActivityId(row.activityId)
+              : null
+            const category = canonical
+              ? activityCategory.get(canonical) || row.category || 'Other'
+              : row.category || 'Other'
+            return {
+              id: row.id,
+              userId: row.userId,
+              points: row.points,
+              category,
+              createdAt: row.createdAt,
+              companyId: context.organizationId || undefined,
+              companyCode: context.organizationCode || undefined,
+            }
+          })
+
+          setTransactions(loadedTx)
+          setTransactionsLoaded(true)
+          setErrorMessage(null)
+        } catch (error) {
+          if (cancelled) return
+          // Profiles + total_points are enough for all-time rank; don't hard-fail.
+          console.warn('[Leaderboard] Org points ledger unavailable; using profile totals', error)
+          setTransactions([])
+          setTransactionsLoaded(true)
+        }
+      })()
+
+      return () => {
+        cancelled = true
+        clearRetryTimeout(transactionsRetryTimeout)
+      }
     }
 
     const constraints = buildTransactionConstraints(context)
@@ -453,6 +569,12 @@ export const useLeaderboardData = ({
         setErrorMessage(null)
       },
       (error) => {
+        if (getErrorCode(error) === 'permission-denied' || getErrorCode(error) === 'unauthenticated') {
+          console.warn('[Leaderboard] Firestore transactions unavailable after auth cutover', error)
+          setTransactions([])
+          setTransactionsLoaded(true)
+          return
+        }
         handleSnapshotError(
           'transactions',
           error,

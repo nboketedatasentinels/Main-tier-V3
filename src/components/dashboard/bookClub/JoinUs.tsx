@@ -55,10 +55,11 @@ export const JoinUs: React.FC = () => {
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleJoinClick}
-          className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary focus-visible:ring focus-visible:ring-offset-2 focus-visible:ring-brand-primary focus-visible:ring-offset-surface-default"
+          className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-sm font-semibold !text-white shadow-sm transition hover:bg-brand-dark hover:!text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary focus-visible:ring focus-visible:ring-offset-2 focus-visible:ring-brand-primary focus-visible:ring-offset-surface-default"
+          style={{ color: '#ffffff' }}
         >
           Go to the Global Book Club hub
-          <ArrowUpRight className="ml-2 h-4 w-4" aria-hidden="true" />
+          <ArrowUpRight className="ml-2 h-4 w-4 text-white" aria-hidden="true" />
         </a>
         <a
           href="https://www.t4leader.com/book-club"

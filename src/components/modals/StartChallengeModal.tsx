@@ -29,7 +29,8 @@ import { Swords, Users, Trophy, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { db } from '@/services/firebase';
 import { ORG_COLLECTION } from '@/constants/organizations';
-import { fetchOrgMembers, getOrgScope } from '@/utils/organizationScope';
+import { getOrgScope } from '@/utils/organizationScope';
+import { listOrgPeers } from '@/services/supabasePeerService';
 import {
   collection,
   query,
@@ -217,7 +218,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       let userOptions: UserOption[] = [];
 
       if (orgScope.isValid) {
-        const members = await fetchOrgMembers(db, orgScope, user.uid);
+        const members = await listOrgPeers();
         userOptions = buildUserOptions(members);
       } else if (profile?.villageId) {
         const villageMembers = await getVillageMembers(profile.villageId);

@@ -6,5 +6,8 @@ const resolvedBaseUrl = rawBaseUrl && rawBaseUrl.length > 0 ? rawBaseUrl : DEFAU
 export const APP_BASE_URL = resolvedBaseUrl
 const normalizedAppBaseUrl = resolvedBaseUrl.replace(/\/+$/, '')
 
+/** Canonical public privacy statement (marketing site). */
+export const PRIVACY_STATEMENT_URL = 'https://www.t4leader.com/privacy-statement'
+
 export const formatVillageInviteLink = (invitationCode: string) =>
   `${normalizedAppBaseUrl}/app/villages/join/${encodeURIComponent(invitationCode.trim())}`

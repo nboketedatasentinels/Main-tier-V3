@@ -12,8 +12,8 @@ import { validateReferralCode } from "@/services/referralService"
 import { GenderOption, Organization, UserRole } from "@/types"
 import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
-import { PrivacyPolicyModal } from "@/components/modals/PrivacyPolicyModal"
 import { CompanyCodeModal } from "@/components/modals/CompanyCodeModal"
+import { PRIVACY_STATEMENT_URL } from "@/config/app"
 
 interface FormData {
   fullName: string
@@ -51,7 +51,6 @@ export const SignUpPage: React.FC = () => {
   const [isCheckingCode, setIsCheckingCode] = useState(false)
   const [validatedOrganization, setValidatedOrganization] = useState<Organization | null>(null)
   const [showTermsModal, setShowTermsModal] = useState(false)
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showCompanyCodeModal, setShowCompanyCodeModal] = useState(false)
   const [pendingGoogleNavigation, setPendingGoogleNavigation] = useState(false)
   const [referralCode, setReferralCode] = useState<string | null>(null)
@@ -497,13 +496,14 @@ export const SignUpPage: React.FC = () => {
               Terms of Use
             </button>{" "}
             and{" "}
-            <button
-              type="button"
-              onClick={() => setShowPrivacyModal(true)}
+            <a
+              href={PRIVACY_STATEMENT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-semibold text-brand-primary hover:underline"
             >
               Privacy Policy
-            </button>
+            </a>
           </label>
         </div>
 
@@ -534,8 +534,6 @@ export const SignUpPage: React.FC = () => {
           setFormData(prev => ({ ...prev, acceptTerms: true }))
         }}
       />
-
-      <PrivacyPolicyModal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} />
 
       <CompanyCodeModal
         isOpen={showCompanyCodeModal}

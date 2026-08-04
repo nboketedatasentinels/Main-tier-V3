@@ -118,7 +118,11 @@ export async function awardChecklistPoints(params: {
   activity: ActivityDef;
   source?: string;
   claimRef?: string;
-}): Promise<{ awarded: boolean; reason?: "already_awarded" }> {
+}): Promise<{
+  awarded: boolean;
+  reason?: "already_awarded" | "limit_exceeded" | "rejected";
+  message?: string;
+}> {
   const { uid, journeyType, weekNumber, activity, source = "weekly_checklist", claimRef } = params;
 
   if (!uid) throw new Error("[PointsService] uid is required");
@@ -163,7 +167,26 @@ export async function awardChecklistPoints(params: {
       },
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      const message = error.message || "Could not award points";
+      const lower = message.toLowerCase();
+      // Soft-fail known policy rejections so the UI can show a clear reason
+      // instead of a generic "Update Failed" toast.
+      if (
+        lower.includes("limit") ||
+        lower.includes("cooldown") ||
+        lower.includes("already") ||
+        lower.includes("cap") ||
+        lower.includes("exhausted")
+      ) {
+        return {
+          awarded: false,
+          reason: lower.includes("already") ? "already_awarded" : "limit_exceeded",
+          message: friendlyAwardLimitMessage(message, activity.title),
+        };
+      }
+      throw new Error(message);
+    }
 
     const result = (data ?? {}) as {
       awarded?: boolean;
@@ -171,9 +194,26 @@ export async function awardChecklistPoints(params: {
       previous_status?: string;
       status?: string;
       points_earned?: number;
+      message?: string;
     };
 
     if (!result.awarded) {
+      const reasonRaw = (result.reason ?? "").toLowerCase();
+      if (
+        reasonRaw.includes("limit") ||
+        reasonRaw.includes("cooldown") ||
+        reasonRaw.includes("cap") ||
+        reasonRaw.includes("exhausted")
+      ) {
+        return {
+          awarded: false,
+          reason: "limit_exceeded",
+          message: friendlyAwardLimitMessage(
+            result.message ?? result.reason ?? "Activity limit reached",
+            activity.title,
+          ),
+        };
+      }
       return { awarded: false, reason: "already_awarded" };
     }
 
@@ -198,6 +238,27 @@ export async function awardChecklistPoints(params: {
     throw error;
   }
 }
+
+const friendlyAwardLimitMessage = (raw: string, title?: string | null) => {
+  const lower = raw.toLowerCase();
+  const name = title?.trim() || "This activity";
+  if (lower.includes("cooldown")) {
+    return `${name} opens again after the 7-day wait between sessions.`;
+  }
+  if (lower.includes("week")) {
+    return `${name} is already done for this week.`;
+  }
+  if (lower.includes("window") || lower.includes("month")) {
+    return `${name} is already claimed for this window. Try the next open week.`;
+  }
+  if (lower.includes("total") || lower.includes("exhausted") || lower.includes("cap")) {
+    return `${name} has reached its maximum number of completions.`;
+  }
+  if (lower.includes("already")) {
+    return `${name} was already credited for this week.`;
+  }
+  return raw;
+};
 
 export async function reconcileUserPointsFromLedger(uid: string): Promise<{
   totalPoints: number;

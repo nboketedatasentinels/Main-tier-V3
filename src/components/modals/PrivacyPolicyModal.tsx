@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   Button,
+  Link,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -11,37 +12,46 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react'
+import { PRIVACY_STATEMENT_URL } from '@/config/app'
 
 interface PrivacyPolicyModalProps {
   isOpen: boolean
   onClose: () => void
 }
 
+/**
+ * Lightweight prompt that sends people to the canonical public privacy
+ * statement on t4leader.com (kept for any leftover callers).
+ */
 export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, onClose }) => {
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="md">
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>Privacy Policy</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
-          <VStack align="start" spacing={3} maxH="420px">
-            <Text fontWeight="semibold">Your privacy matters</Text>
+          <VStack align="start" spacing={3}>
             <Text fontSize="sm" color="gray.600">
-              We collect your information solely to provide and improve the services on this platform. Key highlights include:
+              Our full privacy statement is published on the Transformation 4 Leaders website.
             </Text>
-            <VStack spacing={2} align="start" fontSize="sm" color="gray.700">
-              <Text>• We do not sell your personal data.</Text>
-              <Text>• Data is used to personalize your experience and track progress.</Text>
-              <Text>• You can request data deletion or export through support.</Text>
-              <Text>• Industry best practices are used to protect your data.</Text>
-            </VStack>
-            <Text fontSize="sm" color="gray.600">
-              By continuing, you acknowledge that you have reviewed and understand how your data is handled.
-            </Text>
+            <Link href={PRIVACY_STATEMENT_URL} isExternal color="brand.primary" fontWeight="semibold">
+              Open privacy statement
+            </Link>
           </VStack>
         </ModalBody>
         <ModalFooter>
+          <Button
+            as="a"
+            href={PRIVACY_STATEMENT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            colorScheme="purple"
+            mr={3}
+            onClick={onClose}
+          >
+            View privacy statement
+          </Button>
           <Button variant="ghost" onClick={onClose}>
             Close
           </Button>

@@ -14,7 +14,10 @@ import {
 import { ChevronDown, ChevronRight, PartyPopper } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getVisibleActivities } from '@/utils/activityStateManager'
-import { PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
+import {
+  getWindowNumber,
+  PARALLEL_WINDOW_SIZE_WEEKS,
+} from '@/utils/windowCalculations'
 import { ActivityRow } from './ActivityRow'
 
 type WeekRowKind = 'todo' | 'pending' | 'done'
@@ -36,26 +39,54 @@ const projectForWeek = (activity: ActivityState): ActivityState => {
   // been completed in yet. Strip the global completion flags that the VM sets
   // off the activity-id (status from selectedWeek, hasInteracted from the
   // optimistic mutation) so the row renders as actionable in its own week.
-  // Also clear the 7-day client-side cooldown and "next_window" lock - those
-  // were per-completion gates from the old single-week view; in the new
-  // week-grouped model the per-week filter already enforces "not yet done
-  // in this specific week / window".
+  //
+  // Clear only "next_window" / window-cap locks: those are computed against
+  // the currently selected week, while this row may target a later window that
+  // still has capacity (eligible-week scheduling enforces per-window caps).
+  // Never clear weekly_cooldown — the award RPC enforces the same 7-day gate.
   let next: ActivityState = activity
   if (activity.status === 'completed' || activity.hasInteracted) {
     next = { ...next, status: 'not_started', hasInteracted: false }
   }
   const reason = activity.availability.reason
-  const isTransientLock =
-    activity.availability.state === 'next_window' ||
-    reason === 'weekly_cooldown' ||
-    reason === 'window_cap_reached'
-  if (isTransientLock) {
+  const isSelectedWeekWindowLock =
+    activity.availability.state === 'next_window' || reason === 'window_cap_reached'
+  if (isSelectedWeekWindowLock) {
     next = {
       ...next,
       availability: { state: 'available', isScheduledForWeek: true },
     }
   }
   return next
+}
+
+/** Weeks that still have room under maxPerWindow (and aren't already claimed). */
+const getWindowAwareEligibleWeeks = (params: {
+  startWeek: number
+  totalWeeks: number
+  completedWeeks: Set<number>
+  pendingWeeks: Set<number>
+  maxPerWindow: number | null
+}): number[] => {
+  const { startWeek, totalWeeks, completedWeeks, pendingWeeks, maxPerWindow } = params
+  const usedByWindow = new Map<number, number>()
+  const bump = (week: number) => {
+    const win = getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS)
+    usedByWindow.set(win, (usedByWindow.get(win) ?? 0) + 1)
+  }
+  completedWeeks.forEach(bump)
+  pendingWeeks.forEach(bump)
+
+  const eligible: number[] = []
+  for (let w = startWeek; w <= totalWeeks; w++) {
+    if (completedWeeks.has(w) || pendingWeeks.has(w)) continue
+    if (maxPerWindow != null) {
+      const win = getWindowNumber(w, PARALLEL_WINDOW_SIZE_WEEKS)
+      if ((usedByWindow.get(win) ?? 0) >= maxPerWindow) continue
+    }
+    eligible.push(w)
+  }
+  return eligible
 }
 
 const isRecurringActivity = (activity: ActivityState): boolean => {
@@ -323,33 +354,59 @@ export const ActivityList = ({
         return
       }
 
+      // Cooldown is still active: keep completed/pending rows visible, but do
+      // not offer another "I did this" until the 7-day wait ends (matches RPC).
+      if (activity.availability.reason === 'weekly_cooldown') {
+        return
+      }
+
       const maxTotal = activity.activityPolicy?.maxTotal ?? Infinity
+      const maxPerWindow = activity.activityPolicy?.maxPerWindow ?? null
       const usedTotal = completedWeeks.size + pendingWeeks.size
       const remaining = maxTotal === Infinity ? 0 : Math.max(0, maxTotal - usedTotal)
       if (remaining === 0) return
 
-      const eligibleWeeks: number[] = []
-      for (let w = startWeek; w <= totalWeeks; w++) {
-        if (completedWeeks.has(w) || pendingWeeks.has(w)) continue
-        eligibleWeeks.push(w)
+      // Respect per-window caps (e.g. peer_to_peer maxPerWindow=1). Previously
+      // week 2 stayed actionable after a week-1 claim in the same window, and
+      // the award RPC rejected with "Window activity limit reached".
+      const eligibleWeeks = getWindowAwareEligibleWeeks({
+        startWeek,
+        totalWeeks,
+        completedWeeks,
+        pendingWeeks,
+        maxPerWindow,
+      })
+      if (eligibleWeeks.length === 0) return
+
+      const reservedWindows = new Map<number, number>()
+      const bumpReserved = (week: number) => {
+        const win = getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS)
+        reservedWindows.set(win, (reservedWindows.get(win) ?? 0) + 1)
       }
-      if (eligibleWeeks.length === 0) {
-        eligibleWeeks.push(Math.min(totalWeeks, Math.max(1, startWeek)))
-      }
-      for (let i = 0; i < remaining; i++) {
-        const w = eligibleWeeks[i % eligibleWeeks.length]
+      completedWeeks.forEach(bumpReserved)
+      pendingWeeks.forEach(bumpReserved)
+
+      let assigned = 0
+      for (const w of eligibleWeeks) {
+        if (assigned >= remaining) break
+        if (maxPerWindow != null) {
+          const win = getWindowNumber(w, PARALLEL_WINDOW_SIZE_WEEKS)
+          if ((reservedWindows.get(win) ?? 0) >= maxPerWindow) continue
+          reservedWindows.set(win, (reservedWindows.get(win) ?? 0) + 1)
+        }
         const occurrenceNumber =
-          maxTotal !== Infinity && maxTotal > 1 ? usedTotal + i + 1 : undefined
+          maxTotal !== Infinity && maxTotal > 1 ? usedTotal + assigned + 1 : undefined
         pushWeekRow(w, {
           activity,
           weekOverride: w,
-          occurrence: i,
+          occurrence: assigned,
           occurrenceNumber,
           occurrenceTotal: maxTotal !== Infinity && maxTotal > 1 ? maxTotal : undefined,
           rowKind: 'todo',
         })
         todoTotalCount += 1
         todoPointsTotal += activity.points ?? 0
+        assigned += 1
       }
     })
 
