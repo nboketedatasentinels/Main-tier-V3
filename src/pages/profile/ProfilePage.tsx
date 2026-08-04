@@ -74,7 +74,6 @@ import {
   UserPlus,
   Users,
   X,
-  XCircle,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -94,10 +93,8 @@ import { auth, db, storage } from '@/services/firebase'
 import { supabase } from '@/services/supabase'
 import { mergeUserProfileData } from '@/services/partnerUserMetadataService'
 import { useAuth } from '@/hooks/useAuth'
-import type { StandardRole, Organization, DashboardPreferences } from '@/types'
-import { TransformationTier, UserRole } from '@/types'
+import type { StandardRole, DashboardPreferences } from '@/types'
 import { normalizeRole } from '@/utils/role'
-import { incrementOrganizationMemberCount, validateCompanyCode } from '@/services/organizationService'
 import { fetchVillageById, VillageSummary } from '@/services/villageService'
 import { listVillageInvitations } from '@/services/villageInvitationService'
 import { formatVillageInviteLink } from '@/config/app'
@@ -292,12 +289,6 @@ export const ProfilePage: React.FC = () => {
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [visibilitySaving, setVisibilitySaving] = useState(false)
   const [visibilityMessage, setVisibilityMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-  const [companyCode, setCompanyCode] = useState('')
-  const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
-  const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
-  const [companyCodeChecking, setCompanyCodeChecking] = useState(false)
-  const [companyOrganization, setCompanyOrganization] = useState<Organization | null>(null)
-  const [companyCodeSaving, setCompanyCodeSaving] = useState(false)
   const [personalityTestError, setPersonalityTestError] = useState<string | null>(null)
   const [valuesTestError, setValuesTestError] = useState<string | null>(null)
   const [personalityFormError, setPersonalityFormError] = useState<string | null>(null)
@@ -305,7 +296,6 @@ export const ProfilePage: React.FC = () => {
   const [matchPreferencesMessage, setMatchPreferencesMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showAdvancedMatching, setShowAdvancedMatching] = useState(false)
   const [accountSettingsSaving, setAccountSettingsSaving] = useState(false)
-  const [organizationMessage, setOrganizationMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
   const [villageLoading, setVillageLoading] = useState(false)
   const [villageError, setVillageError] = useState<string | null>(null)
@@ -439,10 +429,6 @@ export const ProfilePage: React.FC = () => {
     fetchUserProfile()
   }, [fetchUserProfile])
 
-  useEffect(() => {
-    setCompanyCode(profileData?.companyCode || '')
-  }, [profileData?.companyCode])
-
   const villageId = useMemo(
     () => profile?.villageId || profileData?.villageId || null,
     [profile?.villageId, profileData?.villageId],
@@ -518,47 +504,6 @@ export const ProfilePage: React.FC = () => {
       isMounted = false
     }
   }, [isPaidMember, villageId])
-
-  useEffect(() => {
-    const trimmedCode = companyCode.trim().toUpperCase()
-
-    if (!trimmedCode) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError(null)
-      setCompanyOrganization(null)
-      setCompanyCodeChecking(false)
-      return
-    }
-
-    if (trimmedCode.length !== 6) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError(null)
-      setCompanyOrganization(null)
-      setCompanyCodeChecking(false)
-      return
-    }
-
-    let cancelled = false
-    setCompanyCodeChecking(true)
-
-    validateCompanyCode(trimmedCode).then((result) => {
-      if (cancelled) return
-      setCompanyCodeValid(result.valid)
-      setCompanyCodeError(result.error ?? null)
-      setCompanyOrganization(result.valid && result.organization ? result.organization : null)
-      setCompanyCodeChecking(false)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [companyCode])
-
-  useEffect(() => {
-    if (organizationMessage?.type !== 'success') return
-    const timer = window.setTimeout(() => setOrganizationMessage(null), 6000)
-    return () => window.clearTimeout(timer)
-  }, [organizationMessage])
 
   const handleInputChange = <K extends keyof ProfileData>(field: K, value: ProfileData[K]) => {
     if (!editedData) return
@@ -868,152 +813,6 @@ export const ProfilePage: React.FC = () => {
     }
   }
 
-  const handleCompanyCodeSave = async () => {
-    if (!user || !profileData) return
-    const trimmedCode = companyCode.trim().toUpperCase()
-    const currentCompanyCode = (profileData.companyCode || '').trim().toUpperCase()
-
-    if (trimmedCode === currentCompanyCode && profileData.companyId) {
-      setOrganizationMessage({
-        type: 'error',
-        text: `You're already connected to ${profileData.companyName || 'this organization'}.`,
-      })
-      return
-    }
-
-    if (!trimmedCode) {
-      toast({
-        title: 'Company code required',
-        description: 'Enter your 6-character company code to continue.',
-        status: 'warning',
-        duration: 4000,
-      })
-      return
-    }
-
-    if (trimmedCode.length !== 6) {
-      toast({
-        title: 'Invalid company code',
-        description: 'Company codes must be 6 characters.',
-        status: 'error',
-        duration: 4000,
-      })
-      return
-    }
-
-    if (companyCodeValid === false || companyCodeChecking) {
-      toast({
-        title: 'Company code not ready',
-        description: companyCodeError || 'Please wait while we verify the company code.',
-        status: 'error',
-        duration: 4000,
-      })
-      return
-    }
-
-    setCompanyCodeSaving(true)
-    setOrganizationMessage(null)
-    const existingAssignments = Array.isArray(profile?.assignedOrganizations) ? profile.assignedOrganizations : []
-    const nextAssignedOrganizations = companyOrganization?.id
-      ? Array.from(
-          new Set([
-            ...existingAssignments.filter(
-              (assignment): assignment is string => typeof assignment === 'string' && assignment.trim().length > 0,
-            ),
-            companyOrganization.id,
-          ]),
-        )
-      : existingAssignments
-    const normalizedCurrentRole = normalizeRole(profileData.role)
-    const roleUpdates =
-      normalizedCurrentRole === 'free_user' || normalizedCurrentRole === 'paid_member'
-        ? { role: UserRole.USER }
-        : {}
-    const membershipUpdates = {
-      membershipStatus: 'paid' as const,
-      ...roleUpdates,
-      transformationTier: companyOrganization
-        ? TransformationTier.CORPORATE_MEMBER
-        : TransformationTier.INDIVIDUAL_PAID,
-      ...(companyOrganization?.id ? { assignedOrganizations: nextAssignedOrganizations } : {}),
-      dashboardPreferences: {
-        ...(profileData.dashboardPreferences ?? {}),
-        lockedToFreeExperience: false,
-      },
-    }
-    const updates = {
-      companyCode: trimmedCode,
-      companyId: companyOrganization?.id ?? null,
-      companyName: companyOrganization?.name ?? null,
-      updatedAt: serverTimestamp(),
-    }
-
-    const shouldIncrementMemberCount =
-      !!companyOrganization?.id && companyOrganization.id !== profile?.companyId
-
-    try {
-      await Promise.all([
-        updateDoc(doc(db, 'profiles', user.uid), {
-          ...updates,
-          ...membershipUpdates,
-        }),
-        updateDoc(doc(db, 'users', user.uid), {
-          ...updates,
-          ...membershipUpdates,
-        }),
-      ])
-
-      if (companyOrganization?.id && shouldIncrementMemberCount) {
-        try {
-          await incrementOrganizationMemberCount(companyOrganization.id)
-        } catch (incrementError) {
-          console.warn('Unable to increment organization member count', incrementError)
-        }
-      }
-
-      await refreshProfile({ reason: 'company-code-upgrade' })
-
-      const updatedProfile = {
-        ...profileData,
-        companyCode: trimmedCode,
-        companyName: companyOrganization?.name ?? profileData.companyName,
-        ...membershipUpdates,
-      }
-      setProfileData(updatedProfile)
-      setEditedData(updatedProfile)
-
-      setOrganizationMessage({
-        type: 'success',
-        text: companyOrganization?.name
-          ? `Connected to ${companyOrganization.name}. Your membership is now paid-check your dashboard for new features.`
-          : 'Company code saved successfully. Your membership is now paid-check your dashboard for new features.',
-      })
-
-      toast({
-        title: 'You are now a paid member',
-        description: companyOrganization?.name
-          ? `Connected to ${companyOrganization.name}. Your membership has been upgraded.`
-          : 'Company code saved successfully. Your membership has been upgraded.',
-        status: 'success',
-        duration: 4000,
-      })
-    } catch (err) {
-      console.error(err)
-      setOrganizationMessage({
-        type: 'error',
-        text: 'We could not connect this organization. Please try again or contact support.',
-      })
-      toast({
-        title: 'Unable to update company code',
-        description: 'Please try again or contact support.',
-        status: 'error',
-        duration: 5000,
-      })
-    } finally {
-      setCompanyCodeSaving(false)
-    }
-  }
-
   const handleSaveAccountSettings = async () => {
     if (!editedData || !profileData) return
     setAccountSettingsSaving(true)
@@ -1065,12 +864,6 @@ export const ProfilePage: React.FC = () => {
     }
     return parts.join(' · ')
   }
-
-  const normalizedCompanyCode = companyCode.trim().toUpperCase()
-  const currentCompanyCode = (profileData?.companyCode || '').trim().toUpperCase()
-  const isAlreadyConnected = Boolean(normalizedCompanyCode)
-    && normalizedCompanyCode === currentCompanyCode
-    && Boolean(profileData?.companyId)
 
   if (loading) {
     return (
@@ -2231,154 +2024,6 @@ export const ProfilePage: React.FC = () => {
                     </CardBody>
                   </Card>
               </Flex>
-
-              {!isPaidMember && (
-                  <Card
-                    borderColor="brand.border"
-                    borderRadius="2xl"
-                    boxShadow="0 8px 30px rgba(39, 6, 46, 0.06)"
-                    overflow="hidden"
-                    bg="white"
-                  >
-                    <CardHeader
-                      pb={4}
-                      borderBottomWidth="1px"
-                      borderColor="blackAlpha.50"
-                      bgGradient="linear(to-r, #350e6f0a, transparent)"
-                    >
-                      <HStack spacing={3} align="flex-start">
-                        <Flex
-                          w={10}
-                          h={10}
-                          borderRadius="xl"
-                          align="center"
-                          justify="center"
-                          bg="#350e6f"
-                          flexShrink={0}
-                        >
-                          <Icon as={Building} color="white" boxSize={5} />
-                        </Flex>
-                        <Box>
-                          <Text fontWeight="bold" fontSize="lg" color="gray.900">
-                            Organization
-                          </Text>
-                          <Text fontSize="sm" color="brand.subtleText" mt={0.5}>
-                            Company code and affiliation status.
-                          </Text>
-                        </Box>
-                      </HStack>
-                    </CardHeader>
-                    <CardBody>
-                      <VStack align="stretch" spacing={4}>
-                        <Box>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Current affiliation
-                          </Text>
-                          <Text fontWeight="semibold">{profileData.companyName || 'Not assigned'}</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Code: {profileData.companyCode || 'N/A'}
-                          </Text>
-                        </Box>
-                        <FormControl>
-                          <FormLabel>Company Code</FormLabel>
-                          <HStack align="center">
-                            <Input
-                              maxW="200px"
-                              value={companyCode}
-                              onChange={(event) => {
-                                setCompanyCode(event.target.value.toUpperCase().slice(0, 6))
-                                setOrganizationMessage(null)
-                              }}
-                              placeholder="6-character code"
-                            />
-                            <Button
-                              colorScheme="purple"
-                              onClick={handleCompanyCodeSave}
-                              isLoading={companyCodeSaving}
-                              loadingText="Connecting"
-                              isDisabled={
-                                companyCodeChecking
-                                || companyCodeSaving
-                                || companyCodeValid === false
-                                || isAlreadyConnected
-                                || normalizedCompanyCode.length !== 6
-                              }
-                            >
-                              Connect to Organization
-                            </Button>
-                          </HStack>
-                          <FormHelperText>
-                            Enter your organization code to unlock paid member features.
-                          </FormHelperText>
-                        </FormControl>
-                        {isAlreadyConnected && (
-                          <Box bg="blue.50" border="1px solid" borderColor="blue.100" p={3} rounded="md">
-                            <HStack spacing={2} color="blue.700">
-                              <Icon as={CheckCircle} />
-                              <Text fontSize="sm">
-                                You're already connected to {profileData.companyName || 'this organization'}.
-                              </Text>
-                            </HStack>
-                          </Box>
-                        )}
-                        {profileData.membershipStatus === 'free' && (
-                          <Box bg="purple.50" border="1px solid" borderColor="purple.100" p={3} rounded="md">
-                            <Text fontSize="sm" fontWeight="semibold" color="purple.700">
-                              Connecting this code upgrades you to paid.
-                            </Text>
-                            <Text fontSize="sm" color="brand.subtleText" mt={1}>
-                              Unlock organization dashboards, peer matching enhancements, and full course access.
-                            </Text>
-                          </Box>
-                        )}
-                        {companyCodeValid && companyOrganization && !companyCodeChecking && (
-                          <VStack align="stretch" spacing={2} bg="green.50" border="1px solid" borderColor="green.100" p={3} rounded="md">
-                            <HStack spacing={2} color="green.600">
-                              <Icon as={CheckCircle} />
-                              <Text fontSize="sm">Valid company code ({companyOrganization.name})</Text>
-                            </HStack>
-                            <HStack spacing={3} fontSize="sm" color="green.700">
-                              <Text>Members: {companyOrganization.memberCount ?? 0}</Text>
-                              <Text>Upgrade path: Free → Paid</Text>
-                            </HStack>
-                          </VStack>
-                        )}
-                        {companyCodeValid === false && !companyCodeChecking && (
-                          <Box bg="red.50" border="1px solid" borderColor="red.100" p={3} rounded="md">
-                            <HStack spacing={2} color="red.600">
-                              <Icon as={XCircle} />
-                              <Text fontSize="sm">{companyCodeError || 'Invalid or inactive company code'}</Text>
-                            </HStack>
-                          </Box>
-                        )}
-                        {companyCodeChecking && (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Checking company code...
-                          </Text>
-                        )}
-                        {companyCodeSaving && (
-                          <Text fontSize="sm" color="brand.subtleText">
-                            Connecting to organization...
-                          </Text>
-                        )}
-                        {organizationMessage && (
-                          <Box
-                            bg={organizationMessage.type === 'success' ? 'green.50' : 'red.50'}
-                            border="1px solid"
-                            borderColor={organizationMessage.type === 'success' ? 'green.100' : 'red.100'}
-                            p={3}
-                            rounded="md"
-                          >
-                            <HStack spacing={2} color={organizationMessage.type === 'success' ? 'green.600' : 'red.600'}>
-                              <Icon as={organizationMessage.type === 'success' ? CheckCircle : AlertCircle} />
-                              <Text fontSize="sm">{organizationMessage.text}</Text>
-                            </HStack>
-                          </Box>
-                        )}
-                      </VStack>
-                    </CardBody>
-                  </Card>
-              )}
 
             {hasAccountSettingsChanges && (
               <Box
