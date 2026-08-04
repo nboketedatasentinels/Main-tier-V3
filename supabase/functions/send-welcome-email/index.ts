@@ -8,7 +8,7 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // ---------------------------------------------------------------------------
 // send-welcome-email  (Supabase Edge Function)
 // Sends a clean, role-specific welcome email when a person is onboarded into a
-// new role on the Transformation Tier platform:
+// new role on the Transformation Leader platform:
 //   - a partner is assigned an organization
 //   - a mentor / ambassador is assigned to an organization
 //   - a user is added to an organization
@@ -23,7 +23,7 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // ---------------------------------------------------------------------------
 const FUNCTION_VERSION = "2026-07-31-company-code";
 
-const APP_NAME = "Transformation Tier";
+const APP_NAME = "Transformation Leader";
 // Access code partners enter on the sign-up page (kept in sync with
 // src/pages/partner/PartnerSignupPage.tsx). Shown only in the partner email.
 const PARTNER_ACCESS_CODE = "t4l.ds.Admin.2025#";
