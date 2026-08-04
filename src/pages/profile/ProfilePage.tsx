@@ -43,7 +43,6 @@ import {
   Tabs,
   Tag,
   Text,
-  Textarea,
   Tooltip,
   useToast,
   VStack,
@@ -1231,43 +1230,6 @@ export const ProfilePage: React.FC = () => {
 
                       <Divider borderColor="brand.border" />
 
-                      {/* Bio Section */}
-                      <FormControl>
-                        <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Bio</FormLabel>
-                        {!isEditing ? (
-                          profileData.bio ? (
-                            <Text whiteSpace="pre-wrap" color="brand.text" lineHeight="tall">
-                              {profileData.bio}
-                            </Text>
-                          ) : (
-                            <Box py={2}>
-                              <Text color="brand.subtleText" mb={2}>Add a bio to help others get to know you</Text>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                color="brand.primary"
-                                leftIcon={<Edit size={14} />}
-                                onClick={() => setIsEditing(true)}
-                                p={0}
-                                h="auto"
-                                _hover={{ bg: 'transparent', textDecoration: 'underline' }}
-                              >
-                                Add a bio
-                              </Button>
-                            </Box>
-                          )
-                        ) : (
-                          <Textarea
-                            value={editedData.bio}
-                            rows={4}
-                            onChange={(e) => handleInputChange('bio', e.target.value)}
-                            placeholder="Tell others about yourself..."
-                          />
-                        )}
-                      </FormControl>
-
-                      <Divider borderColor="brand.border" />
-
                       {/* Social Links Section */}
                       <FormControl>
                         <FormLabel fontSize="sm" color="brand.subtleText" mb={2}>Social Links</FormLabel>
@@ -2162,6 +2124,7 @@ export const ProfilePage: React.FC = () => {
 
               <GridItem>
                 <VStack spacing={6}>
+                  {!isPaidMember && (
                   <Card borderColor="brand.border" boxShadow="card">
                     <CardHeader>
                       <Text fontWeight="semibold" fontSize="lg">Organization</Text>
@@ -2279,6 +2242,7 @@ export const ProfilePage: React.FC = () => {
                       </VStack>
                     </CardBody>
                   </Card>
+                  )}
                 </VStack>
               </GridItem>
             </Grid>
