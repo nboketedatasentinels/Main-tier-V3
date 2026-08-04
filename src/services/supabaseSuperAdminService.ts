@@ -731,7 +731,14 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     programDurationWeeks: (row.program_duration_weeks as number) ?? undefined,
     // The form drives off programDuration (in months) - stored in settings.
     programDuration: (settings.programDurationMonths as number) ?? undefined,
-    cohortStartDate: (row.cohort_start_date as string) ?? undefined,
+    cohortStartDate: (() => {
+      const raw = row.cohort_start_date
+      if (!raw) return undefined
+      const asString = String(raw)
+      // Date inputs need YYYY-MM-DD; timestamptz comes back as full ISO.
+      const match = asString.match(/^(\d{4}-\d{2}-\d{2})/)
+      return match?.[1] ?? asString
+    })(),
     village: (settings.village as string) ?? undefined,
     cluster: (settings.cluster as string) ?? undefined,
     pillar: (settings.pillar as OrganizationRecord['pillar']) ?? undefined,
