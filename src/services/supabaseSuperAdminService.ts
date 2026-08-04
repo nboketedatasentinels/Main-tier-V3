@@ -712,6 +712,8 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     archived: Boolean(settings.archived),
     archivedAt: (settings.archivedAt as string) ?? undefined,
     createdAt: (row.created_at as string) ?? undefined,
+    // Bumped by enrollment RPCs when members are invited/claim the org code.
+    memberCount: typeof row.member_count === 'number' ? row.member_count : 0,
     transformationPartnerId: (row.transformation_partner_id as string) ?? undefined,
     organizationJourneyType: (row.journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,
     programDurationWeeks: (row.program_duration_weeks as number) ?? undefined,
@@ -743,6 +745,57 @@ export interface OrgMemberRecord {
   createdAt?: string | null
   totalPoints?: number | null
   lastActiveAt?: string | null
+}
+
+export interface OrgInvitationRecord {
+  id: string
+  email?: string | null
+  role?: string | null
+  method?: string | null
+  status?: string | null
+  createdAt?: string | null
+  expiresAt?: string | null
+  code?: string | null
+  name?: string | null
+}
+
+// Pending (and other) invitations recorded for an org in Supabase. Used by the
+// org detail page so users added at creation who have not signed up yet still
+// appear under Pending invitations.
+export const fetchOrganizationInvitations = async (org: {
+  id?: string | null
+  code?: string | null
+}): Promise<OrgInvitationRecord[]> => {
+  if (!org.id && !org.code) return []
+
+  let query = supabase
+    .from('invitations')
+    .select('id, email, role, method, status, created_at, expires_at, code, data, organization_id')
+    .order('created_at', { ascending: false })
+    .limit(200)
+
+  if (org.id) {
+    query = query.eq('organization_id', org.id)
+  }
+
+  const { data, error } = await query
+  if (error) throw new Error(error.message)
+
+  const rows = (data ?? []) as Array<Record<string, unknown>>
+  return rows.map((row) => {
+    const jsonb = (row.data as Record<string, unknown> | null) ?? {}
+    return {
+      id: String(row.id ?? ''),
+      email: (row.email as string | null) ?? null,
+      role: (row.role as string | null) ?? 'user',
+      method: (row.method as string | null) ?? 'email',
+      status: (row.status as string | null) ?? 'pending',
+      createdAt: (row.created_at as string | null) ?? null,
+      expiresAt: (row.expires_at as string | null) ?? null,
+      code: (row.code as string | null) ?? (jsonb.code as string | null) ?? null,
+      name: (jsonb.name as string | null) ?? (jsonb.fullName as string | null) ?? null,
+    }
+  })
 }
 
 // Members of an organization: profiles linked by company_id / organization_id /

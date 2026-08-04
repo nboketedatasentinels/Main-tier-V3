@@ -386,6 +386,10 @@ export interface OrganizationDetailView {
    * Cohort size and paid license count.
    */
   teamSize?: number
+  /**
+   * Enrolled members tracked on the organization record (`member_count`).
+   */
+  memberCount?: number
   village?: string
   cluster?: string
   programStart?: string

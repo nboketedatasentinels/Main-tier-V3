@@ -159,6 +159,7 @@ export const OrganizationDetailPage: React.FC = () => {
     pageSize,
     paginatedUsers,
     invitations,
+    statistics,
     totalCount,
     filteredCount,
     activeFilters,
@@ -474,7 +475,20 @@ export const OrganizationDetailPage: React.FC = () => {
                 ) : (
                   <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={3}>
                     {[
-                      { label: 'Team size', value: `${organization?.teamSize ?? 0}` },
+                      {
+                        // Enrolled members (profiles linked to the org), including
+                        // people invited when the organization was created.
+                        label: 'Total users',
+                        value: `${statistics?.totalMembers ?? organization?.memberCount ?? totalCount ?? 0}`,
+                      },
+                      {
+                        label: 'Pending invites',
+                        value: `${invitations.filter((invite) => (invite.status || '').toLowerCase() === 'pending').length}`,
+                      },
+                      {
+                        label: 'Cohort size',
+                        value: `${organization?.teamSize ?? 0}`,
+                      },
                       { label: 'Village', value: organization?.village || 'Not assigned' },
                       { label: 'Cluster', value: organization?.cluster || 'Not assigned' },
                       { label: 'Program start', value: formatDate(programDates.start) },

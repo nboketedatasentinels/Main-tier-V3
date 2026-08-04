@@ -592,7 +592,8 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                         <Th cursor="pointer" onClick={() => handleSort('code')}>
                           Code
                         </Th>
-                        <Th>Team size</Th>
+                        <Th>Users</Th>
+                        <Th>Cohort size</Th>
                         <Th cursor="pointer" onClick={() => handleSort('partnerName')}>
                           Transformation partner
                         </Th>
@@ -604,6 +605,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                         const safeName = (org.name || '').trim() || 'Unnamed organization'
                         const safeCode = (org.code || '').trim() || 'No code'
                         const safeTeamSize = Number.isFinite(org.teamSize) ? Number(org.teamSize) : 0
+                        const safeUserCount = Number.isFinite(org.memberCount) ? Number(org.memberCount) : 0
                         const resolvedPartner = partnerLookup.get(org.transformationPartnerId || '')
                         // A partner assigned by email at creation has no
                         // transformation_partner_id until that email signs up,
@@ -669,6 +671,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                             </Td>
                             <Td fontWeight="semibold">{safeName}</Td>
                             <Td>{safeCode}</Td>
+                            <Td>{safeUserCount}</Td>
                             <Td>{safeTeamSize}</Td>
                             <Td>{safePartner}</Td>
                             <Td>{createdAt}</Td>

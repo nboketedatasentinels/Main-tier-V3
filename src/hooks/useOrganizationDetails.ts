@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { fetchAvailableCourses } from '@/services/organizationService'
-import { fetchOrganizations, fetchOrganizationMembers } from '@/services/supabaseSuperAdminService'
+import {
+  fetchOrganizationInvitations,
+  fetchOrganizations,
+  fetchOrganizationMembers,
+} from '@/services/supabaseSuperAdminService'
 import type { OrgMemberRecord } from '@/services/supabaseSuperAdminService'
 import { normalizeEmail } from '@/utils/email'
 import type {
@@ -35,6 +39,7 @@ const buildDetailView = (organization: {
   code?: string
   status?: string
   teamSize?: number
+  memberCount?: number
   village?: string
   cluster?: string
   programStart?: string
@@ -62,6 +67,7 @@ const buildDetailView = (organization: {
   code: organization.code || 'N/A',
   status: (organization.status || 'inactive') as OrganizationDetailView['status'],
   teamSize: organization.teamSize,
+  memberCount: organization.memberCount,
   village: organization.village,
   cluster: organization.cluster,
   programStart: organization.programStart,
@@ -179,7 +185,15 @@ export const useOrganizationDetails = (organizationId?: string) => {
       const orgKey = orgRecord.id || key
 
       // Members (learners + leadership) linked to the org in Supabase profiles.
-      const memberRecords = await fetchOrganizationMembers({ id: orgRecord.id, code: orgRecord.code })
+      // Pending invites are loaded in parallel so users added at org creation who
+      // have not signed up yet still count toward the total and appear in the UI.
+      const [memberRecords, invitationRows] = await Promise.all([
+        fetchOrganizationMembers({ id: orgRecord.id, code: orgRecord.code }),
+        fetchOrganizationInvitations({ id: orgRecord.id, code: orgRecord.code }).catch((err) => {
+          console.warn('[useOrganizationDetails] invitations unavailable', err)
+          return []
+        }),
+      ])
       // The users table drives follow-ups, which are routed TO the partner - so a
       // partner must never appear as a follow-up target. Exclude partners from
       // the list (they still feed the Leadership & support derivation below).
@@ -190,6 +204,18 @@ export const useOrganizationDetails = (organizationId?: string) => {
       const partnerMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'partner') ?? null
       const mentorMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'mentor') ?? null
       const ambassadorMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'ambassador') ?? null
+
+      const invitationList: OrganizationInvitationProfile[] = invitationRows.map((row) => ({
+        id: row.id,
+        name: row.name?.trim() || 'Invited user',
+        email: row.email || '',
+        role: row.role || 'user',
+        method: row.method === 'one_time_code' ? 'one_time_code' : 'email',
+        status: row.status || 'pending',
+        createdAt: row.createdAt ? new Date(row.createdAt) : null,
+        expiresAt: row.expiresAt ? new Date(row.expiresAt) : null,
+        code: row.code || '',
+      }))
 
       // Course titles from the org's assignments (mapping-driven catalog).
       let titleList: string[] = []
@@ -206,8 +232,11 @@ export const useOrganizationDetails = (organizationId?: string) => {
 
       const now = Date.now()
       const weekMs = 7 * 24 * 60 * 60 * 1000
+      // Prefer the live enrolled member list; fall back to organizations.member_count
+      // when profiles have not linked yet so the overview never shows a blank 0.
+      const enrolledCount = memberRecords.length || orgRecord.memberCount || 0
       const stats: OrganizationStatistics = {
-        totalMembers: userList.length,
+        totalMembers: enrolledCount,
         activeMembers: userList.filter((u) => u.accountStatus === 'active').length,
         paidMembers: userList.filter((u) => u.membershipStatus === 'paid').length,
         newMembersThisWeek: userList.filter((u) => u.createdAt && now - u.createdAt.getTime() <= weekMs).length,
@@ -217,6 +246,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
       setOrganization(
         buildDetailView({
           ...orgRecord,
+          memberCount: enrolledCount,
           assignedMentorId: mentorMember?.id ?? null,
           assignedAmbassadorId: ambassadorMember?.id ?? null,
           transformationPartnerId: partnerMember?.id ?? orgRecord.transformationPartnerId ?? null,
@@ -229,7 +259,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
         }),
       )
       setUsers(userList)
-      setInvitationRecords([])
+      setInvitationRecords(invitationList)
       setStatistics(stats)
       setCourseTitles(titleList)
     } catch (err) {
