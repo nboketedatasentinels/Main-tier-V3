@@ -519,7 +519,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       adminId,
       adminName,
     })
-    toast({ title: 'Organization updated', status: 'success' })
+    // Toast is shown by EditOrganizationModal (includes invite/leadership summary).
     await loadOrganizations()
   }
 

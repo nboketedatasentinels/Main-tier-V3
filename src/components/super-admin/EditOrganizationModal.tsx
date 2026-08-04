@@ -44,11 +44,17 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { InfoIcon } from '@chakra-ui/icons'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import { determineClusterFromTeamSize, fetchAvailableCourses } from '@/services/organizationService'
-import { updateOrganization as updateSupabaseOrganization } from '@/services/supabaseOrgService'
+import {
+  assignLeadershipToOrg,
+  findProfileIdByEmail,
+  inviteOrgMember,
+  updateOrganization as updateSupabaseOrganization,
+} from '@/services/supabaseOrgService'
 import { fetchOrganizationMembers, type OrgMemberRecord } from '@/services/supabaseSuperAdminService'
+import { normalizeEmail } from '@/utils/email'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
@@ -95,6 +101,25 @@ const emptyOrganization: OrganizationRecord = {
   courseAssignmentStructure: 'monthly',
 }
 
+type InviteRole = 'user' | 'partner' | 'mentor' | 'ambassador'
+
+type InviteDraft = {
+  id: string
+  email: string
+  role: InviteRole
+}
+
+const inviteRoleOptions: InviteRole[] = ['user', 'partner', 'mentor', 'ambassador']
+
+const formatInviteRoleLabel = (role: InviteRole) => {
+  if (role === 'user') return 'User'
+  if (role === 'partner') return 'Partner'
+  if (role === 'mentor') return 'Mentor'
+  return 'Ambassador'
+}
+
+const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
+
 export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   isOpen,
   onClose,
@@ -110,6 +135,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [, setOriginalCohortStartDate] = useState<string | null>(null)
   const [members, setMembers] = useState<OrgMemberRecord[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
+  const [mentorEmail, setMentorEmail] = useState('')
+  const [ambassadorEmail, setAmbassadorEmail] = useState('')
+  const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([])
+  const [manualEmail, setManualEmail] = useState('')
+  const [manualRole, setManualRole] = useState<InviteRole>('user')
+  const [manualError, setManualError] = useState<string | null>(null)
 
   const courseLimit = useMemo(() => {
     const option = programDurations.find((duration) => duration.value === form.programDuration)
@@ -216,6 +247,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setMonthlyAssignments({})
       setOriginalCohortStartDate(null)
       setMembers([])
+      setMentorEmail('')
+      setAmbassadorEmail('')
+      setInviteDrafts([])
+      setManualEmail('')
+      setManualRole('user')
+      setManualError(null)
       return
     }
 
@@ -242,12 +279,22 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         if (active) setIsLoading(false)
       })
     // Load who belongs to this org (learners + any leadership linked by
-    // company_id / organization_id / company_code) for the read-only overview.
+    // company_id / organization_id / company_code) so we can edit leadership
+    // emails and add more members after creation.
     if (organization?.id || organization?.code) {
       setMembersLoading(true)
       fetchOrganizationMembers({ id: organization.id, code: organization.code })
         .then((rows) => {
-          if (active) setMembers(rows)
+          if (!active) return
+          setMembers(rows)
+          const mentor = rows.find((m) => (m.role || '').toLowerCase() === 'mentor')
+          const ambassador = rows.find((m) => (m.role || '').toLowerCase() === 'ambassador')
+          const partner = rows.find((m) => (m.role || '').toLowerCase() === 'partner')
+          setMentorEmail(mentor?.email || organization?.assignedMentorEmail || '')
+          setAmbassadorEmail(ambassador?.email || organization?.assignedAmbassadorEmail || '')
+          if (!organization?.assignedPartnerEmail && partner?.email) {
+            setForm((prev) => ({ ...prev, assignedPartnerEmail: partner.email }))
+          }
         })
         .catch(() => {
           if (active) setMembers([])
@@ -318,6 +365,56 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     })
   }
 
+  const handleAddManualInvite = () => {
+    const email = manualEmail.trim()
+    if (!email || !isValidEmail(email)) {
+      setManualError('Enter a valid email address.')
+      return
+    }
+    const normalized = normalizeEmail(email)
+    const alreadyQueued = inviteDrafts.some((draft) => normalizeEmail(draft.email) === normalized)
+    const alreadyMember = members.some((member) => normalizeEmail(member.email || '') === normalized)
+    if (alreadyQueued || alreadyMember) {
+      setManualError('That email is already on this organization or in the add list.')
+      return
+    }
+    setInviteDrafts((prev) => [
+      ...prev,
+      {
+        id: `${normalized}-${Date.now()}`,
+        email,
+        role: manualRole,
+      },
+    ])
+    setManualEmail('')
+    setManualRole('user')
+    setManualError(null)
+  }
+
+  const removeInviteDraft = (id: string) => {
+    setInviteDrafts((prev) => prev.filter((draft) => draft.id !== id))
+  }
+
+  const applyLeadershipEmail = async (
+    orgId: string,
+    email: string,
+    role: 'mentor' | 'ambassador',
+  ): Promise<string | null> => {
+    const normalized = email.trim().toLowerCase()
+    if (!normalized) return null
+    const profileId = await findProfileIdByEmail(normalized)
+    if (profileId) {
+      await assignLeadershipToOrg(orgId, profileId, role, {
+        code: form.code,
+        name: form.name,
+      })
+      return 'assigned'
+    }
+    const result = await inviteOrgMember(orgId, normalized, role)
+    if (!result.ok) return result.error || 'invite_failed'
+    return result.status || 'pending'
+  }
+
   const handleSubmit = async () => {
     if (!organization.id) return
 
@@ -329,6 +426,17 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
+      if (mentorEmail.trim() && !isValidEmail(mentorEmail)) {
+        throw new Error('Mentor email is invalid')
+      }
+      if (ambassadorEmail.trim() && !isValidEmail(ambassadorEmail)) {
+        throw new Error('Ambassador email is invalid')
+      }
+      const partnerEmailValue = (form.assignedPartnerEmail || '').trim()
+      if (partnerEmailValue && !isValidEmail(partnerEmailValue)) {
+        throw new Error('Transformation partner email is invalid')
+      }
+
       setIsSubmitting(true)
       // Update core fields in Supabase. (The old Firebase updateOrganization +
       // cohort cascade are dead now that the Firebase DB was deleted.)
@@ -350,19 +458,68 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         pillar: form.pillar ?? null,
         teamSize: form.teamSize ?? null,
         programDurationMonths: form.programDuration ?? null,
-        partnerEmail: form.assignedPartnerEmail ?? null,
+        partnerEmail: partnerEmailValue || null,
         monthlyCourseAssignments: monthlyAssignments,
         courseAssignments: orderedCourseAssignments,
         courseAssignmentStructure: 'monthly',
         description: form.description ?? null,
       })
 
+      const failedAdds: string[] = []
+      let invitedNow = 0
+      let invitedPending = 0
+
+      // Leadership emails can be set/changed after the org already exists.
+      try {
+        await applyLeadershipEmail(organization.id, mentorEmail, 'mentor')
+      } catch (error) {
+        failedAdds.push(`mentor (${mentorEmail || 'empty'}): ${error instanceof Error ? error.message : 'failed'}`)
+      }
+      try {
+        await applyLeadershipEmail(organization.id, ambassadorEmail, 'ambassador')
+      } catch (error) {
+        failedAdds.push(
+          `ambassador (${ambassadorEmail || 'empty'}): ${error instanceof Error ? error.message : 'failed'}`,
+        )
+      }
+
+      for (const draft of inviteDrafts) {
+        const result = await inviteOrgMember(organization.id, draft.email, draft.role)
+        if (result.ok) {
+          if (result.status === 'enrolled') invitedNow += 1
+          else invitedPending += 1
+        } else {
+          failedAdds.push(`${draft.email}: ${result.error || 'failed'}`)
+        }
+      }
+
+      const inviteSummary =
+        inviteDrafts.length > 0 || mentorEmail.trim() || ambassadorEmail.trim()
+          ? [
+              invitedNow ? `${invitedNow} enrolled now` : null,
+              invitedPending ? `${invitedPending} pending signup` : null,
+              failedAdds.length ? `${failedAdds.length} failed` : null,
+            ]
+              .filter(Boolean)
+              .join(', ')
+          : `Cluster: ${clusterDisplayName}`
+
       toast({
-        title: 'Organization updated successfully',
-        description: `Cluster: ${clusterDisplayName}`,
-        status: 'success',
+        title: failedAdds.length ? 'Organization updated with some invite issues' : 'Organization updated successfully',
+        description: failedAdds.length
+          ? `${inviteSummary}. Failed: ${failedAdds.slice(0, 3).join('; ')}`
+          : inviteSummary,
+        status: failedAdds.length ? 'warning' : 'success',
+        duration: failedAdds.length ? 10000 : 5000,
+        isClosable: true,
       })
-      onUpdated?.({ ...form, id: organization.id })
+      onUpdated?.({
+        ...form,
+        id: organization.id,
+        assignedPartnerEmail: partnerEmailValue || undefined,
+        assignedMentorEmail: mentorEmail.trim() || undefined,
+        assignedAmbassadorEmail: ambassadorEmail.trim() || undefined,
+      })
       onClose()
     } catch (error) {
       toast({
@@ -411,59 +568,191 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               </Box>
 
               <Box borderWidth="1px" borderRadius="lg" p={4} bg="gray.50">
-                <Box>
-                  <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
-                    Members ({membersLoading ? '…' : members.length})
-                  </Text>
-                  {membersLoading ? (
-                    <Spinner size="sm" />
-                  ) : members.length ? (
-                    <Stack spacing={3}>
-                      {leadership.length > 0 && (
+                <Stack spacing={4}>
+                  <Box>
+                    <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
+                      Leadership team
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" mb={3}>
+                      Add or change partner, mentor, and ambassador emails after the organization is created.
+                      Existing accounts are linked immediately; new emails stay as pending invites until signup.
+                    </Text>
+                    <Grid templateColumns={{ base: '1fr', md: 'repeat(3, 1fr)' }} gap={3}>
+                      <FormControl>
+                        <FormLabel fontSize="sm">Transformation partner</FormLabel>
+                        <Input
+                          type="email"
+                          placeholder="partner@example.com"
+                          value={form.assignedPartnerEmail || ''}
+                          onChange={(e) => updateField('assignedPartnerEmail', e.target.value)}
+                          bg="white"
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel fontSize="sm">Mentor</FormLabel>
+                        <Input
+                          type="email"
+                          placeholder="mentor@example.com"
+                          value={mentorEmail}
+                          onChange={(e) => setMentorEmail(e.target.value)}
+                          bg="white"
+                        />
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel fontSize="sm">Ambassador</FormLabel>
+                        <Input
+                          type="email"
+                          placeholder="ambassador@example.com"
+                          value={ambassadorEmail}
+                          onChange={(e) => setAmbassadorEmail(e.target.value)}
+                          bg="white"
+                        />
+                      </FormControl>
+                    </Grid>
+                  </Box>
+
+                  <Box>
+                    <Text fontSize="xs" color="gray.500" textTransform="uppercase" mb={1}>
+                      Current members ({membersLoading ? '…' : members.length})
+                    </Text>
+                    {membersLoading ? (
+                      <Spinner size="sm" />
+                    ) : members.length ? (
+                      <Stack spacing={3}>
+                        {leadership.length > 0 && (
+                          <Box>
+                            <Text fontSize="sm" fontWeight="semibold" color="gray.700">
+                              Leadership
+                            </Text>
+                            <Flex wrap="wrap" gap={2} mt={1}>
+                              {leadership.map((m) => (
+                                <Badge key={m.id} colorScheme="purple" variant="subtle">
+                                  {m.name} · {formatMemberRole(m.role)}
+                                  {m.email ? ` · ${m.email}` : ''}
+                                </Badge>
+                              ))}
+                            </Flex>
+                          </Box>
+                        )}
                         <Box>
                           <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                            Leadership
+                            Learners ({learners.length})
                           </Text>
-                          <Flex wrap="wrap" gap={2} mt={1}>
-                            {leadership.map((m) => (
-                              <Badge key={m.id} colorScheme="purple" variant="subtle">
-                                {m.name} · {formatMemberRole(m.role)}
-                              </Badge>
-                            ))}
-                          </Flex>
+                          {learners.length ? (
+                            <Box maxH="180px" overflowY="auto" mt={1} borderWidth="1px" borderRadius="md" bg="white">
+                              <Table size="sm" variant="simple">
+                                <Tbody>
+                                  {learners.map((m) => (
+                                    <Tr key={m.id}>
+                                      <Td>{m.name}</Td>
+                                      <Td color="gray.600">{m.email}</Td>
+                                      <Td>{formatMemberRole(m.role)}</Td>
+                                    </Tr>
+                                  ))}
+                                </Tbody>
+                              </Table>
+                            </Box>
+                          ) : (
+                            <Text fontSize="sm" color="gray.500">
+                              No learners enrolled yet.
+                            </Text>
+                          )}
                         </Box>
-                      )}
-                      <Box>
-                        <Text fontSize="sm" fontWeight="semibold" color="gray.700">
-                          Learners ({learners.length})
-                        </Text>
-                        {learners.length ? (
-                          <Box maxH="180px" overflowY="auto" mt={1} borderWidth="1px" borderRadius="md">
-                            <Table size="sm" variant="simple">
-                              <Tbody>
-                                {learners.map((m) => (
-                                  <Tr key={m.id}>
-                                    <Td>{m.name}</Td>
-                                    <Td color="gray.600">{m.email}</Td>
-                                    <Td>{formatMemberRole(m.role)}</Td>
-                                  </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
-                          </Box>
-                        ) : (
-                          <Text fontSize="sm" color="gray.500">
-                            No learners enrolled yet.
-                          </Text>
-                        )}
-                      </Box>
-                    </Stack>
-                  ) : (
-                    <Text fontSize="sm" color="gray.500">
-                      No members belong to this organization yet.
+                      </Stack>
+                    ) : (
+                      <Text fontSize="sm" color="gray.500">
+                        No members belong to this organization yet.
+                      </Text>
+                    )}
+                  </Box>
+
+                  <Box borderWidth="1px" borderRadius="md" p={4} bg="white">
+                    <Text fontWeight="semibold" mb={3}>
+                      Add users
                     </Text>
-                  )}
-                </Box>
+                    <Grid
+                      templateColumns={{ base: '1fr', md: '2fr 1.4fr auto' }}
+                      gap={3}
+                      alignItems="start"
+                    >
+                      <FormControl isInvalid={Boolean(manualError)}>
+                        <FormLabel fontSize="sm">Email</FormLabel>
+                        <Input
+                          value={manualEmail}
+                          onChange={(e) => {
+                            setManualEmail(e.target.value)
+                            if (manualError) setManualError(null)
+                          }}
+                          placeholder="jane.doe@example.com"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              handleAddManualInvite()
+                            }
+                          }}
+                        />
+                        <FormErrorMessage>{manualError}</FormErrorMessage>
+                      </FormControl>
+                      <FormControl>
+                        <FormLabel fontSize="sm">Role</FormLabel>
+                        <Select
+                          value={manualRole}
+                          onChange={(e) => setManualRole(e.target.value as InviteRole)}
+                        >
+                          {inviteRoleOptions.map((role) => (
+                            <option key={role} value={role}>
+                              {formatInviteRoleLabel(role)}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Box>
+                        <FormLabel display={{ base: 'none', md: 'flex' }} opacity={0} aria-hidden>
+                          Add
+                        </FormLabel>
+                        <Button colorScheme="purple" onClick={handleAddManualInvite} w={{ base: 'full', md: 'auto' }}>
+                          Add user
+                        </Button>
+                      </Box>
+                    </Grid>
+
+                    {inviteDrafts.length > 0 && (
+                      <Box mt={4}>
+                        <Text fontSize="sm" fontWeight="semibold" mb={2}>
+                          Users to add on save ({inviteDrafts.length})
+                        </Text>
+                        <Stack spacing={2}>
+                          {inviteDrafts.map((draft) => (
+                            <Flex
+                              key={draft.id}
+                              justify="space-between"
+                              align="center"
+                              borderWidth="1px"
+                              borderRadius="md"
+                              px={3}
+                              py={2}
+                            >
+                              <HStack spacing={3}>
+                                <Text fontSize="sm">{draft.email}</Text>
+                                <Badge colorScheme="blue" variant="subtle">
+                                  {formatInviteRoleLabel(draft.role)}
+                                </Badge>
+                              </HStack>
+                              <IconButton
+                                aria-label="Remove user"
+                                icon={<Trash2 size={14} />}
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="red"
+                                onClick={() => removeInviteDraft(draft.id)}
+                              />
+                            </Flex>
+                          ))}
+                        </Stack>
+                      </Box>
+                    )}
+                  </Box>
+                </Stack>
               </Box>
 
               <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
@@ -505,17 +794,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   <FormControl>
                     <FormLabel>Village</FormLabel>
                     <Input value={form.village} onChange={(e) => updateField('village', e.target.value)} />
-                  </FormControl>
-                </GridItem>
-                <GridItem>
-                  <FormControl>
-                    <FormLabel>Transformation partner email</FormLabel>
-                    <Input
-                      type="email"
-                      placeholder="partner@example.com"
-                      value={form.assignedPartnerEmail || ''}
-                      onChange={(e) => updateField('assignedPartnerEmail', e.target.value)}
-                    />
                   </FormControl>
                 </GridItem>
                 <GridItem>

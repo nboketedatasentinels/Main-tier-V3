@@ -35,8 +35,6 @@ import {
   Skeleton,
   SkeletonText,
   Stack,
-  Tag,
-  TagLabel,
   Text,
   Textarea,
   useDisclosure,
@@ -44,7 +42,7 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react'
-import { ArrowLeft, BellRing, ChevronDown, ChevronUp, Search, User } from 'lucide-react'
+import { ArrowLeft, BellRing, Search, User } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { StatusBadge } from '@/components/admin/StatusBadge'
 import { useAuth } from '@/hooks/useAuth'
@@ -52,7 +50,7 @@ import { useOrganizationDetails } from '@/hooks/useOrganizationDetails'
 import { logAdminAction } from '@/services/superAdminService'
 import { createIntervention } from '@/services/partnerInterventionsService'
 import { notifySupabaseUser } from '@/services/notificationService'
-import type { OrganizationUserProfile } from '@/types/admin'
+import type { OrganizationInvitationProfile, OrganizationUserProfile } from '@/types/admin'
 import {
   addDays,
   addMonths,
@@ -101,14 +99,6 @@ const deriveProgramDates = (org?: {
   return { start: startIso, end: endDate.toISOString() }
 }
 
-const getInvitationStatusColor = (status?: string) => {
-  const normalized = (status || '').toLowerCase()
-  if (normalized === 'pending') return 'yellow'
-  if (normalized === 'accepted' || normalized === 'completed') return 'green'
-  if (normalized === 'declined' || normalized === 'revoked') return 'red'
-  return 'gray'
-}
-
 // Preset issues an admin can flag when asking a partner to follow up on a
 // learner. Mirrors the at-risk signals the partner dashboard already tracks
 // (inactivity, points shortfall, stalled progress) so the two sides speak the
@@ -124,9 +114,13 @@ const FOLLOW_UP_ISSUES = [
   'Needs encouragement',
 ]
 
-const invitationPageSize = 10
+const usersPageSize = 10
 
-const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+type OrgUserListFilter = 'all' | 'pending' | 'active'
+
+type OrgUserListRow =
+  | { kind: 'active'; id: string; user: OrganizationUserProfile }
+  | { kind: 'pending'; id: string; invite: OrganizationInvitationProfile }
 
 export const OrganizationDetailPage: React.FC = () => {
   const { organizationId } = useParams()
@@ -137,37 +131,18 @@ export const OrganizationDetailPage: React.FC = () => {
 
   const {
     organization,
+    users,
     courseTitles,
     loading,
     error,
     reload,
-    searchQuery,
-    setSearchQuery,
-    debouncedSearch,
-    roleFilter,
-    setRoleFilter,
-    membershipFilter,
-    setMembershipFilter,
-    accountStatusFilter,
-    setAccountStatusFilter,
-    sortKey,
-    sortDirection,
-    handleSort,
-    page,
-    setPage,
-    pageCount,
-    pageSize,
-    paginatedUsers,
     invitations,
     statistics,
     totalCount,
-    filteredCount,
-    activeFilters,
-    clearFilters,
   } = useOrganizationDetails(organizationId)
-  const [invitationSearchQuery, setInvitationSearchQuery] = useState('')
-  const [invitationStatusFilter, setInvitationStatusFilter] = useState('pending')
-  const [invitationPage, setInvitationPage] = useState(1)
+  const [usersSearchQuery, setUsersSearchQuery] = useState('')
+  const [usersStatusFilter, setUsersStatusFilter] = useState<OrgUserListFilter>('all')
+  const [usersPage, setUsersPage] = useState(1)
 
   useEffect(() => {
     if (error !== 'unauthorized' || unauthorizedLogged.current) return
@@ -313,9 +288,9 @@ export const OrganizationDetailPage: React.FC = () => {
     }
   }
 
-  const clearInvitationFilters = () => {
-    setInvitationSearchQuery('')
-    setInvitationStatusFilter('pending')
+  const clearUsersFilters = () => {
+    setUsersSearchQuery('')
+    setUsersStatusFilter('all')
   }
 
   const programDates = useMemo(
@@ -333,57 +308,63 @@ export const OrganizationDetailPage: React.FC = () => {
     [organization],
   )
 
-  const matchRegex = useMemo(() => {
-    if (!debouncedSearch) return null
-    return new RegExp(`(${escapeRegExp(debouncedSearch)})`, 'ig')
-  }, [debouncedSearch])
-
-  const highlightMatch = (value: string) => {
-    if (!matchRegex) return value
-    return value.split(matchRegex).map((part, index) => {
-      if (part.toLowerCase() === debouncedSearch.toLowerCase()) {
-        return (
-          <Box as="mark" key={`${part}-${index}`} bg="yellow.100" color="inherit" px={1} borderRadius="sm">
-            {part}
-          </Box>
-        )
-      }
-      return <Box as="span" key={`${part}-${index}`}>{part}</Box>
-    })
-  }
-
-  const startIndex = Math.min((page - 1) * pageSize + 1, filteredCount || 0)
-  const endIndex = Math.min(page * pageSize, filteredCount || 0)
   const pendingInvitationCount = useMemo(
     () => invitations.filter((invite) => (invite.status || '').toLowerCase() === 'pending').length,
     [invitations],
   )
-  const filteredInvitations = useMemo(() => {
-    const search = invitationSearchQuery.trim().toLowerCase()
-    return invitations.filter((invite) => {
-      const matchesSearch =
-        !search ||
-        (invite.name || '').toLowerCase().includes(search) ||
-        (invite.email || '').toLowerCase().includes(search) ||
-        (invite.code || '').toLowerCase().includes(search)
-      const matchesStatus = invitationStatusFilter === 'all' || (invite.status || '').toLowerCase() === invitationStatusFilter
-      return matchesSearch && matchesStatus
+
+  // Unified org roster: active = enrolled profiles; pending invite = invited
+  // emails that have never signed up (already de-duped against members in the hook).
+  const userListRows = useMemo<OrgUserListRow[]>(() => {
+    const activeRows: OrgUserListRow[] = users.map((member) => ({
+      kind: 'active',
+      id: `active-${member.id}`,
+      user: member,
+    }))
+    const pendingRows: OrgUserListRow[] = invitations
+      .filter((invite) => (invite.status || '').toLowerCase() === 'pending')
+      .map((invite) => ({
+        kind: 'pending',
+        id: `pending-${invite.id}`,
+        invite,
+      }))
+    return [...activeRows, ...pendingRows]
+  }, [invitations, users])
+
+  const filteredUserListRows = useMemo(() => {
+    const search = usersSearchQuery.trim().toLowerCase()
+    return userListRows.filter((row) => {
+      if (usersStatusFilter === 'active' && row.kind !== 'active') return false
+      if (usersStatusFilter === 'pending' && row.kind !== 'pending') return false
+
+      if (!search) return true
+      if (row.kind === 'active') {
+        return (
+          (row.user.name || '').toLowerCase().includes(search) ||
+          (row.user.email || '').toLowerCase().includes(search)
+        )
+      }
+      return (
+        (row.invite.name || '').toLowerCase().includes(search) ||
+        (row.invite.email || '').toLowerCase().includes(search) ||
+        (row.invite.code || '').toLowerCase().includes(search)
+      )
     })
-  }, [invitationSearchQuery, invitationStatusFilter, invitations])
-  const invitationPageCount = Math.max(1, Math.ceil(filteredInvitations.length / invitationPageSize))
-  const currentInvitationPage = Math.min(invitationPage, invitationPageCount)
-  const paginatedInvitations = useMemo(() => {
-    const start = (currentInvitationPage - 1) * invitationPageSize
-    return filteredInvitations.slice(start, start + invitationPageSize)
-  }, [currentInvitationPage, filteredInvitations])
-  const invitationStartIndex = Math.min((currentInvitationPage - 1) * invitationPageSize + 1, filteredInvitations.length || 0)
-  const invitationEndIndex = Math.min(currentInvitationPage * invitationPageSize, filteredInvitations.length || 0)
-  const invitationFiltersActive =
-    invitationSearchQuery.trim().length > 0 || invitationStatusFilter !== 'pending'
+  }, [userListRows, usersSearchQuery, usersStatusFilter])
+
+  const usersPageCount = Math.max(1, Math.ceil(filteredUserListRows.length / usersPageSize))
+  const currentUsersPage = Math.min(usersPage, usersPageCount)
+  const paginatedUserListRows = useMemo(() => {
+    const start = (currentUsersPage - 1) * usersPageSize
+    return filteredUserListRows.slice(start, start + usersPageSize)
+  }, [currentUsersPage, filteredUserListRows])
+  const usersStartIndex = Math.min((currentUsersPage - 1) * usersPageSize + 1, filteredUserListRows.length || 0)
+  const usersEndIndex = Math.min(currentUsersPage * usersPageSize, filteredUserListRows.length || 0)
+  const usersFiltersActive = usersSearchQuery.trim().length > 0 || usersStatusFilter !== 'all'
 
   useEffect(() => {
-    setInvitationPage(1)
-  }, [invitationSearchQuery, invitationStatusFilter])
+    setUsersPage(1)
+  }, [usersSearchQuery, usersStatusFilter])
 
   if (error && error !== 'unauthorized') {
     const title =
@@ -483,7 +464,7 @@ export const OrganizationDetailPage: React.FC = () => {
                       },
                       {
                         label: 'Pending invites',
-                        value: `${invitations.filter((invite) => (invite.status || '').toLowerCase() === 'pending').length}`,
+                        value: `${pendingInvitationCount}`,
                       },
                       {
                         label: 'Cohort size',
@@ -618,20 +599,22 @@ export const OrganizationDetailPage: React.FC = () => {
               <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
                 <Stack spacing={1}>
                   <Text fontWeight="bold" color="brand.text">
-                    Pending invitations ({filteredInvitations.length})
+                    Users ({filteredUserListRows.length})
                   </Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    Showing {invitationStartIndex}-{invitationEndIndex} of {filteredInvitations.length} invites.
+                    Showing {usersStartIndex}-{usersEndIndex} of {filteredUserListRows.length} users.
                   </Text>
                 </Stack>
                 <HStack spacing={2}>
                   <Badge colorScheme={pendingInvitationCount > 0 ? 'yellow' : 'gray'}>
-                    {pendingInvitationCount > 0 ? `${pendingInvitationCount} action needed` : 'No pending invites'}
+                    {pendingInvitationCount > 0
+                      ? `${pendingInvitationCount} pending invite${pendingInvitationCount === 1 ? '' : 's'}`
+                      : 'No pending invites'}
                   </Badge>
                   <Button
                     variant="outline"
-                    onClick={clearInvitationFilters}
-                    isDisabled={!invitationFiltersActive}
+                    onClick={clearUsersFilters}
+                    isDisabled={!usersFiltersActive}
                   >
                     Clear filters
                   </Button>
@@ -645,18 +628,20 @@ export const OrganizationDetailPage: React.FC = () => {
                       <Search size={16} />
                     </InputLeftElement>
                     <Input
-                      placeholder="Search by invitee, email, or code"
-                      value={invitationSearchQuery}
-                      onChange={(event) => setInvitationSearchQuery(event.target.value)}
+                      placeholder="Search by name, email, or code"
+                      value={usersSearchQuery}
+                      onChange={(event) => setUsersSearchQuery(event.target.value)}
                       bg="white"
                     />
                   </InputGroup>
                 </GridItem>
                 <Select
-                  value={invitationStatusFilter}
-                  onChange={(event) => setInvitationStatusFilter(event.target.value)}
+                  value={usersStatusFilter}
+                  onChange={(event) => setUsersStatusFilter(event.target.value as OrgUserListFilter)}
                 >
-                  <option value="pending">Pending</option>
+                  <option value="all">All users</option>
+                  <option value="pending">Pending invite</option>
+                  <option value="active">Active</option>
                 </Select>
               </Grid>
 
@@ -668,334 +653,154 @@ export const OrganizationDetailPage: React.FC = () => {
                     <Skeleton key={index} height="52px" borderRadius="md" />
                   ))}
                 </Stack>
-              ) : paginatedInvitations.length ? (
+              ) : paginatedUserListRows.length ? (
                 <Box overflowX="auto">
-                  <Box minW="820px">
-                    <Grid templateColumns="2fr 2fr 1fr 1fr 1fr 1fr" gap={2} pb={2}>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Invitee</Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Email / Code</Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Role</Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Method</Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Status</Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>Sent</Text>
-                    </Grid>
-
-                    <Stack spacing={2}>
-                      {paginatedInvitations.map((invite) => (
-                        <Grid
-                          key={invite.id}
-                          templateColumns="2fr 2fr 1fr 1fr 1fr 1fr"
-                          gap={2}
-                          p={3}
-                          borderRadius="md"
-                          border="1px solid"
-                          borderColor="brand.border"
-                          bg="brand.accent"
-                          alignItems="center"
-                        >
-                          <Text fontWeight="semibold" color="brand.text">{invite.name || 'Invited user'}</Text>
-                          <Stack spacing={0}>
-                            <Text color="brand.text">{invite.email || 'No email provided'}</Text>
-                            {invite.method === 'one_time_code' && invite.code ? (
-                              <Text fontSize="xs" color="brand.subtleText">Code: {invite.code}</Text>
-                            ) : null}
-                          </Stack>
-                          <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
-                            {(invite.role || 'user').replace('_', ' ')}
-                          </Badge>
-                          <Badge colorScheme={invite.method === 'email' ? 'purple' : 'orange'} variant="subtle">
-                            {invite.method === 'email' ? 'Email' : 'One-time code'}
-                          </Badge>
-                          <Badge colorScheme={getInvitationStatusColor(invite.status)} variant="subtle" textTransform="capitalize">
-                            {invite.status || 'pending'}
-                          </Badge>
-                          <Stack spacing={0}>
-                            <Text fontSize="sm" color="brand.subtleText">{formatDateTime(invite.createdAt || null)}</Text>
-                            {invite.expiresAt ? (
-                              <Text fontSize="xs" color="brand.subtleText">
-                                Expires {formatDateTime(invite.expiresAt)}
-                              </Text>
-                            ) : null}
-                          </Stack>
-                        </Grid>
-                      ))}
-                    </Stack>
-                  </Box>
-                </Box>
-              ) : (
-                <Box p={4} borderRadius="md" border="1px dashed" borderColor="brand.border">
-                  <Text color="brand.subtleText">
-                    {pendingInvitationCount === 0
-                      ? 'No pending invitations for this organization.'
-                      : 'No pending invitations match the current search or filters.'}
-                  </Text>
-                </Box>
-              )}
-
-              <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Showing {invitationStartIndex}-{invitationEndIndex} of {filteredInvitations.length} invites
-                </Text>
-                <HStack spacing={2}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setInvitationPage(currentInvitationPage - 1)}
-                    isDisabled={currentInvitationPage <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <Select
-                    size="sm"
-                    value={currentInvitationPage}
-                    onChange={(event) => setInvitationPage(Number(event.target.value))}
-                    width="auto"
-                  >
-                    {Array.from({ length: invitationPageCount }).map((_, index) => (
-                      <option key={index} value={index + 1}>
-                        Page {index + 1}
-                      </option>
-                    ))}
-                  </Select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setInvitationPage(currentInvitationPage + 1)}
-                    isDisabled={currentInvitationPage >= invitationPageCount}
-                  >
-                    Next
-                  </Button>
-                </HStack>
-              </Flex>
-            </Stack>
-          </CardBody>
-        </Card>
-
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody py={4}>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
-                <Stack spacing={1}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Users ({filteredCount} of {totalCount})
-                  </Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Showing {startIndex}-{endIndex} of {filteredCount} users
-                  </Text>
-                </Stack>
-                <Button variant="outline" onClick={clearFilters} isDisabled={!activeFilters.length}>
-                  Clear filters
-                </Button>
-              </HStack>
-
-              <Grid templateColumns={{ base: '1fr', md: '2fr 1fr 1fr 1fr' }} gap={3}>
-                <GridItem colSpan={{ base: 1, md: 1 }}>
-                  <InputGroup>
-                    <InputLeftElement pointerEvents="none">
-                      <Search size={16} />
-                    </InputLeftElement>
-                    <Input
-                      placeholder="Search by name or email"
-                      value={searchQuery}
-                      onChange={(event) => setSearchQuery(event.target.value)}
-                      bg="white"
-                    />
-                  </InputGroup>
-                </GridItem>
-                <Select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as typeof roleFilter)}>
-                  <option value="all">All roles</option>
-                  <option value="user">User</option>
-                  <option value="mentor">Mentor</option>
-                  <option value="ambassador">Ambassador</option>
-                  <option value="partner">Partner</option>
-                </Select>
-                <Select
-                  value={membershipFilter}
-                  onChange={(event) => setMembershipFilter(event.target.value as typeof membershipFilter)}
-                >
-                  <option value="all">All memberships</option>
-                  <option value="free">Free</option>
-                  <option value="paid">Paid</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-                <Select
-                  value={accountStatusFilter}
-                  onChange={(event) => setAccountStatusFilter(event.target.value as typeof accountStatusFilter)}
-                >
-                  <option value="all">All accounts</option>
-                  <option value="active">Active</option>
-                  <option value="suspended">Suspended</option>
-                </Select>
-              </Grid>
-
-              {activeFilters.length ? (
-                <HStack spacing={2} wrap="wrap">
-                  {activeFilters.map((filter) => (
-                    <Tag key={`${filter.label}-${filter.value}`} colorScheme="purple" borderRadius="full">
-                      <TagLabel>{filter.label}: {filter.value}</TagLabel>
-                    </Tag>
-                  ))}
-                </HStack>
-              ) : null}
-
-              <Divider />
-
-              {loading ? (
-                <Stack spacing={3}>
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <Skeleton key={index} height="52px" borderRadius="md" />
-                  ))}
-                </Stack>
-              ) : paginatedUsers.length ? (
-                <Box overflowX="auto">
-                  <Box minW="1080px">
-                    <Grid templateColumns="2fr 2fr 1fr 1fr 1fr 1fr 1fr 1.6fr" gap={2} pb={2}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('name')}
-                        rightIcon={sortKey === 'name' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
+                  <Box minW="920px">
+                    <Grid templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr" gap={2} pb={2}>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
                         User
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('email')}
-                        rightIcon={sortKey === 'email' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
-                        Email
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('role')}
-                        rightIcon={sortKey === 'role' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+                        Email / Code
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
                         Role
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('membershipStatus')}
-                        rightIcon={sortKey === 'membershipStatus' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
-                        Membership
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('accountStatus')}
-                        rightIcon={sortKey === 'accountStatus' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
-                        Account
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('points')}
-                        rightIcon={sortKey === 'points' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
-                        Score
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        justifyContent="flex-start"
-                        onClick={() => handleSort('lastActive')}
-                        rightIcon={sortKey === 'lastActive' ? sortDirection === 'asc' ? <ChevronUp size={14} /> : <ChevronDown size={14} /> : undefined}
-                      >
-                        Last active
-                      </Button>
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+                        Status
+                      </Text>
+                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+                        Added
+                      </Text>
                       <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
                         Actions
                       </Text>
                     </Grid>
 
                     <Stack spacing={2}>
-                      {paginatedUsers.map((userRow) => (
-                        <Grid
-                          key={userRow.id}
-                          templateColumns="2fr 2fr 1fr 1fr 1fr 1fr 1fr 1.6fr"
-                          gap={2}
-                          p={3}
-                          borderRadius="md"
-                          border="1px solid"
-                          borderColor="brand.border"
-                          bg="brand.accent"
-                          alignItems="center"
-                        >
-                          <HStack spacing={3}>
-                            <Box
-                              w={8}
-                              h={8}
-                              borderRadius="full"
-                              bg="white"
+                      {paginatedUserListRows.map((row) => {
+                        if (row.kind === 'pending') {
+                          const invite = row.invite
+                          return (
+                            <Grid
+                              key={row.id}
+                              templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr"
+                              gap={2}
+                              p={3}
+                              borderRadius="md"
                               border="1px solid"
                               borderColor="brand.border"
-                              display="flex"
+                              bg="brand.accent"
                               alignItems="center"
-                              justifyContent="center"
                             >
-                              <User size={16} />
-                            </Box>
-                            <Stack spacing={0}>
-                              <Text fontWeight="semibold" color="brand.text">
-                                {highlightMatch(userRow.name || 'No name')}
+                              <HStack spacing={3}>
+                                <Box
+                                  w={8}
+                                  h={8}
+                                  borderRadius="full"
+                                  bg="white"
+                                  border="1px solid"
+                                  borderColor="brand.border"
+                                  display="flex"
+                                  alignItems="center"
+                                  justifyContent="center"
+                                >
+                                  <User size={16} />
+                                </Box>
+                                <Text fontWeight="semibold" color="brand.text">
+                                  {invite.name || 'Invited user'}
+                                </Text>
+                              </HStack>
+                              <Stack spacing={0}>
+                                <Text color="brand.text">{invite.email || 'No email provided'}</Text>
+                                {invite.method === 'one_time_code' && invite.code ? (
+                                  <Text fontSize="xs" color="brand.subtleText">
+                                    Code: {invite.code}
+                                  </Text>
+                                ) : null}
+                              </Stack>
+                              <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
+                                {(invite.role || 'user').replace('_', ' ')}
+                              </Badge>
+                              <Badge colorScheme="yellow" variant="subtle">
+                                Pending invite
+                              </Badge>
+                              <Text fontSize="sm" color="brand.subtleText">
+                                {formatDateTime(invite.createdAt || null)}
                               </Text>
-                              <Text fontSize="xs" color="brand.subtleText">{userRow.role}</Text>
-                            </Stack>
-                          </HStack>
-                          <Text color="brand.text">{highlightMatch(userRow.email || 'No email')}</Text>
-                          <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
-                            {userRow.role.replace('_', ' ')}
-                          </Badge>
-                          <Badge colorScheme={userRow.membershipStatus === 'paid' ? 'green' : 'gray'} textTransform="capitalize">
-                            {userRow.membershipStatus}
-                          </Badge>
-                          <Badge colorScheme={userRow.accountStatus === 'active' ? 'green' : 'red'} textTransform="capitalize">
-                            {userRow.accountStatus}
-                          </Badge>
-                          <Text fontSize="sm" fontWeight="semibold" color="brand.text">
-                            {(userRow.points ?? 0).toLocaleString()}
-                          </Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            {formatDateTime(userRow.lastActive)}
-                          </Text>
-                          <HStack spacing={2}>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleViewUser(userRow.id)}
-                            >
-                              View user
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              colorScheme="orange"
-                              leftIcon={<BellRing size={14} />}
-                              onClick={() => openFollowUp(userRow)}
-                            >
-                              Follow-up
-                            </Button>
-                          </HStack>
-                        </Grid>
-                      ))}
+                              <Text fontSize="sm" color="brand.subtleText">
+                                Awaiting signup
+                              </Text>
+                            </Grid>
+                          )
+                        }
+
+                        const userRow = row.user
+                        return (
+                          <Grid
+                            key={row.id}
+                            templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr"
+                            gap={2}
+                            p={3}
+                            borderRadius="md"
+                            border="1px solid"
+                            borderColor="brand.border"
+                            bg="brand.accent"
+                            alignItems="center"
+                          >
+                            <HStack spacing={3}>
+                              <Box
+                                w={8}
+                                h={8}
+                                borderRadius="full"
+                                bg="white"
+                                border="1px solid"
+                                borderColor="brand.border"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
+                              >
+                                <User size={16} />
+                              </Box>
+                              <Text fontWeight="semibold" color="brand.text">
+                                {userRow.name || 'No name'}
+                              </Text>
+                            </HStack>
+                            <Text color="brand.text">{userRow.email || 'No email'}</Text>
+                            <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
+                              {userRow.role.replace('_', ' ')}
+                            </Badge>
+                            <Badge colorScheme="green" variant="subtle">
+                              Active
+                            </Badge>
+                            <Text fontSize="sm" color="brand.subtleText">
+                              {formatDateTime(userRow.createdAt || null)}
+                            </Text>
+                            <HStack spacing={2}>
+                              <Button size="sm" variant="outline" onClick={() => handleViewUser(userRow.id)}>
+                                View user
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                colorScheme="orange"
+                                leftIcon={<BellRing size={14} />}
+                                onClick={() => openFollowUp(userRow)}
+                              >
+                                Follow-up
+                              </Button>
+                            </HStack>
+                          </Grid>
+                        )
+                      })}
                     </Stack>
                   </Box>
                 </Box>
               ) : (
                 <Box p={4} borderRadius="md" border="1px dashed" borderColor="brand.border">
                   <Text color="brand.subtleText">
-                    {totalCount === 0
-                      ? 'No users belong to this organization yet.'
+                    {userListRows.length === 0
+                      ? 'No users have been added to this organization yet.'
                       : 'No users match the current search or filters.'}
                   </Text>
                 </Box>
@@ -1003,24 +808,24 @@ export const OrganizationDetailPage: React.FC = () => {
 
               <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
                 <Text fontSize="sm" color="brand.subtleText">
-                  Showing {startIndex}-{endIndex} of {filteredCount} users
+                  Showing {usersStartIndex}-{usersEndIndex} of {filteredUserListRows.length} users
                 </Text>
                 <HStack spacing={2}>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setPage(page - 1)}
-                    isDisabled={page <= 1}
+                    onClick={() => setUsersPage(currentUsersPage - 1)}
+                    isDisabled={currentUsersPage <= 1}
                   >
                     Previous
                   </Button>
                   <Select
                     size="sm"
-                    value={page}
-                    onChange={(event) => setPage(Number(event.target.value))}
+                    value={currentUsersPage}
+                    onChange={(event) => setUsersPage(Number(event.target.value))}
                     width="auto"
                   >
-                    {Array.from({ length: pageCount }).map((_, index) => (
+                    {Array.from({ length: usersPageCount }).map((_, index) => (
                       <option key={index} value={index + 1}>
                         Page {index + 1}
                       </option>
@@ -1029,8 +834,8 @@ export const OrganizationDetailPage: React.FC = () => {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setPage(page + 1)}
-                    isDisabled={page >= pageCount}
+                    onClick={() => setUsersPage(currentUsersPage + 1)}
+                    isDisabled={currentUsersPage >= usersPageCount}
                   >
                     Next
                   </Button>

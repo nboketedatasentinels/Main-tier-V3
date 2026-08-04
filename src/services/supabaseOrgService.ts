@@ -377,7 +377,48 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
   if (patch.journeyType !== undefined) updates.journey_type = patch.journeyType
   if (patch.programDurationWeeks !== undefined) updates.program_duration_weeks = patch.programDurationWeeks
   if (patch.cohortStartDate !== undefined) updates.cohort_start_date = patch.cohortStartDate || null
-  updates.settings = buildSettings(patch)
+
+  // Merge settings so we do not wipe unrelated keys (e.g. archived) when the
+  // edit modal only supplies a subset of OrgWriteExtras.
+  const { data: current, error: readError } = await supabase
+    .from('organizations')
+    .select('settings')
+    .eq('id', id)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
+  const existingSettings = ((current?.settings as Record<string, unknown> | null) ?? {}) as Record<string, unknown>
+  const nextExtras: OrgWriteExtras = {
+    village: patch.village !== undefined ? patch.village : ((existingSettings.village as string | null) ?? null),
+    cluster: patch.cluster !== undefined ? patch.cluster : ((existingSettings.cluster as string | null) ?? null),
+    pillar: patch.pillar !== undefined ? patch.pillar : ((existingSettings.pillar as string | null) ?? null),
+    teamSize: patch.teamSize !== undefined ? patch.teamSize : ((existingSettings.teamSize as number | null) ?? null),
+    programDurationMonths:
+      patch.programDurationMonths !== undefined
+        ? patch.programDurationMonths
+        : ((existingSettings.programDurationMonths as number | null) ?? null),
+    partnerEmail:
+      patch.partnerEmail !== undefined
+        ? patch.partnerEmail
+        : ((existingSettings.partnerEmail as string | null) ?? null),
+    description:
+      patch.description !== undefined
+        ? patch.description
+        : ((existingSettings.description as string | null) ?? null),
+    monthlyCourseAssignments:
+      patch.monthlyCourseAssignments !== undefined
+        ? patch.monthlyCourseAssignments
+        : ((existingSettings.monthlyCourseAssignments as Record<string, string> | null) ?? null),
+    courseAssignments:
+      patch.courseAssignments !== undefined
+        ? patch.courseAssignments
+        : ((existingSettings.courseAssignments as string[] | null) ?? null),
+    courseAssignmentStructure:
+      patch.courseAssignmentStructure !== undefined
+        ? patch.courseAssignmentStructure
+        : ((existingSettings.courseAssignmentStructure as 'monthly' | 'array' | null) ?? null),
+  }
+  updates.settings = { ...existingSettings, ...buildSettings(nextExtras) }
+
   const { data, error } = await supabase
     .from('organizations')
     .update(updates)
@@ -385,7 +426,54 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
     .select('*')
     .single()
   if (error) throw new Error(error.message)
+
+  // Same partner auto-link behavior as createOrganization: if the partner email
+  // already has an account, promote + link them now so Edit can assign partners
+  // after the org already exists.
+  if (patch.partnerEmail !== undefined) {
+    const partnerEmail = patch.partnerEmail?.trim().toLowerCase() || ''
+    if (partnerEmail) {
+      try {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('email', partnerEmail)
+          .maybeSingle()
+        if (profile?.id) {
+          await assignPartnerToOrg(id, profile.id as string)
+          const { data: fresh } = await supabase.from('organizations').select('*').eq('id', id).single()
+          if (fresh) return mapOrg(fresh as Raw)
+        } else {
+          void dispatchWelcomeEmail({
+            to: partnerEmail,
+            name: null,
+            role: 'partner',
+            organizationName: (data as Raw).name as string,
+          })
+        }
+      } catch (linkError) {
+        console.warn('[updateOrganization] partner email auto-link skipped', linkError)
+      }
+    }
+  }
+
   return mapOrg(data as Raw)
+}
+
+/**
+ * Resolve a profile id by email (case-insensitive). Used by Edit Organization
+ * to assign mentors/ambassadors who already have accounts.
+ */
+export const findProfileIdByEmail = async (email: string): Promise<string | null> => {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return null
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .ilike('email', normalized)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  return (data?.id as string | undefined) ?? null
 }
 
 /**
