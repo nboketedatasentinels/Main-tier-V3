@@ -34,6 +34,13 @@ interface TestResultPickerProps {
   maxSelections?: number
   isDisabled?: boolean
   isSaving?: boolean
+  /**
+   * Soft lock (e.g. waiting for the 1-hour test cooldown). Field stays clickable
+   * so we can show a "finish your test / wait X minutes" message instead of
+   * silently disabling.
+   */
+  isLocked?: boolean
+  onLockedAttempt?: () => void
 }
 
 /**
@@ -51,6 +58,8 @@ export const TestResultPicker = ({
   maxSelections,
   isDisabled,
   isSaving,
+  isLocked,
+  onLockedAttempt,
 }: TestResultPickerProps) => {
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -80,8 +89,12 @@ export const TestResultPicker = ({
     return `${selected.length} selected`
   }, [labelByValue, selected])
 
-  const open = () => {
+  const tryOpen = () => {
     if (isDisabled || isSaving) return
+    if (isLocked) {
+      onLockedAttempt?.()
+      return
+    }
     setIsOpen(true)
     // Highlight whatever is already showing so the first keystroke replaces it.
     // Without this, typing appends to "INTJ - The Architect" and matches nothing.
@@ -135,14 +148,24 @@ export const TestResultPicker = ({
             // actually saved, so the full name is always visible when settled.
             value={isTyping ? query : settledLabel}
             isDisabled={isDisabled || isSaving}
-            onFocus={open}
-            onClick={open}
+            readOnly={Boolean(isLocked)}
+            onFocus={tryOpen}
+            onClick={tryOpen}
             onChange={event => {
+              if (isLocked) {
+                onLockedAttempt?.()
+                return
+              }
               setQuery(event.target.value)
               setIsTyping(true)
               setIsOpen(true)
             }}
             onKeyDown={event => {
+              if (isLocked) {
+                event.preventDefault()
+                onLockedAttempt?.()
+                return
+              }
               if (event.key === 'Escape') {
                 close()
                 return
@@ -154,7 +177,7 @@ export const TestResultPicker = ({
             }}
           />
           <InputRightElement w={6} pointerEvents="none">
-            <Box as={ChevronDown} w={3} h={3} color="gray.500" />
+            <Box as={ChevronDown} w={3} h={3} color={isLocked ? 'gray.400' : 'gray.500'} />
           </InputRightElement>
         </InputGroup>
       </PopoverAnchor>

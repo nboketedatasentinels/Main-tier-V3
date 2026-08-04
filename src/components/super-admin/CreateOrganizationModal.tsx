@@ -68,7 +68,7 @@ import {
   fetchAvailableCourses,
   generateOrganizationCode,
 } from '@/services/organizationService'
-import { createOrganization as createSupabaseOrganization, inviteOrgMember } from '@/services/supabaseOrgService'
+import { createOrganization as createSupabaseOrganization, inviteOrgMember, assertEmailAvailableForRole, roleConflictBucket, formatRoleConflictLabel } from '@/services/supabaseOrgService'
 import { InvitationResultsModal } from './InvitationResultsModal'
 import {
   MonthlyCourseAssignments,
@@ -560,6 +560,36 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         throw new Error('Resolve invitation errors before submitting.')
       }
 
+      const partnerEmailNormalized = partnerEmail.trim().toLowerCase()
+      if (partnerEmailNormalized && !emailRegex.test(partnerEmailNormalized)) {
+        throw new Error('Transformation partner email is invalid')
+      }
+
+      // Block same-form conflicts (e.g. partner email also invited as User).
+      if (partnerEmailNormalized) {
+        const conflictDraft = inviteDrafts.find(
+          (draft) =>
+            draft.isValid &&
+            draft.email.trim().toLowerCase() === partnerEmailNormalized &&
+            roleConflictBucket(draft.role) !== 'partner',
+        )
+        if (conflictDraft) {
+          throw new Error(
+            `${partnerEmailNormalized} is listed as ${formatRoleConflictLabel(conflictDraft.role)} in User addition. ` +
+              `Don't use this email for a different role (Partner).`,
+          )
+        }
+      }
+
+      // Preflight role conflicts against existing accounts / pending invites
+      // before creating the org, so the admin sees a clear error immediately.
+      if (partnerEmailNormalized) {
+        await assertEmailAvailableForRole(partnerEmailNormalized, 'partner')
+      }
+      for (const draft of inviteDrafts.filter((d) => d.isValid && d.email.trim())) {
+        await assertEmailAvailableForRole(draft.email, draft.role)
+      }
+
       setIsSubmitting(true)
 
       // Create the organization in Supabase. (The old Firebase path hung under
@@ -626,7 +656,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         } else {
           // Never let a failed invite hide behind a green toast: collect it so
           // the admin is told exactly which emails did not get added.
-          failedInvites.push(draft.email)
+          failedInvites.push(
+            result.error
+              ? `${draft.email} (${result.error})`
+              : draft.email,
+          )
           console.warn('[CreateOrganizationModal] invite failed', draft.email, result.error)
         }
       }

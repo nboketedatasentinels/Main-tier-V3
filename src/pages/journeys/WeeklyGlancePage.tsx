@@ -4,10 +4,6 @@ import {
   Flex,
   Heading,
   HStack,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -63,6 +59,11 @@ import {
   TestResultPicker,
   type ResultOption,
 } from '@/components/personality/TestResultPicker'
+import {
+  buildTestUnlockMessage,
+  formatRemainingWait,
+  getTestUnlockState,
+} from '@/utils/testResultUnlock'
 
 const MotionBox = motion(Box)
 
@@ -275,15 +276,34 @@ const KpiTile = ({ label, value, sub, icon, theme }: KpiTileProps) => {
 
 interface ResultSelectSlotProps {
   label: string
-  helper: string
   /** True once the learner has recorded their result for this test. */
   hasResult: boolean
+  /** Unlock state driven by when they opened the external test. */
+  unlockStatus: 'not_started' | 'waiting' | 'unlocked'
+  /** CTA shown before the learner has started this test. */
+  completeButtonLabel: string
+  onCompleteTest: () => void
+  /** Shown while the 1-hour cooldown is still running. */
+  waitMessage: string
+  /** Shown once results can be selected. */
+  selectHelper: string
   /** Dropdown listing every possible outcome of this test. */
   resultPicker: ReactNode
 }
 
-const ResultSelectSlot = ({ label, helper, hasResult, resultPicker }: ResultSelectSlotProps) => {
+const ResultSelectSlot = ({
+  label,
+  hasResult,
+  unlockStatus,
+  completeButtonLabel,
+  onCompleteTest,
+  waitMessage,
+  selectHelper,
+  resultPicker,
+}: ResultSelectSlotProps) => {
   const hasProof = hasResult
+  const showResultInput = hasProof || unlockStatus === 'unlocked'
+
   return (
     <Box
       borderWidth="1px"
@@ -307,23 +327,59 @@ const ResultSelectSlot = ({ label, helper, hasResult, resultPicker }: ResultSele
             flexShrink={0}
           >
             <Box
-              as={hasProof ? CheckCircle2 : Upload}
+              as={hasProof ? CheckCircle2 : unlockStatus === 'waiting' ? Clock : Upload}
               w={3}
               h={3}
-              color={hasProof ? 'green.600' : 'gray.500'}
+              color={hasProof ? 'green.600' : unlockStatus === 'waiting' ? 'orange.500' : 'gray.500'}
             />
           </Flex>
           <Stack spacing={0} flex={1} minW={0}>
             <Text fontSize="xs" fontWeight="semibold" color="gray.800" noOfLines={1}>
               {label}
             </Text>
-            <Text fontSize="2xs" color="gray.500" noOfLines={1}>
-              {hasProof ? 'Saved - change below' : helper}
+            <Text fontSize="2xs" color="gray.500" noOfLines={2}>
+              {hasProof
+                ? 'Saved - change below'
+                : unlockStatus === 'waiting'
+                  ? waitMessage
+                  : unlockStatus === 'unlocked'
+                    ? selectHelper
+                    : 'Take the test first — results unlock after 1 hour'}
             </Text>
           </Stack>
         </HStack>
 
-        {resultPicker}
+        {showResultInput ? (
+          resultPicker
+        ) : unlockStatus === 'waiting' ? (
+          <Flex
+            align="center"
+            gap={2}
+            bg="orange.50"
+            borderWidth="1px"
+            borderColor="orange.200"
+            borderRadius="md"
+            px={2.5}
+            py={2}
+          >
+            <Box as={Clock} w={3.5} h={3.5} color="orange.500" flexShrink={0} />
+            <Text fontSize="2xs" color="orange.700" fontWeight="medium">
+              {waitMessage}
+            </Text>
+          </Flex>
+        ) : (
+          <Button
+            size="xs"
+            bg="brand.primary"
+            color="white"
+            _hover={{ bg: 'brand.dark' }}
+            rightIcon={<Box as={ArrowUpRight} w={3} h={3} />}
+            onClick={onCompleteTest}
+            w="full"
+          >
+            {completeButtonLabel}
+          </Button>
+        )}
       </Stack>
     </Box>
   )
@@ -367,6 +423,13 @@ export const WeeklyGlancePage = () => {
 
   const [savingResult, setSavingResult] = useState<'personality' | 'values' | null>(null)
   const [proofError, setProofError] = useState<string | null>(null)
+  // Tick so "wait X minutes" helpers stay accurate while the page is open.
+  const [nowTick, setNowTick] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowTick(Date.now()), 30_000)
+    return () => window.clearInterval(id)
+  }, [])
 
   // Every possible outcome of each test, so learners select what they got.
   const personalityOptions = useMemo<ResultOption[]>(
@@ -394,6 +457,28 @@ export const WeeklyGlancePage = () => {
         setProofError('You need to be signed in to save your result.')
         return
       }
+
+      const startedAt =
+        kind === 'personality' ? profile.personalityTestStartedAt : profile.valuesTestStartedAt
+      const alreadySaved =
+        kind === 'personality'
+          ? Boolean(profile.personalityType)
+          : (profile.coreValues?.length ?? 0) > 0
+      const unlock = getTestUnlockState(startedAt, Date.now())
+      if (!alreadySaved && unlock.status !== 'unlocked') {
+        const label = kind === 'personality' ? '16Personalities test' : 'Personal Values test'
+        const message = buildTestUnlockMessage(unlock, label)
+        setProofError(message)
+        toast({
+          title: 'Finish your test first',
+          description: message,
+          status: 'info',
+          duration: 6000,
+          isClosable: true,
+        })
+        return
+      }
+
       setProofError(null)
       setSavingResult(kind)
       // The completion flags used to be set when a results link was saved. The
@@ -439,13 +524,114 @@ export const WeeklyGlancePage = () => {
       }
       setSavingResult(null)
     },
-    [profile?.id, toast, updateProfile],
+    [profile, toast, updateProfile],
   )
 
-  // Both personality assessments done -> the "Complete now" CTA becomes "Completed".
+  /**
+   * Open the external assessment and stamp the start time (once) so result
+   * selection unlocks 1 hour later for that specific test.
+   */
+  const handleOpenExternalTest = useCallback(
+    async (kind: 'personality' | 'values') => {
+      const url =
+        kind === 'personality'
+          ? 'https://www.16personalities.com/free-personality-test'
+          : 'https://personalvalu.es/'
+      window.open(url, '_blank', 'noopener,noreferrer')
+
+      if (!profile?.id) return
+      const field = kind === 'personality' ? 'personalityTestStartedAt' : 'valuesTestStartedAt'
+      if (profile[field]) {
+        const unlock = getTestUnlockState(profile[field], Date.now())
+        if (unlock.status === 'waiting') {
+          toast({
+            title: 'Test already started',
+            description: `Wait until ${formatRemainingWait(unlock.remainingMs)} to select your results.`,
+            status: 'info',
+            duration: 5000,
+            isClosable: true,
+          })
+        }
+        return
+      }
+
+      const { error } = await updateProfile({ [field]: new Date().toISOString() })
+      if (error) {
+        console.warn('[WeeklyGlance] could not record test start time', error)
+        toast({
+          title: 'Could not start the unlock timer',
+          description: 'Open the test again so we can unlock results in 1 hour.',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        })
+        return
+      }
+
+      toast({
+        title: 'Test started',
+        description: 'Come back in 1 hour to select your results.',
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      })
+    },
+    [profile, toast, updateProfile],
+  )
+
+  const personalityUnlock = useMemo(
+    () => getTestUnlockState(profile?.personalityTestStartedAt, nowTick),
+    [nowTick, profile?.personalityTestStartedAt],
+  )
+  const valuesUnlock = useMemo(
+    () => getTestUnlockState(profile?.valuesTestStartedAt, nowTick),
+    [nowTick, profile?.valuesTestStartedAt],
+  )
+  const personalityResultLocked =
+    !profile?.personalityType && personalityUnlock.status !== 'unlocked'
+  const valuesResultLocked =
+    (profile?.coreValues?.length ?? 0) === 0 && valuesUnlock.status !== 'unlocked'
+
+  const personalityResultHelper = useMemo(() => {
+    if (personalityUnlock.status === 'waiting') {
+      return `Wait until ${formatRemainingWait(personalityUnlock.remainingMs)} to select your results`
+    }
+    return 'Select the type you got'
+  }, [personalityUnlock])
+
+  const valuesResultHelper = useMemo(() => {
+    if (valuesUnlock.status === 'waiting') {
+      return `Wait until ${formatRemainingWait(valuesUnlock.remainingMs)} to select your results`
+    }
+    return 'Select the 5 values you got'
+  }, [valuesUnlock])
+
+  const showLockedAttempt = useCallback(
+    (kind: 'personality' | 'values') => {
+      const unlock = kind === 'personality' ? personalityUnlock : valuesUnlock
+      const label = kind === 'personality' ? '16Personalities test' : 'Personal Values test'
+      const message = buildTestUnlockMessage(unlock, label)
+      setProofError(message)
+      toast({
+        title: 'Finish your test first',
+        description: message,
+        status: 'info',
+        duration: 6000,
+        isClosable: true,
+      })
+    },
+    [personalityUnlock, toast, valuesUnlock],
+  )
+
+  // Both assessments done — used to unlock course access gated on this profile.
   const bothTestsCompleted = Boolean(
     profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
   )
+
+  // Checklist stays hidden until the learner has entered both test results on
+  // this page (type + all 5 values). Same gate as the result slots below.
+  const canOpenWeeklyChecklist =
+    Boolean(profile?.personalityType) && (profile?.coreValues?.length ?? 0) === 5
 
   useEffect(() => {
     if (!profile?.companyId) {
@@ -807,16 +993,18 @@ export const WeeklyGlancePage = () => {
               </Text>
             </HStack>
           </Stack>
-          <Button
-            onClick={handleNavigateChecklist}
-            bg="brand.primary"
-            color="white"
-            _hover={{ bg: 'brand.dark' }}
-            rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-            size="md"
-          >
-            Open weekly checklist
-          </Button>
+          {canOpenWeeklyChecklist && (
+            <Button
+              onClick={handleNavigateChecklist}
+              bg="brand.primary"
+              color="white"
+              _hover={{ bg: 'brand.dark' }}
+              rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
+              size="md"
+            >
+              Open weekly checklist
+            </Button>
+          )}
         </Flex>
 
         {personalityIncomplete && (
@@ -872,69 +1060,23 @@ export const WeeklyGlancePage = () => {
                       Complete your personality profile
                     </Heading>
                     <Text fontSize="sm" color="gray.600" mt={0.5}>
-                      Upload proof of each test below, then click "Complete now" to fill in your results.
+                      Complete each test below. After 1 hour you can select your results.
                     </Text>
                   </Stack>
                 </HStack>
-                {bothTestsCompleted ? (
-                  <Button
-                    bg="green.500"
-                    color="white"
-                    _hover={{ bg: 'green.500' }}
-                    _active={{ bg: 'green.500' }}
-                    leftIcon={<Box as={CheckCircle2} w={4} h={4} />}
-                    size="md"
-                    flexShrink={0}
-                    isDisabled
-                    cursor="default"
-                    opacity={1}
-                    _disabled={{ bg: 'green.500', color: 'white', opacity: 1, cursor: 'default' }}
-                  >
-                    Completed
-                  </Button>
-                ) : (
-                  <Menu placement="bottom-end">
-                    <MenuButton
-                      as={Button}
-                      bg="brand.primary"
-                      color="white"
-                      _hover={{ bg: 'brand.dark' }}
-                      _active={{ bg: 'brand.dark' }}
-                      rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-                      size="md"
-                      flexShrink={0}
-                    >
-                      Complete now
-                    </MenuButton>
-                    <MenuList>
-                      <MenuItem
-                        onClick={() =>
-                          window.open(
-                            'https://www.16personalities.com/free-personality-test',
-                            '_blank',
-                            'noopener,noreferrer',
-                          )
-                        }
-                      >
-                        16Personalities test
-                      </MenuItem>
-                      <MenuItem
-                        onClick={() =>
-                          window.open('https://personalvalu.es/', '_blank', 'noopener,noreferrer')
-                        }
-                      >
-                        Personal Values test
-                      </MenuItem>
-                    </MenuList>
-                  </Menu>
-                )}
               </Flex>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <ResultSelectSlot
                   label="16Personalities result"
-                  helper="Select the type you got"
                   hasResult={Boolean(profile?.personalityType)}
+                  unlockStatus={
+                    profile?.personalityType ? 'unlocked' : personalityUnlock.status
+                  }
+                  completeButtonLabel="Complete personality test"
+                  onCompleteTest={() => void handleOpenExternalTest('personality')}
+                  waitMessage={personalityResultHelper}
+                  selectHelper="Select the type you got"
                   resultPicker={
                     <TestResultPicker
                       mode="single"
@@ -943,13 +1085,21 @@ export const WeeklyGlancePage = () => {
                       onChange={(next) => void handleResultSelect('personality', next)}
                       placeholder="Select your type"
                       isSaving={savingResult === 'personality'}
+                      isLocked={personalityResultLocked}
+                      onLockedAttempt={() => showLockedAttempt('personality')}
                     />
                   }
                 />
                 <ResultSelectSlot
                   label="Personal Values result"
-                  helper="Select the 5 values you got"
                   hasResult={(profile?.coreValues?.length ?? 0) === 5}
+                  unlockStatus={
+                    (profile?.coreValues?.length ?? 0) > 0 ? 'unlocked' : valuesUnlock.status
+                  }
+                  completeButtonLabel="Complete the values test"
+                  onCompleteTest={() => void handleOpenExternalTest('values')}
+                  waitMessage={valuesResultHelper}
+                  selectHelper="Select the 5 values you got"
                   resultPicker={
                     <TestResultPicker
                       mode="multi"
@@ -959,6 +1109,8 @@ export const WeeklyGlancePage = () => {
                       onChange={(next) => void handleResultSelect('values', next)}
                       placeholder="Select your values"
                       isSaving={savingResult === 'values'}
+                      isLocked={valuesResultLocked}
+                      onLockedAttempt={() => showLockedAttempt('values')}
                     />
                   }
                 />

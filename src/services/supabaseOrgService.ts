@@ -7,6 +7,105 @@
  */
 import { supabase } from '@/services/supabase'
 import { sendRoleWelcomeEmail, toWelcomeRole, type WelcomeRole } from '@/services/welcomeEmailService'
+import { normalizeRole } from '@/utils/role'
+
+/**
+ * Collapse invite/profile roles into a single conflict bucket.
+ * free_user / paid_member / user are all "member" seats — they can share an
+ * email across orgs, but cannot be reused as partner/mentor/ambassador.
+ */
+export const roleConflictBucket = (role: string | null | undefined): string => {
+  const normalized = normalizeRole(role)
+  if (normalized === 'user' || normalized === 'paid_member' || normalized === 'free_user') {
+    return 'user'
+  }
+  return normalized
+}
+
+export const formatRoleConflictLabel = (role: string | null | undefined): string => {
+  const bucket = roleConflictBucket(role)
+  switch (bucket) {
+    case 'partner':
+      return 'Partner'
+    case 'mentor':
+      return 'Mentor'
+    case 'ambassador':
+      return 'Ambassador'
+    case 'super_admin':
+      return 'Super Admin'
+    case 'user':
+    default:
+      return 'User'
+  }
+}
+
+export type EmailRoleLookup = {
+  email: string
+  role: string | null
+  source: 'profile' | 'invitation' | 'none'
+}
+
+/**
+ * Look up the current role attached to an email (existing profile first, then
+ * any pending invitation). Used to block assigning the same email to a
+ * different role when creating/editing organizations.
+ */
+export const lookupEmailRole = async (email: string): Promise<EmailRoleLookup> => {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) {
+    return { email: normalized, role: null, source: 'none' }
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .ilike('email', normalized)
+    .maybeSingle()
+  if (profileError) throw new Error(profileError.message)
+  if (profile?.role) {
+    return { email: normalized, role: String(profile.role), source: 'profile' }
+  }
+
+  const { data: invite, error: inviteError } = await supabase
+    .from('invitations')
+    .select('role')
+    .ilike('email', normalized)
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  if (inviteError) throw new Error(inviteError.message)
+  if (invite?.role) {
+    return { email: normalized, role: String(invite.role), source: 'invitation' }
+  }
+
+  return { email: normalized, role: null, source: 'none' }
+}
+
+/**
+ * Throws when `email` is already tied to a different role than `intendedRole`.
+ * Same-role reuse (e.g. partner on another org, user on another org) is allowed.
+ */
+export const assertEmailAvailableForRole = async (
+  email: string,
+  intendedRole: string,
+): Promise<void> => {
+  const normalized = email.trim().toLowerCase()
+  if (!normalized) return
+
+  const existing = await lookupEmailRole(normalized)
+  if (!existing.role) return
+
+  const currentBucket = roleConflictBucket(existing.role)
+  const intendedBucket = roleConflictBucket(intendedRole)
+  if (currentBucket === intendedBucket) return
+
+  throw new Error(
+    `${normalized} is already assigned as a ${formatRoleConflictLabel(existing.role)}. ` +
+      `Don't use this email for a different role (${formatRoleConflictLabel(intendedRole)}).`,
+  )
+}
+
 
 /**
  * Look up a user's contact details (for addressing a welcome email). Returns
@@ -204,6 +303,13 @@ export interface CreateOrgInput extends OrgWriteExtras {
 }
 
 export const createOrganization = async (input: CreateOrgInput): Promise<OrgRecord> => {
+  const partnerEmail = input.partnerEmail?.trim().toLowerCase()
+  // Validate role conflicts before inserting so we never leave an orphan org
+  // when the partner email is already used as a different role.
+  if (partnerEmail) {
+    await assertEmailAvailableForRole(partnerEmail, 'partner')
+  }
+
   const id =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -232,7 +338,6 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
   // user, link them now (promote + set transformation_partner_id) so the org
   // shows the partner instead of "Unassigned". If the email has no account yet,
   // it stays a pending claim in settings.partnerEmail (claimed on signup).
-  const partnerEmail = input.partnerEmail?.trim().toLowerCase()
   if (partnerEmail) {
     try {
       const { data: profile } = await supabase
@@ -263,8 +368,16 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
         })
       }
     } catch (linkError) {
-      // Non-fatal: the org is created either way and the partner can be
-      // assigned later from the organizations list.
+      // Role conflicts must surface to the admin — do not silently create an
+      // org with a mismatched partner email.
+      if (
+        linkError instanceof Error &&
+        /already assigned as a|different role/i.test(linkError.message)
+      ) {
+        throw linkError
+      }
+      // Other link failures stay non-fatal: the org is created and the partner
+      // can be assigned later from the organizations list.
       console.warn('[createOrganization] partner email auto-link skipped', linkError)
     }
   }
@@ -433,6 +546,7 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
   if (patch.partnerEmail !== undefined) {
     const partnerEmail = patch.partnerEmail?.trim().toLowerCase() || ''
     if (partnerEmail) {
+      await assertEmailAvailableForRole(partnerEmail, 'partner')
       try {
         const { data: profile } = await supabase
           .from('profiles')
@@ -452,6 +566,12 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
           })
         }
       } catch (linkError) {
+        if (
+          linkError instanceof Error &&
+          /already assigned as a|different role/i.test(linkError.message)
+        ) {
+          throw linkError
+        }
         console.warn('[updateOrganization] partner email auto-link skipped', linkError)
       }
     }
@@ -547,6 +667,24 @@ export const listPartnerCandidates = async (): Promise<PartnerCandidate[]> => {
 
 /** Assign (or change) an org's transformation partner. Promotes to partner + adds org to their list. */
 export const assignPartnerToOrg = async (orgId: string, partnerUid: string): Promise<void> => {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email, role')
+    .eq('id', partnerUid)
+    .maybeSingle()
+  if (profileError) throw new Error(profileError.message)
+  if (profile?.email) {
+    await assertEmailAvailableForRole(String(profile.email), 'partner')
+  } else if (profile?.role) {
+    const currentBucket = roleConflictBucket(String(profile.role))
+    if (currentBucket !== 'partner') {
+      throw new Error(
+        `This account is already assigned as a ${formatRoleConflictLabel(String(profile.role))}. ` +
+          `Don't use it for a different role (Partner).`,
+      )
+    }
+  }
+
   const { data, error } = await supabase.rpc('admin_assign_partner', {
     org_id: orgId,
     partner_uid: partnerUid,
@@ -604,6 +742,24 @@ export const assignLeadershipToOrg = async (
   role: 'mentor' | 'ambassador',
   org?: { code?: string | null; name?: string | null },
 ): Promise<void> => {
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('email, role')
+    .eq('id', userId)
+    .maybeSingle()
+  if (profileError) throw new Error(profileError.message)
+  if (profile?.email) {
+    await assertEmailAvailableForRole(String(profile.email), role)
+  } else if (profile?.role) {
+    const currentBucket = roleConflictBucket(String(profile.role))
+    if (currentBucket !== role) {
+      throw new Error(
+        `This account is already assigned as a ${formatRoleConflictLabel(String(profile.role))}. ` +
+          `Don't use it for a different role (${formatRoleConflictLabel(role)}).`,
+      )
+    }
+  }
+
   // Unlink any other same-role holder currently attached to this org so the org
   // has at most one mentor / one ambassador.
   const { error: clearError } = await supabase
@@ -808,6 +964,15 @@ export const inviteOrgMember = async (
   role: string = 'user',
 ): Promise<InviteMemberResult> => {
   const normalizedEmail = email.trim().toLowerCase()
+  try {
+    await assertEmailAvailableForRole(normalizedEmail, role || 'user')
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'email_role_conflict',
+    }
+  }
+
   const { data, error } = await supabase.rpc('admin_invite_org_member', {
     p_org_id: orgId,
     p_email: normalizedEmail,

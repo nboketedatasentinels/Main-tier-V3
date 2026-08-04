@@ -126,6 +126,10 @@ export interface UserProfile {
   region?: string
   hasCompletedPersonalityTest?: boolean
   hasCompletedValuesTest?: boolean
+  /** ISO timestamp when the learner opened the 16Personalities test (unlocks results 1h later). */
+  personalityTestStartedAt?: string
+  /** ISO timestamp when the learner opened the Personal Values test (unlocks results 1h later). */
+  valuesTestStartedAt?: string
   personalityTestResultUrl?: string
   valuesTestResultUrl?: string
   personalityTestProofUrl?: string

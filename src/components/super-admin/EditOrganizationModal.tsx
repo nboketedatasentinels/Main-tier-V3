@@ -49,10 +49,13 @@ import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import { determineClusterFromTeamSize, fetchAvailableCourses } from '@/services/organizationService'
 import {
+  assertEmailAvailableForRole,
   assignLeadershipToOrg,
   findProfileIdByEmail,
+  formatRoleConflictLabel,
   inviteOrgMember,
   removeOrganizationMember,
+  roleConflictBucket,
   updateOrganization as updateSupabaseOrganization,
   updateOrganizationMember,
   type OrgMemberEditableRole,
@@ -532,6 +535,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   ): Promise<string | null> => {
     const normalized = email.trim().toLowerCase()
     if (!normalized) return null
+    await assertEmailAvailableForRole(normalized, role)
     const profileId = await findProfileIdByEmail(normalized)
     if (profileId) {
       await assignLeadershipToOrg(orgId, profileId, role, {
@@ -565,6 +569,37 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       const partnerEmailValue = (form.assignedPartnerEmail || '').trim()
       if (partnerEmailValue && !isValidEmail(partnerEmailValue)) {
         throw new Error('Transformation partner email is invalid')
+      }
+
+      const partnerNormalized = partnerEmailValue.toLowerCase()
+      const mentorNormalized = mentorEmail.trim().toLowerCase()
+      const ambassadorNormalized = ambassadorEmail.trim().toLowerCase()
+
+      // Same-form conflicts between leadership emails / invite drafts.
+      const formRoleByEmail = new Map<string, string>()
+      const registerFormEmail = (email: string, role: string) => {
+        if (!email) return
+        const existing = formRoleByEmail.get(email)
+        if (existing && roleConflictBucket(existing) !== roleConflictBucket(role)) {
+          throw new Error(
+            `${email} is listed as ${formatRoleConflictLabel(existing)} and also as ${formatRoleConflictLabel(role)}. ` +
+              `Don't use this email for a different role.`,
+          )
+        }
+        formRoleByEmail.set(email, role)
+      }
+      registerFormEmail(partnerNormalized, 'partner')
+      registerFormEmail(mentorNormalized, 'mentor')
+      registerFormEmail(ambassadorNormalized, 'ambassador')
+      for (const draft of inviteDrafts.filter((d) => d.email.trim())) {
+        registerFormEmail(draft.email.trim().toLowerCase(), draft.role)
+      }
+
+      if (partnerNormalized) await assertEmailAvailableForRole(partnerNormalized, 'partner')
+      if (mentorNormalized) await assertEmailAvailableForRole(mentorNormalized, 'mentor')
+      if (ambassadorNormalized) await assertEmailAvailableForRole(ambassadorNormalized, 'ambassador')
+      for (const draft of inviteDrafts.filter((d) => d.email.trim())) {
+        await assertEmailAvailableForRole(draft.email, draft.role)
       }
 
       setIsSubmitting(true)
