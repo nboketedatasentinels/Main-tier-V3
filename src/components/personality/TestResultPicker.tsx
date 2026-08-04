@@ -139,8 +139,9 @@ export const TestResultPicker = ({
         <InputGroup size="xs">
           <Input
             ref={inputRef}
-            bg="white"
-            borderColor="gray.300"
+            bg={isLocked ? 'orange.50' : 'white'}
+            borderColor={isLocked ? 'orange.200' : 'gray.300'}
+            color={isLocked ? 'orange.800' : undefined}
             fontSize="2xs"
             pr={6}
             placeholder={placeholder}
@@ -149,6 +150,8 @@ export const TestResultPicker = ({
             value={isTyping ? query : settledLabel}
             isDisabled={isDisabled || isSaving}
             readOnly={Boolean(isLocked)}
+            cursor={isLocked ? 'pointer' : undefined}
+            _placeholder={isLocked ? { color: 'orange.600', opacity: 1 } : undefined}
             onFocus={tryOpen}
             onClick={tryOpen}
             onChange={event => {

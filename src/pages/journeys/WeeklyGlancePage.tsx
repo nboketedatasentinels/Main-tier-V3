@@ -302,14 +302,15 @@ const ResultSelectSlot = ({
   resultPicker,
 }: ResultSelectSlotProps) => {
   const hasProof = hasResult
-  const showResultInput = hasProof || unlockStatus === 'unlocked'
+  // Button first; after click the slot becomes an input (still locked until 1h).
+  const showResultInput = hasProof || unlockStatus === 'waiting' || unlockStatus === 'unlocked'
 
   return (
     <Box
       borderWidth="1px"
       borderStyle="dashed"
-      borderColor={hasProof ? 'green.300' : 'gray.300'}
-      bg={hasProof ? 'green.50' : 'gray.50'}
+      borderColor={hasProof ? 'green.300' : unlockStatus === 'waiting' ? 'orange.200' : 'gray.300'}
+      bg={hasProof ? 'green.50' : unlockStatus === 'waiting' ? 'orange.50' : 'gray.50'}
       borderRadius="md"
       p={2}
     >
@@ -319,9 +320,9 @@ const ResultSelectSlot = ({
             w={6}
             h={6}
             borderRadius="sm"
-            bg={hasProof ? 'green.100' : 'white'}
+            bg={hasProof ? 'green.100' : unlockStatus === 'waiting' ? 'orange.100' : 'white'}
             borderWidth="1px"
-            borderColor={hasProof ? 'green.300' : 'gray.200'}
+            borderColor={hasProof ? 'green.300' : unlockStatus === 'waiting' ? 'orange.200' : 'gray.200'}
             align="center"
             justify="center"
             flexShrink={0}
@@ -337,36 +338,20 @@ const ResultSelectSlot = ({
             <Text fontSize="xs" fontWeight="semibold" color="gray.800" noOfLines={1}>
               {label}
             </Text>
-            <Text fontSize="2xs" color="gray.500" noOfLines={2}>
+            <Text fontSize="2xs" color={unlockStatus === 'waiting' ? 'orange.700' : 'gray.500'} noOfLines={2}>
               {hasProof
                 ? 'Saved - change below'
                 : unlockStatus === 'waiting'
                   ? waitMessage
                   : unlockStatus === 'unlocked'
                     ? selectHelper
-                    : 'Take the test first — results unlock after 1 hour'}
+                    : 'Click below to start the test — results unlock after 1 hour'}
             </Text>
           </Stack>
         </HStack>
 
         {showResultInput ? (
           resultPicker
-        ) : unlockStatus === 'waiting' ? (
-          <Flex
-            align="center"
-            gap={2}
-            bg="orange.50"
-            borderWidth="1px"
-            borderColor="orange.200"
-            borderRadius="md"
-            px={2.5}
-            py={2}
-          >
-            <Box as={Clock} w={3.5} h={3.5} color="orange.500" flexShrink={0} />
-            <Text fontSize="2xs" color="orange.700" fontWeight="medium">
-              {waitMessage}
-            </Text>
-          </Flex>
         ) : (
           <Button
             size="xs"
@@ -1083,7 +1068,11 @@ export const WeeklyGlancePage = () => {
                       options={personalityOptions}
                       selected={profile?.personalityType ? [profile.personalityType] : []}
                       onChange={(next) => void handleResultSelect('personality', next)}
-                      placeholder="Select your type"
+                      placeholder={
+                        personalityResultLocked
+                          ? personalityResultHelper
+                          : 'Select your type'
+                      }
                       isSaving={savingResult === 'personality'}
                       isLocked={personalityResultLocked}
                       onLockedAttempt={() => showLockedAttempt('personality')}
@@ -1107,7 +1096,9 @@ export const WeeklyGlancePage = () => {
                       options={valuesOptions}
                       selected={profile?.coreValues ?? []}
                       onChange={(next) => void handleResultSelect('values', next)}
-                      placeholder="Select your values"
+                      placeholder={
+                        valuesResultLocked ? valuesResultHelper : 'Select your values'
+                      }
                       isSaving={savingResult === 'values'}
                       isLocked={valuesResultLocked}
                       onLockedAttempt={() => showLockedAttempt('values')}
