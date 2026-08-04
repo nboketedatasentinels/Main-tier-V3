@@ -704,6 +704,16 @@ export const fetchUserProfileById = async (
 
 const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
   const settings = (row.settings as Record<string, unknown> | null) ?? {}
+  // Postgres numerics can arrive as strings over the wire - coerce so the admin
+  // table never shows "0 users" / blank created dates for valid rows.
+  const rawMemberCount = row.member_count
+  const memberCount =
+    typeof rawMemberCount === 'number'
+      ? rawMemberCount
+      : typeof rawMemberCount === 'string' && rawMemberCount.trim() !== ''
+        ? Number(rawMemberCount)
+        : 0
+  const createdAtRaw = row.created_at ?? row.createdAt
   return {
     id: row.id as string,
     name: (row.name as string) ?? '',
@@ -711,9 +721,11 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     status: ((row.status as string) ?? 'active') as OrganizationRecord['status'],
     archived: Boolean(settings.archived),
     archivedAt: (settings.archivedAt as string) ?? undefined,
-    createdAt: (row.created_at as string) ?? undefined,
+    createdAt: typeof createdAtRaw === 'string' ? createdAtRaw : createdAtRaw ? String(createdAtRaw) : undefined,
+    updatedAt: typeof row.updated_at === 'string' ? row.updated_at : undefined,
     // Bumped by enrollment RPCs when members are invited/claim the org code.
-    memberCount: typeof row.member_count === 'number' ? row.member_count : 0,
+    // Prefer live enrichment from fetchOrganizations when available.
+    memberCount: Number.isFinite(memberCount) ? memberCount : 0,
     transformationPartnerId: (row.transformation_partner_id as string) ?? undefined,
     organizationJourneyType: (row.journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,
     programDurationWeeks: (row.program_duration_weeks as number) ?? undefined,
@@ -723,7 +735,12 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     village: (settings.village as string) ?? undefined,
     cluster: (settings.cluster as string) ?? undefined,
     pillar: (settings.pillar as OrganizationRecord['pillar']) ?? undefined,
-    teamSize: (settings.teamSize as number) ?? undefined,
+    teamSize:
+      typeof settings.teamSize === 'number'
+        ? settings.teamSize
+        : typeof settings.teamSize === 'string'
+          ? Number(settings.teamSize) || undefined
+          : undefined,
     assignedPartnerEmail: (settings.partnerEmail as string) ?? undefined,
     // Course assignments + description live in the settings jsonb. Read them
     // back so the Edit Organization modal can show which courses were selected
@@ -851,7 +868,92 @@ export const fetchOrganizations = async (): Promise<OrganizationRecord[]> => {
     .select('*')
     .order('created_at', { ascending: false })
   if (error) throw new Error(error.message)
-  return (data ?? []).map((r) => mapOrganization(r as Record<string, unknown>))
+  const orgs = (data ?? []).map((r) => mapOrganization(r as Record<string, unknown>))
+
+  // organizations.member_count can lag behind real enrollments (manual links,
+  // older rows, pending-invite acceptance). Count live profiles + pending
+  // invites so the admin organizations table shows real Users / Created data.
+  try {
+    const [{ data: profiles, error: profilesError }, { data: invites, error: invitesError }] =
+      await Promise.all([
+        supabase.from('profiles').select('id, organization_id, company_id, company_code, email'),
+        supabase.from('invitations').select('organization_id, email, status').eq('status', 'pending'),
+      ])
+    if (profilesError) throw profilesError
+    if (invitesError) throw invitesError
+
+    const byId = new Map(orgs.map((org) => [org.id || '', org]))
+    const byCode = new Map(
+      orgs
+        .filter((org) => org.code)
+        .map((org) => [org.code.trim().toLowerCase(), org]),
+    )
+    const enrolledByOrgId = new Map<string, Set<string>>()
+
+    const addMember = (org: OrganizationRecord | undefined, profileId: string) => {
+      if (!org?.id) return
+      const set = enrolledByOrgId.get(org.id) ?? new Set<string>()
+      set.add(profileId)
+      enrolledByOrgId.set(org.id, set)
+    }
+
+    for (const raw of (profiles ?? []) as Array<Record<string, unknown>>) {
+      const profileId = String(raw.id || '')
+      if (!profileId) continue
+      const organizationId = typeof raw.organization_id === 'string' ? raw.organization_id : ''
+      const companyId = typeof raw.company_id === 'string' ? raw.company_id : ''
+      const companyCode =
+        typeof raw.company_code === 'string' ? raw.company_code.trim().toLowerCase() : ''
+
+      if (organizationId && byId.has(organizationId)) addMember(byId.get(organizationId), profileId)
+      else if (companyId && byId.has(companyId)) addMember(byId.get(companyId), profileId)
+      else if (companyCode && byCode.has(companyCode)) addMember(byCode.get(companyCode), profileId)
+    }
+
+    const pendingByOrgId = new Map<string, Set<string>>()
+    const enrolledEmailsByOrgId = new Map<string, Set<string>>()
+    for (const raw of (profiles ?? []) as Array<Record<string, unknown>>) {
+      const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : ''
+      if (!email) continue
+      const organizationId = typeof raw.organization_id === 'string' ? raw.organization_id : ''
+      const companyId = typeof raw.company_id === 'string' ? raw.company_id : ''
+      const companyCode =
+        typeof raw.company_code === 'string' ? raw.company_code.trim().toLowerCase() : ''
+      const org =
+        (organizationId && byId.get(organizationId)) ||
+        (companyId && byId.get(companyId)) ||
+        (companyCode && byCode.get(companyCode)) ||
+        undefined
+      if (!org?.id) continue
+      const set = enrolledEmailsByOrgId.get(org.id) ?? new Set<string>()
+      set.add(email)
+      enrolledEmailsByOrgId.set(org.id, set)
+    }
+
+    for (const raw of (invites ?? []) as Array<Record<string, unknown>>) {
+      const orgId = typeof raw.organization_id === 'string' ? raw.organization_id : ''
+      const email = typeof raw.email === 'string' ? raw.email.trim().toLowerCase() : ''
+      if (!orgId || !email || !byId.has(orgId)) continue
+      if (enrolledEmailsByOrgId.get(orgId)?.has(email)) continue
+      const set = pendingByOrgId.get(orgId) ?? new Set<string>()
+      set.add(email)
+      pendingByOrgId.set(orgId, set)
+    }
+
+    return orgs.map((org) => {
+      const enrolled = org.id ? enrolledByOrgId.get(org.id)?.size ?? 0 : 0
+      const pending = org.id ? pendingByOrgId.get(org.id)?.size ?? 0 : 0
+      return {
+        ...org,
+        // Always prefer the live profile count once enrichment succeeds.
+        memberCount: enrolled,
+        pendingInviteCount: pending,
+      }
+    })
+  } catch (enrichError) {
+    console.warn('[fetchOrganizations] live member enrichment skipped', enrichError)
+    return orgs
+  }
 }
 
 export const listenToOrganizations = (

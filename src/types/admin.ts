@@ -39,6 +39,11 @@ export interface OrganizationRecord {
    * These fields may be absent until stats have been computed at least once.
    */
   memberCount?: number
+  /**
+   * Pending email invites that have not signed up yet. Populated by the live
+   * enrichment in `fetchOrganizations` for the admin organizations table.
+   */
+  pendingInviteCount?: number
   activeUsers?: number
   newThisWeek?: number
   averageEngagementRate?: number

@@ -606,6 +606,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                         const safeCode = (org.code || '').trim() || 'No code'
                         const safeTeamSize = Number.isFinite(org.teamSize) ? Number(org.teamSize) : 0
                         const safeUserCount = Number.isFinite(org.memberCount) ? Number(org.memberCount) : 0
+                        const pendingInviteCount = Number.isFinite(org.pendingInviteCount)
+                          ? Number(org.pendingInviteCount)
+                          : 0
                         const resolvedPartner = partnerLookup.get(org.transformationPartnerId || '')
                         // A partner assigned by email at creation has no
                         // transformation_partner_id until that email signs up,
@@ -623,7 +626,12 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                             ? new Date(org.createdAt)
                             : org.createdAt instanceof Date
                               ? org.createdAt
-                              : org.createdAt?.toDate?.() ?? null
+                              : org.createdAt &&
+                                  typeof org.createdAt === 'object' &&
+                                  'toDate' in org.createdAt &&
+                                  typeof org.createdAt.toDate === 'function'
+                                ? org.createdAt.toDate()
+                                : null
                         const createdAt =
                           createdDate && !Number.isNaN(createdDate.getTime())
                             ? createdDate.toLocaleString(undefined, {
@@ -634,6 +642,10 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                 minute: '2-digit',
                               })
                             : 'Not set'
+                        const usersLabel =
+                          pendingInviteCount > 0
+                            ? `${safeUserCount} (+${pendingInviteCount} pending)`
+                            : `${safeUserCount}`
 
                         return (
                           <Tr key={org.id || org.code || `fallback-${index}`} _hover={{ bg: 'brand.accent' }}>
@@ -671,7 +683,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                             </Td>
                             <Td fontWeight="semibold">{safeName}</Td>
                             <Td>{safeCode}</Td>
-                            <Td>{safeUserCount}</Td>
+                            <Td>{usersLabel}</Td>
                             <Td>{safeTeamSize}</Td>
                             <Td>{safePartner}</Td>
                             <Td>{createdAt}</Td>
