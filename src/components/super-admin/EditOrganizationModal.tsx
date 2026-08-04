@@ -43,6 +43,7 @@ import {
   Tr,
   useToast,
 } from '@chakra-ui/react'
+import { ClusterProgressionGuide } from '@/components/super-admin/ClusterProgressionGuide'
 import { InfoIcon } from '@chakra-ui/icons'
 import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
@@ -223,10 +224,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const nextBoundaryTier = boundaryTier
     ? clusterTiers[clusterTiers.findIndex((tier) => tier.name === boundaryTier.name) + 1]
     : undefined
-  const clusterProgressMax = 50
-  const clusterProgressValue = Math.min(form.teamSize || 0, clusterProgressMax)
-  const clusterProgressPercent = (clusterProgressValue / clusterProgressMax) * 100
-  const clusterHighlightBg = `${clusterTier.colorScheme}.50`
   const clusterTooltipContent = (
     <Box>
       <Text fontWeight="semibold" mb={2}>
@@ -345,8 +342,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) return
-    if ((form.teamSize ?? 0) > 0 && !form.cluster) {
-      setForm((prev) => ({ ...prev, cluster: determineClusterFromTeamSize(prev.teamSize) }))
+    // Always derive cluster from cohort size so the guide and assigned cluster
+    // stay consistent (e.g. 40 users => Sahel).
+    if ((form.teamSize ?? 0) > 0) {
+      const nextCluster = determineClusterFromTeamSize(form.teamSize)
+      if (nextCluster && form.cluster !== nextCluster) {
+        setForm((prev) => ({ ...prev, cluster: nextCluster }))
+      }
     }
   }, [form.cluster, form.teamSize, isOpen])
 
@@ -868,105 +870,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         <AccordionIcon />
                       </AccordionButton>
                       <AccordionPanel bg="gray.50">
-                        <Table size="sm" variant="simple">
-                          <Thead>
-                            <Tr>
-                              <Th>Cluster Name</Th>
-                              <Th>Cohort Size Range</Th>
-                              <Th>Color Badge</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {clusterTiers.map((tier) => (
-                              <Tr key={tier.name} bg={tier.name === clusterDisplayName ? clusterHighlightBg : 'transparent'}>
-                                <Td>
-                                  {tier.shortName}
-                                </Td>
-                                <Td>{tier.rangeLabel} users</Td>
-                                <Td>
-                                  <Badge colorScheme={tier.colorScheme} variant="subtle">
-                                    {tier.shortName}
-                                  </Badge>
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                        <Box mt={4}>
-                          <Text fontSize="sm" fontWeight="semibold" mb={2}>
-                            Cluster progression
-                          </Text>
-                          <Box position="relative" h="10px" bg="gray.200" borderRadius="full" overflow="hidden">
-                            <Flex h="100%">
-                              {clusterTiers.map((tier) => {
-                                const rangeMax = tier.max ?? clusterProgressMax
-                                const rangeStart = Math.max(tier.min, 1)
-                                const cappedMax = Math.min(rangeMax, clusterProgressMax)
-                                const widthPercent =
-                                  ((cappedMax - rangeStart + 1) / clusterProgressMax) * 100
-                                return (
-                                  <Box
-                                    key={tier.name}
-                                    w={`${widthPercent}%`}
-                                    bg={`${tier.colorScheme}.400`}
-                                  />
-                                )
-                              })}
-                            </Flex>
-                            {clusterBoundaries.map((boundary) => {
-                              const left = `${(boundary / clusterProgressMax) * 100}%`
-                              const boundaryTierName =
-                                clusterTiers.find((tier) => tier.min === boundary)?.shortName ?? 'New tier'
-                              return (
-                                <Tooltip
-                                  key={boundary}
-                                  label={`${boundary} users: ${boundaryTierName} begins`}
-                                  placement="top"
-                                >
-                                  <Box
-                                    position="absolute"
-                                    top="-4px"
-                                    left={left}
-                                    transform="translateX(-50%)"
-                                    w="2px"
-                                    h="18px"
-                                    bg="gray.600"
-                                  />
-                                </Tooltip>
-                              )
-                            })}
-                            {hasValidTeamSize ? (
-                              <Tooltip label={`${form.teamSize} users`} placement="top">
-                                <Box
-                                  position="absolute"
-                                  top="-7px"
-                                  left={`${clusterProgressPercent}%`}
-                                  transform="translateX(-50%)"
-                                  w="18px"
-                                  h="18px"
-                                  bg="white"
-                                  borderWidth="2px"
-                                  borderColor={`${clusterTier.colorScheme}.500`}
-                                  borderRadius="full"
-                                />
-                              </Tooltip>
-                            ) : null}
-                          </Box>
-                          <Grid templateColumns="repeat(5, 1fr)" mt={2} fontSize="xs" color="gray.600">
-                            {clusterTiers.map((tier) => (
-                              <Text key={tier.name} textAlign="center">
-                                {tier.shortName}
-                              </Text>
-                            ))}
-                          </Grid>
-                          <HStack justify="space-between" mt={1} fontSize="xs" color="gray.500">
-                            <Text>1-3</Text>
-                            <Text>4</Text>
-                            <Text>11</Text>
-                            <Text>21</Text>
-                            <Text>41+</Text>
-                          </HStack>
-                        </Box>
+                        <ClusterProgressionGuide
+                          teamSize={form.teamSize || 0}
+                          clusterName={form.cluster || clusterDisplayName}
+                        />
                       </AccordionPanel>
                     </AccordionItem>
                   </Accordion>

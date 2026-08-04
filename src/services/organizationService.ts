@@ -323,7 +323,7 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
   if (teamSize >= 21) return 'Sahel Cluster'
   if (teamSize >= 11) return 'Sahara Cluster'
   if (teamSize >= 4) return 'Kalahari Cluster'
-  return ''
+  return 'No Cluster'
 }
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
