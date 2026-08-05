@@ -296,13 +296,14 @@ export function useWeeklyChecklistViewModel() {
         let journeyType: JourneyType = '6W'
         let orgCohortStartDate: string | null = null
 
-        if (isFreeUser(profile) && !profile.companyId) {
+        if (isFreeUser(profile) && !profile.companyId && !profile.organizationId) {
           journeyType = '4W'
-        } else if (profile.companyId) {
+        } else if (profile.companyId || profile.organizationId) {
           // Organizations live in Supabase now; read the org's journey there.
           // The legacy Firestore org doc is empty for orgs created via the admin
           // UI post-migration, which made corporate members fall back to '6W'.
-          const org = await getOrganizationJourney(profile.companyId)
+          const orgId = profile.organizationId || profile.companyId
+          const org = orgId ? await getOrganizationJourney(orgId) : null
           if (org) {
             journeyType =
               (resolveJourneyType({

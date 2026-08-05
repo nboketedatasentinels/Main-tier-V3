@@ -397,29 +397,25 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     description: "Attend a scheduled session with your mentor.",
     points: 2000,
     behaviorType: "window_limited",
-    approvalType: "partner_approved",
-    requiresApproval: true,
-    verification: "partner_approval",
+    approvalType: "mentor_issued",
     week: 1,
     category: "Leadership",
     flexibleWeeks: true,
-    frequencyNote: "Submit attendance proof. Points are awarded after partner confirmation.",
+    frequencyNote: "Points are awarded by your mentor after the session.",
     visibility: { requiresMentor: true },
   },
   {
     id: "ambassador_session",
     baseId: "ambassador_session",
-    title: "Coach Session",
-    description: "Attend a session led by a coach.",
+    title: "Ambassador Session",
+    description: "Attend a session led by a coach (ambassador).",
     points: 2000,
     behaviorType: "window_limited",
-    approvalType: "partner_approved",
-    requiresApproval: true,
-    verification: "partner_approval",
+    approvalType: "ambassador_issued",
     week: 1,
     category: "Leadership",
     flexibleWeeks: true,
-    frequencyNote: "Submit attendance proof. Points are awarded after partner confirmation.",
+    frequencyNote: "Points are awarded by your coach after the session.",
     visibility: { requiresCoach: true },
   },
 
@@ -485,6 +481,9 @@ interface JourneyActivityEntry {
   titleOverride?: string;
   /** Per-journey week placement; defaults to the base activity's week. */
   weekOverride?: number;
+  /** Per-journey approval override (e.g. webinar is partner-approved on 3M+). */
+  approvalOverride?: ApprovalType;
+  requiresApprovalOverride?: boolean;
 }
 
 const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[]>> = {
@@ -515,46 +514,80 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "practical", totalFrequency: 6 },
   ],
   "3M": [
+    // Matches the 3-month weekly-checklist product table (max 113,000 / pass 75,000).
     { activityId: "podcast_workbook", totalFrequency: 9 },
     { activityId: "weekly_session", totalFrequency: 12 },
-    { activityId: "webinar_workbook", totalFrequency: 3 },
+    {
+      activityId: "webinar_workbook",
+      totalFrequency: 3,
+      pointsOverride: 4000,
+      titleOverride: "Attend Webinar + Workbook",
+      approvalOverride: "partner_approved",
+      requiresApprovalOverride: true,
+    },
     { activityId: "peer_to_peer", totalFrequency: 9 },
     { activityId: "impact_log", totalFrequency: 6 },
     { activityId: "lift_module", totalFrequency: 3, pointsOverride: 3000 },
     { activityId: "linkedin", totalFrequency: 7 },
-    { activityId: "book_club", totalFrequency: 3 },
+    { activityId: "book_club", totalFrequency: 3, pointsOverride: 2500, titleOverride: "Book Club" },
     { activityId: "peer_matching", totalFrequency: 12 },
     { activityId: "challenger", totalFrequency: 6 },
     { activityId: "mentor_meetup", totalFrequency: 3 },
-    { activityId: "ambassador_session", totalFrequency: 3 },
+    {
+      activityId: "ambassador_session",
+      totalFrequency: 3,
+      titleOverride: "Ambassador Session",
+    },
   ],
   "6M": [
     { activityId: "podcast_workbook", totalFrequency: 18 },
     { activityId: "weekly_session", totalFrequency: 24 },
-    { activityId: "webinar_workbook", totalFrequency: 6 },
+    {
+      activityId: "webinar_workbook",
+      totalFrequency: 6,
+      pointsOverride: 4000,
+      titleOverride: "Attend Webinar + Workbook",
+      approvalOverride: "partner_approved",
+      requiresApprovalOverride: true,
+    },
     { activityId: "peer_to_peer", totalFrequency: 18 },
     { activityId: "impact_log", totalFrequency: 12 },
     { activityId: "lift_module", totalFrequency: 6, pointsOverride: 3000 },
     { activityId: "linkedin", totalFrequency: 14 },
-    { activityId: "book_club", totalFrequency: 6 },
+    { activityId: "book_club", totalFrequency: 6, pointsOverride: 2500, titleOverride: "Book Club" },
     { activityId: "peer_matching", totalFrequency: 24 },
     { activityId: "challenger", totalFrequency: 12 },
     { activityId: "mentor_meetup", totalFrequency: 6 },
-    { activityId: "ambassador_session", totalFrequency: 6 },
+    {
+      activityId: "ambassador_session",
+      totalFrequency: 6,
+      titleOverride: "Ambassador Session",
+    },
   ],
   "9M": [
     { activityId: "podcast_workbook", totalFrequency: 27 },
     { activityId: "weekly_session", totalFrequency: 36 },
-    { activityId: "webinar_workbook", totalFrequency: 9 },
+    {
+      activityId: "webinar_workbook",
+      totalFrequency: 9,
+      pointsOverride: 4000,
+      titleOverride: "Attend Webinar + Workbook",
+      approvalOverride: "partner_approved",
+      requiresApprovalOverride: true,
+    },
     { activityId: "peer_to_peer", totalFrequency: 27 },
     { activityId: "impact_log", totalFrequency: 18 },
     { activityId: "lift_module", totalFrequency: 9, pointsOverride: 3000 },
     { activityId: "linkedin", totalFrequency: 21 },
-    { activityId: "book_club", totalFrequency: 9 },
+    { activityId: "book_club", totalFrequency: 9, pointsOverride: 2500, titleOverride: "Book Club" },
     { activityId: "peer_matching", totalFrequency: 36 },
     { activityId: "challenger", totalFrequency: 18 },
     { activityId: "mentor_meetup", totalFrequency: 9 },
-    { activityId: "ambassador_session", totalFrequency: 9 },
+    {
+      activityId: "ambassador_session",
+      totalFrequency: 9,
+      titleOverride: "Ambassador Session",
+    },
   ],
 };
 
@@ -591,8 +624,7 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 6250,
     windowTarget: 12500,
     passMarkPoints: 75000,
-    // Recalculated after webinar (4000→2000) + book_club (2500→1000) cut.
-    maxPossiblePoints: 102500,
+    maxPossiblePoints: 113000,
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 66,
@@ -600,13 +632,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
       {
         key: "without_mentor_and_ambassador",
         label: "No mentor + coach assigned",
-        maxPossiblePoints: 90500,
+        maxPossiblePoints: 101000,
         passMarkPoints: 67000,
       },
       {
         key: "without_mentor_or_ambassador",
         label: "No mentor or coach assigned",
-        maxPossiblePoints: 96500,
+        maxPossiblePoints: 107000,
         passMarkPoints: 71000,
       },
     ],
@@ -616,8 +648,7 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 6250,
     windowTarget: 12500,
     passMarkPoints: 150000,
-    // Recalculated after webinar (4000→2000) + book_club (2500→1000) cut.
-    maxPossiblePoints: 205000,
+    maxPossiblePoints: 226000,
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 66,
@@ -625,13 +656,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
       {
         key: "without_mentor_and_ambassador",
         label: "No mentor + coach assigned",
-        maxPossiblePoints: 181000,
+        maxPossiblePoints: 202000,
         passMarkPoints: 135000,
       },
       {
         key: "without_mentor_or_ambassador",
         label: "No mentor or coach assigned",
-        maxPossiblePoints: 193000,
+        maxPossiblePoints: 214000,
         passMarkPoints: 143000,
       },
     ],
@@ -641,8 +672,7 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 6300,
     windowTarget: 12600,
     passMarkPoints: 227000,
-    // Recalculated after webinar (4000→2000) + book_club (2500→1000) cut.
-    maxPossiblePoints: 307500,
+    maxPossiblePoints: 339000,
     mode: "full",
     timelineDisplay: "duration",
     completionThresholdPct: 67,
@@ -650,13 +680,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
       {
         key: "without_mentor_and_ambassador",
         label: "No mentor + coach assigned",
-        maxPossiblePoints: 271500,
+        maxPossiblePoints: 303000,
         passMarkPoints: 203000,
       },
       {
         key: "without_mentor_or_ambassador",
         label: "No mentor or coach assigned",
-        maxPossiblePoints: 289500,
+        maxPossiblePoints: 321000,
         passMarkPoints: 215000,
       },
     ],
@@ -701,13 +731,16 @@ function buildActivityDef(
       maxTotal: totalFreq,
       maxPerWindow,
     },
-    approvalType: base.approvalType,
-    requiresApproval: base.requiresApproval,
+    approvalType: entry.approvalOverride ?? base.approvalType,
+    requiresApproval: entry.requiresApprovalOverride ?? base.requiresApproval,
     isFreeTier: base.isFreeTier,
     week: entry.weekOverride ?? base.week,
     category: base.category,
     tags: base.tags,
-    verification: base.verification,
+    verification:
+      (entry.approvalOverride ?? base.approvalType) === "partner_approved"
+        ? "partner_approval"
+        : base.verification,
     flexibleWeeks: base.flexibleWeeks,
     frequencyNote: base.frequencyNote,
     visibility: base.visibility,
@@ -743,9 +776,9 @@ const buildJourneyPointsBreakdown = (journeyType: JourneyType): JourneyPointsAct
     const pointsEach = entry.pointsOverride ?? base.points;
     return {
       activityId: entry.activityId,
-      title: base.title,
+      title: entry.titleOverride ?? base.title,
       frequency: entry.totalFrequency,
-      approvalType: base.approvalType,
+      approvalType: entry.approvalOverride ?? base.approvalType,
       pointsEach,
       maxPoints: pointsEach * entry.totalFrequency,
     };

@@ -115,12 +115,12 @@ describe('pointsConfig module activities', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'without_mentor_and_ambassador',
-          maxPossiblePoints: 90500,
+          maxPossiblePoints: 101000,
           passMarkPoints: 67000,
         }),
         expect.objectContaining({
           key: 'without_mentor_or_ambassador',
-          maxPossiblePoints: 96500,
+          maxPossiblePoints: 107000,
           passMarkPoints: 71000,
         }),
       ]),
@@ -130,12 +130,12 @@ describe('pointsConfig module activities', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'without_mentor_and_ambassador',
-          maxPossiblePoints: 181000,
+          maxPossiblePoints: 202000,
           passMarkPoints: 135000,
         }),
         expect.objectContaining({
           key: 'without_mentor_or_ambassador',
-          maxPossiblePoints: 193000,
+          maxPossiblePoints: 214000,
           passMarkPoints: 143000,
         }),
       ]),
@@ -145,16 +145,55 @@ describe('pointsConfig module activities', () => {
       expect.arrayContaining([
         expect.objectContaining({
           key: 'without_mentor_and_ambassador',
-          maxPossiblePoints: 271500,
+          maxPossiblePoints: 303000,
           passMarkPoints: 203000,
         }),
         expect.objectContaining({
           key: 'without_mentor_or_ambassador',
-          maxPossiblePoints: 289500,
+          maxPossiblePoints: 321000,
           passMarkPoints: 215000,
         }),
       ]),
     )
+  })
+
+  it('matches the 3-month weekly-checklist product table', () => {
+    const crossRef = getJourneyPointsCrossReference('3M')
+    const byId = new Map(crossRef.activityBreakdown.map((row) => [row.activityId, row]))
+
+    expect(crossRef.maxPossiblePoints).toBe(113000)
+    expect(crossRef.passMarkPoints).toBe(75000)
+    expect(crossRef.computedMaxPoints).toBe(113000)
+
+    expect(byId.get('podcast_workbook')).toMatchObject({ frequency: 9, pointsEach: 2000, maxPoints: 18000 })
+    expect(byId.get('weekly_session')).toMatchObject({ frequency: 12, pointsEach: 1500, maxPoints: 18000 })
+    expect(byId.get('webinar_workbook')).toMatchObject({
+      title: 'Attend Webinar + Workbook',
+      frequency: 3,
+      pointsEach: 4000,
+      maxPoints: 12000,
+      approvalType: 'partner_approved',
+    })
+    expect(byId.get('peer_to_peer')).toMatchObject({ frequency: 9, pointsEach: 1000, maxPoints: 9000 })
+    expect(byId.get('impact_log')).toMatchObject({ frequency: 6, pointsEach: 1000, maxPoints: 6000 })
+    expect(byId.get('lift_module')).toMatchObject({ frequency: 3, pointsEach: 3000, maxPoints: 9000 })
+    expect(byId.get('linkedin')).toMatchObject({ frequency: 7, pointsEach: 500, maxPoints: 3500 })
+    expect(byId.get('book_club')).toMatchObject({ frequency: 3, pointsEach: 2500, maxPoints: 7500 })
+    expect(byId.get('peer_matching')).toMatchObject({ frequency: 12, pointsEach: 1000, maxPoints: 12000 })
+    expect(byId.get('challenger')).toMatchObject({ frequency: 6, pointsEach: 1000, maxPoints: 6000 })
+    expect(byId.get('mentor_meetup')).toMatchObject({
+      frequency: 3,
+      pointsEach: 2000,
+      maxPoints: 6000,
+      approvalType: 'mentor_issued',
+    })
+    expect(byId.get('ambassador_session')).toMatchObject({
+      title: 'Ambassador Session',
+      frequency: 3,
+      pointsEach: 2000,
+      maxPoints: 6000,
+      approvalType: 'ambassador_issued',
+    })
   })
 
   it('replaces book club with the 4500-point webinar in the 6-week journey config', () => {
