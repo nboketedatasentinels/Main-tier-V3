@@ -45,6 +45,62 @@ export const resolveProgramMonthCount = (programDuration?: number | string | nul
   return Math.ceil(parsed)
 }
 
+/**
+ * Exact course-slot count for an org programme:
+ * 6 weeks → 2 courses, 3 months → 3, 6 months → 6, 9 months → 9.
+ * Prefer explicit month duration, then weeks, then journey type.
+ */
+export const resolveExpectedCourseSlotCount = (params: {
+  programDuration?: number | string | null
+  programDurationWeeks?: number | string | null
+  journeyType?: string | null
+}): number => {
+  const fromDuration = resolveProgramMonthCount(params.programDuration)
+  if (fromDuration > 0) return fromDuration
+
+  const weeksRaw = params.programDurationWeeks
+  const weeks =
+    weeksRaw === undefined || weeksRaw === null
+      ? null
+      : typeof weeksRaw === 'string'
+        ? Number(weeksRaw)
+        : weeksRaw
+  if (typeof weeks === 'number' && Number.isFinite(weeks) && weeks > 0) {
+    const rounded = Math.round(weeks)
+    if (rounded <= 6) return 2
+    if (rounded <= 12) return 3
+    if (rounded <= 24) return 6
+    if (rounded <= 36) return 9
+    return 9
+  }
+
+  switch (params.journeyType) {
+    case '6W':
+      return 2
+    case '3M':
+      return 3
+    case '6M':
+      return 6
+    case '9M':
+      return 9
+    default:
+      return 0
+  }
+}
+
+/** Preserve first-seen order while dropping duplicate ids. */
+export const uniqueOrderedCourseIds = (courseIds: string[]): string[] => {
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  courseIds.forEach((id) => {
+    const cleaned = cleanCourseId(id)
+    if (!cleaned || seen.has(cleaned)) return
+    seen.add(cleaned)
+    ordered.push(cleaned)
+  })
+  return ordered
+}
+
 export const buildMonthlyAssignmentsFromArray = (
   courseAssignments: string[] = [],
   totalMonths: number,
@@ -73,16 +129,19 @@ export const normalizeMonthlyAssignments = (params: {
   monthlyCourseAssignments?: MonthlyCourseAssignments | null
   courseAssignments?: string[] | null
   programDuration?: number | string | null
+  /** When set, force exactly this many ordered slots (3 months → 3, etc.). */
+  expectedSlots?: number | null
 }): {
   monthlyAssignments: MonthlyCourseAssignments
   totalMonths: number
   assignmentMode: MonthlyAssignmentMode
 } => {
-  const { monthlyCourseAssignments, courseAssignments, programDuration } = params
+  const { monthlyCourseAssignments, courseAssignments, programDuration, expectedSlots } = params
   const monthlyCount = monthlyCourseAssignments ? Object.keys(monthlyCourseAssignments).length : 0
   const arrayCount = courseAssignments?.length ?? 0
   const durationCount = resolveProgramMonthCount(programDuration)
-  const totalMonths = Math.max(monthlyCount, arrayCount, durationCount)
+  const expected = typeof expectedSlots === 'number' && expectedSlots > 0 ? expectedSlots : 0
+  const totalMonths = expected || Math.max(monthlyCount, arrayCount, durationCount)
 
   if (!totalMonths) {
     return {
@@ -92,6 +151,8 @@ export const normalizeMonthlyAssignments = (params: {
     }
   }
 
+  // Prefer the monthly map when present - slot "1" is always the first course
+  // the admin selected, "2" the second, and so on.
   const baseAssignments =
     monthlyCourseAssignments && monthlyCount
       ? monthlyCourseAssignments

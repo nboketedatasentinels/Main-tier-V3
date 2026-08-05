@@ -969,8 +969,8 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 </Text>
                 <Text fontSize="sm" color="gray.600" mb={3}>
                   {isMonthlyJourney
-                    ? 'Pick one course per month from the T4L catalogue. Month-based journeys are not pillar-driven — choose courses based on stakeholder discussion. These assignments are saved to the organization.'
-                    : '6-week courses come from the organization pillar (when set) and are saved to the organization. Re-save after changing duration to persist the new course plan.'}
+                    ? `Assign exactly ${courseLimit} courses (1 per month). Learners only see these courses, in this order: Course 1 first, Course 2 second, and so on.`
+                    : '6-week courses come from the organization pillar (when set) and are saved to the organization. Window 1 is shown first to learners.'}
                 </Text>
                 {courseLimit === 0 ? (
                   <Text fontSize="sm" color="gray.600">
@@ -998,7 +998,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         <Flex justify="space-between" align="center" mb={2}>
                           <HStack spacing={2}>
                             <Badge colorScheme={isEmpty ? 'red' : 'green'} borderRadius="full">
-                              {getProgramSegmentLabel(monthNumber, programCadence)}
+                              {`Course ${monthNumber} of ${courseLimit}`}
                             </Badge>
                             {dateRange && (
                               <Text fontSize="sm" color="gray.600">

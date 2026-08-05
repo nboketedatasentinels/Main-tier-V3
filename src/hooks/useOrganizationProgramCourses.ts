@@ -4,6 +4,8 @@ import {
   MonthlyCourseAssignments,
   getMonthlyAssignmentsArray,
   normalizeMonthlyAssignments,
+  resolveExpectedCourseSlotCount,
+  uniqueOrderedCourseIds,
 } from '@/utils/monthlyCourseAssignments'
 import { resolveCourseIdFromMapping } from '@/utils/courseMappings'
 import { normalizeDurationWeeks, resolveDurationWeeksFromProgramDuration, resolveJourneyType } from '@/utils/journeyType'
@@ -102,21 +104,29 @@ export const useOrganizationProgramCourses = (organizationId: string | null) => 
           programDurationWeeks,
           programDuration,
         })
+        const expectedSlots = resolveExpectedCourseSlotCount({
+          programDuration,
+          programDurationWeeks,
+          journeyType,
+        })
         const { monthlyAssignments, totalMonths } = normalizeMonthlyAssignments({
           monthlyCourseAssignments,
           courseAssignments,
           programDuration,
+          expectedSlots,
         })
         const mappedMonthlyAssignments = normalizeMonthlyAssignmentsFromMapping(monthlyAssignments, totalMonths)
+        // Slot order is the contract: admin month/window 1 → learner course 1, etc.
         const monthlyAssignmentArray = getMonthlyAssignmentsArray(mappedMonthlyAssignments, totalMonths)
-        const orderedCourseIds = Array.from(new Set(monthlyAssignmentArray.filter(Boolean)))
+        const orderedCourseIds = uniqueOrderedCourseIds(monthlyAssignmentArray)
 
         setProgram({
           monthlyAssignments: mappedMonthlyAssignments,
           totalMonths,
           cohortStartDate: normalizeDate(data.cohortStartDate),
           orderedCourseIds,
-          courseAssignments,
+          // Keep the flat array in the same admin-selected order for week-based UIs.
+          courseAssignments: monthlyAssignmentArray,
           journeyType,
           programDurationWeeks: programDurationWeeks ?? (journeyType ? JOURNEY_META[journeyType].weeks : null),
           pillar: isPillar(data.pillar) ? data.pillar : null,

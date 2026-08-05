@@ -12,7 +12,7 @@ import {
   Tooltip,
 } from '@chakra-ui/react'
 import { Link as RouterLink } from 'react-router-dom'
-import { ArrowUpRight, Award, BookOpen, CheckCircle2, Clock, Lock, Sparkles, type LucideIcon } from 'lucide-react'
+import { ArrowUpRight, Award, BookOpen, CheckCircle2, Lock, Sparkles, type LucideIcon } from 'lucide-react'
 import type { CourseCompletionRecord } from '@/services/courseCompletionService'
 
 export type CourseAvailability = 'current' | 'past' | 'locked' | 'completed'
@@ -232,12 +232,12 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
         }
       : availability === 'past'
         ? {
-            strip: '#cbd5e1',
-            icon: Clock,
-            iconBg: 'gray.100',
-            iconColor: 'gray.600',
-            eyebrowColor: 'gray.600',
-            badge: { label: 'Ended', bg: 'gray.100', color: 'gray.700' },
+            strip: '#350e6f',
+            icon: BookOpen,
+            iconBg: 'purple.50',
+            iconColor: '#350e6f',
+            eyebrowColor: '#350e6f',
+            badge: { label: 'Available', bg: 'purple.50', color: '#350e6f' },
           }
         : isLocked
           ? {

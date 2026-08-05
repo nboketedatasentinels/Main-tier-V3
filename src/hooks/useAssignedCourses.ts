@@ -129,8 +129,9 @@ export const useAssignedCourses = () => {
     }
 
     // ── Week-based journeys (4W / 6W) ───────────────────────────────────────
+    // Prefer monthly/window map order (admin slot 1 → learner course 1).
     const fallback = getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
-    const assignments = program.courseAssignments.length ? program.courseAssignments : fallback
+    const assignments = fallback.some(Boolean) ? fallback : program.courseAssignments
     const assignedIds = assignments.filter(Boolean)
     if (!assignedIds.length) return []
 

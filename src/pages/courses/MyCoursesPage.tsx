@@ -696,11 +696,17 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     if (!program) return []
     return getMonthlyAssignmentsArray(program.monthlyAssignments, program.totalMonths)
   }, [program])
+  // Always prefer the ordered monthly/window map so admin selection order is
+  // preserved on the learner side (1st pick → Month/Window 1, etc.).
   const assignmentList = useMemo(() => {
     if (!program) return []
-    return program.courseAssignments.length ? program.courseAssignments : fallbackAssignments
+    if (fallbackAssignments.some(Boolean)) return fallbackAssignments
+    return program.courseAssignments
   }, [program, fallbackAssignments])
-  const assignedCourseIds = useMemo(() => assignmentList.filter(Boolean), [assignmentList])
+  const assignedCourseIds = useMemo(
+    () => assignmentList.filter(Boolean),
+    [assignmentList],
+  )
   const assignedCourseCount = useMemo(() => assignedCourseIds.length, [assignedCourseIds])
 
   const monthlyProgramTimeline = useMemo(() => {
@@ -708,7 +714,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     const now = new Date()
     return Array.from({ length: program.totalMonths }, (_, index) => {
       const courseId = program.monthlyAssignments[String(index + 1)] || ''
-      const course = courseId ? courseMap[courseId] : undefined
+      // Learners only see courses the admin actually selected.
+      if (!courseId) return null
+      const course = courseMap[courseId]
       const availability = getMonthAvailabilityStatus({
         cohortStartDate: program.cohortStartDate,
         currentDate: now,
@@ -725,7 +733,14 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         dateRange,
         unlockDate,
       }
-    })
+    }).filter(Boolean) as Array<{
+      monthNumber: number
+      courseId: string
+      course: NormalizedCourse | undefined
+      availability: ReturnType<typeof getMonthAvailabilityStatus>
+      dateRange: string | undefined
+      unlockDate: Date | null
+    }>
   }, [program, courseMap])
 
   const weeklyProgramTimeline = useMemo(() => {
@@ -743,8 +758,10 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
     const weeksPerBlock = is6W ? 2 : 1
     const journeyWeeks = totalWeeks ?? displayAssignments.length * weeksPerBlock
 
-    return displayAssignments.map((courseId, index) => {
-      const course = courseId ? courseMap[courseId] : undefined
+    return displayAssignments
+      .map((courseId, index) => {
+      if (!courseId) return null
+      const course = courseMap[courseId]
       const startWeekIndex = index * weeksPerBlock
       const isLastBlock = index === displayAssignments.length - 1
       // When the assigned courses don't tile the journey exactly (e.g. a 6-week
@@ -785,6 +802,15 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         unlockDate,
       }
     })
+    .filter(Boolean) as Array<{
+      weekNumber: number
+      displayLabel: string | undefined
+      courseId: string
+      course: NormalizedCourse | undefined
+      availability: ReturnType<typeof getWeekAvailabilityStatus>
+      dateRange: string | undefined
+      unlockDate: Date | null
+    }>
   }, [
     program,
     totalWeeks,
