@@ -235,6 +235,60 @@ describe('pointsConfig module activities', () => {
     })
   })
 
+  it('matches the 9-month weekly-checklist product table', () => {
+    const crossRef = getJourneyPointsCrossReference('9M')
+    const byId = new Map(crossRef.activityBreakdown.map((row) => [row.activityId, row]))
+
+    expect(crossRef.maxPossiblePoints).toBe(339000)
+    expect(crossRef.passMarkPoints).toBe(227000)
+    expect(crossRef.computedMaxPoints).toBe(339000)
+
+    expect(byId.get('podcast_workbook')).toMatchObject({ frequency: 27, pointsEach: 2000, maxPoints: 54000 })
+    expect(byId.get('weekly_session')).toMatchObject({ frequency: 36, pointsEach: 1500, maxPoints: 54000 })
+    expect(byId.get('webinar_workbook')).toMatchObject({
+      title: 'Attend Webinar + Workbook',
+      frequency: 9,
+      pointsEach: 4000,
+      maxPoints: 36000,
+      approvalType: 'partner_approved',
+    })
+    expect(byId.get('peer_to_peer')).toMatchObject({ frequency: 27, pointsEach: 1000, maxPoints: 27000 })
+    expect(byId.get('impact_log')).toMatchObject({ frequency: 18, pointsEach: 1000, maxPoints: 18000 })
+    expect(byId.get('lift_module')).toMatchObject({ frequency: 9, pointsEach: 3000, maxPoints: 27000 })
+    expect(byId.get('linkedin')).toMatchObject({ frequency: 21, pointsEach: 500, maxPoints: 10500 })
+    expect(byId.get('book_club')).toMatchObject({ frequency: 9, pointsEach: 2500, maxPoints: 22500 })
+    expect(byId.get('peer_matching')).toMatchObject({ frequency: 36, pointsEach: 1000, maxPoints: 36000 })
+    expect(byId.get('challenger')).toMatchObject({ frequency: 18, pointsEach: 1000, maxPoints: 18000 })
+    expect(byId.get('mentor_meetup')).toMatchObject({
+      frequency: 9,
+      pointsEach: 2000,
+      maxPoints: 18000,
+      approvalType: 'mentor_issued',
+    })
+    expect(byId.get('ambassador_session')).toMatchObject({
+      title: 'Ambassador Session',
+      frequency: 9,
+      pointsEach: 2000,
+      maxPoints: 18000,
+      approvalType: 'ambassador_issued',
+    })
+
+    expect(crossRef.pointVariants).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          key: 'without_mentor_and_ambassador',
+          maxPossiblePoints: 303000,
+          passMarkPoints: 203000,
+        }),
+        expect.objectContaining({
+          key: 'without_mentor_or_ambassador',
+          maxPossiblePoints: 321000,
+          passMarkPoints: 215000,
+        }),
+      ]),
+    )
+  })
+
   it('replaces book club with the 4500-point webinar in the 6-week journey config', () => {
     const activities = getActivitiesForJourney('6W')
     const byId = new Map(activities.map((activity) => [activity.id, activity]))
