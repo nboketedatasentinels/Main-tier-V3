@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Methodology Justification</title>
+<title>T4L | Practical 3: Methodology Justification</title>
+<meta name="programme-component-id" content="starter-kit-practical-3">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-practical-3">
+<meta name="programme-part-title" content="Practical 3 · Methodology Justification">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 3">
+<meta name="programme-submit-confirm" content="Submit Practical 3: Methodology Justification?&#10;&#10;Practical 3 contributes to your Practicals Portfolio (20% of competence pass). Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -385,7 +392,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm planning a [paste Step 1 project summary] using a [paste Step 2 methodology choice] approach. Find me three recent cases (last 5 years) where similar AI/digital transformation projects failed using this methodology. For each case, tell me: (1) what specifically went wrong, (2) whether the methodology choice contributed to the failure, and (3) what early warning signs the project leader missed. Be specific -- if you can't cite real cases, say so rather than make them up.</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? What early warning signs will you watch for?</div>
-      <textarea class="ai-field" placeholder="AI surfaced two real cases (and noted the third was hypothetical, which it labelled clearly). The strongest pattern: in hybrid projects that failed, the handoff between the Waterfall phase and the Agile phase was where things broke -- the team kept the Waterfall mindset (controlled, low-feedback) into the phase that needed Agile's openness. Early warning sign to watch: if my Week 5 review feels like a status report rather than a working session with the ops managers, the handoff has not happened."></textarea>
+      <textarea class="ai-field" name="ai_methodology_cases" placeholder="AI surfaced two real cases (and noted the third was hypothetical, which it labelled clearly). The strongest pattern: in hybrid projects that failed, the handoff between the Waterfall phase and the Agile phase was where things broke -- the team kept the Waterfall mindset (controlled, low-feedback) into the phase that needed Agile's openness. Early warning sign to watch: if my Week 5 review feels like a status report rather than a working session with the ops managers, the handoff has not happened."></textarea>
     </div>
 
     <div class="ai-step">
@@ -399,7 +406,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm proposing a [methodology] approach. The strongest counter-argument I've identified is: [paste Step 4 counter-argument]. My response is: [paste Step 4 response]. Play a sceptical steering committee member who is not convinced. Press my response. What's the second-order pushback I haven't addressed? Where does my response sound rehearsed rather than thought-through?</div>
       <div class="prompt-label" style="margin-top:12px">Where did your response weaken? What will you tighten?</div>
-      <textarea class="ai-field" placeholder="AI's pushback: 'You said the COO asked for unified governance last quarter, but if she's already sceptical of multi-stream programmes she may not buy that hybrid IS unified governance -- she may see it as two streams in disguise.' That's fair. I need to be more concrete about the governance overhead -- specifically that this means one weekly stand-up, one risk register, one steering report. Adding that to my response."></textarea>
+      <textarea class="ai-field" name="ai_counter_stress_test" placeholder="AI's pushback: 'You said the COO asked for unified governance last quarter, but if she's already sceptical of multi-stream programmes she may not buy that hybrid IS unified governance -- she may see it as two streams in disguise.' That's fair. I need to be more concrete about the governance overhead -- specifically that this means one weekly stand-up, one risk register, one steering report. Adding that to my response."></textarea>
     </div>
   </div>
 
@@ -407,7 +414,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As AI tools get better at recommending project methodologies based on project characteristics, what's the difference between an AI's methodology recommendation and a transformation practitioner's choice? Where does practitioner judgement still earn its place?</div>
-    <textarea placeholder="The AI can match my project characteristics against patterns -- 'projects like this typically use Hybrid' -- and that's useful. What it can't see: my organisation's last failure pattern, the specific personalities in my steering committee, the political cost I've already paid for the 2023 cancellation, the relationship I have with the IT director. Methodology choice is technical AND political. AI does the technical analysis. Practitioner judgement reads the political layer that determines whether the technical choice can actually be governed in this specific organisation. The AI broadens. The judgement specifies."></textarea>
+    <textarea name="ai_lens_methodology_judgement" placeholder="The AI can match my project characteristics against patterns -- 'projects like this typically use Hybrid' -- and that's useful. What it can't see: my organisation's last failure pattern, the specific personalities in my steering committee, the political cost I've already paid for the 2023 cancellation, the relationship I have with the IT director. Methodology choice is technical AND political. AI does the technical analysis. Practitioner judgement reads the political layer that determines whether the technical choice can actually be governed in this specific organisation. The AI broadens. The judgement specifies."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -429,62 +436,43 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    project_summary: get('project_summary'),
-    project_distinctives: get('project_distinctives'),
-    methodology_choice: get('methodology_choice'),
-    headline_reason: get('headline_reason'),
-    reasons: {
-      reason_1: get('reason_1'),
-      reason_2: get('reason_2'),
-      reason_3: get('reason_3'),
-    },
-    counter_argument: get('counter_argument'),
-    counter_response: get('counter_response'),
-    ai_risks: {
-      risk_1: get('ai_risk_1'),
-      risk_2: get('ai_risk_2'),
-      risk_3: get('ai_risk_3'),
-    },
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.project_summary,
-    data.project_distinctives,
-    data.methodology_choice,
-    data.headline_reason,
-    data.reasons.reason_1,
-    data.reasons.reason_2,
-    data.reasons.reason_3,
-    data.counter_argument,
-    data.counter_response,
-    data.ai_risks.risk_1,
-    data.ai_risks.risk_2,
-    data.ai_risks.risk_3,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 3? Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W3)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'project_summary',
+    'project_distinctives',
+    'methodology_choice',
+    'headline_reason',
+    'reason_1',
+    'reason_2',
+    'reason_3',
+    'counter_argument',
+    'counter_response',
+    'ai_risk_1',
+    'ai_risk_2',
+    'ai_risk_3',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>T4L | Capstone Part B: Project Scope Document</title>
+<meta name="programme-component-id" content="starter-kit-capstone-part-b">
+<meta name="programme-component-type" content="capstone">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-capstone-part-b">
+<meta name="programme-part-title" content="Part B · Project Scope Document">
+<meta name="programme-component-title" content="Combined Capstone — Project Scope Document">
+<meta name="programme-submit-confirm" content="Submit Capstone Part B: Project Scope Document?&#10;&#10;This closes Course 2 (Lead Like a Pro). Part C (Status Report) submits later. All three Parts (Proposal + Scope + Status Report) are marked together as your Combined Capstone — weighted 50% of your competence pass.&#10;&#10;Once submitted, you can edit until end of Week 6.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; }
@@ -18,6 +25,8 @@
   .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
   .print-btn:hover{background:var(--gold-dark)}
   .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .print-btn-primary{background:var(--gold);color:var(--plum)}
+  .print-btn-primary:hover{background:var(--gold-dark);transform:translateY(-1px)}
   .header-block{background:var(--plum);padding:40px 40px 36px}
   .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
   .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -117,7 +126,7 @@
   <span class="title">Project Scope Document</span>
   <div class="print-bar-actions">
     <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
-    <button class="print-btn" onclick="submitCapstone()">Submit</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
   </div>
 </div>
 <div class="header-block">
@@ -127,7 +136,7 @@
   </div>
   <div class="lift-badge">The Transformation Practitioner</div>
   <h1 class="header-title">Project <em>Scope</em> Document</h1>
-  <p class="header-desc">Take the opportunity you proposed in Part A and scope it end-to-end. Objectives, outcomes, timelines, budget, dependencies, methodology choice — with the rigour required to defend the plan to a steering committee.</p>
+  <p class="header-desc">Take the opportunity you proposed in Part A and scope it end-to-end. Objectives, outcomes, timelines, budget, dependencies, methodology choice -- with the rigour required to defend the plan to a steering committee that's seen too many projects fail. The document senior stakeholders sign off on, not the wishlist that gets filed.</p>
   <div class="capstone-callout">Capstone Part B · Closes Lead Like a Pro</div>
 </div>
 <div class="content">
@@ -146,7 +155,7 @@
     <div class="section-num-row"><div class="section-num">Section 01</div><div class="outcome-tag">Outcome 3 · Project framing</div></div>
     <h2 class="section-title">Project Reference</h2>
     <div class="section-prompt">What is this project, in one paragraph that a senior stakeholder could read and immediately know what they're funding?</div>
-    <textarea name="section_01_reference" placeholder="Project: Make Fleet Utilisation Visible to Action..."></textarea>
+    <textarea name="section_01_reference" placeholder="Project: Make Fleet Utilisation Visible to Action. A 90-day initiative to rebuild fleet utilisation reporting from 14 manual Excel exports into an automated weekly action-oriented dashboard available to four operational managers. Scope includes data pipeline rebuild, dashboard tooling selection, manager training, and a 60-day pilot with explicit utilisation improvement targets. Approved sponsor: COO. Approved budget: $35K capital plus 6 weeks of one analyst's time. Target: move utilisation from 67% to 70% within the 90-day pilot."></textarea>
   </div>
   <div class="section-card">
     <div class="section-num-row"><div class="section-num">Section 02</div><div class="outcome-tag">Outcome 3 · Objectives vs outcomes</div></div>
@@ -154,8 +163,8 @@
     <div class="section-prompt">What does the project DO (objectives) and what changes for the organisation as a result (outcomes)? Distinguish them clearly.</div>
     <div class="section-hint">Objectives are what the project produces. Outcomes are what shifts in the organisation because the objectives were met.</div>
     <div class="two-col">
-      <div class="sub-q"><div class="sub-q-label">Objectives (what the project produces)</div><textarea name="section_02_objectives"></textarea></div>
-      <div class="sub-q"><div class="sub-q-label">Outcomes (what changes for the organisation)</div><textarea name="section_02_outcomes"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Objectives (what the project produces)</div><textarea name="section_02_objectives" placeholder="(1) Replace the 14 manual Excel exports with one automated data pipeline. (2) Deliver one weekly dashboard for the four operational managers. (3) Train the four managers on dashboard interpretation. (4) Run a 60-day pilot with weekly utilisation review meetings."></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Outcomes (what changes for the organisation)</div><textarea name="section_02_outcomes" placeholder="(1) Fleet utilisation moves from 67% to 70% within the 90-day pilot. (2) Analyst time freed for higher-value work. (3) Managers shift from receiving reports to using reports. (4) Reporting infrastructure reusable for Phase 2 metrics."></textarea></div>
     </div>
   </div>
   <div class="section-card">
@@ -277,12 +286,6 @@ My Scope: [paste your Sections 01-08]</div>
     </ul>
   </div>
 </div>
-<script>
-function submitCapstone() {
-  if (!confirm("Submit Capstone Part B: Project Scope Document?\n\nAll three Parts are marked together as your Combined Capstone — weighted 50% of your competence pass.")) return;
-  alert("Capstone Part B received. (In production, this POSTs to /api/capstones/submit with submission_type = CAPSTONE_PART_B)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
 </body>
 </html>

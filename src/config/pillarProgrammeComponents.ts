@@ -235,13 +235,15 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         {
           id: 'starter-kit-capstone-part-b',
           title: 'Part B · Project Scope Document',
-          description: 'Closes Lead Like a Pro (Week 6). Objectives, methodology, risks.',
+          description:
+            'Second Practitioner Capstone. Closes Lead Like a Pro (Week 6). Objectives, methodology, risks.',
           href: '/capstones/starter-kit-capstone-part-b.html',
         },
         {
           id: 'starter-kit-capstone-part-c',
           title: 'Part C · Status Report',
-          description: 'Closes Project Leadership Discipline. Risk-led mid-flight report.',
+          description:
+            'Third Practitioner Capstone. Closes Project Leadership Discipline. Risk-led mid-flight report.',
           href: '/capstones/starter-kit-capstone-part-c.html',
         },
       ],
@@ -249,22 +251,38 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
     {
       id: 'starter-kit-case-study',
       type: 'case_study',
-      title: 'Combined Case Studies (2 parts)',
+      title: 'Combined Case Studies (4 parts)',
       description:
-        'Two case studies marked together: Kodak (the pitch that did not land) and SARS (the modernisation that was dismantled).',
+        'Four case studies marked together. Case Study 1: Nadella. Case Study 2: Kodak. Case Study 3: Okonjo-Iweala. Case Study 4: SARS. Combined weight 30% of competence pass.',
       status: 'available',
       parts: [
         {
           id: 'starter-kit-case-study-1',
-          title: 'Part 1 · The Pitch That Did Not Land',
-          description: 'Kodak and the Digital Camera, 1975–1996. Closes Think Like an Owner.',
+          title: 'Part 1 · The Pattern That Was Costing the Company',
+          description:
+            'First Practitioner Case Study. Satya Nadella\'s first year at Microsoft, 2014. Pattern recognition under pressure.',
           href: '/capstones/starter-kit-case-study-1.html',
         },
         {
           id: 'starter-kit-case-study-2',
-          title: 'Part 2 · The Modernisation That Was Dismantled',
-          description: 'South African Revenue Service, 2014–2018. Closes Delivering Transformation.',
+          title: 'Part 2 · The Pitch That Did Not Land',
+          description:
+            'Second Practitioner Case Study. Kodak and the digital camera, 1975–1996. Opportunity recognition and audience-matched framing.',
           href: '/capstones/starter-kit-case-study-2.html',
+        },
+        {
+          id: 'starter-kit-case-study-3',
+          title: 'Part 3 · Telling My Story Is Risky',
+          description:
+            'Third Practitioner Case Study. Ngozi Okonjo-Iweala and the cost of leading, Nigeria 2012. Shame patterns and strategic vulnerability.',
+          href: '/capstones/starter-kit-case-study-3.html',
+        },
+        {
+          id: 'starter-kit-case-study-4',
+          title: 'Part 4 · The Modernisation That Was Dismantled',
+          description:
+            'Fourth Practitioner Case Study. South African Revenue Service, 2014–2018. Scope discipline, escalation, and senior reporting under pressure.',
+          href: '/capstones/starter-kit-case-study-4.html',
         },
       ],
     },
@@ -309,7 +327,8 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         {
           id: 'starter-kit-practical-6',
           title: 'Practical 6 · Lessons Synthesis',
-          description: 'Week 6 - the integrative artefact that closes the Starter Kit.',
+          description:
+            'Week 6 - synthesise patterns across Practicals 1–5 and commit to one 90-day growth edge.',
           href: '/capstones/starter-kit-practical-6.html',
         },
       ],

@@ -99,7 +99,9 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
             Programme components
           </Heading>
           <Text color="gray.700" fontSize="sm" maxW="2xl" lineHeight="1.65">
-            Three applied deliverables that, alongside your courses, complete the programme.
+            {pillar === 'starter_kit'
+              ? 'Complete Capstone Parts A (One-Page Proposal), B (Project Scope), and C (Status Report) in order. All three are marked together as your Combined Capstone.'
+              : 'Three applied deliverables that, alongside your courses, complete the programme.'}
           </Text>
         </Stack>
 

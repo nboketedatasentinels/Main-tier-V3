@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Risk Register Draft</title>
+<title>T4L | Practical 4: Risk Register Draft</title>
+<meta name="programme-component-id" content="starter-kit-practical-4">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-practical-4">
+<meta name="programme-part-title" content="Practical 4 · Risk Register Draft">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 4">
+<meta name="programme-submit-confirm" content="Submit Practical 4: Risk Register Draft?&#10;&#10;Practical 4 contributes to your Practicals Portfolio (20% of competence pass). Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -165,7 +172,7 @@
 
 <div class="print-bar">
   <div>
-    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-transform">TRANSFORM</span>
     <span class="t4l-leader">LEADER</span>
   </div>
   <span class="title">Risk Register Draft</span>
@@ -181,7 +188,7 @@
       <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
     </div>
     <div class="wordmark-block">
-      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-top">TRANSFORM</div>
       <div class="brand-bottom">LEADER</div>
       <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
     </div>
@@ -461,7 +468,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm building a risk register for a [paste Step 1 project summary] using a [paste Step 1 methodology]. Here are the five risks I've identified: [paste your five risks from Step 2]. Look at standard risk categories for AI/digital transformation projects -- governance, data quality, model bias, regulatory, vendor lock-in, change management, security, ethical exposure. Tell me which categories I've covered, which I've under-weighted, and which I've missed. For any I've missed, suggest the specific risk I should add to my register and why.</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you update the register?</div>
-      <textarea class="ai-field" placeholder="AI flagged that I've covered data quality and adoption well, but I've missed governance and security entirely. Specifically: (1) Who decides if a unified data view shows information that one department wouldn't normally see about another? Right now my register doesn't address this and the COO will likely raise it. (2) Single sign-on / access control on the new reporting layer -- I've assumed IT will handle it but no one owns it on my register. Adding both as Risks 6 and 7, then dropping the weakest existing risk to keep the register at 5."></textarea>
+      <textarea class="ai-field" name="ai_risk_coverage" placeholder="AI flagged that I've covered data quality and adoption well, but I've missed governance and security entirely. Specifically: (1) Who decides if a unified data view shows information that one department wouldn't normally see about another? Right now my register doesn't address this and the COO will likely raise it. (2) Single sign-on / access control on the new reporting layer -- I've assumed IT will handle it but no one owns it on my register. Adding both as Risks 6 and 7, then dropping the weakest existing risk to keep the register at 5."></textarea>
     </div>
 
     <div class="ai-step">
@@ -475,7 +482,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">Here are the five risks and mitigations from my register: [paste your five risks and mitigations from Step 2]. For each mitigation, tell me: (1) Is this actually actionable -- could the named owner start on it Monday? (2) Does it address the cause of the risk or just monitor for symptoms? (3) What's the specific failure mode this mitigation has -- where would it stop working? Be honest. If a mitigation is wishful thinking, say so.</div>
       <div class="prompt-label" style="margin-top:12px">Which mitigations did AI flag as weak? How will you tighten them?</div>
-      <textarea class="ai-field" placeholder="AI flagged Risk 3 mitigation as weak: 'monitor user feedback weekly' is a symptom-monitor, not a cause-addressor. Tightening to: 'IT lead runs a 15-min user check at end of each Agile sprint review with named users -- not survey-based, conversation-based.' Also flagged Risk 4 mitigation as having a clear failure mode: it relies on the contractor adhering to open-standard connectors but there's no contractual penalty if they don't. Adding contract clause + IT director sign-off on connector choice."></textarea>
+      <textarea class="ai-field" name="ai_mitigation_pressure_test" placeholder="AI flagged Risk 3 mitigation as weak: 'monitor user feedback weekly' is a symptom-monitor, not a cause-addressor. Tightening to: 'IT lead runs a 15-min user check at end of each Agile sprint review with named users -- not survey-based, conversation-based.' Also flagged Risk 4 mitigation as having a clear failure mode: it relies on the contractor adhering to open-standard connectors but there's no contractual penalty if they don't. Adding contract clause + IT director sign-off on connector choice."></textarea>
     </div>
   </div>
 
@@ -483,7 +490,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As AI tools get better at scanning project plans and surfacing risks, what's the difference between an AI-generated risk register and a transformation practitioner's register? Where does practitioner judgement still sharpen the work?</div>
-    <textarea placeholder="The AI is genuinely better than me at coverage -- it knows risk categories I haven't seen, from industries I don't work in. What it can't do: weight the risks for my specific organisation. It might tell me 'governance ambiguity is a high risk' generically, but my COO has personally absorbed three governance failures in the last two years -- so on my register, governance is the highest-risk item. That weighting comes from knowing the room. The AI gives me the inventory. The practitioner judgement gives me the priority order."></textarea>
+    <textarea name="ai_lens_risk_judgement" placeholder="The AI is genuinely better than me at coverage -- it knows risk categories I haven't seen, from industries I don't work in. What it can't do: weight the risks for my specific organisation. It might tell me 'governance ambiguity is a high risk' generically, but my COO has personally absorbed three governance failures in the last two years -- so on my register, governance is the highest-risk item. That weighting comes from knowing the room. The AI gives me the inventory. The practitioner judgement gives me the priority order."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -505,59 +512,64 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+
+  function get(name) {
     const el = document.querySelector('[name="' + name + '"]');
     return el ? el.value : '';
-  };
-  const buildRisk = (n) => ({
-    text: get('risk_' + n + '_text'),
-    type: get('risk_' + n + '_type'),
-    severity: get('risk_' + n + '_severity'),
-    likelihood: get('risk_' + n + '_likelihood'),
-    owner: get('risk_' + n + '_owner'),
-    mitigation: get('risk_' + n + '_mitigation'),
-  });
-  return {
-    project_summary: get('project_summary'),
-    methodology: get('methodology'),
-    risks: [buildRisk(1), buildRisk(2), buildRisk(3), buildRisk(4), buildRisk(5)],
-    ai_risk_focus: get('ai_risk_focus'),
-    ai_risk_specificity: get('ai_risk_specificity'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-
-  // Each risk row counts as filled if at least 4 of its 6 fields are filled
-  const risksFilled = data.risks.filter(r => {
-    const filled = [r.text, r.type, r.severity, r.likelihood, r.owner, r.mitigation].filter(v => v && v.trim().length > 0).length;
-    return filled >= 4;
-  }).length;
-
-  const otherFields = [data.project_summary, data.methodology, data.ai_risk_focus, data.ai_risk_specificity];
-  const otherFilled = otherFields.filter(v => v && v.trim().length > 0).length;
-
-  const hasAIRisk = data.risks.some(r => r.type === 'AI');
-
-  if (risksFilled < 5 || otherFilled < 4) {
-    const proceed = confirm("You haven't completed all sections yet. " + risksFilled + " of 5 risks substantially filled, " + otherFilled + " of 4 other fields filled. Submit anyway?");
-    if (!proceed) return;
   }
 
-  if (!hasAIRisk) {
-    const proceed = confirm("None of your risks are marked as AI type. The brief asks for at least one AI-specific risk. Submit anyway?");
-    if (!proceed) return;
+  function buildRisk(n) {
+    return {
+      text: get('risk_' + n + '_text'),
+      type: get('risk_' + n + '_type'),
+      severity: get('risk_' + n + '_severity'),
+      likelihood: get('risk_' + n + '_likelihood'),
+      owner: get('risk_' + n + '_owner'),
+      mitigation: get('risk_' + n + '_mitigation'),
+    };
   }
 
-  if (!confirm("Submit Practical 4? Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.")) return;
+  window.submitPractical = function submitPractical() {
+    const risks = [buildRisk(1), buildRisk(2), buildRisk(3), buildRisk(4), buildRisk(5)];
+    const risksFilled = risks.filter((r) => {
+      const filled = [r.text, r.type, r.severity, r.likelihood, r.owner, r.mitigation].filter(
+        (v) => v && v.trim().length > 0,
+      ).length;
+      return filled >= 4;
+    }).length;
 
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W4)");
-}
+    const otherFields = [
+      get('project_summary'),
+      get('methodology'),
+      get('ai_risk_focus'),
+      get('ai_risk_specificity'),
+    ];
+    const otherFilled = otherFields.filter((v) => v && v.trim().length > 0).length;
+    const hasAIRisk = risks.some((r) => r.type === 'AI');
+
+    if (risksFilled < 5 || otherFilled < 4) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          risksFilled +
+          ' of 5 risks substantially filled, ' +
+          otherFilled +
+          ' of 4 other fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (!hasAIRisk) {
+      const proceed = window.confirm(
+        'None of your risks are marked as AI type. The brief asks for at least one AI-specific risk. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
 </script>
-<script type="module" src="/capstones/_capstone-runtime.js"></script>
 </body>
 </html>

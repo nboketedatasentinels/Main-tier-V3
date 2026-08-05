@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>T4L | Capstone Part C: Status Report</title>
+<meta name="programme-component-id" content="starter-kit-capstone-part-c">
+<meta name="programme-component-type" content="capstone">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-capstone-part-c">
+<meta name="programme-part-title" content="Part C · Status Report">
+<meta name="programme-component-title" content="Combined Capstone — Status Report">
+<meta name="programme-submit-confirm" content="Submit Capstone Part C: Status Report?&#10;&#10;This closes the Combined Capstone for The Transformation Practitioner Journey — Parts A (One-Page Proposal), B (Project Scope), and C (Status Report) are marked together as one Combined Capstone, weighted 50% of your competence pass alongside the Practicals Portfolio (20%) and Combined Case Studies (30%).&#10;&#10;Once submitted, the Combined Capstone is ready for assessor review.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root { --plum:#1A1726; --gold:#F5C842; --gold-dark:#C9A020; --purple:#4A3B8C; --purple-light:#6B5BB5; --cream:#FAF8F3; --border:#E8E3DA; --field-bg:#F9F7F2; --field-border:#D4CEBC; --ai-bg:#0F1F16; --ai-border:#2D7A4F; --rag-green:#166534; --rag-amber:#B45309; --rag-red:#991B1B; }
@@ -18,6 +25,8 @@
   .print-btn{background:var(--gold);color:var(--plum);border:none;border-radius:8px;padding:8px 18px;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit}
   .print-btn:hover{background:var(--gold-dark)}
   .print-btn-secondary{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+  .print-btn-primary{background:var(--gold);color:var(--plum)}
+  .print-btn-primary:hover{background:var(--gold-dark);transform:translateY(-1px)}
   .header-block{background:var(--plum);padding:40px 40px 36px}
   .header-wordmark{display:flex;align-items:center;gap:12px;margin-bottom:20px}
   .play-circle{width:38px;height:38px;background:var(--purple);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -123,7 +132,7 @@
   <span class="title">Status Report</span>
   <div class="print-bar-actions">
     <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
-    <button class="print-btn" onclick="submitCapstone()">Submit</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
   </div>
 </div>
 <div class="header-block">
@@ -133,7 +142,7 @@
   </div>
   <div class="lift-badge">The Transformation Practitioner</div>
   <h1 class="header-title">Status <em>Report</em></h1>
-  <p class="header-desc">The mid-flight report you'd send a steering committee on the project you scoped in Part B. Risk leads. Status follows. Decisions required are named, not buried.</p>
+  <p class="header-desc">The mid-flight report you'd send a steering committee on the project you scoped in Part B. Risk leads. Status follows. Decisions required are named, not buried. Stakeholder positions handled with the discipline that distinguishes healthy disagreement from political behaviour. The artefact a steering committee could read in five minutes and trust.</p>
   <div class="capstone-callout">Capstone Part C · Closes Project Leadership Discipline</div>
 </div>
 <div class="content">
@@ -153,8 +162,8 @@
     <h2 class="section-title">Reporting Context</h2>
     <div class="section-prompt">Set the scene for the steering committee. What programme, what reporting period, who is reading this.</div>
     <div class="two-col">
-      <div class="sub-q"><div class="sub-q-label">Programme and reporting period</div><textarea name="section_01_context"></textarea></div>
-      <div class="sub-q"><div class="sub-q-label">Distribution and authorship</div><textarea name="section_01_distribution"></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Programme and reporting period</div><textarea name="section_01_context" placeholder="Programme: Fleet Utilisation Visibility (FUV) -- the 90-day initiative scoped in Capstone Part B. Reporting period: Weeks 1-6 of 12. Reporting cadence: bi-weekly to steering committee. This is the third bi-weekly report."></textarea></div>
+      <div class="sub-q"><div class="sub-q-label">Distribution and authorship</div><textarea name="section_01_distribution" placeholder="Distribution: COO (programme sponsor), Head of Operations, Head of Finance, Head of IT, programme manager (me). Prepared by: programme manager. Reviewed before distribution: programme sponsor."></textarea></div>
     </div>
   </div>
   <div class="section-card">
@@ -280,12 +289,6 @@ Status Report: [paste your full report from Sections 01-08]</div>
     </ul>
   </div>
 </div>
-<script>
-function submitCapstone() {
-  if (!confirm("Submit Capstone Part C: Status Report?\n\nThis closes the Combined Capstone for The Transformation Practitioner Journey.")) return;
-  alert("Capstone Part C received. Combined Capstone (Parts A + B + C) ready for assessor review. (In production, this POSTs to /api/capstones/submit with submission_type = CAPSTONE_PART_C)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
 </body>
 </html>

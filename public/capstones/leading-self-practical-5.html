@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Trigger Map</title>
+<title>T4L | Practical 5: Trigger Map</title>
+<meta name="programme-component-id" content="leading-self-practical-5">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="leading_self">
+<meta name="programme-part-id" content="leading-self-practical-5">
+<meta name="programme-part-title" content="Practical 5 · Trigger Map">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 5">
+<meta name="programme-submit-confirm" content="Submit Practical 5: Trigger Map?&#10;&#10;Practical 5 contributes to your Practicals Portfolio (20% of competence pass) for Leading Self in the Age of AI. Once submitted, you can still edit until end of Week 5. After Week 5 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -321,7 +328,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm building a Trigger Map for use under pressure. The trigger is: [paste your Step 1]. The body signal is: [paste your body signal]. The old action is: [paste your old action]. The Pause Point I've identified is: [paste your pause point]. Pressure-test the Pause Point. Specifically: (1) Is this a real moment of agency, or have I described an idealised version of myself noticing the signal? (2) What would have to be true for me to actually use this Pause Point in real time -- not in reflection? (3) What's the most likely reason I'd miss the Pause Point in the moment, and what would help me catch it instead?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? How will you tighten the Pause Point?</div>
-      <textarea class="ai-field" placeholder="AI's pushback was useful. It said the Pause Point as written assumes I'll notice the chest heat -- but in the actual moment, I usually only notice it in retrospect. Suggested I anchor the Pause Point to something more reliable: a phrase the senior leader is likely to say ('I have a concern with...'). When that phrase fires, the breath is the rule -- not the body signal. Updating the Map: Pause Point now triggers on the phrase, not on the sensation. The sensation will follow but the phrase comes first."></textarea>
+      <textarea class="ai-field" name="ai_pause_point_test" placeholder="AI's pushback was useful. It said the Pause Point as written assumes I'll notice the chest heat -- but in the actual moment, I usually only notice it in retrospect. Suggested I anchor the Pause Point to something more reliable: a phrase the senior leader is likely to say ('I have a concern with...'). When that phrase fires, the breath is the rule -- not the body signal. Updating the Map: Pause Point now triggers on the phrase, not on the sensation. The sensation will follow but the phrase comes first."></textarea>
     </div>
 
     <div class="ai-step">
@@ -335,7 +342,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm preparing for a high-stakes meeting where a specific trigger is likely to fire. The trigger: [paste Step 1]. My Deliberate Alternative is: [paste your alternative from Step 2]. Play the senior leader who fires this trigger -- I've described them as: [one or two lines about who they are and how they typically push]. Run a 60-second exchange. They challenge me. I use the alternative. They respond. Don't soften it. Push the way they would. Tell me where my alternative breaks under their pushback.</div>
       <div class="prompt-label" style="margin-top:12px">Where did the alternative break? What will you tighten?</div>
-      <textarea class="ai-field" placeholder="AI played the CFO well. The alternative held for the first response but broke when the CFO came back with a follow-up: 'Yes but that's not what I asked.' I had no second-layer response prepared. Adding to the Map: if the challenge comes back twice, the rule is 'I hear you -- give me one minute to respond properly,' then a 60-second considered answer. Two-layer protocol: instinct response + considered response. The instinct response buys me time without conceding."></textarea>
+      <textarea class="ai-field" name="ai_alternative_roleplay" placeholder="AI played the CFO well. The alternative held for the first response but broke when the CFO came back with a follow-up: 'Yes but that's not what I asked.' I had no second-layer response prepared. Adding to the Map: if the challenge comes back twice, the rule is 'I hear you -- give me one minute to respond properly,' then a 60-second considered answer. Two-layer protocol: instinct response + considered response. The instinct response buys me time without conceding."></textarea>
     </div>
   </div>
 
@@ -343,7 +350,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As AI tools become more present in your work and in the rooms you lead in -- AI-augmented dashboards, AI-generated executive summaries, AI in stakeholder communications -- new triggers will fire that weren't on your map six months ago. What's one trigger you can already see forming around AI in your leadership work, and what would the Map for that trigger need to include?</div>
-    <textarea placeholder="The forming trigger: when an AI-generated insight is presented in an exec meeting and the room treats it as authoritative -- when I know there are limitations the AI hasn't surfaced. The body signal is the same chest heat. The old action would be either to defer (let the AI's authority stand) or to over-correct (sound like I'm dismissing AI to protect my role). The Map for this trigger would need: a deliberate alternative that adds nuance without dismissing -- something like 'That's useful -- worth noting AI is good at X here but the Y question is still ours to make.' Same Pause Point structure. New phrase as the trigger anchor."></textarea>
+    <textarea name="ai_lens_new_triggers" placeholder="The forming trigger: when an AI-generated insight is presented in an exec meeting and the room treats it as authoritative -- when I know there are limitations the AI hasn't surfaced. The body signal is the same chest heat. The old action would be either to defer (let the AI's authority stand) or to over-correct (sound like I'm dismissing AI to protect my role). The Map for this trigger would need: a deliberate alternative that adds nuance without dismissing -- something like 'That's useful -- worth noting AI is good at X here but the Y question is still ours to make.' Same Pause Point structure. New phrase as the trigger anchor."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -365,52 +372,39 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    trigger_summary: get('trigger_summary'),
-    trigger_priority: get('trigger_priority'),
-    map: {
-      body_signal: get('body_signal'),
-      old_action: get('old_action'),
-      pause_point: get('pause_point'),
-      deliberate_alternative: get('deliberate_alternative'),
-    },
-    thirty_second_read: get('thirty_second_read'),
-    first_test: get('first_test'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.trigger_summary,
-    data.trigger_priority,
-    data.map.body_signal,
-    data.map.old_action,
-    data.map.pause_point,
-    data.map.deliberate_alternative,
-    data.thirty_second_read,
-    data.first_test,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 5? Once submitted, you can still edit until end of Week 5. After Week 5 closes, the submission is locked.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W5)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'trigger_summary',
+    'trigger_priority',
+    'body_signal',
+    'old_action',
+    'pause_point',
+    'deliberate_alternative',
+    'thirty_second_read',
+    'first_test',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

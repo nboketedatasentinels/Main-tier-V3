@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Protocol Card</title>
+<title>T4L | Practical 2: Protocol Card</title>
+<meta name="programme-component-id" content="leading-self-practical-2">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="leading_self">
+<meta name="programme-part-id" content="leading-self-practical-2">
+<meta name="programme-part-title" content="Practical 2 · Protocol Card">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 2">
+<meta name="programme-submit-confirm" content="Submit Practical 2: Protocol Card?&#10;&#10;Practical 2 contributes to your Practicals Portfolio (20% of competence pass) for Leading Self in the Age of AI. Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -381,7 +388,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm building a protocol to disrupt a leadership pattern. The pattern: [paste your Step 1 pattern]. The trigger: [paste your Step 1 trigger]. My protocol: [paste your Step 2 protocol -- name, three moves, signal phrase]. Generate three realistic high-pressure scenarios where this trigger would fire hard. For each, walk me through what I'd say and do using my protocol. Where does the protocol hold? Where does it likely break? What one adjustment would make it more durable?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you adjust?</div>
-      <textarea class="ai-field" placeholder="AI ran three scenarios -- the strongest test was 'CFO interrupts your one sentence and asks a follow-up before you've finished.' My current protocol has no provision for this -- if interrupted, I'd default back to the old pattern. Adding to Move 3: 'If interrupted, finish my sentence calmly before responding to the new question. Do not jump to the new question.' Small but important addition."></textarea>
+      <textarea class="ai-field" name="ai_protocol_scenarios" placeholder="AI ran three scenarios -- the strongest test was 'CFO interrupts your one sentence and asks a follow-up before you've finished.' My current protocol has no provision for this -- if interrupted, I'd default back to the old pattern. Adding to Move 3: 'If interrupted, finish my sentence calmly before responding to the new question. Do not jump to the new question.' Small but important addition."></textarea>
     </div>
 
     <div class="ai-step">
@@ -395,7 +402,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">My signal phrase for activating a leadership protocol under pressure is: [paste your signal phrase]. For context, the protocol is about [paste protocol name and what it disrupts]. Evaluate this signal phrase. Does it sound like something I'd actually say to myself in a high-pressure moment, or does it sound like a slogan I'd find in a corporate training? Suggest two alternative signal phrases that might fit better -- and tell me what to listen for in choosing.</div>
       <div class="prompt-label" style="margin-top:12px">Did you keep your phrase or switch? Why?</div>
-      <textarea class="ai-field" placeholder="My original phrase was 'One sentence. Then stop.' AI suggested two alternatives: 'Hold the line' and 'Land it and leave it.' The 'land it and leave it' lands harder -- it's how I actually talk, and it carries the energy of finishing rather than restraining. Switching to that. The lesson: my first instinct chose what I thought a leader should say. The second instinct chose something I'd actually say."></textarea>
+      <textarea class="ai-field" name="ai_signal_phrase_test" placeholder="My original phrase was 'One sentence. Then stop.' AI suggested two alternatives: 'Hold the line' and 'Land it and leave it.' The 'land it and leave it' lands harder -- it's how I actually talk, and it carries the energy of finishing rather than restraining. Switching to that. The lesson: my first instinct chose what I thought a leader should say. The second instinct chose something I'd actually say."></textarea>
     </div>
   </div>
 
@@ -403,7 +410,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As a transformation leader, you'll increasingly be expected to deploy yourself with discipline in moments where AI is also in the room -- a vendor pitch with AI tools demonstrating in real time, an exec review where AI dashboards are on screen, a board moment where someone uses AI to challenge your numbers. How does your protocol need to hold in those AI-saturated moments specifically?</div>
-    <textarea placeholder="The AI-saturated moments will be harder for my pattern because the pace is faster -- AI gives a stakeholder the ability to lob challenges at me before I've finished speaking. The 'interrupt' in my protocol was built for human pace. I need to expect to be challenged mid-sentence with data the AI just surfaced, and hold my position anyway. The protocol holds if I trust that the breath, the one sentence, and the silence are still right -- even when the AI has produced a contradicting chart. The discipline is to land my position before responding to AI-produced challenges. It's not about ignoring the AI; it's about not letting the AI's pace dictate mine."></textarea>
+    <textarea name="ai_lens_protocol_pace" placeholder="The AI-saturated moments will be harder for my pattern because the pace is faster -- AI gives a stakeholder the ability to lob challenges at me before I've finished speaking. The 'interrupt' in my protocol was built for human pace. I need to expect to be challenged mid-sentence with data the AI just surfaced, and hold my position anyway. The protocol holds if I trust that the breath, the one sentence, and the silence are still right -- even when the AI has produced a contradicting chart. The discipline is to land my position before responding to AI-produced challenges. It's not about ignoring the AI; it's about not letting the AI's pace dictate mine."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -425,61 +432,53 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+
+  function get(name) {
     const el = document.querySelector('[name="' + name + '"]');
     return el ? el.value : '';
-  };
-  return {
-    pattern_carry: get('pattern_carry'),
-    trigger_carry: get('trigger_carry'),
-    protocol: {
-      name: get('protocol_name'),
-      move_1: get('move_1'),
-      move_2: get('move_2'),
-      move_3: get('move_3'),
-      signal_phrase: get('signal_phrase'),
-    },
-    reps: {
-      day_1: get('rep_day_1'),
-      day_2: get('rep_day_2'),
-      day_3: get('rep_day_3'),
-      day_4: get('rep_day_4'),
-      day_5: get('rep_day_5'),
-    },
-    working: get('working'),
-    not_working: get('not_working'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const repsFilled = Object.values(data.reps).filter(v => v && v.trim().length > 0).length;
-  const otherFields = [
-    data.pattern_carry,
-    data.trigger_carry,
-    data.protocol.name,
-    data.protocol.move_1,
-    data.protocol.move_2,
-    data.protocol.move_3,
-    data.protocol.signal_phrase,
-    data.working,
-    data.not_working,
-  ];
-  const otherFilled = otherFields.filter(v => v && v.trim().length > 0).length;
-
-  if (repsFilled < 3 || otherFilled < otherFields.length) {
-    const proceed = confirm("You haven't completed all sections yet. " + repsFilled + " of 5 days logged, " + otherFilled + " of " + otherFields.length + " other fields filled. The standard asks for at least 3 days of reps. Submit anyway?");
-    if (!proceed) return;
   }
 
-  if (!confirm("Submit Practical 2? Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.")) return;
+  window.submitPractical = function submitPractical() {
+    const reps = [
+      get('rep_day_1'),
+      get('rep_day_2'),
+      get('rep_day_3'),
+      get('rep_day_4'),
+      get('rep_day_5'),
+    ];
+    const repsFilled = reps.filter((v) => v && v.trim().length > 0).length;
 
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W2)");
-}
+    const otherFields = [
+      get('pattern_carry'),
+      get('trigger_carry'),
+      get('protocol_name'),
+      get('move_1'),
+      get('move_2'),
+      get('move_3'),
+      get('signal_phrase'),
+      get('working'),
+      get('not_working'),
+    ];
+    const otherFilled = otherFields.filter((v) => v && v.trim().length > 0).length;
+
+    if (repsFilled < 3 || otherFilled < otherFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          repsFilled +
+          ' of 5 days logged, ' +
+          otherFilled +
+          ' of ' +
+          otherFields.length +
+          ' other fields filled. The standard asks for at least 3 days of reps. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
 </script>
-<script type="module" src="/capstones/_capstone-runtime.js"></script>
 </body>
 </html>

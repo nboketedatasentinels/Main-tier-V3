@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Lessons Synthesis</title>
+<title>T4L | Practical 6: Lessons Synthesis</title>
+<meta name="programme-component-id" content="starter-kit-practical-6">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-practical-6">
+<meta name="programme-part-title" content="Practical 6 · Lessons Synthesis">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 6">
+<meta name="programme-submit-confirm" content="Submit Practical 6: Lessons Synthesis?&#10;&#10;This is the final Practical of the Transformation Practitioner Journey. Once submitted, your full Practicals Portfolio (all six) is ready for assessor review. Practicals Portfolio = 20% of competence pass.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -350,7 +357,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I've completed five Practicals over a six-week Power Journey on AI / digital transformation practice. The two patterns I've named across them are: [paste your Step 1 patterns]. Here are the five Practicals: [paste a 2-3 line summary of each Practical's content]. For each pattern I named, tell me: (1) is the pattern actually visible in the material, (2) is there a stronger pattern I missed, and (3) did I name a real pattern or a flattering one? Be honest. If I wrote what I wished was true, say so.</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you adjust your patterns?</div>
-      <textarea class="ai-field" placeholder="AI confirmed Pattern 1 (political reading) is genuinely visible across Practicals 1, 2, and 4. On Pattern 2 (AI bolted-on), AI agreed but found a stronger version: it noticed I consistently treat the AI Activity sections as separate from the main work, even down to the language I use -- the body of each Practical is in 'practitioner voice,' the AI sections shift to 'project plan voice.' It's the same tendency but the evidence is sharper than what I wrote. Updating Pattern 2 to: 'When I switch to thinking about AI, my voice changes -- the practitioner disappears and the project planner takes over.'"></textarea>
+      <textarea class="ai-field" name="ai_pattern_test" placeholder="AI confirmed Pattern 1 (political reading) is genuinely visible across Practicals 1, 2, and 4. On Pattern 2 (AI bolted-on), AI agreed but found a stronger version: it noticed I consistently treat the AI Activity sections as separate from the main work, even down to the language I use -- the body of each Practical is in 'practitioner voice,' the AI sections shift to 'project plan voice.' It's the same tendency but the evidence is sharper than what I wrote. Updating Pattern 2 to: 'When I switch to thinking about AI, my voice changes -- the practitioner disappears and the project planner takes over.'"></textarea>
     </div>
 
     <div class="ai-step">
@@ -364,7 +371,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">My 90-day commitment from this Journey is: [paste your Step 4 commitment]. My first action this week is: [paste your Step 4 first action]. Pressure-test the commitment. Specifically: (1) Is the scope realistic for a senior practitioner with an existing day job? (2) What's the most likely reason I won't actually do this? (3) What's one thing I should add or change to make it more likely I'll keep the commitment? Be specific.</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you adjust?</div>
-      <textarea class="ai-field" placeholder="AI's pushback was useful. It said the scope is realistic but the structure isn't -- if I rely on Friday afternoon blocks to ship something in 90 days, I'll lose the first 4 weeks to Friday meetings I haven't yet pushed back on. It suggested I move the commitment from 'time-based' to 'milestone-based' with three checkpoints (prototype by Day 30, test on real data by Day 60, deployed by Day 90) and tell two people about each milestone. Adjusting -- adding the three milestones plus committing to brief my COO on Day 30 progress, which forces me to actually ship something."></textarea>
+      <textarea class="ai-field" name="ai_commitment_stress_test" placeholder="AI's pushback was useful. It said the scope is realistic but the structure isn't -- if I rely on Friday afternoon blocks to ship something in 90 days, I'll lose the first 4 weeks to Friday meetings I haven't yet pushed back on. It suggested I move the commitment from 'time-based' to 'milestone-based' with three checkpoints (prototype by Day 30, test on real data by Day 60, deployed by Day 90) and tell two people about each milestone. Adjusting -- adding the three milestones plus committing to brief my COO on Day 30 progress, which forces me to actually ship something."></textarea>
     </div>
   </div>
 
@@ -372,7 +379,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">You've now spent six weeks using AI as a thinking partner across the work. What did you learn about how you want to use AI in your transformation practice from now on -- and what specifically do you not want AI in?</div>
-    <textarea placeholder="What I want AI in: pressure-testing my analyses (Practicals 2 and 3 were sharper because of it), surfacing risk categories I'd missed (Practical 4), and roleplaying difficult conversations (Practical 5). It's a faster, cheaper second opinion than waiting for a peer call. What I don't want AI in: the moment of actually writing in my own voice. When I let AI draft for me, the voice becomes corporate, careful, and forgettable. The practitioner-to-practitioner tone is mine -- it can't be outsourced. So my rule going forward: AI as the sparring partner, never as the ghostwriter."></textarea>
+    <textarea name="ai_lens_practice_boundary" placeholder="What I want AI in: pressure-testing my analyses (Practicals 2 and 3 were sharper because of it), surfacing risk categories I'd missed (Practical 4), and roleplaying difficult conversations (Practical 5). It's a faster, cheaper second opinion than waiting for a peer call. What I don't want AI in: the moment of actually writing in my own voice. When I let AI draft for me, the voice becomes corporate, careful, and forgettable. The practitioner-to-practitioner tone is mine -- it can't be outsourced. So my rule going forward: AI as the sparring partner, never as the ghostwriter."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -394,50 +401,38 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    patterns: {
-      pattern_1: get('pattern_1'),
-      pattern_2: get('pattern_2'),
-    },
-    hardest_practical: get('hardest_practical'),
-    why_hard: get('why_hard'),
-    real_gap: get('real_gap'),
-    commitment: get('commitment'),
-    first_action: get('first_action'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.patterns.pattern_1,
-    data.patterns.pattern_2,
-    data.hardest_practical,
-    data.why_hard,
-    data.real_gap,
-    data.commitment,
-    data.first_action,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 6? This is the final Practical of the Transformation Practitioner Journey -- once submitted, your full Practicals Portfolio (all six) is locked for assessor review.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W6)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'pattern_1',
+    'pattern_2',
+    'hardest_practical',
+    'why_hard',
+    'real_gap',
+    'commitment',
+    'first_action',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

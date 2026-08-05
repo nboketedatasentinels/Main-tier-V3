@@ -118,8 +118,9 @@ export const ProgrammeComponentPartsPanel: React.FC<{ type: ProgrammeComponentTy
   if (!pillar) {
     return (
       <PlainNote>
-        Your {label} appears once your organisation is set up with a pillar. Reach out to your
-        partner if this stays empty.
+        Your {label} appears once your pathway is set. Free practitioners use the Digital
+        Transformation Starter Kit — open Courses to begin Capstone Part A. Organisation learners:
+        ask your partner if this stays empty.
       </PlainNote>
     )
   }

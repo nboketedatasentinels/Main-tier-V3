@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Pattern Profile</title>
+<title>T4L | Practical 1: Pattern Profile</title>
+<meta name="programme-component-id" content="leading-self-practical-1">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="leading_self">
+<meta name="programme-part-id" content="leading-self-practical-1">
+<meta name="programme-part-title" content="Practical 1 · Pattern Profile">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 1">
+<meta name="programme-submit-confirm" content="Submit Practical 1: Pattern Profile?&#10;&#10;Practical 1 contributes to your Practicals Portfolio (20% of competence pass) for Leading Self in the Age of AI. Once submitted, you can still edit until end of Week 1. After Week 1 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -340,7 +347,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm working through a leadership self-awareness exercise. The pattern I've named for myself under pressure is: [paste your Step 1 pattern]. Here are three real moments where I think this pattern showed up: [paste your Step 2 moments 1, 2, 3]. Read these carefully. (1) Is the pattern I've named actually visible in all three moments? (2) Is there a different or more specific pattern that's even more visible? (3) Is there something I'm describing as the pattern that's actually a symptom of a deeper one? Be specific and unflinching.</div>
       <div class="prompt-label" style="margin-top:12px">What did AI surface? Will you tighten the pattern?</div>
-      <textarea class="ai-field" placeholder="AI flagged that 'over-explaining' is the symptom but not the deeper pattern. Across all three moments, the deeper pattern is: I shift from speaking AS a leader to speaking ABOUT my thinking the moment I sense doubt in the room. Over-explaining is what that shift looks like. Anchoring is what's missing. Updating Step 1: 'Under perceived scepticism, I lose my anchor as a leader and start narrating my reasoning instead of holding my position.'"></textarea>
+      <textarea class="ai-field" name="ai_pattern_test" placeholder="AI flagged that 'over-explaining' is the symptom but not the deeper pattern. Across all three moments, the deeper pattern is: I shift from speaking AS a leader to speaking ABOUT my thinking the moment I sense doubt in the room. Over-explaining is what that shift looks like. Anchoring is what's missing. Updating Step 1: 'Under perceived scepticism, I lose my anchor as a leader and start narrating my reasoning instead of holding my position.'"></textarea>
     </div>
 
     <div class="ai-step">
@@ -354,7 +361,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">Here is the true belief I've named as driving my pattern under pressure: [paste your Step 4 true belief]. Push on this. (1) Is this the actual driver, or is it still a relatively polished version of something rawer underneath? (2) What would a more honest version of this belief sound like -- the one I might be flinching from naming? (3) What does this belief assume about my worth, my safety, or my place in the room? Don't be gentle.</div>
       <div class="prompt-label" style="margin-top:12px">What did AI push you toward? Will you adjust your true belief?</div>
-      <textarea class="ai-field" placeholder="AI's push: 'Being exposed is being wrong, and being wrong means I shouldn't be in this seat' is close but you're still hiding inside the word 'shouldn't.' The rawer version is: 'I don't fully believe I deserve this seat. So any moment where I might be wrong feels like the moment I get found out.' That sentence is what I'd been protecting myself from naming. Adjusting Step 4 true belief: 'I don't yet fully believe I belong in this seat -- so any moment of perceived doubt feels like the moment of being found out.'"></textarea>
+      <textarea class="ai-field" name="ai_belief_pressure_test" placeholder="AI's push: 'Being exposed is being wrong, and being wrong means I shouldn't be in this seat' is close but you're still hiding inside the word 'shouldn't.' The rawer version is: 'I don't fully believe I deserve this seat. So any moment where I might be wrong feels like the moment I get found out.' That sentence is what I'd been protecting myself from naming. Adjusting Step 4 true belief: 'I don't yet fully believe I belong in this seat -- so any moment of perceived doubt feels like the moment of being found out.'"></textarea>
     </div>
   </div>
 
@@ -362,7 +369,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As you start using AI more in your transformation work, the AI will increasingly be in the room with you in the moments your pattern runs. What's the risk of using AI to outsource the moments that trigger your pattern -- and what would you have to keep doing yourself to stay anchored as a leader?</div>
-    <textarea placeholder="The risk is hiding inside the AI. If my pattern is over-explaining under perceived scepticism, AI gives me an infinite supply of more context to add -- I could endlessly elaborate before going into a steering committee. The pattern would just get more sophisticated, not break. What I'd have to keep doing myself: holding my position when challenged, in real time, with my own voice. AI can prepare me but it can't be the leader in the room. The work is to stop using preparation as a substitute for presence."></textarea>
+    <textarea name="ai_lens_anchor" placeholder="The risk is hiding inside the AI. If my pattern is over-explaining under perceived scepticism, AI gives me an infinite supply of more context to add -- I could endlessly elaborate before going into a steering committee. The pattern would just get more sophisticated, not break. What I'd have to keep doing myself: holding my position when challenged, in real time, with my own voice. AI can prepare me but it can't be the leader in the room. The work is to stop using preparation as a substitute for presence."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -384,54 +391,40 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    pattern_statement: get('pattern_statement'),
-    pattern_trigger: get('pattern_trigger'),
-    moments: {
-      moment_1: get('moment_1'),
-      moment_2: get('moment_2'),
-      moment_3: get('moment_3'),
-    },
-    cost_concrete: get('cost_concrete'),
-    cost_avoidance: get('cost_avoidance'),
-    flattering_belief: get('flattering_belief'),
-    true_belief: get('true_belief'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.pattern_statement,
-    data.pattern_trigger,
-    data.moments.moment_1,
-    data.moments.moment_2,
-    data.moments.moment_3,
-    data.cost_concrete,
-    data.cost_avoidance,
-    data.flattering_belief,
-    data.true_belief,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 1? Once submitted, you can still edit until end of Week 1. After Week 1 closes, the submission is locked.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W1)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'pattern_statement',
+    'pattern_trigger',
+    'moment_1',
+    'moment_2',
+    'moment_3',
+    'cost_concrete',
+    'cost_avoidance',
+    'flattering_belief',
+    'true_belief',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

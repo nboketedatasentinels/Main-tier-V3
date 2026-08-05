@@ -301,7 +301,7 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
   }, [course, progressMap])
 
   const headerDescription =
-    'Transformational Leadership is a complementary course available to every member. Upgrade anytime to unlock the full learning library while keeping access to this course.'
+    'As a Transformation Practitioner, you start on the Digital Transformation Starter Kit. Your first Capstone is the One-Page Proposal (Part A). Transformational Leadership stays available as a complementary course.'
 
   return (
     <Stack spacing={8} py={2} as="section">
@@ -326,17 +326,17 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
           </Flex>
           <Stack spacing={1} flex={1}>
             <Heading size="lg" color="purple.900">
-              Continue your learning journey
+              Your Practitioner pathway
             </Heading>
             <Text color="purple.700" fontSize="md">
               {headerDescription}
             </Text>
             <HStack spacing={3} flexWrap="wrap">
               <Badge colorScheme="orange" variant="subtle" borderRadius="full">
-                Free tier experience
+                Transformation Practitioner
               </Badge>
               <Text color="orange.700" fontSize="sm">
-                You are viewing the complementary course catalog.
+                Free · no organisation · Starter Kit Capstone Part A first
               </Text>
               <Button
                 as={RouterLink}
@@ -352,6 +352,8 @@ const FreeTierCoursesPage: React.FC<{ userId?: string | null; profile: UserProfi
           </Stack>
         </Flex>
       </Box>
+
+      <PillarProgrammeComponentsSection pillar="starter_kit" />
 
       <Stack spacing={4} as="section">
         <HStack justify="space-between" align="center">

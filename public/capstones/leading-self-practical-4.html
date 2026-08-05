@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Carrying Inventory</title>
+<title>T4L | Practical 4: Carrying Inventory</title>
+<meta name="programme-component-id" content="leading-self-practical-4">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="leading_self">
+<meta name="programme-part-id" content="leading-self-practical-4">
+<meta name="programme-part-title" content="Practical 4 · Carrying Inventory">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 4">
+<meta name="programme-submit-confirm" content="Submit Practical 4: Carrying Inventory?&#10;&#10;Practical 4 contributes to your Practicals Portfolio (20% of competence pass) for Leading Self in the Age of AI. Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -340,7 +347,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm a transformation leader doing inventory work on what I bring into high-stakes meetings. The three masks I've named that I'm carrying are: [paste your three "Carrying" entries from Step 2]. The meeting context: [paste Step 1 meeting]. Read these carefully. (1) What category of mask might I be carrying that I haven't named? (2) Of the three I've listed, which one do you suspect I named because it was easier to admit -- and what's the harder one underneath? (3) What's the question I should be asking myself that I haven't yet?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI surface? Will you add to your inventory?</div>
-      <textarea class="ai-field" placeholder="AI flagged that I haven't named anything around 'being liked.' All three of my masks are about competence and protection. AI suggested there might be a likeability mask I haven't named -- the one that softens recommendations so they don't make anyone uncomfortable. Looking at my last three steering committees, I think this is real -- I add 'we could revisit if needed' as a likeability hedge. Adding to Carrying as Carrying 04: 'The likeability hedge -- softening recommendations so no one in the room has to feel uncomfortable about saying yes.'"></textarea>
+      <textarea class="ai-field" name="ai_inventory_gaps" placeholder="AI flagged that I haven't named anything around 'being liked.' All three of my masks are about competence and protection. AI suggested there might be a likeability mask I haven't named -- the one that softens recommendations so they don't make anyone uncomfortable. Looking at my last three steering committees, I think this is real -- I add 'we could revisit if needed' as a likeability hedge. Adding to Carrying as Carrying 04: 'The likeability hedge -- softening recommendations so no one in the room has to feel uncomfortable about saying yes.'"></textarea>
     </div>
 
     <div class="ai-step">
@@ -354,7 +361,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">My anchor for an upcoming high-stakes meeting is: [paste your Step 3 anchor]. The meeting context: [paste Step 1 meeting]. Pressure-test the anchor. (1) Is this anchor specific and verifiable, or is it general enough that I'd need to invent details to use it? (2) Will it hold when the CFO's scepticism actually fires -- or is it the kind of anchor that sounds strong on paper but evaporates under questioning? (3) What's a sharper version of this anchor I could use?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you sharpen the anchor?</div>
-      <textarea class="ai-field" placeholder="AI flagged that 'the recommendation I'd put my name on' is conviction-based, not evidence-based. Under CFO scrutiny, conviction wobbles. AI suggested the sharper anchor is the work itself: 'four months, thirteen practitioners, two reference customers, three risk frameworks -- this is what's behind my recommendation.' That's verifiable in a way that 'I'd put my name on it' isn't. Sharpening Step 3: anchor stays the same but the in-the-room version is the verifiable list, not the conviction."></textarea>
+      <textarea class="ai-field" name="ai_anchor_pressure_test" placeholder="AI flagged that 'the recommendation I'd put my name on' is conviction-based, not evidence-based. Under CFO scrutiny, conviction wobbles. AI suggested the sharper anchor is the work itself: 'four months, thirteen practitioners, two reference customers, three risk frameworks -- this is what's behind my recommendation.' That's verifiable in a way that 'I'd put my name on it' isn't. Sharpening Step 3: anchor stays the same but the in-the-room version is the verifiable list, not the conviction."></textarea>
     </div>
   </div>
 
@@ -362,7 +369,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">In an AI-augmented organisation, leaders are increasingly being told to "be more like the AI" -- decisive, fast, data-grounded. What's the risk of trying to lead from an AI's posture instead of from your own anchor -- and what does staying anchored look like when AI is constantly modelling a different kind of presence in the room?</div>
-    <textarea placeholder="The risk is performing 'AI-level confidence' -- decisive, no hedging, fast -- as a new mask on top of the old ones. That's still mask work. What staying anchored looks like: leading from my actual judgement, which sometimes is decisive and sometimes is genuinely uncertain. The AI doesn't know my organisation, my people, the political layer, or the specific weight of this recommendation. My presence in the room is what's actually irreplaceable -- not because I'm faster or more decisive than the AI, but because I'm the one who can hold the human judgement the AI can't make. The anchor isn't 'be like the AI' or 'don't be like the AI.' It's 'be the leader the AI needs in the room.'"></textarea>
+    <textarea name="ai_lens_presence" placeholder="The risk is performing 'AI-level confidence' -- decisive, no hedging, fast -- as a new mask on top of the old ones. That's still mask work. What staying anchored looks like: leading from my actual judgement, which sometimes is decisive and sometimes is genuinely uncertain. The AI doesn't know my organisation, my people, the political layer, or the specific weight of this recommendation. My presence in the room is what's actually irreplaceable -- not because I'm faster or more decisive than the AI, but because I'm the one who can hold the human judgement the AI can't make. The anchor isn't 'be like the AI' or 'don't be like the AI.' It's 'be the leader the AI needs in the room.'"></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -384,56 +391,41 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    meeting_context: get('meeting_context'),
-    meeting_outcome: get('meeting_outcome'),
-    inventory: {
-      carrying_1: get('carrying_1'),
-      carrying_2: get('carrying_2'),
-      carrying_3: get('carrying_3'),
-      putting_1: get('putting_1'),
-      putting_2: get('putting_2'),
-      putting_3: get('putting_3'),
-    },
-    anchor: get('anchor'),
-    anchor_use: get('anchor_use'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.meeting_context,
-    data.meeting_outcome,
-    data.inventory.carrying_1,
-    data.inventory.carrying_2,
-    data.inventory.carrying_3,
-    data.inventory.putting_1,
-    data.inventory.putting_2,
-    data.inventory.putting_3,
-    data.anchor,
-    data.anchor_use,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 4? Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W4)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'meeting_context',
+    'meeting_outcome',
+    'carrying_1',
+    'carrying_2',
+    'carrying_3',
+    'putting_1',
+    'putting_2',
+    'putting_3',
+    'anchor',
+    'anchor_use',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Mindset Action Plan Draft</title>
+<title>T4L | Practical 3: Mindset Action Plan Draft</title>
+<meta name="programme-component-id" content="leading-self-practical-3">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="leading_self">
+<meta name="programme-part-id" content="leading-self-practical-3">
+<meta name="programme-part-title" content="Practical 3 · Mindset Action Plan Draft">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 3">
+<meta name="programme-submit-confirm" content="Submit Practical 3: Mindset Action Plan Draft?&#10;&#10;Practical 3 contributes to your Practicals Portfolio (20% of competence pass) for Leading Self in the Age of AI. This draft feeds your Capstone — the Mindset Action Plan. Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -315,7 +322,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm writing a Mindset Action Plan as a transformation leader. The true belief I'm changing is: [paste your Step 1 belief]. The replacement belief I'm working with is: [paste your Step 2 replacement]. Pressure-test this. (1) Does the replacement actually answer the true belief, or are they on different topics? (2) Is the replacement specific enough to act from in a real moment, or is it still a slogan? (3) What's the most honest version of this replacement I could write -- the one I haven't quite written yet?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you adjust your replacement?</div>
-      <textarea class="ai-field" placeholder="AI's pushback: my replacement was answering 'I belong here' but my true belief was specifically about being found out in moments of doubt. The replacement didn't address what to do with the moment of doubt itself -- it was about the seat in general. Tightening: 'My place isn't proven moment-to-moment by being right. It's proven over time by what I deliver. A moment of doubt is part of the work, not evidence I shouldn't be here.'"></textarea>
+      <textarea class="ai-field" name="ai_replacement_belief_test" placeholder="AI's pushback: my replacement was answering 'I belong here' but my true belief was specifically about being found out in moments of doubt. The replacement didn't address what to do with the moment of doubt itself -- it was about the seat in general. Tightening: 'My place isn't proven moment-to-moment by being right. It's proven over time by what I deliver. A moment of doubt is part of the work, not evidence I shouldn't be here.'"></textarea>
     </div>
 
     <div class="ai-step">
@@ -329,7 +336,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">My 30-day metric for tracking a leadership behaviour change is: [paste your Step 4 metric]. (1) Will I actually track this for 30 days, or is the tracking system itself too cumbersome? (2) Is the metric specific enough that I can answer 'yes' or 'no' on each occurrence -- or is there ambiguity that will let me grade myself generously? (3) What's the failure mode -- the most likely reason this metric stops getting tracked by Day 14?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI flag? Will you adjust the metric?</div>
-      <textarea class="ai-field" placeholder="AI flagged that 'clean deploy' is ambiguous -- does adding one qualifier still count? It also flagged that the most likely failure mode is forgetting to log occurrences in real time, then trying to remember at week-end and grading myself generously. Two adjustments: (1) defining 'clean deploy' as zero qualifiers added after the one sentence -- binary, no grey area. (2) Logging in the same notes file within 30 minutes of the meeting, not at week-end. If I miss the 30-min window, the data point is dropped -- I'd rather have fewer honest data points than more vague ones."></textarea>
+      <textarea class="ai-field" name="ai_metric_test" placeholder="AI flagged that 'clean deploy' is ambiguous -- does adding one qualifier still count? It also flagged that the most likely failure mode is forgetting to log occurrences in real time, then trying to remember at week-end and grading myself generously. Two adjustments: (1) defining 'clean deploy' as zero qualifiers added after the one sentence -- binary, no grey area. (2) Logging in the same notes file within 30 minutes of the meeting, not at week-end. If I miss the 30-min window, the data point is dropped -- I'd rather have fewer honest data points than more vague ones."></textarea>
     </div>
   </div>
 
@@ -337,7 +344,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As you start using AI more in your transformation work, AI will be in many of the moments where this new behaviour will be tested. How does the Mindset Action Plan you're drafting need to hold up specifically when AI is in the room with you -- producing data, generating responses, accelerating the pace of senior conversation?</div>
-    <textarea placeholder="The plan was written for human-paced meetings. AI accelerates the pace -- a CFO with an AI dashboard can challenge me with a fresh data point mid-sentence. My replacement belief still holds: my place is proven over time, not in any single moment. But the new behaviour needs an addition: when AI surfaces something in real time, I treat it as a new question, not a failure of my position. I land my original sentence, let it sit, then engage with the AI-surfaced point separately. The plan holds if I refuse to let AI's pace turn every meeting into a continuous referendum on whether I belong."></textarea>
+    <textarea name="ai_lens_plan_pace" placeholder="The plan was written for human-paced meetings. AI accelerates the pace -- a CFO with an AI dashboard can challenge me with a fresh data point mid-sentence. My replacement belief still holds: my place is proven over time, not in any single moment. But the new behaviour needs an addition: when AI surfaces something in real time, I treat it as a new question, not a failure of my position. I land my original sentence, let it sit, then engage with the AI-surfaced point separately. The plan holds if I refuse to let AI's pace turn every meeting into a continuous referendum on whether I belong."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -359,41 +366,39 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    belief_carry: get('belief_carry'),
-    protocol_carry: get('protocol_carry'),
-    replacement_belief: get('replacement_belief'),
-    replacement_rationale: get('replacement_rationale'),
-    new_behaviour: get('new_behaviour'),
-    three_triggers: get('three_triggers'),
-    metric: get('metric'),
-    day_30_success: get('day_30_success'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = Object.values(data);
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 3? Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked. This draft will feed your Capstone -- the Mindset Action Plan -- which is the main deliverable for Course 1.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = LS_PRACTICAL_W3)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'belief_carry',
+    'protocol_carry',
+    'replacement_belief',
+    'replacement_rationale',
+    'new_behaviour',
+    'three_triggers',
+    'metric',
+    'day_30_success',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

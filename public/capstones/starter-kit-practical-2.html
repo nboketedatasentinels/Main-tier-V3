@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Stakeholder Position Paper</title>
+<title>T4L | Practical 2: Stakeholder Position Paper</title>
+<meta name="programme-component-id" content="starter-kit-practical-2">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-practical-2">
+<meta name="programme-part-title" content="Practical 2 · Stakeholder Position Paper">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 2">
+<meta name="programme-submit-confirm" content="Submit Practical 2: Stakeholder Position Paper?&#10;&#10;Practical 2 contributes to your Practicals Portfolio (20% of competence pass). Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -148,7 +155,7 @@
 
 <div class="print-bar">
   <div>
-    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-transform">TRANSFORM</span>
     <span class="t4l-leader">LEADER</span>
   </div>
   <span class="title">Stakeholder Position Paper</span>
@@ -164,7 +171,7 @@
       <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
     </div>
     <div class="wordmark-block">
-      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-top">TRANSFORM</div>
       <div class="brand-bottom">LEADER</div>
       <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
     </div>
@@ -386,7 +393,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm analysing a decision-maker who controls approval for an AI/digital transformation opportunity. Their role is [paste from Step 2]. The three priorities I think they hold right now are: [paste from Step 3]. For each priority, challenge me: what evidence am I relying on, where might I be projecting my own logic, and what alternative priority might actually be more important to them given their role and current organisational context?</div>
       <div class="prompt-label" style="margin-top:12px">What did AI challenge? What will you reconsider?</div>
-      <textarea class="ai-field" placeholder="AI flagged that I assumed 'margin protection' was a top priority because the board mentions it -- but in her actual decisions, she's prioritised retention spend over margin cuts twice in the last six months. So margin is a stated priority but not a revealed one. AI suggested 'team retention through the year-end peak' is probably a stronger latent priority. Updating Step 3 -- swapping margin for retention as Priority 2."></textarea>
+      <textarea class="ai-field" name="ai_priority_challenge" placeholder="AI flagged that I assumed 'margin protection' was a top priority because the board mentions it -- but in her actual decisions, she's prioritised retention spend over margin cuts twice in the last six months. So margin is a stated priority but not a revealed one. AI suggested 'team retention through the year-end peak' is probably a stronger latent priority. Updating Step 3 -- swapping margin for retention as Priority 2."></textarea>
     </div>
 
     <div class="ai-step">
@@ -400,7 +407,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm preparing to make a proposal to a [role from Step 2]. My strongest argument is: [paste from Step 5]. Play this decision-maker. They've been burned before by AI/digital transformation projects that overpromised. They're cautious. Push back hard on my argument -- give me three specific counter-arguments they would make, in their voice, and tell me which one is the hardest to answer.</div>
       <div class="prompt-label" style="margin-top:12px">What's the hardest counter-argument? How will you handle it in the proposal?</div>
-      <textarea class="ai-field" placeholder="The hardest pushback AI surfaced: 'You're showing me a 14-hour reduction, but the last project promised similar gains and didn't deliver. What's specifically different this time?' I don't have a clean answer for this in my current proposal. Adding a section on 'Why this is different from the 2023 cancellation' -- specifically: smaller scope, existing platforms, contractor-delivered, 90-day pilot rather than full programme."></textarea>
+      <textarea class="ai-field" name="ai_counter_arguments" placeholder="The hardest pushback AI surfaced: 'You're showing me a 14-hour reduction, but the last project promised similar gains and didn't deliver. What's specifically different this time?' I don't have a clean answer for this in my current proposal. Adding a section on 'Why this is different from the 2023 cancellation' -- specifically: smaller scope, existing platforms, contractor-delivered, 90-day pilot rather than full programme."></textarea>
     </div>
   </div>
 
@@ -408,7 +415,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As you build your transformation practitioner muscle, you'll increasingly use AI to pressure-test your stakeholder analyses like the one you just did. What's the risk of relying too much on AI for this kind of work -- and how would you stay grounded in the actual relationship with the actual person?</div>
-    <textarea placeholder="The risk is treating the decision-maker as an archetype rather than a person. AI can give me good general patterns ('cautious COOs after a failed IT project tend to...') but it doesn't know that my specific COO is also dealing with her father's illness right now and is therefore unlikely to take on emotional load this quarter. The AI broadens the analysis. The relationship sharpens it. I stay grounded by always testing AI's read against one specific recent conversation I've had with the person -- if AI's analysis doesn't match what I observed, I trust the observation."></textarea>
+    <textarea name="ai_lens_stakeholder_risk" placeholder="The risk is treating the decision-maker as an archetype rather than a person. AI can give me good general patterns ('cautious COOs after a failed IT project tend to...') but it doesn't know that my specific COO is also dealing with her father's illness right now and is therefore unlikely to take on emotional load this quarter. The AI broadens the analysis. The relationship sharpens it. I stay grounded by always testing AI's read against one specific recent conversation I've had with the person -- if AI's analysis doesn't match what I observed, I trust the observation."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -430,66 +437,44 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    chosen_opportunity_restated: get('chosen_opportunity_restated'),
-    action_needed: get('action_needed'),
-    decision_maker: {
-      role: get('dm_role'),
-      authority: get('dm_authority'),
-      relationship: get('dm_relationship'),
-    },
-    priorities: {
-      priority_1: get('priority_1'),
-      priority_2: get('priority_2'),
-      priority_3: get('priority_3'),
-    },
-    blockers: {
-      blocker_1: get('blocker_1'),
-      blocker_2: get('blocker_2'),
-      blocker_3: get('blocker_3'),
-    },
-    proposal_response: get('proposal_response'),
-    strongest_argument: get('strongest_argument'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.chosen_opportunity_restated,
-    data.action_needed,
-    data.decision_maker.role,
-    data.decision_maker.authority,
-    data.decision_maker.relationship,
-    data.priorities.priority_1,
-    data.priorities.priority_2,
-    data.priorities.priority_3,
-    data.blockers.blocker_1,
-    data.blockers.blocker_2,
-    data.blockers.blocker_3,
-    data.proposal_response,
-    data.strongest_argument,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 2? Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W2)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'chosen_opportunity_restated',
+    'action_needed',
+    'dm_role',
+    'dm_authority',
+    'dm_relationship',
+    'priority_1',
+    'priority_2',
+    'priority_3',
+    'blocker_1',
+    'blocker_2',
+    'blocker_3',
+    'proposal_response',
+    'strongest_argument',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

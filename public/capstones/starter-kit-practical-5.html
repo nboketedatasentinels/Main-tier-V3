@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Stakeholder Briefing Script</title>
+<title>T4L | Practical 5: Stakeholder Briefing Script</title>
+<meta name="programme-component-id" content="starter-kit-practical-5">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="starter_kit">
+<meta name="programme-part-id" content="starter-kit-practical-5">
+<meta name="programme-part-title" content="Practical 5 · Stakeholder Briefing Script">
+<meta name="programme-component-title" content="Practicals Portfolio — Practical 5">
+<meta name="programme-submit-confirm" content="Submit Practical 5: Stakeholder Briefing Script?&#10;&#10;Practical 5 contributes to your Practicals Portfolio (20% of competence pass). Once submitted, you can still edit until end of Week 5. After Week 5 closes, the submission is locked.">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -351,7 +358,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">I'm rehearsing a stakeholder briefing. The decision-maker is a [paste decision-maker summary from Step 1]. The risk I'm briefing on is: [paste Step 1 risk]. My script is: [paste your Step 2 lede + Step 3 substance + Step 5 closing]. Play the decision-maker. Respond as they would -- distracted, time-pressured, asking the inconvenient question. Don't be polite. Be the senior person who has 5 minutes for this and three other things on her mind. Push back on the weakest part of my script.</div>
       <div class="prompt-label" style="margin-top:12px">Where did the script weaken under pressure? What will you tighten?</div>
-      <textarea class="ai-field" placeholder="AI played the COO well -- she immediately challenged the 'two weeks of slippage' claim with 'why two weeks specifically? Show me the timeline.' I don't have the timeline ready in the script. Adding a one-line timeline reference: 'Weeks 1-2 are integration, Weeks 3-8 are reporting build. Without source-of-truth decision in Week 1, integration starts in Week 3, reporting build starts in Week 5 -- two weeks lost.' AI also pushed on the 'similar to 2023 cancellation' line -- said it sounded like emotional manipulation. Softening to 'similar pattern to past stalled projects.'"></textarea>
+      <textarea class="ai-field" name="ai_roleplay_pressure" placeholder="AI played the COO well -- she immediately challenged the 'two weeks of slippage' claim with 'why two weeks specifically? Show me the timeline.' I don't have the timeline ready in the script. Adding a one-line timeline reference: 'Weeks 1-2 are integration, Weeks 3-8 are reporting build. Without source-of-truth decision in Week 1, integration starts in Week 3, reporting build starts in Week 5 -- two weeks lost.' AI also pushed on the 'similar to 2023 cancellation' line -- said it sounded like emotional manipulation. Softening to 'similar pattern to past stalled projects.'"></textarea>
     </div>
 
     <div class="ai-step">
@@ -365,7 +372,7 @@
       <div class="prompt-label">Paste this prompt</div>
       <div class="prompt-box">Here's a stakeholder briefing script: [paste your Steps 2-5]. Read it as someone looking for what's been left out. What's the question this stakeholder might ask that the script doesn't answer? Specifically -- where does the script gloss over a weakness, sidestep an inconvenient detail, or leave a gap a sceptical person would notice? Give me the single hardest question I haven't prepared for.</div>
       <div class="prompt-label" style="margin-top:12px">What's the question? How will you handle it if it comes up?</div>
-      <textarea class="ai-field" placeholder="AI's hardest question: 'You've spoken to all three system owners 1:1 -- but have they spoken to each other? If they haven't, my meeting Friday becomes me forcing a decision they haven't even debated yet. That's a worse outcome than no meeting.' I had not prepared for this. The honest answer is no, they haven't spoken to each other yet. Adding to my script: 'I'm setting up a 30-min call between the three of them on Wednesday so they can debate before your meeting. By Friday they'll have done the disagreement. Your meeting forces the conclusion.'"></textarea>
+      <textarea class="ai-field" name="ai_hardest_question" placeholder="AI's hardest question: 'You've spoken to all three system owners 1:1 -- but have they spoken to each other? If they haven't, my meeting Friday becomes me forcing a decision they haven't even debated yet. That's a worse outcome than no meeting.' I had not prepared for this. The honest answer is no, they haven't spoken to each other yet. Adding to my script: 'I'm setting up a 30-min call between the three of them on Wednesday so they can debate before your meeting. By Friday they'll have done the disagreement. Your meeting forces the conclusion.'"></textarea>
     </div>
   </div>
 
@@ -373,7 +380,7 @@
   <div class="ai-lens">
     <div class="ai-lens-label">AI Lens</div>
     <div class="ai-lens-q">As AI tools get good at drafting stakeholder communications, what's the difference between an AI-generated briefing script and one a transformation practitioner would write? Where does the practitioner voice still earn its place?</div>
-    <textarea placeholder="AI is good at structure and at finding the missing question. What it can't do: it doesn't know how my COO actually speaks, what reassurance she needs even when she'd never ask for it, or which words trigger her caution after the 2023 cancellation. The relationship is in the texture -- the verbs I choose, the moments where I pause, the shared references we both understand. AI gives me a defensible script. The practitioner voice makes it land in this specific room with this specific person. The AI drafts. The relationship sharpens."></textarea>
+    <textarea name="ai_lens_briefing_voice" placeholder="AI is good at structure and at finding the missing question. What it can't do: it doesn't know how my COO actually speaks, what reassurance she needs even when she'd never ask for it, or which words trigger her caution after the 2023 cancellation. The relationship is in the texture -- the verbs I choose, the moments where I pause, the shared references we both understand. AI gives me a defensible script. The practitioner voice makes it land in this specific room with this specific person. The AI drafts. The relationship sharpens."></textarea>
   </div>
 
   <!-- TAKE THIS TO PEER-TO-PEER -->
@@ -395,60 +402,42 @@
 
 </div>
 
-<script>
-function collectFormData() {
-  const get = (name) => {
-    const el = document.querySelector('[name="' + name + '"]');
-    return el ? el.value : '';
-  };
-  return {
-    decision_maker_summary: get('decision_maker_summary'),
-    risk_focus: get('risk_focus'),
-    lede: get('lede'),
-    substance: {
-      severity_likelihood: get('severity_likelihood'),
-      actions_taken: get('actions_taken'),
-      the_ask: get('the_ask'),
-    },
-    pushback: {
-      pushback_1: get('pushback_1'),
-      response_1: get('response_1'),
-      pushback_2: get('pushback_2'),
-      response_2: get('response_2'),
-    },
-    closing_line: get('closing_line'),
-  };
-}
-
-function submitPractical() {
-  const data = collectFormData();
-  const fields = [
-    data.decision_maker_summary,
-    data.risk_focus,
-    data.lede,
-    data.substance.severity_likelihood,
-    data.substance.actions_taken,
-    data.substance.the_ask,
-    data.pushback.pushback_1,
-    data.pushback.response_1,
-    data.pushback.pushback_2,
-    data.pushback.response_2,
-    data.closing_line,
-  ];
-  const filled = fields.filter(v => v && v.trim().length > 0).length;
-  const total = fields.length;
-
-  if (filled < total) {
-    const proceed = confirm("You haven't completed all sections yet. " + filled + " of " + total + " fields filled. Submit anyway?");
-    if (!proceed) return;
-  }
-
-  if (!confirm("Submit Practical 5? Once submitted, you can still edit until end of Week 5. After Week 5 closes, the submission is locked.")) return;
-
-  console.log("Submission payload:", data);
-  alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W5)");
-}
-</script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'decision_maker_summary',
+    'risk_focus',
+    'lede',
+    'severity_likelihood',
+    'actions_taken',
+    'the_ask',
+    'pushback_1',
+    'response_1',
+    'pushback_2',
+    'response_2',
+    'closing_line',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && el.value.trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
 </body>
 </html>

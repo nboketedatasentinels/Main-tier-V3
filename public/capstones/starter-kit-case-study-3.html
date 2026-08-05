@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>T4L | Case Study 1: The Pattern That Was Costing the Company</title>
-<meta name="programme-component-id" content="starter-kit-case-study-1">
+<title>T4L | Case Study 3: Telling My Story Is Risky</title>
+<meta name="programme-component-id" content="starter-kit-case-study-3">
 <meta name="programme-component-type" content="case_study">
 <meta name="programme-pillar" content="starter_kit">
-<meta name="programme-part-id" content="starter-kit-case-study-1">
-<meta name="programme-part-title" content="Part 1 · The Pattern That Was Costing the Company">
-<meta name="programme-component-title" content="Combined Case Studies — Case Study 1">
+<meta name="programme-part-id" content="starter-kit-case-study-3">
+<meta name="programme-part-title" content="Part 3 · Telling My Story Is Risky">
+<meta name="programme-component-title" content="Combined Case Studies — Case Study 3">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -60,7 +60,6 @@
 
   .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
 
-  /* What good looks like card */
   .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
   .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
   .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
@@ -68,7 +67,6 @@
   .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
   .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
 
-  /* Case reading section -- collapsible */
   .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
   .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
   .case-header:hover { background: rgba(74,59,140,0.08); }
@@ -91,7 +89,6 @@
   .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
   .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
 
-  /* Word counter sticky bar */
   .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
   .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
   .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
@@ -105,7 +102,6 @@
   .word-counter-meter-fill.over { background: var(--counter-over); }
   .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
 
-  /* Question Section cards */
   .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
   .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
   .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
@@ -127,43 +123,12 @@
   .field-word-count { font-weight: 600; }
   .field-word-count.over { color: var(--counter-over); }
 
-  /* Assessor lens block (learner-facing criteria) */
-  .assessor-lens { background: #fff; border: 1.5px solid var(--gold); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
-  .assessor-lens-header { padding: 18px 24px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; }
-  .assessor-lens-header:hover { background: rgba(245,200,66,0.04); }
-  .assessor-lens-header-text { flex: 1; }
-  .assessor-lens-tag { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
-  .assessor-lens-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
-  .assessor-lens-toggle { font-size: 13px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-  .assessor-lens-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
-  .assessor-lens.open .assessor-lens-toggle::after { transform: rotate(180deg); }
-  .assessor-lens-body { display: none; padding: 0 24px 24px; border-top: 1px solid var(--border); }
-  .assessor-lens.open .assessor-lens-body { display: block; }
-  .assessor-lens-intro { font-size: 13px; color: #666; line-height: 1.65; margin: 16px 0 18px; font-style: italic; }
-  .criterion-block { margin-bottom: 18px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
-  .criterion-block:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
-  .criterion-name { font-size: 12px; font-weight: 700; color: var(--purple); margin-bottom: 4px; letter-spacing: 0.04em; }
-  .criterion-outcome { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; }
-  .criterion-desc { font-size: 13px; color: #444; line-height: 1.65; }
-
-  /* Peer prep block */
-  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
-  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
-  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
-  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
-  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
-  .peer-q-list { list-style: none; padding: 0; margin: 0; }
-  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
-  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
-  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
-  .peer-q-list li:first-child::before { top: 6px; }
-
   @media print {
     .print-bar { position: static; }
     .print-btn { display: none; }
     body { font-size: 12px; }
-    .section-card, .standard-card, .assessor-lens, .case-block, .peer-prep { break-inside: avoid; }
-    .assessor-lens-body, .case-body { display: block !important; }
+    .section-card, .standard-card, .case-block { break-inside: avoid; }
+    .case-body { display: block !important; }
   }
   @media (max-width: 600px) {
     .header-block { padding: 24px 20px; }
@@ -181,7 +146,7 @@
     <span class="t4l-transform">TRANSFORMATION</span>
     <span class="t4l-leader">LEADER</span>
   </div>
-  <span class="title">Case Study 1 · The Pattern That Was Costing the Company</span>
+  <span class="title">Case Study 3 · Telling My Story Is Risky</span>
   <div class="print-bar-actions">
     <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
     <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
@@ -200,12 +165,12 @@
     </div>
   </div>
   <div class="lift-badge">The Transformation Practitioner</div>
-  <div class="case-eyebrow">Case Study 1 · Course 1 · Leading Under Pressure</div>
-  <h1 class="header-title">The Pattern That Was <em>Costing the Company</em></h1>
-  <div class="header-meta"><strong>Satya Nadella's First Year at Microsoft, 2014.</strong> A leader who had a default pattern under pressure, recognised what it was costing him, and designed a specific behavioural alternative.</div>
-  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Identify and analyse personal leadership patterns under pressure), LO2 (Apply intentional behavioural alternatives).</div>
+  <div class="case-eyebrow">Case Study 3 · Course 2 · Resilience Under Sustained Transformation Pressure</div>
+  <h1 class="header-title">Telling My Story <em>Is Risky</em></h1>
+  <div class="header-meta"><strong>Ngozi Okonjo-Iweala and the Cost of Leading, Nigeria 2012.</strong> The layer of cost-of-leading shame that operates underneath the visible work of senior reform leaders -- and the precision required to use vulnerability as a strategic move rather than as performance or as confession.</div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Recognise and name shame patterns), LO4 (Construct vulnerability as strategic capability), partial LO5 (Sustain via three integrated practices).</div>
   <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
-  <div class="case-callout">Case Study 1 of 4 · Combined Case Studies = 30% of competence pass</div>
+  <div class="case-callout">Case Study 3 of 4 · Combined Case Studies = 30% of competence pass</div>
 </div>
 
 <div class="content">
@@ -213,58 +178,58 @@
   <!-- WHAT GOOD LOOKS LIKE -->
   <div class="standard-card">
     <div class="standard-label">What good looks like</div>
-    <div class="standard-title">A case study response that uses the case to think with -- not to summarise.</div>
+    <div class="standard-title">A response that uses the case to think about your own carrying -- with the precision the framework demands.</div>
     <ul class="standard-list">
-      <li>The pattern named with the trigger-reaction-cost framework explicit -- the trigger named precisely, the reaction named, the cost named in concrete terms.</li>
-      <li>Each answer argued from the case, not from generic leadership commentary. The case is treated as evidence to think with -- not as a quote source.</li>
-      <li>The deliberate alternative analysed for design discipline -- two specific elements named that made it operational rather than aspirational.</li>
-      <li>Application to your own pattern with the same structure -- a specific trigger, a specific move, an observable success measure. Could be run starting Monday.</li>
-      <li>300-500 words across all four answers. Quality matters more than length. Avoid hindsight bias and avoid over-claiming about what produced Microsoft's market-cap result.</li>
+      <li>The shame pattern named explicitly using the Course 2 framework, anchored to specific evidence in the case rather than to general impressions of the leader.</li>
+      <li>The shame-versus-guilt distinction made at the level of identity (who I am) versus action (what I did) -- not as severity levels of the same emotion.</li>
+      <li>Vulnerability analysed as a strategic move with structural elements named -- distinguished from oversharing, confession, or therapy.</li>
+      <li>Application to your own carrying with the same discipline -- a specific moment in the next four weeks, with what you would say AND what you would not say, framed as strategy not as disclosure.</li>
+      <li>300-500 words across all four answers. Quality matters more than length. The answer to Q4 is the highest-stakes answer -- precision matters more than emotional reach.</li>
     </ul>
   </div>
 
-  <!-- CASE READING SECTION (collapsible) -->
+  <!-- CASE READING SECTION -->
   <div class="case-block open" id="caseBlock">
     <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
       <div class="case-header-left">
         <div class="case-header-tag">The case · read first</div>
-        <div class="case-header-title">Microsoft, February 2014 -- the first weeks</div>
+        <div class="case-header-title">Nigeria, December 2012 -- and the 2018 disclosure</div>
       </div>
       <div class="case-header-toggle">Collapse</div>
     </div>
     <div class="case-body">
 
       <div class="case-section-label">Background</div>
-      <p>On 4 February 2014, Satya Nadella became the third CEO of Microsoft, succeeding Steve Ballmer. He inherited a company that had become, by his own account, internally combative. Microsoft engineers and product leaders had spent more than a decade in a culture where being seen as the smartest person in the room was the path to promotion. Meetings were performances. Disagreement was sport.</p>
+      <p>In December 2012, Ngozi Okonjo-Iweala was the Coordinating Minister for the Economy and Minister of Finance of Nigeria, in her second tenure under President Goodluck Jonathan. She was leading a programme of reforms that included a crackdown on fraudulent claims for oil subsidy payments -- one of the largest sources of corruption in the Nigerian economy. Of the 6.7 billion US dollars Nigeria was spending annually on fuel subsidies, her team had identified 1.5 billion as fraudulent.</p>
 
-      <p>In his 2017 book <em>Hit Refresh</em>, Nadella describes the leadership pattern he found in himself when he stepped into the CEO role. The pattern was not the company's pattern. It was his own. He noticed that under pressure -- particularly in the first weeks of the role, with the press scrutiny, the share price commentary, and the internal scepticism that he was 'an inside hire who would change nothing' -- he defaulted to proving his technical credentials. He over-explained. He answered questions before they were fully asked. He used technical depth as a shield against the question of whether he could lead.</p>
+      <p>On 9 December 2012, her 83-year-old mother, Professor Kamene Okonjo, was kidnapped from the family home in Ogwashi-Ukwu, Delta State. The kidnappers' first demand, made publicly, was that Okonjo-Iweala resign from her position on live television and leave the country. The second demand was that she abandon the oil subsidy reforms.</p>
 
-      <p>The cost of the pattern was specific. Senior leaders who needed to bring him problems learned, in the first weeks, that bringing a problem produced a technical response, not a leadership response. They started filtering. The information that reached Nadella narrowed. He has described, in a 2018 Harvard Business Review interview and on the McKinsey podcast 'Inside the Strategy Room' in 2019, the moment he recognised the pattern and the deliberate alternative he installed in its place.</p>
+      <p>Okonjo-Iweala did not resign. The reforms continued. Her mother escaped after several days. Six years later, in 2018, Okonjo-Iweala published her account of the period in the MIT Press book <em>Fighting Corruption Is Dangerous: The Story Behind the Headlines</em>. The opening line of that account is the sentence that organises this case study:</p>
 
-      <p>The deliberate alternative was a single behavioural change: when a senior leader brought him a problem, he would ask one question before responding.</p>
+      <div class="pull-quote">"Telling my story is risky. But not telling it is also dangerous."</div>
 
-      <div class="pull-quote">"What do you need from me to move this forward?"</div>
+      <p>That sentence is not motivational. It is precise. It names a strategic decision Okonjo-Iweala made about when, why, and in what form to be visible about the cost of the work she had been doing. She had not spoken publicly about the kidnapping or its specific demands at the time. She had also not, in 2012, dwelt publicly on what the role had cost her -- the threats, the malicious press articles she has documented, the fact that she had returned to Nigeria for a second ministerial term knowing the personal exposure it carried. By 2018, she had decided that not telling the story was a greater risk to the work than telling it would be.</p>
 
-      <p>The change was small. It was not framed as transformation. He has said publicly that it took him roughly six months to make the new pattern automatic.</p>
-
-      <p>Microsoft's market capitalisation when Nadella took over was approximately 314 billion US dollars. By the end of 2019, it had crossed 1 trillion. Nadella has consistently credited the cultural shift -- not the cloud bet, not the Activision acquisition -- as the foundation that made everything else possible.</p>
+      <p>Okonjo-Iweala has spoken openly, including in a 2013 NPR interview and the 2018 book itself, about the layer of carrying that operates beneath public reform work. She has named, specifically, the 'Okonjo Wahala' nickname earned in the Ministry of Finance -- 'Okonjo Trouble' in Igbo -- and the relationship between visible toughness and the private cost of being the first woman to lead Nigeria's Finance Ministry, the first to lead Foreign Affairs, the first African to lead the World Trade Organization. The visible toughness was real. So was the carrying underneath it. In 2021, when Okonjo-Iweala became the first woman and the first African Director-General of the WTO, the line from the 2018 book was widely quoted -- because it was finally legible as a leadership move, not a personal disclosure.</p>
 
       <div class="case-section-label">The dynamic to analyse</div>
-      <p>This case is not about Microsoft. It is about a leader who had a default pattern under pressure, recognised what it was costing him, and designed a specific behavioural alternative.</p>
+      <p>This case is not about courage. It is about the layer of cost-of-leading shame that operates underneath the visible work of senior reform leaders, and about the precision required to use vulnerability as a strategic move rather than as performance or as confession.</p>
 
-      <p>The questions below ask you to examine that design discipline -- and to apply it to one of your own patterns.</p>
+      <p>The questions below ask you to examine three things: which shame pattern is in play, how shame differs from guilt in this context, and what specifically made Okonjo-Iweala's 2018 disclosure strategic rather than therapeutic.</p>
 
       <div class="case-section-label">Sources</div>
       <ul class="sources">
-        <li>Nadella, S. (2017). <em>Hit Refresh</em>. New York: HarperBusiness.</li>
-        <li>Ignatius, A. (2018). 'Microsoft's next act: Satya Nadella in conversation with HBR.' <em>Harvard Business Review</em>, May-June 2018.</li>
-        <li>McKinsey and Company (2019). 'Microsoft's next act.' <em>Inside the Strategy Room</em> podcast, episode 38, 24 April 2019.</li>
-        <li>Bass, D. (2018). 'Satya Nadella's Microsoft.' <em>Bloomberg Businessweek</em>, 27 September 2018.</li>
+        <li>Okonjo-Iweala, N. (2018). <em>Fighting Corruption Is Dangerous: The Story Behind the Headlines</em>. Cambridge MA: MIT Press. ISBN 978-0-262-03801-0.</li>
+        <li>Okonjo-Iweala, N. (2012). <em>Reforming the Unreformable: Lessons from Nigeria</em>. Cambridge MA: MIT Press.</li>
+        <li>Martin, M. (2012). 'Trying to reform Nigeria amid family kidnapping.' NPR Interview, 10 December 2012.</li>
+        <li><em>Foreign Affairs</em> (2013). 'Reforming Nigeria: An interview with Ngozi Okonjo-Iweala.' Foreign Affairs Magazine.</li>
+        <li><em>ThisDay</em> (2016). 'My mother was kidnapped because I advised Jonathan to remove fuel subsidy.' Interview with Le Monde, reported in ThisDay, 7 April 2016.</li>
+        <li>Brown, B. (2012). <em>Daring Greatly</em>. New York: Gotham Books. (Theoretical framework for shame versus guilt distinction.)</li>
       </ul>
     </div>
   </div>
 
-  <!-- WORD COUNTER (sticks to the top of the answer area) -->
+  <!-- WORD COUNTER -->
   <div class="word-counter" id="wordCounter">
     <div>
       <div class="word-counter-label">Total response across all four questions</div>
@@ -281,14 +246,14 @@
   <div class="section-card">
     <div class="section-num-row">
       <div class="section-num">Question 01</div>
-      <div class="outcome-tag">Outcome 1 · Pattern recognition</div>
+      <div class="outcome-tag">Outcome 3 · Shame pattern identification</div>
     </div>
-    <h2 class="section-title">Name Nadella's default pattern using trigger-reaction-cost</h2>
-    <div class="section-prompt">Name Nadella's default pattern in the first weeks as CEO using the Course 1 framework: what was the trigger, what was the reaction, and what was the cost? Three sentences.</div>
-    <div class="section-hint">Three sentences, one for each element. Specificity is the test -- a trigger named precisely (drawn from what the case actually documents), a reaction named at the level of behaviour, a cost named in concrete terms rather than as generic morale or trust language.</div>
-    <textarea name="q1" placeholder="Trigger: ... Reaction: ... Cost: ..." oninput="recountWords()"></textarea>
+    <h2 class="section-title">Identify the shame pattern in play</h2>
+    <div class="section-prompt">Identify which of the three shame patterns from Course 2 is in play in Okonjo-Iweala's account: earned-place shame, should-have-known shame, or cost-of-leading shame. Justify the choice using specific evidence from the case.</div>
+    <div class="section-hint">Pick one pattern and defend it with case evidence. The justification has to point to specific elements in the case that fit the pattern you chose -- not to general impressions of the leader. More than one pattern may be defensible; what matters is whether the choice is defended from the case.</div>
+    <textarea name="q1" placeholder="The shame pattern in play is... The evidence in the case that fits this pattern is..." oninput="recountWords()"></textarea>
     <div class="field-meta">
-      <span>Suggested length: 60-90 words</span>
+      <span>Suggested length: 70-110 words</span>
       <span class="field-word-count" id="q1Count">0 words</span>
     </div>
   </div>
@@ -297,12 +262,12 @@
   <div class="section-card">
     <div class="section-num-row">
       <div class="section-num">Question 02</div>
-      <div class="outcome-tag">Outcome 1 · Pattern as leadership not communication</div>
+      <div class="outcome-tag">Outcome 3 · Shame versus guilt</div>
     </div>
-    <h2 class="section-title">Why is over-explaining a leadership pattern, not a communication habit?</h2>
-    <div class="section-prompt">Why is over-explaining a leadership pattern, not just a communication habit? Use the case to argue the point. Two to three sentences.</div>
-    <div class="section-hint">Argue from the case. What changed because of the pattern -- what others did or stopped doing, what the leader could see and what he stopped being able to see, what the pattern signalled. The argument has to use the case as evidence rather than treat the pattern as a personality tic.</div>
-    <textarea name="q2" placeholder="Over-explaining is a leadership pattern because..." oninput="recountWords()"></textarea>
+    <h2 class="section-title">Distinguish shame from guilt in this case</h2>
+    <div class="section-prompt">Distinguish shame from guilt using this case. Where is shame operating in Okonjo-Iweala's account, and where would guilt have produced a different response? Two to three sentences.</div>
+    <div class="section-hint">The distinction operates at the level of identity versus action -- not at the level of emotional severity. The test is whether your answer makes the two emotions structurally different in what they would have produced in this case, not just synonyms for "bad feeling".</div>
+    <textarea name="q2" placeholder="Shame in this case operates at... Guilt would have operated at... and would have produced..." oninput="recountWords()"></textarea>
     <div class="field-meta">
       <span>Suggested length: 50-80 words</span>
       <span class="field-word-count" id="q2Count">0 words</span>
@@ -313,11 +278,11 @@
   <div class="section-card">
     <div class="section-num-row">
       <div class="section-num">Question 03</div>
-      <div class="outcome-tag">Outcome 2 · Design discipline</div>
+      <div class="outcome-tag">Outcome 4 · Vulnerability as strategy</div>
     </div>
-    <h2 class="section-title">Why did Nadella's deliberate alternative work?</h2>
-    <div class="section-prompt">Nadella's deliberate alternative was one question. Why did the design choice work? Identify two specific elements of the alternative that made it operational rather than aspirational.</div>
-    <div class="section-hint">Two specific elements, each named with operational reasoning. The test is whether the elements you identify could be applied to a different leader's alternative -- if they could, you've named the structural design discipline rather than the surface form. An alternative treated as motivational rather than designed misses what the case is actually showing.</div>
+    <h2 class="section-title">What made the 2018 disclosure strategic?</h2>
+    <div class="section-prompt">The opening line of the 2018 book is offered as an example of vulnerability used strategically rather than performed. What specifically made it strategic? Identify two elements of how she did it that distinguish the move from oversharing or confession.</div>
+    <div class="section-hint">Two elements, each named with structural reasoning -- not adjectives. The test is whether the elements you identify could be applied to a different leader's strategic disclosure. If they could, you've named the design discipline. If they couldn't, you've described this disclosure rather than analysed it. Strategic disclosure is structurally different from confession or therapy.</div>
     <textarea name="q3" placeholder="Element 1: ... Element 2: ..." oninput="recountWords()"></textarea>
     <div class="field-meta">
       <span>Suggested length: 70-110 words</span>
@@ -329,14 +294,14 @@
   <div class="section-card">
     <div class="section-num-row">
       <div class="section-num">Question 04</div>
-      <div class="outcome-tag">Outcomes 1 + 2 · Application to own pattern</div>
+      <div class="outcome-tag">Outcomes 3 + 4 · Application to your own carrying</div>
     </div>
-    <h2 class="section-title">Apply the same discipline to a pattern of your own</h2>
-    <div class="section-prompt">Name one default pattern of your own that emerges under transformation pressure, using the same trigger-reaction-cost structure. Then design one specific behavioural alternative -- not aspirational language, an actual move you could run starting Monday morning. Specify the trigger that activates it, the alternative itself, and what success looks like in the next instance.</div>
-    <div class="section-hint">This is the highest-weighted question. The pattern needs to be specific (not "I get stressed"). The alternative needs a specific trigger, a specific move, and an observable success measure -- something a peer could see in the next instance, not internal feeling. The alternative should be runnable starting Monday morning.</div>
-    <textarea name="q4" placeholder="My pattern -- Trigger: ... Reaction: ... Cost: ...&#10;&#10;The alternative I will run -- Trigger: ... Move: ... Success measure: ..." oninput="recountWords()" style="min-height: 180px;"></textarea>
+    <h2 class="section-title">Apply the same discipline to something you are carrying</h2>
+    <div class="section-prompt">Name one thing you have been carrying in your current transformation work that started before this transformation. Name the shame pattern in play (earned-place, should-have-known, or cost-of-leading). Then describe one specific moment in the next four weeks where naming what is true -- using vulnerability as strategy, not as performance or confession -- would move the work forward. Be precise about what you would say and what you would not say.</div>
+    <div class="section-hint">This is the highest-weighted question. The carrying needs to be named (not gestured at), the pattern needs to be named explicitly using the Course 2 framework, and the upcoming moment needs to be specific (the meeting, the person, the situation). The "what you would say AND what you would not say" framing is doing structural work -- it's how the discipline gets evidenced. Strategic disclosure is precise about both. Confession only specifies what gets said.</div>
+    <textarea name="q4" placeholder="What I am carrying: ...&#10;The shame pattern in play: ...&#10;&#10;The upcoming moment: ...&#10;What I would say: ...&#10;What I would not say: ..." oninput="recountWords()" style="min-height: 200px;"></textarea>
     <div class="field-meta">
-      <span>Suggested length: 120-220 words</span>
+      <span>Suggested length: 110-200 words</span>
       <span class="field-word-count" id="q4Count">0 words</span>
     </div>
   </div>
@@ -362,13 +327,11 @@ function recountWords() {
     }
   });
 
-  // Total counter
   const valEl = document.getElementById('wordCounterValue');
   const fillEl = document.getElementById('wordCounterFill');
   const bandEl = document.getElementById('wordCounterBand');
   const hintEl = document.getElementById('wordCounterHint');
 
-  // Visual band: 300-500 = "good zone" within 0-600 scale
   const max = 600;
   const goodMin = 300;
   const goodMax = 500;
@@ -408,11 +371,11 @@ function collectFormData() {
   const q3 = get('q3');
   const q4 = get('q4');
   return {
-    case_study: 1,
-    case_study_title: "The Pattern That Was Costing the Company -- Satya Nadella's First Year at Microsoft, 2014",
-    journey: "Leading Self in the Age of AI",
-    course: "Course 1 -- Leading Under Pressure",
-    outcomes_assessed: ["LO1", "LO2"],
+    case_study: 3,
+    case_study_title: "Telling My Story Is Risky -- Ngozi Okonjo-Iweala and the Cost of Leading, Nigeria 2012",
+    journey: "The Transformation Practitioner",
+    course: "Course 2 -- Resilience Under Sustained Transformation Pressure",
+    outcomes_assessed: ["LO3", "LO4", "LO5_partial"],
     answers: { q1, q2, q3, q4 },
     word_counts: {
       q1: countWords(q1),
@@ -424,7 +387,6 @@ function collectFormData() {
   };
 }
 
-// Initial paint
 recountWords();
 </script>
 <script type="module" src="/capstones/_capstone-runtime.js"></script>
@@ -439,15 +401,9 @@ recountWords();
       total += s && s.trim() ? s.trim().split(/\s+/).length : 0;
     });
     let warning = '';
-    if (total < 300) {
-      warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Below 300 sits outside the range.';
-    } else if (total > 500) {
-      warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Above 500 sits outside the range.';
-    }
-    const msg =
-      'Submit Case Study 1: The Pattern That Was Costing the Company?\n\nThis is the first of four case studies in the Combined Case Studies component. All four are marked together as one component, weighted 30% of your competence pass.\n\nAfter submission, continue with Case Studies 2–4 (Kodak, Okonjo-Iweala, SARS).' +
-      warning +
-      '\n\nProceed?';
+    if (total < 300) warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Below 300 sits outside the range.';
+    else if (total > 500) warning = '\n\nWARNING: Total response is ' + total + ' words. The expected range is 300-500. Above 500 sits outside the range.';
+    const msg = 'Submit Case Study 3: Telling My Story Is Risky?\n\nThis is the third of four case studies in the Combined Case Studies component. All four are marked together as one component, weighted 30% of your competence pass.\n\nAfter submission, Case Study 4 (SARS) closes the Combined Case Studies component.' + warning + '\n\nProceed?';
     if (!window.confirm(msg)) return;
     if (typeof runtimeSubmit === 'function') runtimeSubmit();
   };

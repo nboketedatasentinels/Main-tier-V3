@@ -226,11 +226,16 @@ async function fetchOrganizationId(uid, token) {
 
 async function submit() {
   if (!META.componentId) {
-    showBanner('error', 'This page is missing its component id. Refresh; if it persists, contact your partner.')
+    showBanner('error', 'This page is missing its component id. Refresh; if it persists, contact support.')
     return
   }
   if (!config) {
     showBanner('error', "We couldn't connect to your account. Open this page from the main app and try again.")
+    return
+  }
+
+  const confirmMessage = readMeta('programme-submit-confirm')
+  if (confirmMessage && !window.confirm(confirmMessage.replace(/&#10;/g, '\n'))) {
     return
   }
 
@@ -319,11 +324,14 @@ async function submit() {
       return
     }
 
+    const reviewerLabel = organizationId
+      ? 'Your partner can now review.'
+      : 'A T4L assessor can now review your Practitioner Capstone.'
     showBanner(
       'success',
       isResubmission
-        ? 'Resubmitted. Your partner will see the updated answers.'
-        : 'Submitted. Your partner can now review.',
+        ? `Resubmitted. ${reviewerLabel}`
+        : `Submitted. ${reviewerLabel}`,
     )
   } catch (err) {
     console.error('[capstone-runtime] save failed', err)
