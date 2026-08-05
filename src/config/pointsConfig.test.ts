@@ -196,6 +196,45 @@ describe('pointsConfig module activities', () => {
     })
   })
 
+  it('matches the 6-month weekly-checklist product table', () => {
+    const crossRef = getJourneyPointsCrossReference('6M')
+    const byId = new Map(crossRef.activityBreakdown.map((row) => [row.activityId, row]))
+
+    expect(crossRef.maxPossiblePoints).toBe(226000)
+    expect(crossRef.passMarkPoints).toBe(150000)
+    expect(crossRef.computedMaxPoints).toBe(226000)
+
+    expect(byId.get('podcast_workbook')).toMatchObject({ frequency: 18, pointsEach: 2000, maxPoints: 36000 })
+    expect(byId.get('weekly_session')).toMatchObject({ frequency: 24, pointsEach: 1500, maxPoints: 36000 })
+    expect(byId.get('webinar_workbook')).toMatchObject({
+      title: 'Attend Webinar + Workbook',
+      frequency: 6,
+      pointsEach: 4000,
+      maxPoints: 24000,
+      approvalType: 'partner_approved',
+    })
+    expect(byId.get('peer_to_peer')).toMatchObject({ frequency: 18, pointsEach: 1000, maxPoints: 18000 })
+    expect(byId.get('impact_log')).toMatchObject({ frequency: 12, pointsEach: 1000, maxPoints: 12000 })
+    expect(byId.get('lift_module')).toMatchObject({ frequency: 6, pointsEach: 3000, maxPoints: 18000 })
+    expect(byId.get('linkedin')).toMatchObject({ frequency: 14, pointsEach: 500, maxPoints: 7000 })
+    expect(byId.get('book_club')).toMatchObject({ frequency: 6, pointsEach: 2500, maxPoints: 15000 })
+    expect(byId.get('peer_matching')).toMatchObject({ frequency: 24, pointsEach: 1000, maxPoints: 24000 })
+    expect(byId.get('challenger')).toMatchObject({ frequency: 12, pointsEach: 1000, maxPoints: 12000 })
+    expect(byId.get('mentor_meetup')).toMatchObject({
+      frequency: 6,
+      pointsEach: 2000,
+      maxPoints: 12000,
+      approvalType: 'mentor_issued',
+    })
+    expect(byId.get('ambassador_session')).toMatchObject({
+      title: 'Ambassador Session',
+      frequency: 6,
+      pointsEach: 2000,
+      maxPoints: 12000,
+      approvalType: 'ambassador_issued',
+    })
+  })
+
   it('replaces book club with the 4500-point webinar in the 6-week journey config', () => {
     const activities = getActivitiesForJourney('6W')
     const byId = new Map(activities.map((activity) => [activity.id, activity]))

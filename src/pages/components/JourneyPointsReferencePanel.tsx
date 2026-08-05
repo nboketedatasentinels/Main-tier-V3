@@ -19,7 +19,7 @@ import {
   type ApprovalType,
   type JourneyType,
 } from '@/config/pointsConfig'
-import { getJourneyLabel, isMonthBasedJourney } from '@/utils/journeyType'
+import { isMonthBasedJourney } from '@/utils/journeyType'
 import { calculatePassMark } from '@/utils/completion'
 import type { LeadershipAvailability } from '@/utils/leadershipAvailability'
 
@@ -30,6 +30,13 @@ const APPROVAL_TABLE_LABEL: Record<ApprovalType, string> = {
   partner_issued: 'Partner Issued',
   mentor_issued: 'Mentor Issued',
   ambassador_issued: 'Ambassador Issued',
+}
+
+/** Product-sheet titles used on weekly-checklist for month-based journeys. */
+const JOURNEY_CHECKLIST_TITLES: Record<'3M' | '6M' | '9M', string> = {
+  '3M': '3 Months Journey',
+  '6M': '6 Months Journey',
+  '9M': '9 Months Journey',
 }
 
 const formatPoints = (value: number) => value.toLocaleString('en-US')
@@ -53,6 +60,7 @@ export const JourneyPointsReferencePanel = ({
 }: JourneyPointsReferencePanelProps) => {
   if (!isMonthBasedJourney(journeyType)) return null
 
+  const checklistTitle = JOURNEY_CHECKLIST_TITLES[journeyType]
   const crossRef = getJourneyPointsCrossReference(journeyType)
   const hasMentor = leadershipAvailability?.hasMentor ?? true
   const hasAmbassador = leadershipAvailability?.hasAmbassador ?? true
@@ -66,15 +74,15 @@ export const JourneyPointsReferencePanel = ({
         <HStack spacing={2}>
           <Icon as={Flag} color="#350e6f" boxSize={5} />
           <Heading size="md" color="#350e6f" textTransform="uppercase" letterSpacing="wide">
-            {getJourneyLabel(journeyType)}
+            {checklistTitle}
           </Heading>
           <Badge colorScheme="purple" borderRadius="full">
             Programme points table
           </Badge>
         </HStack>
         <Text mt={2} fontSize="sm" color="gray.600">
-          Your organization is on the {getJourneyLabel(journeyType)}. Complete activities below to reach the pass
-          mark. Mentor and Ambassador rows apply when those roles are assigned.
+          Your organization is on the {checklistTitle}. Complete activities below to reach the pass mark. Mentor and
+          Ambassador rows apply when those roles are assigned.
         </Text>
       </Box>
 
