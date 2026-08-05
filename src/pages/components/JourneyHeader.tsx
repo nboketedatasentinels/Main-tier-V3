@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '@/services/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { JOURNEY_META } from '@/config/pointsConfig'
+import { getJourneyLabel } from '@/utils/journeyType'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { calculatePassMark } from '@/utils/completion'
 import type { JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
@@ -115,7 +116,7 @@ export const JourneyHeader = ({
             letterSpacing="wide"
             color="gray.500"
           >
-            Journey progress
+            {getJourneyLabel(journey.journeyType)} · Journey progress
           </Text>
           <Text fontSize="xs" color="gray.400">
             Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}

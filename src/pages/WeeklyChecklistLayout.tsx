@@ -3,6 +3,7 @@ import { useWeeklyChecklistViewModel } from '@/hooks/useWeeklyChecklistViewModel
 import { ActivityList } from './components/ActivityList'
 import { ProofModal } from './components/ProofModal'
 import { JourneyHeader } from './components/JourneyHeader'
+import { JourneyPointsReferencePanel } from './components/JourneyPointsReferencePanel'
 
 type VM = ReturnType<typeof useWeeklyChecklistViewModel>
 
@@ -14,6 +15,13 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         progress={vm.allWeeksProgress}
         leadershipAvailability={vm.leadershipAvailability}
       />
+
+      {vm.journey?.journeyType ? (
+        <JourneyPointsReferencePanel
+          journeyType={vm.journey.journeyType}
+          leadershipAvailability={vm.leadershipAvailability}
+        />
+      ) : null}
 
       <ActivityList
         activities={vm.activities}

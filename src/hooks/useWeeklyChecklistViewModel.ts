@@ -11,7 +11,7 @@ import {
   type ActivityId,
   type JourneyType,
 } from '@/config/pointsConfig'
-import { resolveJourneyType } from '@/utils/journeyType'
+import { resolveJourneyType, isJourneyType } from '@/utils/journeyType'
 import { getOrganizationJourney } from '@/services/supabaseOrgService'
 import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { supabase } from '@/services/supabase'
@@ -293,32 +293,34 @@ export function useWeeklyChecklistViewModel() {
 
     const resolve = async () => {
       try {
+        // Paid org members must inherit the org programme (3M / 6M / 9M / 6W).
+        // Never silently stick on 6W when the org is a month-based journey.
         let journeyType: JourneyType = '6W'
         let orgCohortStartDate: string | null = null
 
-        if (isFreeUser(profile) && !profile.companyId && !profile.organizationId) {
+        const orgId =
+          profile.organizationId ||
+          profile.companyId ||
+          (Array.isArray(profile.assignedOrganizations) && profile.assignedOrganizations.length === 1
+            ? profile.assignedOrganizations[0]
+            : null)
+
+        if (isFreeUser(profile) && !orgId) {
           journeyType = '4W'
-        } else if (profile.companyId || profile.organizationId) {
-          // Organizations live in Supabase now; read the org's journey there.
-          // The legacy Firestore org doc is empty for orgs created via the admin
-          // UI post-migration, which made corporate members fall back to '6W'.
-          const orgId = profile.organizationId || profile.companyId
-          const org = orgId ? await getOrganizationJourney(orgId) : null
-          if (org) {
-            journeyType =
-              (resolveJourneyType({
+        } else if (orgId) {
+          const org = await getOrganizationJourney(orgId)
+          const fromOrg = org
+            ? resolveJourneyType({
                 journeyType: org.journeyType,
                 programDurationWeeks: org.programDurationWeeks,
                 programDuration: org.programDurationMonths,
-              }) as JourneyType) || '6W'
-            orgCohortStartDate = org.cohortStartDate
-          } else if (profile.journeyType) {
-            // Org not found - fall back to the journey the claim_organization_code
-            // RPC stamped on the profile at join time.
-            journeyType = profile.journeyType as JourneyType
-          }
-        } else if (profile.journeyType) {
-          journeyType = profile.journeyType as JourneyType
+              })
+            : null
+          const fromProfile = isJourneyType(profile.journeyType) ? profile.journeyType : null
+          journeyType = (fromOrg || fromProfile || '6W') as JourneyType
+          orgCohortStartDate = org?.cohortStartDate ?? null
+        } else if (isJourneyType(profile.journeyType)) {
+          journeyType = profile.journeyType
         }
 
         const meta = JOURNEY_META[journeyType]
