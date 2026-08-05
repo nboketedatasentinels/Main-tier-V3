@@ -17,6 +17,7 @@ import {
   type MismatchSample,
 } from '@/utils/partnerDashboardUtils'
 import { getDisplayName, type DisplayNameInput } from '@/utils/displayName'
+import { isLearnerRole } from '@/utils/role'
 import {
   calculateUserRiskStatus,
   getProgramWeekNumber,
@@ -73,7 +74,7 @@ export interface PartnerUser {
   personalityType?: string
   coreValues?: string[]
   // Inferred from the raw profile role: 'free_user' → 'free', everything else
-  // (paid_member, mentor, ambassador) → 'paid'. Used for paid/free tab split.
+  // (paid_member, mentor, coach) → 'paid'. Used for paid/free tab split.
   membershipTier?: 'free' | 'paid'
 }
 
@@ -778,6 +779,7 @@ export const usePartnerAdminData = (
           filteredDocs.forEach((docWrapper) => {
             try {
               const data = docWrapper.data()
+              if (!isLearnerRole(data.role)) return
 
               const rawCompanyCode = data.companyCode || data.company_code || ''
               const rawOrganizationId = data.organizationId || data.organization_id || data.companyId || ''

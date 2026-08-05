@@ -7,7 +7,6 @@ import {
   getDocs,
   orderBy,
   query,
-  runTransaction,
   serverTimestamp,
   setDoc,
   updateDoc,
@@ -15,6 +14,7 @@ import {
   limit,
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import type { UserProfile } from '@/types'
 
@@ -267,37 +267,28 @@ export const updateUserProfile = async (
   return { updates: sanitized, error: null }
 }
 
-export const updateUserVillageId = async (userId: string, villageId: string): Promise<void> => {
+export const updateUserVillageId = async (userId: string, villageId: string | null): Promise<void> => {
   if (!userId.trim()) {
     throw new Error('User id is required.')
   }
-  if (!villageId.trim()) {
-    throw new Error('Village id is required.')
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id) {
+    throw new Error('Please sign in again.')
+  }
+  if (user.id !== userId) {
+    throw new Error('You can only update your own village membership.')
   }
 
-  const userRef = doc(db, 'users', userId)
-  const profileRef = doc(db, 'profiles', userId)
-
-  await runTransaction(db, async (transaction) => {
-    const [userSnapshot, profileSnapshot] = await Promise.all([
-      transaction.get(userRef),
-      transaction.get(profileRef),
-    ])
-
-    if (!userSnapshot.exists() || !profileSnapshot.exists()) {
-      throw new Error('User profile not found.')
-    }
-
-    const payload = {
-      villageId,
-      updatedAt: serverTimestamp(),
-    }
-
-    await Promise.all([
-      Promise.resolve(transaction.update(userRef, payload)),
-      Promise.resolve(transaction.update(profileRef, payload)),
-    ])
+  // create_my_village already sets village_id; this path is for invite accept / leave.
+  const { error } = await supabase.rpc('set_my_village_id', {
+    p_village_id: villageId?.trim() ? villageId.trim() : null,
   })
+  if (error) {
+    throw new Error(error.message || 'Unable to update village membership.')
+  }
 }
 
 export const logUserProfileAccess = async (log: ProfileAccessLog) => {

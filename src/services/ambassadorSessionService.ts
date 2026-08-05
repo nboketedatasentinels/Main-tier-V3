@@ -24,10 +24,10 @@ import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConf
 const SLOTS = 'ambassador_slots'
 const BOOKINGS = 'ambassador_slot_bookings'
 
-export type AmbassadorSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
-export type AmbassadorBookingStatus = 'booked' | 'attended' | 'no_show' | 'cancelled'
+export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
+export type CoachBookingStatus = 'booked' | 'attended' | 'no_show' | 'cancelled'
 
-export interface AmbassadorSlot {
+export interface CoachSlot {
   id: string
   ambassadorId: string
   ambassadorName: string | null
@@ -40,21 +40,21 @@ export interface AmbassadorSlot {
   capacity: number
   meetingLink: string | null
   location: string | null
-  status: AmbassadorSlotStatus
+  status: CoachSlotStatus
   bookingCount: number
   cancellationReason: string | null
   createdAt: Date
   updatedAt: Date | null
 }
 
-export interface AmbassadorBooking {
+export interface CoachBooking {
   id: string
   slotId: string
   learnerId: string
   learnerName: string | null
   ambassadorId: string
   companyId: string | null
-  status: AmbassadorBookingStatus
+  status: CoachBookingStatus
   bookedAt: Date
   attendedAt: Date | null
   cancelledAt: Date | null
@@ -65,7 +65,7 @@ export interface AmbassadorBooking {
   // Denormalized slot fields for UI convenience
   slotTitle: string | null
   slotScheduledAt: Date | null
-  slotStatus: AmbassadorSlotStatus | null
+  slotStatus: CoachSlotStatus | null
 }
 
 const parseTs = (value: unknown): Date | null => {
@@ -78,34 +78,34 @@ const parseTs = (value: unknown): Date | null => {
 const pickString = (value: unknown): string | null =>
   typeof value === 'string' && value.trim().length > 0 ? value : null
 
-const mapSlot = (id: string, data: Record<string, unknown>): AmbassadorSlot => ({
+const mapSlot = (id: string, data: Record<string, unknown>): CoachSlot => ({
   id,
   ambassadorId: pickString(data.ambassador_id) ?? '',
   ambassadorName: pickString(data.ambassador_name),
   companyId: pickString(data.company_id) ?? '',
   companyCode: pickString(data.company_code),
-  title: pickString(data.title) ?? 'Ambassador coaching session',
+  title: pickString(data.title) ?? 'Coach coaching session',
   description: pickString(data.description),
   scheduledAt: parseTs(data.scheduled_at) ?? new Date(),
   durationMinutes: Number(data.duration_minutes ?? 60) || 60,
   capacity: Math.max(1, Number(data.capacity ?? 1)),
   meetingLink: pickString(data.meeting_link),
   location: pickString(data.location),
-  status: (data.status as AmbassadorSlotStatus) || 'open',
+  status: (data.status as CoachSlotStatus) || 'open',
   bookingCount: Math.max(0, Number(data.booking_count ?? 0)),
   cancellationReason: pickString(data.cancellation_reason),
   createdAt: parseTs(data.created_at) ?? new Date(),
   updatedAt: parseTs(data.updated_at),
 })
 
-const mapBooking = (id: string, data: Record<string, unknown>): AmbassadorBooking => ({
+const mapBooking = (id: string, data: Record<string, unknown>): CoachBooking => ({
   id,
   slotId: pickString(data.slot_id) ?? '',
   learnerId: pickString(data.learner_id) ?? '',
   learnerName: pickString(data.learner_name),
   ambassadorId: pickString(data.ambassador_id) ?? '',
   companyId: pickString(data.company_id),
-  status: (data.status as AmbassadorBookingStatus) || 'booked',
+  status: (data.status as CoachBookingStatus) || 'booked',
   bookedAt: parseTs(data.booked_at) ?? new Date(),
   attendedAt: parseTs(data.attended_at),
   cancelledAt: parseTs(data.cancelled_at),
@@ -115,7 +115,7 @@ const mapBooking = (id: string, data: Record<string, unknown>): AmbassadorBookin
   pointsAwardedAt: parseTs(data.points_awarded_at),
   slotTitle: pickString(data.slot_title),
   slotScheduledAt: parseTs(data.slot_scheduled_at),
-  slotStatus: (pickString(data.slot_status) as AmbassadorSlotStatus | null) ?? null,
+  slotStatus: (pickString(data.slot_status) as CoachSlotStatus | null) ?? null,
 })
 
 const bookingIdFor = (slotId: string, learnerId: string) => `${slotId}__${learnerId}`
@@ -133,12 +133,12 @@ async function getJourneyContext(
       weekNumber: Math.max(1, Number(profile.currentWeek ?? 1)),
     }
   } catch (err) {
-    console.error('[AmbassadorSessionService] Journey context failed:', err)
+    console.error('[CoachSessionService] Journey context failed:', err)
     return null
   }
 }
 
-export async function createAmbassadorSlot(params: {
+export async function createCoachSlot(params: {
   ambassadorId: string
   ambassadorName?: string
   companyId: string
@@ -165,7 +165,7 @@ export async function createAmbassadorSlot(params: {
     location,
   } = params
 
-  if (!ambassadorId) throw new Error('Ambassador id is required.')
+  if (!ambassadorId) throw new Error('Coach id is required.')
   if (!companyId) throw new Error('Organization is required.')
   if (!title.trim()) throw new Error('A session title is required.')
   if (capacity < 1) throw new Error('Capacity must be at least 1 learner.')
@@ -185,7 +185,7 @@ export async function createAmbassadorSlot(params: {
     capacity: Math.round(capacity),
     meeting_link: meetingLink?.trim() || null,
     location: location?.trim() || null,
-    status: 'open' as AmbassadorSlotStatus,
+    status: 'open' as CoachSlotStatus,
     booking_count: 0,
     created_at: serverTimestamp(),
     updated_at: serverTimestamp(),
@@ -195,7 +195,7 @@ export async function createAmbassadorSlot(params: {
   return docRef.id
 }
 
-export async function updateAmbassadorSlot(params: {
+export async function updateCoachSlot(params: {
   slotId: string
   updates: Partial<{
     title: string
@@ -212,7 +212,7 @@ export async function updateAmbassadorSlot(params: {
   const slotSnap = await getDoc(slotRef)
   if (!slotSnap.exists()) throw new Error('Slot not found.')
 
-  const data = slotSnap.data() as { booking_count?: number; status?: AmbassadorSlotStatus }
+  const data = slotSnap.data() as { booking_count?: number; status?: CoachSlotStatus }
   if (data.status === 'cancelled' || data.status === 'completed') {
     throw new Error('Slot is closed and cannot be edited.')
   }
@@ -233,7 +233,7 @@ export async function updateAmbassadorSlot(params: {
     payload.capacity = Math.round(updates.capacity)
     // Re-open a full slot if capacity increased
     if (data.status === 'full' && updates.capacity > currentBookings) {
-      payload.status = 'open' as AmbassadorSlotStatus
+      payload.status = 'open' as CoachSlotStatus
     }
   }
   if (updates.meetingLink !== undefined) payload.meeting_link = updates.meetingLink
@@ -242,7 +242,7 @@ export async function updateAmbassadorSlot(params: {
   await updateDoc(slotRef, payload)
 }
 
-export async function cancelAmbassadorSlot(params: {
+export async function cancelCoachSlot(params: {
   slotId: string
   actorId: string
   reason?: string
@@ -252,13 +252,13 @@ export async function cancelAmbassadorSlot(params: {
 
   const slotSnap = await getDoc(slotRef)
   if (!slotSnap.exists()) throw new Error('Slot not found.')
-  const data = slotSnap.data() as { status?: AmbassadorSlotStatus; title?: string }
+  const data = slotSnap.data() as { status?: CoachSlotStatus; title?: string }
   if (data.status === 'cancelled' || data.status === 'completed') {
     throw new Error('Slot is already closed.')
   }
 
   await updateDoc(slotRef, {
-    status: 'cancelled' as AmbassadorSlotStatus,
+    status: 'cancelled' as CoachSlotStatus,
     cancellation_reason: reason?.trim() || null,
     cancelled_by: actorId,
     updated_at: serverTimestamp(),
@@ -275,25 +275,25 @@ export async function cancelAmbassadorSlot(params: {
   for (const docSnap of snapshot.docs) {
     const bookingData = docSnap.data() as { learner_id?: string }
     await updateDoc(docSnap.ref, {
-      status: 'cancelled' as AmbassadorBookingStatus,
+      status: 'cancelled' as CoachBookingStatus,
       cancelled_at: serverTimestamp(),
       cancelled_by: actorId,
-      cancel_reason: reason?.trim() || 'Ambassador cancelled the session',
-      slot_status: 'cancelled' as AmbassadorSlotStatus,
+      cancel_reason: reason?.trim() || 'Coach cancelled the session',
+      slot_status: 'cancelled' as CoachSlotStatus,
     })
     if (bookingData.learner_id) {
       notifyPromises.push(
         createInAppNotification({
           userId: bookingData.learner_id,
           type: 'important_update',
-          title: 'Ambassador session cancelled',
+          title: 'Coach session cancelled',
           message: reason?.trim()
             ? `${data.title ?? 'A coaching session'} was cancelled. Reason: ${reason.trim()}`
-            : `${data.title ?? 'A coaching session'} was cancelled by the ambassador.`,
+            : `${data.title ?? 'A coaching session'} was cancelled by the coach.`,
           relatedId: slotId,
           metadata: { slotId, kind: 'ambassador_slot_cancelled' },
         }).catch((err) =>
-          console.warn('[AmbassadorSessionService] notify cancel fan-out failed:', err),
+          console.warn('[CoachSessionService] notify cancel fan-out failed:', err),
         ),
       )
     }
@@ -301,7 +301,7 @@ export async function cancelAmbassadorSlot(params: {
   await Promise.all(notifyPromises)
 }
 
-export async function bookAmbassadorSlot(params: {
+export async function bookCoachSlot(params: {
   slotId: string
   learnerId: string
   learnerName?: string
@@ -334,7 +334,7 @@ export async function bookAmbassadorSlot(params: {
     }
 
     if (bookingDoc.exists()) {
-      const existing = bookingDoc.data() as { status?: AmbassadorBookingStatus }
+      const existing = bookingDoc.data() as { status?: CoachBookingStatus }
       if (existing.status === 'booked' || existing.status === 'attended') {
         throw new Error('You are already booked for this session.')
       }
@@ -350,7 +350,7 @@ export async function bookAmbassadorSlot(params: {
       learner_name: learnerName ?? null,
       ambassador_id: ambassadorId,
       company_id: companyId ?? slotData.company_id ?? null,
-      status: 'booked' as AmbassadorBookingStatus,
+      status: 'booked' as CoachBookingStatus,
       booked_at: serverTimestamp(),
       attended_at: null,
       cancelled_at: null,
@@ -360,13 +360,13 @@ export async function bookAmbassadorSlot(params: {
       points_awarded_at: null,
       slot_title: slotTitle,
       slot_scheduled_at: scheduledAt ?? null,
-      slot_status: slotData.status as AmbassadorSlotStatus,
+      slot_status: slotData.status as CoachSlotStatus,
     })
 
     const nextCount = currentCount + 1
     tx.update(slotRef, {
       booking_count: increment(1),
-      status: nextCount >= capacity ? ('full' as AmbassadorSlotStatus) : (slotData.status as AmbassadorSlotStatus),
+      status: nextCount >= capacity ? ('full' as CoachSlotStatus) : (slotData.status as CoachSlotStatus),
       updated_at: serverTimestamp(),
     })
   })
@@ -379,7 +379,7 @@ export async function bookAmbassadorSlot(params: {
       message: `${learnerName ?? 'A learner'} booked "${slotTitle ?? 'your session'}".`,
       relatedId: slotId,
       metadata: { slotId, bookingId, learnerId, kind: 'ambassador_slot_booked' },
-    }).catch((err) => console.warn('[AmbassadorSessionService] notify booking failed:', err))
+    }).catch((err) => console.warn('[CoachSessionService] notify booking failed:', err))
   }
 
   return bookingId
@@ -398,7 +398,7 @@ export async function cancelBooking(params: {
     if (!bookingDoc.exists()) throw new Error('Booking not found.')
 
     const bookingData = bookingDoc.data()
-    const currentStatus = bookingData.status as AmbassadorBookingStatus | undefined
+    const currentStatus = bookingData.status as CoachBookingStatus | undefined
     if (currentStatus !== 'booked') {
       throw new Error('Booking cannot be cancelled in its current state.')
     }
@@ -408,10 +408,10 @@ export async function cancelBooking(params: {
 
     const slotRef = doc(db, SLOTS, slotId)
     const slotDoc = await tx.get(slotRef)
-    const slotStatus = slotDoc.exists() ? (slotDoc.data().status as AmbassadorSlotStatus) : 'open'
+    const slotStatus = slotDoc.exists() ? (slotDoc.data().status as CoachSlotStatus) : 'open'
 
     tx.update(bookingRef, {
-      status: 'cancelled' as AmbassadorBookingStatus,
+      status: 'cancelled' as CoachBookingStatus,
       cancelled_at: serverTimestamp(),
       cancelled_by: actorId,
       cancel_reason: reason?.trim() || null,
@@ -444,7 +444,7 @@ export async function markAttendance(params: {
     if (!bookingDoc.exists()) throw new Error('Booking not found.')
 
     const data = bookingDoc.data()
-    const currentStatus = data.status as AmbassadorBookingStatus | undefined
+    const currentStatus = data.status as CoachBookingStatus | undefined
 
     if (currentStatus === status) {
       learnerId = pickString(data.learner_id)
@@ -487,12 +487,12 @@ export async function markAttendance(params: {
           })
         } else {
           console.warn(
-            `[AmbassadorSessionService] ambassador_session activity unavailable for ${context.journeyType}`,
+            `[CoachSessionService] ambassador_session activity unavailable for ${context.journeyType}`,
           )
         }
       }
     } catch (err) {
-      console.error('[AmbassadorSessionService] Failed to award attendance points:', err)
+      console.error('[CoachSessionService] Failed to award attendance points:', err)
     }
   }
 
@@ -504,13 +504,13 @@ export async function markAttendance(params: {
       message:
         status === 'attended'
           ? shouldAwardPoints
-            ? `Your ambassador confirmed your attendance at "${slotTitle ?? 'the session'}". Points added.`
-            : `Your ambassador confirmed your attendance at "${slotTitle ?? 'the session'}".`
-          : `Your ambassador recorded a no-show for "${slotTitle ?? 'the session'}".`,
+            ? `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}". Points added.`
+            : `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}".`
+          : `Your coach recorded a no-show for "${slotTitle ?? 'the session'}".`,
       relatedId: bookingId,
       metadata: { bookingId, kind: 'ambassador_attendance' },
     }).catch((err) =>
-      console.warn('[AmbassadorSessionService] notify attendance failed:', err),
+      console.warn('[CoachSessionService] notify attendance failed:', err),
     )
   }
 
@@ -521,7 +521,7 @@ export async function markSlotCompleted(slotId: string): Promise<void> {
   const slotRef = doc(db, SLOTS, slotId)
   await setDoc(
     slotRef,
-    { status: 'completed' as AmbassadorSlotStatus, updated_at: serverTimestamp() },
+    { status: 'completed' as CoachSlotStatus, updated_at: serverTimestamp() },
     { merge: true },
   )
 }
@@ -529,7 +529,7 @@ export async function markSlotCompleted(slotId: string): Promise<void> {
 const subscribeToSlotsBy = (
   field: 'ambassador_id' | 'company_id',
   value: string,
-  onUpdate: (slots: AmbassadorSlot[]) => void,
+  onUpdate: (slots: CoachSlot[]) => void,
   onError?: (error: Error) => void,
   extraOpenOnly = false,
 ): Unsubscribe => {
@@ -544,21 +544,21 @@ const subscribeToSlotsBy = (
   )
 }
 
-export const subscribeToAmbassadorSlots = (
+export const subscribeToCoachSlots = (
   ambassadorId: string,
-  onUpdate: (slots: AmbassadorSlot[]) => void,
+  onUpdate: (slots: CoachSlot[]) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe => subscribeToSlotsBy('ambassador_id', ambassadorId, onUpdate, onError)
 
 export const subscribeToOpenSlotsForOrg = (
   companyId: string,
-  onUpdate: (slots: AmbassadorSlot[]) => void,
+  onUpdate: (slots: CoachSlot[]) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe => subscribeToSlotsBy('company_id', companyId, onUpdate, onError, true)
 
 export const subscribeToSlotBookings = (
   slotId: string,
-  onUpdate: (bookings: AmbassadorBooking[]) => void,
+  onUpdate: (bookings: CoachBooking[]) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe => {
   const q = query(collection(db, BOOKINGS), where('slot_id', '==', slotId))
@@ -577,7 +577,7 @@ export const subscribeToSlotBookings = (
 
 export const subscribeToLearnerBookings = (
   learnerId: string,
-  onUpdate: (bookings: AmbassadorBooking[]) => void,
+  onUpdate: (bookings: CoachBooking[]) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe => {
   const q = query(collection(db, BOOKINGS), where('learner_id', '==', learnerId))
@@ -597,8 +597,8 @@ export const subscribeToLearnerBookings = (
 }
 
 export const groupBookingsByStatus = (
-  bookings: AmbassadorBooking[],
-): Record<AmbassadorBookingStatus, AmbassadorBooking[]> => ({
+  bookings: CoachBooking[],
+): Record<CoachBookingStatus, CoachBooking[]> => ({
   booked: bookings.filter((b) => b.status === 'booked'),
   attended: bookings.filter((b) => b.status === 'attended'),
   no_show: bookings.filter((b) => b.status === 'no_show'),

@@ -60,7 +60,7 @@ import { getCourseDetailsFromMapping } from '@/utils/courseMappings'
 
 const MotionBox = motion(Box)
 const MotionFlex = motion(Flex)
-const AI_STACKING_TITLE = 'AI for Transformation Leaders: Judgment Over Features'
+const AI_STACKING_TITLE = 'AI for Transformation Leader: Judgment Over Features'
 const AI_STACKING_COUPON_CODE = 'Ai101'
 
 const ReferralRewardsPage: React.FC = () => {
@@ -452,11 +452,11 @@ const ReferralRewardsPage: React.FC = () => {
           <HStack spacing={3} color="brand.primary">
             <Text fontSize="2xl">🚀🚀</Text>
             <Badge colorScheme="purple" px={3} py={1} borderRadius="full">
-              Tier Ambassador Program
+              Tier Coach Program
             </Badge>
           </HStack>
           <Heading size="lg" color="brand.text">
-            Tier Ambassador Program
+            Tier Coach Program
           </Heading>
           <Text color="brand.subtleText" fontSize="lg" maxW="2xl">
             Grow your crew. Grow your impact. Share your referral link to unlock rewards, recognition, and exclusive perks.
@@ -764,7 +764,7 @@ const ReferralRewardsPage: React.FC = () => {
                           colorScheme="purple"
                           variant="ghost"
                         >
-                          Open AI for Transformation Leaders
+                          Open AI for Transformation Leader
                         </Button>
                         <Text fontSize="xs" color="brand.subtleText">
                           One-time reward for your account. Use this coupon once, then mark it as used.

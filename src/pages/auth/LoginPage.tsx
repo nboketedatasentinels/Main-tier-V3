@@ -410,8 +410,7 @@ export const LoginPage: React.FC = () => {
         isOpen={showPhonePrompt}
         onComplete={() => {
           setShowPhonePrompt(false)
-          // After successfully saving phone, send the user to the welcome page
-          navigate('/welcome', { replace: true })
+          navigate(getLandingPathForRole(profile), { replace: true })
         }}
       />
     </>

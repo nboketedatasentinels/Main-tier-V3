@@ -3,7 +3,6 @@ import {
   type FirestoreError,
   collection,
   doc,
-  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -15,6 +14,7 @@ import {
 } from 'firebase/firestore'
 import { auth, db } from './firebase'
 import { supabase } from './supabase'
+import { respondToChallenge as respondToChallengeRpc } from '@/services/supabaseChallengeService'
 import {
   AdminNotification,
   NotificationRecord,
@@ -238,42 +238,14 @@ export const updateNotificationAction = async (
 }
 
 export const respondToChallenge = async (challengeId: string, action: 'accepted' | 'declined') => {
-  const challengeRef = doc(db, 'challenges', challengeId)
-  const challengeSnap = await getDoc(challengeRef)
-  if (!challengeSnap.exists()) return
-
-  const challengeData = challengeSnap.data() as Record<string, unknown>
-  const responderName = (challengeData.challenged_name as string) || 'Your peer'
-  const challengerId = challengeData.challenger_id as string | undefined
-  const status = action === 'accepted' ? 'active' : 'declined'
-
-  await updateDoc(challengeRef, {
-    status,
-    responded_at: serverTimestamp(),
-    accepted_at: action === 'accepted' ? serverTimestamp() : null,
-    declined_at: action === 'declined' ? serverTimestamp() : null,
-  })
-
-  if (challengerId) {
-    await addDoc(notificationsCollection, {
-      user_id: challengerId,
-      type: 'challenge_response',
-      title: 'Challenge response',
-      message: `${responderName} ${action === 'accepted' ? 'accepted' : 'declined'} your challenge.`,
-      related_id: challengeId,
-      is_read: false,
-      read: false,
-      created_at: serverTimestamp(),
-    })
-  }
+  await respondToChallengeRpc(challengeId, action)
 }
 
 export const handleNotificationAction = async (
   notification: NotificationRecord,
   action_response: NotificationRecord['action_response'],
 ) => {
-  const notificationRef = doc(db, 'notifications', notification.id)
-  await updateDoc(notificationRef, { action_response, is_read: true, read: true })
+  await updateNotificationAction(notification.id, action_response)
 
   if (
     notification.type === 'challenge_request' &&

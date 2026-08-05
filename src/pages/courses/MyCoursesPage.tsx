@@ -81,8 +81,8 @@ const resolveOrganizationId = (profile: UserProfile | null): string | null => {
 }
 
 const COURSE_IMAGE_FILENAMES: Record<string, string> = {
-  'AI for Transformation Leaders: Judgment Over Features': 'course-ai-stacking-101.avif',
-  'Stakeholder Influence for Transformation Leaders': 'course-art-of-connection.avif',
+  'AI for Transformation Leader: Judgment Over Features': 'course-ai-stacking-101.avif',
+  'Stakeholder Influence for Transformation Leader': 'course-art-of-connection.avif',
   "Leading Under Pressure: The Transformation Leader's Operating System": 'course-mindset-reset.avif',
   'From Strategy to Execution in Transformation Programmes': 'course-goal-setting-mastery.avif',
   'The Leader Your Transformation Team Actually Needs': 'course-heart-of-leadership.avif',

@@ -110,7 +110,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   children,
   activeItem = 'overview',
   onNavigate,
-  ambassadorName = 'Ambassador',
+  ambassadorName = 'Coach',
   avatarUrl,
   navSections,
   subtitle = 'Grow the ecosystem and track your impact',
@@ -153,7 +153,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           <Text fontWeight="bold" color="brand.text">
             {ambassadorName}
           </Text>
-          <Badge colorScheme="purple">Ambassador</Badge>
+          <Badge colorScheme="purple">Coach</Badge>
         </Box>
       </HStack>
 
@@ -250,7 +250,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
               <HStack spacing={2}>
                 <Medal size={18} />
                 <Text fontWeight="bold" color="brand.text">
-                  Ambassador Hub
+                  Coach Hub
                 </Text>
               </HStack>
               <Text fontSize="sm" color="brand.subtleText">

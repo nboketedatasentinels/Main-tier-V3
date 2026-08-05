@@ -17,6 +17,7 @@ import {
   getProgramWeekNumber,
   mapWeeklyPointsToProgress,
 } from '@/utils/partnerProgress'
+import { isLearnerRole } from '@/utils/role'
 
 // Firestore 'in' query limit
 const FIRESTORE_IN_QUERY_LIMIT = 30
@@ -425,6 +426,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
           filteredDocs.forEach((docWrapper) => {
             try {
               const data = docWrapper.data()
+              if (!isLearnerRole(data.role)) return
 
               const rawCompanyCode = data.companyCode || data.company_code || ''
               const rawOrganizationId = data.organizationId || data.organization_id || data.companyId || ''

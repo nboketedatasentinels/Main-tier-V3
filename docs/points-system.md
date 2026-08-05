@@ -57,7 +57,7 @@ This creates one mental model across the entire ecosystem.
 | LIFT Course Module Completed | 1 | Partner Issued | 3,000 | 3,000 |
 | Attend book club session | 1 | Partner Issued | 1,500 | 1,500 |
 | Attend shameless circle session | 1 | Partner Issued | 1,500 | 1,500 |
-| Submit an AI tool for review | 1 | Partner Approved | 1,000 | 1,000 |
+| Submit an AI Tool to Be Spotlighted | 1 | Partner Approved | 1,000 | 1,000 |
 
 **MAXIMUM POSSIBLE**: 15,000 points
 **PASS MARK**: 9,000 points

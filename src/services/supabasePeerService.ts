@@ -5,6 +5,7 @@
  * same-organisation peers without broad profiles SELECT or Firestore.
  */
 import { supabase } from '@/services/supabase'
+import { isLearnerRole } from '@/utils/role'
 
 export type SupabasePeerRow = {
   id: string
@@ -125,7 +126,9 @@ export const listOrgPeers = async (options?: {
     throw new Error(result.error || 'Failed to load peers')
   }
 
-  return asPeerRows(result.peers).map(mapSupabasePeerToRecord)
+  return asPeerRows(result.peers)
+    .filter((row) => isLearnerRole(row.role))
+    .map(mapSupabasePeerToRecord)
 }
 
 type OrgLedgerRow = {

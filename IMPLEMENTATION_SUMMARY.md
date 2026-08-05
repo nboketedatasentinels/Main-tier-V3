@@ -1,7 +1,7 @@
 # Role-Based Login Redirect System - Implementation Summary
 
 ## Overview
-This document summarizes the complete implementation of the role-based login redirect system for the Transformation Leaders platform.
+This document summarizes the complete implementation of the role-based login redirect system for the Transformation Leader platform.
 
 ## Implementation Stats
 - **Files Added:** 7 new files

@@ -69,6 +69,7 @@ import { isFreeUser } from '@/utils/membership'
 import { getDisplayName } from '@/utils/displayName'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import { leadershipQuotes } from '@/services/quotes'
+import { SHAMELESS_CIRCLE_WHATSAPP_URL } from '@/config/communityLinks'
 
 interface WeeklyAggregation {
   id: string
@@ -230,7 +231,7 @@ export const CompanyDashboard: React.FC = () => {
   } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
   const assignment = useMemo(
     () => ({
-      ambassador: buildSupportLead(leadershipProfiles.ambassador),
+      coach: buildSupportLead(leadershipProfiles.ambassador),
       mentor: buildSupportLead(leadershipProfiles.mentor),
     }),
     [leadershipProfiles.ambassador, leadershipProfiles.mentor],
@@ -447,7 +448,7 @@ export const CompanyDashboard: React.FC = () => {
           {isAvailable && <Badge colorScheme="green">Available</Badge>}
         </HStack>
         <Text fontWeight="semibold">
-          {name || `No ${role === 'both' ? 'mentor or ambassador' : role} assigned`}
+          {name || `No ${role === 'both' ? 'mentor or coach' : role} assigned`}
         </Text>
 
         {(role === 'mentor' || role === 'both') && mentorSourceLabel && (
@@ -465,7 +466,7 @@ export const CompanyDashboard: React.FC = () => {
                     ? 'No mentor is assigned to you or your organization yet.'
                     : 'No mentor is assigned to your organization yet.'
                   : role === 'ambassador'
-                    ? 'No ambassador is assigned to your organization yet.'
+                    ? 'No coach is assigned to your organization yet.'
                     : 'No support team assigned.'}
               </Text>
             ) : (
@@ -664,7 +665,7 @@ export const CompanyDashboard: React.FC = () => {
                     Mentor source: {leadershipSources.mentor ?? 'None'}
                   </Text>
                   <Text fontSize="xs" color="text.muted">
-                    Ambassador source: {leadershipSources.ambassador ?? 'None'}
+                    Coach source: {leadershipSources.ambassador ?? 'None'}
                   </Text>
                 </VStack>
               )}
@@ -681,10 +682,10 @@ export const CompanyDashboard: React.FC = () => {
                 )}
 
                 {isSamePerson ? (
-                  renderSupportLead('Mentor & Ambassador', assignment.mentor, 'both')
+                  renderSupportLead('Mentor & Coach', assignment.mentor, 'both')
                 ) : (
                   <>
-                    {renderSupportLead('Ambassador Status', assignment.ambassador, 'ambassador')}
+                    {renderSupportLead('Coach Status', assignment.coach, 'ambassador')}
                     <Divider />
                     {renderSupportLead('Mentor', assignment.mentor, 'mentor')}
                   </>
@@ -828,7 +829,7 @@ export const CompanyDashboard: React.FC = () => {
               <Button
                 mt={3}
                 as={Link}
-                href="https://chat.whatsapp.com/GlioRkWeQ36LxxFeBZc8SW"
+                href={SHAMELESS_CIRCLE_WHATSAPP_URL}
                 target="_blank"
                 colorScheme="green"
                 rightIcon={<MessageCircle size={16} />}

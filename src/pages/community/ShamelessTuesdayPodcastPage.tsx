@@ -12,10 +12,11 @@ import {
   Text,
 } from '@chakra-ui/react'
 import { ArrowUpRight, MessageSquare, Mic, Play, Youtube } from 'lucide-react'
+import { SHAMELESS_CIRCLE_WHATSAPP_URL } from '@/config/communityLinks'
 
 const YOUTUBE_EMBED_SRC = 'https://www.youtube.com/embed/Du71f-J9s2A?si=gcMvAtmRINGoIvYU'
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@T4Leaders/podcasts'
-const WHATSAPP_CIRCLE_URL = 'https://chat.whatsapp.com/GU834qw8x6JHYgrzDBUT5i?mode=ems_copy_t'
+const WHATSAPP_CIRCLE_URL = SHAMELESS_CIRCLE_WHATSAPP_URL
 
 export const ShamelessTuesdayPodcastPage: React.FC = () => (
   <Stack spacing={6} pb={10}>

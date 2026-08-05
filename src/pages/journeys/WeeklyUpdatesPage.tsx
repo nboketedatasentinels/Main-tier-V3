@@ -134,7 +134,7 @@ const availabilityReasonLabels: Record<ActivityAvailabilityReason, string> = {
   max_per_week: 'Weekly limit reached',
   max_per_window: 'Cycle limit reached',
   missing_mentor: 'Mentor required',
-  missing_ambassador: 'Ambassador required',
+  missing_ambassador: 'Coach required',
   one_time_used: 'Activity already completed',
   window_cap_reached: 'Cycle limit reached',
 }
@@ -502,14 +502,34 @@ const WeeklyChecklistPage: React.FC = () => {
     )
 
     const unsubscribe = onSnapshot(impactQuery, snapshot => {
-      const hasEntry = !snapshot.empty
+      const docs = snapshot.docs.map((d) => {
+        const data = d.data() as { verificationStatus?: string }
+        return { id: d.id, verificationStatus: data.verificationStatus }
+      })
+      const hasPending = docs.some((entry) => entry.verificationStatus === 'pending')
+      const hasApproved = docs.some(
+        (entry) => entry.verificationStatus === 'approved' || !entry.verificationStatus,
+      )
+      // Rejected-only weeks stay not_started so the learner can resubmit.
+      const nextStatus: ActivityStatus = hasPending
+        ? 'pending'
+        : hasApproved
+          ? 'completed'
+          : 'not_started'
+
       setActivities(prev => {
         const impactActivity = prev.find(activity => activity.id === 'impact_log')
         if (!impactActivity) return prev
-        const nextStatus: ActivityStatus = hasEntry ? 'completed' : 'not_started'
         if (impactActivity.status === nextStatus) return prev
 
-        if (hasEntry) {
+        if (nextStatus === 'pending') {
+          toast({
+            title: 'Impact log awaiting verifier',
+            description: 'Points stay pending until your verifier approves.',
+            status: 'info',
+            duration: 3000,
+          })
+        } else if (nextStatus === 'completed') {
           toast({
             title: 'Impact Log recorded',
             description: 'Your weekly checklist was updated automatically.',

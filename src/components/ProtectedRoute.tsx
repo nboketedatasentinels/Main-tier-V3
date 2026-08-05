@@ -129,7 +129,7 @@ export const ProtectedRoute: React.FC<Props> = ({
     return <Navigate to="/unauthorized" replace />
   }
 
-  // Check for ambassador requirement
+  // Check for coach requirement
   if (requireAmbassador && !isAmbassador) {
     return <Navigate to="/unauthorized" replace />
   }

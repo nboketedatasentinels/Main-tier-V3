@@ -515,7 +515,7 @@ export const OrganizationDetailPage: React.FC = () => {
                         email: organization?.assignedMentorEmail,
                       },
                       {
-                        role: 'Ambassador',
+                        role: 'Coach',
                         name: organization?.assignedAmbassadorName,
                         email: organization?.assignedAmbassadorEmail,
                       },

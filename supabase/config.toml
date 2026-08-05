@@ -12,3 +12,11 @@ verify_jwt = false
 # caller's JWT + partner/admin role inside the function (see authorizeCaller).
 [functions.send-welcome-email]
 verify_jwt = false
+
+# Learner-authenticated send after impact submit; JWT checked inside the function.
+[functions.send-impact-verification-email]
+verify_jwt = false
+
+# Public token-gated approve/reject for external verifiers (no login required).
+[functions.resolve-impact-verification]
+verify_jwt = false

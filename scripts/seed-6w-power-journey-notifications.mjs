@@ -32,7 +32,7 @@ const { serverTimestamp } = admin.firestore.FieldValue
 
 const PROGRAMME = 'transforming-business-6w'
 const TARGET_AUDIENCE = 'Transforming Business 6-Week Power Journey learners'
-const SENDER = 'Tier 4 Leaders Team'
+const SENDER = 'Transformation Leader Team'
 
 const POLLS = {
   1: {
@@ -150,8 +150,8 @@ const PEER_NUDGES = {
 }
 
 const PROGRESS_CHECK_DAY2 = {
-  1: `{{firstName}}, you are at {{currentPoints}} points. Target by end of this week: 6,500. Pass rate for the journey is 40,000. The first LIFT Module payout lands at Week 2 completion -- 7,000 points in one hit when you finish Stakeholder Influence for Transformation Leaders. Stay in the course.`,
-  2: `{{firstName}}, you are at {{currentPoints}} of 21,000. Final week of Stakeholder Influence for Transformation Leaders. The Connection Blueprint Capstone closes the course and triggers a 7,000-point payout. This is the biggest points moment of the journey so far. Block time for it this week.`,
+  1: `{{firstName}}, you are at {{currentPoints}} points. Target by end of this week: 6,500. Pass rate for the journey is 40,000. The first LIFT Module payout lands at Week 2 completion -- 7,000 points in one hit when you finish Stakeholder Influence for Transformation Leader. Stay in the course.`,
+  2: `{{firstName}}, you are at {{currentPoints}} of 21,000. Final week of Stakeholder Influence for Transformation Leader. The Connection Blueprint Capstone closes the course and triggers a 7,000-point payout. This is the biggest points moment of the journey so far. Block time for it this week.`,
   3: `Leading Through Change and Continuous Improvement has started, {{firstName}}. You are at {{currentPoints}} of 28,500 target. New course, new rhythm. This one is four weeks -- longer and heavier than the first. Vision and Digital Transformation are this week. Pace yourself.`,
   4: `{{firstName}}, you are at {{currentPoints}} of 36,000. Heads-up: this is the heaviest content week in Leading Through Change -- Change Strategies, Leading a Team Through Change, plus Leveraging EQ. Block two sessions this week. Do not leave this one for the weekend.`,
   5: `{{firstName}}, you are at {{currentPoints}} of 43,500. This week shifts from strategy to execution -- Stakeholder Management, Conflict, Problem Solving, and Measuring Change Impact. This is where most programmes lose people. Don't.`,
@@ -159,8 +159,8 @@ const PROGRESS_CHECK_DAY2 = {
 }
 
 const PROGRESS_CHECK_DAY5 = {
-  1: `End of Week 1, {{firstName}}. Sitting at {{currentPoints}} of 6,500. Stakeholder Influence for Transformation Leaders closes next week. The Connection Blueprint Capstone is the single biggest points moment coming up. Bank one session this weekend if you can.`,
-  2: `Stakeholder Influence for Transformation Leaders closes this weekend, {{firstName}}. {{currentPoints}} points banked. If the Connection Blueprint Capstone is not finished by Sunday, you miss the 7,000-point payout. Finish it. Everything else can wait.`,
+  1: `End of Week 1, {{firstName}}. Sitting at {{currentPoints}} of 6,500. Stakeholder Influence for Transformation Leader closes next week. The Connection Blueprint Capstone is the single biggest points moment coming up. Bank one session this weekend if you can.`,
+  2: `Stakeholder Influence for Transformation Leader closes this weekend, {{firstName}}. {{currentPoints}} points banked. If the Connection Blueprint Capstone is not finished by Sunday, you miss the 7,000-point payout. Finish it. Everything else can wait.`,
   3: `End of Week 3, {{firstName}}. {{currentPoints}} out of 28,500. The Communicating a Vision section is a quick catch-up if you're behind. The next bi-weekly checkpoint lands at end of Week 4.`,
   4: `End of Week 4, {{firstName}}: {{currentPoints}} of 36,000. You are halfway through Leading Through Change. The final LIFT Module payout is at Week 6 -- another 7,000. Stay in.`,
   5: `End of Week 5, {{firstName}}: {{currentPoints}} points. One week left. The Change Leader Playbook Capstone lands next week. You are within reach of the 40,000 pass rate -- the final LIFT Module payout at end of Week 6 clears it. Do not coast. Finish what you started.`,
@@ -169,7 +169,7 @@ const PROGRESS_CHECK_DAY5 = {
 
 const SURVEYS = {
   1: { week: 1, day: 3, title: 'Open the app: W1 Baseline Assessment', body: `{{firstName}}, the Art of Connection Baseline Assessment is inside the course this week. 10 minutes. Your answers become your reference point for Week 2. Open the app.` },
-  2: { week: 2, day: 6, title: 'Open the app: W2 Course Feedback', body: `{{firstName}}, before you close Stakeholder Influence for Transformation Leaders, complete the Course Feedback survey inside the course. 5 minutes. Your feedback shapes the next cohort.` },
+  2: { week: 2, day: 6, title: 'Open the app: W2 Course Feedback', body: `{{firstName}}, before you close Stakeholder Influence for Transformation Leader, complete the Course Feedback survey inside the course. 5 minutes. Your feedback shapes the next cohort.` },
   4: { week: 4, day: 3, title: 'Open the app: W4 Leadership Self Assessment', body: `{{firstName}}, the Leadership Self Assessment for Leading Through Change is inside the course this week. Same drill as Week 1: 10 minutes, your reference point for Week 6. Open the app.` },
   6: { week: 6, day: 6, title: 'Open the app: Final Course Feedback', body: `Final survey, {{firstName}}. Course Feedback for Leading Through Change is inside the course. 5 minutes. Last thing before graduation.` },
 }
@@ -220,7 +220,7 @@ const DIGITAL_EDGE_EMAILS = {
     'Build your Connection Blueprint in 20 minutes',
     "A prompt that takes your Week 1 default-pattern work and this week's presenting, listening, and conflict comms lessons and produces a one-page blueprint for how you influence.",
     [
-      `You're closing Stakeholder Influence for Transformation Leaders this week. The Capstone asks you to produce a Connection Blueprint. Most practitioners stare at the blank template and freeze.`,
+      `You're closing Stakeholder Influence for Transformation Leader this week. The Capstone asks you to produce a Connection Blueprint. Most practitioners stare at the blank template and freeze.`,
       `This week's Digital Edge is a prompt that turns your Week 1 default-pattern work, your Week 2 listening and conflict reflections, and your stakeholder mapping into a first draft of the blueprint. 20 minutes. One page.`,
       `Walk into Stakeholder Mapping peer session with it already drafted.`,
     ],
@@ -283,7 +283,7 @@ const SHAMELESS_PODCAST_EMAILS = {
     'Weekend listen: the stakeholder she misread for a year',
     '30-60 min podcast + workbook. Pairs with Presenting with Confidence and Stakeholder Mapping.',
     [
-      `Week 2 closes Stakeholder Influence for Transformation Leaders. This week's Shameless Podcast is a practitioner talking about the senior stakeholder she misread for a year -- and what happened when she finally mapped them honestly instead of hopefully.`,
+      `Week 2 closes Stakeholder Influence for Transformation Leader. This week's Shameless Podcast is a practitioner talking about the senior stakeholder she misread for a year -- and what happened when she finally mapped them honestly instead of hopefully.`,
       `One hour over the weekend. Do the workbook. Bring the reflections into your Connection Blueprint.`,
     ],
     [{ label: 'Podcast', url: PODCAST_URLS[2].podcast }, { label: 'Workbook Playbook', url: PODCAST_URLS[2].workbook }],

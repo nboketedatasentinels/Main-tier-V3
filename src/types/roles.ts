@@ -3,6 +3,7 @@ export enum UserRole {
   PARTNER = 'partner',
   MENTOR = 'mentor',
   AMBASSADOR = 'ambassador',
+  VERIFIER = 'verifier',
   USER = 'user',
   FREE_USER = 'free_user',
   PAID_MEMBER = 'paid_member',
@@ -14,6 +15,7 @@ export type StandardRole =
   | 'partner'
   | 'mentor'
   | 'ambassador'
+  | 'verifier'
   | 'user'
   | 'free_user'
   | 'paid_member';
@@ -26,6 +28,7 @@ export const ALL_STANDARD_ROLES: StandardRole[] = [
   'partner',
   'mentor',
   'ambassador',
+  'verifier',
   'user',
   'free_user',
   'paid_member',

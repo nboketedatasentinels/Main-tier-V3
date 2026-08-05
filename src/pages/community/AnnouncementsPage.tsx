@@ -105,7 +105,7 @@ const ROLE_TARGET_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'free_user', label: 'Free members' },
   { value: 'paid_member', label: 'Paid members' },
   { value: 'mentor', label: 'Mentors' },
-  { value: 'ambassador', label: 'Ambassadors' },
+  { value: 'ambassador', label: 'Coaches' },
   { value: 'partner', label: 'Partners' },
 ]
 

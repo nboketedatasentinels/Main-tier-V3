@@ -50,6 +50,7 @@ const PartnerDashboard = lazy(() =>
 // Feature page imports
 import { JourneysPage } from '@/pages/journeys/JourneysPage'
 import { ImpactLogPage } from '@/pages/impact/ImpactLogPage'
+import { VerifyImpactPage } from '@/pages/impact/VerifyImpactPage'
 import { LeadershipBoardPage } from '@/pages/leaderboard/LeadershipBoardPage'
 import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { WeeklyUpdatesPage } from '@/pages/WeeklyChecklistPage'
@@ -175,6 +176,7 @@ export const AppRoutes = () => {
         <Route path="/partner-signup" element={<PartnerSignupPage />} />
         <Route path="/partner-signin" element={<PartnerSignupPage initialMode="signin" />} />
         <Route path="/upgrade" element={<UpgradePage />} />
+        <Route path="/verify-impact" element={<VerifyImpactPage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
         <Route path="/signup" element={<AuthLayout><SignUpPage /></AuthLayout>} />
         <Route path="/admin-signup" element={<AuthLayout><AdminSignupPage /></AuthLayout>} />
@@ -211,9 +213,9 @@ export const AppRoutes = () => {
           <Route index element={<Navigate to="/mentor/dashboard" replace />} />
         </Route>
 
-        {/* Ambassador routes */}
+        {/* Coach routes */}
         <Route
-          path="/ambassador"
+          path="/coach"
           element={
             <ProtectedRoute requiredRoles={[UserRole.AMBASSADOR]}>
               <Outlet />

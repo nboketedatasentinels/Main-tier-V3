@@ -48,14 +48,15 @@ export const LearnerDashboardPage = () => {
   const isCorporateTier =
     profile?.transformationTier === TransformationTier.CORPORATE_MEMBER ||
     profile?.transformationTier === TransformationTier.CORPORATE_LEADER
-  const shouldShowBuildVillageCard =
-    !profile?.villageId &&
+  const shouldShowBuildVillageCard = false
+  const isSharedFreeVillageMember =
+    Boolean(profile?.villageId) &&
     !profile?.companyId &&
     !profile?.companyCode &&
     !profile?.organizationId &&
-    !profile?.corporateVillageId &&
     !isPaidMember &&
     !isCorporateTier
+
 
   const isParallelTrackingEnabled = import.meta.env.VITE_FEATURE_FLAG_PARALLEL_WINDOW_TRACKING === 'true'
 
@@ -217,7 +218,30 @@ export const LearnerDashboardPage = () => {
   return (
     <Box p={{ base: 4, md: 6 }}>
       <Stack spacing={6}>
-        {shouldShowBuildVillageCard && (
+        {isSharedFreeVillageMember && (
+          <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
+            <CardBody>
+              <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">
+                <Stack spacing={1}>
+                  <Heading size="md" color="text.primary">Free Learners Village</Heading>
+                  <Text color="text.primary">
+                    You&apos;re in the shared free community — peer match with other free learners and compare marks on the Leadership Board.
+                  </Text>
+                </Stack>
+                <Stack direction={{ base: 'column', sm: 'row' }} spacing={2}>
+                  <Button colorScheme="purple" onClick={() => navigate('/app/peer-connect')} alignSelf={{ base: 'flex-start', md: 'center' }}>
+                    Peer Connect
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/app/leadership-board')} alignSelf={{ base: 'flex-start', md: 'center' }}>
+                    View marks
+                  </Button>
+                </Stack>
+              </Stack>
+            </CardBody>
+          </Card>
+        )}
+
+        {!isSharedFreeVillageMember && shouldShowBuildVillageCard && (
           <Card bg="brand.primaryMuted" border="1px" borderColor="brand.border">
             <CardBody>
               <Stack direction={{ base: 'column', md: 'row' }} spacing={4} align="flex-start" justify="space-between">

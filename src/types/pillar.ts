@@ -43,14 +43,14 @@ export const PILLAR_METADATA: Record<Pillar, PillarMeta> = {
     label: 'Innovation & Technology (1 + 5 weeks)',
     shortName: 'Innovation & Technology',
     weekSplit: [1, 5],
-    exampleCourses: 'AI for Transformation Leaders, then Digital Transformation with Data Sentinels',
+    exampleCourses: 'AI for Transformation Leader, then Digital Transformation with Data Sentinels',
   },
   transforming_business: {
     value: 'transforming_business',
     label: 'Transforming Business (2 + 4 weeks)',
     shortName: 'Transforming Business',
     weekSplit: [2, 4],
-    exampleCourses: 'Stakeholder Influence for Transformation Leaders, then Leading Through Change and Continuous Improvement',
+    exampleCourses: 'Stakeholder Influence for Transformation Leader, then Leading Through Change and Continuous Improvement',
   },
   fostering: {
     value: 'fostering',
@@ -107,7 +107,7 @@ export const PILLAR_COURSE_PLAN: Record<Pillar, [PillarCoursePlanEntry, PillarCo
   innovation_technology: [
     {
       courseId: 'ai-stacking-101',
-      title: 'AI for Transformation Leaders: Judgment Over Features',
+      title: 'AI for Transformation Leader: Judgment Over Features',
       weeks: 1,
       weekRange: [1, 1],
     },
@@ -121,7 +121,7 @@ export const PILLAR_COURSE_PLAN: Record<Pillar, [PillarCoursePlanEntry, PillarCo
   transforming_business: [
     {
       courseId: 'art-of-connection',
-      title: 'Stakeholder Influence for Transformation Leaders',
+      title: 'Stakeholder Influence for Transformation Leader',
       weeks: 2,
       weekRange: [1, 2],
     },

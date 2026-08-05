@@ -807,7 +807,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                           <option value="paid_member">Paid Member</option>
                           <option value="free_user">Free User</option>
                           <option value="mentor">Mentor</option>
-                          <option value="ambassador">Ambassador</option>
+                          <option value="ambassador">Coach</option>
                           <option value="partner">Partner</option>
                           <option value="super_admin">Super Admin</option>
                         </Select>
@@ -887,7 +887,7 @@ export const UserProfileManagementPage: React.FC<{ viewContext?: ViewContext }> 
                       />
                     </FormControl>
                     <FormControl>
-                      <FormLabel>Ambassador ID</FormLabel>
+                      <FormLabel>Coach ID</FormLabel>
                       <Input
                         value={displayProfile.ambassadorId || ''}
                         onChange={(event) =>

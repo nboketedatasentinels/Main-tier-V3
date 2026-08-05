@@ -46,7 +46,7 @@ type LeadershipRole = 'mentor' | 'ambassador'
 
 const roleLabels: Record<LeadershipRole, string> = {
   mentor: 'Mentor',
-  ambassador: 'Ambassador',
+  ambassador: 'Coach',
 }
 
 const statusBadge = (status?: string) => {
@@ -68,7 +68,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
   const canManageLeadership = isSuperAdmin
 
   const [activeRole, setActiveRole] = useState<LeadershipRole>('mentor')
-  const [leaders, setLeaders] = useState<{ mentors: ManagedUserRecord[]; ambassadors: ManagedUserRecord[] }>({ mentors: [], ambassadors: [] })
+  const [leaders, setLeaders] = useState<{ mentors: ManagedUserRecord[]; coaches: ManagedUserRecord[] }>({ mentors: [], coaches: [] })
   const [search, setSearch] = useState('')
   const [isAssigning, setIsAssigning] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -90,25 +90,25 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
   useEffect(() => {
     setLeaders({
       mentors: propUsers.filter((user) => user.role === 'mentor'),
-      ambassadors: propUsers.filter((user) => user.role === 'ambassador'),
+      coaches: propUsers.filter((user) => user.role === 'ambassador'),
     })
   }, [propUsers])
 
   const activeLabel = roleLabels[activeRole]
 
   const filteredLeaders = useMemo(() => {
-    const pool = activeRole === 'mentor' ? leaders.mentors : leaders.ambassadors
+    const pool = activeRole === 'mentor' ? leaders.mentors : leaders.coaches
     const query = search.toLowerCase()
     return pool.filter((member) =>
       member.name.toLowerCase().includes(query) || (member.email || '').toLowerCase().includes(query) || (member.companyName || '').toLowerCase().includes(query),
     )
-  }, [activeRole, leaders.ambassadors, leaders.mentors, search])
+  }, [activeRole, leaders.coaches, leaders.mentors, search])
 
   const uniqueOrgCount = useMemo(() => {
-    const allLeaders = [...leaders.mentors, ...leaders.ambassadors]
+    const allLeaders = [...leaders.mentors, ...leaders.coaches]
     const orgs = new Set(allLeaders.map(m => m.companyId).filter(Boolean))
     return orgs.size
-  }, [leaders.mentors, leaders.ambassadors])
+  }, [leaders.mentors, leaders.coaches])
 
   // Check if we should show "Last Active" and "Joined" columns
   const showLastActiveColumn = useMemo(() => {
@@ -180,7 +180,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
       }
 
       if (editingMember.role === 'ambassador') {
-        updates.isActiveAmbassador = editingStatus === 'active'
+        updates.isActiveCoach = editingStatus === 'active'
       }
 
       await updateUser(editingMember.id, updates)
@@ -204,7 +204,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
         companyId: null,
         companyCode: null,
         companyName: null,
-        isActiveAmbassador: false,
+        isActiveCoach: false,
       }
       await updateUser(member.id, updates)
       toast({ title: `${member.name} has been removed from the council.`, status: 'success' })
@@ -248,10 +248,10 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
               </Badge>
             </HStack>
             <Text fontSize="3xl" fontWeight="semibold" color="gray.900">
-              Mentor &amp; Ambassador oversight
+              Mentor &amp; Coach oversight
             </Text>
             <Text color="gray.600" mt={2}>
-              {leaders.mentors.length} active mentor{leaders.mentors.length !== 1 ? 's' : ''} and {leaders.ambassadors.length} ambassador{leaders.ambassadors.length !== 1 ? 's' : ''} across {uniqueOrgCount} organization{uniqueOrgCount !== 1 ? 's' : ''}
+              {leaders.mentors.length} active mentor{leaders.mentors.length !== 1 ? 's' : ''} and {leaders.coaches.length} coach{leaders.coaches.length !== 1 ? 's' : ''} across {uniqueOrgCount} organization{uniqueOrgCount !== 1 ? 's' : ''}
             </Text>
           </GridItem>
           <GridItem>
@@ -267,9 +267,9 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
               <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
                 <CardBody>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
-                    Active Ambassadors
+                    Active Coaches
                   </Text>
-                  <Text fontSize="2xl" fontWeight="bold">{leaders.ambassadors.length}</Text>
+                  <Text fontSize="2xl" fontWeight="bold">{leaders.coaches.length}</Text>
                 </CardBody>
               </Card>
             </SimpleGrid>

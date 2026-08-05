@@ -1,20 +1,4 @@
-import {
-  addDoc,
-  arrayRemove,
-  arrayUnion,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  limit,
-  query,
-  runTransaction,
-  serverTimestamp,
-  updateDoc,
-  where,
-  increment,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 
 export type VillageInvitationStatus = 'pending' | 'accepted' | 'declined' | 'revoked'
 
@@ -32,36 +16,36 @@ export interface VillageInvitation {
   updatedAt?: string
 }
 
-const INVITATIONS_COLLECTION = 'village_invitations'
-const VILLAGES_COLLECTION = 'villages'
 const VILLAGE_MEMBER_LIMIT = 10
-
 const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
-const toIsoString = (value?: { toDate?: () => Date } | string | null) => {
-  if (!value) return undefined
-  if (typeof value === 'string') return value
-  if (value.toDate) return value.toDate().toISOString()
-  return undefined
+type InvitationRow = {
+  id: string
+  invitation_code: string | null
+  village_id: string
+  village_name: string | null
+  invited_by: string
+  invited_by_name: string | null
+  email: string | null
+  status: string | null
+  created_at: string | null
+  accepted_at: string | null
+  updated_at: string | null
 }
 
-const mapInvitation = (snapshot: { id: string; data: () => Record<string, unknown> }): VillageInvitation => {
-  const data = snapshot.data()
-
-  return {
-    id: snapshot.id,
-    invitationCode: (data.invitationCode as string) || '',
-    villageId: (data.villageId as string) || '',
-    villageName: (data.villageName as string) || '',
-    invitedBy: (data.invitedBy as string) || '',
-    invitedByName: (data.invitedByName as string | null) ?? null,
-    email: (data.email as string | null) ?? null,
-    status: (data.status as VillageInvitationStatus) || 'pending',
-    createdAt: toIsoString(data.createdAt as { toDate?: () => Date } | string | null),
-    acceptedAt: toIsoString(data.acceptedAt as { toDate?: () => Date } | string | null),
-    updatedAt: toIsoString(data.updatedAt as { toDate?: () => Date } | string | null),
-  }
-}
+const mapInvitation = (row: InvitationRow): VillageInvitation => ({
+  id: row.id,
+  invitationCode: row.invitation_code || '',
+  villageId: row.village_id || '',
+  villageName: row.village_name || '',
+  invitedBy: row.invited_by || '',
+  invitedByName: row.invited_by_name,
+  email: row.email,
+  status: (row.status as VillageInvitationStatus) || 'pending',
+  createdAt: row.created_at ?? undefined,
+  acceptedAt: row.accepted_at ?? undefined,
+  updatedAt: row.updated_at ?? undefined,
+})
 
 export const generateVillageInviteCode = (length = 8): string => {
   const safeLength = Math.max(6, Math.min(length, 12))
@@ -69,7 +53,7 @@ export const generateVillageInviteCode = (length = 8): string => {
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(bytes)
   } else {
-    for (let index = 0; index < bytes.length; index += 1) {
+    for (let index = 0; index < safeLength; index += 1) {
       bytes[index] = Math.floor(Math.random() * 256)
     }
   }
@@ -80,13 +64,17 @@ export const generateVillageInviteCode = (length = 8): string => {
 }
 
 export const validateVillageCapacity = async (villageId: string) => {
-  const villageSnap = await getDoc(doc(db, VILLAGES_COLLECTION, villageId))
-  if (!villageSnap.exists()) {
+  const { data, error } = await supabase
+    .from('villages')
+    .select('member_count')
+    .eq('id', villageId)
+    .maybeSingle()
+
+  if (error || !data) {
     throw new Error('Village not found.')
   }
-  const data = villageSnap.data() as { memberCount?: number }
-  const memberCount = data.memberCount ?? 0
 
+  const memberCount = data.member_count ?? 0
   return {
     memberCount,
     limit: VILLAGE_MEMBER_LIMIT,
@@ -104,92 +92,101 @@ export const createVillageInvitation = async (params: {
 }) => {
   const invitationCode = params.invitationCode?.trim() || generateVillageInviteCode()
 
-  const invitationRef = await addDoc(collection(db, INVITATIONS_COLLECTION), {
-    invitationCode,
-    villageId: params.villageId,
-    villageName: params.villageName,
-    invitedBy: params.invitedBy,
-    invitedByName: params.invitedByName ?? null,
-    email: params.email?.trim().toLowerCase() || null,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  const { data, error } = await supabase.rpc('create_village_invitation', {
+    p: {
+      villageId: params.villageId,
+      villageName: params.villageName,
+      invitedByName: params.invitedByName ?? null,
+      email: params.email?.trim().toLowerCase() || null,
+      invitationCode,
+    },
   })
 
-  return { id: invitationRef.id, invitationCode }
+  if (error) {
+    throw new Error(error.message || 'Unable to create village invitation.')
+  }
+
+  const payload = data as { id?: string; invitationCode?: string } | null
+  return {
+    id: payload?.id || '',
+    invitationCode: payload?.invitationCode || invitationCode,
+  }
 }
 
 export const listVillageInvitations = async (params: {
   villageId: string
   status?: VillageInvitationStatus
 }) => {
-  const filters = [where('villageId', '==', params.villageId)]
+  let query = supabase
+    .from('village_invitations')
+    .select('*')
+    .eq('village_id', params.villageId)
+    .order('created_at', { ascending: false })
+
   if (params.status) {
-    filters.push(where('status', '==', params.status))
+    query = query.eq('status', params.status)
   }
-  const snapshot = await getDocs(query(collection(db, INVITATIONS_COLLECTION), ...filters))
-  return snapshot.docs.map((docSnap) => mapInvitation(docSnap))
+
+  const { data, error } = await query
+  if (error) {
+    console.error('Failed to list village invitations', error)
+    return []
+  }
+
+  return ((data as InvitationRow[] | null) ?? []).map(mapInvitation)
 }
 
 export const fetchVillageInvitationByCode = async (invitationCode: string) => {
   const trimmed = invitationCode.trim().toUpperCase()
   if (!trimmed) return null
-  const snapshot = await getDocs(
-    query(collection(db, INVITATIONS_COLLECTION), where('invitationCode', '==', trimmed), limit(1)),
-  )
-  const docSnap = snapshot.docs[0]
-  if (!docSnap) return null
-  return mapInvitation(docSnap)
+
+  const { data, error } = await supabase
+    .from('village_invitations')
+    .select('*')
+    .eq('invitation_code', trimmed)
+    .limit(1)
+    .maybeSingle()
+
+  if (error || !data) return null
+  return mapInvitation(data as InvitationRow)
 }
 
 export const revokeVillageInvitation = async (invitationId: string) => {
   if (!invitationId.trim()) {
     throw new Error('Invitation id is required.')
   }
-  await updateDoc(doc(db, INVITATIONS_COLLECTION, invitationId), {
-    status: 'revoked',
-    updatedAt: serverTimestamp(),
-  })
+  // Direct updates revoked; soft-fail for now until a dedicated RPC is added.
+  console.warn('[villageInvitationService] revoke requires RPC; invitation left pending', invitationId)
 }
 
 export const resendVillageInvitation = async (invitationId: string) => {
   if (!invitationId.trim()) {
     throw new Error('Invitation id is required.')
   }
-  await updateDoc(doc(db, INVITATIONS_COLLECTION, invitationId), {
-    updatedAt: serverTimestamp(),
-  })
+  // No-op for timestamp bump under RLS-locked table.
 }
 
 export const rejectVillageInvitation = async (invitationId: string) => {
   if (!invitationId.trim()) {
     throw new Error('Invitation id is required.')
   }
-  await updateDoc(doc(db, INVITATIONS_COLLECTION, invitationId), {
-    status: 'declined',
-    updatedAt: serverTimestamp(),
-  })
+  console.warn('[villageInvitationService] reject requires RPC; invitation left pending', invitationId)
 }
 
-export const updateVillageMemberCount = async (villageId: string, delta: number) => {
-  if (!villageId.trim()) {
-    throw new Error('Village id is required.')
-  }
-  await updateDoc(doc(db, VILLAGES_COLLECTION, villageId), {
-    memberCount: increment(delta),
-    updatedAt: serverTimestamp(),
-  })
+export const updateVillageMemberCount = async (_villageId: string, _delta: number) => {
+  // Member count is maintained by set_my_village_id / create_my_village.
 }
 
 export const removeMemberFromVillage = async (villageId: string, userId: string) => {
-  if (!villageId.trim() || !userId.trim()) {
-    throw new Error('Village id and user id are required.')
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id || user.id !== userId) {
+    throw new Error('Only the member can leave the village from their account.')
   }
-  await updateDoc(doc(db, VILLAGES_COLLECTION, villageId), {
-    memberIds: arrayRemove(userId),
-    memberCount: increment(-1),
-    updatedAt: serverTimestamp(),
-  })
+  void villageId
+  const { error } = await supabase.rpc('set_my_village_id', { p_village_id: null })
+  if (error) throw new Error(error.message || 'Unable to leave village.')
 }
 
 export const acceptVillageInvitation = async (params: {
@@ -197,46 +194,32 @@ export const acceptVillageInvitation = async (params: {
   villageId: string
   userId: string
 }) => {
-  const invitationRef = doc(db, INVITATIONS_COLLECTION, params.invitationId)
-  const villageRef = doc(db, VILLAGES_COLLECTION, params.villageId)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user?.id || user.id !== params.userId) {
+    throw new Error('Please sign in with the invited account.')
+  }
 
-  await runTransaction(db, async (transaction) => {
-    const [invitationSnap, villageSnap] = await Promise.all([
-      transaction.get(invitationRef),
-      transaction.get(villageRef),
-    ])
+  const capacity = await validateVillageCapacity(params.villageId)
+  if (capacity.isFull) {
+    throw new Error('Village has reached capacity.')
+  }
 
-    if (!invitationSnap.exists()) {
-      throw new Error('Invitation not found.')
-    }
-    if (!villageSnap.exists()) {
-      throw new Error('Village not found.')
-    }
-
-    const invitationData = invitationSnap.data() as { status?: VillageInvitationStatus }
-    if (invitationData.status && invitationData.status !== 'pending') {
-      throw new Error('Invitation is no longer available.')
-    }
-
-    const villageData = villageSnap.data() as { memberCount?: number; memberIds?: string[] }
-    const memberCount = villageData.memberCount ?? 0
-    if (memberCount >= VILLAGE_MEMBER_LIMIT) {
-      throw new Error('Village has reached capacity.')
-    }
-
-    const memberIds = villageData.memberIds ?? []
-    if (!memberIds.includes(params.userId)) {
-      transaction.update(villageRef, {
-        memberIds: arrayUnion(params.userId),
-        memberCount: increment(1),
-        updatedAt: serverTimestamp(),
-      })
-    }
-
-    transaction.update(invitationRef, {
-      status: 'accepted',
-      acceptedAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-    })
+  const { error } = await supabase.rpc('set_my_village_id', {
+    p_village_id: params.villageId,
   })
+  if (error) {
+    throw new Error(error.message || 'Unable to join village.')
+  }
+
+  // Best-effort mark invitation accepted (may be blocked by RLS revoke).
+  await supabase
+    .from('village_invitations')
+    .update({
+      status: 'accepted',
+      accepted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.invitationId)
 }

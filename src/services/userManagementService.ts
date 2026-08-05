@@ -15,7 +15,7 @@ import { normalizeRole } from '@/utils/role'
 import { resetUserJourney } from './userJourneyService'
 import type { JourneyType } from '@/config/pointsConfig'
 
-export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador'
+export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador' | 'verifier'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
 
 export interface OrganizationOption {
@@ -40,7 +40,7 @@ export interface ManagedUserRecord {
   journeyType?: JourneyType | null
   mentorId?: string | null
   ambassadorId?: string | null
-  isActiveAmbassador?: boolean
+  isActiveCoach?: boolean
   notes?: string | null
   assignedOrganizations?: string[]
   accessLastUpdatedAt?: Date | null
@@ -155,7 +155,7 @@ const mapUser = (docSnap: { id: string; data: () => unknown }): ManagedUserRecor
     journeyType: (data.journeyType as JourneyType) || null,
     mentorId: data.mentorId,
     ambassadorId: data.ambassadorId,
-    isActiveAmbassador: data.isActiveAmbassador,
+    isActiveCoach: data.isActiveCoach,
     assignedOrganizations: Array.isArray(data.assignedOrganizations)
       ? data.assignedOrganizations.filter((assignment): assignment is string => Boolean(assignment))
       : undefined,
@@ -282,13 +282,14 @@ export const fetchOrganizationsList = async (): Promise<OrganizationOption[]> =>
 const toProfilesMembershipStatus = (status: MembershipStatus): 'free' | 'paid' =>
   status === 'paid' ? 'paid' : 'free'
 
-// profiles.role CHECK accepts only: free_user|paid_member|mentor|ambassador|
-// partner|super_admin. normalizeRole maps legacy values (admin->partner, etc.)
+// profiles.role CHECK accepts only: free_user|paid_member|mentor|coach|
+// partner|super_admin|verifier. normalizeRole maps legacy values (admin->partner, etc.)
 // but returns 'user' as its base; the DB enum uses 'free_user'. Coerce here so a
 // role write never violates the CHECK constraint.
 const toProfilesRole = (role: ManagedUserRole): string => {
   const normalized = normalizeRole(role)
-  return normalized === 'user' ? 'free_user' : normalized
+  if (normalized === 'user') return 'free_user'
+  return normalized
 }
 
 const throwIfSupabaseError = (error: { message: string } | null, action: string) => {
@@ -488,8 +489,8 @@ const mapManagedUserUpdatesToProfileColumns = (updates: Partial<ManagedUserRecor
   if (typeof updates.notes !== 'undefined') columns.notes = updates.notes
   if (typeof updates.mentorId !== 'undefined') columns.mentor_id = updates.mentorId
   if (typeof updates.ambassadorId !== 'undefined') columns.ambassador_id = updates.ambassadorId
-  if (typeof updates.isActiveAmbassador !== 'undefined') {
-    columns.is_active_ambassador = updates.isActiveAmbassador
+  if (typeof updates.isActiveCoach !== 'undefined') {
+    columns.is_active_ambassador = updates.isActiveCoach
   }
   return columns
 }

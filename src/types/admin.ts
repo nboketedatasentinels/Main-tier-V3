@@ -50,7 +50,7 @@ export interface OrganizationRecord {
   lastActive?: Timestamp | string | Date | null
   statsUpdatedAt?: Timestamp | string | Date | null
   /**
-   * Cohort size and total paid license count (includes users, mentors, ambassadors, and team leaders).
+   * Cohort size and total paid license count (includes users, mentors, coaches, and team leaders).
    */
   teamSize?: number
   /**
@@ -316,7 +316,7 @@ export interface AdminMetrics {
   paidUsers: number
   partners: number
   mentors: number
-  ambassadors: number
+  coaches: number
 }
 
 export type InvitationMethod = 'email' | 'one_time_code'

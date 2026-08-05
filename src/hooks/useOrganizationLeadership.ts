@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
-import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
-import { fetchUserProfileById, UserProfileExtended } from '@/services/userProfileService'
+import { supabase } from '@/services/supabase'
+import type { UserProfileExtended } from '@/services/userProfileService'
 
 export interface LeadershipAssignments {
   mentorId: string | null
@@ -55,31 +53,16 @@ const emptyAssignments: LeadershipAssignments = {
   partnerId: null,
 }
 
-const emptySupportAssignments: SupportAssignments = {
-  mentorId: null,
-  ambassadorId: null,
-}
-
 const emptyProfiles: LeadershipProfiles = {
   mentor: null,
   ambassador: null,
   partner: null,
 }
 
-const resolveAssignmentId = (data: Record<string, unknown>, keys: string[]) => {
-  for (const key of keys) {
-    const value = data[key]
-    if (typeof value === 'string' && value.trim()) {
-      return value
-    }
-  }
-  return null
-}
-
-const resolveNestedAssignmentId = (data: Record<string, unknown>, keys: string[]) => {
-  const leadership = data.leadership
-  if (!leadership || typeof leadership !== 'object') return null
-  return resolveAssignmentId(leadership as Record<string, unknown>, keys)
+const emptySources: LeadershipAssignmentSources = {
+  mentor: null,
+  ambassador: null,
+  partner: null,
 }
 
 export interface ProfileAssignments {
@@ -87,237 +70,195 @@ export interface ProfileAssignments {
   ambassadorId?: string | null
 }
 
+type LeadershipRpcResult = {
+  organization?: { id?: string | null; code?: string | null; name?: string | null; exists?: boolean } | null
+  assignments?: {
+    partnerId?: string | null
+    mentorId?: string | null
+    ambassadorId?: string | null
+  }
+  assignmentSources?: {
+    partner?: LeadershipAssignmentSource
+    mentor?: LeadershipAssignmentSource
+    ambassador?: LeadershipAssignmentSource
+  }
+  profiles?: {
+    partner?: Record<string, unknown> | null
+    mentor?: Record<string, unknown> | null
+    ambassador?: Record<string, unknown> | null
+  }
+  error?: string
+}
+
+const toExtendedProfile = (raw: Record<string, unknown> | null | undefined): UserProfileExtended | null => {
+  if (!raw || typeof raw !== 'object') return null
+  const id = typeof raw.id === 'string' ? raw.id : null
+  if (!id) return null
+  const firstName = typeof raw.firstName === 'string' ? raw.firstName : ''
+  const lastName = typeof raw.lastName === 'string' ? raw.lastName : ''
+  const fullName =
+    (typeof raw.fullName === 'string' && raw.fullName.trim()) ||
+    [firstName, lastName].filter(Boolean).join(' ').trim() ||
+    (typeof raw.email === 'string' ? raw.email : '') ||
+    'Team member'
+
+  return {
+    id,
+    email: typeof raw.email === 'string' ? raw.email : '',
+    firstName,
+    lastName,
+    fullName,
+    role: (typeof raw.role === 'string' ? raw.role : 'user') as UserProfileExtended['role'],
+    companyId: typeof raw.companyId === 'string' ? raw.companyId : null,
+    companyCode: typeof raw.companyCode === 'string' ? raw.companyCode : null,
+    companyName: typeof raw.companyName === 'string' ? raw.companyName : null,
+    avatarUrl: typeof raw.avatarUrl === 'string' ? raw.avatarUrl : undefined,
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : new Date().toISOString(),
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : new Date().toISOString(),
+    ...(typeof raw.title === 'string' ? { title: raw.title } : {}),
+    ...(typeof raw.bio === 'string' ? { bio: raw.bio } : {}),
+    ...(typeof raw.officeLocation === 'string' ? { officeLocation: raw.officeLocation } : {}),
+    ...(typeof raw.timezone === 'string' ? { timezone: raw.timezone } : {}),
+    ...(typeof raw.availabilityStatus === 'string' ? { availabilityStatus: raw.availabilityStatus } : {}),
+  } as UserProfileExtended
+}
+
+/**
+ * Loads the learner's Transformation Partner / Mentor / Coach from Supabase.
+ * Replaces the old Firestore organization + support_assignments listeners that
+ * fail after the Supabase auth cutover ("Failed to load organization leadership").
+ */
 export const useOrganizationLeadership = (
   companyId?: string | null,
   userId?: string | null,
-  profile?: ProfileAssignments | null
+  _profile?: ProfileAssignments | null,
 ) => {
-  const [organizationAssignments, setOrganizationAssignments] = useState<LeadershipAssignments>(emptyAssignments)
-  const [supportAssignments, setSupportAssignments] = useState<SupportAssignments>(emptySupportAssignments)
+  const [assignments, setAssignments] = useState<LeadershipAssignments>(emptyAssignments)
+  const [assignmentSources, setAssignmentSources] = useState<LeadershipAssignmentSources>(emptySources)
   const [profiles, setProfiles] = useState<LeadershipProfiles>(emptyProfiles)
   const [errors, setErrors] = useState<LeadershipErrors>({})
-  const [loadingOrganizationAssignments, setLoadingOrganizationAssignments] = useState(false)
-  const [loadingSupportAssignments, setLoadingSupportAssignments] = useState(false)
-  const [loadingProfiles, setLoadingProfiles] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
   const [organizationExists, setOrganizationExists] = useState(false)
   const [organizationLoaded, setOrganizationLoaded] = useState(false)
-  const [supportAssignmentExists, setSupportAssignmentExists] = useState(false)
-  const [supportAssignmentLoaded, setSupportAssignmentLoaded] = useState(false)
+  const [resolvedOrgId, setResolvedOrgId] = useState<string | null>(companyId ?? null)
 
   const refresh = useCallback(() => {
     setRefreshKey((prev) => prev + 1)
   }, [])
 
   useEffect(() => {
-    if (!companyId) {
-      setOrganizationAssignments(emptyAssignments)
+    if (!userId) {
+      setAssignments(emptyAssignments)
+      setAssignmentSources(emptySources)
       setProfiles(emptyProfiles)
       setErrors({})
-      setLoadingOrganizationAssignments(false)
-      setLoadingProfiles(false)
+      setLoading(false)
       setOrganizationExists(false)
       setOrganizationLoaded(false)
-      return () => undefined
-    }
-
-    setLoadingOrganizationAssignments(true)
-    setErrors((prev) => ({ ...prev, organization: undefined }))
-
-    const orgRef = doc(db, ORG_COLLECTION, companyId)
-    const unsubscribe = onSnapshot(
-      orgRef,
-      (snapshot) => {
-        setOrganizationLoaded(true)
-        if (!snapshot.exists()) {
-          setOrganizationExists(false)
-          setErrors((prev) => ({ ...prev, organization: 'Organization not found.' }))
-          setOrganizationAssignments(emptyAssignments)
-          setLoadingOrganizationAssignments(false)
-          return
-        }
-        setOrganizationExists(true)
-        const data = snapshot.data() as Record<string, unknown>
-        const mentorKeys = ['assignedMentorId', 'mentorId', 'mentor_id', 'assigned_mentor_id']
-        const ambassadorKeys = ['assignedAmbassadorId', 'ambassadorId', 'ambassador_id', 'assigned_ambassador_id']
-        const partnerKeys = ['transformationPartnerId', 'partnerId', 'partner_id', 'transformation_partner_id']
-
-        const mentorId = resolveAssignmentId(data, mentorKeys) ?? resolveNestedAssignmentId(data, mentorKeys)
-        const ambassadorId =
-          resolveAssignmentId(data, ambassadorKeys) ?? resolveNestedAssignmentId(data, ambassadorKeys)
-        const partnerId = resolveAssignmentId(data, partnerKeys) ?? resolveNestedAssignmentId(data, partnerKeys)
-        setOrganizationAssignments({
-          mentorId,
-          ambassadorId,
-          partnerId,
-        })
-        setLoadingOrganizationAssignments(false)
-      },
-      (error) => {
-        console.error(error)
-        setErrors((prev) => ({ ...prev, organization: 'Failed to load organization leadership.' }))
-        setOrganizationAssignments(emptyAssignments)
-        setLoadingOrganizationAssignments(false)
-        setOrganizationExists(false)
-        setOrganizationLoaded(true)
-      },
-    )
-
-    return () => unsubscribe()
-  }, [companyId, refreshKey])
-
-  useEffect(() => {
-    if (!userId) {
-      setSupportAssignments(emptySupportAssignments)
-      setSupportAssignmentExists(false)
-      setSupportAssignmentLoaded(false)
-      setErrors((prev) => ({ ...prev, supportAssignments: undefined }))
-      setLoadingSupportAssignments(false)
-      return () => undefined
-    }
-
-    setLoadingSupportAssignments(true)
-    setErrors((prev) => ({ ...prev, supportAssignments: undefined }))
-
-    const supportRef = doc(db, 'support_assignments', userId)
-    const unsubscribe = onSnapshot(
-      supportRef,
-      (snapshot) => {
-        setSupportAssignmentLoaded(true)
-        if (!snapshot.exists()) {
-          setSupportAssignmentExists(false)
-          setSupportAssignments(emptySupportAssignments)
-          setLoadingSupportAssignments(false)
-          return
-        }
-        setSupportAssignmentExists(true)
-        const data = snapshot.data() as Record<string, unknown>
-        const mentorId = resolveAssignmentId(data, ['mentor_id', 'mentorId', 'assignedMentorId', 'assigned_mentor_id'])
-        const ambassadorId = resolveAssignmentId(data, [
-          'ambassador_id',
-          'ambassadorId',
-          'assignedAmbassadorId',
-          'assigned_ambassador_id',
-        ])
-        setSupportAssignments({ mentorId, ambassadorId })
-        setLoadingSupportAssignments(false)
-      },
-      (error) => {
-        console.error(error)
-        setErrors((prev) => ({ ...prev, supportAssignments: 'Failed to load support assignments.' }))
-        setSupportAssignments(emptySupportAssignments)
-        setSupportAssignmentExists(false)
-        setSupportAssignmentLoaded(true)
-        setLoadingSupportAssignments(false)
-      },
-    )
-
-    return () => unsubscribe()
-  }, [userId, refreshKey])
-
-  const assignments = useMemo<LeadershipAssignments>(() => {
-    const mentorId = supportAssignments.mentorId ?? organizationAssignments.mentorId ?? profile?.mentorId ?? null
-    const ambassadorId = supportAssignments.ambassadorId ?? organizationAssignments.ambassadorId ?? profile?.ambassadorId ?? null
-    const partnerId = organizationAssignments.partnerId ?? null
-    return { mentorId, ambassadorId, partnerId }
-  }, [organizationAssignments, supportAssignments, profile?.mentorId, profile?.ambassadorId])
-
-  const assignmentSources = useMemo<LeadershipAssignmentSources>(() => {
-    const mentor = supportAssignments.mentorId
-      ? 'user'
-      : organizationAssignments.mentorId
-        ? 'organization'
-        : profile?.mentorId
-          ? 'profile'
-          : null
-    const ambassador = supportAssignments.ambassadorId
-      ? 'user'
-      : organizationAssignments.ambassadorId
-        ? 'organization'
-        : profile?.ambassadorId
-          ? 'profile'
-          : null
-    const partner = organizationAssignments.partnerId ? 'organization' : null
-    return { mentor, ambassador, partner }
-  }, [organizationAssignments, supportAssignments, profile?.mentorId, profile?.ambassadorId])
-
-  useEffect(() => {
-    const { mentorId, ambassadorId, partnerId } = assignments
-
-    if (!mentorId && !ambassadorId && !partnerId) {
-      setProfiles(emptyProfiles)
-      setErrors((prev) => ({ ...prev, mentor: undefined, ambassador: undefined, partner: undefined }))
-      setLoadingProfiles(false)
+      setResolvedOrgId(null)
       return
     }
 
-    let isActive = true
-    setLoadingProfiles(true)
-    setErrors((prev) => ({ ...prev, mentor: undefined, ambassador: undefined, partner: undefined }))
-
-    const loadProfile = async (userId: string | null, roleLabel: 'mentor' | 'ambassador' | 'partner') => {
-      if (!userId) {
-        return { profile: null, error: undefined }
-      }
-      try {
-        const profile = await fetchUserProfileById(userId)
-        if (!profile) {
-          return { profile: null, error: `${roleLabel} assigned but profile not found` }
-        }
-        return { profile, error: undefined }
-      } catch (error) {
-        console.error(error)
-        return { profile: null, error: `Unable to load ${roleLabel} profile` }
-      }
-    }
+    let cancelled = false
+    setLoading(true)
+    setErrors({})
 
     void (async () => {
-      const [mentorResult, ambassadorResult, partnerResult] = await Promise.all([
-        loadProfile(mentorId, 'mentor'),
-        loadProfile(ambassadorId, 'ambassador'),
-        loadProfile(partnerId, 'partner'),
-      ])
+      try {
+        const { data, error } = await supabase.rpc('get_my_organization_leadership')
+        if (error) throw new Error(error.message)
+        if (cancelled) return
 
-      if (!isActive) return
-      setProfiles({
-        mentor: mentorResult.profile,
-        ambassador: ambassadorResult.profile,
-        partner: partnerResult.profile,
-      })
-      setErrors((prev) => ({
-        ...prev,
-        mentor: mentorResult.error,
-        ambassador: ambassadorResult.error,
-        partner: partnerResult.error,
-      }))
-      setLoadingProfiles(false)
+        const payload = (data ?? {}) as LeadershipRpcResult
+        const org = payload.organization
+        const orgExists = Boolean(org?.exists || org?.id)
+        setOrganizationExists(orgExists)
+        setOrganizationLoaded(true)
+        setResolvedOrgId(org?.id ?? companyId ?? null)
+
+        if (payload.error === 'organization_not_found' || (!orgExists && companyId)) {
+          setErrors((prev) => ({
+            ...prev,
+            organization: 'Organization not found.',
+          }))
+        }
+
+        const nextAssignments: LeadershipAssignments = {
+          partnerId: payload.assignments?.partnerId ?? null,
+          mentorId: payload.assignments?.mentorId ?? null,
+          ambassadorId: payload.assignments?.ambassadorId ?? null,
+        }
+        setAssignments(nextAssignments)
+        setAssignmentSources({
+          partner: payload.assignmentSources?.partner ?? (nextAssignments.partnerId ? 'organization' : null),
+          mentor: payload.assignmentSources?.mentor ?? null,
+          ambassador: payload.assignmentSources?.ambassador ?? null,
+        })
+
+        const partner = toExtendedProfile(payload.profiles?.partner ?? null)
+        const mentor = toExtendedProfile(payload.profiles?.mentor ?? null)
+        const ambassador = toExtendedProfile(payload.profiles?.ambassador ?? null)
+        setProfiles({ partner, mentor, ambassador })
+
+        setErrors((prev) => ({
+          ...prev,
+          partner:
+            nextAssignments.partnerId && !partner
+              ? 'Partner assigned but profile not found'
+              : undefined,
+          mentor:
+            nextAssignments.mentorId && !mentor ? 'Mentor assigned but profile not found' : undefined,
+          ambassador:
+            nextAssignments.ambassadorId && !ambassador
+              ? 'Coach assigned but profile not found'
+              : undefined,
+        }))
+      } catch (error) {
+        console.error('[useOrganizationLeadership]', error)
+        if (cancelled) return
+        setOrganizationLoaded(true)
+        setOrganizationExists(false)
+        setAssignments(emptyAssignments)
+        setAssignmentSources(emptySources)
+        setProfiles(emptyProfiles)
+        setErrors({
+          organization: 'Failed to load organization leadership.',
+        })
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
     })()
 
     return () => {
-      isActive = false
+      cancelled = true
     }
-  }, [assignments])
+  }, [userId, companyId, refreshKey])
 
-  const loadingAssignments = useMemo(
-    () => loadingOrganizationAssignments || loadingSupportAssignments,
-    [loadingOrganizationAssignments, loadingSupportAssignments],
+  const supportAssignments = useMemo<SupportAssignments>(
+    () => ({
+      mentorId: assignments.mentorId,
+      ambassadorId: assignments.ambassadorId,
+    }),
+    [assignments.ambassadorId, assignments.mentorId],
   )
-  const loading = useMemo(() => loadingAssignments || loadingProfiles, [loadingAssignments, loadingProfiles])
+
   const organization = useMemo<OrganizationStatus>(
     () => ({
-      id: companyId ?? null,
+      id: resolvedOrgId,
       exists: organizationExists,
       loaded: organizationLoaded,
     }),
-    [companyId, organizationExists, organizationLoaded],
+    [organizationExists, organizationLoaded, resolvedOrgId],
   )
+
   const supportAssignment = useMemo<SupportAssignmentStatus>(
     () => ({
       id: userId ?? null,
-      exists: supportAssignmentExists,
-      loaded: supportAssignmentLoaded,
+      exists: Boolean(assignments.mentorId || assignments.ambassadorId),
+      loaded: organizationLoaded,
     }),
-    [supportAssignmentExists, supportAssignmentLoaded, userId],
+    [assignments.ambassadorId, assignments.mentorId, organizationLoaded, userId],
   )
 
   return {
@@ -326,10 +267,11 @@ export const useOrganizationLeadership = (
     profiles,
     errors,
     loading,
-    loadingAssignments,
-    loadingProfiles,
+    loadingAssignments: loading,
+    loadingProfiles: loading,
     organization,
     supportAssignment,
+    supportAssignments,
     refresh,
   }
 }

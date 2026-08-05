@@ -57,7 +57,7 @@ export async function claimPhoneNumber(
 
 /**
  * Look up a user UID by their phone number.  Useful for cross-platform
- * identity resolution (e.g. Ambassadors platform ↔ Tier platform).
+ * identity resolution (e.g. Coaches platform ↔ Tier platform).
  */
 export async function lookupUserByPhone(
   rawPhone: string,

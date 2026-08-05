@@ -15,9 +15,7 @@ import {
 import { BookMarked, MessageCircle, Sparkles } from 'lucide-react'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { JoinUs as BookClubJoinUs } from '@/components/dashboard/bookClub/JoinUs'
-
-const WHATSAPP_SHAMELESS_LINK =
-  'https://chat.whatsapp.com/BF2pozbxlCI1elSDkMMq3A?s=cl&p=i&ilr=2'
+import { SHAMELESS_CIRCLE_WHATSAPP_URL } from '@/config/communityLinks'
 
 const ShamelessCircleTab = () => (
   <Stack spacing={4}>
@@ -36,7 +34,7 @@ const ShamelessCircleTab = () => (
         'Credit fellow members when building on their insights',
         'Use threads to keep parallel conversations organized',
       ]}
-      link={WHATSAPP_SHAMELESS_LINK}
+      link={SHAMELESS_CIRCLE_WHATSAPP_URL}
       ctaLabel="Open Shameless Circle on WhatsApp"
       communityName="Shameless Circle"
     />

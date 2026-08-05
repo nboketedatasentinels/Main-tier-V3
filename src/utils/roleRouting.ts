@@ -117,28 +117,19 @@ export const getLandingPathForRole = (
     return '/mentor/dashboard'
   }
 
-  // Priority 5: Ambassador
+  // Priority 5: Coach
   if (normalizedRole === 'ambassador') {
-    console.log('🔷 Ambassador detected → /ambassador/dashboard')
+    console.log('🔷 Coach detected → /ambassador/dashboard')
     return '/ambassador/dashboard'
+  }
+
+  // Priority 5b: Verifier (impact log email approvers who have an account)
+  if (normalizedRole === 'verifier') {
+    return '/verify-impact'
   }
 
   // Priority 6: Learners (user / free_user / paid_member)
   if (profile) {
-    const needsOnboarding =
-      !profile.onboardingComplete && !profile.onboardingSkipped && isFreeUser(profile)
-
-    console.log('🔷 Learner onboarding check:', {
-      onboardingComplete: profile.onboardingComplete,
-      onboardingSkipped: profile.onboardingSkipped,
-      needsOnboarding,
-    })
-
-    if (needsOnboarding) {
-      console.log('🔷 Needs onboarding → /welcome')
-      return '/welcome'
-    }
-
     const preferred = getPreferredDashboardRoute(profile)
     if (preferred) {
       console.log('🔷 Learner preferred route:', preferred)

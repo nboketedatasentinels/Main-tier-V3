@@ -8,6 +8,7 @@ import {
 } from '@/services/supabaseSuperAdminService'
 import type { OrgMemberRecord } from '@/services/supabaseSuperAdminService'
 import { normalizeEmail } from '@/utils/email'
+import { isLearnerRole } from '@/utils/role'
 import type {
   AdminRole,
   OrganizationAccountStatusFilter,
@@ -198,7 +199,7 @@ export const useOrganizationDetails = (organizationId?: string) => {
       // partner must never appear as a follow-up target. Exclude partners from
       // the list (they still feed the Leadership & support derivation below).
       const userList = memberRecords
-        .filter((m) => (m.role || '').toLowerCase() !== 'partner')
+        .filter((m) => isLearnerRole(m.role))
         .map((m) => mapMemberToProfile(m, orgKey, orgRecord.code))
 
       const partnerMember = memberRecords.find((m) => (m.role || '').toLowerCase() === 'partner') ?? null

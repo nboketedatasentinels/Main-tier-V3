@@ -121,7 +121,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
     useLearnerOverview(selectedOrgId || null)
 
   // Load the selected org's journeyType - this is the source of truth
-  // for whether to show mentor/ambassador columns. Reading it from
+  // for whether to show mentor/coach columns. Reading it from
   // learner rows is unreliable because stub profiles can have
   // journeyType = undefined.
   useEffect(() => {
@@ -223,8 +223,8 @@ export const LearnerAssignmentsPage: React.FC = () => {
     }
   }, [rows])
 
-  // 6W (6-Week Power Journey) doesn't include mentor or ambassador sessions,
-  // so the Mentor / Mentor Sessions / Ambassador Sessions columns are hidden
+  // 6W (6-Week Power Journey) doesn't include mentor or coach sessions,
+  // so the Mentor / Mentor Sessions / Coach Sessions columns are hidden
   // when the selected org is configured for 6W. Reading from the org doc
   // (not from learner rows) avoids false positives when a learner profile
   // has journeyType = undefined.
@@ -403,7 +403,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
                         <Th>Journey</Th>
                         {showMentorColumns && <Th>Mentor</Th>}
                         {showMentorColumns && <Th isNumeric>Mentor sessions</Th>}
-                        {showMentorColumns && <Th isNumeric>Ambassador sessions</Th>}
+                        {showMentorColumns && <Th isNumeric>Coach sessions</Th>}
                         <Th isNumeric>Total points</Th>
                         {showMentorColumns && <Th>Flags</Th>}
                       </Tr>

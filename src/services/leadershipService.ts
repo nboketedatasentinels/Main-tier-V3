@@ -1,6 +1,6 @@
 /**
  * Leadership Management Service
- * Phase 6: Manages mentor, ambassador, and partner assignments
+ * Phase 6: Manages mentor, coach, and partner assignments
  */
 
 import {
@@ -50,14 +50,14 @@ export async function getOrgMentor(orgId: string): Promise<LeadershipAssignment 
 }
 
 /**
- * Get ambassador for organization
+ * Get coach for organization
  */
-export async function getOrgAmbassador(orgId: string): Promise<LeadershipAssignment | null> {
+export async function getOrgCoach(orgId: string): Promise<LeadershipAssignment | null> {
   try {
     const roster = await getLeadershipRoster(orgId)
     return roster.find((l) => l.role === 'ambassador') || null
   } catch (error) {
-    console.error('Error getting org ambassador:', error)
+    console.error('Error getting org coach:', error)
     return null
   }
 }

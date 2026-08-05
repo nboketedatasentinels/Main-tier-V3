@@ -62,8 +62,8 @@ export async function calculateLearnerPassMark(
       currentPassmark += adjustment
     }
 
-    if (!config.leadership.hasAmbassador && config.passMark.adjustments.noAmbassadorAvailable) {
-      const adjustment = config.passMark.adjustments.noAmbassadorAvailable
+    if (!config.leadership.hasAmbassador && config.passMark.adjustments.noCoachAvailable) {
+      const adjustment = config.passMark.adjustments.noCoachAvailable
       adjustments.push({
         reason: 'no_ambassador',
         amount: adjustment,
@@ -145,7 +145,7 @@ export function generatePassMarkExplanation(
         reasons.push('mentorship is not currently available')
         break
       case 'no_ambassador':
-        reasons.push('ambassador support is not currently available')
+        reasons.push('coach support is not currently available')
         break
       case 'no_partner':
         reasons.push('transformation partner support is not currently available')
@@ -456,7 +456,7 @@ export async function createPassMarkContext(
 
         if (!this.leadership.hasAmbassador) {
           passmark +=
-            this.orgConfiguration.passMark.adjustments.noAmbassadorAvailable || 0
+            this.orgConfiguration.passMark.adjustments.noCoachAvailable || 0
         }
 
         if (!this.leadership.hasPartner) {
@@ -494,7 +494,7 @@ export async function createPassMarkContext(
             reason: 'no_ambassador',
             amount:
               this.orgConfiguration.passMark.adjustments
-                .noAmbassadorAvailable || 0,
+                .noCoachAvailable || 0,
           })
         }
 

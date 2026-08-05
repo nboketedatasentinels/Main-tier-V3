@@ -711,7 +711,7 @@ const INNOVATION_TECHNOLOGY: PodcastPillarCatalogue = {
   modules: [
     {
       id: 'module_1',
-      label: 'AI Operating Hour for Transformation Leaders',
+      label: 'AI Operating Hour for Transformation Leader',
       weekRange: [1, 1],
     },
     {

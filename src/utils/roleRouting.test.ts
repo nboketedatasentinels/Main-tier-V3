@@ -6,7 +6,7 @@ import { getLandingPathForRole } from './roleRouting'
 const asProfile = (overrides: Partial<UserProfile>): UserProfile => overrides as UserProfile
 
 describe('getLandingPathForRole onboarding gating', () => {
-  it('routes free users with incomplete onboarding to welcome', () => {
+  it('routes free users with incomplete onboarding to free dashboard (welcome removed)', () => {
     const path = getLandingPathForRole(
       asProfile({
         role: UserRole.USER,
@@ -16,7 +16,7 @@ describe('getLandingPathForRole onboarding gating', () => {
       })
     )
 
-    expect(path).toBe('/welcome')
+    expect(path).toBe('/app/dashboard/free')
   })
 
   it('does not route paid members with incomplete onboarding to welcome', () => {

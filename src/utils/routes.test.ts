@@ -23,15 +23,15 @@ describe('getLandingPathForRole', () => {
     expect(path).toBe('/mentor/dashboard');
   });
 
-  it('should return the ambassador dashboard for AMBASSADOR role', () => {
+  it('should return the coach dashboard for AMBASSADOR role', () => {
     const path = getLandingPathForRole(UserRole.AMBASSADOR);
     expect(path).toBe('/ambassador/dashboard');
   });
 
-  it('should return /welcome for a user who has not completed onboarding', () => {
+  it('should return free dashboard for a user who has not completed onboarding', () => {
     const profile = { onboardingComplete: false, onboardingSkipped: false } as UserProfile;
     const path = getLandingPathForRole(UserRole.USER, profile);
-    expect(path).toBe('/welcome');
+    expect(path).toBe('/app/weekly-glance');
   });
 
   it('should return the preferred dashboard route if it exists', () => {

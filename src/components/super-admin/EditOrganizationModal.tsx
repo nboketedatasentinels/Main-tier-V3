@@ -79,6 +79,15 @@ import {
   getClusterShortName,
   getClusterTierByName,
 } from '@/utils/clusterTiers'
+import {
+  getMonthlyJourneyCourseOptions,
+  isMonthlyJourneyDuration,
+} from '@/config/courseCatalogue'
+import { resolveJourneyType } from '@/utils/journeyType'
+import {
+  PILLAR_COURSE_PLAN,
+  type Pillar,
+} from '@/types/pillar'
 
 interface EditOrganizationModalProps {
   isOpen: boolean
@@ -122,7 +131,7 @@ const formatInviteRoleLabel = (role: InviteRole) => {
   if (role === 'user') return 'User'
   if (role === 'partner') return 'Partner'
   if (role === 'mentor') return 'Mentor'
-  return 'Ambassador'
+  return 'Coach'
 }
 
 const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())
@@ -161,7 +170,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [members, setMembers] = useState<OrgMemberRecord[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
   const [mentorEmail, setMentorEmail] = useState('')
-  const [ambassadorEmail, setAmbassadorEmail] = useState('')
+  const [ambassadorEmail, setCoachEmail] = useState('')
   const [inviteDrafts, setInviteDrafts] = useState<InviteDraft[]>([])
   const [manualEmail, setManualEmail] = useState('')
   const [manualRole, setManualRole] = useState<InviteRole>('user')
@@ -180,6 +189,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
   const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
   const assignmentSectionLabel = programCadence === 'biweekly' ? '3-week window course assignments' : 'Monthly course assignments'
+  const isMonthlyJourney = isMonthlyJourneyDuration(form.programDuration)
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
   const codeLength = form.code.trim().length
@@ -210,10 +220,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     [monthlyAssignments, courseLimit],
   )
 
-  const sortedCourses = useMemo(
-    () => [...courses].sort((a, b) => a.title.localeCompare(b.title)),
-    [courses],
-  )
+  const sortedCourses = useMemo(() => {
+    if (isMonthlyJourney) return getMonthlyJourneyCourseOptions()
+    return [...courses].sort((a, b) => a.title.localeCompare(b.title))
+  }, [courses, isMonthlyJourney])
   const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
   const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
   const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
@@ -274,7 +284,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       setOriginalCohortStartDate(null)
       setMembers([])
       setMentorEmail('')
-      setAmbassadorEmail('')
+      setCoachEmail('')
       setInviteDrafts([])
       setManualEmail('')
       setManualRole('user')
@@ -323,10 +333,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
           if (!active) return
           setMembers(rows)
           const mentor = rows.find((m) => (m.role || '').toLowerCase() === 'mentor')
-          const ambassador = rows.find((m) => (m.role || '').toLowerCase() === 'ambassador')
+          const coach = rows.find((m) => (m.role || '').toLowerCase() === 'ambassador')
           const partner = rows.find((m) => (m.role || '').toLowerCase() === 'partner')
           setMentorEmail(mentor?.email || organization?.assignedMentorEmail || '')
-          setAmbassadorEmail(ambassador?.email || organization?.assignedAmbassadorEmail || '')
+          setCoachEmail(coach?.email || organization?.assignedAmbassadorEmail || '')
           if (!organization?.assignedPartnerEmail && partner?.email) {
             setForm((prev) => ({ ...prev, assignedPartnerEmail: partner.email }))
           }
@@ -442,10 +452,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       const rows = await fetchOrganizationMembers({ id: organization.id, code: organization.code })
       setMembers(rows)
       const mentor = rows.find((m) => (m.role || '').toLowerCase() === 'mentor')
-      const ambassador = rows.find((m) => (m.role || '').toLowerCase() === 'ambassador')
+      const coach = rows.find((m) => (m.role || '').toLowerCase() === 'ambassador')
       const partner = rows.find((m) => (m.role || '').toLowerCase() === 'partner')
       setMentorEmail(mentor?.email || '')
-      setAmbassadorEmail(ambassador?.email || '')
+      setCoachEmail(coach?.email || '')
       if (partner?.email) {
         setForm((prev) => ({ ...prev, assignedPartnerEmail: partner.email }))
       }
@@ -557,6 +567,28 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!form.code) throw new Error('Organization code is required')
       if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
       if (!form.programDuration) throw new Error('Program duration is required')
+
+      let assignmentsToSave = { ...monthlyAssignments }
+      if (form.programDuration === 1.5 && form.pillar) {
+        const plan = PILLAR_COURSE_PLAN[form.pillar as Pillar]
+        assignmentsToSave = {
+          '1': plan[0].courseId,
+          '2': plan[1].courseId,
+        }
+      }
+      const missingMonths = Array.from({ length: courseLimit }, (_, index) => index + 1).filter(
+        (month) => !assignmentsToSave[String(month)],
+      )
+      if (form.programDuration === 1.5 && missingMonths.length && !form.pillar) {
+        throw new Error('This 6-week organization needs a pillar (or existing course assignments) before saving')
+      }
+      if (missingMonths.length) {
+        throw new Error(
+          form.programDuration === 1.5
+            ? 'Select a pillar so both 6-week courses are assigned'
+            : `Assign a course for every month (${missingMonths.length} still empty)`,
+        )
+      }
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
@@ -564,7 +596,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         throw new Error('Mentor email is invalid')
       }
       if (ambassadorEmail.trim() && !isValidEmail(ambassadorEmail)) {
-        throw new Error('Ambassador email is invalid')
+        throw new Error('Coach email is invalid')
       }
       const partnerEmailValue = (form.assignedPartnerEmail || '').trim()
       if (partnerEmailValue && !isValidEmail(partnerEmailValue)) {
@@ -606,25 +638,31 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       // Update core fields in Supabase. (The old Firebase updateOrganization +
       // cohort cascade are dead now that the Firebase DB was deleted.)
       const programDurationWeeks = form.programDuration ? Math.round(form.programDuration * 4) : null
+      const resolvedJourneyType =
+        resolveJourneyType({
+          journeyType: form.organizationJourneyType,
+          programDurationWeeks,
+          programDuration: form.programDuration,
+        }) ?? null
       // Ordered course array derived from the per-month assignment map, kept for
       // consumers that read the flat `courseAssignments` array.
       const orderedCourseAssignments = Array.from({ length: courseLimit }, (_, index) =>
-        monthlyAssignments[String(index + 1)] || '',
+        assignmentsToSave[String(index + 1)] || '',
       )
       await updateSupabaseOrganization(organization.id, {
         name: form.name.trim(),
         code: form.code.toUpperCase(),
         status: form.status,
-        journeyType: form.organizationJourneyType ?? null,
+        journeyType: resolvedJourneyType,
         programDurationWeeks,
         cohortStartDate: toDateInputValue(form.cohortStartDate as string | Date | undefined) || null,
         village: form.village ?? null,
         cluster: form.cluster ?? null,
-        pillar: form.pillar ?? null,
+        pillar: form.programDuration === 1.5 ? form.pillar ?? null : null,
         teamSize: form.teamSize ?? null,
         programDurationMonths: form.programDuration ?? null,
         partnerEmail: partnerEmailValue || null,
-        monthlyCourseAssignments: monthlyAssignments,
+        monthlyCourseAssignments: assignmentsToSave,
         courseAssignments: orderedCourseAssignments,
         courseAssignmentStructure: 'monthly',
         description: form.description ?? null,
@@ -644,7 +682,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         await applyLeadershipEmail(organization.id, ambassadorEmail, 'ambassador')
       } catch (error) {
         failedAdds.push(
-          `ambassador (${ambassadorEmail || 'empty'}): ${error instanceof Error ? error.message : 'failed'}`,
+          `coach (${ambassadorEmail || 'empty'}): ${error instanceof Error ? error.message : 'failed'}`,
         )
       }
 
@@ -681,6 +719,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       onUpdated?.({
         ...form,
         id: organization.id,
+        organizationJourneyType: resolvedJourneyType ?? undefined,
+        programDurationWeeks: programDurationWeeks ?? undefined,
+        pillar: form.programDuration === 1.5 ? form.pillar : undefined,
+        monthlyCourseAssignments: assignmentsToSave,
+        courseAssignments: orderedCourseAssignments,
+        courseAssignmentStructure: 'monthly',
         assignedPartnerEmail: partnerEmailValue || undefined,
         assignedMentorEmail: mentorEmail.trim() || undefined,
         assignedAmbassadorEmail: ambassadorEmail.trim() || undefined,
@@ -701,7 +745,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     super_admin: 'Super Admin',
     partner: 'Partner',
     mentor: 'Mentor',
-    ambassador: 'Ambassador',
+    ambassador: 'Coach',
     paid_member: 'Paid Member',
     free_user: 'Free User',
     user: 'User',
@@ -826,7 +870,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     <Select
                       placeholder="Select duration"
                       value={form.programDuration?.toString() || ''}
-                      onChange={(e) => updateField('programDuration', Number(e.target.value))}
+                      onChange={(e) => {
+                        const next = Number(e.target.value)
+                        updateField('programDuration', next)
+                        if (next !== 1.5) updateField('pillar', undefined)
+                      }}
                     >
                       {programDurations.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -886,12 +934,12 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                 </GridItem>
                 <GridItem>
                   <FormControl>
-                    <FormLabel>Ambassador</FormLabel>
+                    <FormLabel>Coach</FormLabel>
                     <Input
                       type="email"
-                      placeholder="ambassador@example.com"
+                      placeholder="coach@example.com"
                       value={ambassadorEmail}
-                      onChange={(e) => setAmbassadorEmail(e.target.value)}
+                      onChange={(e) => setCoachEmail(e.target.value)}
                     />
                   </FormControl>
                 </GridItem>
@@ -916,8 +964,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               </Grid>
 
               <Box>
-                <Text fontWeight="medium" mb={2}>
+                <Text fontWeight="medium" mb={1}>
                   {assignmentSectionLabel}
+                </Text>
+                <Text fontSize="sm" color="gray.600" mb={3}>
+                  {isMonthlyJourney
+                    ? 'Pick one course per month from the T4L catalogue. Month-based journeys are not pillar-driven — choose courses based on stakeholder discussion. These assignments are saved to the organization.'
+                    : '6-week courses come from the organization pillar (when set) and are saved to the organization. Re-save after changing duration to persist the new course plan.'}
                 </Text>
                 {courseLimit === 0 ? (
                   <Text fontSize="sm" color="gray.600">
@@ -992,7 +1045,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       </Box>
                     )
                   })}
-                  {!courses.length && (
+                  {!sortedCourses.length && (
                     <Text fontSize="sm" color="gray.600">
                       No courses available yet.
                     </Text>

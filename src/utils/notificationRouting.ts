@@ -7,7 +7,7 @@ const PREFIXED_ROUTES: Array<{ prefix: string; path: string }> = [
   { prefix: '/partner', path: '/partner/notifications' },
   { prefix: '/admin', path: '/admin/notifications' },
   { prefix: '/mentor', path: '/mentor/notifications' },
-  { prefix: '/ambassador', path: '/ambassador/notifications' },
+  { prefix: '/coach', path: '/ambassador/notifications' },
 ]
 
 export const LEARNER_NOTIFICATIONS_PATH = '/app/notifications'

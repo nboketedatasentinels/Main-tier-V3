@@ -21,10 +21,10 @@ import { format, formatDistanceToNow } from 'date-fns'
 import { Calendar, CheckCircle2, Users } from 'lucide-react'
 import { useLearnerBookings, useOpenSlotsForOrg } from '@/hooks/useAmbassadorSessions'
 import {
-  bookAmbassadorSlot,
+  bookCoachSlot,
   cancelBooking,
-  type AmbassadorBooking,
-  type AmbassadorSlot,
+  type CoachBooking,
+  type CoachSlot,
 } from '@/services/ambassadorSessionService'
 
 interface LearnerAmbassadorBookingsProps {
@@ -33,7 +33,7 @@ interface LearnerAmbassadorBookingsProps {
   companyId: string | null
 }
 
-const bookingStatusBadge = (booking: AmbassadorBooking): { label: string; scheme: string } => {
+const bookingStatusBadge = (booking: CoachBooking): { label: string; scheme: string } => {
   switch (booking.status) {
     case 'booked':
       return { label: 'Booked', scheme: 'blue' }
@@ -108,10 +108,10 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
     [byStatus.attended, byStatus.no_show, byStatus.cancelled],
   )
 
-  const handleBookSlot = async (slot: AmbassadorSlot) => {
+  const handleBookSlot = async (slot: CoachSlot) => {
     setBookingBusyId(slot.id)
     try {
-      await bookAmbassadorSlot({
+      await bookCoachSlot({
         slotId: slot.id,
         learnerId,
         learnerName,
@@ -130,7 +130,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
     }
   }
 
-  const handleCancelBooking = async (booking: AmbassadorBooking) => {
+  const handleCancelBooking = async (booking: CoachBooking) => {
     setCancellingId(booking.id)
     try {
       await cancelBooking({ bookingId: booking.id, actorId: learnerId })
@@ -143,7 +143,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
     }
   }
 
-  const renderSlotRow = (slot: AmbassadorSlot) => (
+  const renderSlotRow = (slot: CoachSlot) => (
     <Flex
       key={slot.id}
       p={4}
@@ -196,7 +196,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
     </Flex>
   )
 
-  const renderBookingRow = (booking: AmbassadorBooking, allowCancel: boolean) => {
+  const renderBookingRow = (booking: CoachBooking, allowCancel: boolean) => {
     const badge = bookingStatusBadge(booking)
     const when = booking.slotScheduledAt ?? booking.bookedAt
     return (
@@ -256,7 +256,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
         <Box>
           <AlertTitle>Organization not linked</AlertTitle>
           <AlertDescription>
-            Ambassador coaching sessions are set up per organization. Contact your admin.
+            Coach coaching sessions are set up per organization. Contact your admin.
           </AlertDescription>
         </Box>
       </Alert>
@@ -272,7 +272,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
         <HStack justify="space-between" mb={2} flexWrap="wrap">
           <Heading size="sm">Available coaching sessions</Heading>
           <Text fontSize="sm" color="text.secondary">
-            Book a slot - your ambassador will confirm attendance and award points.
+            Book a slot - your coach will confirm attendance and award points.
           </Text>
         </HStack>
         {loading && (
@@ -304,7 +304,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
             <Icon as={Calendar} color="text.muted" />
             <Text fontWeight="semibold">No sessions open for booking</Text>
             <Text fontSize="sm" color="text.secondary">
-              Check back soon - your ambassador will post new slots regularly.
+              Check back soon - your coach will post new slots regularly.
             </Text>
           </Flex>
         )}

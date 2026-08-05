@@ -88,7 +88,7 @@ export function getDefaultOrgConfiguration(orgId: string): OrganizationConfigura
       minimumPassMark: 50,
       adjustments: {
         noMentorAvailable: -10,
-        noAmbassadorAvailable: -5,
+        noCoachAvailable: -5,
         noPartnerAvailable: -10,
         limitedCapacity: -5,
       },
@@ -488,7 +488,7 @@ export async function getPassMarkAdjustments(orgId: string): Promise<{
         base: defaultConfig.passMark.basePassMark,
         adjustments: {
           no_mentor: defaultConfig.passMark.adjustments.noMentorAvailable ?? 0,
-          no_ambassador: defaultConfig.passMark.adjustments.noAmbassadorAvailable ?? 0,
+          no_ambassador: defaultConfig.passMark.adjustments.noCoachAvailable ?? 0,
           no_partner: defaultConfig.passMark.adjustments.noPartnerAvailable ?? 0,
           capacity_limited: defaultConfig.passMark.adjustments.limitedCapacity ?? 0,
           custom: 0,
@@ -500,7 +500,7 @@ export async function getPassMarkAdjustments(orgId: string): Promise<{
       base: config.passMark.basePassMark,
       adjustments: {
         no_mentor: config.passMark.adjustments.noMentorAvailable ?? 0,
-        no_ambassador: config.passMark.adjustments.noAmbassadorAvailable ?? 0,
+        no_ambassador: config.passMark.adjustments.noCoachAvailable ?? 0,
         no_partner: config.passMark.adjustments.noPartnerAvailable ?? 0,
         capacity_limited: config.passMark.adjustments.limitedCapacity ?? 0,
         custom: 0,

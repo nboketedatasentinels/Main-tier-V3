@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button } from '@chakra-ui/react'
 import { MessageSquare, Youtube } from 'lucide-react'
+import { SHAMELESS_CIRCLE_WHATSAPP_URL } from '@/config/communityLinks'
 
 export const ShamelessCirclePage: React.FC = () => {
   return (
@@ -26,7 +27,7 @@ export const ShamelessCirclePage: React.FC = () => {
         </ul>
         <Button
           as="a"
-          href="https://chat.whatsapp.com/GU834qw8x6JHYgrzDBUT5i?mode=ems_copy_t"
+          href={SHAMELESS_CIRCLE_WHATSAPP_URL}
           target="_blank"
           rel="noopener noreferrer"
           colorScheme="green"

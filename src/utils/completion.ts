@@ -35,9 +35,9 @@ export interface CompletionResult {
 }
 
 /**
- * Calculates how many points are locked behind mentor/ambassador requirements.
+ * Calculates how many points are locked behind mentor/coach requirements.
  */
-export const getMentorAmbassadorAdjustment = (
+export const getMentorCoachAdjustment = (
   journeyType: JourneyType,
   hasMentor: boolean,
   hasAmbassador: boolean
@@ -48,7 +48,7 @@ export const getMentorAmbassadorAdjustment = (
   const numWindows = Math.ceil(journeyWeeks / WINDOW_SIZE_WEEKS);
 
   let lockedMentorPoints = 0;
-  let lockedAmbassadorPoints = 0;
+  let lockedCoachPoints = 0;
 
   activities.forEach((activity) => {
     const { maxTotal, maxPerWindow } = getActivityFrequencyLimits(activity);
@@ -68,16 +68,16 @@ export const getMentorAmbassadorAdjustment = (
     if (activity.visibility?.requiresMentor) {
       lockedMentorPoints += activityTotalPossiblePoints;
     }
-    if (activity.visibility?.requiresAmbassador) {
-      lockedAmbassadorPoints += activityTotalPossiblePoints;
+    if (activity.visibility?.requiresCoach) {
+      lockedCoachPoints += activityTotalPossiblePoints;
     }
   });
 
   return {
     mentorAdjustment: hasMentor ? 0 : lockedMentorPoints,
-    ambassadorAdjustment: hasAmbassador ? 0 : lockedAmbassadorPoints,
+    ambassadorAdjustment: hasAmbassador ? 0 : lockedCoachPoints,
     lockedMentorPoints,
-    lockedAmbassadorPoints,
+    lockedCoachPoints,
   };
 };
 
@@ -91,7 +91,7 @@ const selectJourneyVariantKey = (
 };
 
 /**
- * Calculates the pass mark for a journey, adjusting for missing mentor/ambassador if necessary.
+ * Calculates the pass mark for a journey, adjusting for missing mentor/coach if necessary.
  * Uses explicit passMarkPoints from JOURNEY_META when available.
  */
 export const calculatePassMark = (
@@ -110,8 +110,8 @@ export const calculatePassMark = (
   const baseThreshold = journey.passMarkPoints
     ?? Math.floor((baseTotalTarget * (journey.completionThresholdPct ?? 100)) / 100);
 
-  const { mentorAdjustment, ambassadorAdjustment, lockedMentorPoints, lockedAmbassadorPoints } =
-    getMentorAmbassadorAdjustment(journeyType, hasMentor, hasAmbassador);
+  const { mentorAdjustment, ambassadorAdjustment, lockedMentorPoints, lockedCoachPoints } =
+    getMentorCoachAdjustment(journeyType, hasMentor, hasAmbassador);
 
   const selectedVariantKey = selectJourneyVariantKey(hasMentor, hasAmbassador);
   const selectedVariant = selectedVariantKey
@@ -137,7 +137,7 @@ export const calculatePassMark = (
       totalTarget: selectedVariant.maxPossiblePoints,
       adjustments: {
         mentorPoints: lockedMentorPoints,
-        ambassadorPoints: lockedAmbassadorPoints,
+        ambassadorPoints: lockedCoachPoints,
         mentorPassMarkReduction,
         ambassadorPassMarkReduction,
         variantKey: selectedVariant.key,
@@ -155,7 +155,7 @@ export const calculatePassMark = (
     totalTarget,
     adjustments: {
       mentorPoints: lockedMentorPoints,
-      ambassadorPoints: lockedAmbassadorPoints,
+      ambassadorPoints: lockedCoachPoints,
       mentorPassMarkReduction: mentorAdjustment,
       ambassadorPassMarkReduction: ambassadorAdjustment,
       variantKey: mentorAdjustment > 0 || ambassadorAdjustment > 0 ? 'dynamic' : undefined,

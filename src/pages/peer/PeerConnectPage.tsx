@@ -72,6 +72,7 @@ import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { getOrgScope } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
 import { normalizeEmail } from '@/utils/email'
+import { isLearnerRole } from '@/utils/role'
 import { fetchSupabasePeerById, listOrgPeers } from '@/services/supabasePeerService'
 import {
   createPeerSession,
@@ -123,6 +124,7 @@ const hasSignedInMarkers = (record: Record<string, unknown>) => {
 
 const isEligiblePeerRecord = (record: Record<string, unknown>) => {
   if (record.mergedInto) return false
+  if (!isLearnerRole(record.role)) return false
 
   const status = normalizeAccountStatus(record.accountStatus ?? record.status)
   if (status && status !== 'active') return false

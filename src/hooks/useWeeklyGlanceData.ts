@@ -103,7 +103,7 @@ const toStringArray = (value: unknown): string[] => {
     .filter((item) => item.length > 0)
 }
 
-// Minimal Supabase profiles row -> UserProfileExtended (mentor/ambassador cards
+// Minimal Supabase profiles row -> UserProfileExtended (mentor/coach cards
 // only render firstName/avatar). Long tail lives in the `data` jsonb column.
 const mapProfileRow = (row: Row | null): UserProfileExtended | null => {
   if (!row) return null
@@ -258,7 +258,7 @@ export const useWeeklyGlanceData = () => {
     }
   }, [profileId, journeyType, weekNumber])
 
-  /* ---- support assignment (mentor / ambassador) from profile ---- */
+  /* ---- support assignment (mentor / coach) from profile ---- */
   useEffect(() => {
     if (!profileId) {
       setSupportAssignment(null)

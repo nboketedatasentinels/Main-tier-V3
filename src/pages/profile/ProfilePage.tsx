@@ -43,6 +43,7 @@ import {
   Tabs,
   Tag,
   Text,
+  Textarea,
   Tooltip,
   useToast,
   VStack,
@@ -76,28 +77,18 @@ import {
   X,
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import {
-  EmailAuthProvider,
-  User as FirebaseUser,
-  reauthenticateWithCredential,
-  updateEmail,
-  updatePassword,
-} from 'firebase/auth'
-import {
-  doc,
-  serverTimestamp,
-  updateDoc,
-} from 'firebase/firestore'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
-import { auth, db, storage } from '@/services/firebase'
+import { storage } from '@/services/firebase'
 import { supabase } from '@/services/supabase'
 import { mergeUserProfileData } from '@/services/partnerUserMetadataService'
+import { updateUserVillageId } from '@/services/userProfileService'
 import { useAuth } from '@/hooks/useAuth'
 import type { StandardRole, DashboardPreferences } from '@/types'
 import { normalizeRole } from '@/utils/role'
 import { fetchVillageById, VillageSummary } from '@/services/villageService'
 import { listVillageInvitations } from '@/services/villageInvitationService'
 import { formatVillageInviteLink } from '@/config/app'
+import { FREE_USERS_VILLAGE_NAME, isSharedFreeVillage } from '@/config/villages'
 import { CORE_VALUES, TEST_RESULT_URL_RULES, validateTestResultUrl } from '@/config/personality-data'
 import BadgeDisplay from '@/components/profile/BadgeDisplay'
 
@@ -167,7 +158,8 @@ const roleDisplayMap: Record<StandardRole, string> = {
   free_user: 'Learner',
   paid_member: 'Learner',
   mentor: 'Mentor',
-  ambassador: 'Ambassador',
+  ambassador: 'Coach',
+  verifier: 'Verifier',
   partner: 'Partner',
   super_admin: 'Super Admin',
 }
@@ -235,11 +227,7 @@ const timezoneOptions = [
 
 const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
   if (!hasRecords) {
-    return (
-      <Text fontSize="sm" color="brand.subtleText">
-        No payment history - upgrade to start your subscription.
-      </Text>
-    )
+    return null
   }
 
   return (
@@ -271,7 +259,7 @@ const PaymentHistory: React.FC<{ hasRecords: boolean }> = ({ hasRecords }) => {
 
 export const ProfilePage: React.FC = () => {
   const navigate = useNavigate()
-  const { user, profile, refreshProfile, updateProfile } = useAuth()
+  const { user, profile, refreshProfile, updateProfile, isPaid } = useAuth()
   const toast = useToast()
 
   const [loading, setLoading] = useState(true)
@@ -334,8 +322,37 @@ export const ProfilePage: React.FC = () => {
       email: (typeof docData.email === 'string' && docData.email) || '',
       role: (docData.role as StandardRole) || profile?.role || 'user',
       accountStatus: (docData.accountStatus as ProfileData['accountStatus']) || 'active',
-      membershipStatus: (docData.membershipStatus as ProfileData['membershipStatus']) ||
-        ((normalizeRole(docData.role as StandardRole) === 'user' && profile?.membershipStatus === 'paid') ? 'paid' : 'free'),
+      membershipStatus: (() => {
+        const role = normalizeRole(
+          (docData.role as string | undefined) || profile?.role,
+        )
+        const rawStatus =
+          (docData.membershipStatus as string | undefined) ||
+          (docData.membership_status as string | undefined) ||
+          profile?.membershipStatus
+        if (rawStatus === 'paid') return 'paid' as const
+        if (
+          role === 'paid_member' ||
+          role === 'partner' ||
+          role === 'mentor' ||
+          role === 'ambassador' ||
+          role === 'super_admin'
+        ) {
+          return 'paid' as const
+        }
+        // Org-affiliated learners are treated as paid on this platform.
+        if (
+          docData.companyId ||
+          docData.company_id ||
+          docData.companyCode ||
+          docData.company_code ||
+          profile?.companyId ||
+          profile?.companyCode
+        ) {
+          return 'paid' as const
+        }
+        return 'free' as const
+      })(),
       profilePictureUrl:
         (typeof docData.avatarUrl === 'string' ? docData.avatarUrl : undefined) ||
         (typeof docData.profilePictureUrl === 'string' ? docData.profilePictureUrl : undefined) ||
@@ -433,11 +450,22 @@ export const ProfilePage: React.FC = () => {
     () => profile?.villageId || profileData?.villageId || null,
     [profile?.villageId, profileData?.villageId],
   )
-  const isPaidMember = profileData?.membershipStatus === 'paid'
-  const shouldShowVillageCard = !isPaidMember && Boolean(villageId)
-  const villageMemberLimit = 10
-  const isVillageNearCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit - 2
-  const isVillageAtCapacity = (villageDetails?.memberCount ?? 0) >= villageMemberLimit
+  const isPaidMember = Boolean(
+    isPaid ||
+      profileData?.membershipStatus === 'paid' ||
+      profile?.membershipStatus === 'paid' ||
+      normalizeRole(profileData?.role || profile?.role) === 'paid_member',
+  )
+  const isFreeMember = !isPaidMember
+  const shouldShowVillageCard = isFreeMember && Boolean(villageId)
+  const villageMemberLimit = isSharedFreeVillage(villageId) ? Number.POSITIVE_INFINITY : 10
+  const isVillageNearCapacity =
+    Number.isFinite(villageMemberLimit) &&
+    (villageDetails?.memberCount ?? 0) >= villageMemberLimit - 2
+  const isVillageAtCapacity =
+    Number.isFinite(villageMemberLimit) &&
+    (villageDetails?.memberCount ?? 0) >= villageMemberLimit
+  const isSharedVillageMember = isSharedFreeVillage(villageId)
 
   useEffect(() => {
     let isMounted = true
@@ -546,12 +574,19 @@ export const ProfilePage: React.FC = () => {
 
   const handleLeaveVillage = async () => {
     if (!user) return
+    if (isSharedFreeVillage(villageId)) {
+      toast({
+        title: 'Shared village',
+        description: `${FREE_USERS_VILLAGE_NAME} is the home community for free learners and can't be left.`,
+        status: 'info',
+        duration: 4000,
+      })
+      setIsLeaveVillageOpen(false)
+      return
+    }
     setIsLeavingVillage(true)
     try {
-      await Promise.all([
-        updateDoc(doc(db, 'users', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
-        updateDoc(doc(db, 'profiles', user.uid), { villageId: null, updatedAt: serverTimestamp() }),
-      ])
+      await updateUserVillageId(user.uid, null)
       await refreshProfile({ reason: 'village-left' })
       setVillageDetails(null)
       setVillageError(null)
@@ -604,15 +639,24 @@ export const ProfilePage: React.FC = () => {
   }
 
   const handleSaveProfile = async () => {
-    if (!user || !editedData) return
+    if (!user || !editedData || !profileData) return
     setIsSaving(true)
     setError(null)
     setPersonalityTestError(null)
     setValuesTestError(null)
     setPersonalityFormError(null)
 
-    const personalityUrlCheck = validateTestResultUrl('personality', editedData.personalityTestResultUrl)
-    const valuesUrlCheck = validateTestResultUrl('values', editedData.valuesTestResultUrl)
+    const personalityUrl = (editedData.personalityTestResultUrl ?? '').trim()
+    const valuesUrl = (editedData.valuesTestResultUrl ?? '').trim()
+
+    // Empty verification links are allowed (many learners already have type/values
+    // without pasted URLs). Non-empty links must still be valid result pages.
+    const personalityUrlCheck = personalityUrl
+      ? validateTestResultUrl('personality', personalityUrl)
+      : { valid: true as const }
+    const valuesUrlCheck = valuesUrl
+      ? validateTestResultUrl('values', valuesUrl)
+      : { valid: true as const }
     if (!personalityUrlCheck.valid || !valuesUrlCheck.valid) {
       if (!personalityUrlCheck.valid) {
         setPersonalityTestError(personalityUrlCheck.error ?? 'Paste your 16Personalities results link.')
@@ -624,17 +668,27 @@ export const ProfilePage: React.FC = () => {
       return
     }
 
-    if (!editedData.personalityType) {
-      setPersonalityFormError('Please select your personality type.')
-      setIsSaving(false)
-      return
+    const personalityChanged =
+      editedData.personalityType !== profileData.personalityType ||
+      JSON.stringify(editedData.coreValues) !== JSON.stringify(profileData.coreValues) ||
+      personalityUrl !== (profileData.personalityTestResultUrl ?? '').trim() ||
+      valuesUrl !== (profileData.valuesTestResultUrl ?? '').trim()
+
+    // Only enforce personality completeness when the learner is editing that section.
+    // Name / bio / social saves must not be blocked by missing type or values.
+    if (personalityChanged) {
+      if (!editedData.personalityType) {
+        setPersonalityFormError('Please select your personality type.')
+        setIsSaving(false)
+        return
+      }
+      if (editedData.coreValues.length !== 5) {
+        setPersonalityFormError('Please select exactly 5 core values.')
+        setIsSaving(false)
+        return
+      }
     }
 
-    if (editedData.coreValues.length !== 5) {
-      setPersonalityFormError('Please select exactly 5 core values.')
-      setIsSaving(false)
-      return
-    }
     try {
       // Profile picture still uploads to Firebase Storage; best-effort so a dead
       // Storage session never blocks saving the profile / test results. Falls
@@ -647,32 +701,45 @@ export const ProfilePage: React.FC = () => {
         uploadedUrl = editedData.profilePictureUrl
       }
 
-      // Persist via the Supabase-backed AuthContext updater, which splits
-      // canonical columns from the `data` jsonb. Replaces the Firestore
-      // updateDoc(profiles/users) writes that failed after the auth cutover.
+      const nextAvatar = uploadedUrl || editedData.profilePictureUrl || undefined
       const { error: saveError } = await updateProfile({
-        fullName: editedData.fullName,
-        avatarUrl: uploadedUrl || editedData.profilePictureUrl || undefined,
+        fullName: editedData.fullName.trim(),
+        avatarUrl: nextAvatar,
         bio: editedData.bio || '',
         personalityType: editedData.personalityType || undefined,
         coreValues: editedData.coreValues,
-        hasCompletedPersonalityTest: editedData.hasCompletedPersonalityTest ?? false,
-        hasCompletedValuesTest: editedData.hasCompletedValuesTest ?? false,
-        personalityTestResultUrl: (editedData.personalityTestResultUrl ?? '').trim(),
-        valuesTestResultUrl: (editedData.valuesTestResultUrl ?? '').trim(),
+        hasCompletedPersonalityTest:
+          editedData.hasCompletedPersonalityTest || Boolean(personalityUrl) || Boolean(editedData.personalityType),
+        hasCompletedValuesTest:
+          editedData.hasCompletedValuesTest || Boolean(valuesUrl) || editedData.coreValues.length === 5,
+        personalityTestResultUrl: personalityUrl,
+        valuesTestResultUrl: valuesUrl,
         leaderboardVisibility: editedData.leaderboardVisibility,
       })
       if (saveError) throw saveError
 
-      // socialLinks isn't a typed UserProfile column; merge it into profiles.data
-      // jsonb directly (runs after updateProfile so it reads the fresh row).
-      if (editedData.socialLinks && Object.keys(editedData.socialLinks).length) {
-        await mergeUserProfileData(user.uid, { socialLinks: editedData.socialLinks })
-      }
+      // Always persist social links (including clears) into profiles.data jsonb.
+      await mergeUserProfileData(user.uid, {
+        socialLinks: editedData.socialLinks || {},
+        avatarUrl: nextAvatar,
+        bio: editedData.bio || '',
+        personalityTestResultUrl: personalityUrl,
+        valuesTestResultUrl: valuesUrl,
+        profilePictureUrl: nextAvatar,
+      })
 
-      const updatedProfile = { ...editedData, profilePictureUrl: uploadedUrl || editedData.profilePictureUrl }
+      await refreshProfile({ reason: 'profile-saved' })
+
+      const updatedProfile = {
+        ...editedData,
+        fullName: editedData.fullName.trim(),
+        profilePictureUrl: nextAvatar,
+        personalityTestResultUrl: personalityUrl,
+        valuesTestResultUrl: valuesUrl,
+      }
       setProfileData(updatedProfile)
       setEditedData(updatedProfile)
+      setProfilePictureFile(null)
       setIsEditing(false)
       toast({
         title: 'Profile updated',
@@ -698,14 +765,9 @@ export const ProfilePage: React.FC = () => {
     setPersonalityFormError(null)
   }
 
-  const reauthenticateUser = async (currentUser: FirebaseUser, password: string) => {
-    const credential = EmailAuthProvider.credential(currentUser.email || '', password)
-    return reauthenticateWithCredential(currentUser, credential)
-  }
-
   const handleChangeEmail = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!auth.currentUser || !editedData) return
+    if (!user?.email || !editedData) return
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailPattern.test(emailForm.newEmail)) {
@@ -714,21 +776,33 @@ export const ProfilePage: React.FC = () => {
     }
 
     try {
-      await reauthenticateUser(auth.currentUser, emailForm.password)
-      await updateEmail(auth.currentUser, emailForm.newEmail)
-      await updateDoc(doc(db, 'profiles', auth.currentUser.uid), {
-        email: emailForm.newEmail,
-        updatedAt: serverTimestamp(),
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: emailForm.password,
       })
+      if (reauthError) {
+        setEmailMessage({ type: 'error', text: 'Unable to update email. Check your password and try again.' })
+        return
+      }
 
-      const updated = { ...editedData, email: emailForm.newEmail }
+      const { error: authError } = await supabase.auth.updateUser({ email: emailForm.newEmail.trim() })
+      if (authError) throw authError
+
+      const { error: profileError } = await updateProfile({ email: emailForm.newEmail.trim() })
+      if (profileError) throw profileError
+
+      const updated = { ...editedData, email: emailForm.newEmail.trim() }
       setProfileData(updated)
       setEditedData(updated)
-      setEmailMessage({ type: 'success', text: 'Email updated successfully.' })
+      setEmailMessage({
+        type: 'success',
+        text: 'Email update started. Check your inbox to confirm the new address if prompted.',
+      })
       setTimeout(() => {
         setEmailFormOpen(false)
         setEmailMessage(null)
-      }, 2000)
+        setEmailForm({ newEmail: '', password: '' })
+      }, 2500)
     } catch (err) {
       console.error(err)
       setEmailMessage({ type: 'error', text: 'Unable to update email. Check your password and try again.' })
@@ -737,7 +811,7 @@ export const ProfilePage: React.FC = () => {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!auth.currentUser) return
+    if (!user?.email) return
 
     if (passwordForm.newPassword.length < 8) {
       setPasswordMessage({ type: 'error', text: 'Password must be at least 8 characters.' })
@@ -750,8 +824,20 @@ export const ProfilePage: React.FC = () => {
     }
 
     try {
-      await reauthenticateUser(auth.currentUser, passwordForm.currentPassword)
-      await updatePassword(auth.currentUser, passwordForm.newPassword)
+      const { error: reauthError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: passwordForm.currentPassword,
+      })
+      if (reauthError) {
+        setPasswordMessage({ type: 'error', text: 'Unable to update password. Please try again.' })
+        return
+      }
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: passwordForm.newPassword,
+      })
+      if (updateError) throw updateError
+
       setPasswordMessage({ type: 'success', text: 'Password updated successfully.' })
       setTimeout(() => {
         setPasswordFormOpen(false)
@@ -765,18 +851,22 @@ export const ProfilePage: React.FC = () => {
   }
 
   const handleSaveVisibilityPreference = async () => {
-    if (!auth.currentUser || !editedData) return
+    if (!user || !editedData) return
     setVisibilitySaving(true)
     try {
-      const visibilityUpdates = {
+      const { error: saveError } = await updateProfile({
         leaderboardVisibility: editedData.leaderboardVisibility,
-        'privacySettings.showOnLeaderboard': editedData.leaderboardVisibility !== 'private',
-        updatedAt: serverTimestamp(),
-      }
-      await Promise.all([
-        updateDoc(doc(db, 'profiles', auth.currentUser.uid), visibilityUpdates),
-        updateDoc(doc(db, 'users', auth.currentUser.uid), visibilityUpdates),
-      ])
+      })
+      if (saveError) throw saveError
+
+      await mergeUserProfileData(user.uid, {
+        leaderboardVisibility: editedData.leaderboardVisibility,
+        privacySettings: {
+          ...(editedData.privacySettings || {}),
+          showOnLeaderboard: editedData.leaderboardVisibility !== 'private',
+        },
+      })
+
       setProfileData({ ...editedData })
       setVisibilityMessage({ type: 'success', text: 'Leaderboard visibility updated successfully.' })
     } catch (err) {
@@ -788,7 +878,7 @@ export const ProfilePage: React.FC = () => {
   }
 
   const handleSaveMatchPreferences = async () => {
-    if (!auth.currentUser || !editedData) return
+    if (!user || !editedData) return
     setMatchPreferencesSaving(true)
     setMatchPreferencesMessage(null)
     try {
@@ -797,12 +887,12 @@ export const ProfilePage: React.FC = () => {
         preferredMatchDay: editedData.preferredMatchDay ?? 1,
         matchNotificationPreference: editedData.matchNotificationPreference || 'both',
         timezone: editedData.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-        updatedAt: serverTimestamp(),
       }
-      await Promise.all([
-        updateDoc(doc(db, 'profiles', auth.currentUser.uid), updates),
-        updateDoc(doc(db, 'users', auth.currentUser.uid), updates),
-      ])
+      const { error: saveError } = await updateProfile(updates)
+      if (saveError) throw saveError
+
+      await mergeUserProfileData(user.uid, updates)
+
       setProfileData({ ...editedData, ...updates })
       setMatchPreferencesMessage({ type: 'success', text: 'Peer matching preferences updated.' })
     } catch (err) {
@@ -1010,13 +1100,30 @@ export const ProfilePage: React.FC = () => {
 
                         <FormControl>
                           <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Email Address</FormLabel>
+                          <HStack spacing={2} color="brand.text">
+                            <Icon as={MailIcon} size={16} color="brand.subtleText" />
+                            <Text>{profileData.email}</Text>
+                          </HStack>
+                          {isEditing && (
+                            <FormHelperText>
+                              Change email from the Account Settings tab.
+                            </FormHelperText>
+                          )}
+                        </FormControl>
+
+                        <FormControl mt={4}>
+                          <FormLabel fontSize="sm" color="brand.subtleText" mb={1}>Bio</FormLabel>
                           {!isEditing ? (
-                            <HStack spacing={2} color="brand.text">
-                              <Icon as={MailIcon} size={16} color="brand.subtleText" />
-                              <Text>{profileData.email}</Text>
-                            </HStack>
+                            <Text color="brand.text" whiteSpace="pre-wrap">
+                              {profileData.bio?.trim() || 'No bio yet.'}
+                            </Text>
                           ) : (
-                            <Input type="email" value={editedData.email} onChange={(e) => handleInputChange('email', e.target.value)} />
+                            <Textarea
+                              value={editedData.bio || ''}
+                              onChange={(e) => handleInputChange('bio', e.target.value)}
+                              placeholder="Tell others about yourself..."
+                              rows={4}
+                            />
                           )}
                         </FormControl>
                       </Box>
@@ -1437,7 +1544,9 @@ export const ProfilePage: React.FC = () => {
                               <Text fontSize="xs" color="brand.subtleText">Members</Text>
                               <HStack spacing={2}>
                                 <Text fontSize="sm">
-                                  {villageDetails?.memberCount ?? 0}/{villageMemberLimit}
+                                  {isSharedVillageMember
+                                    ? `${villageDetails?.memberCount ?? 0} free learners`
+                                    : `${villageDetails?.memberCount ?? 0}/${villageMemberLimit}`}
                                 </Text>
                                 {isVillageAtCapacity && (
                                   <Badge colorScheme="red" fontSize="xs">At capacity</Badge>
@@ -1447,6 +1556,7 @@ export const ProfilePage: React.FC = () => {
                                 )}
                               </HStack>
                             </Box>
+                            {!isSharedVillageMember && (
                             <Box>
                               <Text fontSize="xs" color="brand.subtleText">Pending invites</Text>
                               <HStack spacing={2}>
@@ -1456,6 +1566,8 @@ export const ProfilePage: React.FC = () => {
                                 )}
                               </HStack>
                             </Box>
+                            )}
+                            {!isSharedVillageMember && (
                             <Box>
                               <Text fontSize="xs" color="brand.subtleText">Shareable invite link</Text>
                               {shareableInviteCode ? (
@@ -1473,10 +1585,15 @@ export const ProfilePage: React.FC = () => {
                                 </Text>
                               )}
                             </Box>
+                            )}
                             <Box>
                               <Text fontSize="xs" color="brand.subtleText">Role</Text>
                               <Text fontSize="sm">
-                                {villageDetails?.creatorId && profile?.id === villageDetails.creatorId ? 'Founder' : 'Member'}
+                                {isSharedVillageMember
+                                  ? 'Free learner'
+                                  : villageDetails?.creatorId && profile?.id === villageDetails.creatorId
+                                    ? 'Founder'
+                                    : 'Member'}
                               </Text>
                             </Box>
                             <Box>
@@ -1486,6 +1603,24 @@ export const ProfilePage: React.FC = () => {
                                 <Text fontSize="sm">{formatVillageDate(villageDetails?.createdAt)}</Text>
                               </HStack>
                             </Box>
+                            {isSharedVillageMember ? (
+                              <HStack spacing={3} flexWrap="wrap">
+                                <Button
+                                  size="sm"
+                                  colorScheme="purple"
+                                  onClick={() => navigate('/app/peer-connect')}
+                                >
+                                  Peer Connect
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => navigate('/app/leadership-board')}
+                                >
+                                  View marks
+                                </Button>
+                              </HStack>
+                            ) : (
                             <HStack spacing={3} flexWrap="wrap">
                               <Button
                                 size="sm"
@@ -1516,6 +1651,7 @@ export const ProfilePage: React.FC = () => {
                                 Leave Village
                               </Button>
                             </HStack>
+                            )}
                           </VStack>
                         )}
                       </CardBody>
@@ -1955,7 +2091,11 @@ export const ProfilePage: React.FC = () => {
                           </Text>
 
                         <RadioGroup
-                          value={editedData.leaderboardVisibility}
+                          value={
+                            editedData.leaderboardVisibility === 'private'
+                              ? 'company'
+                              : editedData.leaderboardVisibility
+                          }
                           onChange={(value) => handleInputChange('leaderboardVisibility', value as ProfileData['leaderboardVisibility'])}
                         >
                           <VStack align="stretch" spacing={3}>
@@ -1970,17 +2110,24 @@ export const ProfilePage: React.FC = () => {
                                 title: 'Company Only',
                                 description: 'Only teammates and cohort members can see your ranking and activity.',
                               },
-                              {
-                                value: 'private',
-                                title: 'Hidden',
-                                description: 'Keep your ranking private while you continue to earn points.',
-                              },
                             ].map((option) => (
                               <Box
                                 key={option.value}
                                 border="1px solid"
-                                borderColor={editedData.leaderboardVisibility === option.value ? 'brand.primary' : 'brand.border'}
-                                bg={editedData.leaderboardVisibility === option.value ? 'purple.50' : 'white'}
+                                borderColor={
+                                  (editedData.leaderboardVisibility === 'private'
+                                    ? 'company'
+                                    : editedData.leaderboardVisibility) === option.value
+                                    ? 'brand.primary'
+                                    : 'brand.border'
+                                }
+                                bg={
+                                  (editedData.leaderboardVisibility === 'private'
+                                    ? 'company'
+                                    : editedData.leaderboardVisibility) === option.value
+                                    ? 'purple.50'
+                                    : 'white'
+                                }
                                 rounded="xl"
                                 p={4}
                                 transition="all 0.15s ease"
@@ -2059,22 +2206,24 @@ export const ProfilePage: React.FC = () => {
                 <CardBody>
                   <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4}>
                     <Box>
-                      <Text fontWeight="bold" fontSize="lg">{membershipCopy[profileData.membershipStatus].title}</Text>
+                      <Text fontWeight="bold" fontSize="lg">
+                        {membershipCopy[isPaidMember ? 'paid' : 'free'].title}
+                      </Text>
                       <Text color="brand.subtleText" fontSize="sm">
-                        {membershipCopy[profileData.membershipStatus].description}
+                        {membershipCopy[isPaidMember ? 'paid' : 'free'].description}
                       </Text>
                     </Box>
-                    <Tag size="sm" colorScheme={membershipTagColor[profileData.membershipStatus]}>
-                      {membershipCopy[profileData.membershipStatus].badge}
+                    <Tag size="sm" colorScheme={membershipTagColor[isPaidMember ? 'paid' : 'free']}>
+                      {membershipCopy[isPaidMember ? 'paid' : 'free'].badge}
                     </Tag>
                   </Flex>
                   <Text mt={3} fontSize="sm" color="brand.text">
-                    {membershipCopy[profileData.membershipStatus].statusMessage}
+                    {membershipCopy[isPaidMember ? 'paid' : 'free'].statusMessage}
                   </Text>
                 </CardBody>
               </Card>
 
-              {profileData.membershipStatus === 'free' && (
+              {isFreeMember && (
                 <Card borderColor="brand.border" boxShadow="card">
                   <CardHeader>
                     <Text fontWeight="semibold" fontSize="lg">Feature Comparison</Text>
@@ -2117,7 +2266,7 @@ export const ProfilePage: React.FC = () => {
                 </Card>
               )}
 
-              <PaymentHistory hasRecords={profileData.membershipStatus === 'paid'} />
+              <PaymentHistory hasRecords={isPaidMember} />
             </VStack>
           </TabPanel>
         </TabPanels>

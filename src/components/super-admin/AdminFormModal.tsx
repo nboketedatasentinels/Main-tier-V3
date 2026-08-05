@@ -37,7 +37,7 @@ interface AdminFormModalProps {
 const roleOptions: { value: AdminRole; label: string }[] = [
   { value: 'partner', label: 'Partner' },
   { value: 'mentor', label: 'Mentor' },
-  { value: 'ambassador', label: 'Ambassador' },
+  { value: 'ambassador', label: 'Coach' },
 ]
 
 const defaultState: AdminFormData = {

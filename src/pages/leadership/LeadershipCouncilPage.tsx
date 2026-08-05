@@ -184,7 +184,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const isLeadershipEligible = isLeadershipCouncilJourney(profile?.journeyType)
   const isPartnerVisible = isPartnerVisibleJourney(profile?.journeyType)
   const journeyLockReason = !isLeadershipEligible
-    ? 'Mentor and Ambassador unlock on 3-month, 6-month, and 9-month journeys.'
+    ? 'Mentor and Coach unlock on 3-month, 6-month, and 9-month journeys.'
     : null
   const currentJourneyLabel = profile?.journeyType ? getJourneyLabel(profile.journeyType) : null
   const mentorSourceLabel =
@@ -256,7 +256,7 @@ export const LeadershipCouncilPage: React.FC = () => {
         },
         {
           id: 'ambassador',
-          title: 'Ambassador ready',
+          title: 'Coach ready',
           description: journeyBlockedDescription,
           status: 'blocked',
         },
@@ -275,7 +275,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           title: 'Assignments checked',
           description: supportAssignmentsReady
             ? supportAssignmentStatus.exists
-              ? 'Your mentor and ambassador assignments are in place.'
+              ? 'Your mentor and coach assignments are in place.'
               : 'Checked - your admin hasn’t recorded assignments yet.'
             : 'Checking your support assignments.',
           status: supportAssignmentsReady
@@ -296,12 +296,12 @@ export const LeadershipCouncilPage: React.FC = () => {
         },
         {
           id: 'ambassador',
-          title: 'Ambassador ready',
+          title: 'Coach ready',
           description: ambassadorProfile
-            ? 'Ambassador ready - coaching sessions will appear here when scheduled.'
+            ? 'Coach ready - coaching sessions will appear here when scheduled.'
             : assignmentsLoading
-              ? 'Loading your ambassador assignment.'
-              : 'Ambassador coaching hasn’t been set up for your organization yet.',
+              ? 'Loading your coach assignment.'
+              : 'Coach coaching hasn’t been set up for your organization yet.',
           status: ambassadorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
         },
       ]
@@ -588,7 +588,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           <Stack spacing={3} align="center" textAlign="center">
             <Icon as={UserCircle2} boxSize={10} color="text.muted" />
             <Heading size="md">Sign in to view your Leadership Council</Heading>
-            <Text color="text.secondary">Create an account or sign in to connect with your mentor and ambassador.</Text>
+            <Text color="text.secondary">Create an account or sign in to connect with your mentor and coach.</Text>
           </Stack>
         </CardBody>
       </Card>
@@ -643,7 +643,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '-'}</Text>
                   <Text fontSize="xs" color="whiteAlpha.700">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
                   <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '-'}</Text>
-                  <Text fontSize="xs" color="whiteAlpha.700">Ambassador: {assignmentSources.ambassador ?? '-'}</Text>
+                  <Text fontSize="xs" color="whiteAlpha.700">Coach: {assignmentSources.ambassador ?? '-'}</Text>
                 </HStack>
               )}
             </Box>
@@ -680,7 +680,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           <Text fontSize="sm" color="gray.700">
             <Text as="span" fontWeight="semibold" color="#27062e">
               {isPartnerVisible
-                ? 'Mentor and Ambassador unlock on 3M, 6M, and 9M journeys.'
+                ? 'Mentor and Coach unlock on 3M, 6M, and 9M journeys.'
                 : 'Unlocks on 3M, 6M, and 9M journeys.'}
             </Text>
             {isPartnerVisible
@@ -781,7 +781,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                 >
                   <HStack spacing={2}>
                     {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
-                    <Text as="span">Ambassador</Text>
+                    <Text as="span">Coach</Text>
                   </HStack>
                 </Tab>
               </Tooltip>
@@ -819,19 +819,19 @@ export const LeadershipCouncilPage: React.FC = () => {
                     '6-week, 3-month, 6-month, and 9-month journeys',
                   )
                 ) : (
-                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
+                <Card borderColor="#350e6f" borderWidth="1px" bg="#27062e" borderRadius="2xl" overflow="hidden">
                   <CardHeader pb={2}>
                     <Stack spacing={2}>
                       <Text
                         fontSize="xs"
                         textTransform="uppercase"
-                        color="#350e6f"
+                        color="whiteAlpha.800"
                         fontWeight="bold"
                         letterSpacing="0.14em"
                       >
                         Transformation Partner
                       </Text>
-                      <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                      <Heading size="md" color="white" letterSpacing="-0.01em">
                         {partnerProfile
                           ? displayNameForProfile(partnerProfile)
                           : 'No partner assigned'}
@@ -841,8 +841,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <CardBody>
                     {partnerLoading && (
                       <Flex direction="column" align="center" gap={3} p={6}>
-                        <Spinner />
-                        <Text color="text.secondary">Loading transformation partner...</Text>
+                        <Spinner color="white" />
+                        <Text color="whiteAlpha.800">Loading transformation partner...</Text>
                       </Flex>
                     )}
                     {!partnerLoading && partnerProfile && (
@@ -856,22 +856,22 @@ export const LeadershipCouncilPage: React.FC = () => {
                               bg="#350e6f"
                             />
                             <Stack spacing={0.5}>
-                              <Text color="gray.700" fontSize="sm" fontWeight="medium">
+                              <Text color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
                                 {partnerProfile.title || 'Transformation Partner'}
                               </Text>
-                              <Text color="gray.500" fontSize="xs">
+                              <Text color="whiteAlpha.700" fontSize="xs">
                                 {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
                               </Text>
                             </Stack>
                           </HStack>
                           <HStack spacing={2} flexWrap="wrap">
                             {partnerProfile.rating && (
-                              <Badge colorScheme="purple" variant="subtle">
+                              <Badge colorScheme="purple" variant="solid">
                                 Rating {partnerProfile.rating.toFixed(1)} / 5 ({partnerProfile.ratingCount || 0} reviews)
                               </Badge>
                             )}
                             {partnerProfile.xp && (
-                              <Badge colorScheme="purple" variant="subtle">
+                              <Badge colorScheme="purple" variant="solid">
                                 XP {partnerProfile.xp.toLocaleString()}
                               </Badge>
                             )}
@@ -879,19 +879,20 @@ export const LeadershipCouncilPage: React.FC = () => {
                         </HStack>
 
                         {partnerProfile.bio && (
-                          <Text color="gray.700" fontSize="sm" lineHeight="1.65">
+                          <Text color="whiteAlpha.900" fontSize="sm" lineHeight="1.65">
                             {partnerProfile.bio}
                           </Text>
                         )}
 
                         {partnerProfile.email && (
                           <HStack spacing={2} pt={1}>
-                            <Icon as={ExternalLink} color="gray.500" boxSize={3.5} />
+                            <Icon as={ExternalLink} color="whiteAlpha.700" boxSize={3.5} />
                             <Link
                               href={`mailto:${partnerProfile.email}`}
-                              color="#350e6f"
+                              color="white"
                               fontSize="sm"
                               fontWeight="medium"
+                              textDecoration="underline"
                             >
                               {partnerProfile.email}
                             </Link>
@@ -901,12 +902,20 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
                     {!partnerLoading && !partnerProfile && (
                       <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
-                        <Icon as={Shield} boxSize={9} color="gray.400" />
-                        <Heading size="sm" color="#27062e">Partner not set up</Heading>
-                        <Text color="gray.600" fontSize="sm">
+                        <Icon as={Shield} boxSize={9} color="whiteAlpha.700" />
+                        <Heading size="sm" color="white">Partner not set up</Heading>
+                        <Text color="whiteAlpha.800" fontSize="sm">
                           {partnerError || 'Ask your admin to set up your partner profile.'}
                         </Text>
-                        <Button size="sm" leftIcon={<RefreshCcw size={16} />} onClick={retryAssignments} mt={1}>
+                        <Button
+                          size="sm"
+                          leftIcon={<RefreshCcw size={16} />}
+                          onClick={retryAssignments}
+                          mt={1}
+                          bg="white"
+                          color="#27062e"
+                          _hover={{ bg: 'whiteAlpha.900' }}
+                        >
                           Try again
                         </Button>
                       </Flex>
@@ -918,7 +927,7 @@ export const LeadershipCouncilPage: React.FC = () => {
 
               <TabPanel px={0} pt={4}>
                 {!isLeadershipEligible ? (
-                  renderJourneyLockedTab('Ambassador Assignment')
+                  renderJourneyLockedTab('Coach Assignment')
                 ) : (
                 <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={0}>
@@ -931,10 +940,10 @@ export const LeadershipCouncilPage: React.FC = () => {
                           fontWeight="bold"
                           letterSpacing="0.14em"
                         >
-                          Ambassador
+                          Coach
                         </Text>
                         <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                          {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No ambassador assigned'}
+                          {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No coach assigned'}
                         </Heading>
                         {ambassadorProfile?.availabilityStatus && (
                           <Badge
@@ -960,7 +969,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                     {assignmentsLoading && (
                       <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="gray.200" rounded="xl">
                         <Spinner size="sm" />
-                        <Text color="gray.600" fontSize="sm">Loading ambassador…</Text>
+                        <Text color="gray.600" fontSize="sm">Loading coach…</Text>
                       </Flex>
                     )}
 
@@ -968,7 +977,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       <Alert status="warning" rounded="lg" mb={4}>
                         <AlertIcon />
                         <Box>
-                          <AlertTitle>Couldn't load ambassador.</AlertTitle>
+                          <AlertTitle>Couldn't load coach.</AlertTitle>
                           <AlertDescription>{ambassadorError}</AlertDescription>
                         </Box>
                         <Button size="sm" leftIcon={<RefreshCcw size={16} />} ml={4} onClick={retryAssignments}>
@@ -980,7 +989,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                     {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
                       <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
                         <Icon as={User} boxSize={9} color="gray.400" />
-                        <Heading size="sm" color="#27062e">No ambassador assigned</Heading>
+                        <Heading size="sm" color="#27062e">No coach assigned</Heading>
                         <Text color="gray.600" fontSize="sm">
                           {hasOrganization
                             ? 'Ask your admin to assign one.'
@@ -991,7 +1000,7 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {ambassadorProfile && isSamePerson && (
                       <Text fontSize="sm" color="gray.600" mt={2}>
-                        Your mentor is also your ambassador for this programme.
+                        Your mentor is also your coach for this programme.
                       </Text>
                     )}
 
@@ -1025,7 +1034,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                           fontWeight="bold"
                           letterSpacing="0.14em"
                         >
-                          {isSamePerson ? 'Mentor & Ambassador' : 'Mentor'}
+                          {isSamePerson ? 'Mentor & Coach' : 'Mentor'}
                         </Text>
                         <Heading size="md" color="#27062e" letterSpacing="-0.01em">
                           {mentorProfile ? displayNameForProfile(mentorProfile) : 'No mentor assigned'}

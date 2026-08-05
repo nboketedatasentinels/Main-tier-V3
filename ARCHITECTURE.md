@@ -1,6 +1,6 @@
 # T4L Tier Platform – Architecture & Experience Blueprint
 
-This document captures the target architecture, routing map, and dashboard layout definitions for rebuilding the Tier site for Transformation Leaders (T4L). It aligns to the mandated stack, brand system, and product requirements in the latest specification.
+This document captures the target architecture, routing map, and dashboard layout definitions for rebuilding the Tier site for Transformation Leader (T4L). It aligns to the mandated stack, brand system, and product requirements in the latest specification.
 
 ## 1. System Overview
 

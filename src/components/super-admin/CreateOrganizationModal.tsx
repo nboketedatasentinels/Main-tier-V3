@@ -97,6 +97,11 @@ import {
   formatPillarWeekRange,
   type Pillar,
 } from '@/types/pillar'
+import {
+  getMonthlyJourneyCourseOptions,
+  isMonthlyJourneyDuration,
+} from '@/config/courseCatalogue'
+import { resolveJourneyType } from '@/utils/journeyType'
 
 interface CreateOrganizationModalProps {
   isOpen: boolean
@@ -194,8 +199,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const assignmentUnit = programCadence === 'biweekly' ? 'window' : 'month'
   const assignmentUnitPlural = programCadence === 'biweekly' ? 'windows' : 'months'
   const assignmentSectionLabel = programCadence === 'biweekly' ? '3-week window course assignments' : 'Monthly course assignments'
-  // Course-assignment section removed from the create modal per request (can be set later via edit).
-  const SHOW_COURSE_ASSIGNMENTS = false
+  // Show course slots for every paid duration (6W + 3M/6M/9M). 6W is pillar-
+  // driven; month-based journeys pick from the T4L catalogue.
+  const isMonthlyJourney = isMonthlyJourneyDuration(form.programDuration)
+  const showCourseAssignments = courseLimit > 0
   const assignmentBreakdownLabel = programCadence === 'biweekly' ? 'Cycle breakdown summary' : 'Monthly breakdown summary'
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
@@ -205,15 +212,26 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     () => (form.cohortStartDate ? new Date(String(form.cohortStartDate)) : null),
     [form.cohortStartDate],
   )
+  const sortedCourses = useMemo(() => {
+    if (isMonthlyJourney) return getMonthlyJourneyCourseOptions()
+    return [...courses].sort((a, b) => a.title.localeCompare(b.title))
+  }, [courses, isMonthlyJourney])
+  const courseTitleById = useMemo(() => {
+    const map = new Map<string, string>()
+    sortedCourses.forEach((course) => map.set(course.id, course.title))
+    courses.forEach((course) => {
+      if (!map.has(course.id)) map.set(course.id, course.title)
+    })
+    return map
+  }, [courses, sortedCourses])
   const monthlySummary = useMemo(
     () =>
       buildMonthlyAssignmentsSummary({
         monthlyAssignments,
         totalMonths: courseLimit,
-        courseTitleLookup: (courseId) =>
-          courses.find((course) => course.id === courseId)?.title || courseId,
+        courseTitleLookup: (courseId) => courseTitleById.get(courseId) || courseId,
       }),
-    [monthlyAssignments, courseLimit, courses],
+    [monthlyAssignments, courseLimit, courseTitleById],
   )
   const duplicateCourses = useMemo(() => {
     const seen = new Set<string>()
@@ -243,10 +261,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     return { total, valid, invalid }
   }, [inviteDrafts])
 
-  const sortedCourses = useMemo(
-    () => [...courses].sort((a, b) => a.title.localeCompare(b.title)),
-    [courses],
-  )
   const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
   const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
   const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
@@ -553,6 +567,28 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       if (form.programDuration === 1.5 && !form.pillar) {
         throw new Error('Pillar is required for the 6-week journey')
       }
+
+      // Prefer pillar plan for 6W so DB always gets the two course ids even if
+      // local assignment state was cleared by a duration remount.
+      let assignmentsToSave = { ...monthlyAssignments }
+      if (form.programDuration === 1.5 && form.pillar) {
+        const plan = PILLAR_COURSE_PLAN[form.pillar]
+        assignmentsToSave = {
+          '1': plan[0].courseId,
+          '2': plan[1].courseId,
+        }
+      }
+
+      const missingMonths = Array.from({ length: courseLimit }, (_, index) => index + 1).filter(
+        (month) => !assignmentsToSave[String(month)],
+      )
+      if (missingMonths.length) {
+        throw new Error(
+          form.programDuration === 1.5
+            ? 'Select a pillar so both 6-week courses are assigned'
+            : `Assign a course for every month (${missingMonths.length} still empty)`,
+        )
+      }
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
       }
@@ -595,10 +631,16 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
       // Create the organization in Supabase. (The old Firebase path hung under
       // Supabase auth - that's why the button did nothing.)
       const programDurationWeeks = form.programDuration ? Math.round(form.programDuration * 4) : null
+      const resolvedJourneyType =
+        resolveJourneyType({
+          journeyType: form.organizationJourneyType,
+          programDurationWeeks,
+          programDuration: form.programDuration,
+        }) ?? null
       // Ordered course array derived from the per-month assignment map, kept for
       // consumers that read the flat `courseAssignments` array.
       const orderedCourseAssignments = Array.from({ length: courseLimit }, (_, index) =>
-        monthlyAssignments[String(index + 1)] || '',
+        assignmentsToSave[String(index + 1)] || '',
       )
       const created = await createSupabaseOrganization({
         name: form.name.trim(),
@@ -606,16 +648,16 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         // New orgs are created Active (the Status field was removed from this
         // modal). Always send 'active' to satisfy organizations_status_check.
         status: 'active',
-        journeyType: form.organizationJourneyType ?? null,
+        journeyType: resolvedJourneyType,
         programDurationWeeks,
         cohortStartDate: form.cohortStartDate ? String(form.cohortStartDate) : null,
         village: form.village ?? null,
         cluster: form.cluster ?? null,
-        pillar: form.pillar ?? null,
+        pillar: form.programDuration === 1.5 ? form.pillar ?? null : null,
         teamSize: form.teamSize ?? null,
         programDurationMonths: form.programDuration ?? null,
         partnerEmail: partnerEmail.trim() || null,
-        monthlyCourseAssignments: monthlyAssignments,
+        monthlyCourseAssignments: assignmentsToSave,
         courseAssignments: orderedCourseAssignments,
         courseAssignmentStructure: 'monthly',
       })
@@ -625,6 +667,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         ...form,
         id: created.id,
         code: form.code.toUpperCase(),
+        organizationJourneyType: resolvedJourneyType ?? undefined,
+        programDurationWeeks: programDurationWeeks ?? undefined,
+        pillar: form.programDuration === 1.5 ? form.pillar : undefined,
+        monthlyCourseAssignments: assignmentsToSave,
+        courseAssignments: orderedCourseAssignments,
+        courseAssignmentStructure: 'monthly',
         assignedPartnerEmail: partnerEmail.trim() || undefined,
         // If the partner email matched an existing user, createOrganization
         // links them and returns the id - carry it so the new row shows the
@@ -914,10 +962,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 </GridItem>
               </Grid>
 
-              {SHOW_COURSE_ASSIGNMENTS && (
+              {showCourseAssignments && (
               <Box>
-                <Text fontWeight="medium" mb={2}>
+                <Text fontWeight="medium" mb={1}>
                   {assignmentSectionLabel}
+                </Text>
+                <Text fontSize="sm" color="gray.600" mb={3}>
+                  {isMonthlyJourney
+                    ? 'Pick one course per month from the T4L catalogue. Month-based journeys are not pillar-driven — choose courses based on stakeholder discussion. These assignments are saved to the organization.'
+                    : '6-week courses are assigned automatically from the selected pillar and saved to the organization.'}
                 </Text>
                 {courseLimit === 0 ? (
                   <Text fontSize="sm" color="gray.600">
@@ -940,15 +993,17 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         })()
                       : undefined
                     const isEmpty = !assignedCourse
+                    const isPillarLocked = Boolean(form.pillar && form.programDuration === 1.5)
                     const pillarPlanEntry =
-                      form.pillar && form.programDuration === 1.5
+                      isPillarLocked && form.pillar
                         ? PILLAR_COURSE_PLAN[form.pillar][index]
                         : null
+                    const selectValue = pillarPlanEntry?.courseId || assignedCourse
                     return (
                       <Box key={monthKey} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
                         <Flex justify="space-between" align="center" mb={2}>
                           <HStack spacing={2}>
-                            <Badge colorScheme={isEmpty ? 'red' : 'green'} borderRadius="full">
+                            <Badge colorScheme={!selectValue ? 'red' : 'green'} borderRadius="full">
                               {pillarPlanEntry
                                 ? formatPillarWeekRange(pillarPlanEntry.weekRange)
                                 : getProgramSegmentLabel(monthNumber, programCadence)}
@@ -965,7 +1020,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                               size="sm"
                               icon={<ChevronUp size={16} />}
                               onClick={() => swapMonthlyAssignments(index, index - 1)}
-                              isDisabled={index === 0}
+                              isDisabled={isPillarLocked || index === 0}
                               variant="ghost"
                             />
                             <IconButton
@@ -973,16 +1028,17 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                               size="sm"
                               icon={<ChevronDown size={16} />}
                               onClick={() => swapMonthlyAssignments(index, index + 1)}
-                              isDisabled={index === courseLimit - 1}
+                              isDisabled={isPillarLocked || index === courseLimit - 1}
                               variant="ghost"
                             />
                           </HStack>
                         </Flex>
                         <Select
-                          placeholder="Select course"
-                          value={assignedCourse}
+                          placeholder={isPillarLocked ? undefined : 'Select course'}
+                          value={selectValue}
                           onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                           bg="white"
+                          isDisabled={isPillarLocked}
                         >
                           {sortedCourses.map((course) => (
                             <option key={course.id} value={course.id}>
@@ -990,11 +1046,16 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                             </option>
                           ))}
                         </Select>
-                        {isEmpty && (
+                        {isEmpty && !isPillarLocked && (
                           <Text fontSize="xs" color="red.500" mt={2}>
                             Course assignment required for this {assignmentUnit}.
                           </Text>
                         )}
+                        {isPillarLocked && pillarPlanEntry ? (
+                          <Text fontSize="xs" color="gray.600" mt={2}>
+                            Auto-assigned from pillar: {pillarPlanEntry.title}
+                          </Text>
+                        ) : null}
                       </Box>
                     )
                   })}

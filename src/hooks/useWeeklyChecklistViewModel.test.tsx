@@ -82,7 +82,7 @@ vi.mock('@/config/pointsConfig', () => ({
     {
       id: 'ai_tool_review',
       baseId: 'ai_tool_review',
-      title: 'Submit an AI Tool for Review',
+      title: 'Submit an AI Tool to Be Spotlighted',
       description: 'Submit an AI tool for super admin review.',
       points: 1000,
       maxPerMonth: 1,

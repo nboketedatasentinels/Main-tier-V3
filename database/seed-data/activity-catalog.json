@@ -211,8 +211,8 @@
   {
     "id": "ai_tool_review",
     "baseId": "ai_tool_review",
-    "title": "Submit an AI Tool for Review",
-    "description": "Submit an AI tool for partner review and feedback.",
+    "title": "Submit an AI Tool to Be Spotlighted",
+    "description": "Submit an AI tool to be spotlighted after partner review.",
     "points": 1000,
     "maxPerMonth": 1,
     "approvalType": "partner_approved",

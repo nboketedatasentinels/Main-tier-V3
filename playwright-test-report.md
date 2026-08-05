@@ -24,7 +24,7 @@
 | Responsive (Tablet) | Pass | Viewport tests pass |
 | Responsive (Desktop) | Pass | Viewport tests pass |
 | Accessibility - Lang | Pass | `lang="en"` attribute present |
-| Accessibility - Title | Pass | Page title: "T4L - Transformation Leaders" |
+| Accessibility - Title | Pass | Page title: "T4L - Transformation Leader" |
 | Accessibility - ARIA | Fail | Missing ARIA landmarks |
 | Accessibility - Labels | Fail | Some form labels missing |
 | Performance - Load | Pass | Page loads within acceptable time |
@@ -122,7 +122,7 @@ Several pages lack proper ARIA landmarks for screen reader navigation:
 
 ### Page Infrastructure
 - `lang="en"` attribute correctly set on HTML element
-- Page title properly set: "T4L - Transformation Leaders"
+- Page title properly set: "T4L - Transformation Leader"
 - Form submit buttons are functional
 - Navigation between pages works
 

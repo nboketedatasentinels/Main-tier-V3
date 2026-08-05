@@ -13,6 +13,8 @@ import { getFriendlyErrorMessage } from '@/utils/authErrors'
 import { canAccessOrganization } from '@/services/organizationAccessService'
 import { claimOrganizationCode, acceptOrgInvitations } from '@/services/supabaseOrgService'
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
+import { ensureFreeUserVillage } from '@/services/villageService'
+import { isFreeUser } from '@/utils/membership'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -342,6 +344,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
       }
 
+      // Free non-org learners share one village for peer match + marks.
+      if (ensuredProfile && isFreeUser(ensuredProfile) && !ensuredProfile.organizationId && !ensuredProfile.companyId && !ensuredProfile.companyCode) {
+        const villageJoin = await ensureFreeUserVillage()
+        if (!isActive) return
+        if (villageJoin.joined && villageJoin.villageId && ensuredProfile.villageId !== villageJoin.villageId) {
+          const reloaded = await fetchProfileWithRetry(authUser)
+          if (!isActive) return
+          if (reloaded) {
+            ensuredProfile = { ...reloaded, assignedOrganizations: reloaded.assignedOrganizations ?? [] }
+          }
+        }
+      }
+
       console.log('🟢 [Auth] Profile resolved', { origin, role: ensuredProfile?.role })
       setProfile(ensuredProfile)
       recordProfileLoad(ensuredProfile)
@@ -603,10 +618,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     try {
       const { columns, dataPatch } = splitProfileUpdates(updates)
-      const patch: Record<string, unknown> = { ...columns }
+      const patch: Record<string, unknown> = {
+        ...columns,
+        updated_at: new Date().toISOString(),
+      }
 
       if (Object.keys(dataPatch).length) {
-        const mergedData = { ...profileDataRef.current, ...dataPatch }
+        // Re-read `data` so concurrent merges (e.g. socialLinks) aren't clobbered
+        // when profileDataRef is stale relative to the row.
+        const { data: freshRow } = await supabase
+          .from('profiles')
+          .select('data')
+          .eq('id', user.uid)
+          .maybeSingle()
+        const currentData =
+          (freshRow?.data as Record<string, unknown> | null) ?? profileDataRef.current ?? {}
+        const mergedData = { ...currentData, ...dataPatch }
         profileDataRef.current = mergedData
         patch.data = mergedData
       }

@@ -247,7 +247,7 @@ export interface RecoveryNotificationPayload {
 
 export interface PartnerDailyDigest {
   id: string
-  partnerId: string // mentor/ambassador user_id
+  partnerId: string // mentor/coach user_id
   partnerName: string
   orgId: string
   digestDate: string // YYYY-MM-DD

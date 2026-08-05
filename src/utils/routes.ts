@@ -47,7 +47,7 @@ export const getDefaultDashboardRouteByMembership = (profile: UserProfile | null
  * Comprehensive role-based landing path with priority logic
  * Priority:
  * 1. redirectUrl query parameter (external/payment flows)
- * 2. Role-based redirection (Super Admin, Admin, Mentor, Ambassador)
+ * 2. Role-based redirection (Super Admin, Admin, Mentor, Coach)
  * 3. Regular user with onboarding check
  */
 export const getLandingPathForRole = (
@@ -88,14 +88,8 @@ export const getLandingPathForRole = (
       break;
   }
 
-  // Priority 3: Regular user (FREE_USER, PAID_MEMBER) with onboarding check
+  // Priority 3: Regular user (FREE_USER, PAID_MEMBER)
   if (profile) {
-    // Check onboarding status
-    const needsOnboarding = !profile.onboardingComplete && !profile.onboardingSkipped;
-    if (needsOnboarding) {
-      return '/welcome';
-    }
-
     // Check for preferred dashboard route
     const preferredRoute = getPreferredDashboardRoute(profile);
     if (preferredRoute) {

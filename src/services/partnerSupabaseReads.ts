@@ -15,6 +15,7 @@
  * already-subscribed channel and `.on()` would throw.
  */
 import { supabase } from '@/services/supabase'
+import { isLearnerRole } from '@/utils/role'
 
 // Monotonic suffixes so every subscription gets a distinct channel topic.
 let assignedOrgsChannelSeq = 0
@@ -359,7 +360,11 @@ export const listenToPartnerMembers = (
       })
 
       if (cancelled) return
-      onChange(rows.map((row) => ({ id: row.id, data: () => mapMemberRow(row) })))
+      onChange(
+        rows
+          .filter((row) => isLearnerRole(row.role))
+          .map((row) => ({ id: row.id, data: () => mapMemberRow(row) })),
+      )
     } catch (error) {
       if (cancelled) return
       onError?.(error)

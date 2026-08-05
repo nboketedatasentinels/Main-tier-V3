@@ -50,10 +50,10 @@ import {
 } from 'lucide-react'
 import { useAmbassadorSlots, useSlotBookings } from '@/hooks/useAmbassadorSessions'
 import {
-  cancelAmbassadorSlot,
-  createAmbassadorSlot,
+  cancelCoachSlot,
+  createCoachSlot,
   markAttendance,
-  type AmbassadorSlot,
+  type CoachSlot,
 } from '@/services/ambassadorSessionService'
 
 interface AmbassadorSessionsPanelProps {
@@ -63,7 +63,7 @@ interface AmbassadorSessionsPanelProps {
   companyCode?: string | null
 }
 
-const slotStatusBadge = (slot: AmbassadorSlot): { label: string; scheme: string } => {
+const slotStatusBadge = (slot: CoachSlot): { label: string; scheme: string } => {
   if (slot.status === 'cancelled') return { label: 'Cancelled', scheme: 'gray' }
   if (slot.status === 'completed') return { label: 'Completed', scheme: 'purple' }
   if (slot.status === 'full') return { label: 'Full', scheme: 'orange' }
@@ -252,7 +252,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
 
     setSubmitting(true)
     try {
-      await createAmbassadorSlot({
+      await createCoachSlot({
         ambassadorId,
         ambassadorName,
         companyId,
@@ -276,14 +276,14 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
     }
   }
 
-  const handleCancelSlot = async (slot: AmbassadorSlot) => {
+  const handleCancelSlot = async (slot: CoachSlot) => {
     const confirmed = window.confirm(
       `Cancel "${slot.title}"? All ${slot.bookingCount} booking${slot.bookingCount === 1 ? '' : 's'} will be notified.`,
     )
     if (!confirmed) return
     setCancellingId(slot.id)
     try {
-      await cancelAmbassadorSlot({ slotId: slot.id, actorId: ambassadorId })
+      await cancelCoachSlot({ slotId: slot.id, actorId: ambassadorId })
       toast({ title: 'Session cancelled', status: 'info' })
     } catch (err) {
       const description = err instanceof Error ? err.message : 'Try again in a moment.'
@@ -293,7 +293,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
     }
   }
 
-  const renderSlot = (slot: AmbassadorSlot, mode: 'upcoming' | 'past' | 'cancelled') => {
+  const renderSlot = (slot: CoachSlot, mode: 'upcoming' | 'past' | 'cancelled') => {
     const badge = slotStatusBadge(slot)
     const isExpanded = expandedSlotId === slot.id
     return (

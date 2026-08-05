@@ -210,7 +210,7 @@ export const getRoleLabel = (profile: UserProfile | null | undefined): string =>
     case 'mentor':
       return 'Mentor'
     case 'ambassador':
-      return 'Ambassador'
+      return 'Coach'
     case 'user':
     case 'free_user':
     case 'paid_member':

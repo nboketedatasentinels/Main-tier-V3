@@ -205,7 +205,7 @@ export function T4LAuthShell({ children }: { children: React.ReactNode }) {
                 transition={{ delay: 0.35, duration: 0.4 }}
                 className="text-sm text-center text-text-secondary max-w-xs"
               >
-                Transformation Leaders - track your growth, earn points, and lead change with confidence.
+                Transformation Leader - track your growth, earn points, and lead change with confidence.
               </motion.p>
             </div>
           </div>

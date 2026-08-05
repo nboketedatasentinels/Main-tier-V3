@@ -58,7 +58,7 @@ const wrapEmailHtml = (data: SendProgrammeEmailData): string => {
         </td></tr>
         <tr><td style="padding:18px 32px;border-top:1px solid #E2E8F0;background:#FAFAFA;">
           <p style="margin:0;font-size:11px;color:#A0AEC0;text-align:center;line-height:1.5;">
-            Tier 4 Leaders &bull; You received this because your organisation enrolled you in the 6-Week Power Journey.
+            Transformation Leader &bull; You received this because your organisation enrolled you in the 6-Week Power Journey.
           </p>
         </td></tr>
       </table>
@@ -157,7 +157,7 @@ export const sendProgrammeEmail = functions
     try {
       const transport = getTransporter();
       const info = await transport.sendMail({
-        from: `"Tier 4 Leaders" <${fromAddress}>`,
+        from: `"Transformation Leader" <${fromAddress}>`,
         to: data.to,
         subject: data.subject,
         html,

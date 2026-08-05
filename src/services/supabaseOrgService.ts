@@ -12,7 +12,7 @@ import { normalizeRole } from '@/utils/role'
 /**
  * Collapse invite/profile roles into a single conflict bucket.
  * free_user / paid_member / user are all "member" seats — they can share an
- * email across orgs, but cannot be reused as partner/mentor/ambassador.
+ * email across orgs, but cannot be reused as partner/mentor/coach.
  */
 export const roleConflictBucket = (role: string | null | undefined): string => {
   const normalized = normalizeRole(role)
@@ -30,7 +30,7 @@ export const formatRoleConflictLabel = (role: string | null | undefined): string
     case 'mentor':
       return 'Mentor'
     case 'ambassador':
-      return 'Ambassador'
+      return 'Coach'
     case 'super_admin':
       return 'Super Admin'
     case 'user':
@@ -582,7 +582,7 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
 
 /**
  * Resolve a profile id by email (case-insensitive). Used by Edit Organization
- * to assign mentors/ambassadors who already have accounts.
+ * to assign mentors/coaches who already have accounts.
  */
 export const findProfileIdByEmail = async (email: string): Promise<string | null> => {
   const normalized = email.trim().toLowerCase()
@@ -729,7 +729,7 @@ export const deleteOrganization = async (orgId: string): Promise<void> => {
 }
 
 /**
- * Assign a mentor/ambassador to an organization. There is no dedicated org
+ * Assign a mentor/coach to an organization. There is no dedicated org
  * column for these (unlike transformation_partner_id for partners), so the link
  * lives on the assigned user's profile via company_id/organization_id - the same
  * keys fetchOrganizationMembers reads. Enforces a single holder per role per org
@@ -761,7 +761,7 @@ export const assignLeadershipToOrg = async (
   }
 
   // Unlink any other same-role holder currently attached to this org so the org
-  // has at most one mentor / one ambassador.
+  // has at most one mentor / one coach.
   const { error: clearError } = await supabase
     .from('profiles')
     .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
@@ -782,7 +782,7 @@ export const assignLeadershipToOrg = async (
     .eq('id', userId)
   if (error) throw new Error(`Assignment failed: ${error.message}`)
 
-  // Welcome the newly assigned mentor / ambassador (best-effort).
+  // Welcome the newly assigned mentor / coach (best-effort).
   const summary = org?.name && org?.code ? null : await fetchOrgSummary(orgId)
   const { email, name } = await fetchProfileContact(userId)
   void dispatchWelcomeEmail({
@@ -811,7 +811,7 @@ export type OrgMemberEditableRole = 'user' | 'partner' | 'mentor' | 'ambassador'
 
 /**
  * Edit an existing org member from the Edit Organization modal: name and/or role.
- * Partner/mentor/ambassador changes go through the same assignment helpers used
+ * Partner/mentor/coach changes go through the same assignment helpers used
  * elsewhere so org linkage + assignedOrganizations stay consistent.
  */
 export const updateOrganizationMember = async (params: {

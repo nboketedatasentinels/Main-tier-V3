@@ -67,7 +67,7 @@ const toErr = (err: unknown, fallback: string): Error =>
 
 // Learner counts by role for the Admin Oversight cards. free_user / paid_member
 // are the two learner roles (see CLAUDE.md role list); admins load the
-// partner/mentor/ambassador counts from their own list.
+// partner/mentor/coach counts from their own list.
 export const fetchUserRoleCounts = async (): Promise<{ free: number; paid: number }> => {
   const [free, paid] = await Promise.all([
     supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'free_user'),
@@ -89,12 +89,12 @@ export const fetchRoleBreakdownCounts = async (): Promise<{
   paid: number
   partners: number
   mentors: number
-  ambassadors: number
+  coaches: number
 }> => {
   const { data, error } = await supabase.from('profiles').select('role')
   if (error) throw new Error(error.message)
   const rows = (data ?? []) as { role: string | null }[]
-  const counts = { free: 0, paid: 0, partners: 0, mentors: 0, ambassadors: 0 }
+  const counts = { free: 0, paid: 0, partners: 0, mentors: 0, coaches: 0 }
   for (const row of rows) {
     switch (normalizeRole(row.role ?? '')) {
       case 'free_user':
@@ -110,7 +110,7 @@ export const fetchRoleBreakdownCounts = async (): Promise<{
         counts.mentors++
         break
       case 'ambassador':
-        counts.ambassadors++
+        counts.coaches++
         break
     }
   }

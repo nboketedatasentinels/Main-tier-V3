@@ -122,6 +122,10 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     label: 'Register for webinar',
     href: '/app/events',
   },
+  impact_log: {
+    label: 'Open Impact Log',
+    href: '/app/impact',
+  },
 }
 
 function shouldRequireSuperAdminReviewForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {

@@ -36,6 +36,7 @@ import {
 } from '@/utils/journeyType'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { COURSE_DETAILS_MAPPING, resolveCourseIdFromMapping } from '@/utils/courseMappings'
+import { getMonthlyJourneyCourseOptions, MONTHLY_JOURNEY_COURSE_IDS } from '@/config/courseCatalogue'
 import { inviteUsersBulk } from './invitationService'
 import {
   syncOrganizationPartnerChange,
@@ -327,20 +328,25 @@ export const determineClusterFromTeamSize = (teamSize?: number) => {
 }
 
 export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
+  // Month-based journeys (3M+) use the curated T4L catalogue. Keep that as the
+  // primary admin option list so legacy / non-challenge mappings stay out.
+  const catalogueOptions = getMonthlyJourneyCourseOptions()
   const mappingEntries = Object.entries(COURSE_DETAILS_MAPPING).filter(([, details]) => {
     if (!details?.slug) return false
-    // Super admin assignment should only offer the current challenge-page catalog.
+    if (!MONTHLY_JOURNEY_COURSE_IDS.has(details.slug)) return false
     return typeof details.link === 'string' && details.link.includes('/challenge-page/')
   })
   const mappedFallback: CourseOption[] = mappingEntries
     .map(([title, details]) => ({ id: details.slug, title, description: details.description }))
     .sort((a, b) => a.title.localeCompare(b.title))
 
+  const baseOptions = catalogueOptions.length ? catalogueOptions : mappedFallback
+
   try {
     const snapshot = await getDocs(coursesCollection)
 
-    // Keep mapping as the canonical source of available courses and IDs.
-    const courseMap = new Map<string, CourseOption>(mappedFallback.map((course) => [course.id, course]))
+    // Keep catalogue/mapping as the canonical source of available courses and IDs.
+    const courseMap = new Map<string, CourseOption>(baseOptions.map((course) => [course.id, course]))
 
     snapshot.docs.forEach((docSnap) => {
       const data = docSnap.data() as {
@@ -371,12 +377,12 @@ export const fetchAvailableCourses = async (): Promise<CourseOption[]> => {
     })
 
     const merged = Array.from(courseMap.values()).sort((a, b) => a.title.localeCompare(b.title))
-    return merged.length ? merged : mappedFallback
+    return merged.length ? merged : baseOptions
   } catch (error) {
-    console.warn('[OrganizationService] Failed to fetch Firestore courses; using local course mappings', {
+    console.warn('[OrganizationService] Failed to fetch Firestore courses; using local course catalogue', {
       message: (error as Error)?.message,
     })
-    return mappedFallback
+    return baseOptions
   }
 }
 
@@ -644,7 +650,7 @@ export const fetchOrganizationDetails = async (organizationId: string): Promise<
 /**
  * One-shot read of an organization's journeyType from Supabase. Used where the
  * dashboard needs just the journey (e.g. deciding whether to show mentor /
- * ambassador columns) without holding a full org subscription. Supabase-backed
+ * coach columns) without holding a full org subscription. Supabase-backed
  * so it works after the auth cutover - the old Firestore getDoc had no Firebase
  * session and failed with "Missing or insufficient permissions".
  */
@@ -1044,11 +1050,11 @@ export const listenToMentors = (
 }
 
 /**
- * Real-time listener for ambassadors.
- * Updates automatically when users gain/lose the ambassador role.
+ * Real-time listener for coaches.
+ * Updates automatically when users gain/lose the coach role.
  */
 export const listenToAmbassadors = (
-  onChange: (ambassadors: OrganizationLead[]) => void,
+  onChange: (coaches: OrganizationLead[]) => void,
   onError?: (error: FirestoreError) => void,
 ) => {
   const ambassadorQuery = query(usersCollection, where('role', '==', 'ambassador'))

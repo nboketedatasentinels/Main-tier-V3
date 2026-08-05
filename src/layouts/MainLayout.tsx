@@ -540,7 +540,7 @@ export const MainLayout: React.FC = () => {
             </Box>
             <Box>
               <Text fontSize="sm" fontWeight="semibold" color="gray.800" fontFamily="heading">
-                Transformation
+                Transformation Leader
               </Text>
               <Text fontSize="xs" color="gray.500" fontFamily="body">
                 Leadership Journey

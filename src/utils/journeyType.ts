@@ -33,14 +33,14 @@ export const getJourneyLabel = (journeyType: JourneyType): string => JOURNEY_LAB
 
 export const isMonthBasedJourney = (journeyType: JourneyType): boolean => MONTH_BASED_JOURNEYS.includes(journeyType)
 
-// Leadership Council (mentor + ambassador pairing) is only unlocked on 3M/6M/9M
-// programs. 4W and 6W learners see the section but the mentor + ambassador gates
+// Leadership Council (mentor + coach pairing) is only unlocked on 3M/6M/9M
+// programs. 4W and 6W learners see the section but the mentor + coach gates
 // stay blocked.
 export const isLeadershipCouncilJourney = (journeyType?: JourneyType | null): boolean =>
   journeyType ? isMonthBasedJourney(journeyType) : false
 
 // The Transformation Partner is the org-level support contact. They're visible
-// from 6W onwards (6W learners see partner details only - mentor and ambassador
+// from 6W onwards (6W learners see partner details only - mentor and coach
 // still gated to 3M/6M/9M). 4W learners don't see any leadership-council content.
 export const isPartnerVisibleJourney = (journeyType?: JourneyType | null): boolean => {
   if (!journeyType) return false

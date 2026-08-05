@@ -72,7 +72,7 @@ const engagementHighlights = [
 
 export const AmbassadorDashboard: React.FC = () => {
   const { profile } = useAuth()
-  const ambassadorName = profile?.fullName || profile?.firstName || 'Ambassador'
+  const ambassadorName = profile?.fullName || profile?.firstName || 'Coach'
 
   return (
     <AmbassadorLayout
@@ -87,7 +87,7 @@ export const AmbassadorDashboard: React.FC = () => {
               Welcome back, {ambassadorName}
             </Text>
             <Text color="brand.subtleText">
-              Track referrals, celebrate wins, and grow the ecosystem with dedicated ambassador tools.
+              Track referrals, celebrate wins, and grow the ecosystem with dedicated coach tools.
             </Text>
             <HStack spacing={3}>
               <Badge colorScheme="purple">Referral program</Badge>

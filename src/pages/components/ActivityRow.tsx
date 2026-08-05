@@ -76,7 +76,7 @@ const APPROVAL_LABEL: Record<string, string> = {
   partner_approved: 'Partner approves',
   partner_issued: 'Partner issues',
   mentor_issued: 'Mentor issues',
-  ambassador_issued: 'Ambassador issues',
+  ambassador_issued: 'Coach issues',
 }
 
 const ordinalLabel = (n: number) => {
@@ -272,7 +272,7 @@ export const ActivityRow = ({
       activity.availability.reason === 'missing_mentor' ||
       activity.availability.reason === 'missing_ambassador'
     ) {
-      return 'You need a mentor or ambassador first.'
+      return 'You need a mentor or coach first.'
     }
     if (lockedByAvailability) return 'This opens when conditions are met.'
     return null
@@ -347,6 +347,10 @@ export const ActivityRow = ({
 
   const handlePrimaryClick = () => {
     if (primaryActionDisabled) return
+    if (activity.id === 'impact_log') {
+      navigate('/app/impact')
+      return
+    }
     if (requiresPartnerApproval) {
       onOpenProof(activity)
     } else if (!isExternalAiToolSubmission) {

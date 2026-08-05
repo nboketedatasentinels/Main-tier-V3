@@ -106,7 +106,7 @@ describe('pointsConfig module activities', () => {
     expectActivity('practical', 0, 6)
   })
 
-  it('keeps alternate pass marks/max points for journeys with optional mentor and ambassador support', () => {
+  it('keeps alternate pass marks/max points for journeys with optional mentor and coach support', () => {
     const threeMonth = getJourneyPointsCrossReference('3M')
     const sixMonth = getJourneyPointsCrossReference('6M')
     const nineMonth = getJourneyPointsCrossReference('9M')

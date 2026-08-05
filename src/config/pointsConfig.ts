@@ -88,7 +88,7 @@ export type ActivityDef = {
   frequencyNote?: string;
   visibility?: {
     requiresMentor?: boolean;
-    requiresAmbassador?: boolean;
+    requiresCoach?: boolean;
   };
 };
 
@@ -199,7 +199,7 @@ interface BaseActivityEntry {
   frequencyNote?: string;
   visibility?: {
     requiresMentor?: boolean;
-    requiresAmbassador?: boolean;
+    requiresCoach?: boolean;
   };
 }
 
@@ -236,8 +236,8 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "ai_tool_review",
     baseId: "ai_tool_review",
-    title: "Submit an AI Tool for Review",
-    description: "Submit an AI tool for partner review and feedback.",
+    title: "Submit an AI Tool to Be Spotlighted",
+    description: "Submit an AI tool to be spotlighted after partner review.",
     points: 1000,
     behaviorType: "one_time",
     approvalType: "partner_approved",
@@ -310,7 +310,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     id: "impact_log",
     baseId: "impact_log",
     title: "Impact Log Entry",
-    description: "Log an impact story to capture outcomes and progress.",
+    description: "Log an impact story to capture outcomes and progress. A verifier must approve before points are awarded.",
     points: 1000,
     behaviorType: "window_limited",
     approvalType: "auto",
@@ -318,7 +318,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     week: 4,
     category: "Impact",
     flexibleWeeks: true,
-    frequencyNote: "Record your impact regularly.",
+    frequencyNote: "Record your impact regularly. Points pending verifier approval.",
   },
   {
     id: "lift_module",
@@ -389,7 +389,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     frequencyNote: "One challenge per window.",
   },
 
-  // ── 3M+ activities (require mentor/ambassador) ──
+  // ── 3M+ activities (require mentor/coach) ──
   {
     id: "mentor_meetup",
     baseId: "mentor_meetup",
@@ -409,8 +409,8 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "ambassador_session",
     baseId: "ambassador_session",
-    title: "Ambassador Session",
-    description: "Attend a session led by an ambassador.",
+    title: "Coach Session",
+    description: "Attend a session led by a coach.",
     points: 2000,
     behaviorType: "window_limited",
     approvalType: "partner_approved",
@@ -420,7 +420,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     category: "Leadership",
     flexibleWeeks: true,
     frequencyNote: "Submit attendance proof. Points are awarded after partner confirmation.",
-    visibility: { requiresAmbassador: true },
+    visibility: { requiresCoach: true },
   },
 
   // ── Pillar components (6W only) - partner-issued ──
@@ -599,13 +599,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     pointVariants: [
       {
         key: "without_mentor_and_ambassador",
-        label: "No mentor + ambassador assigned",
+        label: "No mentor + coach assigned",
         maxPossiblePoints: 90500,
         passMarkPoints: 67000,
       },
       {
         key: "without_mentor_or_ambassador",
-        label: "No mentor or ambassador assigned",
+        label: "No mentor or coach assigned",
         maxPossiblePoints: 96500,
         passMarkPoints: 71000,
       },
@@ -624,13 +624,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     pointVariants: [
       {
         key: "without_mentor_and_ambassador",
-        label: "No mentor + ambassador assigned",
+        label: "No mentor + coach assigned",
         maxPossiblePoints: 181000,
         passMarkPoints: 135000,
       },
       {
         key: "without_mentor_or_ambassador",
-        label: "No mentor or ambassador assigned",
+        label: "No mentor or coach assigned",
         maxPossiblePoints: 193000,
         passMarkPoints: 143000,
       },
@@ -649,13 +649,13 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     pointVariants: [
       {
         key: "without_mentor_and_ambassador",
-        label: "No mentor + ambassador assigned",
+        label: "No mentor + coach assigned",
         maxPossiblePoints: 271500,
         passMarkPoints: 203000,
       },
       {
         key: "without_mentor_or_ambassador",
-        label: "No mentor or ambassador assigned",
+        label: "No mentor or coach assigned",
         maxPossiblePoints: 289500,
         passMarkPoints: 215000,
       },
@@ -757,7 +757,7 @@ const getJourneyPointsVariants = (journeyType: JourneyType): JourneyPointsVarian
   return [
     {
       key: "default",
-      label: "Standard (with mentor + ambassador if assigned)",
+      label: "Standard (with mentor + coach if assigned)",
       maxPossiblePoints: meta.maxPossiblePoints,
       passMarkPoints: meta.passMarkPoints,
     },

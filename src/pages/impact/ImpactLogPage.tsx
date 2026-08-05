@@ -79,7 +79,7 @@ import {
   Twitter,
   Instagram,
 } from 'lucide-react'
-import { addDoc, collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, where } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore'
 import { FirebaseError } from 'firebase/app'
 import { format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
 import { db } from '@/services/firebase'
@@ -105,9 +105,14 @@ import {
 } from '@/config/impactLogMappings'
 import { isFreeUser } from '@/utils/membership'
 import { removeUndefinedFields } from '@/utils/firestore';
-import { JOURNEY_META, getActivitiesForJourney, getMonthNumber, type ActivityDef, type JourneyType } from '@/config/pointsConfig';
-import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService';
-import { awardPointsForImpactLog } from '@/services/pointsTransactionService'
+import { JOURNEY_META, getActivitiesForJourney, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
+import { revokeChecklistPoints } from '@/services/pointsService'
+import {
+  createImpactVerification,
+  fetchVerificationStatusByImpactLogIds,
+  markImpactLogChecklistPending,
+  sendImpactVerificationEmail,
+} from '@/services/impactVerificationService'
 import PointsDashboard from '@/components/PointsDashboard'
 import { generateImpactPdfReport } from '@/reports/impactPdfReport'
 import { isValidUrl } from '@/utils/validation';
@@ -149,8 +154,14 @@ export interface ImpactLogEntry {
    * - 'Tier 4: Third-Party Verified': Both `verifierEmail` and `evidenceLink` are required.
    */
   verificationLevel: string
-  /** The email of the person who can verify the impact. Required for Tier 2 and Tier 4. */
+  /** The email of the person who can verify the impact. Required for points. */
   verifierEmail?: string
+  /** Display name of the verifier (in or out of org). */
+  verifierName?: string
+  /** Platform role for the verifier — always `verifier` for this flow. */
+  verifierRole?: 'verifier'
+  /** Approval gate: pending until verifier approves/rejects via email. */
+  verificationStatus?: 'pending' | 'approved' | 'rejected'
   /** A URL to evidence supporting the impact. Required for Tier 3 and Tier 4. */
   evidenceLink?: string
   transformationPartnerId?: string
@@ -475,6 +486,9 @@ export const ImpactLogPage: React.FC = () => {
     peopleImpacted: 0,
     usdValue: 0,
     verificationLevel: 'Tier 1: Self-Reported',
+    verifierName: '',
+    verifierEmail: '',
+    verifierRole: 'verifier',
     date: format(new Date(), 'yyyy-MM-dd'),
   })
   const isEsgActive = formValues.categoryGroup === 'esg'
@@ -697,6 +711,37 @@ export const ImpactLogPage: React.FC = () => {
     void runPartnerSync(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid])
+
+
+  useEffect(() => {
+    if (!user?.uid || entries.length === 0) return
+    let cancelled = false
+    const pendingIds = entries
+      .filter((entry) => !entry.verificationStatus || entry.verificationStatus === 'pending')
+      .map((entry) => entry.id)
+    if (!pendingIds.length) return
+
+    void (async () => {
+      try {
+        const statusMap = await fetchVerificationStatusByImpactLogIds(pendingIds)
+        if (cancelled) return
+        await Promise.all(
+          Object.entries(statusMap).map(async ([id, status]) => {
+            if (status === 'pending') return
+            const local = entries.find((e) => e.id === id)
+            if (!local || local.verificationStatus === status) return
+            await updateDoc(doc(db, 'impact_logs', id), { verificationStatus: status })
+          }),
+        )
+      } catch (error) {
+        console.warn('[ImpactLog] Failed to sync verification statuses', error)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [entries, user?.uid])
 
   useEffect(() => {
     if (!user?.uid) return
@@ -1300,7 +1345,7 @@ export const ImpactLogPage: React.FC = () => {
 
     setIsSubmittingImpact(true)
     const errors: string[] = []
-    const { verificationLevel, verifierEmail, evidenceLink, description, date, hours, peopleImpacted } = formValues
+    const { verificationLevel, verifierEmail, verifierName, evidenceLink, description, date, hours, peopleImpacted } = formValues
     const requirements = verificationRequirements[(verificationLevel || 'Tier 1: Self-Reported') as VerificationTier]
     const categoryGroup = formValues.categoryGroup || 'esg'
 
@@ -1340,12 +1385,15 @@ export const ImpactLogPage: React.FC = () => {
       errors.push('Please complete all required fields (Description, Date, and either Hours or People Impacted).')
     }
 
-    if (requirements.verifierEmail) {
-      if (!verifierEmail) {
-        errors.push('Verifier email is required for this verification tier.')
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(verifierEmail)) {
-        errors.push('Please enter a valid verifier email address.')
-      }
+    const trimmedVerifierName = (verifierName || '').trim()
+    const trimmedVerifierEmail = (verifierEmail || '').trim()
+    if (!trimmedVerifierName) {
+      errors.push('Verifier name is required. Points are awarded only after they approve.')
+    }
+    if (!trimmedVerifierEmail) {
+      errors.push('Verifier email is required so we can send them this impact log.')
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedVerifierEmail)) {
+      errors.push('Please enter a valid verifier email address.')
     }
 
     if (requirements.evidenceLink) {
@@ -1431,7 +1479,10 @@ export const ImpactLogPage: React.FC = () => {
             }),
         ...(formValues.outcomeLabel ? { outcomeLabel: formValues.outcomeLabel } : {}),
         verificationLevel: formValues.verificationLevel || 'Tier 1: Self-Reported',
-        ...(formValues.verifierEmail ? { verifierEmail: formValues.verifierEmail } : {}),
+        verificationStatus: 'pending' as const,
+        verifierName: trimmedVerifierName,
+        verifierEmail: trimmedVerifierEmail,
+        verifierRole: 'verifier' as const,
         ...(formValues.evidenceLink ? { evidenceLink: formValues.evidenceLink } : {}),
         ...(formValues.verificationLevel === 'Tier 2: Partner Verified'
           ? {
@@ -1449,14 +1500,136 @@ export const ImpactLogPage: React.FC = () => {
 
       const docRef = await addDoc(collection(db, 'impact_logs'), payload);
 
-      // Record additional engagement points in the separate points_transactions ledger.
+      const journeyType = resolveJourneyType();
+      const activity = resolveImpactActivity(journeyType)
+      const weekNumber = resolveWeekNumberForDate(payload.date, journeyType)
+      const learnerName =
+        [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim() ||
+        profile?.fullName ||
+        profile?.email ||
+        'A learner'
+      const learnerEmail = profile?.email || user.email || null
+      const activityTitle = payload.title || 'Impact Activity'
+      const pointsToAward = activity?.points ?? (journeyType === '6W' ? 2000 : 1000)
+
+      // Gate points on verifier approval — mark checklist pending and email verifier.
       try {
-        await awardPointsForImpactLog(user.uid, docRef.id)
+        await markImpactLogChecklistPending({ userId: user.uid, weekNumber })
       } catch (err) {
-        if (import.meta.env.DEV) {
-           
-          console.warn('[ImpactLog] Failed to record points transaction for impact log entry', err)
+        console.warn('[ImpactLog] Failed to mark checklist pending', err)
+      }
+
+      let emailSent = false
+      try {
+        const formatMoney = (value: unknown) => {
+          const n = Number(value)
+          if (!Number.isFinite(n)) return '—'
+          return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
         }
+        const formatNumber = (value: unknown) => {
+          const n = Number(value)
+          if (!Number.isFinite(n)) return '—'
+          return n.toLocaleString()
+        }
+        const detail = (label: string, value: unknown) => {
+          if (value == null) return null
+          if (Array.isArray(value) && value.length === 0) return null
+          const text = Array.isArray(value)
+            ? value.map((v) => String(v).trim()).filter(Boolean).join(', ')
+            : String(value).trim()
+          if (!text) return null
+          return { label, value: text }
+        }
+
+        const activityRows = [
+          detail('Activity title', payload.title),
+          detail('Description', payload.description),
+          detail('Activity date', payload.date),
+          detail('Impact type', categoryGroup === 'esg' ? 'ESG' : 'Business outcome'),
+          detail(
+            'Category',
+            categoryGroup === 'esg' ? payload.esgCategory : payload.businessCategory,
+          ),
+          detail('Activity type', payload.activityType),
+          detail('Business waste / activity', payload.businessActivity),
+          detail('Outcome label', payload.outcomeLabel),
+          detail('LIFT pillars', payload.liftPillars),
+        ].filter(Boolean) as Array<{ label: string; value: string }>
+
+        const metricsRows = [
+          detail('People impacted', formatNumber(payload.peopleImpacted)),
+          detail('Hours contributed', formatNumber(payload.hours)),
+          detail('Estimated USD value', formatMoney(payload.usdValue)),
+          detail('USD value source', payload.usdValueSource),
+          detail('Unit rate applied', payload.unitRateApplied != null ? formatMoney(payload.unitRateApplied) : null),
+          detail('Volunteer hourly rate applied', payload.volHourRateApplied != null ? formatMoney(payload.volHourRateApplied) : null),
+          detail('SASB topic', payload.sasbTopic),
+          detail('Impact score (SCP)', formatNumber(payload.scp)),
+          detail('Impact value', formatNumber(payload.impactValue)),
+          detail('Base points (preview)', formatNumber(payload.points)),
+          detail('Verification multiplier', formatNumber(payload.verificationMultiplier)),
+        ].filter(Boolean) as Array<{ label: string; value: string }>
+
+        const verificationRows = [
+          detail('Verification tier', payload.verificationLevel),
+          detail('Verification status', 'Pending verifier approval'),
+          detail('Verifier name', trimmedVerifierName),
+          detail('Verifier email', trimmedVerifierEmail),
+          detail('Verifier role', 'Verifier'),
+          detail('Evidence link', payload.evidenceLink),
+          detail('Transformation partner', payload.transformationPartnerName),
+          detail('Partner validation status', payload.partnerValidationStatus),
+        ].filter(Boolean) as Array<{ label: string; value: string }>
+
+        const submissionRows = [
+          detail('Learner name', learnerName),
+          detail('Learner email', learnerEmail),
+          detail('Organisation', profile?.companyName),
+          detail('Organisation ID', payload.companyId || profile?.companyId),
+          detail('Source platform', payload.sourcePlatform),
+          detail('Submitted at', payload.createdAt),
+          detail('Journey type', journeyType),
+          detail('Checklist week', weekNumber),
+          detail('Points pending approval', formatNumber(pointsToAward)),
+        ].filter(Boolean) as Array<{ label: string; value: string }>
+
+        const emailSections = [
+          { title: 'Activity details', rows: activityRows },
+          { title: 'Impact metrics', rows: metricsRows },
+          { title: 'Verification', rows: verificationRows },
+          { title: 'Submission record', rows: submissionRows },
+        ].filter((section) => section.rows.length > 0)
+
+        const impactSummary = Object.fromEntries(
+          emailSections.flatMap((section) => section.rows.map((row) => [row.label, row.value])),
+        )
+
+        const verification = await createImpactVerification({
+          impactLogId: docRef.id,
+          verifierName: trimmedVerifierName,
+          verifierEmail: trimmedVerifierEmail,
+          weekNumber,
+          journeyType,
+          activityTitle,
+          pointsToAward,
+          learnerName,
+          learnerEmail,
+          impactSummary,
+        })
+        const sendResult = await sendImpactVerificationEmail({
+          to: trimmedVerifierEmail,
+          verifierName: trimmedVerifierName,
+          learnerName,
+          learnerEmail,
+          token: verification.token,
+          activityTitle,
+          submittedAt: payload.createdAt,
+          organizationName: profile?.companyName || null,
+          sections: emailSections,
+        })
+        emailSent = sendResult.success
+      } catch (err) {
+        console.error('[ImpactLog] Failed to create/send verifier request', err)
       }
 
       const impactLogsQuery = query(collection(db, 'impact_logs'), where('userId', '==', user.uid));
@@ -1465,63 +1638,14 @@ export const ImpactLogPage: React.FC = () => {
         await awardBadge(user.uid, 'impact-master');
       }
 
-      const journeyType = resolveJourneyType();
-      const activity = resolveImpactActivity(journeyType)
-      const weekNumber = resolveWeekNumberForDate(payload.date, journeyType)
-      const monthNumber = getMonthNumber(weekNumber)
-      const weekSuffix =
-        profile?.currentWeek && profile.currentWeek !== weekNumber
-          ? ` Progress has been applied to Week ${weekNumber} based on the activity date.`
-          : ''
-      const toastStatus: 'success' | 'warning' = 'success'
-      let toastTitle = 'Impact logged successfully!'
-      let toastDescription = 'Your entry has been saved.'
-
-      if (activity) {
-        const ledgerRef = doc(db, 'pointsLedger', `${user.uid}__w${weekNumber}__${activity.id}`)
-        const ledgerSnap = await getDoc(ledgerRef)
-
-        if (ledgerSnap.exists()) {
-          // Impact was saved successfully, just no additional journey points
-          toastDescription = "Your impact has been logged successfully."
-        } else {
-          const monthQuery = query(
-            collection(db, 'pointsLedger'),
-            where('uid', '==', user.uid),
-            where('activityId', '==', activity.id),
-            where('monthNumber', '==', monthNumber),
-          )
-          const monthSnapshot = await getDocs(monthQuery)
-
-          if (monthSnapshot.size >= activity.maxPerMonth) {
-            // Impact was saved successfully, just reached monthly limit for bonus points
-            toastDescription = 'Your impact has been logged successfully.'
-          } else {
-            try {
-              await awardChecklistPoints({
-                uid: user.uid,
-                journeyType,
-                weekNumber,
-                activity, // Use journey-configured points (e.g., 2000 for 6W)
-                source: 'impact_log_submission',
-              })
-              toastTitle = 'Impact logged and journey updated!'
-              toastDescription = `Your contribution has been added to your journey progress.${weekSuffix}`
-            } catch (awardError) {
-              if (import.meta.env.DEV) {
-                console.error('Impact log points award failed', awardError)
-              }
-              // Impact was still saved successfully
-              toastDescription = 'Your impact has been logged successfully.'
-            }
-          }
-        }
-      }
-
       toast({
-        title: toastTitle,
-        description: toastDescription,
-        status: toastStatus,
+        title: 'Impact submitted for verification',
+        description: emailSent
+          ? `We emailed ${trimmedVerifierName} (${trimmedVerifierEmail}). Points stay pending until they approve.`
+          : `Saved as pending. We could not confirm the email to ${trimmedVerifierEmail} — ask them to check spam, or resubmit if needed.`,
+        status: emailSent ? 'success' : 'warning',
+        duration: 8000,
+        isClosable: true,
       })
       setIsSubmittingImpact(false)
       onClose()
@@ -1641,7 +1765,7 @@ export const ImpactLogPage: React.FC = () => {
     const pathMatch = data.match(/\/event\/([a-zA-Z0-9_-]+)/)
     if (pathMatch) return pathMatch[1]
 
-    // Pattern: ?event={id} or &event={id} (any URL with event query param, including T4L Ambassador QR codes)
+    // Pattern: ?event={id} or &event={id} (any URL with event query param, including T4L Coach QR codes)
     const queryMatch = data.match(/[?&]event=([a-zA-Z0-9_-]+)/)
     if (queryMatch) return queryMatch[1]
 
@@ -1689,7 +1813,7 @@ export const ImpactLogPage: React.FC = () => {
         return
       }
 
-      // If user is not logged in, redirect to Ambassador platform's guest participation page
+      // If user is not logged in, redirect to Coach platform's guest participation page
       if (!user) {
         const ambassadorBase = import.meta.env.VITE_IMPACT_API_BASE_URL || 'https://ambassadors.t4leader.com'
         window.location.href = `${ambassadorBase}/event-participate.html?event=${eventId}`
@@ -3243,6 +3367,38 @@ export const ImpactLogPage: React.FC = () => {
                         )}
                       </Text>
                   </Box>
+                  </Box>
+
+                  <Box p={4} bg="purple.50" border="1px solid" borderColor="purple.100" rounded="lg">
+                    <Text fontWeight="semibold" mb={1}>
+                      Verifier <Text as="span" color="red.500">*</Text>
+                    </Text>
+                    <Text fontSize="sm" color="text.muted" mb={3}>
+                      Someone in or outside your organization. We email them this impact log.
+                      Role is Verifier — they must approve before you earn points. Until then it stays pending.
+                    </Text>
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                      <FormControl isRequired>
+                        <FormLabel>Verifier name</FormLabel>
+                        <Input
+                          value={formValues.verifierName || ''}
+                          onChange={(e) => setFormValues((prev) => ({ ...prev, verifierName: e.target.value }))}
+                          placeholder="Full name"
+                        />
+                      </FormControl>
+                      <FormControl isRequired>
+                        <FormLabel>Verifier email</FormLabel>
+                        <Input
+                          type="email"
+                          value={formValues.verifierEmail || ''}
+                          onChange={(e) => setFormValues((prev) => ({ ...prev, verifierEmail: e.target.value }))}
+                          placeholder="name@example.com"
+                        />
+                      </FormControl>
+                    </SimpleGrid>
+                    <Text mt={3} fontSize="sm">
+                      Role: <Text as="span" fontWeight="semibold">Verifier</Text>
+                    </Text>
                   </Box>
 
                   <Box>

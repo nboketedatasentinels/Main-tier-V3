@@ -194,7 +194,7 @@ describe('getVisibleActivities', () => {
     expect(input.map(item => item.id)).toEqual(['a', 'b'])
   })
 
-  it('hides activities blocked by missing mentor or ambassador support', () => {
+  it('hides activities blocked by missing mentor or coach support', () => {
     const input = [
       { id: 'mentor', availability: { state: 'locked' as const, reason: 'missing_mentor' as const } },
       { id: 'ambassador', availability: { state: 'locked' as const, reason: 'missing_ambassador' as const } },

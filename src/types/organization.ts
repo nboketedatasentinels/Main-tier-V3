@@ -154,7 +154,7 @@ export interface PassMarkConfiguration {
   // Dynamic adjustments
   adjustments: {
     noMentorAvailable?: number
-    noAmbassadorAvailable?: number
+    noCoachAvailable?: number
     noPartnerAvailable?: number
     limitedCapacity?: number
   }
@@ -439,7 +439,7 @@ export interface OrganizationLeadershipStats {
 
   // Effectiveness
   avgMentorSessionsPerWeek?: number
-  avgAmbassadorEngagements?: number
+  avgCoachEngagements?: number
 }
 
 /**

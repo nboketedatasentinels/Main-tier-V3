@@ -68,8 +68,6 @@ import {
   onSnapshot,
   orderBy,
   query,
-  serverTimestamp,
-  updateDoc,
   where,
 } from 'firebase/firestore'
 import { ResponsiveContainer, Treemap, Tooltip as RechartsTooltip } from 'recharts'
@@ -94,6 +92,7 @@ import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
 import { cancelChallenge } from '@/services/challengeService'
 import { isFreeUser } from '@/utils/membership'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
+import { FREE_USERS_VILLAGE_NAME, isSharedFreeVillage } from '@/config/villages'
 import { format } from 'date-fns'
 
 interface FeaturedBadge {
@@ -184,7 +183,6 @@ export const LeadershipBoardPage: React.FC = () => {
   } = useDisclosure()
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
   const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onClose: onLeaveClose } = useDisclosure()
-  const supportEmail = 'transform@t4leader.com'
   const pointsColors = useToken('colors', [
     'brand.primary',
     'brand.dark',
@@ -536,7 +534,7 @@ export const LeadershipBoardPage: React.FC = () => {
     )
     if (!confirmed) return
 
-    const result = await cancelChallenge(challengeId, profile.id)
+    const result = await cancelChallenge(challengeId)
 
     if (result.success) {
       toast({
@@ -778,13 +776,18 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const handleLeaveVillage = useCallback(async () => {
     if (!profile?.id || !villageId) return
+    if (isSharedFreeVillage(villageId)) {
+      toast({
+        title: 'Shared village',
+        description: `${FREE_USERS_VILLAGE_NAME} is the home community for free learners and can't be left.`,
+        status: 'info',
+      })
+      onLeaveClose()
+      return
+    }
     setIsLeavingVillage(true)
     try {
       await removeMemberFromVillage({ villageId, userId: profile.id })
-      await Promise.all([
-        updateDoc(doc(db, 'users', profile.id), { villageId: null, updatedAt: serverTimestamp() }),
-        updateDoc(doc(db, 'profiles', profile.id), { villageId: null, updatedAt: serverTimestamp() }),
-      ])
       toast({ title: 'You have left the village', status: 'success' })
       onLeaveClose()
       setVillageDetails(null)
@@ -1023,7 +1026,8 @@ export const LeadershipBoardPage: React.FC = () => {
         <TabPanels>
           <TabPanel px={0}>
             <Stack spacing={6}>
-              {shouldShowVillageSection && (
+              {shouldShowVillageSection &&
+                ((isVillageLoading && villageId) || (shouldShowVillageCard && villageRouteId)) && (
                 <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
                   <CardBody>
                     {isVillageLoading && villageId ? (
@@ -1033,7 +1037,7 @@ export const LeadershipBoardPage: React.FC = () => {
                           Loading your village details...
                         </Text>
                       </VStack>
-                    ) : shouldShowVillageCard && villageRouteId ? (
+                    ) : (
                       <VStack spacing={4} py={4} textAlign="center">
                         <Icon as={isVillageCreator ? Crown : Users} color="brand.primary" boxSize={7} />
                         <Text fontSize="xl" fontWeight="bold" color="text.primary">
@@ -1083,25 +1087,6 @@ export const LeadershipBoardPage: React.FC = () => {
                             </Button>
                           )}
                         </Stack>
-                      </VStack>
-                    ) : (
-                      <VStack spacing={3} py={4} textAlign="center">
-                        <Icon as={Sparkles} color="brand.primary" boxSize={7} />
-                        <Text fontSize="xl" fontWeight="bold" color="text.primary">
-                          Personal leaderboard view
-                        </Text>
-                        <Text color="text.secondary">
-                          Join a village or organization to see peer rankings and ecosystem benchmarks.
-                        </Text>
-                        <Button
-                          bg="#350e6f"
-                          color="white"
-                          _hover={{ bg: '#4a1499' }}
-                          as="a"
-                          href={`mailto:${supportEmail}`}
-                        >
-                          Contact support to join a village
-                        </Button>
                       </VStack>
                     )}
                   </CardBody>

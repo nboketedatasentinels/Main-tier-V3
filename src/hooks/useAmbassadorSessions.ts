@@ -1,24 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   groupBookingsByStatus,
-  subscribeToAmbassadorSlots,
+  subscribeToCoachSlots,
   subscribeToLearnerBookings,
   subscribeToOpenSlotsForOrg,
   subscribeToSlotBookings,
-  type AmbassadorBooking,
-  type AmbassadorBookingStatus,
-  type AmbassadorSlot,
+  type CoachBooking,
+  type CoachBookingStatus,
+  type CoachSlot,
 } from '@/services/ambassadorSessionService'
 
 interface SlotsResult {
-  slots: AmbassadorSlot[]
+  slots: CoachSlot[]
   loading: boolean
   error: string | null
 }
 
 interface BookingsResult {
-  bookings: AmbassadorBooking[]
-  byStatus: Record<AmbassadorBookingStatus, AmbassadorBooking[]>
+  bookings: CoachBooking[]
+  byStatus: Record<CoachBookingStatus, CoachBooking[]>
   loading: boolean
   error: string | null
 }
@@ -27,13 +27,13 @@ const useSlotSubscription = (
   subscribe:
     | ((
         id: string,
-        onUpdate: (slots: AmbassadorSlot[]) => void,
+        onUpdate: (slots: CoachSlot[]) => void,
         onError?: (error: Error) => void,
       ) => () => void)
     | null,
   id: string | null | undefined,
 ): SlotsResult => {
-  const [slots, setSlots] = useState<AmbassadorSlot[]>([])
+  const [slots, setSlots] = useState<CoachSlot[]>([])
   const [loading, setLoading] = useState<boolean>(Boolean(id && subscribe))
   const [error, setError] = useState<string | null>(null)
 
@@ -70,13 +70,13 @@ const useBookingsSubscription = (
   subscribe:
     | ((
         id: string,
-        onUpdate: (bookings: AmbassadorBooking[]) => void,
+        onUpdate: (bookings: CoachBooking[]) => void,
         onError?: (error: Error) => void,
       ) => () => void)
     | null,
   id: string | null | undefined,
 ): BookingsResult => {
-  const [bookings, setBookings] = useState<AmbassadorBooking[]>([])
+  const [bookings, setBookings] = useState<CoachBooking[]>([])
   const [loading, setLoading] = useState<boolean>(Boolean(id && subscribe))
   const [error, setError] = useState<string | null>(null)
 
@@ -112,7 +112,7 @@ const useBookingsSubscription = (
 }
 
 export const useAmbassadorSlots = (ambassadorId?: string | null): SlotsResult =>
-  useSlotSubscription(subscribeToAmbassadorSlots, ambassadorId ?? null)
+  useSlotSubscription(subscribeToCoachSlots, ambassadorId ?? null)
 
 export const useOpenSlotsForOrg = (companyId?: string | null): SlotsResult =>
   useSlotSubscription(subscribeToOpenSlotsForOrg, companyId ?? null)

@@ -55,13 +55,13 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
 
 export const buildAmbassadorNavItems = (): NavigationSection[] => [
   {
-    title: 'Ambassador',
+    title: 'Coach',
     items: [
       { key: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
       { key: 'referrals', label: 'My Referrals', icon: Sparkles },
       { key: 'engagement', label: 'Ecosystem Engagement', icon: Users },
       { key: 'rewards', label: 'Rewards & Recognition', icon: Gift },
-      { key: 'resources', label: 'Ambassador Resources', icon: BookOpen },
+      { key: 'resources', label: 'Coach Resources', icon: BookOpen },
       { key: 'analytics', label: 'Performance Analytics', icon: BarChart3 },
     ],
   },

@@ -1,6 +1,7 @@
 import { supabase } from "@/services/supabase";
 import { getActivityDefinitionById, JourneyType } from "@/config/pointsConfig";
 import { UserProfile } from "@/types";
+import { isLearnerRole } from "@/utils/role";
 import { createApprovalRequest } from "./approvalsService";
 import { upsertChecklistActivity } from "./checklistService";
 import { awardChecklistPoints } from "./pointsService";
@@ -48,7 +49,9 @@ export async function getEligibleLearnersForActivity(
     const { data, error } = await query
     if (error) throw error
 
-    return ((data ?? []) as unknown as EligibleLearnerRow[]).map((row) => {
+    return ((data ?? []) as unknown as EligibleLearnerRow[])
+      .filter((row) => isLearnerRole(row.role))
+      .map((row) => {
       const fullName =
         row.full_name ||
         [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||

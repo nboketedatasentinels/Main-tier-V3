@@ -43,7 +43,7 @@ export const resolveLeadershipAvailability = (params: {
 
   const explicitMentor =
     normalizeBoolean(leadership?.hasMentor) ?? normalizeBoolean(organizationData?.hasMentor)
-  const explicitAmbassador =
+  const explicitCoach =
     normalizeBoolean(leadership?.hasAmbassador) ?? normalizeBoolean(organizationData?.hasAmbassador)
 
   const mentorAssignmentKeys = ['assignedMentorId', 'mentorId', 'mentor_id', 'assigned_mentor_id']
@@ -51,18 +51,18 @@ export const resolveLeadershipAvailability = (params: {
 
   const organizationMentorAssigned =
     hasAnyAssignmentId(organizationData, mentorAssignmentKeys) || hasAnyAssignmentId(leadership, mentorAssignmentKeys)
-  const organizationAmbassadorAssigned =
+  const organizationCoachAssigned =
     hasAnyAssignmentId(organizationData, ambassadorAssignmentKeys) || hasAnyAssignmentId(leadership, ambassadorAssignmentKeys)
 
   const profileMentorAssigned = Boolean(
     normalizeNonEmptyString(params.profile?.mentorOverrideId) || normalizeNonEmptyString(params.profile?.mentorId),
   )
-  const profileAmbassadorAssigned = Boolean(
+  const profileCoachAssigned = Boolean(
     normalizeNonEmptyString(params.profile?.ambassadorOverrideId) || normalizeNonEmptyString(params.profile?.ambassadorId),
   )
 
   const hasMentor = Boolean(explicitMentor || organizationMentorAssigned || profileMentorAssigned)
-  const hasAmbassador = Boolean(explicitAmbassador || organizationAmbassadorAssigned || profileAmbassadorAssigned)
+  const hasAmbassador = Boolean(explicitCoach || organizationCoachAssigned || profileCoachAssigned)
 
   return {
     hasMentor,

@@ -17,7 +17,7 @@ import { PRIVACY_STATEMENT_URL } from "@/config/app"
 
 interface FormData {
   fullName: string
-  gender: GenderOption
+  gender: GenderOption | ""
   email: string
   phoneNumber: string
   password: string
@@ -34,7 +34,7 @@ export const SignUpPage: React.FC = () => {
 
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
-    gender: "prefer_not_to_say",
+    gender: "",
     email: "",
     phoneNumber: "",
     password: "",
@@ -168,6 +168,7 @@ export const SignUpPage: React.FC = () => {
 
   const validate = () => {
     if (!formData.fullName.trim()) return "Full name is required."
+    if (!formData.gender) return "Gender is required."
 
     const email = formData.email.trim()
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -182,10 +183,10 @@ export const SignUpPage: React.FC = () => {
     if (formData.password.length < 8) return "Password must be at least 8 characters."
     if (formData.password !== formData.confirmPassword) return "Passwords do not match."
 
-    if (formData.companyCode.trim()) {
-      if (formData.companyCode.trim().length !== 6) return "Company code must be 6 characters."
-      if (companyCodeValid === false) return "Company code is invalid or inactive."
-    }
+    if (!formData.companyCode.trim()) return "Company code is required."
+    if (formData.companyCode.trim().length !== 6) return "Company code must be 6 characters."
+    if (companyCodeValid === false) return "Company code is invalid or inactive."
+    if (companyCodeValid !== true) return "Please wait for the company code to be verified."
 
     if (!formData.acceptTerms) return "You must accept the Terms of Use and Privacy Policy."
 
@@ -248,9 +249,8 @@ export const SignUpPage: React.FC = () => {
           lastName,
           fullName: formData.fullName.trim(),
           phoneNumber: formData.phoneNumber.trim(),
-          gender: formData.gender !== "prefer_not_to_say" ? formData.gender : undefined,
-          companyCode:
-            formData.companyCode.trim() ? formData.companyCode.trim() : undefined,
+          gender: formData.gender || undefined,
+          companyCode: formData.companyCode.trim(),
           companyId: validatedOrganization?.id,
           companyName: validatedOrganization?.name,
         },
@@ -337,7 +337,9 @@ export const SignUpPage: React.FC = () => {
         )}
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Full Name</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Full Name <span className="text-danger">*</span>
+          </label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
@@ -352,12 +354,18 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Gender (optional)</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Gender <span className="text-danger">*</span>
+          </label>
           <select
             value={formData.gender}
             onChange={e => handleChange("gender", e.target.value as GenderOption)}
             className="h-10 w-full rounded-md border border-border-control bg-surface-subtle px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
+            required
           >
+            <option value="" disabled>
+              Select gender
+            </option>
             <option value="prefer_not_to_say">Prefer not to say</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
@@ -367,7 +375,9 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Email</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Email <span className="text-danger">*</span>
+          </label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
@@ -383,7 +393,9 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Phone Number</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Phone Number <span className="text-danger">*</span>
+          </label>
           <div className="relative">
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
@@ -399,7 +411,9 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Company Code (optional)</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Company Code <span className="text-danger">*</span>
+          </label>
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
@@ -408,6 +422,7 @@ export const SignUpPage: React.FC = () => {
               placeholder="6-digit code"
               maxLength={6}
               className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm uppercase tracking-widest text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
+              required
             />
           </div>
           {isCheckingCode && (
@@ -436,7 +451,9 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Password</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Password <span className="text-danger">*</span>
+          </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
@@ -462,7 +479,9 @@ export const SignUpPage: React.FC = () => {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-text-secondary">Confirm password</label>
+          <label className="mb-1 block text-sm font-medium text-text-secondary">
+            Confirm password <span className="text-danger">*</span>
+          </label>
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
@@ -487,7 +506,7 @@ export const SignUpPage: React.FC = () => {
             required
           />
           <label htmlFor="acceptTerms" className="text-sm text-text-secondary">
-            I accept the{" "}
+            <span className="text-danger">*</span> I accept the{" "}
             <button
               type="button"
               onClick={() => setShowTermsModal(true)}

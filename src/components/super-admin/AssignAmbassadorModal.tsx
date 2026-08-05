@@ -26,9 +26,9 @@ interface Props {
   onClose: () => void
   organization?: OrganizationRecord | null
   onSubmit: (ambassadorId: string | null) => Promise<void>
-  ambassadors: OrganizationLead[]
-  isLoadingAmbassadors?: boolean
-  ambassadorsError?: string | null
+  coaches: OrganizationLead[]
+  isLoadingCoaches?: boolean
+  coachesError?: string | null
 }
 
 export const AssignAmbassadorModal: React.FC<Props> = ({
@@ -36,17 +36,17 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
   onClose,
   organization,
   onSubmit,
-  ambassadors,
-  isLoadingAmbassadors = false,
-  ambassadorsError = null,
+  coaches,
+  isLoadingCoaches = false,
+  coachesError = null,
 }) => {
-  const [ambassador, setAmbassador] = useState('')
-  const [ambassadorSearch, setAmbassadorSearch] = useState('')
+  const [coach, setCoach] = useState('')
+  const [ambassadorSearch, setCoachSearch] = useState('')
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
-    setAmbassador(organization?.assignedAmbassadorId || '')
+    setCoach(organization?.assignedAmbassadorId || '')
     setSubmitError(null)
   }, [organization])
 
@@ -55,34 +55,34 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
     setSubmitError(null)
   }, [isOpen])
 
-  const sortedAmbassadors = useMemo(
-    () => [...ambassadors].sort((a, b) => a.name.localeCompare(b.name)),
-    [ambassadors],
+  const sortedCoaches = useMemo(
+    () => [...coaches].sort((a, b) => a.name.localeCompare(b.name)),
+    [coaches],
   )
 
-  const filteredAmbassadors = useMemo(() => {
+  const filteredCoaches = useMemo(() => {
     const term = ambassadorSearch.trim().toLowerCase()
-    if (!term) return sortedAmbassadors
-    return sortedAmbassadors.filter((item) => {
+    if (!term) return sortedCoaches
+    return sortedCoaches.filter((item) => {
       const email = item.email?.toLowerCase() ?? ''
       return item.name.toLowerCase().includes(term) || email.includes(term)
     })
-  }, [ambassadorSearch, sortedAmbassadors])
+  }, [ambassadorSearch, sortedCoaches])
 
-  const missingAmbassador =
-    ambassador && !ambassadors.some((item) => item.id === ambassador)
-      ? { id: ambassador, name: `Current ambassador (${ambassador})` }
+  const missingCoach =
+    coach && !coaches.some((item) => item.id === coach)
+      ? { id: coach, name: `Current coach (${coach})` }
       : null
 
   const handleSubmit = async () => {
     setLoading(true)
     setSubmitError(null)
     try {
-      await onSubmit(ambassador ? ambassador : null)
+      await onSubmit(coach ? coach : null)
       onClose()
     } catch (error) {
       console.error(error)
-      setSubmitError(error instanceof Error ? error.message : 'Unable to save ambassador assignment.')
+      setSubmitError(error instanceof Error ? error.message : 'Unable to save coach assignment.')
     } finally {
       setLoading(false)
     }
@@ -92,60 +92,60 @@ export const AssignAmbassadorModal: React.FC<Props> = ({
     <Modal isOpen={isOpen} onClose={onClose} size="lg">
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>Assign ambassador</ModalHeader>
+        <ModalHeader>Assign coach</ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           <Stack spacing={4}>
             <Text color="gray.700">
-              Search ambassadors and update the assignment for this organization.
+              Search coaches and update the assignment for this organization.
             </Text>
             <FormControl>
-              <FormLabel>Search ambassador</FormLabel>
+              <FormLabel>Search coach</FormLabel>
               <Input
                 value={ambassadorSearch}
-                onChange={(e) => setAmbassadorSearch(e.target.value)}
+                onChange={(e) => setCoachSearch(e.target.value)}
                 placeholder="Type a name or email"
               />
             </FormControl>
             <FormControl>
-              <FormLabel>Ambassador</FormLabel>
+              <FormLabel>Coach</FormLabel>
               <Select
-                value={ambassador}
-                onChange={(e) => setAmbassador(e.target.value)}
-                placeholder="Select ambassador"
-                isDisabled={isLoadingAmbassadors}
+                value={coach}
+                onChange={(e) => setCoach(e.target.value)}
+                placeholder="Select coach"
+                isDisabled={isLoadingCoaches}
               >
-                <option value="">- No ambassador -</option>
-                {missingAmbassador ? (
-                  <option value={missingAmbassador.id}>{missingAmbassador.name}</option>
+                <option value="">- No coach -</option>
+                {missingCoach ? (
+                  <option value={missingCoach.id}>{missingCoach.name}</option>
                 ) : null}
-                {filteredAmbassadors.map((ambassadorOption) => (
+                {filteredCoaches.map((ambassadorOption) => (
                   <option key={ambassadorOption.id} value={ambassadorOption.id}>
                     {ambassadorOption.name}
                     {ambassadorOption.email ? ` - ${ambassadorOption.email}` : ''}
                   </option>
                 ))}
               </Select>
-              {isLoadingAmbassadors ? (
+              {isLoadingCoaches ? (
                 <FormHelperText>
                   <HStack spacing={2}>
                     <Spinner size="xs" />
-                    <Text>Loading ambassadors...</Text>
+                    <Text>Loading coaches...</Text>
                   </HStack>
                 </FormHelperText>
               ) : null}
-              {!isLoadingAmbassadors && ambassadorsError ? (
-                <FormHelperText color="red.500">{ambassadorsError}</FormHelperText>
+              {!isLoadingCoaches && coachesError ? (
+                <FormHelperText color="red.500">{coachesError}</FormHelperText>
               ) : null}
-              {!isLoadingAmbassadors && !ambassadorsError && !filteredAmbassadors.length ? (
-                <FormHelperText color="gray.600">No ambassadors available.</FormHelperText>
+              {!isLoadingCoaches && !coachesError && !filteredCoaches.length ? (
+                <FormHelperText color="gray.600">No coaches available.</FormHelperText>
               ) : null}
             </FormControl>
             {organization && (
               <Stack spacing={1} fontSize="sm" color="gray.600">
                 <Text>
-                  Current ambassador:{' '}
-                  {ambassadors.find((item) => item.id === organization.assignedAmbassadorId)?.name || 'Unassigned'}
+                  Current coach:{' '}
+                  {coaches.find((item) => item.id === organization.assignedAmbassadorId)?.name || 'Unassigned'}
                 </Text>
                 <Badge colorScheme={organization.status === 'active' ? 'green' : 'orange'} w="fit-content">
                   {organization.status}

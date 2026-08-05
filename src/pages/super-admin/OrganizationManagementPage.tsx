@@ -98,9 +98,9 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   const [mentors, setMentors] = useState<OrganizationLead[]>([])
   const [isLoadingMentors, setIsLoadingMentors] = useState(false)
   const [mentorsError, setMentorsError] = useState<string | null>(null)
-  const [ambassadors, setAmbassadors] = useState<OrganizationLead[]>([])
-  const [isLoadingAmbassadors, setIsLoadingAmbassadors] = useState(false)
-  const [ambassadorsError, setAmbassadorsError] = useState<string | null>(null)
+  const [coaches, setCoaches] = useState<OrganizationLead[]>([])
+  const [isLoadingCoaches, setIsLoadingCoaches] = useState(false)
+  const [coachesError, setCoachesError] = useState<string | null>(null)
 
   const createModal = useDisclosure()
   const editModal = useDisclosure()
@@ -189,18 +189,18 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
   }, [toast])
 
   useEffect(() => {
-    setIsLoadingAmbassadors(true)
-    setAmbassadorsError(null)
+    setIsLoadingCoaches(true)
+    setCoachesError(null)
     const unsubscribe = listenToAmbassadors(
       (ambassadorOptions) => {
-        setAmbassadors(ambassadorOptions)
-        setIsLoadingAmbassadors(false)
+        setCoaches(ambassadorOptions)
+        setIsLoadingCoaches(false)
       },
       (error) => {
         console.error(error)
-        setAmbassadorsError('Unable to load ambassadors.')
-        toast({ title: 'Unable to load ambassadors', status: 'error' })
-        setIsLoadingAmbassadors(false)
+        setCoachesError('Unable to load coaches.')
+        toast({ title: 'Unable to load coaches', status: 'error' })
+        setIsLoadingCoaches(false)
       },
     )
     return unsubscribe
@@ -382,7 +382,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
     }
   }
 
-  const handleAssignAmbassador = async (ambassadorId: string | null) => {
+  const handleAssignCoach = async (ambassadorId: string | null) => {
     if (!selectedOrg?.id) return
     try {
       if (ambassadorId) {
@@ -402,7 +402,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
       // Best-effort audit (Firestore); must not fail the Supabase assignment.
       try {
         await logAdminAction({
-          action: 'Ambassador assignment updated',
+          action: 'Coach assignment updated',
           organizationName: selectedOrg.name,
           organizationCode: selectedOrg.code,
           adminId,
@@ -410,14 +410,14 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
           metadata: { ambassadorId },
         })
       } catch (auditError) {
-        console.warn('[OrgManagement] ambassador audit log failed', auditError)
+        console.warn('[OrgManagement] coach audit log failed', auditError)
       }
-      toast({ title: ambassadorId ? 'Ambassador assigned' : 'Ambassador removed', status: 'success' })
+      toast({ title: ambassadorId ? 'Coach assigned' : 'Coach removed', status: 'success' })
       assignAmbassadorModal.onClose()
     } catch (error) {
       console.error(error)
       const message = error instanceof Error ? error.message : 'Unexpected error'
-      toast({ title: 'Unable to update ambassador assignment', description: message, status: 'error' })
+      toast({ title: 'Unable to update coach assignment', description: message, status: 'error' })
       return
     }
   }
@@ -785,10 +785,10 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
           assignAmbassadorModal.onClose()
         }}
         organization={selectedOrg || undefined}
-        onSubmit={handleAssignAmbassador}
-        ambassadors={ambassadors}
-        isLoadingAmbassadors={isLoadingAmbassadors}
-        ambassadorsError={ambassadorsError}
+        onSubmit={handleAssignCoach}
+        coaches={coaches}
+        isLoadingCoaches={isLoadingCoaches}
+        coachesError={coachesError}
       />
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}

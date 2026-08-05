@@ -22,7 +22,7 @@ export type ActivityBehavior = {
   requiresApproval: boolean
   visibility: {
     requiresMentor: boolean
-    requiresAmbassador: boolean
+    requiresCoach: boolean
   }
 }
 
@@ -71,7 +71,7 @@ export const classifyActivityBehavior = (activity: ActivityDef): ActivityBehavio
     requiresApproval: Boolean(activity.requiresApproval),
     visibility: {
       requiresMentor: Boolean(activity.visibility?.requiresMentor),
-      requiresAmbassador: Boolean(activity.visibility?.requiresAmbassador),
+      requiresCoach: Boolean(activity.visibility?.requiresCoach),
     },
   }
 }
@@ -97,7 +97,7 @@ export const calculateActivityAvailability = (
     return { state: 'locked', reason: 'missing_mentor', isScheduledForWeek: false }
   }
 
-  if (behavior.visibility.requiresAmbassador && !hasAmbassador) {
+  if (behavior.visibility.requiresCoach && !hasAmbassador) {
     return { state: 'locked', reason: 'missing_ambassador', isScheduledForWeek: false }
   }
 

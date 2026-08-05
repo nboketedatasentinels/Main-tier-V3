@@ -612,7 +612,7 @@ export function useLeadershipRoster(orgId?: string) {
     [roster]
   )
 
-  const getAmbassadors = useCallback(
+  const getCoaches = useCallback(
     () => roster.filter((l) => l.role === 'ambassador'),
     [roster]
   )
@@ -637,7 +637,7 @@ export function useLeadershipRoster(orgId?: string) {
     error,
     getRoster,
     getMentors,
-    getAmbassadors,
+    getCoaches,
     getPartners,
     getAvailableLeaders,
   }

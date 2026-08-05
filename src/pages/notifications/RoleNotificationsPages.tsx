@@ -107,7 +107,7 @@ export const AmbassadorNotificationsPage = () => {
   return (
     <AmbassadorLayout
       activeItem="notifications"
-      ambassadorName={`${profile?.firstName || 'Ambassador'} ${profile?.lastName || ''}`.trim()}
+      ambassadorName={`${profile?.firstName || 'Coach'} ${profile?.lastName || ''}`.trim()}
       onNavigate={() => navigate('/ambassador/dashboard')}
     >
       <NotificationsPage subtitle="Messages and updates sent to you." />

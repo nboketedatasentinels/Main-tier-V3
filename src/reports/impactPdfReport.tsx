@@ -5,10 +5,10 @@ import type { ExportFilters } from '@/pages/impact/ImpactLogPage'
 
 // ============================================
 // PROFESSIONAL IMPACT REPORT PDF
-// Design adapted from T4L-Ambassadors
+// Design adapted from T4L-Coaches
 // ============================================
 
-// Color palette matching T4L-Ambassadors design
+// Color palette matching T4L-Coaches design
 const COLORS = {
   primaryDark: '#271b48',
   primary: '#681fa5',

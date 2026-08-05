@@ -6,7 +6,7 @@ import type { UserProfile } from '@/types'
 // Monotonic suffix so each learner subscription gets a distinct channel topic.
 let learnersChannelSeq = 0
 
-// Columns read when listing org mentors/ambassadors from `profiles`; the `data`
+// Columns read when listing org mentors/coaches from `profiles`; the `data`
 // jsonb carries long-tail identity fields not promoted to columns.
 const MEMBER_OPTION_COLUMNS =
   'id, email, first_name, last_name, full_name, company_id, company_code, data'
@@ -111,7 +111,7 @@ export const fetchMentorsForOrg = async (params: {
   return list.sort((a, b) => a.fullName.localeCompare(b.fullName))
 }
 
-export interface OrgAmbassadorOption {
+export interface OrgCoachOption {
   id: string
   fullName: string
   email: string | null
@@ -120,15 +120,15 @@ export interface OrgAmbassadorOption {
 }
 
 /**
- * Returns ambassadors whose profile companyId/companyCode matches the target organization.
- * Falls back to returning all ambassadors when no org-specific ambassadors exist, mirroring
+ * Returns coaches whose profile companyId/companyCode matches the target organization.
+ * Falls back to returning all coaches when no org-specific coaches exist, mirroring
  * the mentor lookup behaviour so partner admins can still see the global roster during
  * org bootstrapping.
  */
 export const fetchAmbassadorsForOrg = async (params: {
   companyId: string
   companyCode?: string | null
-}): Promise<OrgAmbassadorOption[]> => {
+}): Promise<OrgCoachOption[]> => {
   const { companyId, companyCode } = params
   if (!companyId) return []
 
@@ -138,16 +138,16 @@ export const fetchAmbassadorsForOrg = async (params: {
     .eq('role', 'ambassador')
   if (error) throw new Error(error.message)
 
-  const allAmbassadors: OrgAmbassadorOption[] = (data ?? []).map((row) =>
-    mapProfileToMemberOption(row as Record<string, unknown>, 'Unknown ambassador'),
+  const allCoaches: OrgCoachOption[] = (data ?? []).map((row) =>
+    mapProfileToMemberOption(row as Record<string, unknown>, 'Unknown coach'),
   )
 
-  const orgMatched = allAmbassadors.filter((ambassador) => {
-    if (ambassador.companyId && ambassador.companyId === companyId) return true
-    if (companyCode && ambassador.companyCode && ambassador.companyCode === companyCode) return true
+  const orgMatched = allCoaches.filter((coach) => {
+    if (coach.companyId && coach.companyId === companyId) return true
+    if (companyCode && coach.companyCode && coach.companyCode === companyCode) return true
     return false
   })
-  const list = orgMatched.length > 0 ? orgMatched : allAmbassadors
+  const list = orgMatched.length > 0 ? orgMatched : allCoaches
   return list.sort((a, b) => a.fullName.localeCompare(b.fullName))
 }
 

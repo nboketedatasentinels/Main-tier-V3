@@ -57,10 +57,10 @@ import { assignOrganizations as assignAdminOrganizations } from '@/services/supe
 import { OrganizationRecord } from '@/types/admin'
 import { AccountStatus, TransformationTier } from '@/types'
 import type { JourneyType } from '@/config/pointsConfig'
-import { normalizeRole } from '@/utils/role'
+import { normalizeRole, formatRoleLabel as formatStandardRoleLabel } from '@/utils/role'
 import { isFreeUser } from '@/utils/membership'
 
-const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador']
+const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador', 'verifier']
 const roleDescriptions: Record<ManagedUserRole, string> = {
   user: 'Standard learner access.',
   partner: 'Organization admin with multi-organization scope.',
@@ -68,7 +68,8 @@ const roleDescriptions: Record<ManagedUserRole, string> = {
   super_admin: 'Platform-wide administrative access.',
   team_leader: 'Legacy team leadership role.',
   mentor: 'Mentor access with organization assignments.',
-  ambassador: 'Ambassador access with organization assignments.',
+  ambassador: 'Coach access with organization assignments.',
+  verifier: 'Impact log verifier (in or out of org) — approves entries by email.',
 }
 const multiOrganizationRoles = new Set<ManagedUserRole>(['partner', 'mentor', 'ambassador'])
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']
@@ -189,7 +190,7 @@ const formatRoleLabel = (role?: ManagedUserRole | string, membershipStatus?: Mem
     if (membershipStatus === 'inactive') return 'Inactive Member'
     return 'User'
   }
-  return formatTokenLabel(role)
+  return formatStandardRoleLabel(role)
 }
 
 const formatMembershipLabel = (status?: MembershipStatus | string | null) => {
@@ -222,7 +223,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const { assignedOrganizationIds } = usePartnerAdminSnapshot({ enabled: isAdmin && !isSuperAdmin })
   const [organizations, setOrganizations] = useState<Array<{ id: string; name: string; code?: string }>>([])
   const [error, setError] = useState<string | null>(null)
-  const [roleCounts, setRoleCounts] = useState({ free: 0, paid: 0, partners: 0, mentors: 0, ambassadors: 0 })
+  const [roleCounts, setRoleCounts] = useState({ free: 0, paid: 0, partners: 0, mentors: 0, coaches: 0 })
   const [pendingInvites, setPendingInvites] = useState(0)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkLoading, setBulkLoading] = useState(false)
@@ -371,6 +372,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     team_leader: 'orange',
     mentor: 'blue',
     ambassador: 'green',
+    verifier: 'cyan',
   }
 
   const currentPromotionRole = (promotionRoleSelection || 'user') as ManagedUserRole
@@ -854,7 +856,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
         <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
         <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
         <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
-        <MetricCard label="Ambassadors" value={roleCounts.ambassadors} icon={ShieldCheck} helper="Ambassador role access." />
+        <MetricCard label="Coaches" value={roleCounts.coaches} icon={ShieldCheck} helper="Coach role access." />
         <MetricCard label="Pending Invites" value={pendingInvites} icon={ShieldCheck} helper="Invited, not yet signed up." />
       </SimpleGrid>
 

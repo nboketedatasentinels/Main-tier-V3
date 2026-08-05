@@ -89,7 +89,7 @@ export interface UserProfile {
   ambassadorId?: string
   mentorOverrideId?: string | null
   ambassadorOverrideId?: string | null
-  isActiveAmbassador?: boolean
+  isActiveCoach?: boolean
 
   // Journey Status
   journeyStatus?: 'active' | 'completed' | 'failed' | 'abandoned'
@@ -286,7 +286,7 @@ export interface ActivityCatalogEntry {
   frequencyNote?: string
   visibility?: {
     requiresMentor?: boolean
-    requiresAmbassador?: boolean
+    requiresCoach?: boolean
   }
   isActive: boolean
   createdAt: string

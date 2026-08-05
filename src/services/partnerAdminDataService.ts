@@ -2,7 +2,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
 import { normalizeTimestamp } from '@/utils/partnerDashboardUtils'
-import { normalizeRole } from '@/utils/role'
+import { normalizeRole, isLearnerRole } from '@/utils/role'
 import type {
   PartnerAdminDataSnapshot,
   PartnerAdminPointsOverview,
@@ -114,6 +114,9 @@ const fetchUsersByCompanyCodes = async (
           nudgeEnabled?: boolean
           adminNotes?: string
         }
+
+        // Partners / mentors / coaches / admins are never "users".
+        if (!isLearnerRole(data.role)) return
 
         // Build name with fallbacks
         const fullName =

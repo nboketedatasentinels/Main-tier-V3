@@ -178,7 +178,7 @@ async function executeAdjustPassMarkAction(
     const adjustments = { ...orgConfig.passMark.adjustments }
     // Map reason to config key
     if (config.reason === 'no_mentor') adjustments.noMentorAvailable = config.amount
-    else if (config.reason === 'no_ambassador') adjustments.noAmbassadorAvailable = config.amount
+    else if (config.reason === 'no_ambassador') adjustments.noCoachAvailable = config.amount
     else if (config.reason === 'no_partner') adjustments.noPartnerAvailable = config.amount
     else if (config.reason === 'capacity_limited') adjustments.limitedCapacity = config.amount
     // custom is not stored in standard adjustments object structure efficiently without strict typing, ignoring for now or handling as custom override

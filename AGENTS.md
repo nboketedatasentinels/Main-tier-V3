@@ -5,7 +5,7 @@ Codex should treat this file as authoritative.
 
 Project Overview
 
-T4L (Transformation Leaders) is a comprehensive leadership transformation and professional development platform.
+T4L (Transformation Leader) is a comprehensive leadership transformation and professional development platform.
 
 It is a React 18 + TypeScript SPA built with Vite, using Firebase (Firestore, Auth, Cloud Functions, Storage) for backend services, Chakra UI + Tailwind CSS for styling, Stripe for payments, and SendGrid for transactional emails.
 

@@ -135,7 +135,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                     <HStack spacing={2}>
                       <Avatar size="sm" name={getDisplayName(ambassadorProfile, 'Member')} src={getAvatarSrc(ambassadorProfile)} />
                       <VStack spacing={0} align="start">
-                        <Text fontSize="xs" color="text.secondary">Ambassador</Text>
+                        <Text fontSize="xs" color="text.secondary">Coach</Text>
                         <Text fontWeight="semibold">
                           {getDisplayName(ambassadorProfile, 'Member')}
                         </Text>
@@ -162,7 +162,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
                     <HStack spacing={2}>
                       <Avatar size="sm" name={getDisplayName(mentorProfile, 'Member')} src={getAvatarSrc(mentorProfile)} />
                       <VStack spacing={0} align="start">
-                        <Text fontSize="xs" color="text.secondary">Mentor & Ambassador</Text>
+                        <Text fontSize="xs" color="text.secondary">Mentor & Coach</Text>
                         <Text fontWeight="semibold">
                           {getDisplayName(mentorProfile, 'Member')}
                         </Text>

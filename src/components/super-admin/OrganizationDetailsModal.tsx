@@ -189,10 +189,10 @@ export const OrganizationDetailsModal: React.FC<Props> = ({
                   <InfoItem label="Mentor" value={organization.assignedMentorName || organization.assignedMentorEmail || '-'} />
                   <InfoItem label="Mentor email" value={organization.assignedMentorEmail || '-'} />
                   <InfoItem
-                    label="Ambassador"
+                    label="Coach"
                     value={organization.assignedAmbassadorName || organization.assignedAmbassadorEmail || '-'}
                   />
-                  <InfoItem label="Ambassador email" value={organization.assignedAmbassadorEmail || '-'} />
+                  <InfoItem label="Coach email" value={organization.assignedAmbassadorEmail || '-'} />
                 </Stack>
               </Box>
 
