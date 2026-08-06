@@ -2,7 +2,6 @@ import {
   Box,
   Button,
   Flex,
-  Grid,
   Heading,
   HStack,
   Modal,
@@ -1185,29 +1184,26 @@ export const WeeklyGlancePage = () => {
           </Skeleton>
         </SimpleGrid>
 
-        {/* Rules of Engagement player (~2/3) on the left; assigned courses (~1/3) on the right. */}
-        <Grid
-          templateColumns={{
-            base: '1fr',
-            lg: showAssignedCourses ? '2fr 1fr' : '1fr',
-          }}
-          gap={{ base: 6, lg: 6 }}
-          alignItems="start"
+        {/* Rules of Engagement (~2/3) flex-left; assigned courses (~1/3) flex-right. */}
+        <Flex
+          direction={{ base: 'column', md: 'row' }}
+          align="stretch"
+          gap={{ base: 6, md: 6 }}
           w="full"
         >
-          <Box minW={0} w="full">
+          <Box flex={{ base: 'none', md: showAssignedCourses ? '2 1 0%' : '1 1 auto' }} minW={0} w="full">
             <RulesOfEngagementVideo showCopy={false} />
           </Box>
 
           {showAssignedCourses && (
-            <Stack minW={0} w="full" spacing={4}>
+            <Stack flex={{ base: 'none', md: '1 1 0%' }} minW={0} w="full" spacing={4}>
               {assignedLoading && !assignedCourses.length ? (
                 <Stack spacing={4}>
                   <Skeleton h="170px" rounded="xl" />
                   <Skeleton h="170px" rounded="xl" />
                 </Stack>
               ) : (
-                <Stack spacing={4}>
+                <Stack spacing={4} h="full">
                   {assignedCourses.map((course) => (
                     <AssignedCourseCard
                       key={`${course.periodLabel}-${course.id}`}
@@ -1231,7 +1227,7 @@ export const WeeklyGlancePage = () => {
               )}
             </Stack>
           )}
-        </Grid>
+        </Flex>
 
         {shouldShowBuildVillageCard && (
           <Box

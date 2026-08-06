@@ -71,44 +71,12 @@ export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ 
       overflow="hidden"
     >
       <Flex
-        direction={{ base: 'column', lg: 'row' }}
+        direction={{ base: 'column', md: 'row' }}
         align="stretch"
-        gap={{ base: 5, lg: 8 }}
+        gap={{ base: 5, md: 6 }}
         p={showCopy ? { base: 5, md: 6, lg: 8 } : 0}
       >
-        {showCopy && (
-        <Stack spacing={4} flex="1 1 0" maxW={{ lg: '380px' }} justify="center">
-          <Text
-            color="purple.700"
-            textTransform="uppercase"
-            letterSpacing="0.16em"
-            fontSize="xs"
-            fontWeight="semibold"
-          >
-            Programme Orientation
-          </Text>
-
-          <Heading
-            as="h2"
-            size="lg"
-            color="gray.900"
-            lineHeight="1.2"
-            letterSpacing="-0.01em"
-            fontWeight="semibold"
-          >
-            Rules of Engagement
-          </Heading>
-
-          <Text color="gray.600" fontSize="sm" lineHeight="1.7">
-            A short orientation from the T4L team. Please review before
-            beginning the programme. It outlines the expectations, the
-            cadence, and the professional standards that apply throughout
-            your journey.
-          </Text>
-        </Stack>
-        )}
-
-        <Box flex="1 1 0" minW={0} w="full">
+        <Box flex={{ base: 'none', md: '2 1 0%' }} minW={0} w="full" order={{ base: 1, md: 1 }}>
           <MotionBox
             initial={prefersReducedMotion ? false : MORPH_INITIAL}
             animate={prefersReducedMotion ? undefined : MORPH_ANIMATE}
@@ -167,6 +135,45 @@ export const RulesOfEngagementVideo: React.FC<RulesOfEngagementVideoProps> = ({ 
             )}
           </MotionBox>
         </Box>
+
+        {showCopy && (
+          <Stack
+            spacing={4}
+            flex={{ base: 'none', md: '1 1 0%' }}
+            minW={0}
+            w="full"
+            justify="center"
+            order={{ base: 2, md: 2 }}
+          >
+            <Text
+              color="purple.700"
+              textTransform="uppercase"
+              letterSpacing="0.16em"
+              fontSize="xs"
+              fontWeight="semibold"
+            >
+              Programme Orientation
+            </Text>
+
+            <Heading
+              as="h2"
+              size="lg"
+              color="gray.900"
+              lineHeight="1.2"
+              letterSpacing="-0.01em"
+              fontWeight="semibold"
+            >
+              Rules of Engagement
+            </Heading>
+
+            <Text color="gray.600" fontSize="sm" lineHeight="1.7">
+              A short orientation from the T4L team. Please review before
+              beginning the programme. It outlines the expectations, the
+              cadence, and the professional standards that apply throughout
+              your journey.
+            </Text>
+          </Stack>
+        )}
       </Flex>
     </Box>
   )
