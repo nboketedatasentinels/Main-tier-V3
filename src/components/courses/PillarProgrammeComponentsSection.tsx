@@ -33,13 +33,16 @@ import { PILLAR_METADATA, type Pillar } from '@/types/pillar'
 
 interface Props {
   pillar: Pillar | null
+  /** When true, render only the three cards (no section chrome). Used under Week 1 on the checklist. */
+  cardsOnly?: boolean
 }
 
-export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) => {
+export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar, cardsOnly = false }) => {
   const location = useLocation()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
+    if (cardsOnly) return
     if (location.hash !== '#programme-components') return
     const node = containerRef.current
     if (!node) return
@@ -48,12 +51,28 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
       node.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
     return () => window.cancelAnimationFrame(id)
-  }, [location.hash, pillar])
+  }, [cardsOnly, location.hash, pillar])
 
   if (!pillar) return null
   const entries = PILLAR_PROGRAMME_COMPONENTS[pillar] ?? []
   if (entries.length === 0) return null
   const pillarLabel = PILLAR_METADATA[pillar].shortName
+
+  const cards = (
+    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+      {entries.map((entry) => (
+        <ProgrammeComponentCard key={entry.id} entry={entry} />
+      ))}
+    </SimpleGrid>
+  )
+
+  if (cardsOnly) {
+    return (
+      <Box px={{ base: 3, md: 4 }} py={4} bg="white" borderBottom="1px solid" borderColor="gray.100">
+        {cards}
+      </Box>
+    )
+  }
 
   return (
     <Box
@@ -105,11 +124,7 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar }) =>
           </Text>
         </Stack>
 
-        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-          {entries.map((entry) => (
-            <ProgrammeComponentCard key={entry.id} entry={entry} />
-          ))}
-        </SimpleGrid>
+        {cards}
       </Stack>
     </Box>
   )

@@ -19,6 +19,11 @@ import {
   PARALLEL_WINDOW_SIZE_WEEKS,
 } from '@/utils/windowCalculations'
 import { ActivityRow } from './ActivityRow'
+import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
+import { useUserPillar } from '@/hooks/useUserPillar'
+
+/** Checklist activity ids that mirror the Capstone / Case Study / Practical cards. */
+const PROGRAMME_COMPONENT_ACTIVITY_IDS = new Set(['capstone', 'case_study', 'practical'])
 
 type WeekRowKind = 'todo' | 'pending' | 'done'
 
@@ -187,12 +192,18 @@ export const ActivityList = ({
   onRefreshLedger,
   isActivityBusy,
 }: ActivityListProps) => {
+  const { pillar } = useUserPillar()
+  // Free practitioners (Starter Kit) see the same Capstone / Case Study /
+  // Practical cards under Week 1 as on My Courses - not as scattered rows.
+  const showProgrammeCardsUnderWeek1 = pillar === 'starter_kit'
+
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
 
-  const ordered = useMemo(
-    () => visibleActivities.filter((activity) => activity?.id),
-    [visibleActivities],
-  )
+  const ordered = useMemo(() => {
+    const withId = visibleActivities.filter((activity) => activity?.id)
+    if (!showProgrammeCardsUnderWeek1) return withId
+    return withId.filter((activity) => !PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id))
+  }, [visibleActivities, showProgrammeCardsUnderWeek1])
 
   // Full journey capacity (points × occurrence caps) - e.g. 60,000 for 6W.
   // Do NOT derive the header from currently open To-do rows: partner-issued
@@ -580,9 +591,15 @@ export const ActivityList = ({
 
   const renderTodoSection = () => {
     const weekKeys = Array.from(grouped.todoByWeek.keys()).sort((a, b) => a - b)
-    if (weekKeys.length === 0) return null
+    // Always surface Week 1 when Starter Kit cards belong there, even if no
+    // other To-do rows are scheduled for that week yet.
+    const displayWeekKeys =
+      showProgrammeCardsUnderWeek1 && !weekKeys.includes(1)
+        ? [1, ...weekKeys]
+        : weekKeys
+    if (displayWeekKeys.length === 0) return null
     const isCollapsed = collapsedSections.todo
-    const visibleRowCount = weekKeys.reduce(
+    const visibleRowCount = displayWeekKeys.reduce(
       (sum, week) => sum + (grouped.todoByWeek.get(week)?.length ?? 0),
       0,
     )
@@ -617,7 +634,7 @@ export const ActivityList = ({
             {SECTION_TITLES.todo}
           </Text>
           <Text fontSize="xs" color="gray.500">
-            {visibleRowCount}
+            {visibleRowCount + (showProgrammeCardsUnderWeek1 ? 3 : 0)}
           </Text>
           {journeyPointsTotal > 0 && (
             <Text fontSize="xs" color="#350e6f" fontWeight="semibold" ml="auto">
@@ -628,9 +645,10 @@ export const ActivityList = ({
 
         <Collapse in={!isCollapsed} animateOpacity>
           <ColumnHeader />
-          {weekKeys.map((week) => {
+          {displayWeekKeys.map((week) => {
             const weekRows = grouped.todoByWeek.get(week) ?? []
-            if (weekRows.length === 0) return null
+            const showCards = showProgrammeCardsUnderWeek1 && week === 1
+            if (weekRows.length === 0 && !showCards) return null
             const isWeekCollapsed = Boolean(collapsedTodoWeeks[week])
             const weekPoints = weekRows
               .filter((row) => (row.rowKind ?? 'todo') === 'todo')
@@ -690,7 +708,7 @@ export const ActivityList = ({
                     </Text>
                   )}
                   <Text fontSize="xs" color={isCurrent ? '#350e6f' : 'gray.500'}>
-                    {weekRows.length}
+                    {weekRows.length + (showCards ? 3 : 0)}
                   </Text>
                   {weekPoints > 0 && (
                     <Text
@@ -704,6 +722,9 @@ export const ActivityList = ({
                   )}
                 </Flex>
                 <Collapse in={!isWeekCollapsed} animateOpacity>
+                  {showCards && (
+                    <PillarProgrammeComponentsSection pillar={pillar} cardsOnly />
+                  )}
                   {weekRows.map(
                     ({
                       activity,
