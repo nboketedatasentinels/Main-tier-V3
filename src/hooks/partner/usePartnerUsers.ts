@@ -58,6 +58,8 @@ type FirestorePartnerUser = Partial<PartnerUser> & {
   lastName?: string
   companyCode?: string
   company_code?: string
+  journeyType?: string
+  journey_type?: string
   accountStatus?: string
   registrationDate?: unknown
   registration_date?: unknown

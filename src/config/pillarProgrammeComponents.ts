@@ -49,30 +49,6 @@ export interface ProgrammeComponentEntry {
   parts?: ProgrammeComponentPart[]
 }
 
-const placeholderTriple = (pillarSlug: string): ProgrammeComponentEntry[] => [
-  {
-    id: `${pillarSlug}-capstone`,
-    type: 'capstone',
-    title: 'Capstone',
-    description: 'Content coming soon.',
-    status: 'coming_soon',
-  },
-  {
-    id: `${pillarSlug}-case-study`,
-    type: 'case_study',
-    title: 'Case Study',
-    description: 'Content coming soon.',
-    status: 'coming_soon',
-  },
-  {
-    id: `${pillarSlug}-practical`,
-    type: 'practical',
-    title: 'Practical',
-    description: 'Content coming soon.',
-    status: 'coming_soon',
-  },
-]
-
 export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry[]> = {
   leading_self: [
     {
