@@ -61,6 +61,22 @@ alter table public.impact_logs
   alter column created_at set default now(),
   alter column updated_at set default now();
 
+-- Legacy scaffold uses text ids with no default - inserts would fail without this.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'impact_logs' and column_name = 'id'
+  ) then
+    begin
+      alter table public.impact_logs alter column id set default gen_random_uuid()::text;
+    exception
+      when others then
+        raise notice 'impact_logs id default skipped: %', sqlerrm;
+    end;
+  end if;
+end $$;
+
 create index if not exists impact_logs_uid_created_idx
   on public.impact_logs (uid, created_at desc);
 

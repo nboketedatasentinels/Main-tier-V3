@@ -55,6 +55,7 @@ type ImpactLogRow = {
   company_id?: string | null
   title?: string | null
   description?: string | null
+  date?: string | null
   activity_date?: string | null
   hours?: number | null
   people_impacted?: number | null
@@ -73,7 +74,7 @@ const toRecord = (row: ImpactLogRow): ImpactLogRecord => {
     companyId: row.company_id ?? data.companyId,
     title: row.title || data.title || 'Impact Activity',
     description: row.description ?? data.description ?? '',
-    date: row.activity_date || data.date || '',
+    date: row.activity_date || row.date || data.date || '',
     hours: Number(row.hours ?? data.hours ?? 0),
     peopleImpacted: Number(row.people_impacted ?? data.peopleImpacted ?? 0),
     usdValue: Number(row.usd_value ?? data.usdValue ?? 0),
@@ -94,18 +95,32 @@ const toRecord = (row: ImpactLogRow): ImpactLogRecord => {
 export type CreateImpactLogInput = Omit<ImpactLogRecord, 'id'>
 
 export async function createImpactLog(entry: CreateImpactLogInput): Promise<ImpactLogRecord> {
+  const id = crypto.randomUUID()
   const { data, error } = await supabase
     .from('impact_logs')
     .insert({
+      id,
       uid: entry.userId,
       company_id: entry.companyId ?? null,
       title: entry.title || 'Impact Activity',
       description: entry.description || '',
+      // Legacy column is `date`; newer readers also use `activity_date`.
+      date: entry.date || null,
       activity_date: entry.date || null,
       hours: entry.hours ?? 0,
       people_impacted: entry.peopleImpacted ?? 0,
       usd_value: entry.usdValue ?? 0,
+      points: entry.points ?? 0,
+      impact_value: entry.impactValue ?? 0,
+      category_group: entry.categoryGroup || null,
+      esg_category: entry.esgCategory || null,
+      activity_type: entry.activityType || null,
+      business_category: entry.businessCategory || null,
+      business_activity: entry.businessActivity || null,
+      verification_level: entry.verificationLevel || null,
       verification_status: entry.verificationStatus || 'pending',
+      source_platform: entry.sourcePlatform || 'transformation_tier',
+      read_only: entry.readOnly ?? false,
       data: entry,
     })
     .select('*')
