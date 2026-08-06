@@ -49,11 +49,11 @@ export const WhatsAppAccessPage: React.FC = () => {
           <HStack spacing={2} color="green.600">
             <Icon as={MessageCircle} boxSize={5} />
             <Text fontSize="xs" fontWeight="bold" letterSpacing="widest">
-              WHATSAPP ACCESS
+              JOIN COMMUNITY
             </Text>
           </HStack>
           <Heading size="lg" color="brand.text">
-            WhatsApp Access
+            Join Community
           </Heading>
           <Text color="brand.subtleText" fontSize="md">
             Jump into the WhatsApp communities where T4L conversations happen in real time - reading

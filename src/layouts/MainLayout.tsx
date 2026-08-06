@@ -284,7 +284,7 @@ export const MainLayout: React.FC = () => {
           { label: 'Event', path: '/app/events', icon: CalendarDays },
           { label: 'Shameless Tuesday', path: '/app/shameless-tuesday', icon: Headphones },
           { label: 'Tools', path: '/app/tools', icon: Wrench },
-          { label: 'WhatsApp Access', path: '/app/whatsapp-access', icon: MessageCircle },
+          { label: 'Join Community', path: '/app/whatsapp-access', icon: MessageCircle },
           { label: 'Feedback', path: '/app/feedback', icon: MessageSquare },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
         ],
