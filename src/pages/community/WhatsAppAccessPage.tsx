@@ -15,7 +15,7 @@ import {
 import { ArrowUpRight, Circle, MessageCircle } from 'lucide-react'
 
 /** Free Practitioner Community application (Zoho survey). */
-const JOIN_NOW_URL = 'https://survey.zohopublic.com/zs/Itjsiy'
+const JOIN_NOW_URL = 'https://survey.zohopublic.com/zs/NSCZzU'
 
 const STATS = [
   {
