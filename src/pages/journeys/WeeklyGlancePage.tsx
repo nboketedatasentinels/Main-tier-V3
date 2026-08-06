@@ -2,6 +2,7 @@ import {
   Box,
   Button,
   Flex,
+  Grid,
   Heading,
   HStack,
   Modal,
@@ -1184,25 +1185,22 @@ export const WeeklyGlancePage = () => {
           </Skeleton>
         </SimpleGrid>
 
-        {/* Rules of Engagement player on the left, assigned courses stacked
-            beside it on the right (first course on top). */}
-        <Flex
-          direction={{ base: 'column', lg: 'row' }}
-          align="flex-start"
+        {/* Rules of Engagement player (~2/3) on the left; assigned courses (~1/3) on the right. */}
+        <Grid
+          templateColumns={{
+            base: '1fr',
+            lg: showAssignedCourses ? '2fr 1fr' : '1fr',
+          }}
           gap={{ base: 6, lg: 6 }}
+          alignItems="start"
+          w="full"
         >
-          <Box flex={{ base: '1 1 auto', lg: '1 1 0' }} minW={0} w="full">
+          <Box minW={0} w="full">
             <RulesOfEngagementVideo showCopy={false} />
           </Box>
 
           {showAssignedCourses && (
-            <Stack
-              flex={{ base: '1 1 auto', lg: '0 0 360px' }}
-              maxW={{ lg: '360px' }}
-              minW={0}
-              w="full"
-              spacing={4}
-            >
+            <Stack minW={0} w="full" spacing={4}>
               {assignedLoading && !assignedCourses.length ? (
                 <Stack spacing={4}>
                   <Skeleton h="170px" rounded="xl" />
@@ -1233,7 +1231,7 @@ export const WeeklyGlancePage = () => {
               )}
             </Stack>
           )}
-        </Flex>
+        </Grid>
 
         {shouldShowBuildVillageCard && (
           <Box
