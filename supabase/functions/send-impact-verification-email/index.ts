@@ -412,9 +412,12 @@ Deno.serve(async (req) => {
       rejectUrl,
     });
 
-    const from = Deno.env.get("SMTP_FROM") || Deno.env.get("SMTP_USER") || "info@t4leader.com";
+    const fromAddressRaw =
+      Deno.env.get("SMTP_FROM") || Deno.env.get("SMTP_USER") || "info@t4leader.com";
+    const fromEmailMatch = fromAddressRaw.match(/<([^>]+)>/);
+    const fromEmail = (fromEmailMatch?.[1] || fromAddressRaw).trim();
     await getTransporter().sendMail({
-      from: `"${APP_NAME}" <${from}>`,
+      from: `"${APP_NAME}" <${fromEmail}>`,
       to,
       subject: `Verification requested: ${activityTitle} - ${learnerName}`,
       text,

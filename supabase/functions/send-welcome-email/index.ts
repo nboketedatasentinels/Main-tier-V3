@@ -21,8 +21,7 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // avoid the CORS-preflight 401; we verify the caller's JWT + role in-function.
 // Transport: SMTP (reuses the existing info@t4leader.com mailbox).
 // ---------------------------------------------------------------------------
-const FUNCTION_VERSION = "2026-08-06-no-em-dashes";
-
+const FUNCTION_VERSION = "2026-08-06-transformation-leader";
 const APP_NAME = "Transformation Leader";
 // Access code partners enter on the sign-up page (kept in sync with
 // src/pages/partner/PartnerSignupPage.tsx). Shown only in the partner email.
