@@ -225,7 +225,7 @@ export const LearnerDashboardPage = () => {
                 <Stack spacing={1}>
                   <Heading size="md" color="text.primary">Free Learners Village</Heading>
                   <Text color="text.primary">
-                    You&apos;re in the shared free community — peer match with other free learners and compare marks on the Leadership Board.
+                    You&apos;re in the shared free community - peer match with other free learners and compare marks on the Leadership Board.
                   </Text>
                 </Stack>
                 <Stack direction={{ base: 'column', sm: 'row' }} spacing={2}>

@@ -32,10 +32,13 @@ describe('pointsConfig module activities', () => {
   it('matches uploaded 4-week intro points and checklist frequencies', () => {
     const activities = getActivitiesForJourney('4W')
     const byId = new Map(activities.map((activity) => [activity.id, activity]))
+    const crossRef = getJourneyPointsCrossReference('4W')
+    const crossById = new Map(crossRef.activityBreakdown.map((row) => [row.activityId, row]))
 
     expect(JOURNEY_META['4W'].windowTarget).toBe(7500)
     expect(JOURNEY_META['4W'].passMarkPoints).toBe(9000)
-    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(16500)
+    expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(15000)
+    expect(byId.has('peer_to_peer')).toBe(false)
 
     expect(byId.get('watch_podcast')?.points).toBe(1000)
     expect(byId.get('watch_podcast')?.activityPolicy?.maxTotal).toBe(3)
@@ -43,17 +46,31 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('impact_log')?.points).toBe(1000)
     expect(byId.get('impact_log')?.activityPolicy?.maxTotal).toBe(2)
 
-    expect(byId.get('webinar_workbook')?.points).toBe(2000)
+    expect(byId.get('webinar_workbook')?.points).toBe(3000)
+    expect(byId.get('webinar_workbook')?.title).toBe('Attend Webinar + Workbook')
+    expect(byId.get('webinar_workbook')?.approvalType).toBe('partner_approved')
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
-    expect(byId.get('book_club')?.points).toBe(1000)
+
+    expect(byId.get('lift_module')?.points).toBe(3000)
+    expect(byId.get('book_club')?.points).toBe(1500)
+    expect(byId.get('book_club')?.title).toBe('Attend Book Club Session')
     expect(byId.get('shameless_circle')?.points).toBe(1500)
+    expect(byId.get('shameless_circle')?.title).toBe('Attend Shameless Circle Session')
     expect(byId.get('ai_tool_review')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('shameless_circle')?.activityPolicy?.maxTotal).toBe(1)
+
+    expect(crossById.get('watch_podcast')).toMatchObject({ frequency: 3, pointsEach: 1000, maxPoints: 3000 })
+    expect(crossById.get('webinar_workbook')).toMatchObject({ frequency: 1, pointsEach: 3000, maxPoints: 3000 })
+    expect(crossById.get('impact_log')).toMatchObject({ frequency: 2, pointsEach: 1000, maxPoints: 2000 })
+    expect(crossById.get('lift_module')).toMatchObject({ frequency: 1, pointsEach: 3000, maxPoints: 3000 })
+    expect(crossById.get('book_club')).toMatchObject({ frequency: 1, pointsEach: 1500, maxPoints: 1500 })
+    expect(crossById.get('shameless_circle')).toMatchObject({ frequency: 1, pointsEach: 1500, maxPoints: 1500 })
+    expect(crossById.get('ai_tool_review')).toMatchObject({ frequency: 1, pointsEach: 1000, maxPoints: 1000 })
   })
 
-  it('uses a 14,000 point two-week target for the 6-week journey', () => {
-    expect(JOURNEY_META['6W'].weeklyTarget).toBe(7000)
-    expect(JOURNEY_META['6W'].windowTarget).toBe(14000)
+  it('uses a 13,500 point two-week target for the 6-week journey', () => {
+    expect(JOURNEY_META['6W'].weeklyTarget).toBe(6750)
+    expect(JOURNEY_META['6W'].windowTarget).toBe(13500)
   })
 
   it('cross-references each journey activity table with configured maximum points', () => {
@@ -66,7 +83,7 @@ describe('pointsConfig module activities', () => {
 
   it('6-week journey totals exactly 60,000 points for every pillar', () => {
     // Pillars only change the week split (3+3, 1+5, 2+4) and course names, not
-    // the point values — the 6W activity table (capstone x2, case_study x2,
+    // the point values - the 6W activity table (capstone x2, case_study x2,
     // practical x6 @ 0 pts, lift_module x2 @ 7,000, etc.) is identical across
     // pillars. This locks the invariant that the weekly-checklist total is
     // 60,000 no matter the pillar.

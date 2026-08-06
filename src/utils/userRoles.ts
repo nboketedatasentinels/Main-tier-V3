@@ -11,9 +11,10 @@ export const isLeader = (user: PartnerUser): boolean => {
 
 /**
  * Checks if a user is currently at risk based on their riskStatus.
+ * Warning/watch is recoverable and must NOT count as at-risk.
  */
 export const isAtRisk = (user: PartnerUser): boolean => {
-  return ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus)
+  return ['critical', 'at_risk'].includes(user.riskStatus)
 }
 
 /**

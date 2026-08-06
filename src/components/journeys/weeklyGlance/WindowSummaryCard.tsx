@@ -46,14 +46,15 @@ const getDisplayStatus = (
   }
 
   if (status === 'alert' || ratio < 0.75) {
-    return 'behind';
+    return 'behind'
   }
 
-  if (status === 'warning' || status === 'recovery') {
-    return 'catching_up';
+  if (status === 'warning') {
+    return 'catching_up'
   }
 
-  return 'on_track';
+  // on_track + recovery both read as healthy pacing
+  return 'on_track'
 };
 
 const getPeakEndMessage = (

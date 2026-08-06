@@ -213,7 +213,7 @@ export const removeMemberFromVillage = async (params: { villageId: string; userI
 
     // Also drop from member_ids via a targeted update through service isn't available;
     // set_my_village_id(null) clears the profile. Remove from array with a soft update
-    // only when the leaver is the actor (RLS blocks direct updates — use RPC path).
+    // only when the leaver is the actor (RLS blocks direct updates - use RPC path).
     return
   }
 

@@ -25,7 +25,7 @@ async function awardOrExplain<TActivity extends ActivityDef>(
 
   if (!result.awarded) {
     if (result.reason === 'already_awarded') {
-      // Idempotent — treat as success so the checklist locks the week claim.
+      // Idempotent - treat as success so the checklist locks the week claim.
       await onSuccess('completed');
       return;
     }

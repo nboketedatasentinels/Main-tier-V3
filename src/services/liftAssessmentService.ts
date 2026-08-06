@@ -144,7 +144,7 @@ export const createLiftLead = async (intake: IntakeAnswers): Promise<string | nu
  *
  * Goes through the `complete_lift_lead` SECURITY DEFINER RPC, NOT a direct
  * .update(): `lift_leads` SELECT is partner/admin-only, and RLS requires a row
- * to be visible via SELECT before an UPDATE can match it — so an anonymous
+ * to be visible via SELECT before an UPDATE can match it - so an anonymous
  * .update() silently affects 0 rows (200, no error) and completed_at never gets
  * set. The RPC runs as the owner, bypasses RLS for this one controlled write,
  * and keeps reads locked down. See migration 0029.

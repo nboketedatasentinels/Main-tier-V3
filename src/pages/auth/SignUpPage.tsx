@@ -6,10 +6,10 @@ import { Spinner, useToast } from "@chakra-ui/react"
 import { useAuth } from "@/hooks/useAuth"
 import { getFriendlyErrorMessage } from "@/utils/authErrors"
 import { normalizePhoneNumber, isValidPhoneNumber } from "@/utils/phoneNumber"
-import { validateCompanyCode } from "@/services/organizationService"
-import { auth } from "@/services/firebase"
 import { validateReferralCode } from "@/services/referralService"
-import { GenderOption, Organization, UserRole } from "@/types"
+import { useCompanyCodeValidation } from "@/hooks/useCompanyCodeValidation"
+import { getCompanyCodeSignupBlocker } from "@/utils/companyCodeSignupGate"
+import { GenderOption, UserRole } from "@/types"
 import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
 import { CompanyCodeModal } from "@/components/modals/CompanyCodeModal"
@@ -46,15 +46,18 @@ export const SignUpPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
-  const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
-  const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
-  const [isCheckingCode, setIsCheckingCode] = useState(false)
-  const [validatedOrganization, setValidatedOrganization] = useState<Organization | null>(null)
   const [showTermsModal, setShowTermsModal] = useState(false)
   const [showCompanyCodeModal, setShowCompanyCodeModal] = useState(false)
   const [pendingGoogleNavigation, setPendingGoogleNavigation] = useState(false)
   const [referralCode, setReferralCode] = useState<string | null>(null)
   const [referralStatus, setReferralStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle")
+
+  const {
+    isChecking: isCheckingCode,
+    isValid: companyCodeValid,
+    error: companyCodeError,
+    organization: validatedOrganization,
+  } = useCompanyCodeValidation(formData.companyCode)
 
   useEffect(() => {
     const queryRef = searchParams.get("ref")?.trim()
@@ -112,60 +115,6 @@ export const SignUpPage: React.FC = () => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  useEffect(() => {
-    const code = formData.companyCode.trim()
-
-    if (!code) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError(null)
-      setValidatedOrganization(null)
-      setIsCheckingCode(false)
-      return
-    }
-
-    if (code.length !== 6) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError(null)
-      setValidatedOrganization(null)
-      setIsCheckingCode(false)
-      return
-    }
-
-    // Email sign-up validates organization code in AuthContext after auth is established.
-    // Skip unauthenticated pre-checks here to avoid blocking on Firestore public-read restrictions.
-    if (!auth.currentUser) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError("Code will be verified after sign-up")
-      setValidatedOrganization(null)
-      setIsCheckingCode(false)
-      return
-    }
-
-    let cancelled = false
-    setIsCheckingCode(true)
-
-    void validateCompanyCode(code)
-      .then(result => {
-        if (cancelled) return
-
-        setCompanyCodeValid(result.valid)
-        setCompanyCodeError(result.error ?? null)
-        setValidatedOrganization(result.valid && result.organization ? result.organization : null)
-        setIsCheckingCode(false)
-      })
-      .catch(validationError => {
-        if (cancelled) return
-        setCompanyCodeValid(false)
-        setValidatedOrganization(null)
-        setCompanyCodeError(getFriendlyErrorMessage(validationError))
-        setIsCheckingCode(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [formData.companyCode])
-
   const validate = () => {
     if (!formData.fullName.trim()) return "Full name is required."
     if (!formData.gender) return "Gender is required."
@@ -183,10 +132,13 @@ export const SignUpPage: React.FC = () => {
     if (formData.password.length < 8) return "Password must be at least 8 characters."
     if (formData.password !== formData.confirmPassword) return "Passwords do not match."
 
-    if (!formData.companyCode.trim()) return "Company code is required."
-    if (formData.companyCode.trim().length !== 6) return "Company code must be 6 characters."
-    if (companyCodeValid === false) return "Company code is invalid or inactive."
-    if (companyCodeValid !== true) return "Please wait for the company code to be verified."
+    const companyCodeBlocker = getCompanyCodeSignupBlocker({
+      code: formData.companyCode,
+      isChecking: isCheckingCode,
+      isValid: companyCodeValid,
+      error: companyCodeError,
+    })
+    if (companyCodeBlocker) return companyCodeBlocker
 
     if (!formData.acceptTerms) return "You must accept the Terms of Use and Privacy Policy."
 
@@ -259,11 +211,6 @@ export const SignUpPage: React.FC = () => {
 
       if (signUpError) {
         const signUpMessage = getFriendlyErrorMessage(signUpError)
-        if (formData.companyCode.trim() && /company code/i.test(signUpMessage)) {
-          setCompanyCodeValid(false)
-          setCompanyCodeError(signUpMessage)
-          setValidatedOrganization(null)
-        }
         setError(signUpMessage)
         return
       }
@@ -418,7 +365,7 @@ export const SignUpPage: React.FC = () => {
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               value={formData.companyCode}
-              onChange={e => handleChange("companyCode", e.target.value.slice(0, 6))}
+              onChange={e => handleChange("companyCode", e.target.value.slice(0, 6).toUpperCase())}
               placeholder="6-digit code"
               maxLength={6}
               className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm uppercase tracking-widest text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
@@ -441,11 +388,6 @@ export const SignUpPage: React.FC = () => {
             <div className="mt-2 inline-flex items-center gap-2 text-sm text-danger">
               <XCircle className="h-4 w-4" />
               <span>{companyCodeError || "Invalid or inactive company code"}</span>
-            </div>
-          )}
-          {companyCodeValid === null && companyCodeError && !isCheckingCode && (
-            <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary">
-              <span>{companyCodeError}</span>
             </div>
           )}
         </div>

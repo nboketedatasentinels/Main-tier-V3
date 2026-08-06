@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 3: The Real Org Chart</title>
+<meta name="programme-component-id" content="fostering-practical-3">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-practical-3">
+<meta name="programme-part-title" content="Practical 3 · The Real Org Chart">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 3">
+<meta name="programme-submit-confirm" content="Submit Practical 3: The Real Org Chart?&#10;&#10;Practical 3 contributes to your Practicals Portfolio (20% of competence pass) for Fostering AI-Ready Teams. Once submitted, you can still edit until end of Week 3. After Week 3 closes, the submission is locked.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+    --hard: #B45309;
+    --soft: #6D28D9;
+    --expert: #0E7490;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  /* Three Power Types Card -- distinctive to Practical 3 */
+  .powers-card { background: linear-gradient(135deg, rgba(180,83,9,0.04) 0%, rgba(109,40,217,0.04) 50%, rgba(14,116,144,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .powers-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .powers-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .powers-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .powers-grid { grid-template-columns: 1fr; } }
+  .power-col { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 18px 16px; display: flex; flex-direction: column; }
+  .power-col.hard { border-top: 4px solid var(--hard); }
+  .power-col.soft { border-top: 4px solid var(--soft); }
+  .power-col.expert { border-top: 4px solid var(--expert); }
+  .power-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .power-col.hard .power-tag { color: var(--hard); }
+  .power-col.soft .power-tag { color: var(--soft); }
+  .power-col.expert .power-tag { color: var(--expert); }
+  .power-name { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 4px; }
+  .power-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 12px; }
+  .power-col textarea { min-height: 110px; font-size: 12px; padding: 10px 12px; flex: 1; }
+
+  /* Divergence rows */
+  .divergence-row { background: #fff; border: 1.5px solid var(--gold); border-radius: 12px; padding: 18px 20px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .divergence-row { grid-template-columns: 1fr; gap: 8px; } }
+  .div-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .div-body { display: flex; flex-direction: column; gap: 10px; }
+  .div-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .div-grid { grid-template-columns: 1fr; } }
+  .div-field-label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+  .div-field textarea { min-height: 70px; font-size: 12px; padding: 10px 12px; }
+  .div-cost-block { background: rgba(245,200,66,0.08); border: 1px solid var(--gold); border-radius: 10px; padding: 12px 14px; margin-top: 4px; }
+  .div-cost-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; }
+  .div-cost-block textarea { min-height: 60px; background: #fff; border-color: var(--field-border); font-size: 12px; }
+  .divergences-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; margin-top: 4px; }
+  .divergences-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 18px; font-style: italic; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .powers-card, .divergence-row { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .powers-card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Real Org Chart Map</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Fostering AI-Ready Teams</div>
+    <div class="practical-badge">Week 3 · Practical 3 of 6</div>
+  </div>
+  <h1 class="header-title">The Real <em>Org Chart</em></h1>
+  <p class="header-desc">Map the three power types operating in your team -- hard, soft, and expert. Then name the three biggest divergences between the real chart and the formal one. Each divergence comes with a cost -- the specific way it is showing up in the AI rollout. The formal chart is the one HR has on file. The real chart is the one the team operates by. Most AI rollouts run aground on the gap between the two.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Each power type is mapped with named people, not abstract roles. Initials are fine -- positions are not.</li>
+      <li>The three divergences are the genuinely biggest ones, including any where you yourself appear lower or higher than the formal chart says.</li>
+      <li>Each divergence cost is tied to a specific incident in the AI rollout -- a meeting derailed, a decision routed around the formal owner, a sign-off that did not happen.</li>
+      <li>The map names at least one divergence where expert authority sits below the formal authority -- because that is where AI rollouts most often fracture.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the team and formal chart -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Frame the Team and the Formal Chart</div>
+      </div>
+    </div>
+    <p class="step-desc">Before you map the real chart, name what the formal one says. The boxes on the HR diagram. Reporting lines, stated remit, declared authority. This is your reference point. The real chart in Step 2 will be measured against it.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Team</div>
+        </div>
+        <div class="substep-body">Name the team -- size, function, your role in it. Two sentences.</div>
+        <textarea name="team_context" placeholder="My direct delivery team -- 14 people across data engineering and platform reliability. I'm their VP. We are 4 months into a rollout of an AI-assisted incident response tool that is changing how senior engineers spend their week."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Formal Chart</div>
+        </div>
+        <div class="substep-body">What HR's diagram says -- reporting lines, stated remit, declared owners of the AI rollout. Two or three sentences.</div>
+        <textarea name="formal_chart" placeholder="Formal owner of the AI rollout: Director of Engineering Excellence (D), reporting to me. Two team leads beneath D -- one for platform reliability, one for incident response. 14 ICs distributed under the leads. The senior network engineer N reports to the incident response lead."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Map the three power types -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Map the Three Power Types</div>
+      </div>
+    </div>
+    <p class="step-desc">For each power type, name the people who actually hold it -- by initial or short reference. Hard power is positional and budgetary. Soft power is who the room defers to socially. Expert power is whose technical judgement settles the disagreement. The three rarely line up. Where they do not, the AI rollout is most exposed.</p>
+
+    <div class="powers-card">
+      <div class="powers-card-label">The Three Power Types</div>
+      <div class="powers-card-sub">Who actually holds each kind of power · named people, not abstract roles</div>
+
+      <div class="powers-grid">
+        <div class="power-col hard">
+          <div class="power-tag">Hard Power</div>
+          <div class="power-name">Positional &amp; Budgetary</div>
+          <div class="power-helper">Who can sign off, hire, fire, reallocate budget, and override the AI rollout if they choose to.</div>
+          <textarea name="hard_power" placeholder="Me (VP), D (Director of Engineering Excellence), and the CFO who controls the rollout budget envelope. The CIO is a fourth signatory but in practice rubber-stamps what the CFO has already shaped."></textarea>
+        </div>
+        <div class="power-col soft">
+          <div class="power-tag">Soft Power</div>
+          <div class="power-name">Social &amp; Influence</div>
+          <div class="power-helper">Who the room defers to socially -- the person whose reaction in a meeting the others read first before deciding what they think.</div>
+          <textarea name="soft_power" placeholder="J -- platform reliability lead. People watch her face before speaking in technical meetings. M -- the incident response lead's deputy, not on the formal chart as a leader, but the person juniors go to before raising anything formally."></textarea>
+        </div>
+        <div class="power-col expert">
+          <div class="power-tag">Expert Power</div>
+          <div class="power-name">Technical Authority</div>
+          <div class="power-helper">Whose technical judgement settles the disagreement when the AI tool and the team disagree on what just happened.</div>
+          <textarea name="expert_power" placeholder="N -- senior network engineer. 11 years' incident knowledge on the platform we are rebuilding around the AI tool. When N says the AI's read of an alert pattern is wrong, the room defers. Her formal authority is two layers below D."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: The three divergences -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Three Biggest Divergences -- and What Each Is Costing</div>
+      </div>
+    </div>
+    <p class="step-desc">Look at the three power maps. Where does the real chart diverge most sharply from the formal one? Pick the three biggest divergences -- the gaps that have the highest real-world voltage. For each one, name the divergence concretely (who has more or less power than the formal chart says) and the specific cost the AI rollout is paying for it. Not "communication friction". A specific decision routed around someone, a specific sign-off that did not happen, a specific meeting where the formal owner was not in the room when the call was made.</p>
+
+    <div class="divergences-label">The Three Divergences</div>
+    <div class="divergences-sub">Each one named concretely · each cost tied to a specific AI rollout incident</div>
+
+    <div class="divergence-row">
+      <div class="div-num">01</div>
+      <div class="div-body">
+        <div class="div-grid">
+          <div class="div-field">
+            <div class="div-field-label">The Divergence</div>
+            <textarea name="div_1_what" placeholder="N has expert power that the formal chart does not give her. The formal owner of the AI rollout (D) does not have the technical authority to settle disagreements between the AI and the team -- but the chart says he does. The team routes around him to N when there is a real call to make."></textarea>
+          </div>
+          <div class="div-field">
+            <div class="div-field-label">Who Has More or Less Power Than the Formal Chart Says</div>
+            <textarea name="div_1_who" placeholder="N has more expert power than her formal level. D has less expert power than his formal role implies. Structural gap: technical authority sits two layers below decision authority."></textarea>
+          </div>
+        </div>
+        <div class="div-cost-block">
+          <div class="div-cost-label">What this divergence is costing the AI rollout -- specific incident</div>
+          <textarea name="div_1_cost" placeholder="On 22 May, the post-incident review of a database failover. D made the call to accept the AI's flawed root-cause analysis as the official record. N -- whose 11 years on the platform would have caught the misread -- was in the room but said nothing because pushback to D's call would have publicly contested his authority on his own rollout. The AI's wrong analysis is now in the audit trail."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="divergence-row">
+      <div class="div-num">02</div>
+      <div class="div-body">
+        <div class="div-grid">
+          <div class="div-field">
+            <div class="div-field-label">The Divergence</div>
+            <textarea name="div_2_what" placeholder="Describe the second divergence -- who has more or less power than the formal chart says, and what kind."></textarea>
+          </div>
+          <div class="div-field">
+            <div class="div-field-label">Who Has More or Less Power Than the Formal Chart Says</div>
+            <textarea name="div_2_who" placeholder="The named person and the gap between their formal authority and their actual influence."></textarea>
+          </div>
+        </div>
+        <div class="div-cost-block">
+          <div class="div-cost-label">What this divergence is costing the AI rollout -- specific incident</div>
+          <textarea name="div_2_cost" placeholder="The specific incident -- meeting, decision, sign-off, conversation -- and the cost the AI rollout is paying."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="divergence-row">
+      <div class="div-num">03</div>
+      <div class="div-body">
+        <div class="div-grid">
+          <div class="div-field">
+            <div class="div-field-label">The Divergence</div>
+            <textarea name="div_3_what" placeholder="The third divergence -- and consider naming one where you yourself sit higher or lower on the real chart than the formal one says."></textarea>
+          </div>
+          <div class="div-field">
+            <div class="div-field-label">Who Has More or Less Power Than the Formal Chart Says</div>
+            <textarea name="div_3_who" placeholder="The named person and the gap. If this is about your own authority, name that honestly."></textarea>
+          </div>
+        </div>
+        <div class="div-cost-block">
+          <div class="div-cost-label">What this divergence is costing the AI rollout -- specific incident</div>
+          <textarea name="div_3_cost" placeholder="The specific incident and the cost."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Map</h2>
+    <p class="ai-activity-desc">Real org chart maps fail at the same two places every time -- the practitioner picks the safest divergences (the ones that are about other people, not themselves), and the costs collapse into "communication friction" once stripped of specifics. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether You Picked the Genuinely Biggest Divergences</div>
+          <div class="ai-step-body">Ask AI to test whether the three divergences you named are the genuinely biggest ones -- including any where you yourself sit higher or lower than the formal chart says.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am mapping the real org chart of my team during an AI rollout. The three power types I have mapped are: Hard: [paste]. Soft: [paste]. Expert: [paste]. The three biggest divergences I have named are: [paste each one with its cost]. Pressure-test this. Specifically: (1) Have I picked the genuinely biggest divergences, or the safest ones to name -- the ones that are about other people, not me? (2) Is there a divergence I have not named where I myself appear higher or lower on the real chart than the formal one? (3) Looking at the power maps, is there a divergence between hard and expert power that the AI rollout is sitting on top of, that I have not named because it is uncomfortable to name?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What divergence did you miss -- and is it about you?</div>
+      <textarea class="ai-field" name="ai_divergences_test" placeholder="AI pushed back. It said two of my three divergences were about D and one about the CFO -- none about me. It surfaced that on the real chart, my hard power is intact but my expert power on this rollout is lower than my formal role suggests, because I am dependent on N's technical read more than the org chart implies. Adding a fourth divergence: I appear lower on the expert map than my hard-power role suggests, which is why my interventions in incident reviews land as positional moves rather than technical ones. Demoting one of my D-divergences and naming this one instead."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Cost Statements</div>
+          <div class="ai-step-body">Ask AI to test whether each cost is tied to a specific AI rollout incident -- or whether it has slipped into "communication friction" or "team alignment" generic.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My three divergence costs are: [paste each cost]. Pressure-test on three criteria. (1) Is each cost tied to a specific incident in the AI rollout -- a meeting derailed, a decision routed around the formal owner, a sign-off that did not happen -- or has it slipped into "communication friction" or "team alignment" generic? (2) Could a different practitioner reading these costs tell what is at stake in my AI rollout specifically, or could they apply to any team? (3) For the cost that is most generic, rewrite it with operational specificity -- the date, the meeting, the named person, the consequence.</div>
+      <div class="prompt-label" style="margin-top:12px">Which cost was most generic? What is the tightened version?</div>
+      <textarea class="ai-field" name="ai_cost_statements_test" placeholder="AI flagged the second cost as too soft -- I had written 'M's deputy role creates routing friction' which could apply anywhere. Tightened: 'On 28 May, the team retro decision to defer the AI-tool feedback escalation was made informally with M after the formal meeting closed. The incident response lead -- M's actual manager -- was not in the conversation. The escalation is now a week late and the AI vendor has flagged it as our team being slow to engage. Cost: vendor relationship damage, plus M is operating outside her formal authority with my implicit blessing.' Specific date, meeting, named outcome."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the AI rollout has shifted -- new tooling, new role definitions, new budget pressure -- which of the three power types is most likely to redistribute, and which divergence is most likely to widen rather than close? What would tell you the redistribution had started before the org chart catches up?</div>
+    <textarea name="ai_lens_power_redistribution" placeholder="Most likely to redistribute: expert power. By Q4, the second-generation tool will have closed some of N's technical edge -- automated alert pattern recognition will catch what only she could before. The divergence between hard and expert power will narrow on that axis but widen on a different one: integration architecture, where the second-generation tool relies on judgement N does not currently hold. The signal that the redistribution has started is the first incident review where someone other than N is the technical reference point in the room. When that happens once and it goes well, the chart starts redrawing itself."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Real org chart maps fall apart at the same place every time -- the divergences are about other people, not the practitioner, and the costs are written in language that lets the formal chart off the hook. A peer who has done their own map can hear both faults at the same speed an assessor will.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the three power types aloud, then the three divergences. Ask your peer one question: of the three divergences, which one was uncomfortable to write? If they cannot tell -- and you wrote three that were comfortable -- the map is not yet honest. The honest map has at least one divergence the practitioner did not want to put on the page.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the three divergences, is at least one about you -- where you sit higher or lower on the real chart than the formal one says?</li>
+      <li>Each cost -- is it tied to a specific incident in the AI rollout, or has it slipped into "communication friction" or "team alignment" generic?</li>
+      <li>Where hard power and expert power diverge -- is that divergence on the page, or did you skip it because it is the uncomfortable one?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'team_context',
+    'formal_chart',
+    'hard_power',
+    'soft_power',
+    'expert_power',
+    'div_1_what',
+    'div_1_who',
+    'div_1_cost',
+    'div_2_what',
+    'div_2_who',
+    'div_2_cost',
+    'div_3_what',
+    'div_3_who',
+    'div_3_cost',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

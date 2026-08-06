@@ -466,11 +466,19 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                 pointsByUser[docWrapper.id] || [],
                 currentWeek
               )
+
+              let userJourneyType: string | null = data.journeyType ?? data.journey_type ?? null
+              const userTotalPoints = data.totalPoints ?? data.total_points ?? 0
+
               const riskResult = calculateUserRiskStatus(
                 progress.current_week,
                 progress.earned_points,
                 progress.required_points,
-                data.nudgeResponseScore
+                data.nudgeResponseScore,
+                {
+                  journeyType: userJourneyType,
+                  totalPoints: userTotalPoints,
+                }
               )
 
               const weeklyRequirement = progress.required_points[currentWeek] || 0
@@ -479,16 +487,15 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                 ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
                 : data.progressPercent || 0
 
+              // Window-based mapping only - never invent critical from empty weekly %.
               const riskStatus: PartnerRiskLevel | 'at_risk' =
-                riskResult.status === 'at_risk'
-                  ? 'at_risk'
-                  : progressPercent >= 95
-                    ? 'engaged'
-                    : progressPercent >= 80
+                riskResult.level === 'critical'
+                  ? 'critical'
+                  : riskResult.level === 'behind'
+                    ? 'at_risk'
+                    : riskResult.level === 'warning'
                       ? 'watch'
-                      : progressPercent >= 60
-                        ? 'concern'
-                        : 'critical'
+                      : 'engaged'
 
               const riskReasons = [
                 ...(data.riskReasons || []),

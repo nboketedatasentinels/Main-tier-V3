@@ -11,7 +11,7 @@ import { normalizeRole } from '@/utils/role'
 
 /**
  * Collapse invite/profile roles into a single conflict bucket.
- * free_user / paid_member / user are all "member" seats — they can share an
+ * free_user / paid_member / user are all "member" seats - they can share an
  * email across orgs, but cannot be reused as partner/mentor/coach.
  */
 export const roleConflictBucket = (role: string | null | undefined): string => {
@@ -109,7 +109,7 @@ export const assertEmailAvailableForRole = async (
 
 /**
  * Look up a user's contact details (for addressing a welcome email). Returns
- * nulls on any failure — a welcome email is best-effort and must never break the
+ * nulls on any failure - a welcome email is best-effort and must never break the
  * assignment that triggered it.
  */
 const fetchProfileContact = async (
@@ -357,7 +357,7 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
         if (fresh) return mapOrg(fresh as Raw)
       } else {
         // No account yet: the partner stays a pending claim (claimed on signup),
-        // so assignPartnerToOrg — and its welcome email — never runs. Still send
+        // so assignPartnerToOrg - and its welcome email - never runs. Still send
         // the partner invite email so they know they've been made partner and
         // get the access code + signup link. Best-effort (fire-and-forget).
         void dispatchWelcomeEmail({
@@ -368,7 +368,7 @@ export const createOrganization = async (input: CreateOrgInput): Promise<OrgReco
         })
       }
     } catch (linkError) {
-      // Role conflicts must surface to the admin — do not silently create an
+      // Role conflicts must surface to the admin - do not silently create an
       // org with a mismatched partner email.
       if (
         linkError instanceof Error &&
@@ -476,16 +476,33 @@ export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramR
 
 export interface UpdateOrgInput extends OrgWriteExtras {
   name?: string
+  /** @deprecated Codes are immutable after create. Ignored if passed; changes are rejected. */
   code?: string
   journeyType?: string | null
   programDurationWeeks?: number | null
 }
 
-/** Update an organization's fields (RLS: is_partner_or_admin). */
+/** Update an organization's fields (RLS: is_partner_or_admin). Codes cannot change. */
 export const updateOrganization = async (id: string, patch: UpdateOrgInput): Promise<OrgRecord> => {
+  if (patch.code !== undefined) {
+    const { data: currentOrg, error: codeReadError } = await supabase
+      .from('organizations')
+      .select('code')
+      .eq('id', id)
+      .maybeSingle()
+    if (codeReadError) throw new Error(codeReadError.message)
+    const existing = String(currentOrg?.code ?? '')
+      .trim()
+      .toUpperCase()
+    const requested = patch.code.trim().toUpperCase()
+    if (requested && existing && requested !== existing) {
+      throw new Error('Organization code cannot be changed')
+    }
+  }
+
   const updates: Record<string, unknown> = {}
   if (patch.name !== undefined) updates.name = patch.name.trim()
-  if (patch.code !== undefined) updates.code = patch.code.trim().toUpperCase()
+  // Never write `code` - organization codes are permanent after creation.
   if (patch.status !== undefined) updates.status = patch.status
   if (patch.journeyType !== undefined) updates.journey_type = patch.journeyType
   if (patch.programDurationWeeks !== undefined) updates.program_duration_weeks = patch.programDurationWeeks
@@ -666,7 +683,11 @@ export const listPartnerCandidates = async (): Promise<PartnerCandidate[]> => {
 }
 
 /** Assign (or change) an org's transformation partner. Promotes to partner + adds org to their list. */
-export const assignPartnerToOrg = async (orgId: string, partnerUid: string): Promise<void> => {
+export const assignPartnerToOrg = async (
+  orgId: string,
+  partnerUid: string,
+  options?: { sendWelcome?: boolean },
+): Promise<void> => {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('email, role')
@@ -694,7 +715,10 @@ export const assignPartnerToOrg = async (orgId: string, partnerUid: string): Pro
 
   // Welcome the newly assigned partner (best-effort). Runs for BOTH entry points:
   // the "Assign partner" modal AND the create-org auto-link, so partners set at
-  // org creation are welcomed too.
+  // org creation are welcomed too. Callers that already notify on role change
+  // can pass sendWelcome: false to avoid a duplicate email.
+  if (options?.sendWelcome === false) return
+
   const [{ email, name }, org] = await Promise.all([
     fetchProfileContact(partnerUid),
     fetchOrgSummary(orgId),
@@ -741,6 +765,7 @@ export const assignLeadershipToOrg = async (
   userId: string,
   role: 'mentor' | 'ambassador',
   org?: { code?: string | null; name?: string | null },
+  options?: { sendWelcome?: boolean },
 ): Promise<void> => {
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
@@ -782,7 +807,10 @@ export const assignLeadershipToOrg = async (
     .eq('id', userId)
   if (error) throw new Error(`Assignment failed: ${error.message}`)
 
-  // Welcome the newly assigned mentor / coach (best-effort).
+  // Welcome the newly assigned mentor / coach (best-effort). Callers that already
+  // notify on role change can pass sendWelcome: false to avoid a duplicate email.
+  if (options?.sendWelcome === false) return
+
   const summary = org?.name && org?.code ? null : await fetchOrgSummary(orgId)
   const { email, name } = await fetchProfileContact(userId)
   void dispatchWelcomeEmail({
@@ -813,6 +841,7 @@ export type OrgMemberEditableRole = 'user' | 'partner' | 'mentor' | 'ambassador'
  * Edit an existing org member from the Edit Organization modal: name and/or role.
  * Partner/mentor/coach changes go through the same assignment helpers used
  * elsewhere so org linkage + assignedOrganizations stay consistent.
+ * When the role changes, the member receives a role email for the new role.
  */
 export const updateOrganizationMember = async (params: {
   orgId: string
@@ -823,6 +852,17 @@ export const updateOrganizationMember = async (params: {
 }): Promise<void> => {
   const { orgId, userId, role, name, org } = params
   const now = new Date().toISOString()
+
+  const { data: existing, error: existingError } = await supabase
+    .from('profiles')
+    .select('role, email, full_name')
+    .eq('id', userId)
+    .maybeSingle()
+  if (existingError) throw new Error(existingError.message)
+
+  const previousWelcomeRole = toWelcomeRole(existing?.role as string | null | undefined)
+  const nextWelcomeRole = toWelcomeRole(role)
+  const roleChanged = previousWelcomeRole !== nextWelcomeRole
 
   if (typeof name === 'string') {
     const trimmed = name.trim()
@@ -836,45 +876,55 @@ export const updateOrganizationMember = async (params: {
   }
 
   if (role === 'partner') {
-    await assignPartnerToOrg(orgId, userId)
-    return
-  }
-
-  if (role === 'mentor' || role === 'ambassador') {
+    await assignPartnerToOrg(orgId, userId, { sendWelcome: false })
+  } else if (role === 'mentor' || role === 'ambassador') {
     // Ensure the profile role matches, then bind them as the org's sole holder.
     const { error: roleError } = await supabase
       .from('profiles')
       .update({ role, updated_at: now })
       .eq('id', userId)
     if (roleError) throw new Error(`Unable to update role: ${roleError.message}`)
-    await assignLeadershipToOrg(orgId, userId, role, org)
-    return
+    await assignLeadershipToOrg(orgId, userId, role, org, { sendWelcome: false })
+  } else {
+    // Learner / plain member inside an org is a paid_member (never free_user).
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        role: 'paid_member',
+        membership_status: 'paid',
+        organization_id: orgId,
+        company_id: orgId,
+        company_code: org?.code ?? null,
+        company_name: org?.name ?? null,
+        updated_at: now,
+      })
+      .eq('id', userId)
+    if (error) throw new Error(`Unable to update member: ${error.message}`)
+
+    // If they were the org's transformation partner, clear that link so the list
+    // does not keep showing a demoted user as the assigned partner.
+    const { data: orgRow } = await supabase
+      .from('organizations')
+      .select('transformation_partner_id')
+      .eq('id', orgId)
+      .maybeSingle()
+    if ((orgRow?.transformation_partner_id as string | null) === userId) {
+      await removePartnerFromOrg(orgId)
+    }
   }
 
-  // Learner / general member inside an org is a paid_member (never free_user).
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      role: 'paid_member',
-      membership_status: 'paid',
-      organization_id: orgId,
-      company_id: orgId,
-      company_code: org?.code ?? null,
-      company_name: org?.name ?? null,
-      updated_at: now,
+  if (roleChanged) {
+    const displayName =
+      (typeof name === 'string' && name.trim()) ||
+      (typeof existing?.full_name === 'string' ? existing.full_name : null) ||
+      (typeof existing?.email === 'string' ? existing.email : null)
+    void dispatchWelcomeEmail({
+      to: typeof existing?.email === 'string' ? existing.email : null,
+      name: displayName,
+      role: nextWelcomeRole,
+      organizationName: org?.name ?? null,
+      organizationCode: org?.code ?? null,
     })
-    .eq('id', userId)
-  if (error) throw new Error(`Unable to update member: ${error.message}`)
-
-  // If they were the org's transformation partner, clear that link so the list
-  // does not keep showing a demoted user as the assigned partner.
-  const { data: orgRow } = await supabase
-    .from('organizations')
-    .select('transformation_partner_id')
-    .eq('id', orgId)
-    .maybeSingle()
-  if ((orgRow?.transformation_partner_id as string | null) === userId) {
-    await removePartnerFromOrg(orgId)
   }
 }
 
@@ -936,7 +986,7 @@ export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResul
   if (error) return { ok: false, error: error.message }
   const result = (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
   // Welcome the member into the org they just joined (best-effort, self-addressed).
-  // The code they just claimed is the org code — echo it back in the welcome.
+  // The code they just claimed is the org code - echo it back in the welcome.
   if (result.ok) {
     void dispatchSelfJoinWelcomeEmail(
       result.organizationName ?? null,
@@ -1004,7 +1054,7 @@ export const acceptOrgInvitations = async (): Promise<{ ok: boolean; error?: str
   const { data, error } = await supabase.rpc('accept_org_invitations')
   if (error) return { ok: false, error: error.message }
   const result = (data ?? { ok: false, error: 'no_result' }) as { ok: boolean; error?: string }
-  // Only welcome the member if an org membership actually resulted — accept can
+  // Only welcome the member if an org membership actually resulted - accept can
   // be called on load for any org-less user, and we must not fire a spurious
   // email when there was nothing to accept.
   if (result.ok) {

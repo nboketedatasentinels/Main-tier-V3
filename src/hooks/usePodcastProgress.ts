@@ -46,7 +46,7 @@ export function usePodcastProgress(uid: string | null | undefined): PodcastProgr
       [podcastId]: {
         ...prev[podcastId],
         ...state,
-        // Once passed in local state, keep it — never regress on a stale fetch race.
+        // Once passed in local state, keep it - never regress on a stale fetch race.
         passed: Boolean(prev[podcastId]?.passed || state.passed),
         bestScore: Math.max(prev[podcastId]?.bestScore ?? 0, state.bestScore ?? 0),
         attempts: Math.max(prev[podcastId]?.attempts ?? 0, state.attempts ?? 0),

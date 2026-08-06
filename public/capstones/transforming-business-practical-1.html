@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 1: The Door Practice Log</title>
+<meta name="programme-component-id" content="transforming-business-practical-1">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="transforming_business">
+<meta name="programme-part-id" content="transforming-business-practical-1">
+<meta name="programme-part-title" content="Practical 1 · The Door Practice Log">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 1">
+<meta name="programme-submit-confirm" content="Submit Practical 1: The Door Practice Log?&#10;&#10;Practical 1 contributes to your Practicals Portfolio (20% of competence pass) for Transforming Business with AI. Once submitted, you can still edit until end of Week 1. After Week 1 closes, the submission is locked.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+    --door-line: #C9A020;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Door Practice Log - distinctive to Practical 1 */
+  .log-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .log-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .log-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 24px; font-style: italic; }
+  .log-entry { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .log-entry-header { display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; margin-bottom: 16px; }
+  .log-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .log-entry-title-block { display: flex; flex-direction: column; gap: 4px; }
+  .log-day-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .log-day-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); line-height: 1.2; }
+  .log-day-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-top: 2px; }
+  .log-fluency-flag { display: inline-block; background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.4); border-radius: 14px; padding: 3px 10px; font-size: 10px; color: #B91C1C; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 6px; align-self: flex-start; }
+  .log-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 600px) { .log-field-grid { grid-template-columns: 1fr; } }
+  .log-field { display: flex; flex-direction: column; gap: 5px; }
+  .log-field label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+  .log-field .helper { font-size: 11px; color: #888; font-style: italic; line-height: 1.4; margin-bottom: 2px; }
+  .log-entry textarea { min-height: 70px; font-size: 12px; padding: 10px 12px; }
+
+  /* Two-up meta row at top of each entry */
+  .log-meta-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px dashed var(--field-border); }
+  @media (max-width: 600px) { .log-meta-row { grid-template-columns: 1fr; } }
+  .log-meta-field { display: flex; flex-direction: column; gap: 4px; }
+  .log-meta-field label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+  .log-meta-field input { padding: 8px 12px; font-size: 12px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .log-card, .log-entry { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .log-card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Door Practice Log</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Transforming Business with AI</div>
+    <div class="practical-badge">Week 1 · Practical 1 of 6</div>
+  </div>
+  <h1 class="header-title">The Door Practice <em>Log</em></h1>
+  <p class="header-desc">Five real meetings this week. Before each one, run the Door Practice -- read the room before you walk in. AI fluency in the room. The unspoken board-level definition of success. The vendor narrative shaping executive perception. Then capture what shifted in your behaviour because you read the room first. At least one of the five must be a meeting where the AI fluency was asymmetric -- the room had more than you, or you had more than the room. The asymmetry direction is part of the data.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Five real meetings from this actual work week, not reverse-engineered from memory at the end.</li>
+      <li>Each entry names what you read about the room -- AI fluency, the unspoken board-level success definition, the vendor narrative shaping the conversation -- before you contributed.</li>
+      <li>At least one entry honestly names asymmetric AI fluency -- including the entry where you had less than the room, not just where you had more.</li>
+      <li>At least one entry references a vendor narrative (Microsoft AI, OpenAI, the Big Four advisor, the local systems integrator) that was shaping executive perception in the room.</li>
+      <li>Each entry names what shifted in your behaviour -- the question you did not ask, the framing you swapped, the silence you held longer -- because you ran the Door Practice first.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the week before logging -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Frame the Week Before You Log</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the five log entries, two pieces of context. The week you are logging -- the actual five-day window. And the transformation programme the meetings sit inside -- so a peer or assessor can read the entries as a sequence, not five disconnected check-ins. Specificity here makes the log honest.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Week</div>
+        </div>
+        <div class="substep-body">The five-day window you are logging. Date range. Whether it was a typical week or unusually loaded.</div>
+        <textarea name="week_window" placeholder="Mon 10 March -- Fri 14 March. Above-average week -- two unscheduled board prep sessions added on Tuesday because the AI ethics question landed late. Three of the five meetings I had not planned for at start of week."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Programme</div>
+        </div>
+        <div class="substep-body">The AI-era business transformation these meetings sit inside. Two sentences -- enough for an assessor to follow the thread between entries.</div>
+        <textarea name="programme_context" placeholder="An enterprise-wide AI customer service deployment in retail banking. I'm the Group CDO. We are 14 months in, with a board-mandated KPI to reach 60% AI-handled customer interactions by FY26 -- and a regulator who has just opened consultation on AI in financial services that is changing what defensible looks like."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The five-entry log -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Log Five Real Meetings</div>
+      </div>
+    </div>
+    <p class="step-desc">Five separate stakeholder meetings or calls. Each one logged before you walked in -- not after. For each entry: who was in the room, what you read about the room, what shifted in your behaviour because you read it, and what would have happened if you had skipped the Door Practice. Mark the asymmetric-fluency entry with the flag -- and be honest about the direction.</p>
+
+    <div class="log-card">
+      <div class="log-card-label">Five-Day Log</div>
+      <div class="log-card-sub">One entry per real meeting · ran before you walked in · captured within the same day</div>
+
+      <!-- ENTRY 1 -->
+      <div class="log-entry">
+        <div class="log-entry-header">
+          <div class="log-num">01</div>
+          <div class="log-entry-title-block">
+            <div class="log-day-label">Entry 1</div>
+            <div class="log-day-name">First Meeting</div>
+            <div class="log-day-helper">The first meeting of the week where you ran the Door Practice deliberately.</div>
+          </div>
+        </div>
+        <div class="log-meta-row">
+          <div class="log-meta-field">
+            <label>Day &amp; Time</label>
+            <input type="text" name="entry_1_when" placeholder="Mon 10 March, 09:00 -- weekly Group Exec session">
+          </div>
+          <div class="log-meta-field">
+            <label>Stakeholder(s)</label>
+            <input type="text" name="entry_1_who" placeholder="Group CEO, CFO, COO, Chief Risk Officer, Group Strategy Director -- five people, all C-suite">
+          </div>
+        </div>
+        <div class="log-field-grid">
+          <div class="log-field">
+            <label>What you read about the room</label>
+            <div class="helper">AI fluency · unspoken success definition · vendor narrative · the priority not on the agenda but in the air.</div>
+            <textarea name="entry_1_read" placeholder="AI fluency: high in CFO and Strategy Director, low in CEO (still translating AI through 2023 frames), variable in COO. Vendor narrative: a Microsoft AI demo had been circulated the night before, shaping the CEO's questions before I arrived -- I read this in the agenda not in the room. Unspoken success definition for this session: not 'progress on the rollout' but 'is this AI investment defensible to the board next quarter given the regulator move'. The fluency was asymmetric and the vendor narrative was the script the CEO had been handed."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What shifted in your behaviour</label>
+            <div class="helper">The question you did not ask. The framing you swapped. The silence you held longer. Observable.</div>
+            <textarea name="entry_1_shifted" placeholder="I dropped my prepared 'rollout progress' opener. Opened instead with the regulator timeline and what defensible looks like in Q2. Did not engage the Microsoft demo content directly -- waited for someone else to surface it (the CFO did, at minute 18). Held silence twice, both times producing a Strategy Director question I had been about to ask myself. Came out of the meeting with the CEO's actual concern named -- 'are we 18 months ahead of the regulator or 18 months behind' -- which was not the question on the agenda."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What would have happened without the Door Practice</label>
+            <div class="helper">Honest counterfactual. What would the ten minutes after walking in have looked like?</div>
+            <textarea name="entry_1_counterfactual" placeholder="I would have led with the rollout dashboard, watched the CEO disengage by minute 4, then spent the next 30 minutes trying to reconnect through detail. The Microsoft demo would have run uncontested in the room because I would have been defending against it instead of repositioning. The regulator question would not have surfaced until the end-of-meeting AOB -- and would have shaped the rest of the week from there."></textarea>
+          </div>
+          <div class="log-field">
+            <label>AI fluency in the room</label>
+            <div class="helper">Symmetric, asymmetric-up (you had more), asymmetric-down (room had more)?</div>
+            <textarea name="entry_1_fluency" placeholder="Asymmetric-up. I had more AI fluency than the CEO and COO. The risk in this case is that fluency-up makes you talk past the people whose decision matters. The Door Practice caught it -- I underspoke the technical content deliberately."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTRY 2 -->
+      <div class="log-entry">
+        <div class="log-entry-header">
+          <div class="log-num">02</div>
+          <div class="log-entry-title-block">
+            <div class="log-day-label">Entry 2</div>
+            <div class="log-day-name">Second Meeting</div>
+            <div class="log-day-helper">A second real meeting, ideally a different stakeholder type -- regulator, vendor, board sub-committee, partner.</div>
+          </div>
+        </div>
+        <div class="log-meta-row">
+          <div class="log-meta-field">
+            <label>Day &amp; Time</label>
+            <input type="text" name="entry_2_when" placeholder="Tue 11 March, 14:00 -- bilateral with the Chief Compliance Officer">
+          </div>
+          <div class="log-meta-field">
+            <label>Stakeholder(s)</label>
+            <input type="text" name="entry_2_who" placeholder="Chief Compliance Officer, plus her Head of Conduct -- two people, one of whom I had not met">
+          </div>
+        </div>
+        <div class="log-field-grid">
+          <div class="log-field">
+            <label>What you read about the room</label>
+            <div class="helper">AI fluency · unspoken success definition · vendor narrative · the priority not on the agenda but in the air.</div>
+            <textarea name="entry_2_read" placeholder="The CCO had circulated the regulator's draft consultation paper four hours before. The unspoken priority was not 'how do we comply' but 'how do we avoid the next FCA letter'. AI fluency in the room: medium-high -- the Head of Conduct knew more about model governance than I had expected. No vendor narrative in this room -- compliance had been left out of the Microsoft demo cycle, and was reading it as exclusion."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What shifted in your behaviour</label>
+            <div class="helper">The question you did not ask. The framing you swapped. The silence you held longer. Observable.</div>
+            <textarea name="entry_2_shifted" placeholder="Did not bring the rollout numbers into the room at all. Opened with the regulator paper and what we had been doing in the past 30 days that we could already evidence as defensible. Asked the Head of Conduct what exclusion from the Microsoft demos had cost the compliance read of the rollout -- which was not on my list of questions but was the question the room needed. Came out with a written invitation for compliance into the next vendor session."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What would have happened without the Door Practice</label>
+            <div class="helper">Honest counterfactual. What would the ten minutes after walking in have looked like?</div>
+            <textarea name="entry_2_counterfactual" placeholder="I would have walked in with the Group Exec deck still in my head and led with rollout traction. The CCO would have read that as 'CDO is briefing me on something I am not the audience for'. The exclusion-from-vendor-demos issue would have stayed silent and become a complaint to the CEO via a different channel within two weeks."></textarea>
+          </div>
+          <div class="log-field">
+            <label>AI fluency in the room</label>
+            <div class="helper">Symmetric, asymmetric-up (you had more), asymmetric-down (room had more)?</div>
+            <textarea name="entry_2_fluency" placeholder="Asymmetric-down on model governance specifically. The Head of Conduct had spent six months on the FCA's previous AI guidance and knew its operational implications better than I did. I named that explicitly in the room -- 'you are ahead of me on model governance, walk me through what good looks like' -- and the conversation reset around that."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTRY 3 -->
+      <div class="log-entry">
+        <div class="log-entry-header">
+          <div class="log-num">03</div>
+          <div class="log-entry-title-block">
+            <div class="log-day-label">Entry 3</div>
+            <div class="log-day-name">Third Meeting</div>
+            <div class="log-day-helper">A third meeting -- the one you almost did not run the Door Practice for, because it felt routine.</div>
+          </div>
+        </div>
+        <div class="log-meta-row">
+          <div class="log-meta-field">
+            <label>Day &amp; Time</label>
+            <input type="text" name="entry_3_when" placeholder="Wed 12 March, 11:00 -- vendor review with our AI services partner">
+          </div>
+          <div class="log-meta-field">
+            <label>Stakeholder(s)</label>
+            <input type="text" name="entry_3_who" placeholder="Vendor account director, vendor solutions lead, our Programme Director, our procurement lead">
+          </div>
+        </div>
+        <div class="log-field-grid">
+          <div class="log-field">
+            <label>What you read about the room</label>
+            <div class="helper">AI fluency · unspoken success definition · vendor narrative · the priority not on the agenda but in the air.</div>
+            <textarea name="entry_3_read" placeholder="Vendor narrative was the room. The vendor's account director had been talking directly to our CEO for three weeks about a roadmap acceleration we had not seen. The unspoken success definition for the vendor: lock the next 18-month commitment before our regulator engagement changes the procurement terms. Our Programme Director walked in expecting a status update; I walked in reading a sales meeting."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What shifted in your behaviour</label>
+            <div class="helper">The question you did not ask. The framing you swapped. The silence you held longer. Observable.</div>
+            <textarea name="entry_3_shifted" placeholder="Did not let the vendor open with the roadmap deck. Asked instead for a written read of what the vendor understood our regulator timeline to be and how their roadmap was conditioned on it. The vendor did not have a clean answer -- which was the data. Booked a re-do for Friday with the CCO in the room. Stopped the meeting from becoming the commitment moment the vendor had been driving toward."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What would have happened without the Door Practice</label>
+            <div class="helper">Honest counterfactual. What would the ten minutes after walking in have looked like?</div>
+            <textarea name="entry_3_counterfactual" placeholder="The vendor would have walked us through their roadmap deck for 40 minutes, our Programme Director would have asked technical questions inside the vendor's frame, and the meeting would have ended with our procurement lead asking what we needed to give the vendor by end of month -- which was the vendor's actual ask, dressed as a status update."></textarea>
+          </div>
+          <div class="log-field">
+            <label>AI fluency in the room</label>
+            <div class="helper">Symmetric, asymmetric-up (you had more), asymmetric-down (room had more)?</div>
+            <textarea name="entry_3_fluency" placeholder="Symmetric on capability, asymmetric on commercial framing -- the vendor had three weeks of CEO conversations we had not been in. The fluency that mattered was not technical, it was political."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTRY 4 -->
+      <div class="log-entry">
+        <div class="log-entry-header">
+          <div class="log-num">04</div>
+          <div class="log-entry-title-block">
+            <div class="log-day-label">Entry 4</div>
+            <div class="log-day-name">Fourth Meeting</div>
+            <div class="log-day-helper">A fourth meeting -- a smaller or more internal one, where the Door Practice was easy to skip.</div>
+          </div>
+        </div>
+        <div class="log-meta-row">
+          <div class="log-meta-field">
+            <label>Day &amp; Time</label>
+            <input type="text" name="entry_4_when" placeholder="Thu 13 March, 16:00 -- 1:1 with my Programme Director">
+          </div>
+          <div class="log-meta-field">
+            <label>Stakeholder(s)</label>
+            <input type="text" name="entry_4_who" placeholder="Just my Programme Director -- 14 years' tenure, runs the rollout day-to-day">
+          </div>
+        </div>
+        <div class="log-field-grid">
+          <div class="log-field">
+            <label>What you read about the room</label>
+            <div class="helper">AI fluency · unspoken success definition · vendor narrative · the priority not on the agenda but in the air.</div>
+            <textarea name="entry_4_read" placeholder="The unspoken priority was not the rollout numbers -- it was that she had been blindsided in the vendor meeting on Wednesday and had not yet said it. The fluency in the room was symmetric on AI but asymmetric on what had happened that week -- I knew about the CEO-vendor conversations, she did not, and the gap was costing her authority in her own programme."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What shifted in your behaviour</label>
+            <div class="helper">The question you did not ask. The framing you swapped. The silence you held longer. Observable.</div>
+            <textarea name="entry_4_shifted" placeholder="Did not run the standard 1:1 agenda. Opened with: 'I owe you a brief on what the CEO and the vendor have been discussing for the past three weeks that has not been on our agenda -- and what that means for how Wednesday went.' Spent 20 of the 45 minutes there. The rest of the meeting got more useful because the asymmetry was named and closed."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What would have happened without the Door Practice</label>
+            <div class="helper">Honest counterfactual. What would the ten minutes after walking in have looked like?</div>
+            <textarea name="entry_4_counterfactual" placeholder="I would have run the standard agenda, she would have given me the standard report, the gap from Wednesday would have stayed sealed, and her authority in the programme would have continued to leak for another two weeks until she raised it in escalation."></textarea>
+          </div>
+          <div class="log-field">
+            <label>AI fluency in the room</label>
+            <div class="helper">Symmetric, asymmetric-up (you had more), asymmetric-down (room had more)?</div>
+            <textarea name="entry_4_fluency" placeholder="Symmetric. The fluency asymmetry that mattered was not about AI -- it was about who had been in which room that week."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTRY 5 -->
+      <div class="log-entry">
+        <div class="log-entry-header">
+          <div class="log-num">05</div>
+          <div class="log-entry-title-block">
+            <div class="log-day-label">Entry 5</div>
+            <div class="log-day-name">Fifth Meeting</div>
+            <div class="log-day-helper">A fifth meeting -- the hardest one of the week, or the most consequential.</div>
+          </div>
+        </div>
+        <div class="log-meta-row">
+          <div class="log-meta-field">
+            <label>Day &amp; Time</label>
+            <input type="text" name="entry_5_when" placeholder="Fri 14 March, 10:00 -- pre-board prep with the Group CEO">
+          </div>
+          <div class="log-meta-field">
+            <label>Stakeholder(s)</label>
+            <input type="text" name="entry_5_who" placeholder="Group CEO, alone -- 45 minutes, his office">
+          </div>
+        </div>
+        <div class="log-field-grid">
+          <div class="log-field">
+            <label>What you read about the room</label>
+            <div class="helper">AI fluency · unspoken success definition · vendor narrative · the priority not on the agenda but in the air.</div>
+            <textarea name="entry_5_read" placeholder="The room was carrying the regulator paper, the Microsoft demo, and a note from the Chair he had not yet shared with me. The unspoken success definition: not 'is the rollout on track' but 'can I defend this to the Chair on Tuesday'. Fluency: the CEO had upskilled three notches in two weeks -- the Chair note had forced it. Vendor narrative: still present but losing weight against the regulator narrative for the first time."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What shifted in your behaviour</label>
+            <div class="helper">The question you did not ask. The framing you swapped. The silence you held longer. Observable.</div>
+            <textarea name="entry_5_shifted" placeholder="Asked for the Chair note before I briefed him -- which I would not have done two months ago. Restructured the brief in the meeting to lead with what we could already evidence as regulator-defensible, not with the rollout traction. Held silence after his question about whether we should slow the rollout -- the silence produced his actual concern, which was about the Chair's confidence in the executive team, not the rollout itself. Different conversation than the one I had prepped for."></textarea>
+          </div>
+          <div class="log-field">
+            <label>What would have happened without the Door Practice</label>
+            <div class="helper">Honest counterfactual. What would the ten minutes after walking in have looked like?</div>
+            <textarea name="entry_5_counterfactual" placeholder="I would have walked in with the rollout brief and a confident pitch on the FY26 KPI. The Chair note would have stayed in his drawer. The Tuesday board conversation would have been led by the Chair not by us. By Wednesday I would have been writing a defence memo instead of a forward plan."></textarea>
+          </div>
+          <div class="log-field">
+            <label>AI fluency in the room</label>
+            <div class="helper">Symmetric, asymmetric-up (you had more), asymmetric-down (room had more)?</div>
+            <textarea name="entry_5_fluency" placeholder="The fluency had moved during the week. Started Monday asymmetric-up; by Friday symmetric. The Chair note was the upskill event. The Door Practice on Friday was about reading that change -- not running Friday on Monday's read."></textarea>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- STEP 3: Pattern across the five -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Pattern Across the Five</div>
+      </div>
+    </div>
+    <p class="step-desc">Five entries are data, not a Practical. The Practical is what the five together reveal that no single entry would. Two checks. First: across all five, what was the most consistent thing you read about the room that you had not been reading before? Second: where in your week did the Door Practice not happen this time, and what was the cost? Naming the pattern is what makes this Practical generalise. Without it, you have done five entries, not changed an instinct.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Pattern</div>
+        </div>
+        <div class="substep-body">Across the five entries -- what was the most consistent piece of data you were reading about rooms that you had not been reading before? One sentence.</div>
+        <textarea name="pattern" placeholder="In four of the five entries, the priority that mattered was not the one on the agenda -- it was the one shaped by something that had landed in the room four to seventy-two hours before (a vendor email, a Chair note, a regulator paper). The Door Practice mostly meant 'what did this room read in the past three days that I have not'."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Where the Practice Did Not Happen</div>
+        </div>
+        <div class="substep-body">The meeting this week where you did not run the Door Practice -- and the cost of skipping it. Honest, not heroic.</div>
+        <textarea name="missed_practice" placeholder="Tuesday 09:00 standup with the rollout team. I treated it as routine and walked in with my own agenda. Three of the team had had pull-aside conversations the day before about the vendor session and were reading me as having already decided things I had not. Cost: 40 minutes of misalignment in the meeting that did not get caught until Thursday's 1:1."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Stress-Test the Log</h2>
+    <p class="ai-activity-desc">Door Practice logs fail in two predictable places -- the practitioner reverse-engineers entries from memory at the end of the week (so the data is reconstructed not captured), and the asymmetric-fluency entry only ever names the direction where the practitioner had more. Both make the log unmarkable and unrepeatable. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether the Five Were Logged in Real Time</div>
+          <div class="ai-step-body">Ask AI to test whether each entry reads like it was captured the day of the meeting -- or like it was reconstructed on Friday afternoon when the Practical was due.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am submitting a five-day Door Practice Log. The five entries are: [paste]. Pressure-test this. Specifically: (1) Does each entry contain detail that could only have been captured close to the meeting -- a specific time, a specific phrase, a specific moment of silence -- or have the entries been smoothed into a coherent narrative arc that reads like Friday-afternoon reconstruction? (2) Are the counterfactuals ('what would have happened without the Door Practice') different in shape across the five, or do they sound like the same template applied five times? (3) Which entry sounds least like the actual day it claims to describe? Tell me which entry is at risk of having been reverse-engineered and what would make it more credible.</div>
+      <div class="prompt-label" style="margin-top:12px">Which entry is at risk and what would make it more credible?</div>
+      <textarea class="ai-field" name="ai_realtime_test" placeholder="AI flagged Entry 3 -- I had written all four counterfactuals in the same shape ('the meeting would have...') which read as template not capture. I rewrote Entry 3 with the specific 11:14am moment when I asked the vendor for a written read and they hesitated. Specific time, specific words, specific hesitation. The counterfactual now anchors to that moment, not to a generic 'meeting' shape."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Asymmetric-Fluency Honesty</div>
+          <div class="ai-step-body">Ask AI to test whether the asymmetric-fluency entries are honest about the direction -- including the entries where the practitioner had less than the room, not only where they had more.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">In my five Door Practice entries, I have flagged the AI fluency in each room as symmetric, asymmetric-up (I had more), or asymmetric-down (the room had more). My five reads are: [paste]. Pressure-test the honesty. (1) Across the five entries, how many times did I claim asymmetric-up versus asymmetric-down? (2) If I claimed asymmetric-up four times out of five, that is a flag -- a senior practitioner walking into five different rooms and being the most fluent in four of them is unlikely to be reading the rooms accurately. (3) Push me on the entries where I claimed symmetric or asymmetric-up -- is there evidence in the entry itself that I was actually less fluent than the room on a specific dimension (model governance, vendor commercials, regulator detail) and I am defending against admitting it?</div>
+      <div class="prompt-label" style="margin-top:12px">Where might the asymmetric-fluency reads be defensive rather than honest?</div>
+      <textarea class="ai-field" name="ai_fluency_honesty" placeholder="AI pushed back on Entry 1 -- I had claimed asymmetric-up but the entry itself shows the CFO surfacing the Microsoft demo that I did not surface, and the Strategy Director asking the question I had been about to ask. That is not asymmetric-up across the room -- it is asymmetric-up on technical detail and asymmetric-down on commercial-political fluency. I rewrote the fluency line to name both directions. The entry is more credible now because it is less flattering."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Three months from now, when you have run the Door Practice on twenty more meetings, what is the read that you will have started to make automatically -- the one that you currently have to remind yourself to look for? And what is the read you are still ducking, even with the discipline?</div>
+    <textarea name="ai_lens_future_read" placeholder="The read I will be making automatically is who has been in which room in the past 72 hours -- the temporal asymmetry. That is now showing up in four of five entries. The read I am still ducking is the one about my own commercial-political fluency relative to vendors who have been talking to my CEO without me. I keep flagging that as 'asymmetric-up on capability' instead of naming it as 'asymmetric-down on access'. The Door Practice has caught the room reading; it has not yet caught the self-reading. That is the next discipline."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Door Practice logs fall apart at the same place every time -- the practitioner reconstructs the entries on Friday afternoon, and the asymmetric-fluency entries only ever name the direction where the practitioner had more. A peer who has logged their own week can hear both at the same speed an assessor will. Bring this to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read out the entry you trust the least first -- the one where the data feels thinnest, or where you wrote the entry late. If your peer's first reaction is 'that sounds like it was written on Friday afternoon', the log is at risk and the rest is too. Then read the entry where you flagged the fluency asymmetry. If the direction was up, your peer should be able to ask one credible question that would force the entry to admit a downward asymmetry on a specific dimension -- and you should be able to hear it without defending.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The entry you wrote the latest -- does it have a specific moment, phrase, or time that anchors it to the actual day, or is it a smoothed narrative reconstruction?</li>
+      <li>Across your five fluency reads -- is there an entry where you claimed asymmetric-up that should have been asymmetric-down on a specific dimension you are not yet comfortable naming?</li>
+      <li>The pattern you named across the five -- if you ran another week of Door Practice tomorrow, what would the pattern predict about Tuesday morning? If it cannot predict anything, the pattern is post-hoc not real.</li>
+    </ul>
+  </div>
+
+</div>
+
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'week_window',
+    'programme_context',
+    'entry_1_when',
+    'entry_1_who',
+    'entry_1_read',
+    'entry_1_shifted',
+    'entry_1_counterfactual',
+    'entry_1_fluency',
+    'entry_2_when',
+    'entry_2_who',
+    'entry_2_read',
+    'entry_2_shifted',
+    'entry_2_counterfactual',
+    'entry_2_fluency',
+    'entry_3_when',
+    'entry_3_who',
+    'entry_3_read',
+    'entry_3_shifted',
+    'entry_3_counterfactual',
+    'entry_3_fluency',
+    'entry_4_when',
+    'entry_4_who',
+    'entry_4_read',
+    'entry_4_shifted',
+    'entry_4_counterfactual',
+    'entry_4_fluency',
+    'entry_5_when',
+    'entry_5_who',
+    'entry_5_read',
+    'entry_5_shifted',
+    'entry_5_counterfactual',
+    'entry_5_fluency',
+    'pattern',
+    'missed_practice',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

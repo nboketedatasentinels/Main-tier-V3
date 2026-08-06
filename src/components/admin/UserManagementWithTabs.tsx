@@ -155,6 +155,8 @@ export const UserManagementWithTabs = () => {
   const userCount = users.filter(u => normalizeRole(u.role) !== 'super_admin').length
   const mentorCount = users.filter(u => normalizeRole(u.role) === 'mentor').length
   const ambassadorCount = users.filter(u => normalizeRole(u.role) === 'ambassador').length
+  const partnerCount = users.filter(u => normalizeRole(u.role) === 'partner').length
+  const leadershipCount = mentorCount + ambassadorCount + partnerCount
 
   // Optional: derived subsets per tab (keeps tab components simpler)
   const memo = useMemo(() => {
@@ -188,7 +190,7 @@ export const UserManagementWithTabs = () => {
           </Tab>
           <Tab whiteSpace="nowrap">
             Leadership Council
-            <Badge ml={2} colorScheme="gray" fontSize="xs">{mentorCount + ambassadorCount}</Badge>
+            <Badge ml={2} colorScheme="gray" fontSize="xs">{leadershipCount}</Badge>
           </Tab>
         </TabList>
 

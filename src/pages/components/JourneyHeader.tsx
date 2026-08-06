@@ -99,7 +99,7 @@ export const JourneyHeader = ({
     }
   }, [user?.uid, profile?.id])
 
-  // Progress against the pass mark — identical formula to Weekly Glance.
+  // Progress against the pass mark - identical formula to Weekly Glance.
   const journeyProgress =
     passMark > 0 ? Math.min(100, Math.round((totalEarned / passMark) * 100)) : 0
 

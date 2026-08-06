@@ -237,7 +237,7 @@ const ReferralRewardsPage: React.FC = () => {
 
   const handleShare = useCallback(async () => {
     const shareData = {
-      title: 'Join me on Transformation Tier!',
+      title: 'Join me on Transformation Leader!',
       text: "I'm building my transformation journey and would love for you to join me!",
       url: referralLink,
     }
@@ -255,7 +255,7 @@ const ReferralRewardsPage: React.FC = () => {
     await handleCopy()
   }, [handleCopy, referralLink])
 
-  const shareMessage = 'Join me on Transformation Tier and start your growth journey!'
+  const shareMessage = 'Join me on Transformation Leader and start your growth journey!'
   const messageWithLink = `${shareMessage} ${referralLink}`
   const aiStackingCourseLink =
     getCourseDetailsFromMapping(AI_STACKING_TITLE)?.link ?? `${baseAppUrl.replace(/\/$/, '')}/app/courses`
@@ -281,7 +281,7 @@ const ReferralRewardsPage: React.FC = () => {
   }, [referralLink, openShareUrl])
 
   const handleEmailShare = useCallback(() => {
-    const subject = 'Join me on Transformation Tier'
+    const subject = 'Join me on Transformation Leader'
     openShareUrl(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageWithLink)}`)
   }, [messageWithLink, openShareUrl])
 
@@ -892,7 +892,7 @@ const ReferralRewardsPage: React.FC = () => {
             Share your link and start building your ecosystem.
           </Heading>
           <Text opacity={0.9} maxW="3xl" color="white">
-            Invite friends, peers, or teammates to Transformation Tier. Each successful signup counts toward your next reward
+            Invite friends, peers, or teammates to Transformation Leader. Each successful signup counts toward your next reward
             and helps expand our ecosystem of ambitious leaders.
           </Text>
 

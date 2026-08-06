@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 1: Five Pillars Self-Audit</title>
+<meta name="programme-component-id" content="fostering-practical-1">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-practical-1">
+<meta name="programme-part-title" content="Practical 1 · Five Pillars Self-Audit">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 1">
+<meta name="programme-submit-confirm" content="Submit Practical 1: Five Pillars Self-Audit?&#10;&#10;Practical 1 contributes to your Practicals Portfolio (20% of competence pass) for Fostering AI-Ready Teams. Once submitted, you can still edit until end of Week 1. After Week 1 closes, the submission is locked.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  select {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3e%3cpath d='M2 4l4 4 4-4' stroke='%234A3B8C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+  }
+  select:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Five Pillars Scorecard -- distinctive to Practical 1 */
+  .pillars-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .pillars-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .pillars-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 20px; font-style: italic; }
+  .pillar-row { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr 220px; gap: 18px; align-items: stretch; }
+  @media (max-width: 720px) { .pillar-row { grid-template-columns: 1fr; gap: 12px; align-items: start; } }
+  .pillar-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .pillar-body { display: flex; flex-direction: column; gap: 6px; }
+  .pillar-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .pillar-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 6px; }
+  .pillar-row textarea { min-height: 80px; font-size: 12px; padding: 10px 12px; flex: 1; }
+  .pillar-score { display: flex; flex-direction: column; align-items: stretch; gap: 6px; justify-content: flex-start; }
+  .pillar-score-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .score-buttons { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .score-btn { background: #fff; border: 1.5px solid var(--field-border); border-radius: 8px; padding: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 700; color: var(--purple); cursor: pointer; transition: all 0.15s; }
+  .score-btn:hover { border-color: var(--purple-light); background: rgba(107,91,181,0.06); }
+  .score-btn.selected { background: var(--gold); border-color: var(--gold-dark); color: var(--plum); }
+  .score-scale-helper { font-size: 10px; color: #888; display: flex; justify-content: space-between; margin-top: -2px; }
+
+  /* Cost statement card -- the AI-era specific cost */
+  .cost-card { background: rgba(245,200,66,0.06); border: 1.5px solid var(--gold); border-radius: 12px; padding: 20px 22px; margin-top: 4px; }
+  .cost-card .cost-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .cost-card .cost-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .cost-card .cost-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+  .ai-era-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .ai-era-tag { font-size: 11px; color: var(--gold-dark); background: #fff; border: 1px solid var(--gold); border-radius: 14px; padding: 4px 10px; font-weight: 600; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .pillars-card, .pillar-row { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .pillars-card { padding: 18px 16px; }
+    .pillar-row { padding: 16px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Five Pillars Self-Audit</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Fostering AI-Ready Teams</div>
+    <div class="practical-badge">Week 1 · Practical 1 of 6</div>
+  </div>
+  <h1 class="header-title">Five Pillars <em>Self-Audit</em></h1>
+  <p class="header-desc">Score your team on the five pillars of heart-centred leadership against observable behaviour in the past 30 days. Not the team you wish you had. The one that turned up. Then name the lowest pillar -- the one you would rather not name -- and the cost it has been producing in your AI-era work specifically.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Each pillar scored against observable behaviour from the past 30 days, not gut feel.</li>
+      <li>The lowest pillar is the genuinely lowest one -- the one that is uncomfortable to name.</li>
+      <li>The cost is concrete: a decision delayed, a person disengaged, a meeting derailed. Not "team morale".</li>
+      <li>The AI-era context is explicit -- rollout pressure, role redesign, technical authority shift, change fatigue compounding -- not generic team stress.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the team you are scoring -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Frame the Team You Are Scoring</div>
+      </div>
+    </div>
+    <p class="step-desc">Before you score, name the team. Not the org chart team -- the actual delivery team running through the AI-era work right now. The one whose behaviour you have observed in the past 30 days. Specificity here makes the audit honest.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Team</div>
+        </div>
+        <div class="substep-body">Name the team -- size, function, your relationship to it. Two sentences.</div>
+        <textarea name="team_context" placeholder="My direct delivery team -- 14 people across data engineering and platform reliability. I'm their VP. We are 4 months into a rollout of an AI-assisted incident response tool that is changing how senior engineers spend their week."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The 30-Day Window</div>
+        </div>
+        <div class="substep-body">What real situations from the past 30 days will you score against? Two or three brief markers.</div>
+        <textarea name="thirty_day_window" placeholder="Two incident reviews where the team had to defend overriding the AI's recommendation. One reorg conversation about whether the senior on-call rotation still makes sense. One Friday team retro where the room went quiet when I asked what people were carrying."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The scorecard -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Score the Five Pillars</div>
+      </div>
+    </div>
+    <p class="step-desc">Score each pillar 1 to 5 against what you have actually observed in the past 30 days. For each one, write the specific behaviour that earned the score -- the meeting, the comment, the moment. Score against evidence, not against the version of the team you want to defend in this audit.</p>
+
+    <div class="pillars-card">
+      <div class="pillars-card-label">The Five Pillars Scorecard</div>
+      <div class="pillars-card-sub">1 = rarely visible · 3 = sometimes visible · 5 = consistently observable in the past 30 days</div>
+
+      <div class="pillar-row">
+        <div class="pillar-num">01</div>
+        <div class="pillar-body">
+          <div class="pillar-name">Self-Awareness</div>
+          <div class="pillar-helper">The team and its members can name what they are feeling in the room and how it is affecting the work. They can say "I'm frustrated and it's making me argumentative" rather than just being argumentative.</div>
+          <textarea name="pillar_1_evidence" placeholder="Observable evidence from the past 30 days -- the meeting, the comment, the moment that earned the score."></textarea>
+        </div>
+        <div class="pillar-score">
+          <div class="pillar-score-label">Score 1 – 5</div>
+          <div class="score-buttons" data-pillar="1">
+            <button type="button" class="score-btn" data-score="1">1</button>
+            <button type="button" class="score-btn" data-score="2">2</button>
+            <button type="button" class="score-btn" data-score="3">3</button>
+            <button type="button" class="score-btn" data-score="4">4</button>
+            <button type="button" class="score-btn" data-score="5">5</button>
+          </div>
+          <div class="score-scale-helper"><span>low</span><span>high</span></div>
+          <input type="hidden" name="pillar_1_score" value="">
+        </div>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-num">02</div>
+        <div class="pillar-body">
+          <div class="pillar-name">Self-Regulation</div>
+          <div class="pillar-helper">Under pressure -- a failed AI rollout, a missed deadline, a senior leader pushing back -- the team holds its shape. Disagreement stays productive. Reactivity does not run the room.</div>
+          <textarea name="pillar_2_evidence" placeholder="Observable evidence from the past 30 days -- the meeting, the comment, the moment that earned the score."></textarea>
+        </div>
+        <div class="pillar-score">
+          <div class="pillar-score-label">Score 1 – 5</div>
+          <div class="score-buttons" data-pillar="2">
+            <button type="button" class="score-btn" data-score="1">1</button>
+            <button type="button" class="score-btn" data-score="2">2</button>
+            <button type="button" class="score-btn" data-score="3">3</button>
+            <button type="button" class="score-btn" data-score="4">4</button>
+            <button type="button" class="score-btn" data-score="5">5</button>
+          </div>
+          <div class="score-scale-helper"><span>low</span><span>high</span></div>
+          <input type="hidden" name="pillar_2_score" value="">
+        </div>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-num">03</div>
+        <div class="pillar-body">
+          <div class="pillar-name">Motivation</div>
+          <div class="pillar-helper">The team is moving toward something it can articulate -- not just executing tickets. People can say what the AI rollout is for and why this version of the work matters. The energy is durable, not performative.</div>
+          <textarea name="pillar_3_evidence" placeholder="Observable evidence from the past 30 days -- the meeting, the comment, the moment that earned the score."></textarea>
+        </div>
+        <div class="pillar-score">
+          <div class="pillar-score-label">Score 1 – 5</div>
+          <div class="score-buttons" data-pillar="3">
+            <button type="button" class="score-btn" data-score="1">1</button>
+            <button type="button" class="score-btn" data-score="2">2</button>
+            <button type="button" class="score-btn" data-score="3">3</button>
+            <button type="button" class="score-btn" data-score="4">4</button>
+            <button type="button" class="score-btn" data-score="5">5</button>
+          </div>
+          <div class="score-scale-helper"><span>low</span><span>high</span></div>
+          <input type="hidden" name="pillar_3_score" value="">
+        </div>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-num">04</div>
+        <div class="pillar-body">
+          <div class="pillar-name">Empathy</div>
+          <div class="pillar-helper">The team reads each other accurately -- including the senior engineer who has gone quiet, the new hire who is overcompensating, the one whose role is being most affected by the rollout. People are seen, not just managed.</div>
+          <textarea name="pillar_4_evidence" placeholder="Observable evidence from the past 30 days -- the meeting, the comment, the moment that earned the score."></textarea>
+        </div>
+        <div class="pillar-score">
+          <div class="pillar-score-label">Score 1 – 5</div>
+          <div class="score-buttons" data-pillar="4">
+            <button type="button" class="score-btn" data-score="1">1</button>
+            <button type="button" class="score-btn" data-score="2">2</button>
+            <button type="button" class="score-btn" data-score="3">3</button>
+            <button type="button" class="score-btn" data-score="4">4</button>
+            <button type="button" class="score-btn" data-score="5">5</button>
+          </div>
+          <div class="score-scale-helper"><span>low</span><span>high</span></div>
+          <input type="hidden" name="pillar_4_score" value="">
+        </div>
+      </div>
+
+      <div class="pillar-row">
+        <div class="pillar-num">05</div>
+        <div class="pillar-body">
+          <div class="pillar-name">Social Skill</div>
+          <div class="pillar-helper">The team can disagree out loud, repair after a tense conversation, and influence each other without title pressure. Difficult things get said in the room rather than in the side-channel after the meeting.</div>
+          <textarea name="pillar_5_evidence" placeholder="Observable evidence from the past 30 days -- the meeting, the comment, the moment that earned the score."></textarea>
+        </div>
+        <div class="pillar-score">
+          <div class="pillar-score-label">Score 1 – 5</div>
+          <div class="score-buttons" data-pillar="5">
+            <button type="button" class="score-btn" data-score="1">1</button>
+            <button type="button" class="score-btn" data-score="2">2</button>
+            <button type="button" class="score-btn" data-score="3">3</button>
+            <button type="button" class="score-btn" data-score="4">4</button>
+            <button type="button" class="score-btn" data-score="5">5</button>
+          </div>
+          <div class="score-scale-helper"><span>low</span><span>high</span></div>
+          <input type="hidden" name="pillar_5_score" value="">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Lowest pillar + cost -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Lowest Pillar -- and the Cost</div>
+      </div>
+    </div>
+    <p class="step-desc">Look at the scorecard. The lowest pillar is your starting point for the Blueprint in Week 2. If two pillars are tied, pick the one you would rather not pick -- the one that is closer to your own pattern as the leader. The honest one. Then trace the cost. Not "team morale". A specific decision delayed, a specific person disengaged, a specific meeting derailed -- in the AI-era context.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Lowest Pillar</div>
+        </div>
+        <div class="substep-body">Select the pillar with the lowest score. If two are tied, pick the one you would rather not pick.</div>
+        <select name="lowest_pillar">
+          <option value="">Choose the lowest pillar…</option>
+          <option value="self_awareness">01 · Self-Awareness</option>
+          <option value="self_regulation">02 · Self-Regulation</option>
+          <option value="motivation">03 · Motivation</option>
+          <option value="empathy">04 · Empathy</option>
+          <option value="social_skill">05 · Social Skill</option>
+        </select>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Why This One</div>
+        </div>
+        <div class="substep-body">Two sentences -- why this pillar specifically, including what would have been the safer pillar to name instead.</div>
+        <textarea name="why_this_pillar" placeholder="Empathy is genuinely the lowest -- I have been managing the rollout in execution mode and I have stopped reading the senior engineers in the room. The safer pillar to name would have been Motivation, because the rollout is genuinely behind schedule and that is easier to talk about than the fact that I have stopped seeing my people."></textarea>
+      </div>
+    </div>
+
+    <div class="cost-card">
+      <div class="cost-label">The cost statement</div>
+      <div class="cost-q">What has the lowest pillar been costing the team's AI-era work specifically?</div>
+      <p class="cost-helper">Concrete. A decision delayed, a person disengaged, a meeting derailed. The AI-era context must be in the sentence -- not "team stress" or "morale". One of the four below should appear by name.</p>
+      <div class="ai-era-tags">
+        <span class="ai-era-tag">Rollout pressure</span>
+        <span class="ai-era-tag">Role redesign</span>
+        <span class="ai-era-tag">Technical authority shift</span>
+        <span class="ai-era-tag">Change fatigue compounding</span>
+      </div>
+      <textarea name="cost_statement" placeholder="In the past 30 days, my lowest empathy has cost a specific senior engineer -- the one whose 11 years of incident knowledge is being replaced fastest by the AI tool. He has stopped pushing back in incident reviews. I read it as compliance. It is technical authority shift, and the cost is that the next time the AI gets it wrong, no one in the room will be willing to say so."></textarea>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Audit</h2>
+    <p class="ai-activity-desc">Self-audits fail at the same two places every time -- you pick the safer pillar, and the cost statement slides into generic team language. AI as an outside reader can hear both faults faster than a peer can. Use it before you take this Practical to peer-to-peer.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether You Picked the Genuinely Lowest Pillar</div>
+          <div class="ai-step-body">Ask AI to test whether the pillar you named is the genuinely lowest one -- or the one that is safest to talk about. Most practitioners pick the second.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am running a self-audit on my team across five pillars of heart-centred leadership: self-awareness, self-regulation, motivation, empathy, and social skill. My scores against observable behaviour in the past 30 days were: [paste your five scores]. The evidence I wrote against each was: [paste your evidence sentences]. The pillar I have named as lowest is: [paste your lowest pillar]. Pressure-test this choice. Specifically: (1) Is the pillar I have named the genuinely lowest one, or the safest one to name -- the one that is more about the team than about me as the leader? (2) Looking at my evidence, is there a different pillar where the evidence is actually weaker than I am admitting? (3) If a peer who knows my team independently scored these pillars, where would they most likely disagree with me?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What will you change about your lowest pillar choice -- if anything?</div>
+      <textarea class="ai-field" name="ai_lowest_pillar_test" placeholder="AI pushed back on my Motivation score being too low. It read my evidence on Empathy and said the scoring there was generous -- the senior engineer going quiet was not a Motivation problem, it was an Empathy problem I had pattern-matched to the wrong pillar because Motivation is easier to admit. Updating: lowest pillar is Empathy, not Motivation. Motivation moves up one. The cost statement now needs to be rewritten because it was tracing a Motivation cost, not an Empathy one."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Cost Statement</div>
+          <div class="ai-step-body">Ask AI to test whether the cost statement is concrete and AI-era specific -- or whether it has slipped into generic team language. If the cost statement is generic, the Blueprint built from it next week will be generic too.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My cost statement for the lowest pillar in the team's AI-era work is: [paste your cost statement]. Pressure-test it on three criteria. (1) Is it concrete -- a specific decision delayed, person disengaged, or meeting derailed -- or does it stay at the level of "team morale" or "team stress"? (2) Does it explicitly name an AI-era dynamic: rollout pressure, role redesign, technical authority shift, or change fatigue compounding? (3) Could a different practitioner reading this cost statement understand what is at stake in my team specifically, or could it apply to any team in any organisation? Tell me where the statement is generic, and rewrite the weakest sentence with operational specificity.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the cost statement go generic? What is the tightened version?</div>
+      <textarea class="ai-field" name="ai_cost_statement_test" placeholder="AI flagged that 'no one in the room will be willing to say so' was strong but the front half of the statement said 'has stopped pushing back' which is too soft -- it could be read as compliance or fatigue. Tightened version: 'The cost is that on 14 May, in the post-incident review of the database failover, the senior engineer who would normally have flagged the AI's misread of the alert pattern said nothing, and the team adopted the AI's flawed root-cause analysis as the official record.' Specific date, specific incident, specific consequence. AI-era dynamic named: technical authority shift."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the AI rollout has shifted again -- new tooling, new role definitions, a new pressure cycle -- which of the five pillars is most likely to drop a score, and what early signal would you watch for before it shows up in observable behaviour?</div>
+    <textarea name="ai_lens_future_pillar" placeholder="Most likely to drop: Empathy again, but for a different reason. By Q4 we will be onto the second-generation tool, and the engineers who adapted to the first version will be told their adaptation is now obsolete. The early signal I would watch for is the silence pattern -- specifically, the moment where the engineer who has historically been first to ask a clarifying question stops asking. That is the signal that lands a week before a heatmap would catch it."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Self-audits fall apart at the same place every time -- the pillar named is one the practitioner is comfortable being seen failing at. A peer who has done their own audit can hear when the choice is honest and when it is strategic. Bring this Practical to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read your scorecard out loud, then read the evidence you wrote against each pillar. Watch your peer's face at the lowest-pillar reveal. If they look surprised, you may have picked the safer one. If they nod, you probably named what they would have named. Either way, the conversation is useful before you submit.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Is the lowest pillar the one you would rather not name -- or the one that lets you off the hook because it is more about the team than about you?</li>
+      <li>Is the cost stated in concrete terms -- a decision delayed, a person disengaged, a meeting derailed -- or has it slipped into "team morale" language?</li>
+      <li>Does the AI-era context show up in the cost statement -- rollout pressure, role redesign, technical authority shift, change fatigue compounding -- or could this cost statement apply to any team in any year?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+// Score button selection (KEEP as non-module so it runs immediately)
+document.querySelectorAll('.score-buttons').forEach(group => {
+  const pillar = group.dataset.pillar;
+  const hidden = document.querySelector('input[name="pillar_' + pillar + '_score"]');
+  group.querySelectorAll('.score-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.score-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      if (hidden) hidden.value = btn.dataset.score;
+    });
+  });
+});
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'team_context',
+    'thirty_day_window',
+    'pillar_1_score',
+    'pillar_1_evidence',
+    'pillar_2_score',
+    'pillar_2_evidence',
+    'pillar_3_score',
+    'pillar_3_evidence',
+    'pillar_4_score',
+    'pillar_4_evidence',
+    'pillar_5_score',
+    'pillar_5_evidence',
+    'lowest_pillar',
+    'why_this_pillar',
+    'cost_statement',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

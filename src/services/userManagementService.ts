@@ -14,6 +14,7 @@ import { normalizeEmail } from '@/utils/email'
 import { normalizeRole } from '@/utils/role'
 import { resetUserJourney } from './userJourneyService'
 import type { JourneyType } from '@/config/pointsConfig'
+import { notifyUserOfRoleChange, toWelcomeRole } from '@/services/welcomeEmailService'
 
 export type ManagedUserRole = 'user' | 'partner' | 'admin' | 'super_admin' | 'team_leader' | 'mentor' | 'ambassador' | 'verifier'
 export type MembershipStatus = 'free' | 'paid' | 'inactive'
@@ -299,6 +300,14 @@ const throwIfSupabaseError = (error: { message: string } | null, action: string)
 }
 
 export const updateUserRole = async (userId: string, role: ManagedUserRole, companyId?: string | null) => {
+  const { data: existing } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', userId)
+    .maybeSingle()
+  const previousWelcomeRole = toWelcomeRole(existing?.role as string | null | undefined)
+  const nextWelcomeRole = toWelcomeRole(role)
+
   const updates: Record<string, unknown> = {
     role: toProfilesRole(role),
     updated_at: new Date().toISOString(),
@@ -308,6 +317,10 @@ export const updateUserRole = async (userId: string, role: ManagedUserRole, comp
   }
   const { error } = await supabase.from('profiles').update(updates).eq('id', userId)
   throwIfSupabaseError(error, 'updateUserRole')
+
+  if (previousWelcomeRole !== nextWelcomeRole) {
+    void notifyUserOfRoleChange({ userId, role })
+  }
 }
 
 export const updateMembershipStatus = async (userId: string, membershipStatus: MembershipStatus) => {
@@ -389,6 +402,12 @@ export const bulkUpdateRole = async (userIds: string[], role: ManagedUserRole) =
   if (!userIds.length) {
     return { successfulIds: [], failedIds: [] }
   }
+
+  const { data: existingRows } = await supabase
+    .from('profiles')
+    .select('id, role, email, full_name, company_name, company_code')
+    .in('id', userIds)
+
   const { error } = await supabase
     .from('profiles')
     .update({ role: toProfilesRole(role), updated_at: new Date().toISOString() })
@@ -398,6 +417,20 @@ export const bulkUpdateRole = async (userIds: string[], role: ManagedUserRole) =
   if (error) {
     return { successfulIds: [], failedIds: [...userIds] }
   }
+
+  const nextWelcomeRole = toWelcomeRole(role)
+  for (const row of existingRows ?? []) {
+    if (toWelcomeRole(row.role as string | null | undefined) === nextWelcomeRole) continue
+    void notifyUserOfRoleChange({
+      userId: row.id as string,
+      role,
+      email: (row.email as string | null) ?? null,
+      name: (row.full_name as string | null) ?? null,
+      organizationName: (row.company_name as string | null) ?? null,
+      organizationCode: (row.company_code as string | null) ?? null,
+    })
+  }
+
   return { successfulIds: [...userIds], failedIds: [] }
 }
 
@@ -420,7 +453,7 @@ export const bulkUpdateMembershipStatus = async (userIds: string[], membershipSt
 
 export const assignRoleToUser = async (
   userId: string,
-  role: Extract<ManagedUserRole, 'mentor' | 'ambassador'>,
+  role: Extract<ManagedUserRole, 'mentor' | 'ambassador' | 'partner'>,
   company?: OrganizationOption | null,
   notes?: string,
 ) => {
@@ -446,6 +479,13 @@ export const assignRoleToUser = async (
 
   const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
   throwIfSupabaseError(error, 'assignRoleToUser')
+
+  void notifyUserOfRoleChange({
+    userId,
+    role,
+    organizationName: company?.name ?? null,
+    organizationCode: company?.code ?? null,
+  })
 
   // Best-effort role-assignment notification. A failure here must not roll back
   // the role assignment above, so we log and continue rather than throw.
@@ -588,6 +628,15 @@ export const updateUserAccessWithAudit = async (params: {
 
   const { error } = await supabase.from('profiles').update(payload).eq('id', userId)
   throwIfSupabaseError(error, 'updateUserAccessWithAudit')
+
+  if (changedFields.includes('role')) {
+    void notifyUserOfRoleChange({
+      userId,
+      role: after.role ?? updates.role,
+      organizationName: after.companyName ?? updates.companyName ?? null,
+      organizationCode: after.companyCode ?? updates.companyCode ?? null,
+    })
+  }
 
   // Best-effort audit trail. A failure to record the audit row must not undo
   // the access change that already succeeded above, so we log and continue.

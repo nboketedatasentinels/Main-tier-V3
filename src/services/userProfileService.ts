@@ -17,6 +17,7 @@ import { db } from '@/services/firebase'
 import { supabase } from '@/services/supabase'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import type { UserProfile } from '@/types'
+import { notifyUserOfRoleChange } from '@/services/welcomeEmailService'
 
 export interface BadgeRecord {
   id: string
@@ -237,6 +238,17 @@ export const updateUserProfile = async (
     setDoc(doc(db, 'profiles', userId), payload, { merge: true }),
     setDoc(doc(db, 'users', userId), payload, { merge: true }),
   ])
+
+  if (hasRoleUpdate) {
+    void notifyUserOfRoleChange({
+      userId,
+      role: String(sanitized.role),
+      organizationName:
+        typeof sanitized.companyName === 'string' ? sanitized.companyName : null,
+      organizationCode:
+        typeof sanitized.companyCode === 'string' ? sanitized.companyCode : null,
+    })
+  }
 
   const hasMentorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'mentorId')
   const hasAmbassadorUpdate = Object.prototype.hasOwnProperty.call(sanitized, 'ambassadorId')

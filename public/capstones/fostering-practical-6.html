@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 6: 90-Day Operating Plan + Lessons Synthesis</title>
+<meta name="programme-component-id" content="fostering-practical-6">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-practical-6">
+<meta name="programme-part-title" content="Practical 6 · 90-Day Operating Plan + Lessons Synthesis">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 6">
+<meta name="programme-submit-confirm" content="Submit Practical 6: 90-Day Operating Plan + Lessons Synthesis (Capstone Part B)?&#10;&#10;This Practical is also Capstone Part B for Fostering AI-Ready Teams. It contributes to your Practicals Portfolio (20%) and Combined Capstone (50% shared with Part A). Once submitted, you can still edit until end of Week 6. After Week 6 closes, the submission is locked and will be marked as the second half of your Combined Capstone.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .capstone-badge { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid var(--gold); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  .plan-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.06) 100%); border: 2px solid var(--gold); border-radius: 16px; padding: 32px 28px 24px; margin-bottom: 16px; position: relative; }
+  .plan-stamp { position: absolute; top: -12px; left: 24px; background: var(--gold); color: var(--plum); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; padding: 5px 12px; border-radius: 14px; }
+  .plan-card-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .plan-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .plan-section { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .plan-section { grid-template-columns: 1fr; gap: 8px; } }
+  .ps-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .ps-body { display: flex; flex-direction: column; gap: 6px; }
+  .ps-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .ps-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .plan-section textarea { min-height: 80px; font-size: 12px; padding: 10px 12px; }
+
+  .capstone-callout { background: var(--plum); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; }
+  .capstone-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .capstone-icon svg { width: 18px; height: 18px; }
+  .capstone-callout-text .cc-tag { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .capstone-callout-text .cc-body { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.6; }
+
+  .synth-card { background: #fff; border: 2px solid var(--purple); border-radius: 16px; padding: 24px 28px; margin-bottom: 24px; position: relative; }
+  .synth-stamp { position: absolute; top: -12px; left: 24px; background: var(--purple); color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.14em; padding: 5px 12px; border-radius: 14px; }
+  .synth-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; margin-top: 4px; }
+  .synth-title { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--plum); margin-bottom: 6px; }
+  .synth-desc { font-size: 13px; color: #666; line-height: 1.7; margin-bottom: 14px; }
+  .synth-card textarea { min-height: 200px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .plan-card, .plan-section, .synth-card { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .plan-card { padding: 30px 16px 18px; }
+    .plan-section { padding: 16px 16px; }
+    .synth-card { padding: 22px 16px 18px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">90-Day Operating Plan + Lessons Synthesis</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Fostering AI-Ready Teams</div>
+    <div class="practical-badge">Week 6 · Practical 6 of 6</div>
+    <div class="capstone-badge">Capstone Part B</div>
+  </div>
+  <h1 class="header-title">90-Day <em>Operating Plan</em></h1>
+  <p class="header-desc">Pull the six weeks together into the operating plan you will run for the next 90 days. Six sections that turn the audit, blueprint, org chart, conversation, and heatmap into something the team can feel by Week 18. Then write the Lessons Synthesis -- what you have actually learned about leading a team through an AI rollout, in your own words, that you did not know in Week 1. This is Capstone Part B. It must be deployable on Monday morning.</p>
+</div>
+
+<div class="content">
+
+  <div class="capstone-callout">
+    <div class="capstone-icon">
+      <svg viewBox="0 0 18 18" fill="none"><path d="M3 3h12v12H3z" stroke="#1A1726" stroke-width="2" fill="none"/><path d="M6 7h6M6 10h6M6 13h3" stroke="#1A1726" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="capstone-callout-text">
+      <div class="cc-tag">Capstone Part B · Marked Submission</div>
+      <div class="cc-body">This Practical is also the Week 6 Capstone artefact. Your assessor marks it against the Capstone rubric -- it carries 25% of your final grade as the second half of the Combined Capstone. The same submission, marked once, counts for both the Practicals Portfolio and the Capstone.</div>
+    </div>
+  </div>
+
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The plan is six sections -- each one short, specific, deployable on Monday. Not a 12-page document trying to demonstrate effort.</li>
+      <li>Each section names a specific cadence, decision, signal, intervention, development move, or protocol -- with dates or frequencies attached.</li>
+      <li>The Lessons Synthesis is in your own voice -- not the language of the course. What you actually now know that you did not know in Week 1.</li>
+      <li>The Synthesis names at least one belief you came in with that turned out to be wrong, and what replaced it.</li>
+      <li>Each section ties back to one of the previous five Practicals -- the Synthesis shows that the journey worked, not that you read the materials well.</li>
+    </ul>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Carry the Six-Week Journey Forward</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the operating plan, name what you are bringing into Week 7 from each of the previous Practicals. One line each. This is the spine of the operating plan -- if a section of the plan does not reference one of these, the plan has lost continuity with the journey.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Carry-Forward from W1, W2, W3</div>
+        </div>
+        <div class="substep-body">One line each. The pillar from W1, the alternative behaviour from the Blueprint, the biggest divergence from the org chart.</div>
+        <textarea name="carry_w123" placeholder="W1: Empathy was the lowest pillar -- the cost was N stopping pushback in incident reviews. W2 Blueprint alternative: open every incident review with the senior engineer&apos;s read before the AI summary. W3 biggest divergence: technical authority sits two layers below decision authority in the formal chart, with N as the load-bearing point."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Carry-Forward from W4, W5</div>
+        </div>
+        <div class="substep-body">One line each. What is now in motion from the conversation, and the highest-risk role from the heatmap.</div>
+        <textarea name="carry_w45" placeholder="W4 conversation: N is now leading post-incident reviews with AI summary opened second; we have a 16 June review of how that landed; I owe her a written read of the second-generation tool by 20 June. W5 heatmap: highest-risk role is N; intervention is the structural change to incident review order, with success measured by a documented root-cause challenge in two consecutive reviews."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Design the Six-Section Operating Plan</div>
+      </div>
+    </div>
+    <p class="step-desc">Six sections. Each one short. The plan reads as a single deployable artefact -- a page a peer could pick up in 90 seconds and tell you what you are running, on what cadence, with what signals, and what triggers an intervention. If a section grows past five lines, it is doing too much. Cut, do not pad.</p>
+
+    <div class="plan-card">
+      <div class="plan-stamp">THE 90-DAY PLAN</div>
+      <div class="plan-card-label">90-Day Operating Plan</div>
+      <div class="plan-card-sub">Six sections · one page · deployable Monday morning of Week 7</div>
+
+      <div class="plan-section">
+        <div class="ps-num">01</div>
+        <div class="ps-body">
+          <div class="ps-name">Meeting Cadence</div>
+          <div class="ps-helper">The recurring meetings that hold the operating system together for 90 days. Frequency, length, named purpose. Not the meetings that already exist out of habit -- the ones that are doing real work.</div>
+          <textarea name="plan_cadence" placeholder="Weekly post-incident reviews -- Friday 14:00, 60 minutes, AI summary opened second. Biweekly 1:1 with N -- 30 minutes, future-tense check-in as the standing first item. Monthly architecture review -- third Tuesday, 90 minutes, with N as technical reference point. Quarterly Q3 prioritisation -- 5 June, full team."></textarea>
+        </div>
+      </div>
+
+      <div class="plan-section">
+        <div class="ps-num">02</div>
+        <div class="ps-body">
+          <div class="ps-name">Decision Rights</div>
+          <div class="ps-helper">Where decisions sit -- and where they have moved from. The honest version. Where you have ceded authority you used to hold, and where you have re-claimed authority that had drifted.</div>
+          <textarea name="plan_decisions" placeholder="Technical root-cause analysis decisions: ceded from D to N for the duration of the rollout, with D notified, not approving. AI vendor escalation decisions: kept at VP level, not delegated to D. Hiring for vacated incident response roles: paused until Week 12 -- N&apos;s growth path is the higher-priority decision and has a date attached."></textarea>
+        </div>
+      </div>
+
+      <div class="plan-section">
+        <div class="ps-num">03</div>
+        <div class="ps-body">
+          <div class="ps-name">Signal Monitoring</div>
+          <div class="ps-helper">The two or three observable signals you will track weekly -- the ones that would tell you the operating system is failing before the heatmap re-run does. Specific. Not &quot;morale&quot;.</div>
+          <textarea name="plan_signals" placeholder="Three weekly signals. (1) The order of speakers in incident reviews -- does N still go first? (2) Future-tense questions from senior engineers in 1:1s -- are they happening or being deferred again? (3) The number of documented root-cause analyses that differ from the AI summary -- the metric from the W2 Blueprint."></textarea>
+        </div>
+      </div>
+
+      <div class="plan-section">
+        <div class="ps-num">04</div>
+        <div class="ps-body">
+          <div class="ps-name">Intervention Triggers</div>
+          <div class="ps-helper">What pulls you out of the cadence and into a structural intervention. Specific. The thing that, if it happens, means you re-run the heatmap before the calendar reminds you to.</div>
+          <textarea name="plan_triggers" placeholder="Two triggers. (1) If for three consecutive incident reviews the AI summary is opened first by default, the structural change has not landed -- I run a session to redesign the review template, not just remind people of the order. (2) If any senior engineer asks a future-tense question I cannot answer in any 1:1, I have one week to turn that into a written read, not a follow-up commitment."></textarea>
+        </div>
+      </div>
+
+      <div class="plan-section">
+        <div class="ps-num">05</div>
+        <div class="ps-body">
+          <div class="ps-name">Team Development Moves</div>
+          <div class="ps-helper">The deliberate moves to grow the team into the AI-era roles. Not generic &quot;career development&quot;. Specific moves with named people and dates.</div>
+          <textarea name="plan_development" placeholder="N: leads the technical write-up of the second-generation tool architecture, by 30 July. M: graduates from informal deputy to formal incident response co-lead, with a budget line, by Week 10. J: takes on the cross-team AI tooling integration ownership starting Week 8 -- her soft power becomes a formal remit. Three named moves. Three dates."></textarea>
+        </div>
+      </div>
+
+      <div class="plan-section">
+        <div class="ps-num">06</div>
+        <div class="ps-body">
+          <div class="ps-name">The Leader&apos;s Own Protocol</div>
+          <div class="ps-helper">What you will do as the leader to hold the operating system. Not a self-care line. Specific protocols -- writing rhythms, calibration check-ins, your own peer-to-peer cadence.</div>
+          <textarea name="plan_leader_protocol" placeholder="Weekly Friday afternoon write-up: 30 minutes, name what shifted in the team and what I did not raise this week that I should have. Biweekly peer-to-peer with my Practitioner Community partner: same Practical lens, mutual heatmap re-runs. Monthly calibration: re-read the W4 conversation pattern -- am I deferring something for absence-of-frame? If yes, calendar within seven days, no exceptions."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Write the Lessons Synthesis</div>
+      </div>
+    </div>
+    <p class="step-desc">The Lessons Synthesis is the part of Capstone Part B that proves the journey worked -- not that you read the materials well. Write it in your own voice. Not the language of the course. What do you actually now know that you did not know in Week 1? Where did the audit, the blueprint, the org chart, the conversation, and the heatmap land in your thinking? Name at least one belief you came in with that turned out to be wrong and what replaced it. The voice should sound like you, on a Friday afternoon, talking to a peer who asked what the six weeks taught you.</p>
+
+    <div class="synth-card">
+      <div class="synth-stamp">LESSONS SYNTHESIS</div>
+      <div class="synth-label">In Your Own Voice</div>
+      <div class="synth-title">What You Now Know That You Did Not Know in Week 1</div>
+      <p class="synth-desc">Cumulative thinking across the six Practicals. What pattern recognition is now automatic that was effortful before. What belief you came in with turned out to be wrong, and what replaced it. The Synthesis is short -- aim for three to four paragraphs of dense, particular, voice-driven writing. Not a course summary.</p>
+      <textarea name="lessons_synthesis" placeholder="The thing I came in with that turned out to be wrong: I thought leading a team through an AI rollout was a communication problem -- that the team&apos;s resistance was a function of how well I framed the rollout. Six weeks in, what replaced it: it is a structural authority problem dressed as a communication one. The reason N was disengaging was not that I had not communicated the rollout well. It was that the rollout had structurally moved her technical authority and the org chart had not caught up. No amount of framing would have fixed that. Only the structural move -- changing the order of incident reviews -- did.
+
+The pattern recognition that is now automatic: when I see a senior engineer stop pushing back in a technical meeting that is being mediated by an AI tool, the question is no longer &apos;what is wrong with their morale&apos;. The question is &apos;where has the AI rollout structurally moved their authority and does the org chart still match&apos;. The heatmap in Week 5 made that question reflexive. I cannot un-see it.
+
+What landed unexpectedly: the W4 conversation reflection. I had thought the Practical was about having the hard conversation. It turned out to be about the pattern of avoidance -- and the realisation that I defer conversations whose frame I do not yet have, when in practice the conversation is the thing that builds the frame. That insight has redrawn what counts as &apos;ready&apos; for me. I am not waiting for clarity before the conversation any more.
+
+What I did not learn but had hoped to: how to do this at scale. The Practicals worked because they were one team, one rollout, one practitioner. The next 90 days will tell me whether the operating plan transports to the next AI rollout cycle, or whether each rollout is its own field of structural disturbance. I suspect the latter -- which means the operating plan I just wrote is the template, not the answer."></textarea>
+    </div>
+  </div>
+
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Plan and the Synthesis</h2>
+    <p class="ai-activity-desc">Capstone Part B fails at two predictable places -- the operating plan reads as aspirational rather than deployable, and the Lessons Synthesis collapses into the language of the course rather than the practitioner&apos;s own voice. AI as an outside reader catches both. Use it before you submit -- this is the half of the Capstone that determines whether the journey produced a leader or just a learner.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Operating Plan -- Deployable vs Aspirational</div>
+          <div class="ai-step-body">Ask AI to test whether the six sections are deployable on Monday morning -- with cadences, decisions, signals, and triggers that someone other than you could pick up and run -- or whether they have slipped into aspirational language.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am writing a 90-day operating plan as Capstone Part B for a course on leading AI-ready teams. The six sections are: (1) Meeting Cadence: [paste]. (2) Decision Rights: [paste]. (3) Signal Monitoring: [paste]. (4) Intervention Triggers: [paste]. (5) Team Development Moves: [paste]. (6) The Leader&apos;s Own Protocol: [paste]. Pressure-test on three criteria. (1) For each section, could a peer pick this up on Monday morning and tell you what they would actually do this week? (2) Which section is most aspirational -- closer to a description of a good leader than to a deployable instruction? (3) Where would the plan most likely fail in Week 7 -- and is the failure mode addressed in the plan itself, or assumed away? Tell me which section needs the most rewriting and rewrite the weakest one with operational specificity.</div>
+      <div class="prompt-label" style="margin-top:12px">Which section was weakest? What is the rewritten version?</div>
+      <textarea class="ai-field" name="ai_plan_test" placeholder="AI flagged section 6 -- The Leader&apos;s Own Protocol -- as the most aspirational. I had written &apos;monthly self-reflection&apos; which is a description of a good leader, not a deployable instruction. Rewriting: &apos;Monthly first-Friday calibration: re-read the W4 conversation pattern. Three questions on a single page -- what conversation am I deferring for absence-of-frame, what is the date by which I will calendar it, and who is the peer who will know if I miss the date. Output: a calendared conversation by end of the same week, or an explicit decision not to have it.&apos; Specific cadence, specific output, specific accountability."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test the Synthesis -- Pattern Recognition vs Course Recap</div>
+          <div class="ai-step-body">Ask AI to test whether the Lessons Synthesis is genuine pattern recognition in your own voice -- or whether it has slipped into the language of the course, listing the Practicals back rather than naming what you now actually know.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My Lessons Synthesis is: [paste]. Pressure-test on three criteria. (1) Does this read in my own voice -- specific to my team, my rollout, my pattern -- or has it slipped into generic course language (&quot;I learned the importance of empathy&quot;, &quot;I now value team development&quot;)? (2) Have I named at least one specific belief I came in with that turned out to be wrong, and what replaced it -- or have I only named what I added, which lets every prior belief stand? (3) Is the pattern recognition genuinely automatic now, or am I still describing the Practicals back rather than what they have left me with? Where the Synthesis is generic, rewrite the weakest paragraph with the specifics of my team and my rollout.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the Synthesis go generic? What is the voice-driven version?</div>
+      <textarea class="ai-field" name="ai_synthesis_test" placeholder="AI flagged the second paragraph as too clean -- I had written &apos;I now think differently about resistance&apos; which is a course-summary line. Rewriting in voice: &apos;When I see a senior engineer stop pushing back in a technical meeting being mediated by an AI tool, the question I now ask first is not what is wrong with their morale. It is: where has the AI rollout structurally moved their authority, and does the org chart still match. The heatmap in Week 5 made that question reflexive. I cannot un-see it.&apos; Specific to N, specific to incident reviews, specific to the AI tool. The voice came back."></textarea>
+    </div>
+  </div>
+
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the second-generation AI tool is live and a new round of structural disturbance hits the team, which section of this 90-day plan will be the first to break -- and what version of the W5 heatmap will tell you the plan is no longer fit for the new rollout cycle? When does the operating plan become the next cohort&apos;s audit?</div>
+    <textarea name="ai_lens_plan_break" placeholder="First section to break: Decision Rights. The second-generation tool will redistribute technical authority again -- N&apos;s expert position will narrow on alert pattern recognition and widen on integration architecture, which means the decision rights I have set for the current rollout will be partly obsolete by Q4. The signal that the plan is breaking is the first incident review where the technical reference point in the room is not N. When that happens once and lands well, I re-run the heatmap. The operating plan becomes the next audit when I have to write a new W3 divergence list -- and that is probably Week 16, not Week 18."></textarea>
+  </div>
+
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Capstone Part B falls apart at the same place every time -- the plan reads well on the page but no one could run it on Monday, and the Synthesis sounds like the course rather than the practitioner. A peer who has done their own Capstone can hear both faults at the same speed an assessor will.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the six plan sections aloud. After each one, ask your peer one question: if you handed them this section and asked them to run it next week, would they know what to do? Then read the Synthesis. If their first reaction is &quot;this sounds like you&quot; -- the voice has held. If their first reaction is &quot;this could have come from anyone in the cohort&quot; -- it has slipped into course language and you have one more pass to make.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Of the six plan sections, which one would you struggle to run on Monday morning even though you wrote it -- and what is missing from it that would make it deployable?</li>
+      <li>The Synthesis -- can you point to one belief you came in with that turned out to be wrong, and what replaced it? If not, you have only added, not changed.</li>
+      <li>If the second-generation AI rollout starts in Week 13, which section of the plan breaks first -- and is that breakage already named in the plan, or assumed away?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'carry_w123',
+    'carry_w45',
+    'plan_cadence',
+    'plan_decisions',
+    'plan_signals',
+    'plan_triggers',
+    'plan_development',
+    'plan_leader_protocol',
+    'lessons_synthesis',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 2: Heart-Centered Blueprint</title>
+<meta name="programme-component-id" content="fostering-practical-2">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-practical-2">
+<meta name="programme-part-title" content="Practical 2 · Heart-Centered Blueprint">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 2">
+<meta name="programme-submit-confirm" content="Submit Practical 2: Heart-Centered Blueprint (Capstone Part A)?&#10;&#10;This Practical is also Capstone Part A for Fostering AI-Ready Teams. It contributes to your Practicals Portfolio (20%) and Combined Capstone (50% shared with Part B). Once submitted, you can still edit until end of Week 2. After Week 2 closes, the submission is locked.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .capstone-badge { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid var(--gold); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Blueprint Card -- distinctive to Practical 2 */
+  .blueprint-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.06) 100%); border: 2px solid var(--gold); border-radius: 16px; padding: 32px 28px 24px; margin-bottom: 16px; position: relative; }
+  .blueprint-stamp { position: absolute; top: -12px; left: 24px; background: var(--gold); color: var(--plum); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; padding: 5px 12px; border-radius: 14px; }
+  .blueprint-card-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .blueprint-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 22px; font-style: italic; }
+  .blueprint-section { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .blueprint-section { grid-template-columns: 1fr; gap: 8px; } }
+  .bp-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .bp-body { display: flex; flex-direction: column; gap: 6px; }
+  .bp-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .bp-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .blueprint-section textarea { min-height: 72px; font-size: 12px; padding: 10px 12px; }
+  .moments-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .moment-row { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; }
+  .moment-num { font-size: 11px; font-weight: 700; color: var(--purple); }
+
+  /* Capstone callout */
+  .capstone-callout { background: var(--plum); border-radius: 12px; padding: 18px 22px; margin-bottom: 24px; display: grid; grid-template-columns: 44px 1fr; gap: 16px; align-items: start; }
+  .capstone-icon { width: 36px; height: 36px; background: var(--gold); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .capstone-icon svg { width: 18px; height: 18px; }
+  .capstone-callout-text .cc-tag { font-size: 10px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .capstone-callout-text .cc-body { font-size: 13px; color: rgba(255,255,255,0.85); line-height: 1.6; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .blueprint-card, .blueprint-section { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .blueprint-card { padding: 30px 16px 18px; }
+    .blueprint-section { padding: 16px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Heart-Centered Blueprint</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Fostering AI-Ready Teams</div>
+    <div class="practical-badge">Week 2 · Practical 2 of 6</div>
+    <div class="capstone-badge">Capstone Part A</div>
+  </div>
+  <h1 class="header-title">Heart-Centered <em>Blueprint</em></h1>
+  <p class="header-desc">Take the lowest pillar from Week 1 and design the Blueprint -- five sections that turn the audit into something the team can feel in the next 30 days. The pillar carried forward, the alternative behaviour you will run instead of the default, the three recurring AI-era moments where the alternative will land, what empathy looks like in those moments, and the observable 30-day metric. This is Capstone Part A. It must be deployable -- not aspirational.</p>
+</div>
+
+<div class="content">
+
+  <!-- CAPSTONE CALLOUT -->
+  <div class="capstone-callout">
+    <div class="capstone-icon">
+      <svg viewBox="0 0 18 18" fill="none"><path d="M3 3h12v12H3z" stroke="#1A1726" stroke-width="2" fill="none"/><path d="M6 7h6M6 10h6M6 13h3" stroke="#1A1726" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </div>
+    <div class="capstone-callout-text">
+      <div class="cc-tag">Capstone Part A · Marked Submission</div>
+      <div class="cc-body">This Practical is also the Week 2 Capstone artefact. Your assessor marks it against the Capstone rubric -- it carries 25% of your final grade as half of the Combined Capstone. The same submission, marked once, counts for both the Practicals Portfolio and the Capstone.</div>
+    </div>
+  </div>
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The Blueprint is one page -- five sections, sharp, deployable. Not aspirational language stretched into an essay.</li>
+      <li>The lowest pillar from Week 1 is carried forward by name, including the cost statement that named what it has been costing the AI-era work.</li>
+      <li>The alternative behaviour is a specific move you will run, not "be more present" or "listen better".</li>
+      <li>The three recurring moments are real, repeating events in the next 30 days -- not "team meetings in general".</li>
+      <li>The 30-day metric is observable. Someone other than you could tell whether it had been met.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Carry forward Week 1 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Carry Forward the Week 1 Audit</div>
+      </div>
+    </div>
+    <p class="step-desc">The Blueprint only works if it is built on the audit you actually did, not the audit you wish you had done. Bring forward the lowest pillar you named in Week 1 and the cost statement -- including the AI-era context that made the cost specific. If you would change the pillar choice now, change it here, before you start designing the Blueprint.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Lowest Pillar (from W1)</div>
+        </div>
+        <div class="substep-body">The pillar you named -- and a sentence on whether it has held up under a week of observation, or whether it should change.</div>
+        <textarea name="w1_pillar" placeholder="Empathy. Held up. The week between audit and now confirmed it -- I noticed three more moments where I was managing the rollout in execution mode and missing what the senior engineer in the room was actually saying."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Cost Statement (from W1)</div>
+        </div>
+        <div class="substep-body">The cost statement, with the AI-era context -- as you wrote it, or tightened.</div>
+        <textarea name="w1_cost" placeholder="On 14 May, in the post-incident review of the database failover, the senior engineer who would normally have flagged the AI's misread of the alert pattern said nothing. The team adopted the AI's flawed root-cause analysis as the official record. AI-era dynamic: technical authority shift."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The Blueprint (5 sections) -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Design the Five-Section Blueprint</div>
+      </div>
+    </div>
+    <p class="step-desc">Five sections. Each one short. The Blueprint reads as a single deployable artefact -- a page a peer could pick up in 90 seconds and tell you what you are running and what it should change in 30 days. If a section grows past four lines, it is doing too much. Cut, do not pad.</p>
+
+    <div class="blueprint-card">
+      <div class="blueprint-stamp">THE BLUEPRINT</div>
+      <div class="blueprint-card-label">Heart-Centered Leader Blueprint</div>
+      <div class="blueprint-card-sub">Five sections · one page · deployable in the next 30 days</div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">01</div>
+        <div class="bp-body">
+          <div class="bp-name">The Pillar Carried Forward</div>
+          <div class="bp-helper">Name the pillar in one sentence. State the cost in one sentence -- the AI-era version, not the generic version.</div>
+          <textarea name="bp_pillar" placeholder="Empathy. The cost: in the past 30 days, the senior engineer with the most context on the pre-rollout system has stopped offering judgement in incident reviews, because pushback now reads as resistance to the AI rather than as engineering."></textarea>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">02</div>
+        <div class="bp-body">
+          <div class="bp-name">The Alternative Behaviour</div>
+          <div class="bp-helper">The specific move you will run instead of the default. Not "be more present". A behaviour someone could observe you doing.</div>
+          <textarea name="bp_alternative" placeholder="In every incident review, before the AI summary is opened, I will ask the most senior engineer present to state their independent read first -- in their own words, with the AI screen still closed. Their read becomes the reference point. The AI summary is the second voice in the room, not the first."></textarea>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">03</div>
+        <div class="bp-body">
+          <div class="bp-name">Three Recurring Moments Where This Lands</div>
+          <div class="bp-helper">Three real, repeating events in the next 30 days where the alternative behaviour will be run. Specific. Datable.</div>
+          <div class="moments-grid">
+            <div class="moment-row">
+              <div class="moment-num">01</div>
+              <input type="text" name="bp_moment_1" placeholder="Weekly post-incident reviews -- every Friday, 14:00. Next: 15 May.">
+            </div>
+            <div class="moment-row">
+              <div class="moment-num">02</div>
+              <input type="text" name="bp_moment_2" placeholder="Monthly architecture reviews -- third Tuesday. Next: 21 May.">
+            </div>
+            <div class="moment-row">
+              <div class="moment-num">03</div>
+              <input type="text" name="bp_moment_3" placeholder="Quarterly Q3 prioritisation kickoff -- 5 June.">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">04</div>
+        <div class="bp-body">
+          <div class="bp-name">What Empathy Looks Like in Those Moments</div>
+          <div class="bp-helper">Specific. Behavioural. What someone watching you in the room would see -- and what the affected person would feel that they did not feel before.</div>
+          <textarea name="bp_empathy" placeholder="In the room: I open with the senior engineer's read by name -- 'N, what's your independent view before we look at the summary?' I write down their answer verbatim before I respond. The affected person sees that their judgement is the reference point, not the appendix. The team sees that pushback to the AI is the start of the engineering conversation, not the end of it."></textarea>
+        </div>
+      </div>
+
+      <div class="blueprint-section">
+        <div class="bp-num">05</div>
+        <div class="bp-body">
+          <div class="bp-name">The 30-Day Metric</div>
+          <div class="bp-helper">Observable. Someone other than you could tell in 30 days whether it had been met. No "feel" words. No "morale".</div>
+          <textarea name="bp_metric" placeholder="In 30 days, the documented root-cause analysis from at least two of the four post-incident reviews has been changed by an engineer's challenge to the AI summary. The change is in the official record, not in the side conversation. Either it happened or it did not."></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Deployability check -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Pressure-Test for Deployability</div>
+      </div>
+    </div>
+    <p class="step-desc">A Blueprint that reads well on the page is not the same as a Blueprint you can run on Tuesday morning. Two checks before you submit. First: who else has read it, and what did they actually say -- not what you hoped they would. Second: where is it most likely to fail in the first week, and what is the recovery move you have already designed for that?</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Who Read It and What They Said</div>
+        </div>
+        <div class="substep-body">A peer, partner, or trusted team member you read this to. Their actual reaction -- specifically the part that pushed back.</div>
+        <textarea name="readback" placeholder="Read it to my partner programme peer on Wednesday. Her pushback: 'Your alternative behaviour is good but section 4 is generic -- "feels like their judgement is the reference point" is the kind of line I would write if I were trying to sound caring. What would N actually see?' I rewrote section 4 around what N would observe, not how she would feel. The Blueprint got tighter."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">First-Week Failure Mode</div>
+        </div>
+        <div class="substep-body">Where will the Blueprint most likely fail in the first week, and what is the move you will run when it does?</div>
+        <textarea name="failure_mode" placeholder="Most likely failure: in the first incident review, an exec joins late, the AI summary is already on screen, and the room defaults to discussing the summary -- I lose the order I wanted to hold. Recovery move: I close the screen, ask the senior engineer for their read, then reopen the summary. Owning the room reset, even at small social cost, is part of the Blueprint -- it is the alternative behaviour, not the script around it."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Blueprint</h2>
+    <p class="ai-activity-desc">Blueprints fail at the same two places every time -- the alternative behaviour collapses into "be more present" once put under pressure, and the 30-day metric ends up unobservable when stripped of feeling-language. AI as an outside reader catches both faster than a peer can. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test the Alternative Behaviour</div>
+          <div class="ai-step-body">Ask AI to test whether the alternative is a specific behaviour or whether it has slipped into a slogan -- "be more present", "listen harder", "show up for the team".</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am writing a Heart-Centered Blueprint for my team. The lowest pillar I am addressing is: [paste your pillar]. The alternative behaviour I have designed is: [paste your alternative behaviour]. Pressure-test it. Specifically: (1) If I asked a stranger to watch me in a meeting, would they be able to tell I was running the alternative behaviour, or is it observable only to me? (2) Has the alternative collapsed into a slogan -- "be more present", "listen better", "show up for the team" -- once stripped of detail? (3) What is the version of the alternative behaviour that someone could imitate by watching me do it once? Rewrite the weakest part with operational specificity.</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What is the tightened alternative behaviour?</div>
+      <textarea class="ai-field" name="ai_alternative_test" placeholder="AI said the alternative was strong but the phrase 'open with N's independent read' was at risk of collapsing into 'check in with N more' once I was tired or behind schedule. It rewrote the protocol: 'Before the AI summary is opened, I ask one question and write the answer verbatim before responding.' The protocol is the artefact. If I have not written the verbatim answer, I have not run the behaviour. Updating the Blueprint."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the 30-Day Metric</div>
+          <div class="ai-step-body">Ask AI to test whether the metric is genuinely observable -- whether someone other than you could confirm it -- or whether it has slipped into "feel" language that cannot be checked.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My 30-day metric for the Blueprint is: [paste your metric]. Pressure-test on three criteria. (1) Could someone other than me -- a peer, a partner, an assessor -- look at observable evidence in 30 days and tell whether the metric had been met? (2) Does the metric depend on subjective feelings ("feels heard", "is more engaged", "morale lifted") or on observable artefacts (the documented record, attendance, a behaviour change)? (3) If the metric is met, does that prove the alternative behaviour landed -- or could it be met without the underlying behaviour shifting? Rewrite the weakest part to be observable and unambiguous.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the metric go subjective? What is the observable version?</div>
+      <textarea class="ai-field" name="ai_metric_test" placeholder="AI flagged that 'changed by an engineer's challenge' was strong but I needed to define 'change' -- whether a sentence rewrite counted, or only a root-cause shift. Tightened: 'In 30 days, the official root-cause analysis in at least two of the four post-incident review documents differs from the AI's first-pass summary, and the difference is attributable to a named engineer's challenge -- with the challenge logged in the review notes.' Specific, attributable, in the official record."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">If the Blueprint runs as designed and the 30-day metric is met, what is the next pillar -- the second-lowest from your Week 1 audit -- that the room you have just shifted will surface? And what does the Week 7 version of this Blueprint need to address that this version does not?</div>
+    <textarea name="ai_lens_next_pillar" placeholder="If the empathy Blueprint lands, the next pillar that surfaces will be Self-Regulation -- because once the senior engineer is back in the room with judgement, the disagreement gets sharper, not softer, and my own reactivity in the room becomes the next visible variable. The Week 7 Blueprint needs an alternative behaviour for what I do when N challenges the AI summary AND I disagree with her challenge -- the structural move that holds the disagreement productive instead of collapsing it back to the AI summary by default."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Blueprints fall apart at the same place every time -- the alternative behaviour sounds operational on the page, but a peer reading it cannot tell what they would see if they watched you run it. If your peer cannot describe the behaviour back to you in their own words, the Blueprint is not yet deployable.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the Blueprint aloud, in order. Then ask your peer to tell you, without looking at the page, what they would see if they watched you run the alternative behaviour in the next incident review. If they can describe a specific scene -- the order of who speaks, what gets opened on the screen, what gets written down -- the Blueprint is deployable. If they say "you would be more empathetic", the Blueprint is still aspirational.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The alternative behaviour -- could you describe it to me as a specific scene, or only as a quality I would bring to the room?</li>
+      <li>The three recurring moments -- are they real events in the next 30 days, with dates, or are they "team meetings in general"?</li>
+      <li>The 30-day metric -- if I came back in 30 days, could I check whether it had been met without asking you how you feel about it?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'w1_pillar',
+    'w1_cost',
+    'bp_pillar',
+    'bp_alternative',
+    'bp_moment_1',
+    'bp_moment_2',
+    'bp_moment_3',
+    'bp_empathy',
+    'bp_metric',
+    'readback',
+    'failure_mode',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

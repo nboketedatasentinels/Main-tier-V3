@@ -111,7 +111,7 @@ const DashboardRouter = () => {
   // Block render only on the INITIAL load (before a profile exists). Once we
   // have a profile, background refreshes flip profileLoading true again;
   // returning null then would unmount and remount the whole dashboard on every
-  // refresh — re-subscribing every Supabase listener and remounting every form
+  // refresh - re-subscribing every Supabase listener and remounting every form
   // control in a tight loop (the WebSocket "closed before established" storm and
   // the "form field needs id/name" issue flood). Mirrors ProtectedRoute's guard.
   if ((loading || profileLoading) && !profile) {

@@ -129,7 +129,7 @@ interface ActivityRowProps {
   occurrenceTotal?: number
   /** How many claims are awaiting partner review (count toward DONE progress). */
   pendingCount?: number
-  /** This week's claim is consumed (submitted/approved) — not the same as fully maxed. */
+  /** This week's claim is consumed (submitted/approved) - not the same as fully maxed. */
   weekClaimComplete?: boolean
   isActionInFlight: boolean
 }
@@ -163,7 +163,7 @@ export const ActivityRow = ({
     activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
   // Capstone / case study / practical open their parts list instead of a
-  // checklist "Submit" CTA — points are claimed from the part runtime itself.
+  // checklist "Submit" CTA - points are claimed from the part runtime itself.
   const requiresPartnerApproval = Boolean(
     !isProgrammeComponent &&
       (activity.approvalType === 'partner_approved' ||
@@ -211,7 +211,7 @@ export const ActivityRow = ({
       ? completedCount >= totalFrequency
       : visualState === 'completed' || (weekClaimComplete && visualState !== 'pending_review'))
   const showStrike = isFullyComplete
-  // Journey-total progress (e.g. 1/2) must look the same in every week row —
+  // Journey-total progress (e.g. 1/2) must look the same in every week row -
   // never derive the numerator from the week-local occurrence index.
   const displayDoneCount = hasFrequency
     ? Math.min(totalFrequency, Math.max(0, consumedCount))
@@ -238,8 +238,8 @@ export const ActivityRow = ({
     if (lockedByWeek) return `This activity opens after Week ${currentWeek}.`
     if (visualState === 'pending_review' && !isFullyComplete) {
       return hasFrequency
-        ? `Submitted for this week (${displayDoneCount} of ${totalFrequency}) — awaiting partner review.`
-        : 'Submitted for this week — awaiting partner review.'
+        ? `Submitted for this week (${displayDoneCount} of ${totalFrequency}) - awaiting partner review.`
+        : 'Submitted for this week - awaiting partner review.'
     }
     if (weekClaimComplete && !isFullyComplete) {
       return hasFrequency
@@ -358,7 +358,7 @@ export const ActivityRow = ({
     }
   }
 
-  // Maxed activities stay collapsed — click should not open details/CTA.
+  // Maxed activities stay collapsed - click should not open details/CTA.
   const canExpand = !isFullyComplete
   const showDetails = Boolean(isExpanded && canExpand)
 

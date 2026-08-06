@@ -189,7 +189,7 @@ export const NotificationsList = () => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Depend on user.uid (a stable string), NOT the user object — the auth user
+    // Depend on user.uid (a stable string), NOT the user object - the auth user
     // object gets a fresh identity each render, which re-subscribed the Supabase
     // notifications listener on every render and looped (ERR_INSUFFICIENT_RESOURCES).
     const uid = user?.uid

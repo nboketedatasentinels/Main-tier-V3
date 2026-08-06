@@ -192,8 +192,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const isMonthlyJourney = isMonthlyJourneyDuration(form.programDuration)
 
   const remainingCourses = courseLimit - getAssignedCourseIdsFromMonthlyAssignments(monthlyAssignments, courseLimit).length
-  const codeLength = form.code.trim().length
-  const isCodeValidLength = codeLength === 6
   const cohortStartDate = useMemo(
     () => (form.cohortStartDate ? new Date(String(form.cohortStartDate)) : null),
     [form.cohortStartDate],
@@ -501,7 +499,15 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         name: editMemberName,
         org: { code: form.code, name: form.name },
       })
-      toast({ title: 'User updated', status: 'success' })
+      const previousRole = toEditableRole(editingMember.role)
+      toast({
+        title: 'User updated',
+        description:
+          previousRole !== editMemberRole
+            ? `Role changed to ${formatInviteRoleLabel(editMemberRole)}. A confirmation email was sent.`
+            : undefined,
+        status: 'success',
+      })
       closeEditMember()
       await reloadMembers()
     } catch (error) {
@@ -564,8 +570,6 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
     try {
       if (!form.name || form.name.length < 3) throw new Error('Organization name must be at least 3 characters')
-      if (!form.code) throw new Error('Organization code is required')
-      if (!isCodeValidLength) throw new Error('Organization code must be exactly 6 characters')
       if (!form.programDuration) throw new Error('Program duration is required')
 
       let assignmentsToSave = { ...monthlyAssignments }
@@ -651,7 +655,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       )
       await updateSupabaseOrganization(organization.id, {
         name: form.name.trim(),
-        code: form.code.toUpperCase(),
+        // Organization codes are immutable after create - never send code here.
         status: form.status,
         journeyType: resolvedJourneyType,
         programDurationWeeks,
@@ -786,10 +790,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   </FormControl>
                 </GridItem>
                 <GridItem>
-                  <FormControl isRequired isInvalid={codeLength > 0 && !isCodeValidLength}>
+                  <FormControl>
                     <FormLabel display="flex" alignItems="center" gap={2}>
                       Organization code
-                      <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
+                      <Tooltip label="Organization codes are permanent and cannot be changed after creation." placement="top">
                         <InfoIcon color="text.muted" />
                       </Tooltip>
                     </FormLabel>
@@ -797,16 +801,19 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       <InputLeftAddon>Code</InputLeftAddon>
                       <Input
                         value={form.code}
-                        onChange={(e) => updateField('code', e.target.value.toUpperCase())}
+                        isReadOnly
+                        isDisabled
                         maxLength={6}
                         placeholder="6-char code"
                         textTransform="uppercase"
+                        fontFamily="mono"
+                        bg="gray.50"
+                        cursor="not-allowed"
                       />
                     </InputGroup>
-                    <FormHelperText color={isCodeValidLength ? 'green.500' : 'gray.600'}>
-                      {codeLength}/6 characters
+                    <FormHelperText color="gray.600">
+                      Code cannot be changed. Members use this to join the organization.
                     </FormHelperText>
-                    <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
                   </FormControl>
                 </GridItem>
                 <GridItem>
@@ -1226,7 +1233,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         {members.map((m) => (
                           <Tr key={m.id}>
                             <Td>{m.name}</Td>
-                            <Td color="gray.600">{m.email || '—'}</Td>
+                            <Td color="gray.600">{m.email || '-'}</Td>
                             <Td>
                               <Badge colorScheme="purple" variant="subtle">
                                 {formatMemberRole(m.role)}

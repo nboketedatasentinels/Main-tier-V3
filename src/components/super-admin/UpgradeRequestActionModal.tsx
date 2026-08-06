@@ -107,7 +107,7 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
         setOrganizations(items)
       } catch (error) {
         console.error(error)
-        setFormError('Unable to load organisations. Please try again.')
+        setFormError('Unable to load organizations. Please try again.')
       } finally {
         setOrgLoading(false)
       }
@@ -191,22 +191,22 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
               variant="enclosed"
             >
               <TabList>
-                <Tab>Add to organisation</Tab>
-                <Tab>Create organisation</Tab>
+                <Tab>Add to organization</Tab>
+                <Tab>Create organization</Tab>
               </TabList>
               <TabPanels>
                 <TabPanel px={0}>
                   <Stack spacing={3}>
                     <FormControl>
-                      <FormLabel>Search organisations</FormLabel>
+                      <FormLabel>Search organizations</FormLabel>
                       <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by name or code" />
                     </FormControl>
                     <FormControl isRequired>
-                      <FormLabel>Select organisation</FormLabel>
+                      <FormLabel>Select organization</FormLabel>
                       <Select
                         value={selectedOrgId}
                         onChange={(event) => setSelectedOrgId(event.target.value)}
-                        placeholder={orgLoading ? 'Loading...' : 'Select organisation'}
+                        placeholder={orgLoading ? 'Loading...' : 'Select organization'}
                       >
                         {filteredOrganizations.map((org) => (
                           <option key={org.id} value={org.id}>
@@ -238,7 +238,7 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                 <TabPanel px={0}>
                   <Stack spacing={3}>
                     <Text fontSize="sm" color="gray.600">
-                      Create the organisation using the standard Organisation Management form. Once created, it will be
+                      Create the organization using the standard Organization Management form. Once created, it will be
                       selected automatically for this upgrade approval.
                     </Text>
                     <Button
@@ -252,14 +252,14 @@ export const UpgradeRequestActionModal: React.FC<UpgradeRequestActionModalProps>
                       isDisabled={isSubmitting}
                       alignSelf="flex-start"
                     >
-                      Create new organisation
+                      Create new organization
                     </Button>
                     <Box borderWidth="1px" borderRadius="md" p={3}>
                       <Text fontSize="sm" fontWeight="semibold" mb={1}>
                         Preview
                       </Text>
                       <Text fontSize="sm" color="gray.600">
-                        After creating the organisation, it will be selected automatically-then click “Assign & Approve”.
+                        After creating the organization, it will be selected automatically-then click “Assign & Approve”.
                       </Text>
                     </Box>
                   </Stack>

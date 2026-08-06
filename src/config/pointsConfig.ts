@@ -488,14 +488,31 @@ interface JourneyActivityEntry {
 
 const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[]>> = {
   "4W": [
+    // Free-user intro checklist (no org): limited activities, max 15,000 / pass 9,000.
     { activityId: "watch_podcast", totalFrequency: 3 },
-    { activityId: "webinar_workbook", totalFrequency: 1 },
+    {
+      activityId: "webinar_workbook",
+      totalFrequency: 1,
+      pointsOverride: 3000,
+      titleOverride: "Attend Webinar + Workbook",
+      approvalOverride: "partner_approved",
+      requiresApprovalOverride: true,
+    },
     { activityId: "impact_log", totalFrequency: 2 },
     { activityId: "lift_module", totalFrequency: 1, pointsOverride: 3000 },
-    { activityId: "book_club", totalFrequency: 1 },
-    { activityId: "shameless_circle", totalFrequency: 1, pointsOverride: 1500 },
+    {
+      activityId: "book_club",
+      totalFrequency: 1,
+      pointsOverride: 1500,
+      titleOverride: "Attend Book Club Session",
+    },
+    {
+      activityId: "shameless_circle",
+      totalFrequency: 1,
+      pointsOverride: 1500,
+      titleOverride: "Attend Shameless Circle Session",
+    },
     { activityId: "ai_tool_review", totalFrequency: 1 },
-    { activityId: "peer_to_peer", totalFrequency: 3, weekOverride: 1 },
   ],
   "6W": [
     { activityId: "podcast_workbook", totalFrequency: 3, pointsOverride: 1000 },
@@ -599,15 +616,17 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 3750,
     windowTarget: 7500,
     passMarkPoints: 9000,
-    maxPossiblePoints: 16500,
+    // watch 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
+    // shameless 1500 + ai tool 1000 = 15,000.
+    maxPossiblePoints: 15000,
     mode: "intro",
     timelineDisplay: "duration",
     completionThresholdPct: 60,
   },
   "6W": {
     weeks: 6,
-    weeklyTarget: 7000,
-    windowTarget: 14000,
+    weeklyTarget: 6750,
+    windowTarget: 13500,
     passMarkPoints: 40000,
     // Sum of the 6W activity table (per-activity points x frequency):
     // webinar 1x4500, linkedin 3x500, impact_log 4x2000, peer_to_peer 3x1000,

@@ -338,13 +338,13 @@ async function callRecordPodcastProgress(
     }
   }
 
-  // 3) Always persist to profiles.data — this is the production-safe path when
+  // 3) Always persist to profiles.data - this is the production-safe path when
   // podcast_progress isn't migrated yet. If this succeeds, the learner keeps
   // their pass even when (1)/(2) fail.
   const stateForProfile = saved ?? fallback
   try {
     await saveProgressToProfile(uid, podcastId, stateForProfile)
-    // Profile write succeeded — treat as saved even if table/RPC failed.
+    // Profile write succeeded - treat as saved even if table/RPC failed.
     saved = stateForProfile
   } catch (err) {
     errors.push(err instanceof Error ? err.message : String(err))

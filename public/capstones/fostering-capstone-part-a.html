@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part A: The Heart-Centered Leader Blueprint</title>
+<meta name="programme-component-id" content="fostering-capstone-part-a">
+<meta name="programme-component-type" content="capstone">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-capstone-part-a">
+<meta name="programme-part-title" content="Part A · The Heart-Centered Leader Blueprint">
+<meta name="programme-component-title" content="Combined Capstone - The Heart-Centered Leader Blueprint">
+<meta name="programme-submit-confirm" content="Submit Capstone Part A: The Heart-Centered Leader Blueprint?&#10;&#10;This is Capstone Part A of 2 in the Combined Capstone for Fostering AI-Ready Teams. Both parts are marked together as one component, weighted 50% of your competence pass.&#10;&#10;After submission, Capstone Part B (90-Day Operating Plan, Week 6) closes the Combined Capstone at end of Module 2. Once submitted, you can still edit until end of Week 2.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  .carry-note { background: rgba(74,59,140,0.06); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #444; line-height: 1.55; }
+  .carry-note strong { color: var(--purple); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 3px; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 160px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  .peer-prep { background: rgba(74,59,140,0.06); border: 1.5px solid rgba(74,59,140,0.2); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: #444; line-height: 1.65; margin-bottom: 16px; }
+  .peer-questions-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 13px; color: #2A2438; line-height: 1.65; padding: 8px 0 8px 24px; position: relative; border-bottom: 1px solid rgba(74,59,140,0.1); }
+  .peer-q-list li:last-child { border-bottom: none; }
+  .peer-q-list li::before { content: "?"; position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--purple); color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .peer-prep { break-inside: avoid; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .peer-prep { padding: 20px 18px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Capstone Part A · The Heart-Centered Leader Blueprint</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Fostering AI-Ready Teams</div>
+  <div class="case-eyebrow">Capstone Part A · Module 1 · Week 2 · The Leader Your AI-Era Team Actually Needs</div>
+  <h1 class="header-title">The Heart-Centered <em>Leader Blueprint</em></h1>
+  <div class="header-meta"><strong>Your personal operating model for leading an AI-era team. Five sections that integrate the EQ pillar you are strengthening, the alternative behaviour you are practising, the recurring moments where the old behaviour ran you, what empathy looks like for you in those moments, and the one 30-day metric you will track. The Blueprint should function as a daily reference -- something you could pin to your desk and use to run yourself.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Analyse leadership presence and team dynamics), LO2 (Design and demonstrate a heart-centred leadership blueprint)</div>
+  <div class="header-meta"><strong>Word count:</strong> 600-800 words total across all sections.</div>
+  <div class="case-callout">Capstone Part A of 2 · Combined Capstone = 50% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Blueprint that functions as a daily operating model -- specific, observable, and runnable starting Monday morning.</div>
+    <ul class="standard-list">
+      <li>The EQ pillar named is the genuinely lowest one (often uncomfortable to admit), not the safest one to write about.</li>
+      <li>The alternative behaviour is operationally specific -- a move a colleague could observe -- not "communicate better" or "be more empathetic".</li>
+      <li>The three recurring moments are real situations from your AI-era team work, not hypothetical patterns.</li>
+      <li>Empathy in Section 4 is described at the level of behaviour, not feeling -- what you would say or do, not what you would feel.</li>
+      <li>The 30-day metric in Section 5 is observable to a manager -- a behaviour change someone else could see -- not internal tracking only.</li>
+      <li>The Blueprint as a whole could be pinned to a desk and used as a daily operating reference, not read once and filed away.</li>
+    </ul>
+  </div>
+
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all sections</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 600-800 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 600-800 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 01</div>
+      <div class="outcome-tag">Outcome 1 · Pillar identification</div>
+    </div>
+    <h2 class="section-title">The EQ pillar I am strengthening</h2>
+    <div class="section-prompt">Of the five pillars of heart-centred leadership -- self-awareness, self-regulation, motivation, empathy, social skill -- name the one you are strengthening through this Blueprint. State why this pillar specifically, and what it has been costing your AI-era team work in concrete terms (a decision delayed, a person disengaged, a meeting derailed -- not "team morale").</div>
+    <div class="section-hint">The pillar is named with the framework. The naming should pass the test of being uncomfortable to admit -- if it feels safe, it is probably the wrong one. The cost has to be concrete and tied specifically to AI-era work (rollout pressure, role redesign, technical authority shift, change fatigue compounding), not generic team friction.</div>
+    <textarea name="s1" placeholder="The pillar I am strengthening: ...
+
+Why this pillar: ...
+
+What it has been costing my AI-era team work: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 80-110 words</span>
+      <span class="field-word-count" id="s1Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 02</div>
+      <div class="outcome-tag">Outcome 2 · Alternative behaviour</div>
+    </div>
+    <h2 class="section-title">The behaviour I am practising instead of my default</h2>
+    <div class="section-prompt">Name your default behaviour in the moments that involve the pillar you are strengthening. Then name the alternative behaviour you are practising instead. The alternative needs to be operationally specific -- something a colleague could see you do -- not aspirational language.</div>
+    <div class="section-hint">The default is named honestly (the test: would a peer who works with you recognise it?). The alternative is a specific move with a specific trigger -- something that activates in a specific kind of moment, not 'I will be more open'. Two operational tests: a colleague can see you do it; you could practise it starting Monday morning without preparation.</div>
+    <textarea name="s2" placeholder="My default behaviour: ...
+
+The alternative behaviour I am practising: ...
+
+What the alternative looks like in action: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 100-140 words</span>
+      <span class="field-word-count" id="s2Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 03</div>
+      <div class="outcome-tag">Outcome 1 + 2 · Recurring moments</div>
+    </div>
+    <h2 class="section-title">Three recurring moments where the old behaviour used to run me</h2>
+    <div class="section-prompt">Name three specific recurring moments from your AI-era team work where the old behaviour used to run you. Each moment should be specific -- a real situation type, with the trigger and what tended to happen. These are the moments where the alternative behaviour from Section 2 will show up.</div>
+    <div class="section-hint">Three real situations from your work, not three categories. Each one names the trigger (what kicks the default behaviour off), what tended to happen, and what was at stake when the old behaviour ran. The moments should be different enough that the alternative behaviour gets tested across different conditions -- not three versions of the same situation.</div>
+    <textarea name="s3" placeholder="Moment 1: ...
+  Trigger: ...
+  What tended to happen: ...
+
+Moment 2: ...
+  Trigger: ...
+  What tended to happen: ...
+
+Moment 3: ...
+  Trigger: ...
+  What tended to happen: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 180-240 words</span>
+      <span class="field-word-count" id="s3Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 04</div>
+      <div class="outcome-tag">Outcome 1 + 2 · Empathy in those moments</div>
+    </div>
+    <h2 class="section-title">What empathy looks like for me in those moments</h2>
+    <div class="section-prompt">For each of the three moments in Section 3, describe what empathy looks like in action -- what you would say, what you would do, what you would not do. The description should pass the test of being observable: a colleague watching you in that moment could see whether you ran the empathic move or fell back to the default.</div>
+    <div class="section-hint">Empathy named at the level of behaviour, not feeling. The test is whether your empathy could be observed by someone else -- 'I would feel more compassionate' is not a behaviour; 'I would ask the question and then stay silent for ten seconds' is. Different moments may call for different empathic moves; collapsing them into a single generic posture misses the discipline.</div>
+    <textarea name="s4" placeholder="In Moment 1: empathy looks like...
+
+In Moment 2: empathy looks like...
+
+In Moment 3: empathy looks like..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-170 words</span>
+      <span class="field-word-count" id="s4Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 05</div>
+      <div class="outcome-tag">Outcome 2 · 30-day metric</div>
+    </div>
+    <h2 class="section-title">The one metric I will track for 30 days</h2>
+    <div class="section-prompt">Name the one metric you will track for 30 days to know whether the alternative behaviour is producing the change you want. The metric must be observable to someone other than you -- a behaviour your team or your manager could see -- not internal feeling. Specify the cadence (when you check it) and what would tell you the alternative is working versus what would tell you it is not.</div>
+    <div class="section-hint">Observable means another person could verify it without asking you how you feel. Examples of the level of specificity required: 'how many times this week a senior engineer brought a problem and I asked a question rather than answering' or 'how many of the 1:1s this week ended with the team member talking more than I did'. Internal feeling metrics do not meet the bar.</div>
+    <textarea name="s5" placeholder="The metric I will track: ...
+
+Observable to whom: ...
+
+Cadence: ...
+
+What would tell me the alternative is working: ...
+What would tell me it is not: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 110-140 words</span>
+      <span class="field-word-count" id="s5Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, walk a peer through the Blueprint.</h2>
+    <p class="peer-prep-sub">The Blueprint is meant to be a daily operating model. The fastest test is whether someone who knows your work can read it and predict what you would do in a real situation tomorrow. If the peer cannot, the Blueprint is journaling rather than operating.</p>
+
+    <div class="peer-questions-label">Questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Is the pillar in Section 1 the genuinely lowest one, or the safest one to write about? What would make you uncomfortable to admit?</li>
+      <li>In Section 2, could a colleague see you run the alternative behaviour, or would they only see the result? If they could not see it, is it operational?</li>
+      <li>Are the three moments in Section 3 different enough that the alternative behaviour gets tested across different conditions, or are they three versions of the same situation?</li>
+      <li>Is the metric in Section 5 observable to someone other than you, or is it tracking your internal feeling?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) {
+  if (!s || !s.trim()) return 0;
+  return s.trim().split(/\s+/).length;
+}
+window.recountWords = function recountWords() {
+  const fields = ['s1', 's2', 's3', 's4', 's5'];
+  let total = 0;
+  fields.forEach((name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name + 'Count');
+    if (display) display.textContent = c + ' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 960, goodMin = 600, goodMax = 800;
+  bandEl.style.left = ((goodMin / max) * 100) + '%';
+  bandEl.style.width = (((goodMax - goodMin) / max) * 100) + '%';
+  fillEl.style.width = Math.min(100, (total / max) * 100) + '%';
+  valEl.textContent = total + ' words';
+  valEl.classList.remove('under', 'good', 'over');
+  fillEl.classList.remove('good', 'over');
+  if (total < goodMin) {
+    valEl.classList.add('under');
+    hintEl.textContent = 'Below the 600-word threshold. The expected range is 600-800.';
+  } else if (total <= goodMax) {
+    valEl.classList.add('good');
+    fillEl.classList.add('good');
+    hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.';
+  } else {
+    valEl.classList.add('over');
+    fillEl.classList.add('over');
+    hintEl.textContent = 'Over 800 words. The response needs to land in the 600-800 word range.';
+  }
+  return total;
+};
+window.recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = ['s1', 's2', 's3', 's4', 's5'];
+
+  window.submitCapstone = function submitCapstone() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    const total =
+      typeof window.recountWords === 'function'
+        ? window.recountWords()
+        : 0;
+    if (total < 600 || total > 800) {
+      const warning =
+        total < 600
+          ? 'Total response is ' + total + ' words. The expected range is 600-800. Below 600 sits outside the range.'
+          : 'Total response is ' + total + ' words. The expected range is 600-800. Above 800 sits outside the range.';
+      const proceed = window.confirm(warning + '\n\nSubmit anyway?');
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

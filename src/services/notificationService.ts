@@ -141,7 +141,7 @@ export const listenToUserNotifications = (
     }
     entry.subs.add(sub)
     if (entry.latest) {
-      onChange(entry.latest) // instant cached data — no new fetch
+      onChange(entry.latest) // instant cached data - no new fetch
     } else {
       void loadNotificationsFor(userId)
     }

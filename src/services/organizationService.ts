@@ -306,10 +306,8 @@ export const findOrganizationsWithInvalidCodes = async (): Promise<OrganizationR
     .filter((organization) => (organization.code || '').trim().length !== 6)
 }
 
-export const regenerateOrganizationCode = async (organizationId: string, organizationName: string) => {
-  const code = generateOrganizationCode(organizationName)
-  await updateDoc(doc(orgCollection, organizationId), { code, updatedAt: serverTimestamp() })
-  return code
+export const regenerateOrganizationCode = async (_organizationId: string, _organizationName: string) => {
+  throw new Error('Organization code cannot be changed')
 }
 
 export const validateOrganizationCodeUnique = async (code: string) => {
@@ -426,26 +424,43 @@ export const validateCompanyCode = async (
   if (!trimmed) {
     return { valid: false, error: 'Company code is required.' }
   }
+  if (trimmed.length !== 6) {
+    return { valid: false, error: 'Company code must be 6 characters.' }
+  }
 
-  // Organizations were migrated to Supabase (create/list/update). The signup
-  // code lookup must read Supabase too - otherwise codes for any org created
-  // after the migration would never resolve ("Company code not found").
-  const { data: row, error } = await supabase
-    .from('organizations')
-    .select(
-      'id, code, name, status, journey_type, program_duration_weeks, cohort_start_date, settings, member_count, created_at, updated_at',
-    )
-    .ilike('code', trimmed)
-    .limit(1)
-    .maybeSingle()
+  // Public SECURITY DEFINER lookup - works before sign-in (anon) so signup can
+  // confirm a company code immediately. NEVER fall back to “verify after signup”
+  // while still blocking the submit button (Aug 2026 regression).
+  const { data, error } = await supabase.rpc('lookup_organization_code', {
+    p_code: trimmed,
+  })
 
   if (error) {
+    console.error('[validateCompanyCode] lookup failed', error)
     return { valid: false, error: 'Unable to validate company code.' }
   }
-  if (!row) {
-    return { valid: false, error: 'Company code not found.' }
+
+  const payload = (data ?? {}) as {
+    ok?: boolean
+    error?: string
+    organization?: Record<string, unknown>
   }
 
+  if (!payload.ok || !payload.organization) {
+    const lookupError = payload.error
+    if (lookupError === 'code_not_found') {
+      return { valid: false, error: 'Company code not found.' }
+    }
+    if (lookupError === 'org_inactive') {
+      return { valid: false, error: 'Company is not active.' }
+    }
+    if (lookupError === 'code_invalid_length') {
+      return { valid: false, error: 'Company code must be 6 characters.' }
+    }
+    return { valid: false, error: 'Unable to validate company code.' }
+  }
+
+  const row = payload.organization
   const settings = (row.settings as Record<string, unknown> | null) ?? {}
   const programDurationMonths = (settings.programDurationMonths as number | string | null) ?? null
   const programDurationWeeks = normalizeProgramDurationWeeks(
@@ -453,7 +468,7 @@ export const validateCompanyCode = async (
     programDurationMonths,
   )
   const journeyType = resolveJourneyType({
-    journeyType: row.journey_type,
+    journeyType: row.journey_type as string | null | undefined,
     programDurationWeeks,
     programDuration: programDurationMonths,
   })

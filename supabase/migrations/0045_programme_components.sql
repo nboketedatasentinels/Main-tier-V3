@@ -280,6 +280,118 @@ on conflict (id) do update set
   journey_label = excluded.journey_label,
   updated_at = now();
 
+-- ── Seed: Leading Self in the Age of AI (Combined Capstone) ─────────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'leading-self-capstone',
+    'leading_self',
+    'capstone',
+    null,
+    null,
+    'Combined Capstone (2 parts)',
+    'Two parts marked together: Mindset Action Plan (Course 1) and Resilience Action Plan (Course 2). Combined weight 50% of competence pass.',
+    null,
+    10,
+    'available',
+    'Leading Self in the Age of AI'
+  ),
+  (
+    'leading-self-capstone-part-a',
+    'leading_self',
+    'capstone',
+    'leading-self-capstone',
+    'leading-self-capstone-part-a',
+    'Part A · Mindset Action Plan',
+    'Closes Course 1 - Leading Under Pressure. Patterns, alternatives, calendar trigger, environmental design, and Digital Edge AI reflection.',
+    '/capstones/leading-self-capstone-part-a.html',
+    11,
+    'available',
+    'Leading Self in the Age of AI'
+  ),
+  (
+    'leading-self-capstone-part-b',
+    'leading_self',
+    'capstone',
+    'leading-self-capstone',
+    'leading-self-capstone-part-b',
+    'Part B · Resilience Action Plan',
+    'Closes Course 2 and the Journey. Shame literacy, body as data, trigger map, accountability partner, three legs of the stool, and 90-day commitment.',
+    '/capstones/leading-self-capstone-part-b.html',
+    12,
+    'available',
+    'Leading Self in the Age of AI'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
+-- ── Seed: Leading Self in the Age of AI (Combined Case Studies) ─────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'leading-self-case-study',
+    'leading_self',
+    'case_study',
+    null,
+    null,
+    'Combined Case Studies (2 parts)',
+    'Two case studies marked together. Case Study 1: Nadella (Course 1). Case Study 2: Okonjo-Iweala (Course 2). Combined weight 30% of competence pass.',
+    null,
+    20,
+    'available',
+    'Leading Self in the Age of AI'
+  ),
+  (
+    'leading-self-case-study-1',
+    'leading_self',
+    'case_study',
+    'leading-self-case-study',
+    'leading-self-case-study-1',
+    'Case Study 1 · The Pattern That Was Costing the Company',
+    'Course 1 - Leading Under Pressure. Satya Nadella''s first year at Microsoft, 2014. Pattern recognition and deliberate alternatives.',
+    '/capstones/leading-self-case-study-1.html',
+    21,
+    'available',
+    'Leading Self in the Age of AI'
+  ),
+  (
+    'leading-self-case-study-2',
+    'leading_self',
+    'case_study',
+    'leading-self-case-study',
+    'leading-self-case-study-2',
+    'Case Study 2 · Telling My Story Is Risky',
+    'Course 2 - Resilience Under Sustained Transformation Pressure. Ngozi Okonjo-Iweala and the cost of leading, Nigeria 2012. Shame patterns and strategic vulnerability.',
+    '/capstones/leading-self-case-study-2.html',
+    22,
+    'available',
+    'Leading Self in the Age of AI'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
 -- ── Seed: Leading Self in the Age of AI (Practicals Portfolio) ─────────────
 insert into public.programme_components
   (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
@@ -388,6 +500,446 @@ on conflict (id) do update set
   journey_label = excluded.journey_label,
   updated_at = now();
 
+-- ── Seed: Fostering AI-Ready Teams (Combined Capstone) ──────────────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'fostering-capstone',
+    'fostering',
+    'capstone',
+    null,
+    null,
+    'Combined Capstone (2 parts)',
+    'Two parts marked together: Heart-Centered Leader Blueprint (Week 2) and 90-Day Operating Plan (Week 6). Combined weight 50% of competence pass.',
+    null,
+    10,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-capstone-part-a',
+    'fostering',
+    'capstone',
+    'fostering-capstone',
+    'fostering-capstone-part-a',
+    'Part A · The Heart-Centered Leader Blueprint',
+    'Week 2 - five-section Blueprint: EQ pillar, alternative behaviour, three recurring moments, empathy in action, and a 30-day observable metric. 600–800 words.',
+    '/capstones/fostering-capstone-part-a.html',
+    11,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-capstone-part-b',
+    'fostering',
+    'capstone',
+    'fostering-capstone',
+    'fostering-capstone-part-b',
+    'Part B · The 90-Day Operating Plan',
+    'Week 6 - seven-section operating plan: team current state, heatmap, 30/60/90 conversations, system resets, leader cadence, success indicators, and AI integration. 800–1000 words.',
+    '/capstones/fostering-capstone-part-b.html',
+    12,
+    'available',
+    'Fostering AI-Ready Teams'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
+-- ── Seed: Fostering AI-Ready Teams (Combined Case Studies) ──────────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'fostering-case-study',
+    'fostering',
+    'case_study',
+    null,
+    null,
+    'Combined Case Studies (2 parts)',
+    'Two case studies marked together. Case Study 1: Klarna (Module 1). Case Study 2: MTN (Module 2). Combined weight 30% of competence pass.',
+    null,
+    20,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-case-study-1',
+    'fostering',
+    'case_study',
+    'fostering-case-study',
+    'fostering-case-study-1',
+    'Case Study 1 · The Pillar That Cracked First',
+    'Module 1 - Klarna and the AI Customer Service Reversal, 2024–2025. Leadership pillars under AI rollout pressure.',
+    '/capstones/fostering-case-study-1.html',
+    21,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-case-study-2',
+    'fostering',
+    'case_study',
+    'fostering-case-study',
+    'fostering-case-study-2',
+    'Case Study 2 · The Senior Engineer Who Stopped Asking',
+    'Module 2 - MTN Group AI Network Operations, Nigeria and South Africa, 2023–2024. Real org chart, difficult conversations, and early signals.',
+    '/capstones/fostering-case-study-2.html',
+    22,
+    'available',
+    'Fostering AI-Ready Teams'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
+-- ── Seed: Fostering AI-Ready Teams (Practicals Portfolio) ───────────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'fostering-practical',
+    'fostering',
+    'practical',
+    null,
+    null,
+    'Practicals Portfolio (6 parts)',
+    'Six weekly practicals across the Fostering AI-Ready Teams Journey. All required; together they form the Practicals Portfolio component.',
+    null,
+    30,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-practical-1',
+    'fostering',
+    'practical',
+    'fostering-practical',
+    'fostering-practical-1',
+    'Practical 1 · Five Pillars Self-Audit',
+    'Week 1 - score your team on the five pillars of heart-centred leadership against observable behaviour, then name the lowest pillar and its AI-era cost.',
+    '/capstones/fostering-practical-1.html',
+    31,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-practical-2',
+    'fostering',
+    'practical',
+    'fostering-practical',
+    'fostering-practical-2',
+    'Practical 2 · Heart-Centered Blueprint',
+    'Week 2 - Capstone Part A. Design the five-section Blueprint from the lowest pillar: alternative behaviour, three recurring moments, empathy in the room, and a 30-day metric.',
+    '/capstones/fostering-practical-2.html',
+    32,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-practical-3',
+    'fostering',
+    'practical',
+    'fostering-practical',
+    'fostering-practical-3',
+    'Practical 3 · The Real Org Chart',
+    'Week 3 - map hard, soft, and expert power in your team, then name the three biggest divergences from the formal chart and what each is costing the AI rollout.',
+    '/capstones/fostering-practical-3.html',
+    33,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-practical-4',
+    'fostering',
+    'practical',
+    'fostering-practical',
+    'fostering-practical-4',
+    'Practical 4 · The Conversation You''ve Been Avoiding',
+    'Week 4 - run the deferred conversation, then reflect across five stages: who, opening line verbatim, what you heard, what shifted, what is now in motion.',
+    '/capstones/fostering-practical-4.html',
+    34,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-practical-5',
+    'fostering',
+    'practical',
+    'fostering-practical',
+    'fostering-practical-5',
+    'Practical 5 · Heatmap Before the Exit Interview',
+    'Week 5 - score the team across six dimensions, name the highest-risk role and ignored signal, then design a dated intervention with a 30-day success measure.',
+    '/capstones/fostering-practical-5.html',
+    35,
+    'available',
+    'Fostering AI-Ready Teams'
+  ),
+  (
+    'fostering-practical-6',
+    'fostering',
+    'practical',
+    'fostering-practical',
+    'fostering-practical-6',
+    'Practical 6 · 90-Day Operating Plan + Lessons Synthesis',
+    'Week 6 - Capstone Part B. Design the six-section 90-day operating plan and write the Lessons Synthesis in your own voice.',
+    '/capstones/fostering-practical-6.html',
+    36,
+    'available',
+    'Fostering AI-Ready Teams'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
+-- ── Seed: Transforming Business with AI (Combined Capstone) ─────────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'transforming-business-capstone',
+    'transforming_business',
+    'capstone',
+    null,
+    null,
+    'Combined Capstone (2 parts)',
+    'Two parts marked together: Connection Blueprint (Week 2) and Transformation Memo (Week 6). Combined weight 50% of competence pass.',
+    null,
+    10,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-capstone-part-a',
+    'transforming_business',
+    'capstone',
+    'transforming-business-capstone',
+    'transforming-business-capstone-part-a',
+    'Part A · The Connection Blueprint',
+    'Week 2 - four-section persuasion artefact (Position, Now, Stake, Survival) for one named executive. 600–800 words.',
+    '/capstones/transforming-business-capstone-part-a.html',
+    11,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-capstone-part-b',
+    'transforming_business',
+    'capstone',
+    'transforming-business-capstone',
+    'transforming-business-capstone-part-b',
+    'Part B · The Transformation Memo',
+    'Week 6 - five-section sponsor memo (vision, resistance, reset, cadence, ask) plus AI Integration judgement. 800–1000 words.',
+    '/capstones/transforming-business-capstone-part-b.html',
+    12,
+    'available',
+    'Transforming Business with AI'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
+-- ── Seed: Transforming Business with AI (Practicals Portfolio) ──────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'transforming-business-practical',
+    'transforming_business',
+    'practical',
+    null,
+    null,
+    'Practicals Portfolio (6 parts)',
+    'Six weekly practicals across the Transforming Business with AI Journey. All required; together they form the Practicals Portfolio component.',
+    null,
+    30,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-practical-1',
+    'transforming_business',
+    'practical',
+    'transforming-business-practical',
+    'transforming-business-practical-1',
+    'Practical 1 · The Door Practice Log',
+    'Week 1 - log five real meetings with a pre-entry Door Practice read: AI fluency, unspoken success definition, vendor narrative, and what shifted in your behaviour.',
+    '/capstones/transforming-business-practical-1.html',
+    31,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-practical-2',
+    'transforming_business',
+    'practical',
+    'transforming-business-practical',
+    'transforming-business-practical-2',
+    'Practical 2 · The Connection Blueprint',
+    'Week 2 - Capstone Part A. Four-section persuasion artefact (Position, Now, Stake, Survival) for one named executive whose decision matters in the next 90 days.',
+    '/capstones/transforming-business-practical-2.html',
+    32,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-practical-3',
+    'transforming_business',
+    'practical',
+    'transforming-business-practical',
+    'transforming-business-practical-3',
+    'Practical 3 · The Vision Sentence Test',
+    'Week 3 - write one 15–20 word vision sentence and run three independent 24-hour recall tests; revise against the failure mode the data surfaces.',
+    '/capstones/transforming-business-practical-3.html',
+    33,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-practical-4',
+    'transforming_business',
+    'practical',
+    'transforming-business-practical',
+    'transforming-business-practical-4',
+    'Practical 4 · The Resistance Reframe',
+    'Week 4 (heaviest) - run a resistance conversation, then reflect across five stages: default read vs correct category (informed risk, fear, identity, political), category-matched move, and what is now in motion.',
+    '/capstones/transforming-business-practical-4.html',
+    34,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-practical-5',
+    'transforming_business',
+    'practical',
+    'transforming-business-practical',
+    'transforming-business-practical-5',
+    'Practical 5 · The Drift Heatmap',
+    'Week 5 - score five operating rhythms green/amber/red against 60-day evidence, pick the most-drifted rhythm, and book a cause-not-symptom reset with named participants and a 30-day success measure.',
+    '/capstones/transforming-business-practical-5.html',
+    35,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-practical-6',
+    'transforming_business',
+    'practical',
+    'transforming-business-practical',
+    'transforming-business-practical-6',
+    'Practical 6 · The Transformation Memo',
+    'Week 6 - Capstone Part B. Five-section memo for a named executive sponsor (vision, resistance, reset, cadence, ask) plus Lessons Synthesis and AI integration judgement. Closes the Combined Capstone.',
+    '/capstones/transforming-business-practical-6.html',
+    36,
+    'available',
+    'Transforming Business with AI'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
+-- ── Seed: Transforming Business with AI (Combined Case Studies) ─────────────
+insert into public.programme_components
+  (id, pillar, component_type, parent_id, part_id, title, description, href, sort_order, status, journey_label)
+values
+  (
+    'transforming-business-case-study',
+    'transforming_business',
+    'case_study',
+    null,
+    null,
+    'Combined Case Studies (2 parts)',
+    'Two case studies marked together. Case Study 1: Standard Bank (Module 1). Case Study 2: Safaricom (Module 2). Combined weight 30% of competence pass.',
+    null,
+    20,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-case-study-1',
+    'transforming_business',
+    'case_study',
+    'transforming-business-case-study',
+    'transforming-business-case-study-1',
+    'Case Study 1 · The Vision the Team Stopped Repeating',
+    'Module 1 - Standard Bank''s AI-led Transformation, South Africa and 21 sub-Saharan markets, 2020–2025. Vision cascade, Door Practice, and Connection Blueprint.',
+    '/capstones/transforming-business-case-study-1.html',
+    21,
+    'available',
+    'Transforming Business with AI'
+  ),
+  (
+    'transforming-business-case-study-2',
+    'transforming_business',
+    'case_study',
+    'transforming-business-case-study',
+    'transforming-business-case-study-2',
+    'Case Study 2 · The Resistance Everyone Misread',
+    'Module 2 - Safaricom''s Zuri AI Chatbot and the M-Pesa High Court Petition, Kenya, 2025. Vision portability, resistance categories, and operating system drift.',
+    '/capstones/transforming-business-case-study-2.html',
+    22,
+    'available',
+    'Transforming Business with AI'
+  )
+on conflict (id) do update set
+  pillar = excluded.pillar,
+  component_type = excluded.component_type,
+  parent_id = excluded.parent_id,
+  part_id = excluded.part_id,
+  title = excluded.title,
+  description = excluded.description,
+  href = excluded.href,
+  sort_order = excluded.sort_order,
+  status = excluded.status,
+  journey_label = excluded.journey_label,
+  updated_at = now();
+
 -- ── Learner submissions ─────────────────────────────────────────────────────
 create table if not exists public.programme_component_submissions (
   id uuid primary key default gen_random_uuid(),
@@ -435,7 +987,7 @@ create trigger pcs_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- Map last_updated_at via set_updated_at only if the helper updates `updated_at`.
--- Our column is last_updated_at — keep a dedicated trigger.
+-- Our column is last_updated_at - keep a dedicated trigger.
 drop trigger if exists pcs_set_updated_at on public.programme_component_submissions;
 
 create or replace function public.pcs_touch_last_updated_at()

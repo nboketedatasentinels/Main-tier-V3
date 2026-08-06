@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 1: The Pillar That Cracked First</title>
+<meta name="programme-component-id" content="fostering-case-study-1">
+<meta name="programme-component-type" content="case_study">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-case-study-1">
+<meta name="programme-part-title" content="Case Study 1 · The Pillar That Cracked First">
+<meta name="programme-component-title" content="Combined Case Studies - Case Study 1">
+<meta name="programme-submit-confirm" content="Submit Case Study 1: The Pillar That Cracked First?&#10;&#10;This is one of two case studies in the Combined Case Studies component. Both case studies are marked together as one component, weighted 30% of your competence pass.&#10;&#10;After submission, Case Study 2 (MTN, Module 2) closes the component at end of Week 6.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --case-bg: #FFFEF9;
+    --counter-under: #B45309;
+    --counter-good: #166534;
+    --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .section-card, .standard-card, .case-block { break-inside: avoid; }
+    .case-body { display: block !important; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 24px; }
+    .content { padding: 20px 14px 40px; }
+    .section-card, .case-body { padding: 20px 18px; }
+    .case-header { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 1 · The Pillar That Cracked First</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Fostering AI-Ready Teams</div>
+  <div class="case-eyebrow">Case Study 1 · Module 1 · The Leader Your AI-Era Team Actually Needs</div>
+  <h1 class="header-title">The Pillar That <em>Cracked First</em></h1>
+  <div class="header-meta"><strong>Klarna and the AI Customer Service Reversal, 2024-2025.</strong> A senior practitioner who introduced a transformation that exposed which pillar of his leadership had been holding the team together -- and which pillar had not.</div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Analyse patterns of leadership presence and team dynamics), LO2 (Design and demonstrate a heart-centred leadership blueprint).</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 1 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that uses the case to think about leadership pillars under AI rollout pressure -- and applies that to your own team.</div>
+    <ul class="standard-list">
+      <li>The pillar named with the specificity the five-pillar framework demands -- not the safest one to pick, the one the case actually shows under stress.</li>
+      <li>The senior leader exits and team disengagement read as evidence of a culture pattern that pre-existed the rollout -- argued from the case, not asserted.</li>
+      <li>The blueprint redesign written as a specific recurring moment, a named alternative behaviour, and an observable 90-day metric -- not as "communicate better" or "be more empathetic".</li>
+      <li>Application to your own scope with the same discipline -- a specific AI rollout, the pillar at risk, the team dynamic that would expose it, and one specific behaviour change you are committing to.</li>
+      <li>300-500 words across all four answers. Use figures and dates from the case where they sharpen the argument.</li>
+    </ul>
+  </div>
+
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">Klarna, February 2024 -- and the May 2025 reversal</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+
+      <div class="case-section-label">Background</div>
+      <p>In February 2024, Klarna -- the Swedish buy-now-pay-later fintech founded in 2005 by Sebastian Siemiatkowski and headquartered in Stockholm -- publicly announced that an AI assistant built on OpenAI technology was performing the work equivalent of 700 full-time customer service agents. The AI handled two-thirds of customer service chats in its first month, was available in 23 markets and 35 languages, resolved cases in under two minutes versus the previous 11-minute average, and was projected to drive an estimated 40 million US dollars in profit improvement in 2024.</p>
+
+      <p>The announcement was framed as a transformation case study. Klarna had reduced its workforce from approximately 5,000 to roughly 3,500 employees over the previous 18 months. Siemiatkowski publicly attributed a meaningful portion of the reduction to AI capability and signalled that more roles would be displaced. The narrative was widely covered in Bloomberg, the Financial Times, the Wall Street Journal, and Reuters.</p>
+
+      <p>In May 2025 -- 15 months later -- Siemiatkowski reversed course publicly. In an interview with Bloomberg in May 2025, he acknowledged that customer service quality had degraded, that customers were complaining about the AI's inability to handle complex or emotional cases, and that Klarna would be re-hiring human customer service agents. He stated that:</p>
+
+      <div class="pull-quote">"Investing in human, human-quality service is a critical investment for the future of the brand."</div>
+
+      <p>The company began a deliberate rebuild of its human customer service capability while keeping AI in a supporting rather than substitutive role.</p>
+
+      <p>Internally during the same period, Klarna's customer service leadership team had been raising concerns through 2024 about training, dignity in the workplace, and team morale. Multiple LinkedIn posts from former Klarna customer service leaders in late 2024 and early 2025 described a team that had stopped asking questions, that had moved from a culture of customer empathy to one of metric-chasing, and that had quietly begun looking elsewhere. The senior leaders who had built the previous customer service culture left during 2024 and early 2025.</p>
+
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not primarily a story about whether AI can do customer service work. It is a story about a senior practitioner who introduced a transformation that exposed which pillar of his leadership had been holding the team together -- and which pillar had not. The reversal was not driven by AI capability changing. It was driven by the human dynamics of the team and the customer base catching up with what had been put in place.</p>
+
+      <p>The questions below ask you to identify the leadership pillar that cracked first, why the rollout exposed it specifically, and what an AI-ready leadership blueprint would have looked like in early 2024.</p>
+
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+        <li>Bloomberg, multiple articles February 2024 to May 2025, including 'Klarna Says Its AI Assistant Does the Work of 700 People After Layoffs' (February 2024) and 'Klarna Goes Back to Humans Over AI for Service' (May 2025).</li>
+        <li><em>Financial Times</em>, multiple articles 2024-2025 on Klarna's workforce strategy and IPO preparation.</li>
+        <li>Sebastian Siemiatkowski LinkedIn posts and public interviews, 2024-2025.</li>
+        <li>Public LinkedIn posts from former Klarna customer service leaders, 2024-2025.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 1 · Pillar identification</div>
+    </div>
+    <h2 class="section-title">Which pillar cracked first inside Klarna's customer service organisation?</h2>
+    <div class="section-prompt">Of the five pillars of heart-centred leadership -- self-awareness, self-regulation, motivation, empathy, social skill -- which one cracked first inside Klarna's customer service organisation during 2024? Justify your answer in 2-3 sentences using evidence from the case.</div>
+    <div class="section-hint">Pick one pillar and defend it with case evidence. The justification has to point to specific elements in the case that fit the pillar you chose -- the senior leader exits, the team that stopped asking, the customer service quality degradation, the metric-chasing culture. The safest pillar to pick is rarely the one the case actually shows under stress.</div>
+    <textarea name="q1" placeholder="The pillar that cracked first was... The case evidence that fits this pillar is..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 60-90 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 1 · Pattern beyond the rollout</div>
+    </div>
+    <h2 class="section-title">What does the senior leader exit pattern reveal beyond the AI rollout itself?</h2>
+    <div class="section-prompt">The senior customer service leaders who left Klarna in 2024 and early 2025 had been raising concerns through 2024. What does this pattern -- senior practitioners raising concerns and then leaving -- reveal about the team dynamic, beyond the AI rollout itself?</div>
+    <div class="section-hint">The test is whether you treat the AI rollout as cause or as exposure. A culture pattern that pre-existed the rollout would have surfaced under any sufficient pressure -- the rollout did not invent it. The argument has to use the case as evidence: the timing of the concerns, the timing of the exits, what had to be true for senior practitioners to raise concerns and then leave rather than escalate.</div>
+    <textarea name="q2" placeholder="The pattern reveals... The dynamic that pre-existed the rollout was..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 60-90 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 2 · Blueprint design</div>
+    </div>
+    <h2 class="section-title">Design the alternative behaviour for Siemiatkowski</h2>
+    <div class="section-prompt">If you had been advising Siemiatkowski in early 2024 on a heart-centred leadership blueprint for the AI rollout, what specific behaviour would you have asked him to practise instead of the default he ran? Name the recurring moment, the alternative behaviour, and the observable metric you would have asked him to track for 90 days.</div>
+    <div class="section-hint">Three things to name -- the recurring moment (a specific moment in his leadership where the default behaviour ran), the alternative behaviour (operationally specific, not "communicate better"), and an observable 90-day metric (something a manager could see, not internal feeling). The test is whether the blueprint could be run starting Monday morning by Siemiatkowski himself.</div>
+    <textarea name="q3" placeholder="The recurring moment: ...
+The alternative behaviour: ...
+The 90-day metric: ..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 80-130 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 1 + 2 · Application to your own scope</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to an AI rollout in your own scope</h2>
+    <div class="section-prompt">Identify one AI rollout in your own current organisational scope where a similar pillar may be at risk of cracking. Name the pillar, the team dynamic that would expose it, and the one thing you would change about your own behaviour as the leader before the rollout exposes it.</div>
+    <div class="section-hint">This is the highest-weighted question. The rollout needs to be specific to your actual work -- not transferred from the case. The pillar named is the one you actually believe is at risk, not the one you are most comfortable discussing. The behaviour change is concrete -- a specific change you will make, runnable starting Monday, not an intent to "be more present".</div>
+    <textarea name="q4" placeholder="The AI rollout in my scope: ...
+The pillar at risk: ...
+The team dynamic that would expose it: ...
+The one behaviour change I am committing to: ..." oninput="recountWords()" style="min-height: 180px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 100-190 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) {
+  if (!s || !s.trim()) return 0;
+  return s.trim().split(/\s+/).length;
+}
+window.recountWords = function recountWords() {
+  const fields = ['q1', 'q2', 'q3', 'q4'];
+  let total = 0;
+  fields.forEach((name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name + 'Count');
+    if (display) display.textContent = c + ' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 600, goodMin = 300, goodMax = 500;
+  bandEl.style.left = ((goodMin / max) * 100) + '%';
+  bandEl.style.width = (((goodMax - goodMin) / max) * 100) + '%';
+  fillEl.style.width = Math.min(100, (total / max) * 100) + '%';
+  valEl.textContent = total + ' words';
+  valEl.classList.remove('under', 'good', 'over');
+  fillEl.classList.remove('good', 'over');
+  if (total < goodMin) {
+    valEl.classList.add('under');
+    hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.';
+  } else if (total <= goodMax) {
+    valEl.classList.add('good');
+    fillEl.classList.add('good');
+    hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.';
+  } else {
+    valEl.classList.add('over');
+    fillEl.classList.add('over');
+    hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.';
+  }
+  return total;
+};
+window.recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = ['q1', 'q2', 'q3', 'q4'];
+
+  window.submitCaseStudy = function submitCaseStudy() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    const total =
+      typeof window.recountWords === 'function' ? window.recountWords() : 0;
+    if (total < 300 || total > 500) {
+      const warning =
+        total < 300
+          ? 'Total response is ' + total + ' words. The expected range is 300-500. Below 300 sits outside the range.'
+          : 'Total response is ' + total + ' words. The expected range is 300-500. Above 500 sits outside the range.';
+      const proceed = window.confirm(warning + '\n\nSubmit anyway?');
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

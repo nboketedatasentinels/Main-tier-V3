@@ -346,8 +346,8 @@ export const usePartnerAdminData = (
   }, [assignedOrganizationIds, organizations, organizationsReady])
 
   // Track WHICH assignment key the organizations effect last resolved for. Keyed
-  // (not a boolean) so a late-arriving assignment — assignedOrganizationIds going
-  // from [] to [orgId] after an initial empty resolve — actually re-fetches the
+  // (not a boolean) so a late-arriving assignment - assignedOrganizationIds going
+  // from [] to [orgId] after an initial empty resolve - actually re-fetches the
   // org records instead of being skipped. The boolean version left the dashboard
   // org dropdown permanently blank while course-approvals (usePartnerOrganizations,
   // which has no such guard) showed the same org fine.
@@ -850,8 +850,9 @@ export const usePartnerAdminData = (
                 ? Math.min(100, Math.round((weeklyEarned / weeklyRequirement) * 100))
                 : data.progressPercent || 0
 
-              // Map pace-ratio risk level to partner display categories
-              // Only critical/behind = at risk. Warning and above = positively evolving, not at risk.
+              // Map window status to partner display categories.
+              // Only Alert (week 2 of window) / journey-ended = at risk.
+              // Warning is watch - recoverable, not at risk.
               const riskStatus: PartnerRiskLevel | 'at_risk' =
                 riskResult.level === 'critical'
                   ? 'critical'
@@ -859,9 +860,7 @@ export const usePartnerAdminData = (
                     ? 'at_risk'
                     : riskResult.level === 'warning'
                       ? 'watch'
-                      : progressPercent >= 95
-                        ? 'engaged'
-                        : 'watch'
+                      : 'engaged'
 
               const riskReasons = [
                 ...(data.riskReasons || []),

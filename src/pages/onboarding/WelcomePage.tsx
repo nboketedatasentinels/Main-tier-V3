@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { getLandingPathForRole } from '@/utils/roleRouting'
 
 /**
- * Free-user welcome/onboarding page removed — send anyone hitting /welcome
+ * Free-user welcome/onboarding page removed - send anyone hitting /welcome
  * straight to their role landing path (free dashboard for free users).
  */
 export const WelcomePage: React.FC = () => {

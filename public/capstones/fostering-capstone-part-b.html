@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Capstone Part B: The 90-Day Operating Plan</title>
+<meta name="programme-component-id" content="fostering-capstone-part-b">
+<meta name="programme-component-type" content="capstone">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-capstone-part-b">
+<meta name="programme-part-title" content="Part B · The 90-Day Operating Plan">
+<meta name="programme-component-title" content="Combined Capstone - The 90-Day Operating Plan">
+<meta name="programme-submit-confirm" content="Submit Capstone Part B: The 90-Day Operating Plan?&#10;&#10;This closes the Combined Capstone for the Fostering AI-Ready Teams Journey. Both parts (Heart-Centered Leader Blueprint and 90-Day Operating Plan) are marked together as one component, weighted 50% of your competence pass alongside the Combined Case Studies (30%) and the Practicals Portfolio (20%).&#10;&#10;Once submitted, you can still edit until end of Week 6.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  .carry-note { background: rgba(74,59,140,0.06); border-left: 3px solid var(--purple); border-radius: 0 8px 8px 0; padding: 10px 14px; margin-bottom: 14px; font-size: 12px; color: #444; line-height: 1.55; }
+  .carry-note strong { color: var(--purple); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 10px; display: block; margin-bottom: 3px; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 160px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  .peer-prep { background: rgba(74,59,140,0.06); border: 1.5px solid rgba(74,59,140,0.2); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: #444; line-height: 1.65; margin-bottom: 16px; }
+  .peer-questions-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 10px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 13px; color: #2A2438; line-height: 1.65; padding: 8px 0 8px 24px; position: relative; border-bottom: 1px solid rgba(74,59,140,0.1); }
+  .peer-q-list li:last-child { border-bottom: none; }
+  .peer-q-list li::before { content: "?"; position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; background: var(--purple); color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .peer-prep { break-inside: avoid; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .peer-prep { padding: 20px 18px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Capstone Part B · The 90-Day Operating Plan</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCapstone()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Fostering AI-Ready Teams</div>
+  <div class="case-eyebrow">Capstone Part B · Module 2 · Week 6 · Building AI-Ready Teams That Hold Together</div>
+  <h1 class="header-title">The 90-Day <em>Operating Plan</em></h1>
+  <div class="header-meta"><strong>Your operating system for leading the AI-era team you have today, not the one you wish you had. Six sections that integrate the team's current state on the five pillars and the Real Org Chart, the Heatmap reading, the conversations to be had over 30 / 60 / 90 days, the system reset moves, your leader's operating cadence, and the success indicators -- plus the AI Integration section drawing on one Digital Edge exercise. The Plan should be defensible to a CEO or CHRO without further explanation.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO1 (Analyse patterns), LO3 (Distinguish formal from real org chart; lead through it), LO4 (Construct and execute the difficult conversation), LO5 (Evaluate early signals; design interventions), LO6 (Integrate AI tools with judgement)</div>
+  <div class="header-meta"><strong>Word count:</strong> 800-1000 words total across all sections.</div>
+  <div class="case-callout">Capstone Part B of 2 · Combined Capstone = 50% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A Plan that reads as a connected operating system -- each section drawing on the prior weeks of the Journey, defensible to senior stakeholders without your personal explanation.</div>
+    <ul class="standard-list">
+      <li>The five-pillar reading and Real Org Chart in Section 1 reflect honest assessment of the team you actually have, including the uncomfortable parts.</li>
+      <li>The Heatmap in Section 2 names the highest-risk role specifically -- not "the team is at risk" -- with the early signal you have been ignoring named honestly.</li>
+      <li>The 30 / 60 / 90 day conversations in Section 3 are connected to the Real Org Chart and the Heatmap -- they are not free-standing.</li>
+      <li>The system reset moves in Section 4 address cause, not symptom -- structural changes, not motivational gestures.</li>
+      <li>The leader's operating cadence in Section 5 is sustainable beyond 90 days -- specific recurring rhythms, calendar slots, accountability mechanisms.</li>
+      <li>The success indicators in Section 6 are observable -- a manager-level external rater could see whether the indicator has shifted in 90 days.</li>
+      <li>The AI Integration in Section 7 demonstrates evaluative judgement -- what was kept, what was rejected, why -- not uncritical adoption.</li>
+      <li>The Plan as a whole is defensible to a CEO or CHRO who was not in the Journey, with no need for personal explanation.</li>
+    </ul>
+  </div>
+
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all sections</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 800-1000 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 800-1000 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 01</div>
+      <div class="outcome-tag">Outcome 1 + 3 · Team current state</div>
+    </div>
+    <h2 class="section-title">The team's current state -- five pillars + Real Org Chart</h2>
+    <div class="section-prompt">Score the team on the five pillars of heart-centred leadership against observable behaviour in the past 30 days. Then map the Real Org Chart -- where hard power, soft power, and expert power actually sit, and where they diverge from the formal chart. Name the most significant divergence and what it is costing the AI-era work.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the Five Pillars Self-Audit (Practical 1) and the Real Org Chart Map (Practical 3) you completed earlier in the Journey. Update against the past 30 days of observable behaviour, not the snapshot from earlier in the Journey.</div>
+    <div class="section-hint">Score against observable behaviour, not gut feel. The Real Org Chart names hard, soft, and expert power separately. The divergence you name should be the genuinely uncomfortable one -- a senior person whose actual influence is lower than their title, or a junior person whose influence is higher. Cost is named in concrete terms tied to AI-era work, not generic team friction.</div>
+    <textarea name="s1" placeholder="Five-pillar scores (1-5):
+  Self-awareness: ...
+  Self-regulation: ...
+  Motivation: ...
+  Empathy: ...
+  Social skill: ...
+
+Real Org Chart:
+  Hard power sits with: ...
+  Soft power sits with: ...
+  Expert power sits with: ...
+
+Most significant divergence: ...
+What it is costing AI-era work: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-160 words</span>
+      <span class="field-word-count" id="s1Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 02</div>
+      <div class="outcome-tag">Outcome 5 · Heatmap reading</div>
+    </div>
+    <h2 class="section-title">Heatmap reading -- the highest-risk role and the early signal</h2>
+    <div class="section-prompt">Score the team across the six Heatmap dimensions -- work meaning, manager relationship, growth visibility, workload sustainability, AI-tooling confidence, succession risk -- as green/amber/red against observable behaviour in the past 30 days. Identify the highest-risk role specifically (by role, not by name) and name the early signal you have been ignoring or downplaying.</div>
+    <div class="carry-note"><strong>Carry forward</strong>Build on the Heatmap Practical (Practical 5). Update against the past 30 days. The early signal you name should be a behavioural change, not a sentiment change.</div>
+    <div class="section-hint">The highest-risk role is named with specificity -- what makes this person specifically at risk, not 'general turnover risk'. The early signal is one you have already noticed and have not yet acted on. Honesty here is the discipline; the test is whether someone who works with this person would recognise the signal you name.</div>
+    <textarea name="s2" placeholder="Heatmap dimensions (G/A/R):
+  Work meaning: ...
+  Manager relationship: ...
+  Growth visibility: ...
+  Workload sustainability: ...
+  AI-tooling confidence: ...
+  Succession risk: ...
+
+The highest-risk role: ...
+Why this person specifically: ...
+
+The early signal I have been ignoring: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 110-140 words</span>
+      <span class="field-word-count" id="s2Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 03</div>
+      <div class="outcome-tag">Outcome 4 · Conversations 30 / 60 / 90</div>
+    </div>
+    <h2 class="section-title">Conversations to be had in the next 30 / 60 / 90 days</h2>
+    <div class="section-prompt">Name the specific conversations you will have at the 30 / 60 / 90 day marks. For each conversation: who (by role), what the conversation is about, what you have to be willing to hear, and how it connects to the Real Org Chart from Section 1 or the Heatmap from Section 2. The conversations are not free-standing.</div>
+    <div class="section-hint">Each conversation connects back to a specific element of Section 1 or Section 2. A conversation that does not is either out of scope for this Plan or signals a gap in the Plan's coherence. 'What you have to be willing to hear' is the discipline -- naming what would make you defensive, and committing to staying open to it. The 30 / 60 / 90 cadence sequences the conversations in a way that makes operational sense for the team's situation.</div>
+    <textarea name="s3" placeholder="30-day conversation:
+  Who: ...
+  About: ...
+  What I have to be willing to hear: ...
+  Connection to Sec 1 or Sec 2: ...
+
+60-day conversation:
+  Who: ...
+  About: ...
+  What I have to be willing to hear: ...
+  Connection: ...
+
+90-day conversation:
+  Who: ...
+  About: ...
+  What I have to be willing to hear: ...
+  Connection: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 150-180 words</span>
+      <span class="field-word-count" id="s3Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 04</div>
+      <div class="outcome-tag">Outcome 5 · System reset moves</div>
+    </div>
+    <h2 class="section-title">System reset moves -- structural, not motivational</h2>
+    <div class="section-prompt">Name two or three system reset moves that address the cause of what Section 1 and Section 2 surfaced -- not the symptom. The moves are structural (a recurring meeting redesigned, an escalation pathway changed, a decision-rights reallocation, a feedback loop created), not motivational gestures. For each move: what changes, who is responsible, by when.</div>
+    <div class="section-hint">Structural means the move changes how the system runs, not how people feel about it. The test: if you put the move in place and then disappeared for two weeks, would the change still be operating? If yes, it is structural. If no, it depends on your presence and is motivational. Each move addresses a specific cause from Section 1 or Section 2 -- not a generic team improvement.</div>
+    <textarea name="s4" placeholder="Reset move 1:
+  What changes: ...
+  Who is responsible: ...
+  By when: ...
+  Cause it addresses (from Sec 1 or 2): ...
+
+Reset move 2:
+  What changes: ...
+  Who is responsible: ...
+  By when: ...
+  Cause it addresses: ...
+
+[Reset move 3 if needed]" oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 130-160 words</span>
+      <span class="field-word-count" id="s4Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 05</div>
+      <div class="outcome-tag">Outcome 5 · Leader's operating cadence</div>
+    </div>
+    <h2 class="section-title">The leader's operating cadence -- sustainable beyond 90 days</h2>
+    <div class="section-prompt">Name your operating cadence -- the recurring rhythms, calendar slots, and accountability mechanisms that hold this Plan together. The cadence should be runnable beyond the 90 days without your willpower carrying it. Specify what happens daily, weekly, and monthly, and what mechanism keeps you accountable to it.</div>
+    <div class="section-hint">Sustainable means built on calendar slots, not on motivation. The test: if you had a stressful month, would the cadence survive? Anything that depends on you remembering to do it does not. Name the accountability mechanism specifically -- a peer, a partner, a recurring check-in, a public commitment -- not 'I will hold myself accountable'.</div>
+    <textarea name="s5" placeholder="Daily rhythms: ...
+
+Weekly rhythms: ...
+
+Monthly rhythms: ...
+
+The accountability mechanism: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 100-130 words</span>
+      <span class="field-word-count" id="s5Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 06</div>
+      <div class="outcome-tag">Outcome 5 · Success indicators</div>
+    </div>
+    <h2 class="section-title">Success indicators -- observable in 90 days</h2>
+    <div class="section-prompt">Name the success indicators that will tell you, at 90 days, whether this Plan is producing the change you want. The indicators should be observable to someone other than you -- a behaviour change in a named person, a meeting dynamic change, a metric a manager could verify. Specify what would tell you to escalate the Plan and what would tell you to reset it.</div>
+    <div class="section-hint">Observable means a manager-level external rater could see whether the indicator has shifted, without you explaining it. Internal feeling indicators do not meet the bar. The escalate/reset triggers protect the Plan from drifting -- without them, ambiguous results lead to a gradually-weakening Plan.</div>
+    <textarea name="s6" placeholder="Indicator 1: ...
+  Observable to: ...
+  What success looks like at 90 days: ...
+
+Indicator 2: ...
+  Observable to: ...
+  What success looks like at 90 days: ...
+
+What would tell me to escalate: ...
+What would tell me to reset: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 90-120 words</span>
+      <span class="field-word-count" id="s6Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Section 07</div>
+      <div class="outcome-tag">Outcome 6 · AI Integration</div>
+    </div>
+    <h2 class="section-title">AI Integration -- judgement, not adoption</h2>
+    <div class="section-prompt">Select one Digital Edge exercise output from this Module (the RACI conversation script, the Real Org Chart prompt, the Heatmap prompt, or another). Name what you kept from the AI output, what you rejected, and why -- including any instance where you overrode the AI suggestion with your own judgement. Demonstrate evaluative judgement, not uncritical adoption.</div>
+    <div class="section-hint">The discipline is evaluative -- not 'AI gave me good ideas'. Name a specific output, name what you kept and why, name what you rejected and why. If everything was kept, you have summarised, not evaluated. The override case is the strongest evidence: a moment where the AI suggested one move and you chose another, with the reasoning named.</div>
+    <textarea name="s7" placeholder="Digital Edge exercise selected: ...
+
+What I kept: ...
+  Why: ...
+
+What I rejected: ...
+  Why: ...
+
+Where I overrode the AI suggestion: ...
+  My reasoning: ..." oninput="recountWords()" style="min-height: 220px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 90-110 words</span>
+      <span class="field-word-count" id="s7Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, run the Plan past a peer.</h2>
+    <p class="peer-prep-sub">The 90-Day Operating Plan is meant to be defensible to a CEO or CHRO without your personal explanation. The fastest test is whether a peer can read it and predict what you would do in the next 30 days. If the peer cannot, the Plan is intent rather than operating.</p>
+
+    <div class="peer-questions-label">Questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Could a CEO or CHRO read this Plan and act on it without asking you for additional context?</li>
+      <li>Do the conversations in Section 3 connect to the Real Org Chart and Heatmap, or are they free-standing?</li>
+      <li>Are the system reset moves in Section 4 structural, or do they depend on your willpower or presence?</li>
+      <li>In Section 7 -- did you actually evaluate the AI output, or did you summarise what it said? Where did you override it?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) {
+  if (!s || !s.trim()) return 0;
+  return s.trim().split(/\s+/).length;
+}
+window.recountWords = function recountWords() {
+  const fields = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'];
+  let total = 0;
+  fields.forEach((name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name + 'Count');
+    if (display) display.textContent = c + ' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 1200, goodMin = 800, goodMax = 1000;
+  bandEl.style.left = ((goodMin / max) * 100) + '%';
+  bandEl.style.width = (((goodMax - goodMin) / max) * 100) + '%';
+  fillEl.style.width = Math.min(100, (total / max) * 100) + '%';
+  valEl.textContent = total + ' words';
+  valEl.classList.remove('under', 'good', 'over');
+  fillEl.classList.remove('good', 'over');
+  if (total < goodMin) {
+    valEl.classList.add('under');
+    hintEl.textContent = 'Below the 800-word threshold. The expected range is 800-1000.';
+  } else if (total <= goodMax) {
+    valEl.classList.add('good');
+    fillEl.classList.add('good');
+    hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.';
+  } else {
+    valEl.classList.add('over');
+    fillEl.classList.add('over');
+    hintEl.textContent = 'Over 1000 words. The response needs to land in the 800-1000 word range.';
+  }
+  return total;
+};
+window.recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = ['s1', 's2', 's3', 's4', 's5', 's6', 's7'];
+
+  window.submitCapstone = function submitCapstone() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    const total =
+      typeof window.recountWords === 'function'
+        ? window.recountWords()
+        : 0;
+    if (total < 800 || total > 1000) {
+      const warning =
+        total < 800
+          ? 'Total response is ' + total + ' words. The expected range is 800-1000. Below 800 sits outside the range.'
+          : 'Total response is ' + total + ' words. The expected range is 800-1000. Above 1000 sits outside the range.';
+      const proceed = window.confirm(warning + '\n\nSubmit anyway?');
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

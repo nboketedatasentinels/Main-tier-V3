@@ -27,7 +27,7 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
   // Stable string key of the assigned org codes. assignedOrgKeys is a Set whose
   // identity changes every render; deriving a sorted-joined STRING lets the
   // subscription effect below depend on the CONTENT (stable) instead of the Set
-  // reference — otherwise it re-subscribed every render and looped forever
+  // reference - otherwise it re-subscribed every render and looped forever
   // (ERR_INSUFFICIENT_RESOURCES).
   const assignedIdsKey = useMemo(
     () => Array.from(assignedOrgKeys).filter(Boolean).sort().join('|'),
@@ -56,7 +56,7 @@ export const usePartnerInterventions = (options: UsePartnerInterventionsOptions)
 
     return () => unsubscribe()
     // Subscription depends only on the QUERY inputs (which orgs to fetch), NOT on
-    // the client-side filter Sets — those are applied in the memo below.
+    // the client-side filter Sets - those are applied in the memo below.
   }, [assignedIdsKey, enabled, isSuperAdmin, profileStatus, user?.uid])
 
   // Client-side scoping. Re-runs cheaply when the filter changes, without ever

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -18,9 +18,10 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { CheckCircle, XCircle } from 'lucide-react'
-import { validateCompanyCode } from '@/services/organizationService'
 import { claimOrganizationCode } from '@/services/supabaseOrgService'
 import { useAuth } from '@/hooks/useAuth'
+import { useCompanyCodeValidation } from '@/hooks/useCompanyCodeValidation'
+import { getCompanyCodeSignupBlocker } from '@/utils/companyCodeSignupGate'
 
 interface CompanyCodeModalProps {
   isOpen: boolean
@@ -38,86 +39,31 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
   const toast = useToast()
   const { updateProfile, refreshProfile, profile } = useAuth()
   const [companyCode, setCompanyCode] = useState('')
-  const [companyCodeValid, setCompanyCodeValid] = useState<boolean | null>(null)
-  const [companyCodeError, setCompanyCodeError] = useState<string | null>(null)
-  const [isCheckingCode, setIsCheckingCode] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [companyName, setCompanyName] = useState<string | null>(null)
-  const [companyId, setCompanyId] = useState<string | null>(null)
 
   const trimmedCode = useMemo(() => companyCode.trim().toUpperCase(), [companyCode])
+  const {
+    isChecking: isCheckingCode,
+    isValid: companyCodeValid,
+    error: companyCodeError,
+    organization,
+  } = useCompanyCodeValidation(trimmedCode)
 
-  useEffect(() => {
-    if (!trimmedCode) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError(null)
-      setCompanyName(null)
-      setCompanyId(null)
-      setIsCheckingCode(false)
-      return
-    }
-
-    if (trimmedCode.length !== 6) {
-      setCompanyCodeValid(null)
-      setCompanyCodeError(null)
-      setCompanyName(null)
-      setCompanyId(null)
-      setIsCheckingCode(false)
-      return
-    }
-
-    let cancelled = false
-    setIsCheckingCode(true)
-
-    void validateCompanyCode(trimmedCode)
-      .then((result) => {
-        if (cancelled) return
-        setCompanyCodeValid(result.valid)
-        setCompanyCodeError(result.error ?? null)
-        setCompanyName(result.valid && result.organization ? result.organization.name : null)
-        setCompanyId(result.valid && result.organization ? result.organization.id : null)
-        setIsCheckingCode(false)
-      })
-      .catch((validationError) => {
-        if (cancelled) return
-        setCompanyCodeValid(false)
-        setCompanyName(null)
-        setCompanyId(null)
-        setCompanyCodeError(validationError instanceof Error ? validationError.message : 'Unable to verify company code.')
-        setIsCheckingCode(false)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [trimmedCode])
+  const companyName = organization?.name ?? null
+  const companyId = organization?.id ?? null
 
   const handleSubmit = async () => {
-    if (!trimmedCode) {
+    const blocker = getCompanyCodeSignupBlocker({
+      code: trimmedCode,
+      isChecking: isCheckingCode,
+      isValid: companyCodeValid,
+      error: companyCodeError,
+    })
+    if (blocker) {
       toast({
-        title: 'Company code required',
-        description: 'Enter your 6-character company code to continue.',
-        status: 'warning',
-        duration: 4000,
-      })
-      return
-    }
-
-    if (trimmedCode.length !== 6) {
-      toast({
-        title: 'Invalid company code',
-        description: 'Company codes must be 6 characters.',
-        status: 'error',
-        duration: 4000,
-      })
-      return
-    }
-
-    if (companyCodeValid === false || isCheckingCode) {
-      toast({
-        title: 'Company code not ready',
-        description: companyCodeError || 'Please wait while we verify the company code.',
-        status: 'error',
+        title: isCheckingCode ? 'Still verifying' : 'Company code required',
+        description: blocker,
+        status: isCheckingCode ? 'info' : 'error',
         duration: 4000,
       })
       return

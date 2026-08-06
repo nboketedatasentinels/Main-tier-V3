@@ -79,7 +79,7 @@ const surfaceCardProps = {
   _hover: { boxShadow: 'card-elevated' },
 } as const
 
-// Subtle brand-tinted rounded tile for section-header icons — a small,
+// Subtle brand-tinted rounded tile for section-header icons - a small,
 // consistent flourish that lifts the header hierarchy without adding color noise.
 const IconTile: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <Flex
@@ -250,7 +250,7 @@ export const PartnerDashboard: React.FC = () => {
       .map((u) => ({
         id: u.id,
         name: getDisplayName(u, 'Learner'),
-        email: u.email || '—',
+        email: u.email || '-',
         lastLogin: parse(u.lastActiveAt || u.lastActive),
       }))
       .sort((a, b) => {
@@ -266,7 +266,7 @@ export const PartnerDashboard: React.FC = () => {
   }, [recentLoginRows])
 
   // Learners (for the selected org) with an outstanding personality and/or values
-  // assessment — shows each one's per-assessment status so a partner can see who
+  // assessment - shows each one's per-assessment status so a partner can see who
   // has done one, the other, or neither.
   const assessmentsTableRef = useRef<HTMLDivElement>(null)
   const [showAssessmentsTable, setShowAssessmentsTable] = useState(false)
@@ -294,7 +294,7 @@ export const PartnerDashboard: React.FC = () => {
         return {
           id: u.id,
           name: getDisplayName(u, 'Learner'),
-          email: u.email || '—',
+          email: u.email || '-',
           personalityDone,
           valuesDone,
           personalityType: u.personalityType || null,

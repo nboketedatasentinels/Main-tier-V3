@@ -257,7 +257,7 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
       {isPublic ? (
         /* Public funnel: tease the breakdown, then gate it behind a call. */
         <Box position="relative">
-          {/* Blurred peek of the full breakdown — enough to see it's rich, not enough to read. */}
+          {/* Blurred peek of the full breakdown - enough to see it's rich, not enough to read. */}
           <Box
             aria-hidden="true"
             maxH="300px"
@@ -281,7 +281,7 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
             pointerEvents="none"
           />
 
-          {/* The gate — the last, unmissable thing. */}
+          {/* The gate - the last, unmissable thing. */}
           <Box
             mt={-14}
             position="relative"

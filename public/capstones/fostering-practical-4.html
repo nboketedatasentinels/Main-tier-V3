@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 4: The Conversation You've Been Avoiding</title>
+<meta name="programme-component-id" content="fostering-practical-4">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-practical-4">
+<meta name="programme-part-title" content="Practical 4 · The Conversation You've Been Avoiding">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 4">
+<meta name="programme-submit-confirm" content="Submit Practical 4: The Conversation You've Been Avoiding?&#10;&#10;Practical 4 contributes to your Practicals Portfolio (20% of competence pass) for Fostering AI-Ready Teams. Once submitted, you can still edit until end of Week 4. After Week 4 closes, the submission is locked.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+    --conv-line: #C9A020;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Conversation Anatomy Timeline -- distinctive to Practical 4 */
+  .conv-card { background: linear-gradient(135deg, rgba(74,59,140,0.04) 0%, rgba(245,200,66,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .conv-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .conv-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 24px; font-style: italic; }
+  .conv-stages { position: relative; padding-left: 0; }
+  .conv-stage { position: relative; background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px 16px 20px; margin-bottom: 16px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: start; }
+  @media (max-width: 600px) { .conv-stage { grid-template-columns: 1fr; gap: 8px; } }
+  .conv-stage::after { content: ""; display: none; }
+  .conv-stage:not(:last-child)::after { content: ""; display: block; position: absolute; left: 47px; top: calc(100% + 0px); width: 2px; height: 16px; background: var(--conv-line); }
+  @media (max-width: 600px) { .conv-stage:not(:last-child)::after { display: none; } }
+  .conv-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .conv-body { display: flex; flex-direction: column; gap: 6px; }
+  .conv-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .conv-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 8px; }
+  .conv-stage textarea { min-height: 80px; font-size: 12px; padding: 10px 12px; }
+
+  /* Pre-conversation context block */
+  .pre-conv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 600px) { .pre-conv-grid { grid-template-columns: 1fr; } }
+  .pre-conv-field label { display: block; font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 4px; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .conv-card, .conv-stage { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .conv-card { padding: 18px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">The Conversation You've Been Avoiding</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Fostering AI-Ready Teams</div>
+    <div class="practical-badge">Week 4 · Practical 4 of 6</div>
+  </div>
+  <h1 class="header-title">The Conversation <em>You've Been Avoiding</em></h1>
+  <p class="header-desc">Pick the conversation you have been avoiding -- the one with a member of your team that has been deferred for more than two weeks because the AI rollout has made it harder to have. Run it. Then come back and reflect on what actually happened. Five stages: who, your opening line verbatim, what you heard, what shifted in the room, what is now in motion. Reflection is the practical -- the conversation is the cost of admission.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>The person is named -- by initial or short reference -- and the reason this conversation has been avoided is honest, not staged.</li>
+      <li>The opening line is recorded verbatim -- the actual words you used, not the version you wish you had used.</li>
+      <li>What you heard is the unexpected part -- the moment the conversation turned, the comment that was not in your script.</li>
+      <li>What shifted is observable -- a sentence the other person said that they would not have said before, a posture change, a question they asked.</li>
+      <li>What is now in motion is one specific thing -- a meeting booked, a decision unblocked, a permission granted -- with a date.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the conversation before reflecting -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Set Up the Conversation Before You Reflect</div>
+      </div>
+    </div>
+    <p class="step-desc">Before the five-stage reflection, two pieces of context. Who the conversation was with -- by initial or short reference. And why it had been avoided -- the honest reason, not the version that lets you off the hook. "I was busy" is not a reason. "I did not know how to raise the AI rollout's effect on her seniority without sounding like I was managing her out" is a reason.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Who and When</div>
+        </div>
+        <div class="substep-body">Person -- by initial or short reference. Their role. The date the conversation actually happened. Whether you initiated or they did.</div>
+        <textarea name="who_when" placeholder="N -- senior network engineer, 11 years' incident knowledge. The conversation happened on 6 June, 16:30, in her office (her choice). I initiated. I had been deferring it for six weeks."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">Why It Had Been Avoided</div>
+        </div>
+        <div class="substep-body">The honest reason. Not "I was busy". The structural reason that was actually keeping the conversation off the calendar.</div>
+        <textarea name="why_avoided" placeholder="I did not know how to raise that the AI rollout had structurally moved her authority -- without sounding like I was either managing her out or apologising for the rollout. The avoidance was about not having a frame for what I was about to ask her to absorb. Six weeks of delay was me waiting for the frame to arrive on its own."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The five-stage anatomy -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Reflect Across the Five Stages</div>
+      </div>
+    </div>
+    <p class="step-desc">Walk the conversation in five stages. The order matters -- this is the anatomy of what happened, not a thematic essay. Stage 2 is the one that gets cleaned up most often in reflection. Resist that. Write the opening line as it actually came out of your mouth, not as you wish it had.</p>
+
+    <div class="conv-card">
+      <div class="conv-card-label">The Conversation Anatomy</div>
+      <div class="conv-card-sub">Five stages · in order · written from inside the conversation, not above it</div>
+
+      <div class="conv-stages">
+        <div class="conv-stage">
+          <div class="conv-num">01</div>
+          <div class="conv-body">
+            <div class="conv-name">Who Was in the Room</div>
+            <div class="conv-helper">The person -- and a sentence on what you knew about their state going in. What you were carrying about them, accurately or not, when you opened the door.</div>
+            <textarea name="stage_1_who" placeholder="N. I went in believing she was disengaging. Three months of decreasing pushback in incident reviews, increased response-time delays, and the absence of future-tense questions in our 1:1s had me reading the situation as 'she has one foot out'. I was preparing for a defensive conversation about retention."></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">02</div>
+          <div class="conv-body">
+            <div class="conv-name">Your Opening Line, Verbatim</div>
+            <div class="conv-helper">Exact words. The version you actually said, not the version you rehearsed in your head. If you are tempted to clean it up, that is the line you most need to write down.</div>
+            <textarea name="stage_2_opening" placeholder='"I have been putting off this conversation for six weeks because I have not known how to ask it well, and I would rather ask it badly than keep waiting for a better version."'></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">03</div>
+          <div class="conv-body">
+            <div class="conv-name">What You Actually Heard</div>
+            <div class="conv-helper">The part that was not in your script. The moment the conversation turned -- a comment, a silence that landed differently than expected, the thing she said that you had not predicted she would say.</div>
+            <textarea name="stage_3_heard" placeholder="She did not push back on the rollout the way I had expected. She said: 'I have been waiting to see whether you would notice the rollout was costing me my technical authority before I had to say it out loud.' Six weeks of delay was being read by her as me ducking, not me thinking. The cost was on the meter and I had been pretending the meter was not running."></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">04</div>
+          <div class="conv-body">
+            <div class="conv-name">What Shifted in the Room</div>
+            <div class="conv-helper">Observable. A sentence she said that she would not have said before. A posture change. A question she asked that she had not asked in months.</div>
+            <textarea name="stage_4_shifted" placeholder="At minute 22 she asked, for the first time in three months, what the second-generation tool would mean for her role. Not as a complaint -- as an actual planning question. The future tense came back into the conversation. She also offered, unprompted, to lead the technical write-up of the next post-incident review with the AI summary opened second, not first. That offer would not have been on the table at minute 1."></textarea>
+          </div>
+        </div>
+
+        <div class="conv-stage">
+          <div class="conv-num">05</div>
+          <div class="conv-body">
+            <div class="conv-name">What Is Now in Motion</div>
+            <div class="conv-helper">One specific thing. A meeting booked, a decision unblocked, a permission granted, a process changed. With a date. Not "we agreed to keep talking".</div>
+            <textarea name="stage_5_motion" placeholder="N is leading the post-incident review on 13 June with the AI summary opened second. We have booked a 30-minute review of how that landed for the morning of 16 June -- before the cycle resets. I have committed to giving her a written read of how I see the second-generation tool affecting her role by 20 June. Three dated commitments out of one conversation."></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Cost of the avoidance -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Cost of the Avoidance</div>
+      </div>
+    </div>
+    <p class="step-desc">The conversation cost something to have. The avoidance cost something more. Two checks. First: what specifically cost more by being deferred six weeks (or however long) than it would have cost on day one? Second: what is the structural pattern this conversation belongs to -- the kind of conversation you tend to defer? Naming the pattern is what makes this Practical generalise. Without it, you have done one conversation, not changed an instinct.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Cost of the Delay</div>
+        </div>
+        <div class="substep-body">What specifically got more expensive by being deferred. Not "trust eroded". An observable cost.</div>
+        <textarea name="cost_of_delay" placeholder="In the six weeks of delay, three post-incident reviews documented AI summaries that N would have caught, including one that is now in the audit trail with regulatory exposure. The conversation, on day one, would have cost me an awkward 40 minutes. The avoidance cost the team three flawed records and the slow erosion of N's willingness to challenge the tool. The second cost is recoverable. The audit trail is not."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Pattern</div>
+        </div>
+        <div class="substep-body">The kind of conversation you tend to defer. Not "hard ones". A specific structural pattern.</div>
+        <textarea name="pattern" placeholder="The pattern: I defer conversations where I would need to admit I do not yet have a frame for what I am about to ask the other person to absorb. I treat absence-of-frame as a reason to wait, when in practice the conversation is the thing that builds the frame. The frame does not arrive in advance of the conversation -- it arrives during it. Once I see this, the cost of every future six-week delay is visible in advance."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Reflection</h2>
+    <p class="ai-activity-desc">Conversation reflections fail at two places every time -- the practitioner cleans up the opening line in retrospect, and what shifted gets written as how the practitioner felt rather than what was observable. Both make the reflection unmarkable and unrepeatable. AI as an outside reader catches both. Use it before you submit.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether This Was a Real Conversation</div>
+          <div class="ai-step-body">Ask AI to test whether the reflection reads as the actual conversation that happened -- or whether it has been cleaned up into the conversation you wish you had had.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am reflecting on a hard conversation I had with someone on my team during an AI rollout. The five stages are: (1) who was in the room: [paste]. (2) opening line verbatim: [paste]. (3) what I heard: [paste]. (4) what shifted: [paste]. (5) what is now in motion: [paste]. Pressure-test this. Specifically: (1) Does the opening line sound like something that came out of a real mouth in a real moment, or has it been polished into something I wish I had said? (2) Does what I "heard" name a specific moment, comment, or silence -- or has it been summarised into a thematic statement that any reflective leader could write? (3) Does "what shifted" describe an observable change -- a sentence the other person said, a posture, a question -- or have I described how I felt the room had shifted, which is not the same thing? Tell me where the reflection has gone abstract and rewrite the weakest stage with operational specificity.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the reflection go abstract? What is the rewritten version?</div>
+      <textarea class="ai-field" name="ai_reflection_test" placeholder="AI flagged stage 4 -- I had written 'the energy in the room shifted' which is unmarkable. Rewriting: 'At minute 22 N asked, for the first time in three months, what the second-generation tool would mean for her role. The future tense came back into the conversation. She also offered, unprompted, to lead the technical write-up of the next post-incident review with the AI summary opened second.' Specific moment, specific question, specific offer."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Test What Actually Shifted vs What Stayed the Same</div>
+          <div class="ai-step-body">Ask AI to test whether what is now "in motion" is genuinely new -- a meeting that would not have been booked, a decision that would not have been made -- or whether it would have happened anyway and the conversation is being credited with it.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">What I claim is now in motion after the conversation is: [paste]. Pressure-test on three criteria. (1) Of the things now in motion, which would have happened anyway in the next two weeks even without the conversation? Strip those out. (2) Of what remains, which has a date attached -- a specific meeting booked, a decision made, a written commitment with a deadline? (3) What did NOT shift that I had hoped would shift -- and naming that is part of the reflection, not a failure of it. The honest version of "what is now in motion" is shorter than the optimistic version. Help me find it.</div>
+      <div class="prompt-label" style="margin-top:12px">What is genuinely new vs what would have happened anyway? What did not shift?</div>
+      <textarea class="ai-field" name="ai_motion_test" placeholder="AI stripped out two items I had claimed -- 'we are going to communicate better' and 'I'll be more aware'. Both would have happened or not regardless. What remains: N leads 13 June review with AI second; we review on 16 June; I write up second-generation tool implications by 20 June. Three dated, specific. What did NOT shift: N's actual confidence about her trajectory. She wanted dates and got them, but we did not yet talk about whether her role still belongs to her in 12 months. That conversation is the next one I am avoiding. Naming it now."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the AI rollout has shifted again, which conversation are you most likely to defer for the same structural reason -- absence of a frame, awkwardness about the rollout's effect on someone's authority, the wait for a better version of the question? What is the trigger that should override the wait next time?</div>
+    <textarea name="ai_lens_next_deferred" placeholder="Most likely to defer: the conversation with D -- the formal owner of the AI rollout who has been struggling to hold technical authority that the rollout has structurally moved away from him. Same pattern: I do not yet have a frame for asking him to absorb the redefinition of his role, so I am waiting for one. The trigger that should override the wait is the count -- two weeks of deferral becomes the line. If a conversation I should be having is two weeks past where I would have wanted it, the next available calendar slot is not optional."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Conversation reflections fall apart at the same place every time -- the practitioner cleans up the opening line and writes "what shifted" as how they felt rather than what was observable. A peer who has done their own reflection can hear both at the same speed an assessor will. Bring this to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the opening line aloud first. If your peer's first reaction is "people actually talk like that?" -- the line is genuine. If their first reaction is "that sounds prepared" -- it has been cleaned up in retrospect, and the rest of the reflection is at risk of having been cleaned up too. Then read what shifted. If your peer can describe the moment back to you in concrete terms -- the question N asked, the offer she made -- the observation is real. If they cannot, what is on the page is feeling-language pretending to be observation.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>The opening line -- does it sound like something a real mouth said in a real moment, or like the version you wish you had used?</li>
+      <li>What shifted -- can you describe a specific moment, sentence, or question, or have you written feeling-language pretending to be observation?</li>
+      <li>The pattern you named -- if you ran into the same structural setup tomorrow with someone else, would naming the pattern actually change what you do, or is it self-aware language without a behaviour change attached?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'who_when',
+    'why_avoided',
+    'stage_1_who',
+    'stage_2_opening',
+    'stage_3_heard',
+    'stage_4_shifted',
+    'stage_5_motion',
+    'cost_of_delay',
+    'pattern',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

@@ -40,13 +40,22 @@ import {
   assignRoleToUser,
   updateUser,
 } from '@/services/userManagementService'
+import { assignPartnerToOrg, removePartnerFromOrg } from '@/services/supabaseOrgService'
 import { getDisplayName } from '@/utils/displayName'
+import { normalizeRole } from '@/utils/role'
 
-type LeadershipRole = 'mentor' | 'ambassador'
+type LeadershipRole = 'mentor' | 'ambassador' | 'partner'
 
 const roleLabels: Record<LeadershipRole, string> = {
   mentor: 'Mentor',
   ambassador: 'Coach',
+  partner: 'Partner',
+}
+
+const rolePlurals: Record<LeadershipRole, string> = {
+  mentor: 'mentors',
+  ambassador: 'coaches',
+  partner: 'partners',
 }
 
 const statusBadge = (status?: string) => {
@@ -68,7 +77,11 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
   const canManageLeadership = isSuperAdmin
 
   const [activeRole, setActiveRole] = useState<LeadershipRole>('mentor')
-  const [leaders, setLeaders] = useState<{ mentors: ManagedUserRecord[]; coaches: ManagedUserRecord[] }>({ mentors: [], coaches: [] })
+  const [leaders, setLeaders] = useState<{
+    mentors: ManagedUserRecord[]
+    coaches: ManagedUserRecord[]
+    partners: ManagedUserRecord[]
+  }>({ mentors: [], coaches: [], partners: [] })
   const [search, setSearch] = useState('')
   const [isAssigning, setIsAssigning] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -89,40 +102,54 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
 
   useEffect(() => {
     setLeaders({
-      mentors: propUsers.filter((user) => user.role === 'mentor'),
-      coaches: propUsers.filter((user) => user.role === 'ambassador'),
+      mentors: propUsers.filter((user) => normalizeRole(user.role) === 'mentor'),
+      coaches: propUsers.filter((user) => normalizeRole(user.role) === 'ambassador'),
+      partners: propUsers.filter((user) => normalizeRole(user.role) === 'partner'),
     })
   }, [propUsers])
 
   const activeLabel = roleLabels[activeRole]
+  const activePlural = rolePlurals[activeRole]
 
   const filteredLeaders = useMemo(() => {
-    const pool = activeRole === 'mentor' ? leaders.mentors : leaders.coaches
+    const pool =
+      activeRole === 'mentor'
+        ? leaders.mentors
+        : activeRole === 'ambassador'
+          ? leaders.coaches
+          : leaders.partners
     const query = search.toLowerCase()
-    return pool.filter((member) =>
-      member.name.toLowerCase().includes(query) || (member.email || '').toLowerCase().includes(query) || (member.companyName || '').toLowerCase().includes(query),
+    return pool.filter(
+      (member) =>
+        member.name.toLowerCase().includes(query) ||
+        (member.email || '').toLowerCase().includes(query) ||
+        (member.companyName || '').toLowerCase().includes(query),
     )
-  }, [activeRole, leaders.coaches, leaders.mentors, search])
+  }, [activeRole, leaders.coaches, leaders.mentors, leaders.partners, search])
 
   const uniqueOrgCount = useMemo(() => {
-    const allLeaders = [...leaders.mentors, ...leaders.coaches]
-    const orgs = new Set(allLeaders.map(m => m.companyId).filter(Boolean))
+    const allLeaders = [...leaders.mentors, ...leaders.coaches, ...leaders.partners]
+    const orgs = new Set(allLeaders.map((m) => m.companyId).filter(Boolean))
     return orgs.size
-  }, [leaders.mentors, leaders.coaches])
+  }, [leaders.mentors, leaders.coaches, leaders.partners])
 
   // Check if we should show "Last Active" and "Joined" columns
   const showLastActiveColumn = useMemo(() => {
-    const knownCount = filteredLeaders.filter(m => m.lastActive).length
+    const knownCount = filteredLeaders.filter((m) => m.lastActive).length
     return knownCount / (filteredLeaders.length || 1) > 0.5
   }, [filteredLeaders])
 
   const showJoinedColumn = useMemo(() => {
-    const knownCount = filteredLeaders.filter(m => m.createdAt).length
+    const knownCount = filteredLeaders.filter((m) => m.createdAt).length
     return knownCount / (filteredLeaders.length || 1) > 0.5
   }, [filteredLeaders])
 
   const availableMembers = useMemo(
-    () => propUsers.filter((user) => !['mentor', 'ambassador'].includes(user.role)),
+    () =>
+      propUsers.filter((user) => {
+        const role = normalizeRole(user.role)
+        return !['mentor', 'ambassador', 'partner', 'super_admin'].includes(role)
+      }),
     [propUsers],
   )
 
@@ -146,13 +173,27 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
     try {
       setIsAssigning(true)
       const company = propOrganizations.find((org) => org.id === selectedCompanyId)
-      await assignRoleToUser(selectedUserId, assignRole, company || null, assignmentNotes)
+
+      if (assignRole === 'partner' && company?.id) {
+        // Proper partner link: role + transformation_partner_id on the org.
+        await assignPartnerToOrg(company.id, selectedUserId)
+        if (assignmentNotes.trim()) {
+          await updateUser(selectedUserId, { notes: assignmentNotes.trim() })
+        }
+      } else {
+        await assignRoleToUser(selectedUserId, assignRole, company || null, assignmentNotes)
+      }
+
       toast({ title: `${activeLabel} assigned successfully.`, status: 'success' })
       assignModal.onClose()
       clearPromotionForm()
     } catch (err) {
       console.error(err)
-      toast({ title: 'Only super admins can manage leadership assignments.', status: 'error' })
+      toast({
+        title: 'Unable to assign leadership role',
+        description: err instanceof Error ? err.message : 'Only super admins can manage leadership assignments.',
+        status: 'error',
+      })
     } finally {
       setIsAssigning(false)
     }
@@ -184,6 +225,12 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
       }
 
       await updateUser(editingMember.id, updates)
+
+      // Keep org.transformation_partner_id in sync when editing a partner's company.
+      if (normalizeRole(editingMember.role) === 'partner' && company?.id && company.id !== editingMember.companyId) {
+        await assignPartnerToOrg(company.id, editingMember.id, { sendWelcome: false })
+      }
+
       toast({ title: 'Leadership profile updated.', status: 'success' })
       editModal.onClose()
     } catch (err) {
@@ -199,6 +246,15 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
 
     try {
       setRemovingId(member.id)
+
+      if (normalizeRole(member.role) === 'partner' && member.companyId) {
+        try {
+          await removePartnerFromOrg(member.companyId)
+        } catch (partnerError) {
+          console.warn('[LeadershipCouncil] partner org unlink skipped', partnerError)
+        }
+      }
+
       const updates: Partial<ManagedUserRecord> = {
         role: 'user',
         companyId: null,
@@ -248,14 +304,17 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
               </Badge>
             </HStack>
             <Text fontSize="3xl" fontWeight="semibold" color="gray.900">
-              Mentor &amp; Coach oversight
+              Mentor, Coach &amp; Partner oversight
             </Text>
             <Text color="gray.600" mt={2}>
-              {leaders.mentors.length} active mentor{leaders.mentors.length !== 1 ? 's' : ''} and {leaders.coaches.length} coach{leaders.coaches.length !== 1 ? 's' : ''} across {uniqueOrgCount} organization{uniqueOrgCount !== 1 ? 's' : ''}
+              {leaders.mentors.length} active mentor{leaders.mentors.length !== 1 ? 's' : ''},{' '}
+              {leaders.coaches.length} coach{leaders.coaches.length !== 1 ? 'es' : ''} and{' '}
+              {leaders.partners.length} partner{leaders.partners.length !== 1 ? 's' : ''} across{' '}
+              {uniqueOrgCount} organization{uniqueOrgCount !== 1 ? 's' : ''}
             </Text>
           </GridItem>
           <GridItem>
-            <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
+            <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4}>
               <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
                 <CardBody>
                   <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
@@ -270,6 +329,14 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                     Active Coaches
                   </Text>
                   <Text fontSize="2xl" fontWeight="bold">{leaders.coaches.length}</Text>
+                </CardBody>
+              </Card>
+              <Card border="1px solid" borderColor="border.control" bg="white" borderRadius="xl">
+                <CardBody>
+                  <Text fontSize="xs" color="gray.500" textTransform="uppercase" letterSpacing="widest">
+                    Active Partners
+                  </Text>
+                  <Text fontSize="2xl" fontWeight="bold">{leaders.partners.length}</Text>
                 </CardBody>
               </Card>
             </SimpleGrid>
@@ -297,7 +364,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                   w={{ base: 'full', md: 'auto' }}
                   justify="space-between"
                 >
-                  {(['mentor', 'ambassador'] as LeadershipRole[]).map((role) => (
+                  {(['mentor', 'ambassador', 'partner'] as LeadershipRole[]).map((role) => (
                     <Button
                       key={role}
                       onClick={() => setActiveRole(role)}
@@ -318,7 +385,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                       <Icon as={Search} color="text.muted" />
                     </InputLeftElement>
                     <Input
-                      placeholder={`Search ${activeLabel.toLowerCase()}s`}
+                      placeholder={`Search ${activePlural}`}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                     />
@@ -362,7 +429,7 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
                   <Flex py={10} direction="column" align="center" gap={2}>
                     <Icon as={UsersIcon} boxSize={10} color="text.muted" />
                     <Text fontWeight="medium" color="gray.700">
-                      No {activeLabel.toLowerCase()}s found. Use 'Add {activeLabel}' to promote a member.
+                      No {activePlural} found. Use &apos;Add {activeLabel}&apos; to promote a member.
                     </Text>
                   </Flex>
                 ) : (
@@ -479,10 +546,14 @@ export const LeadershipCouncil = ({ users: propUsers, organizations: propOrganiz
 
               <Box>
                 <Text fontSize="sm" color="gray.600" mb={1}>
-                  Assign company (optional)
+                  Assign company {assignRole === 'partner' ? '(recommended)' : '(optional)'}
                 </Text>
                 <Select
-                  placeholder="Optional company assignment"
+                  placeholder={
+                    assignRole === 'partner'
+                      ? 'Select organization for this partner'
+                      : 'Optional company assignment'
+                  }
                   value={selectedCompanyId}
                   onChange={(e) => setSelectedCompanyId(e.target.value)}
                 >

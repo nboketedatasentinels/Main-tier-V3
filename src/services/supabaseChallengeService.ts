@@ -3,7 +3,7 @@
  *
  * Replaces Firestore `challenges` writes that fail after the auth cutover.
  * Checklist "challenger" points are awarded only after end_date has passed and
- * the challenge was accepted (status → completed) — never on create.
+ * the challenge was accepted (status → completed) - never on create.
  */
 import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'

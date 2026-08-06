@@ -175,7 +175,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
   // partner has no assignment", NOT "the selection is invalid". Without this
   // guard, a partner landing on ?org=<id> they aren't assigned to hit an
   // infinite ping-pong: this effect reset selectedOrg to 'all', the sync effect
-  // above forced it back to the URL id, and round it went — re-rendering the
+  // above forced it back to the URL id, and round it went - re-rendering the
   // whole dashboard on every tick (visible twitch + "form field id/name" flood).
   // Only treat a selection as invalid when we actually have an org list to
   // validate it against.
@@ -273,7 +273,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     return () => unsubscribe()
   }, [profile?.id, profileStatus])
 
-  // Derived (org-filtered) views — recompute cheaply when the filter or data
+  // Derived (org-filtered) views - recompute cheaply when the filter or data
   // changes, without re-subscribing.
   const notifications = useMemo(
     () => rawNotifications.filter(matchesSelectedOrg).slice(0, 5),

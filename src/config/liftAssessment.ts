@@ -283,7 +283,7 @@ export const COUNTRY_DIAL_CODES: Record<string, string> = {
   Venezuela: '+58', Vietnam: '+84', Yemen: '+967', Zambia: '+260', Zimbabwe: '+263',
 }
 
-/** Unique dial codes, sorted by numeric value — options for the phone prefix picker. */
+/** Unique dial codes, sorted by numeric value - options for the phone prefix picker. */
 export const DIAL_CODES: string[] = Array.from(new Set(Object.values(COUNTRY_DIAL_CODES))).sort(
   (a, b) => Number(a.slice(1)) - Number(b.slice(1)),
 )

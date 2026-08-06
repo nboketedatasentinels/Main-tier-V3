@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Practical 5: Heatmap Before the Exit Interview</title>
+<meta name="programme-component-id" content="fostering-practical-5">
+<meta name="programme-component-type" content="practical">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-practical-5">
+<meta name="programme-part-title" content="Practical 5 · Heatmap Before the Exit Interview">
+<meta name="programme-component-title" content="Practicals Portfolio - Practical 5">
+<meta name="programme-submit-confirm" content="Submit Practical 5: Heatmap Before the Exit Interview?&#10;&#10;Practical 5 contributes to your Practicals Portfolio (20% of competence pass) for Fostering AI-Ready Teams. Once submitted, you can still edit until end of Week 5. After Week 5 closes, the submission is locked.">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726;
+    --gold: #F5C842;
+    --gold-dark: #C9A020;
+    --purple: #4A3B8C;
+    --purple-light: #6B5BB5;
+    --cream: #FAF8F3;
+    --border: #E8E3DA;
+    --field-bg: #F9F7F2;
+    --field-border: #D4CEBC;
+    --ai-bg: #0F1F16;
+    --ai-border: #2D7A4F;
+    --ai-lens-bg: #F0FBF5;
+
+    /* Heatmap-specific colours */
+    --heat-green: #16A34A;
+    --heat-green-bg: #DCFCE7;
+    --heat-green-border: #86EFAC;
+    --heat-amber: #D97706;
+    --heat-amber-bg: #FEF3C7;
+    --heat-amber-border: #FCD34D;
+    --heat-red: #DC2626;
+    --heat-red-bg: #FEE2E2;
+    --heat-red-border: #FCA5A5;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .t4l-transform { font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; display: block; }
+  .print-bar .t4l-leader { font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; display: block; }
+  .print-bar .title { font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; }
+  .practical-badge { display: inline-block; background: rgba(107,91,181,0.3); border: 1px solid rgba(107,91,181,0.5); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: #C4B8FF; letter-spacing: 0.1em; text-transform: uppercase; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 36px; color: #fff; line-height: 1.15; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-desc { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 680px; line-height: 1.7; }
+
+  .content { max-width: 860px; margin: 0 auto; padding: 36px 24px 60px; }
+
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 18px 22px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 17px; color: var(--plum); margin-bottom: 10px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 4px 0 4px 18px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+
+  .step-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .step-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px; }
+  .step-num-badge { width: 44px; height: 44px; background: var(--plum); border: 2px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-num-badge span { font-weight: 700; font-size: 16px; color: var(--gold); font-family: 'DM Serif Display', serif; }
+  .step-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 4px; }
+  .step-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); }
+  .step-desc { font-size: 13px; color: #666; margin-bottom: 20px; line-height: 1.7; }
+
+  .substep-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .substep-grid { grid-template-columns: 1fr; } }
+  .substep-card { background: var(--field-bg); border: 1.5px solid var(--field-border); border-radius: 12px; padding: 16px 18px; }
+  .substep-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .substep-dot { width: 28px; height: 28px; background: var(--purple); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .substep-dot span { font-size: 10px; font-weight: 700; color: #fff; }
+  .substep-label { font-size: 12px; font-weight: 600; color: var(--purple); }
+  .substep-body { font-size: 12px; color: #666; margin-bottom: 10px; }
+
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 88px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .substep-card textarea { background: #fff; min-height: 80px; }
+
+  input[type="text"], input[type="date"] {
+    width: 100%; background: #fff; border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum);
+  }
+  input[type="text"]:focus, input[type="date"]:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+
+  /* Heatmap Scorecard -- distinctive to Practical 5 */
+  .heatmap-card { background: linear-gradient(135deg, rgba(220,38,38,0.04) 0%, rgba(217,119,6,0.04) 50%, rgba(22,163,74,0.04) 100%); border: 1.5px solid var(--field-border); border-radius: 16px; padding: 24px 28px; margin-bottom: 16px; }
+  .heatmap-card-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; text-align: center; }
+  .heatmap-card-sub { font-size: 12px; color: #666; text-align: center; margin-bottom: 20px; font-style: italic; }
+  .heatmap-legend { display: flex; justify-content: center; gap: 18px; margin-bottom: 22px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #555; }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid; }
+  .legend-swatch.green { background: var(--heat-green-bg); border-color: var(--heat-green); }
+  .legend-swatch.amber { background: var(--heat-amber-bg); border-color: var(--heat-amber); }
+  .legend-swatch.red { background: var(--heat-red-bg); border-color: var(--heat-red); }
+
+  .heatmap-row { background: #fff; border: 1.5px solid var(--field-border); border-radius: 12px; padding: 18px 20px; margin-bottom: 12px; display: grid; grid-template-columns: 56px 1fr 220px; gap: 18px; align-items: stretch; }
+  @media (max-width: 720px) { .heatmap-row { grid-template-columns: 1fr; gap: 12px; align-items: start; } }
+  .heat-num { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 32px; color: var(--gold-dark); line-height: 1; padding-top: 4px; }
+  .heat-body { display: flex; flex-direction: column; gap: 6px; }
+  .heat-name { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); }
+  .heat-helper { font-size: 12px; color: #666; line-height: 1.5; font-style: italic; margin-bottom: 6px; }
+  .heatmap-row textarea { min-height: 80px; font-size: 12px; padding: 10px 12px; flex: 1; }
+  .heat-score { display: flex; flex-direction: column; align-items: stretch; gap: 6px; justify-content: flex-start; }
+  .heat-score-label { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  .heat-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+  .heat-btn { background: #fff; border: 1.5px solid var(--field-border); border-radius: 8px; padding: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700; color: #555; cursor: pointer; transition: all 0.15s; letter-spacing: 0.06em; }
+  .heat-btn:hover { transform: translateY(-1px); }
+  .heat-btn[data-rating="green"]:hover { border-color: var(--heat-green); background: rgba(22,163,74,0.06); color: var(--heat-green); }
+  .heat-btn[data-rating="amber"]:hover { border-color: var(--heat-amber); background: rgba(217,119,6,0.06); color: var(--heat-amber); }
+  .heat-btn[data-rating="red"]:hover { border-color: var(--heat-red); background: rgba(220,38,38,0.06); color: var(--heat-red); }
+  .heat-btn[data-rating="green"].selected { background: var(--heat-green-bg); border-color: var(--heat-green); color: var(--heat-green); border-width: 2px; }
+  .heat-btn[data-rating="amber"].selected { background: var(--heat-amber-bg); border-color: var(--heat-amber); color: var(--heat-amber); border-width: 2px; }
+  .heat-btn[data-rating="red"].selected { background: var(--heat-red-bg); border-color: var(--heat-red); color: var(--heat-red); border-width: 2px; }
+
+  /* Highest-risk role intervention card */
+  .intervention-card { background: rgba(220,38,38,0.04); border: 1.5px solid var(--heat-red); border-radius: 12px; padding: 20px 22px; margin-top: 4px; }
+  .intervention-card .int-label { font-size: 10px; font-weight: 700; color: var(--heat-red); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .intervention-card .int-q { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 6px; }
+  .intervention-card .int-helper { font-size: 12px; color: #666; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+  .intervention-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  @media (max-width: 600px) { .intervention-grid { grid-template-columns: 1fr; } }
+  .field-block { display: flex; flex-direction: column; gap: 6px; }
+  .field-block label { font-size: 11px; font-weight: 700; color: var(--plum); letter-spacing: 0.05em; text-transform: uppercase; }
+  .cause-tag-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .cause-tag { font-size: 11px; color: var(--heat-red); background: #fff; border: 1px solid var(--heat-red); border-radius: 14px; padding: 4px 10px; font-weight: 600; }
+
+  .ai-activity { background: var(--ai-bg); border: 1.5px solid var(--ai-border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .ai-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: #4ADE80; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-activity-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: #fff; margin-bottom: 10px; }
+  .ai-activity-desc { font-size: 13px; color: rgba(255,255,255,0.65); margin-bottom: 24px; line-height: 1.7; }
+  .ai-step { background: rgba(255,255,255,0.05); border: 1px solid rgba(45,122,79,0.4); border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; }
+  .ai-step-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+  .step-badge { width: 36px; height: 36px; background: var(--plum); border: 1.5px solid var(--gold); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-badge span { font-weight: 700; font-size: 13px; color: var(--gold); }
+  .ai-step-title { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+  .ai-step-body { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.65; }
+  .prompt-box { background: rgba(0,0,0,0.35); border: 1px solid rgba(45,122,79,0.5); border-radius: 8px; padding: 12px 14px; margin: 10px 0; font-family: 'DM Sans', sans-serif; font-size: 12px; color: #A7F3D0; line-height: 1.7; white-space: pre-wrap; }
+  .prompt-label { font-size: 10px; font-weight: 700; color: #4ADE80; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 4px; }
+  .ai-field { width: 100%; background: rgba(255,255,255,0.06); border: 1.5px solid rgba(45,122,79,0.4); border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif; font-size: 13px; color: #fff; resize: vertical; min-height: 80px; line-height: 1.6; margin-top: 8px; }
+  .ai-field:focus { outline: none; border-color: #4ADE80; box-shadow: 0 0 0 3px rgba(74,222,128,0.1); }
+  .ai-field::placeholder { color: rgba(255,255,255,0.3); }
+
+  .ai-lens { background: var(--ai-lens-bg); border-left: 4px solid var(--ai-border); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .ai-lens-label { font-size: 10px; font-weight: 700; color: #166534; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .ai-lens-q { font-size: 14px; font-weight: 600; color: #14532D; margin-bottom: 10px; }
+  .ai-lens textarea { background: #fff; border-color: #A7F3D0; min-height: 80px; }
+  .ai-lens textarea:focus { border-color: var(--ai-border); }
+
+  .peer-prep { background: var(--plum); border-radius: 16px; padding: 32px; margin-bottom: 24px; }
+  .peer-prep-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--gold); text-transform: uppercase; margin-bottom: 8px; }
+  .peer-prep-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: #fff; margin-bottom: 8px; }
+  .peer-prep-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-bottom: 18px; line-height: 1.65; }
+  .peer-bring { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px; margin-top: 8px; }
+  .peer-bring-text { font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 18px; line-height: 1.6; }
+  .peer-questions-label { font-size: 12px; font-weight: 700; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 12px; }
+  .peer-q-list { list-style: none; padding: 0; margin: 0; }
+  .peer-q-list li { font-size: 14px; color: rgba(255,255,255,0.92); line-height: 1.6; padding: 12px 0 12px 28px; position: relative; border-top: 1px solid rgba(255,255,255,0.12); font-family: 'DM Serif Display', serif; font-style: italic; }
+  .peer-q-list li:first-child { border-top: none; padding-top: 6px; }
+  .peer-q-list li::before { content: "→"; position: absolute; left: 0; top: 12px; color: var(--gold); font-style: normal; font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .peer-q-list li:first-child::before { top: 6px; }
+
+  @media print {
+    .print-bar { position: static; }
+    .print-btn { display: none; }
+    body { font-size: 12px; }
+    .step-card, .ai-activity, .peer-prep, .heatmap-card, .heatmap-row { break-inside: avoid; }
+  }
+  @media (max-width: 600px) {
+    .header-block { padding: 24px 20px; }
+    .header-title { font-size: 26px; }
+    .content { padding: 20px 14px 40px; }
+    .step-card, .ai-activity { padding: 20px 18px; }
+    .heatmap-card { padding: 18px 16px; }
+    .heatmap-row { padding: 16px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div>
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Heatmap Before the Exit Interview</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitPractical()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="badge-row">
+    <div class="lift-badge">Fostering AI-Ready Teams</div>
+    <div class="practical-badge">Week 5 · Practical 5 of 6</div>
+  </div>
+  <h1 class="header-title">Heatmap <em>Before the Exit Interview</em></h1>
+  <p class="header-desc">Score the team across six dimensions against observable behaviour in the past 30 days. Then name the highest-risk role -- the specific person, not a role family. Name the early signal you have been ignoring. And design the intervention you will run -- with a date, named participants, and a 30-day success measure that addresses the cause, not the surface signal.</p>
+</div>
+
+<div class="content">
+
+  <!-- WHAT GOOD LOOKS LIKE -->
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">Aim for these as you go.</div>
+    <ul class="standard-list">
+      <li>Each dimension scored against observable behaviour in the past 30 days, not gut feel.</li>
+      <li>Highest-risk role named with specificity -- a person by role and ideally name -- including why this person specifically.</li>
+      <li>The ignored signal is one you have actually been ignoring -- not one you have already started acting on.</li>
+      <li>The intervention addresses the cause, not the surface signal. No one-off coffees pretending to be interventions.</li>
+      <li>The intervention has a date, named participants, and a 30-day success measure that is observable.</li>
+    </ul>
+  </div>
+
+  <!-- STEP 1: Frame the team and the 30-day window -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>1</span></div>
+      <div>
+        <div class="step-label">Step 1</div>
+        <div class="step-title">Ground the Heatmap in the Past 30 Days</div>
+      </div>
+    </div>
+    <p class="step-desc">A heatmap is only useful if it is scored against what actually happened, not against the version of the team you are managing in your head. Before you score, name three to five real moments from the past 30 days that you will use as evidence. Specific meetings. Specific comments. Specific silences.</p>
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">The Team</div>
+        </div>
+        <div class="substep-body">Name the team you are scoring -- size, function, your relationship to it. Two sentences.</div>
+        <textarea name="team_context" placeholder="My direct delivery team -- 14 people across data engineering and platform reliability. I'm their VP. We are 4 months into a rollout of an AI-assisted incident response tool that is changing how senior engineers spend their week."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Evidence Window</div>
+        </div>
+        <div class="substep-body">Three to five real moments from the past 30 days you will score against. Specific. Datable.</div>
+        <textarea name="evidence_window" placeholder="14 May post-incident review: senior engineer who would normally have flagged the AI's misread said nothing. 22 May 1:1 with N: she asked whether the AI rollout means her secondment is being quietly cut. 28 May team retro: the silence after 'what are you carrying' lasted 11 seconds. 2 June Slack: M's response time dropped from minutes to a day. 5 June planning: three people stopped contributing to the Q3 prioritisation."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: The Heatmap -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>2</span></div>
+      <div>
+        <div class="step-label">Step 2</div>
+        <div class="step-title">Score the Six Dimensions</div>
+      </div>
+    </div>
+    <p class="step-desc">For each dimension, score against the evidence window from Step 1. Green if it is observably healthy in the past 30 days. Amber if there is drift you can name but it is not yet acute. Red if there is a specific signal in the past 30 days that the team is at risk on this dimension. Then write what you are scoring against.</p>
+
+    <div class="heatmap-card">
+      <div class="heatmap-card-label">The Heatmap</div>
+      <div class="heatmap-card-sub">Six dimensions · scored against observable behaviour in the past 30 days</div>
+
+      <div class="heatmap-legend">
+        <div class="legend-item"><span class="legend-swatch green"></span>Green · observably healthy</div>
+        <div class="legend-item"><span class="legend-swatch amber"></span>Amber · nameable drift</div>
+        <div class="legend-item"><span class="legend-swatch red"></span>Red · specific risk signal</div>
+      </div>
+
+      <div class="heatmap-row">
+        <div class="heat-num">01</div>
+        <div class="heat-body">
+          <div class="heat-name">Work Meaning</div>
+          <div class="heat-helper">The team understands why this version of the work matters now -- not just what they are shipping but what it is for. The AI rollout has not made the work feel transactional or arbitrary.</div>
+          <textarea name="dim_1_evidence" placeholder="The specific moment, comment, or silence in the past 30 days that earned the rating."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Rating</div>
+          <div class="heat-buttons" data-dim="1">
+            <button type="button" class="heat-btn" data-rating="green">GREEN</button>
+            <button type="button" class="heat-btn" data-rating="amber">AMBER</button>
+            <button type="button" class="heat-btn" data-rating="red">RED</button>
+          </div>
+          <input type="hidden" name="dim_1_rating" value="">
+        </div>
+      </div>
+
+      <div class="heatmap-row">
+        <div class="heat-num">02</div>
+        <div class="heat-body">
+          <div class="heat-name">Manager Relationship</div>
+          <div class="heat-helper">The relationship between you and each person on the team is current. People are bringing real things to you. The 1:1s are not deteriorating into status updates because the work is being absorbed by AI tooling.</div>
+          <textarea name="dim_2_evidence" placeholder="The specific moment, comment, or silence in the past 30 days that earned the rating."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Rating</div>
+          <div class="heat-buttons" data-dim="2">
+            <button type="button" class="heat-btn" data-rating="green">GREEN</button>
+            <button type="button" class="heat-btn" data-rating="amber">AMBER</button>
+            <button type="button" class="heat-btn" data-rating="red">RED</button>
+          </div>
+          <input type="hidden" name="dim_2_rating" value="">
+        </div>
+      </div>
+
+      <div class="heatmap-row">
+        <div class="heat-num">03</div>
+        <div class="heat-body">
+          <div class="heat-name">Growth Visibility</div>
+          <div class="heat-helper">People can see what they are growing into in 12 months -- specifically in a world where AI tooling is changing what mastery looks like. The growth path is not "do what you do, but with the AI". It is named, visible, and credible.</div>
+          <textarea name="dim_3_evidence" placeholder="The specific moment, comment, or silence in the past 30 days that earned the rating."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Rating</div>
+          <div class="heat-buttons" data-dim="3">
+            <button type="button" class="heat-btn" data-rating="green">GREEN</button>
+            <button type="button" class="heat-btn" data-rating="amber">AMBER</button>
+            <button type="button" class="heat-btn" data-rating="red">RED</button>
+          </div>
+          <input type="hidden" name="dim_3_rating" value="">
+        </div>
+      </div>
+
+      <div class="heatmap-row">
+        <div class="heat-num">04</div>
+        <div class="heat-body">
+          <div class="heat-name">Workload Sustainability</div>
+          <div class="heat-helper">The team's pace is sustainable into Q3 and beyond. Change fatigue from compounding AI rollouts is being acknowledged in the workload, not just absorbed. The team is not running on overtime to compensate for the rollout's friction.</div>
+          <textarea name="dim_4_evidence" placeholder="The specific moment, comment, or silence in the past 30 days that earned the rating."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Rating</div>
+          <div class="heat-buttons" data-dim="4">
+            <button type="button" class="heat-btn" data-rating="green">GREEN</button>
+            <button type="button" class="heat-btn" data-rating="amber">AMBER</button>
+            <button type="button" class="heat-btn" data-rating="red">RED</button>
+          </div>
+          <input type="hidden" name="dim_4_rating" value="">
+        </div>
+      </div>
+
+      <div class="heatmap-row">
+        <div class="heat-num">05</div>
+        <div class="heat-body">
+          <div class="heat-name">AI-Tooling Confidence</div>
+          <div class="heat-helper">The team's confidence with the AI tooling is rising, not falling. People feel able to override the AI when their judgement says so. Pushback in technical reviews is being read as engineering, not as resistance.</div>
+          <textarea name="dim_5_evidence" placeholder="The specific moment, comment, or silence in the past 30 days that earned the rating."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Rating</div>
+          <div class="heat-buttons" data-dim="5">
+            <button type="button" class="heat-btn" data-rating="green">GREEN</button>
+            <button type="button" class="heat-btn" data-rating="amber">AMBER</button>
+            <button type="button" class="heat-btn" data-rating="red">RED</button>
+          </div>
+          <input type="hidden" name="dim_5_rating" value="">
+        </div>
+      </div>
+
+      <div class="heatmap-row">
+        <div class="heat-num">06</div>
+        <div class="heat-body">
+          <div class="heat-name">Succession Risk</div>
+          <div class="heat-helper">If the highest-context senior on the team left in 30 days, the team would still hold. Knowledge is not single-threaded through one person whose role is being most affected by the AI rollout. Cost of replacement is honest, not hopeful.</div>
+          <textarea name="dim_6_evidence" placeholder="The specific moment, comment, or silence in the past 30 days that earned the rating."></textarea>
+        </div>
+        <div class="heat-score">
+          <div class="heat-score-label">Rating</div>
+          <div class="heat-buttons" data-dim="6">
+            <button type="button" class="heat-btn" data-rating="green">GREEN</button>
+            <button type="button" class="heat-btn" data-rating="amber">AMBER</button>
+            <button type="button" class="heat-btn" data-rating="red">RED</button>
+          </div>
+          <input type="hidden" name="dim_6_rating" value="">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Highest-risk role + ignored signal + intervention -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num-badge"><span>3</span></div>
+      <div>
+        <div class="step-label">Step 3</div>
+        <div class="step-title">Name the Role, the Ignored Signal, and the Intervention</div>
+      </div>
+    </div>
+    <p class="step-desc">Look at the heatmap. The highest-risk role is the specific person whose situation lights up across multiple dimensions -- and who you would most regret losing in 90 days. Not a role family. A person. Then name the early signal you have been ignoring on them. The honest one -- not the one you have already started acting on. Then design the intervention. Cause, not surface.</p>
+
+    <div class="substep-grid">
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>01</span></div>
+          <div class="substep-label">Highest-Risk Role</div>
+        </div>
+        <div class="substep-body">Role and ideally name (or initial). One sentence on why this person specifically.</div>
+        <textarea name="highest_risk_role" placeholder="N -- senior network engineer, 11 years' incident knowledge on the platform we are rebuilding around the AI tool. The risk is not that she is unhappy. The risk is that she has stopped pushing back in incident reviews, and the moment that knowledge walks out, the AI rollout loses its safety margin."></textarea>
+      </div>
+      <div class="substep-card">
+        <div class="substep-header">
+          <div class="substep-dot"><span>02</span></div>
+          <div class="substep-label">The Ignored Signal</div>
+        </div>
+        <div class="substep-body">The signal you have actually been ignoring -- not one you have already started acting on.</div>
+        <textarea name="ignored_signal" placeholder="In the past three incident reviews, N has been first to nod at the AI's read of the alert pattern -- where six months ago she would have been first to challenge it. I had read this as her getting comfortable with the tool. Reading it honestly now: she has stopped offering her judgement because the cost of being read as resistance is higher than the cost of going along."></textarea>
+      </div>
+    </div>
+
+    <div class="intervention-card">
+      <div class="int-label">The Intervention</div>
+      <div class="int-q">What will you actually run -- and how will you know in 30 days whether it worked?</div>
+      <p class="int-helper">Address the cause, not the surface signal. A one-off coffee is not an intervention. A generic "I'll check in more" is not an intervention. The cause here is what is making the signal show up -- usually structural, not personal.</p>
+      <div class="cause-tag-row">
+        <span class="cause-tag">Structural change to how disagreement is heard</span>
+        <span class="cause-tag">Re-establishment of expert authority in the room</span>
+        <span class="cause-tag">Workload or scope reset</span>
+        <span class="cause-tag">Named role redesign conversation</span>
+      </div>
+      <div class="intervention-grid">
+        <div class="field-block">
+          <label>Intervention name and shape</label>
+          <input type="text" name="intervention_name" placeholder="E.g. Restructure incident review to surface dissent first, before AI summary">
+        </div>
+        <div class="field-block">
+          <label>Booked for (date)</label>
+          <input type="date" name="intervention_date" value="">
+        </div>
+      </div>
+      <div class="intervention-grid">
+        <div class="field-block">
+          <label>Named participants</label>
+          <input type="text" name="intervention_participants" placeholder="E.g. N (lead reviewer this rotation), me, full incident response cohort">
+        </div>
+        <div class="field-block">
+          <label>30-day success measure</label>
+          <input type="text" name="intervention_success" placeholder="E.g. N raises at least one challenge to the AI summary in two consecutive incident reviews">
+        </div>
+      </div>
+      <div class="field-block">
+        <label>What is the cause this intervention is addressing -- not the surface signal?</label>
+        <textarea name="intervention_cause" placeholder="The cause is not that N is disengaged. The cause is that the incident review process now puts the AI summary first and asks for human review second -- which structurally codes pushback as disagreement with the AI, rather than as the engineering judgement that comes before any tool. The intervention restructures the order: human dissent first, AI summary second. The dimension this addresses is technical authority shift, not 'morale'."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI ACTIVITY -->
+  <div class="ai-activity">
+    <div class="ai-tag">AI-Powered Activity</div>
+    <h2 class="ai-activity-title">Use AI to Pressure-Test the Heatmap</h2>
+    <p class="ai-activity-desc">Heatmaps fail at the same two places every time -- the practitioner names a signal they have already started acting on (which lets them off the hook), and the intervention is a surface fix dressed up as a structural one. AI as an outside reader can hear both faults faster than a peer can. Use it before you take this Practical to peer-to-peer.</p>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>1</span></div>
+        <div>
+          <div class="ai-step-title">Test Whether the Ignored Signal Is Genuinely Ignored</div>
+          <div class="ai-step-body">Ask AI to test whether the signal you have named is one you have actually been ignoring -- or one you have already started acting on, named here to feel like the work has been done.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">I am running a Heatmap before the exit interview on my team. The highest-risk role is: [paste your highest-risk role]. The signal I have named as the early signal I have been ignoring is: [paste your ignored signal]. Pressure-test this. Specifically: (1) Is this a signal I have actually been ignoring, or one I have already started acting on -- and named here because it is comfortable to admit? (2) What is the harder signal I might be ignoring that this one is sitting in front of? (3) If a peer who knows this person independently scored the situation, what would they name as the signal that is actually being missed?</div>
+      <div class="prompt-label" style="margin-top:12px">What did AI flag? What is the harder signal you have actually been ignoring?</div>
+      <textarea class="ai-field" name="ai_ignored_signal_test" placeholder="AI pushed back. It said 'she has stopped pushing back' is a signal I had already noticed and was already weighing -- so naming it as ignored is partial credit at best. The harder signal it surfaced: in the past two 1:1s, N has stopped asking about Q3 -- the future-tense questions that an engaged senior asks. That is the signal I have actually been ignoring, because it is quieter and because facing it means facing that the future-tense conversation is one I have not been able to give her a real answer to. Updating: the ignored signal is the absence of future-tense questions, not the absence of pushback."></textarea>
+    </div>
+
+    <div class="ai-step">
+      <div class="ai-step-header">
+        <div class="step-badge"><span>2</span></div>
+        <div>
+          <div class="ai-step-title">Stress-Test the Intervention -- Cause vs Surface Fix</div>
+          <div class="ai-step-body">Ask AI to test whether the intervention addresses the cause or whether it is a surface fix -- a one-off coffee, a generic check-in, a vague "I will be more present" -- dressed up to look structural.</div>
+        </div>
+      </div>
+      <div class="prompt-label">Paste this prompt</div>
+      <div class="prompt-box">My intervention for the highest-risk role is: [paste your intervention name and shape]. The cause I have named is: [paste the cause]. The 30-day success measure is: [paste the success measure]. Pressure-test on three criteria. (1) Does the intervention actually address the cause I have named, or does it address a different (easier) version of the cause? (2) Is the success measure observable -- a specific behaviour change in 30 days -- or is it vague ("feel more engaged", "be back in the conversation")? (3) If the intervention runs as designed and the success measure is met, would the underlying dynamic actually have shifted -- or would I have just papered over the signal? Tell me where the intervention is closer to a surface fix than a structural one, and rewrite the weakest part.</div>
+      <div class="prompt-label" style="margin-top:12px">Where did the intervention go surface? What is the structural version?</div>
+      <textarea class="ai-field" name="ai_intervention_test" placeholder="AI flagged that 'restructure incident review' was the structural piece, but the success measure -- 'N raises at least one challenge in two consecutive reviews' -- could be met without the underlying dynamic shifting (she could raise a low-stakes challenge to satisfy the new format). Tightened: success measure becomes 'N raises a challenge that changes the documented root-cause analysis at least once in 30 days'. That measure cannot be gamed -- the documented analysis either changes or it does not. The cause is now matched to a measure that proves the cause was actually addressed."></textarea>
+    </div>
+  </div>
+
+  <!-- AI LENS -->
+  <div class="ai-lens">
+    <div class="ai-lens-label">AI Lens</div>
+    <div class="ai-lens-q">Six months from now, when the AI rollout has shifted again -- new tooling, new role definitions, a new pressure cycle -- which of the six heatmap dimensions is most likely to drop a rating, and what observable signal would tell you to re-run the heatmap before the calendar reminds you to?</div>
+    <textarea name="ai_lens_rerun_signal" placeholder="Most likely to drop: Growth Visibility. By Q4 the second-generation tool will be in. The engineers who adapted to the first version will be told their adaptation is now obsolete -- and Growth Visibility will tilt amber across the senior layer, even where it is currently green. The signal that should trigger the re-run is the moment any senior engineer asks, in a 1:1, what their role looks like in 12 months -- and I notice I do not have a real answer. That question, asked once, is the trigger to re-run. Not the calendar."></textarea>
+  </div>
+
+  <!-- TAKE THIS TO PEER-TO-PEER -->
+  <div class="peer-prep">
+    <div class="peer-prep-tag">Take This to Peer-to-Peer</div>
+    <h2 class="peer-prep-title">Before you submit, talk it through.</h2>
+    <p class="peer-prep-sub">Heatmaps fall apart at the same two places every time -- the ignored signal is one the practitioner has already started acting on, and the intervention is a one-off coffee with a different label on it. A peer who has done their own heatmap can hear both at the same speed an assessor will. Bring this Practical to your peer-to-peer call this week.</p>
+
+    <div class="peer-bring">What to bring</div>
+    <p class="peer-bring-text">Read the heatmap aloud, in order. Then read the highest-risk role, the ignored signal, and the intervention. If your peer's first reaction at the intervention is "could you do that on Tuesday?" -- the intervention is structural. If their first reaction is "what does that actually mean in practice?" -- it is still a surface fix wearing a structural label.</p>
+
+    <div class="peer-questions-label">Three questions for your peer to ask you</div>
+    <ul class="peer-q-list">
+      <li>Is the highest-risk role named with a person and a specific reason -- or is it a role family wearing a name?</li>
+      <li>The ignored signal -- did you name the one you have actually been ignoring, or the one you have already started acting on because that one is comfortable to admit?</li>
+      <li>If you ran the intervention exactly as designed and hit the 30-day measure, would the underlying dynamic have shifted -- or would you have just papered over the signal?</li>
+    </ul>
+  </div>
+
+</div>
+
+<script>
+// Heat button selection (green/amber/red)
+document.querySelectorAll('.heat-buttons').forEach(group => {
+  const dim = group.dataset.dim;
+  const hidden = document.querySelector('input[name="dim_' + dim + '_rating"]');
+  group.querySelectorAll('.heat-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.heat-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      if (hidden) hidden.value = btn.dataset.rating;
+    });
+  });
+});
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = [
+    'team_context',
+    'evidence_window',
+    'dim_1_rating',
+    'dim_1_evidence',
+    'dim_2_rating',
+    'dim_2_evidence',
+    'dim_3_rating',
+    'dim_3_evidence',
+    'dim_4_rating',
+    'dim_4_evidence',
+    'dim_5_rating',
+    'dim_5_evidence',
+    'dim_6_rating',
+    'dim_6_evidence',
+    'highest_risk_role',
+    'ignored_signal',
+    'intervention_name',
+    'intervention_date',
+    'intervention_participants',
+    'intervention_success',
+    'intervention_cause',
+  ];
+
+  window.submitPractical = function submitPractical() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

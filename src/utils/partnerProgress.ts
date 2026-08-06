@@ -1,5 +1,10 @@
 import { differenceInCalendarDays } from 'date-fns'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
+import {
+  calculatePartnerWindowRisk,
+  type PartnerWindowRiskResult,
+  type WindowStatus,
+} from '@/utils/windowStatus'
 
 export interface WeeklyPointsRecord {
   user_id?: string
@@ -48,12 +53,14 @@ export const mapWeeklyPointsToProgress = (
 
 /**
  * Journey context for risk calculation.
- * Uses pace-ratio: compare actual points earned vs expected points at this point in the journey.
+ * Risk is based on the current 2-week window vs journey window target
+ * (On Track / Warning / Alert / Recovery) - not lifetime pace ratio.
  */
 export interface JourneyContext {
   journeyType: string | null
   totalPoints: number
   programDurationWeeks?: number | null
+  previousWindowStatus?: WindowStatus | null
 }
 
 export type RiskLevel = 'critical' | 'behind' | 'warning' | 'on_track'
@@ -63,121 +70,47 @@ export interface RiskResult {
   level: RiskLevel
   reason?: string
   points_deficit?: number
+  /** @deprecated Prefer windowRatio - kept for older call sites. */
   paceRatio?: number
+  windowRatio?: number
+  windowStatus?: WindowStatus
 }
 
 /**
- * Calculates user risk status using pace-ratio:
- *   paceRatio = totalEarned / expectedPointsAtThisTime
+ * Calculates partner/admin risk from the current 2-week window.
  *
- * Thresholds:
- *   Journey ended + not passed → critical
- *   paceRatio < 0.40           → critical (at_risk)
- *   paceRatio < 0.65           → behind   (at_risk)
- *   paceRatio < 0.85           → warning  (on_track - not at risk, just a heads up)
- *   paceRatio >= 0.85          → on_track
+ * Thresholds (universal):
+ *   On Track  ≥ 100% of window target
+ *   Warning   75% – 99%
+ *   Alert     < 75%  → at_risk only in week 2 of the window
+ *   Recovery  ≥ 100% after Alert
  *
- * Grace period: first 20% of the journey (or first 2 weeks) → always on_track.
- * This prevents false positives for users who just started.
+ * False-alarm guards live in calculatePartnerWindowRisk.
  */
 export const calculateUserRiskStatus = (
   currentWeek: number,
-  _earnedPoints: Record<number, number>,
+  earnedPoints: Record<number, number>,
   _requiredPoints: Record<number, number>,
   _nudgeResponsivenessScore?: number,
   journeyContext?: JourneyContext,
 ): RiskResult => {
-  const journeyType = journeyContext?.journeyType as JourneyType | null
-  const totalEarned = journeyContext?.totalPoints ?? 0
+  const result: PartnerWindowRiskResult = calculatePartnerWindowRisk({
+    journeyType: (journeyContext?.journeyType as JourneyType | null) ?? null,
+    currentWeek,
+    totalPoints: journeyContext?.totalPoints ?? 0,
+    earnedPointsByWeek: earnedPoints,
+    previousWindowStatus: journeyContext?.previousWindowStatus,
+    programDurationWeeks: journeyContext?.programDurationWeeks,
+  })
 
-  // Resolve pass mark and total weeks from journey metadata
-  const meta = journeyType ? JOURNEY_META[journeyType] : null
-  const passMarkPoints = meta?.passMarkPoints ?? 0
-  const totalWeeks = journeyContext?.programDurationWeeks ?? meta?.weeks ?? 0
-
-  // If we can't determine journey parameters, can't assess risk
-  if (!passMarkPoints || !totalWeeks) {
-    return { status: 'on_track', level: 'on_track' }
-  }
-
-  // Already passed - never at risk
-  if (totalEarned >= passMarkPoints) {
-    return {
-      status: 'on_track',
-      level: 'on_track',
-      reason: `Passed: ${totalEarned.toLocaleString()} >= ${passMarkPoints.toLocaleString()} pass mark`,
-      paceRatio: 1,
-    }
-  }
-
-  const elapsedWeeks = Math.min(totalWeeks, Math.max(0, currentWeek - 1))
-  const timeProgress = elapsedWeeks / totalWeeks
-  const journeyEnded = currentWeek > totalWeeks
-
-  // Grace period: first 20% of the journey or first 2 weeks - don't flag anyone
-  const gracePeriodWeeks = Math.max(2, Math.ceil(totalWeeks * 0.2))
-  if (currentWeek <= gracePeriodWeeks && !journeyEnded) {
-    return {
-      status: 'on_track',
-      level: 'on_track',
-      reason: `Grace period (week ${currentWeek} of ${gracePeriodWeeks})`,
-      paceRatio: 1,
-    }
-  }
-
-  const expectedPointsNow = timeProgress * passMarkPoints
-  const paceRatio = expectedPointsNow > 0 ? totalEarned / expectedPointsNow : 1
-  const deficit = Math.max(0, Math.round(expectedPointsNow - totalEarned))
-
-  // Journey ended without passing
-  if (journeyEnded) {
-    return {
-      status: 'at_risk',
-      level: 'critical',
-      reason: `Journey ended: ${totalEarned.toLocaleString()} of ${passMarkPoints.toLocaleString()} required`,
-      points_deficit: passMarkPoints - totalEarned,
-      paceRatio,
-    }
-  }
-
-  // Significantly behind - critical
-  if (paceRatio < 0.4) {
-    return {
-      status: 'at_risk',
-      level: 'critical',
-      reason: `Significantly behind: ${deficit.toLocaleString()} pts below expected pace`,
-      points_deficit: deficit,
-      paceRatio,
-    }
-  }
-
-  // Falling behind - at risk
-  if (paceRatio < 0.65) {
-    return {
-      status: 'at_risk',
-      level: 'behind',
-      reason: `Falling behind: ${deficit.toLocaleString()} pts below expected pace`,
-      points_deficit: deficit,
-      paceRatio,
-    }
-  }
-
-  // Slightly off pace - warning, but NOT at_risk (positively evolving)
-  if (paceRatio < 0.85) {
-    return {
-      status: 'on_track',
-      level: 'warning',
-      reason: `Slightly off pace: ${deficit.toLocaleString()} pts below target`,
-      points_deficit: deficit,
-      paceRatio,
-    }
-  }
-
-  // On track
   return {
-    status: 'on_track',
-    level: 'on_track',
-    paceRatio,
+    status: result.status,
+    level: result.level,
+    reason: result.reason,
+    points_deficit: result.points_deficit,
+    paceRatio: result.windowRatio,
+    windowRatio: result.windowRatio,
+    windowStatus: result.windowStatus,
   }
 }
 
@@ -207,3 +140,7 @@ export const build14DayRegistrationTrend = (
     value: bucket.value,
   }))
 }
+
+/** Convenience: window target for a journey (product sheet). */
+export const getWindowTargetForJourney = (journeyType: JourneyType): number =>
+  JOURNEY_META[journeyType].windowTarget

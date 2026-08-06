@@ -69,7 +69,7 @@ export const ProtectedRoute: React.FC<Props> = ({
     }
   }, [canAccessOrganization, profile, requireOrganization, user])
 
-  // Block render until auth + profile are known — but ONLY on the initial load
+  // Block render until auth + profile are known - but ONLY on the initial load
   // (before we have a profile). Once a profile exists, background refreshes flip
   // profileLoading true again; swapping in the loader then would unmount and
   // remount the whole page repeatedly (the "twitch"/flicker) and re-subscribe

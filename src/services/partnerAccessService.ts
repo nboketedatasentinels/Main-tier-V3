@@ -13,7 +13,7 @@ const ASSIGNMENT_STATUSES = ['active', 'watch', 'paused']
  *   1) organizations.transformation_partner_id = partnerId  (canonical)
  *   2) profiles.{partnerId}.data.assignedOrganizations       (mirror)
  *
- * `organizationId` may be an org UUID or a company code — both are matched.
+ * `organizationId` may be an org UUID or a company code - both are matched.
  */
 export const canPartnerAccessOrganization = async (
   partnerId: string,

@@ -486,7 +486,7 @@ export function useWeeklyChecklistViewModel() {
   }, [selectedWeek, user, ledgerRefreshKey])
 
   // Live map of pending verification weeks (across the journey). Source of
-  // truth is Supabase `point_verifications` — the same store proof submit
+  // truth is Supabase `point_verifications` - the same store proof submit
   // writes to. Used by ActivityList to move that week out of To-do into
   // In Review so the learner can't keep re-submitting the same week.
   useEffect(() => {

@@ -69,7 +69,7 @@ const roleDescriptions: Record<ManagedUserRole, string> = {
   team_leader: 'Legacy team leadership role.',
   mentor: 'Mentor access with organization assignments.',
   ambassador: 'Coach access with organization assignments.',
-  verifier: 'Impact log verifier (in or out of org) — approves entries by email.',
+  verifier: 'Impact log verifier (in or out of org) - approves entries by email.',
 }
 const multiOrganizationRoles = new Set<ManagedUserRole>(['partner', 'mentor', 'ambassador'])
 const membershipOptions: MembershipStatus[] = ['free', 'paid', 'inactive']

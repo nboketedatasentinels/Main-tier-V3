@@ -122,18 +122,23 @@ export const OrganizationFormModal: React.FC<Props> = ({
   }
 
   const handleSubmit = async () => {
-    if (!form.name || !form.code) {
-      toast({ title: 'Name and code are required', status: 'warning' })
+    if (!form.name || (mode === 'create' && !form.code)) {
+      toast({ title: mode === 'create' ? 'Name and code are required' : 'Name is required', status: 'warning' })
       return
     }
-    if (!isCodeValidLength) {
+    if (mode === 'create' && !isCodeValidLength) {
       toast({ title: 'Organization code must be exactly 6 characters', status: 'warning' })
       return
     }
 
     try {
       setSubmitting(true)
-      await onSubmit(form)
+      // On edit, always keep the original code even if the form was tampered with.
+      const payload =
+        mode === 'edit' && initialData?.code
+          ? { ...form, code: initialData.code }
+          : form
+      await onSubmit(payload)
       onClose()
     } finally {
       setSubmitting(false)
@@ -153,24 +158,40 @@ export const OrganizationFormModal: React.FC<Props> = ({
                 <FormLabel>Organization name</FormLabel>
                 <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="Acme Corp" />
               </FormControl>
-              <FormControl isRequired isInvalid={codeLength > 0 && !isCodeValidLength}>
+              <FormControl isRequired={mode === 'create'} isInvalid={mode === 'create' && codeLength > 0 && !isCodeValidLength}>
                 <FormLabel display="flex" alignItems="center" gap={2}>
                   Organization code
-                  <Tooltip label="6-character code: 2-letter prefix + 4 random characters." placement="top">
+                  <Tooltip
+                    label={
+                      mode === 'edit'
+                        ? 'Organization codes are permanent and cannot be changed after creation.'
+                        : '6-character code: 2-letter prefix + 4 random characters.'
+                    }
+                    placement="top"
+                  >
                     <InfoIcon color="text.muted" />
                   </Tooltip>
                 </FormLabel>
                 <Input
                   value={form.code}
-                  onChange={(e) => handleChange('code', e.target.value.toUpperCase())}
+                  onChange={(e) => mode === 'create' && handleChange('code', e.target.value.toUpperCase())}
                   placeholder="6-char code"
                   maxLength={6}
                   textTransform="uppercase"
+                  isReadOnly={mode === 'edit'}
+                  isDisabled={mode === 'edit'}
+                  fontFamily={mode === 'edit' ? 'mono' : undefined}
+                  bg={mode === 'edit' ? 'gray.50' : undefined}
+                  cursor={mode === 'edit' ? 'not-allowed' : undefined}
                 />
-                <FormHelperText color={isCodeValidLength ? 'green.500' : 'gray.600'}>
-                  {codeLength}/6 characters
+                <FormHelperText color={mode === 'edit' ? 'gray.600' : isCodeValidLength ? 'green.500' : 'gray.600'}>
+                  {mode === 'edit'
+                    ? 'Code cannot be changed. Members use this to join the organization.'
+                    : `${codeLength}/6 characters`}
                 </FormHelperText>
-                <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
+                {mode === 'create' && (
+                  <FormErrorMessage>Organization code must be exactly 6 characters.</FormErrorMessage>
+                )}
               </FormControl>
             </HStack>
 

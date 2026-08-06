@@ -74,7 +74,7 @@ function isCorporateUser(profile: UserProfile | null | undefined) {
 }
 
 function canCreateVillage(profile: UserProfile | null | undefined) {
-  // Free learners auto-join the shared Free Learners Village — private create is disabled.
+  // Free learners auto-join the shared Free Learners Village - private create is disabled.
   void profile
   void isCorporateUser
   return false
@@ -340,7 +340,7 @@ const ResultSelectSlot = ({
                   ? waitMessage
                   : unlockStatus === 'unlocked'
                     ? selectHelper
-                    : 'Click below to start the test — results unlock after 1 hour'}
+                    : 'Click below to start the test - results unlock after 1 hour'}
             </Text>
           </Stack>
         </HStack>
@@ -603,7 +603,7 @@ export const WeeklyGlancePage = () => {
     [personalityUnlock, toast, valuesUnlock],
   )
 
-  // Both assessments done — used to unlock course access gated on this profile.
+  // Both assessments done - used to unlock course access gated on this profile.
   const bothTestsCompleted = Boolean(
     profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
   )
@@ -1275,7 +1275,7 @@ export const WeeklyGlancePage = () => {
                     {FREE_USERS_VILLAGE_NAME}
                   </Heading>
                   <Text fontSize="sm" color="gray.600">
-                    Shared free community — peer match with other free learners and compare marks on the Leadership Board.
+                    Shared free community - peer match with other free learners and compare marks on the Leadership Board.
                   </Text>
                 </Stack>
               </HStack>

@@ -1,7 +1,8 @@
 import { doc, serverTimestamp, type Transaction } from "firebase/firestore";
 import { db } from "@/services/firebase";
 import { JOURNEY_META, type ActivityDef, type JourneyType } from "@/config/pointsConfig";
-import { getWindowNumber, getWindowRange, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalculations";
+import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from "@/utils/windowCalculations";
+import { calculateWindowStatus, type WindowStatus } from "@/utils/windowStatus";
 import { detectStatusChangeAndNudge } from "./nudgeMonitorService";
 
 /**
@@ -19,33 +20,18 @@ export async function updateWindowOnAward(
 ) {
   const { uid, journeyType, weekNumber, activity } = params;
 
-  const programDurationWeeks = JOURNEY_META[journeyType].weeks;
   const windowNumber = getWindowNumber(weekNumber, PARALLEL_WINDOW_SIZE_WEEKS);
-  const { windowWeeks } = getWindowRange(weekNumber, programDurationWeeks, PARALLEL_WINDOW_SIZE_WEEKS);
-
-  const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
-  const windowTarget = weeklyTarget * windowWeeks;
+  const windowTarget = JOURNEY_META[journeyType].windowTarget;
 
   const progressRef = doc(db, "windowProgress", `${uid}__${journeyType}__${windowNumber}`);
   const progressDoc = await transaction.get(progressRef);
 
   const currentData = progressDoc.exists() ? progressDoc.data() : null;
   const currentPoints = currentData?.pointsEarned ?? 0;
-  const previousStatus = currentData?.status ?? "alert";
+  // Missing history must NOT default to "alert" - that falsely triggers Recovery.
+  const previousStatus = (currentData?.status as WindowStatus | undefined) ?? null;
   const newPoints = currentPoints + activity.points;
-
-  const ratio = windowTarget > 0 ? newPoints / windowTarget : 0;
-  let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-  if (ratio >= 1) {
-    status = "on_track";
-  } else if (ratio >= 0.75) {
-    status = "warning";
-  }
-
-  // Apply Recovery when status moves from alert to on_track or warning
-  if (previousStatus === "alert" && (status === "on_track" || status === "warning")) {
-    status = "recovery";
-  }
+  const status = calculateWindowStatus(newPoints, windowTarget, previousStatus);
 
   transaction.set(
     progressRef,
@@ -67,7 +53,7 @@ export async function updateWindowOnAward(
     detectStatusChangeAndNudge({
       uid,
       journeyType,
-      previousStatus,
+      previousStatus: previousStatus ?? "on_track",
       currentStatus: status,
       pointsEarned: newPoints,
       windowTarget,
@@ -90,12 +76,8 @@ export async function updateWindowOnRevoke(
 ) {
     const { uid, journeyType, weekNumber, activity } = params;
 
-    const programDurationWeeks = JOURNEY_META[journeyType].weeks;
     const windowNumber = getWindowNumber(weekNumber, PARALLEL_WINDOW_SIZE_WEEKS);
-    const { windowWeeks } = getWindowRange(weekNumber, programDurationWeeks, PARALLEL_WINDOW_SIZE_WEEKS);
-
-    const weeklyTarget = JOURNEY_META[journeyType].weeklyTarget;
-    const windowTarget = weeklyTarget * windowWeeks;
+    const windowTarget = JOURNEY_META[journeyType].windowTarget;
 
     const progressRef = doc(db, "windowProgress", `${uid}__${journeyType}__${windowNumber}`);
     const progressDoc = await transaction.get(progressRef);
@@ -106,21 +88,9 @@ export async function updateWindowOnRevoke(
 
     const currentData = progressDoc.data();
     const currentPoints = currentData.pointsEarned ?? 0;
-    const previousStatus = currentData.status ?? "alert";
+    const previousStatus = (currentData.status as WindowStatus | undefined) ?? null;
     const newPoints = Math.max(0, currentPoints - activity.points);
-
-    const ratio = windowTarget > 0 ? newPoints / windowTarget : 0;
-    let status: "on_track" | "warning" | "alert" | "recovery" = "alert";
-    if (ratio >= 1) {
-      status = "on_track";
-    } else if (ratio >= 0.75) {
-      status = "warning";
-    }
-
-    // Recovery check for consistency (unlikely to improve status on revoke)
-    if (previousStatus === "alert" && (status === "on_track" || status === "warning")) {
-      status = "recovery";
-    }
+    const status = calculateWindowStatus(newPoints, windowTarget, previousStatus);
 
     transaction.set(
         progressRef,
@@ -142,7 +112,7 @@ export async function updateWindowOnRevoke(
         detectStatusChangeAndNudge({
             uid,
             journeyType,
-            previousStatus,
+            previousStatus: previousStatus ?? "on_track",
             currentStatus: status,
             pointsEarned: newPoints,
             windowTarget,

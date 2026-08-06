@@ -219,7 +219,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   // Rendered as an inline JSX value (used at {profileSection}) rather than a
   // component declared in the render body. Declaring `const ProfileSection = () => ...`
   // and rendering `<ProfileSection />` gives React a NEW component type every
-  // render, which unmounts+remounts the whole subtree each time — remounting the
+  // render, which unmounts+remounts the whole subtree each time - remounting the
   // org <Select> and <NotificationDropdown> (re-subscribing realtime) on every
   // render. A plain element value keeps a stable identity across renders.
   const profileSection = (
@@ -262,8 +262,8 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
     </HStack>
   )
 
-  // Inline JSX value (see profileSection note above) — not a render-body
-  // component — so the org <Select> and <NotificationDropdown> keep a stable
+  // Inline JSX value (see profileSection note above) - not a render-body
+  // component - so the org <Select> and <NotificationDropdown> keep a stable
   // identity and are not remounted on every render.
   const headerControls = (
     <HStack spacing={3} align="center" wrap={{ base: 'wrap', md: 'nowrap' }} justify="flex-end" flexShrink={0}>

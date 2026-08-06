@@ -19,7 +19,7 @@ import { recordUserActivity } from "./userProfileService";
  * insufficient permissions" after the Supabase auth cutover (no Firebase
  * session), silently breaking every points award. The deterministic ledger id
  * below is preserved verbatim so it matches the rows backfilled from Firestore
- * — that is what keeps awards idempotent across the two eras.
+ * - that is what keeps awards idempotent across the two eras.
  */
 
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
@@ -217,7 +217,7 @@ export async function awardChecklistPoints(params: {
       return { awarded: false, reason: "already_awarded" };
     }
 
-    // Best-effort side-effects — must never fail the award. (Some still target
+    // Best-effort side-effects - must never fail the award. (Some still target
     // the not-yet-migrated Firestore services and will no-op until migrated.)
     void recordUserActivity(uid).catch(() => {});
     setTimeout(() => {
@@ -329,7 +329,7 @@ export async function revokeChecklistPoints(params: {
       points_earned?: number;
     };
 
-    // Nothing to revoke (row already gone) — no-op.
+    // Nothing to revoke (row already gone) - no-op.
     if (result.revoked === false) return;
 
     setTimeout(() => {

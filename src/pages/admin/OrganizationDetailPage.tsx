@@ -206,12 +206,12 @@ export const OrganizationDetailPage: React.FC = () => {
     // Compose a human-readable reason from the selected issues plus any note.
     const note = followUpReason.trim()
     const summary =
-      [followUpIssues.join(', '), note].filter(Boolean).join(' — ') ||
+      [followUpIssues.join(', '), note].filter(Boolean).join(' - ') ||
       'Follow-up requested by admin'
     const partnerId = organization?.transformationPartnerId ?? null
     // Who should get the "follow up" reminder in their bell: the org's assigned
-    // partner, or — when a partner is the one requesting it and the org has no
-    // partner on record yet — the acting partner themselves. This guarantees the
+    // partner, or - when a partner is the one requesting it and the org has no
+    // partner on record yet - the acting partner themselves. This guarantees the
     // partner who sends a follow-up always gets a reminder to act on it.
     const recipientId = partnerId ?? (isPartnerView ? user?.uid ?? null : null)
     setFollowUpSubmitting(true)
@@ -241,7 +241,7 @@ export const OrganizationDetailPage: React.FC = () => {
             title: 'Follow-up requested',
             message: `${adminName} asked you to follow up with ${followUpUser.name}${
               followUpIssues.length ? `: ${followUpIssues.join(', ')}` : ''
-            }${note ? ` — ${note}` : ''}`,
+            }${note ? ` - ${note}` : ''}`,
             relatedId: interventionId || followUpUser.id,
             data: {
               learnerId: followUpUser.id,

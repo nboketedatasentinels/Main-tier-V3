@@ -80,3 +80,51 @@ export const sendRoleWelcomeEmail = async (
     return { success: false }
   }
 }
+
+/**
+ * Notify a user that their role changed. Loads contact + org labels from their
+ * profile when not supplied. Best-effort: never throws.
+ */
+export const notifyUserOfRoleChange = async (params: {
+  userId: string
+  role: string | null | undefined
+  email?: string | null
+  name?: string | null
+  organizationName?: string | null
+  organizationCode?: string | null
+}): Promise<void> => {
+  try {
+    let email = params.email?.trim() || null
+    let name = params.name?.trim() || null
+    let organizationName = params.organizationName?.trim() || null
+    let organizationCode = params.organizationCode?.trim() || null
+
+    if (!email || !name || !organizationName || !organizationCode) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('email, full_name, company_name, company_code')
+        .eq('id', params.userId)
+        .maybeSingle()
+      email = email || (typeof data?.email === 'string' ? data.email.trim() : null)
+      name = name || (typeof data?.full_name === 'string' ? data.full_name.trim() : null) || email
+      organizationName =
+        organizationName ||
+        (typeof data?.company_name === 'string' ? data.company_name.trim() : null)
+      organizationCode =
+        organizationCode ||
+        (typeof data?.company_code === 'string' ? data.company_code.trim() : null)
+    }
+
+    if (!email) return
+
+    await sendRoleWelcomeEmail({
+      to: email,
+      recipientName: name || email,
+      role: toWelcomeRole(params.role),
+      organizationName,
+      organizationCode,
+    })
+  } catch (error) {
+    console.warn('[welcomeEmailService] notifyUserOfRoleChange failed', error)
+  }
+}

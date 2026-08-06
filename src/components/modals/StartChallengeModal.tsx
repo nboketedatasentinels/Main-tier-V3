@@ -168,7 +168,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   };
 
   // --- SUBMISSION LOGIC ---
-  // Creates via Supabase RPC (0040). Points are NOT awarded here — they land
+  // Creates via Supabase RPC (0040). Points are NOT awarded here - they land
   // only after the challenge week ends and the challenge was accepted/completed.
   const handleCreateChallenge = async () => {
     if (!validateForm()) return;

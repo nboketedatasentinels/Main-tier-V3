@@ -32,8 +32,9 @@ const APPROVAL_TABLE_LABEL: Record<ApprovalType, string> = {
   ambassador_issued: 'Ambassador Issued',
 }
 
-/** Product-sheet titles used on weekly-checklist for month-based journeys. */
-const JOURNEY_CHECKLIST_TITLES: Record<'3M' | '6M' | '9M', string> = {
+/** Product-sheet titles used on weekly-checklist. */
+const JOURNEY_CHECKLIST_TITLES: Partial<Record<JourneyType, string>> = {
+  '4W': '4-Week Intro Journey - Limited Activities',
   '3M': '3 Months Journey',
   '6M': '6 Months Journey',
   '9M': '9 Months Journey',
@@ -44,29 +45,34 @@ const formatPoints = (value: number) => value.toLocaleString('en-US')
 const isLeadershipActivity = (activityId: string) =>
   activityId === 'mentor_meetup' || activityId === 'ambassador_session'
 
+const shouldShowJourneyPointsPanel = (journeyType: JourneyType) =>
+  journeyType === '4W' || isMonthBasedJourney(journeyType)
+
 type JourneyPointsReferencePanelProps = {
   journeyType: JourneyType
   leadershipAvailability?: LeadershipAvailability
 }
 
 /**
- * Product points table for month-based journeys (3M / 6M / 9M).
+ * Product points table for 4W intro and month-based journeys (3M / 6M / 9M).
  * Shown on weekly-checklist so learners see the same Activity / Frequency /
- * Approval / Points / Max breakdown the programme is scored against.
+ * Points / Max breakdown the programme is scored against.
  */
 export const JourneyPointsReferencePanel = ({
   journeyType,
   leadershipAvailability,
 }: JourneyPointsReferencePanelProps) => {
-  if (!isMonthBasedJourney(journeyType)) return null
+  if (!shouldShowJourneyPointsPanel(journeyType)) return null
 
-  const checklistTitle = JOURNEY_CHECKLIST_TITLES[journeyType]
+  const isIntroJourney = journeyType === '4W'
+  const checklistTitle = JOURNEY_CHECKLIST_TITLES[journeyType] ?? journeyType
   const crossRef = getJourneyPointsCrossReference(journeyType)
   const hasMentor = leadershipAvailability?.hasMentor ?? true
   const hasAmbassador = leadershipAvailability?.hasAmbassador ?? true
   const passMark = calculatePassMark(journeyType, hasMentor, hasAmbassador)
   const withoutBoth = crossRef.pointVariants.find((v) => v.key === 'without_mentor_and_ambassador')
   const withoutOne = crossRef.pointVariants.find((v) => v.key === 'without_mentor_or_ambassador')
+  const maxColumnLabel = isIntroJourney ? '4-Week Max' : 'Max'
 
   return (
     <Box bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="xl" boxShadow="sm" overflow="hidden">
@@ -76,13 +82,16 @@ export const JourneyPointsReferencePanel = ({
           <Heading size="md" color="#350e6f" textTransform="uppercase" letterSpacing="wide">
             {checklistTitle}
           </Heading>
-          <Badge colorScheme="purple" borderRadius="full">
-            Programme points table
-          </Badge>
+          {!isIntroJourney ? (
+            <Badge colorScheme="purple" borderRadius="full">
+              Programme points table
+            </Badge>
+          ) : null}
         </HStack>
         <Text mt={2} fontSize="sm" color="gray.600">
-          Your organization is on the {checklistTitle}. Complete activities below to reach the pass mark. Mentor and
-          Ambassador rows apply when those roles are assigned.
+          {isIntroJourney
+            ? 'This introductory course has a reduced set of activities.'
+            : `Your organization is on the ${checklistTitle}. Complete activities below to reach the pass mark. Mentor and Ambassador rows apply when those roles are assigned.`}
         </Text>
       </Box>
 
@@ -96,14 +105,16 @@ export const JourneyPointsReferencePanel = ({
               <Th color="white" borderColor="#350e6f" isNumeric>
                 Frequency
               </Th>
-              <Th color="white" borderColor="#350e6f">
-                Approval Type
-              </Th>
+              {!isIntroJourney ? (
+                <Th color="white" borderColor="#350e6f">
+                  Approval Type
+                </Th>
+              ) : null}
               <Th color="white" borderColor="#350e6f" isNumeric>
                 Points Each
               </Th>
               <Th color="white" borderColor="#350e6f" isNumeric>
-                Max
+                {maxColumnLabel}
               </Th>
             </Tr>
           </Thead>
@@ -122,7 +133,9 @@ export const JourneyPointsReferencePanel = ({
                   <Td isNumeric color={emphasisColor}>
                     {row.frequency}
                   </Td>
-                  <Td color={emphasisColor}>{APPROVAL_TABLE_LABEL[row.approvalType] ?? row.approvalType}</Td>
+                  {!isIntroJourney ? (
+                    <Td color={emphasisColor}>{APPROVAL_TABLE_LABEL[row.approvalType] ?? row.approvalType}</Td>
+                  ) : null}
                   <Td isNumeric color={emphasisColor}>
                     {formatPoints(row.pointsEach)}
                   </Td>
@@ -139,7 +152,7 @@ export const JourneyPointsReferencePanel = ({
       <Stack spacing={2} px={{ base: 4, md: 5 }} py={4} borderTopWidth="1px" borderColor="gray.100">
         <HStack justify="space-between" flexWrap="wrap" spacing={3}>
           <Text fontWeight="bold" color="gray.800">
-            MAXIMUM POSSIBLE
+            {isIntroJourney ? 'MAXIMUM POSSIBLE (4 weeks)' : 'MAXIMUM POSSIBLE'}
           </Text>
           <Text fontWeight="bold" color="gray.800">
             {formatPoints(crossRef.maxPossiblePoints)}
@@ -153,7 +166,7 @@ export const JourneyPointsReferencePanel = ({
             {formatPoints(passMark.adjustedThreshold)}
           </Badge>
         </HStack>
-        {withoutBoth ? (
+        {!isIntroJourney && withoutBoth ? (
           <HStack justify="space-between" flexWrap="wrap" spacing={3}>
             <Text fontSize="sm" color="gray.600">
               No Mentor + Ambassador (both)
@@ -163,7 +176,7 @@ export const JourneyPointsReferencePanel = ({
             </Text>
           </HStack>
         ) : null}
-        {withoutOne ? (
+        {!isIntroJourney && withoutOne ? (
           <HStack justify="space-between" flexWrap="wrap" spacing={3}>
             <Text fontSize="sm" color="gray.600">
               No Ambassador / Mentor

@@ -10,7 +10,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const FUNCTION_VERSION = "2026-07-03-layout-owner-desc";
 
 // Structured custom fields (boss's spec). OFF until the fields exist in Zoho AND
-// the API names below are confirmed via /settings/fields — sending an unknown
+// the API names below are confirmed via /settings/fields - sending an unknown
 // API name makes Zoho reject the WHOLE create. Flip ZOHO_INCLUDE_CUSTOM_FIELDS=true
 // only after that. The keys are the PROPOSED api names; correct any that Zoho
 // generated differently after the discovery step.
@@ -29,8 +29,8 @@ const CF = {
   completedAt: "Completed_At",
   seniority: "Seniority",
   cadence: "Cadence_Track",
-  // Manager_and_up is a Zoho FORMULA field — Zoho computes it, we never send it.
-  // LinkedIn_Profile_URL, Booking_Status, Booked_At have no source yet — left empty on purpose.
+  // Manager_and_up is a Zoho FORMULA field - Zoho computes it, we never send it.
+  // LinkedIn_Profile_URL, Booking_Status, Booked_At have no source yet - left empty on purpose.
 };
 
 const ZOHO_DC = Deno.env.get("ZOHO_DC") || "com";
@@ -104,7 +104,7 @@ function getOwnerId(tier: string | null): string | null {
   return null;
 }
 
-// ── Assessment config — a mirror of src/config/liftAssessment.ts so the Zoho
+// ── Assessment config - a mirror of src/config/liftAssessment.ts so the Zoho
 // Description reproduces EXACTLY what the admin "eye" modal shows. If the
 // questions / labels change in that file, update them here too.
 const SCALE_LABELS = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"];
@@ -155,14 +155,14 @@ const GENDER_LABELS: Record<string, string> = { woman: "Woman", man: "Man", non_
 const TIER_OWNERS: Record<string, string> = { A: "Nono", B: "Nyaga", C: "Ayakwa" };
 
 // Renders the full assessment breakdown (contact + intake + per-item answers +
-// scores) as text, mirroring the admin "eye" modal — this becomes the Zoho
+// scores) as text, mirroring the admin "eye" modal - this becomes the Zoho
 // lead's Description so the team sees everything.
 // deno-lint-ignore no-explicit-any
 function buildDescription(lead: any): string {
   const intake = lead.intake || {};
   const scores = lead.item_scores || {};
   const pillars: Record<string, unknown> = { L: lead.pillar_l, I: lead.pillar_i, F: lead.pillar_f, T: lead.pillar_t };
-  const dash = "—";
+  const dash = "-";
   const L: string[] = [];
 
   L.push("=== LIFT ASSESSMENT RESULT ===");
@@ -299,7 +299,7 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
     if (lead.first_name) leadData.First_Name = lead.first_name;
     if (lead.email) leadData.Email = lead.email;
     if (lead.phone) leadData.Phone = lead.phone;
-    // Leads' standard country field is "Country_Region" (NOT "Country") — using
+    // Leads' standard country field is "Country_Region" (NOT "Country") - using
     // "Country" silently dropped the value on earlier tests.
     if (lead.country) leadData.Country_Region = lead.country;
   } else {
@@ -316,7 +316,7 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
   }
 
   // The full assessment breakdown (everything the admin "eye" view shows) goes
-  // into the standard Description field — no custom fields, so Zoho can't reject
+  // into the standard Description field - no custom fields, so Zoho can't reject
   // the create on an unknown field API name.
   leadData.Description = buildDescription(lead);
 
@@ -346,7 +346,7 @@ async function createLead(lead: any, accessToken: string): Promise<string> {
     if (roleField) set(roleField, roleLabel(lead.intake?.role));
     // Gateway URL is a fixed marketing link supplied via env (optional).
     set(CF.gatewayUrl, Deno.env.get("ZOHO_GATEWAY_URL") || null);
-    // resultUrl / LinkedIn / Booking_* intentionally omitted — no source yet.
+    // resultUrl / LinkedIn / Booking_* intentionally omitted - no source yet.
   }
 
   const ownerId = getOwnerId(lead.lead_tier);

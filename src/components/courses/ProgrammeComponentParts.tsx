@@ -119,7 +119,7 @@ export const ProgrammeComponentPartsPanel: React.FC<{ type: ProgrammeComponentTy
     return (
       <PlainNote>
         Your {label} appears once your pathway is set. Free practitioners use the Digital
-        Transformation Starter Kit — open Courses to begin Capstone Part A. Organisation learners:
+        Transformation Starter Kit - open Courses to begin Capstone Part A. Organisation learners:
         ask your partner if this stays empty.
       </PlainNote>
     )

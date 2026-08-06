@@ -75,7 +75,7 @@ export const OrganizationCard: React.FC<OrganizationCardProps> = ({
         onClick={onViewClick}
         isDisabled={!onViewClick}
       >
-        View Organisation
+        View organization
       </Button>
     </Box>
   )

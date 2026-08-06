@@ -250,7 +250,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
   const atRiskUsers = useMemo(
     () =>
-      filtered.filter(user => ['watch', 'concern', 'critical', 'at_risk'].includes(user.riskStatus)),
+      filtered.filter(user => ['critical', 'at_risk'].includes(user.riskStatus)),
     [filtered],
   )
 

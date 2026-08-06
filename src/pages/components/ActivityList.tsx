@@ -43,7 +43,7 @@ const projectForWeek = (activity: ActivityState): ActivityState => {
   // Clear only "next_window" / window-cap locks: those are computed against
   // the currently selected week, while this row may target a later window that
   // still has capacity (eligible-week scheduling enforces per-window caps).
-  // Never clear weekly_cooldown — the award RPC enforces the same 7-day gate.
+  // Never clear weekly_cooldown - the award RPC enforces the same 7-day gate.
   let next: ActivityState = activity
   if (activity.status === 'completed' || activity.hasInteracted) {
     next = { ...next, status: 'not_started', hasInteracted: false }
@@ -194,7 +194,7 @@ export const ActivityList = ({
     [visibleActivities],
   )
 
-  // Full journey capacity (points × occurrence caps) — e.g. 60,000 for 6W.
+  // Full journey capacity (points × occurrence caps) - e.g. 60,000 for 6W.
   // Do NOT derive the header from currently open To-do rows: partner-issued
   // activities (weekly sessions, LIFT, webinars, pillar work) sit in Coming up
   // until issued and were silently dropping the total (e.g. 42k instead of 60k).
@@ -235,7 +235,7 @@ export const ActivityList = ({
       donePointsTotal += activity.points ?? 0
 
       const totalCap = activity.activityPolicy?.maxTotal ?? 1
-      // Keep the completed claim visible in its week with strikethrough —
+      // Keep the completed claim visible in its week with strikethrough -
       // do not let maxed-out activities vanish from the week list.
       pushWeekRow(week, {
         activity,
@@ -345,7 +345,7 @@ export const ActivityList = ({
         activity.availability.state === 'permanently_exhausted' ||
         totalDone >= totalCap
       if (isPermExhausted) {
-        // Fully consumed — completed weeks already pushed above with
+        // Fully consumed - completed weeks already pushed above with
         // strikethrough. Do not drop them from the week list.
         return
       }

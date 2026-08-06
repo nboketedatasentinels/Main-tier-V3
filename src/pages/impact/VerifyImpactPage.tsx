@@ -25,7 +25,7 @@ import {
 
 /**
  * Public token page for impact-log verifiers (in or out of org).
- * Linked from the verification email — no login required.
+ * Linked from the verification email - no login required.
  */
 export function VerifyImpactPage() {
   const [searchParams] = useSearchParams()

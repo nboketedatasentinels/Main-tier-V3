@@ -414,8 +414,8 @@ export const ProfilePage: React.FC = () => {
     setError(null)
     try {
       // Read from Supabase (the Firestore `getDoc(profiles)` failed with
-      // "Missing or insufficient permissions" after the Supabase auth cutover —
-      // no Firebase session — which surfaced as "Failed to load your profile").
+      // "Missing or insufficient permissions" after the Supabase auth cutover -
+      // no Firebase session - which surfaced as "Failed to load your profile").
       const { data: row, error: readError } = await supabase
         .from('profiles')
         .select('*')

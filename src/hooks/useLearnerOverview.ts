@@ -68,8 +68,8 @@ export const useLearnerOverview = (companyId?: string | null): UseLearnerOvervie
   useEffect(() => {
     if (!companyId || learners.length === 0) {
       // Reuse the existing empty object when it is already empty. Returning a
-      // fresh {} here would change the `stats` reference and — because this
-      // effect used to depend on `stats` — retrigger itself forever for any
+      // fresh {} here would change the `stats` reference and - because this
+      // effect used to depend on `stats` - retrigger itself forever for any
       // org with no matching learners (tight render loop + realtime resubscribe
       // storm + DevTools "form field" flood). See course-approvals bug.
       setStats((prev) => (Object.keys(prev).length === 0 ? prev : {}))

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>T4L | Case Study 2: The Senior Engineer Who Stopped Asking</title>
+<meta name="programme-component-id" content="fostering-case-study-2">
+<meta name="programme-component-type" content="case_study">
+<meta name="programme-pillar" content="fostering">
+<meta name="programme-part-id" content="fostering-case-study-2">
+<meta name="programme-part-title" content="Case Study 2 · The Senior Engineer Who Stopped Asking">
+<meta name="programme-component-title" content="Combined Case Studies - Case Study 2">
+<meta name="programme-submit-confirm" content="Submit Case Study 2: The Senior Engineer Who Stopped Asking?&#10;&#10;This closes the Combined Case Studies component for the Fostering AI-Ready Teams Journey. Both case studies (Klarna and MTN) are marked together as one component, weighted 30% of your competence pass alongside the Combined Capstone (50%) and the Practicals Portfolio (20%).">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --plum: #1A1726; --gold: #F5C842; --gold-dark: #C9A020;
+    --purple: #4A3B8C; --purple-light: #6B5BB5; --cream: #FAF8F3;
+    --border: #E8E3DA; --field-bg: #F9F7F2; --field-border: #D4CEBC;
+    --case-bg: #FFFEF9; --counter-under: #B45309;
+    --counter-good: #166534; --counter-over: #991B1B;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: #1A1726; font-size: 15px; line-height: 1.6; }
+  .print-bar { position: sticky; top: 0; z-index: 100; background: var(--plum); display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; gap: 12px; }
+  .print-bar .wordmark { display: flex; flex-direction: column; gap: 1px; }
+  .print-bar .wordmark .t4l-transform { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: var(--gold); letter-spacing: 0.08em; }
+  .print-bar .wordmark .t4l-leader { font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 11px; color: #fff; letter-spacing: 0.08em; }
+  .print-bar .title { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; color: #fff; text-align: center; flex: 1; }
+  .print-bar-actions { display: flex; gap: 8px; align-items: center; }
+  .print-btn { background: var(--gold); color: var(--plum); border: none; border-radius: 8px; padding: 8px 18px; font-family: 'DM Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: background 0.15s, transform 0.15s; }
+  .print-btn:hover { background: var(--gold-dark); }
+  .print-btn-secondary { background: transparent; color: var(--gold); border: 1.5px solid var(--gold); }
+  .print-btn-secondary:hover { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .print-btn-primary { background: var(--gold); color: var(--plum); }
+  .print-btn-primary:hover { background: var(--gold-dark); transform: translateY(-1px); }
+  .header-block { background: var(--plum); padding: 40px 40px 36px; }
+  .header-wordmark { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .play-circle { width: 38px; height: 38px; background: var(--purple); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .play-circle svg { width: 14px; height: 14px; }
+  .wordmark-block .brand-top { font-size: 13px; font-weight: 700; color: var(--gold); letter-spacing: 0.12em; }
+  .wordmark-block .brand-bottom { font-size: 13px; font-weight: 700; color: #fff; letter-spacing: 0.12em; }
+  .wordmark-block .brand-tag { font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 0.1em; margin-top: 2px; }
+  .lift-badge { display: inline-block; background: rgba(245,200,66,0.15); border: 1px solid rgba(245,200,66,0.3); border-radius: 20px; padding: 5px 14px; font-size: 10px; font-weight: 600; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .case-eyebrow { font-size: 11px; font-weight: 700; color: var(--gold); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .header-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: #fff; line-height: 1.2; margin-bottom: 12px; }
+  .header-title em { color: var(--gold); font-style: italic; }
+  .header-meta { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.7; margin-bottom: 8px; }
+  .header-meta strong { color: rgba(255,255,255,0.9); }
+  .case-callout { display: inline-block; background: rgba(245,200,66,0.2); border: 1px solid rgba(245,200,66,0.5); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 600; color: var(--gold); margin-top: 14px; }
+  .content { max-width: 880px; margin: 0 auto; padding: 36px 24px 60px; }
+  .standard-card { background: rgba(245,200,66,0.08); border-left: 3px solid var(--gold); border-radius: 0 12px 12px 0; padding: 20px 24px; margin-bottom: 24px; }
+  .standard-label { font-size: 10px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+  .standard-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--plum); margin-bottom: 12px; }
+  .standard-list { list-style: none; padding: 0; margin: 0; }
+  .standard-list li { font-size: 13px; color: #444; line-height: 1.6; padding: 6px 0 6px 20px; position: relative; }
+  .standard-list li::before { content: "→"; position: absolute; left: 0; color: var(--gold-dark); font-weight: 700; }
+  .case-block { background: var(--case-bg); border: 1.5px solid var(--border); border-radius: 16px; margin-bottom: 24px; overflow: hidden; }
+  .case-header { padding: 20px 28px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; transition: background 0.15s; background: rgba(74,59,140,0.04); }
+  .case-header:hover { background: rgba(74,59,140,0.08); }
+  .case-header-left { display: flex; flex-direction: column; gap: 4px; }
+  .case-header-tag { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .case-header-title { font-family: 'DM Serif Display', serif; font-size: 19px; color: var(--plum); }
+  .case-header-toggle { font-size: 12px; font-weight: 700; color: var(--purple); display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .case-header-toggle::after { content: "▼"; font-size: 10px; transition: transform 0.2s; }
+  .case-block.open .case-header-toggle::after { transform: rotate(180deg); }
+  .case-body { display: block; padding: 28px 32px; border-top: 1.5px solid var(--border); }
+  .case-block:not(.open) .case-body { display: none; }
+  .case-section-label { font-size: 11px; font-weight: 700; color: var(--gold-dark); letter-spacing: 0.14em; text-transform: uppercase; margin: 24px 0 10px; }
+  .case-section-label:first-child { margin-top: 0; }
+  .case-body p { font-size: 14px; color: #2A2438; line-height: 1.75; margin-bottom: 14px; }
+  .case-body p:last-child { margin-bottom: 0; }
+  .case-body em { font-style: italic; color: var(--purple); }
+  .case-body .pull-quote { font-family: 'DM Serif Display', serif; font-style: italic; font-size: 17px; color: var(--plum); padding: 14px 20px; border-left: 3px solid var(--gold); background: rgba(245,200,66,0.05); margin: 16px 0; }
+  .case-body ul.sources { list-style: none; padding: 0; margin: 0; }
+  .case-body ul.sources li { font-size: 13px; color: #444; line-height: 1.65; padding: 6px 0 6px 20px; position: relative; }
+  .case-body ul.sources li::before { content: "·"; position: absolute; left: 6px; color: var(--gold-dark); font-weight: 700; font-size: 18px; line-height: 1; }
+  .word-counter { background: #fff; border: 1.5px solid var(--border); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .word-counter-label { font-size: 12px; font-weight: 600; color: #555; }
+  .word-counter-value { font-family: 'DM Serif Display', serif; font-size: 22px; line-height: 1; }
+  .word-counter-value.under { color: var(--counter-under); }
+  .word-counter-value.good { color: var(--counter-good); }
+  .word-counter-value.over { color: var(--counter-over); }
+  .word-counter-hint { font-size: 11px; color: #888; font-style: italic; margin-top: 2px; }
+  .word-counter-meter { flex: 1; min-width: 140px; max-width: 240px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; position: relative; }
+  .word-counter-meter-fill { height: 100%; background: var(--counter-under); transition: width 0.25s, background 0.25s; }
+  .word-counter-meter-fill.good { background: var(--counter-good); }
+  .word-counter-meter-fill.over { background: var(--counter-over); }
+  .word-counter-meter-band { position: absolute; top: 0; bottom: 0; background: rgba(22,101,52,0.12); pointer-events: none; }
+  .section-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 28px 32px; margin-bottom: 24px; }
+  .section-num-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .section-num { font-size: 10px; font-weight: 700; color: var(--purple); letter-spacing: 0.14em; text-transform: uppercase; }
+  .outcome-tag { display: inline-block; background: rgba(74,59,140,0.1); border: 1px solid rgba(74,59,140,0.25); border-radius: 12px; padding: 2px 10px; font-size: 9px; font-weight: 700; color: var(--purple); letter-spacing: 0.1em; text-transform: uppercase; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--plum); margin-bottom: 6px; }
+  .section-prompt { font-size: 14px; font-weight: 600; color: var(--plum); margin-bottom: 12px; line-height: 1.55; }
+  .section-hint { font-size: 12px; color: #888; margin-bottom: 14px; font-style: italic; line-height: 1.6; }
+  textarea {
+    width: 100%; background: var(--field-bg); border: 1.5px solid var(--field-border);
+    border-radius: 10px; padding: 12px 14px; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--plum); resize: vertical; line-height: 1.6;
+    transition: border-color 0.2s, box-shadow 0.2s; min-height: 140px;
+  }
+  textarea:focus { outline: none; border-color: var(--purple-light); box-shadow: 0 0 0 3px rgba(107,91,181,0.12); }
+  textarea::placeholder { color: #aaa; }
+  .field-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; font-size: 11px; color: #888; }
+  .field-word-count { font-weight: 600; }
+  .field-word-count.over { color: var(--counter-over); }
+  @media print { .print-bar { position: static; } .print-btn { display: none; } body { font-size: 12px; } .section-card, .standard-card, .case-block { break-inside: avoid; } .case-body { display: block !important; } }
+  @media (max-width: 600px) { .header-block { padding: 24px 20px; } .header-title { font-size: 24px; } .content { padding: 20px 14px 40px; } .section-card, .case-body { padding: 20px 18px; } .case-header { padding: 16px 20px; } }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <div class="wordmark">
+    <span class="t4l-transform">TRANSFORMATION</span>
+    <span class="t4l-leader">LEADER</span>
+  </div>
+  <span class="title">Case Study 2 · The Senior Engineer Who Stopped Asking</span>
+  <div class="print-bar-actions">
+    <button class="print-btn print-btn-secondary" onclick="window.print()">Save / Print</button>
+    <button class="print-btn print-btn-primary" onclick="submitCaseStudy()">Submit</button>
+  </div>
+</div>
+
+<div class="header-block">
+  <div class="header-wordmark">
+    <div class="play-circle">
+      <svg viewBox="0 0 14 14" fill="none"><polygon points="3,2 12,7 3,12" fill="#F5C842"/></svg>
+    </div>
+    <div class="wordmark-block">
+      <div class="brand-top">TRANSFORMATION</div>
+      <div class="brand-bottom">LEADER</div>
+      <div class="brand-tag">POSITIVE IMPACT | SUSTAINABLE CHANGE</div>
+    </div>
+  </div>
+  <div class="lift-badge">Fostering AI-Ready Teams</div>
+  <div class="case-eyebrow">Case Study 2 · Module 2 · Building AI-Ready Teams That Hold Together</div>
+  <h1 class="header-title">The Senior Engineer Who <em>Stopped Asking</em></h1>
+  <div class="header-meta"><strong>MTN Group AI Network Operations, Nigeria and South Africa, 2023-2024. How the formal org chart and the real delivery organisation diverged once the AI tools were introduced -- and what happened to the senior engineers whose informal expert power was suddenly competing with AI-generated outputs in technical review meetings.</strong></div>
+  <div class="header-meta"><strong>Outcomes assessed:</strong> LO3 (Distinguish formal org chart from actual delivery organisation), LO4 (Construct and execute the difficult conversation), LO5 (Evaluate early signals of disengagement)</div>
+  <div class="header-meta"><strong>Word count:</strong> 300-500 words total across all four questions.</div>
+  <div class="case-callout">Case Study 2 of 2 · Combined Case Studies = 30% of competence pass</div>
+</div>
+
+<div class="content">
+
+  <div class="standard-card">
+    <div class="standard-label">What good looks like</div>
+    <div class="standard-title">A response that uses the case to think about the real delivery organisation, the conversation that needed to happen, and the early signal that was visible months before.</div>
+    <ul class="standard-list">
+      <li>Hard, soft, and expert power each named separately on the Real Org Chart -- and the question of which one the AI tooling shifted answered with case evidence, not asserted.</li>
+      <li>The early signal of disengagement named at the level of behaviour -- something specific that was happening in technical review meetings, not "morale dropped".</li>
+      <li>Why the signal was misread named structurally -- not as the leader's failing, but as the dynamic that made the misreading the path of least resistance.</li>
+      <li>The conversation written as actual sentences a leader could use, with what the leader has to be willing to hear named -- not just what the leader will say.</li>
+      <li>300-500 words across all four answers. Use specific elements from the case (AfricaCom 2024, the LinkedIn posts from former engineers, MTN annual report framing) to anchor the argument.</li>
+    </ul>
+  </div>
+
+  <div class="case-block open" id="caseBlock">
+    <div class="case-header" onclick="document.getElementById('caseBlock').classList.toggle('open')">
+      <div class="case-header-left">
+        <div class="case-header-tag">The case · read first</div>
+        <div class="case-header-title">MTN Nigeria and MTN South Africa, 2023-2024</div>
+      </div>
+      <div class="case-header-toggle">Collapse</div>
+    </div>
+    <div class="case-body">
+      <div class="case-section-label">Background</div>
+      <p>MTN Group is Africa's largest mobile network operator, headquartered in Johannesburg, South Africa, with major operations in Nigeria, Ghana, Uganda, Cameroon, and 13 other markets. Across 2022 and 2023, MTN published its 'Ambition 2025' strategy emphasising AI-driven network operations as a core capability investment. Public statements from CEO Ralph Mupita and Group CTIO Mazen Mroue across 2023 and 2024 referenced AI-driven network optimisation, predictive maintenance, and automated fault detection as strategic priorities.</p>
+      <p>Within MTN Nigeria and MTN South Africa specifically, AI-assisted network operations tools were rolled out across 2023 and 2024 to support engineering teams. The tools were positioned as augmentation -- supporting human engineers rather than replacing them. Senior network engineers who held deep knowledge of specific network segments -- some with 12-15 years of context on regional infrastructure quirks -- were expected to validate and supervise AI-generated recommendations.</p>
+      <p>By mid-2024, a pattern had emerged across both operations. Senior network engineers were increasingly accepting AI recommendations without challenge -- not because the recommendations were always right, but because the social and political cost of pushing back had risen. Multiple practitioners reported in industry publications and at the AfricaCom 2024 conference (held in Cape Town) that informal escalation paths had narrowed, that 'I disagree with the AI' was being read by middle management as resistance to transformation rather than informed engineering judgement, and that the senior engineers who had previously been the institutional memory of regional networks had stopped asking the awkward questions in technical reviews.</p>
+      <p>Public reporting by African Business and TechCabal across 2024 and early 2025 documented voluntary attrition rising in MTN's senior network engineering function in both Nigeria and South Africa. MTN's published group annual reports (2023 and 2024) acknowledged 'changes in engineering team composition' as part of the digital transformation programme, framed as positive workforce evolution. Senior engineers who left have spoken publicly on LinkedIn about the dynamic of being unable to disagree productively with AI-generated recommendations within the existing team culture.</p>
+      <div class="case-section-label">The dynamic to analyse</div>
+      <p>This case is not a story about whether the AI tools were technically capable. It is a story about how the formal org chart and the real delivery organisation diverged once the AI tools were introduced -- and what happened to the senior engineers whose informal expert power was suddenly competing with AI-generated outputs in technical review meetings.</p>
+      <p>The questions below ask you to map the divergence between formal and real authority, identify the conversation that was not happening, and design the early-signal intervention that should have been run before the senior engineers started leaving.</p>
+      <div class="case-section-label">Sources</div>
+      <ul class="sources">
+      <li>MTN Group Annual Reports 2022, 2023, 2024 (mtn.com investor relations).</li>
+      <li>African Business magazine, multiple articles 2023-2025 on African telecom AI strategy.</li>
+      <li>TechCabal, multiple articles 2024-2025 on Nigerian and South African telecom workforce changes.</li>
+      <li>AfricaCom 2024 conference proceedings and panel transcripts (Cape Town, November 2024).</li>
+      <li>Public LinkedIn posts from former MTN senior network engineers, 2024-2025.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="word-counter" id="wordCounter">
+    <div>
+      <div class="word-counter-label">Total response across all four questions</div>
+      <div class="word-counter-hint" id="wordCounterHint">Target: 300-500 words. Quality matters more than length.</div>
+    </div>
+    <div class="word-counter-meter" title="Range 300-500 words">
+      <div class="word-counter-meter-band" id="wordCounterBand"></div>
+      <div class="word-counter-meter-fill" id="wordCounterFill" style="width: 0%"></div>
+    </div>
+    <div class="word-counter-value under" id="wordCounterValue">0 words</div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 01</div>
+      <div class="outcome-tag">Outcome 3 · Real Org Chart</div>
+    </div>
+    <h2 class="section-title">Map the formal versus real authority -- and which power type shifted</h2>
+    <div class="section-prompt">Map the formal versus real authority in MTN's network engineering organisation in 2024. Where did hard power sit, where did soft power sit, where did expert power sit -- and which of these did the AI tooling rollout shift?</div>
+    <div class="section-hint">Three power types named separately -- not collapsed into one. The question of which one shifted is answered from case evidence, not asserted. The test is whether each of the three power types is grounded in something specific the case shows about MTN's engineering organisation, and whether the shift you identify is traced to a specific consequence in the case.</div>
+    <textarea name="q1" placeholder="Hard power sat with... Soft power sat with... Expert power sat with... The AI tooling rollout shifted..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q1Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 02</div>
+      <div class="outcome-tag">Outcome 5 · Early signal</div>
+    </div>
+    <h2 class="section-title">Identify the early signal -- and why it was misread</h2>
+    <div class="section-prompt">Identify the early signal of disengagement that was visible months before the senior engineers started leaving. Why was this signal misread inside MTN, and what would a Heatmap reading have surfaced that the formal performance metrics did not?</div>
+    <div class="section-hint">The early signal lives at the level of behaviour, not sentiment -- something a manager could have observed in a meeting, not something they had to infer from a survey. The misreading explanation works structurally: not "the manager was bad" but "the existing reading frame made the misreading the easier conclusion". The Heatmap dimensions you name should be ones that the formal metrics could not have captured.</div>
+    <textarea name="q2" placeholder="The early signal: ... It was misread as ... because ... A Heatmap reading would have surfaced ..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q2Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 03</div>
+      <div class="outcome-tag">Outcome 4 · The conversation</div>
+    </div>
+    <h2 class="section-title">Construct the conversation an MTN engineering leader should have had</h2>
+    <div class="section-prompt">Construct the conversation that an MTN engineering leader should have had with one of the senior engineers in mid-2024. Provide the opening line verbatim, name what the leader would need to be willing to hear, and describe what would need to shift in the conversation for the senior engineer to feel safe asking the awkward questions again.</div>
+    <div class="section-hint">A verbatim opening line, not a summary of what the leader would say. What the leader has to be willing to hear is the discipline -- a one-off conversation that does not change how disagreement is handled in technical review will not produce a sustained shift. A structural shift is the point; a more empathetic tone is not.</div>
+    <textarea name="q3" placeholder="Opening line (verbatim): &quot;...&quot;
+
+What the leader has to be willing to hear: ...
+
+The shift required: ..." oninput="recountWords()"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 70-110 words</span>
+      <span class="field-word-count" id="q3Count">0 words</span>
+    </div>
+  </div>
+
+  <div class="section-card">
+    <div class="section-num-row">
+      <div class="section-num">Question 04</div>
+      <div class="outcome-tag">Outcomes 3 + 4 + 5 · Application to your own scope</div>
+    </div>
+    <h2 class="section-title">Apply the same discipline to a senior expert in your own scope</h2>
+    <div class="section-prompt">Identify a senior expert in your own organisational scope who is at risk of becoming the person who stopped asking. Name them by role, name the AI tooling dynamic that is creating the risk, and name the specific conversation you will book with them in the next 14 days.</div>
+    <div class="section-hint">This is the highest-weighted question. The expert needs to be specific (by role; their actual situation, not a hypothetical). The AI tooling dynamic is concrete -- a specific tool, a specific kind of recommendation, a specific kind of meeting where the expert's pushback used to count. The conversation booked is in your calendar in the next 14 days, not 'I will reach out'.</div>
+    <textarea name="q4" placeholder="The senior expert (by role): ...
+The AI tooling dynamic creating the risk: ...
+The specific conversation booked in the next 14 days: ..." oninput="recountWords()" style="min-height: 200px;"></textarea>
+    <div class="field-meta">
+      <span>Suggested length: 90-170 words</span>
+      <span class="field-word-count" id="q4Count">0 words</span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function countWords(s) {
+  if (!s || !s.trim()) return 0;
+  return s.trim().split(/\s+/).length;
+}
+window.recountWords = function recountWords() {
+  const fields = ['q1', 'q2', 'q3', 'q4'];
+  let total = 0;
+  fields.forEach((name) => {
+    const el = document.querySelector('[name="' + name + '"]');
+    const c = countWords(el ? el.value : '');
+    total += c;
+    const display = document.getElementById(name + 'Count');
+    if (display) display.textContent = c + ' words';
+  });
+  const valEl = document.getElementById('wordCounterValue');
+  const fillEl = document.getElementById('wordCounterFill');
+  const bandEl = document.getElementById('wordCounterBand');
+  const hintEl = document.getElementById('wordCounterHint');
+  const max = 600, goodMin = 300, goodMax = 500;
+  bandEl.style.left = ((goodMin / max) * 100) + '%';
+  bandEl.style.width = (((goodMax - goodMin) / max) * 100) + '%';
+  fillEl.style.width = Math.min(100, (total / max) * 100) + '%';
+  valEl.textContent = total + ' words';
+  valEl.classList.remove('under', 'good', 'over');
+  fillEl.classList.remove('good', 'over');
+  if (total < goodMin) {
+    valEl.classList.add('under');
+    hintEl.textContent = 'Below the 300-word threshold. The expected range is 300-500.';
+  } else if (total <= goodMax) {
+    valEl.classList.add('good');
+    fillEl.classList.add('good');
+    hintEl.textContent = 'In range. Quality matters more than length -- review for filler before submitting.';
+  } else {
+    valEl.classList.add('over');
+    fillEl.classList.add('over');
+    hintEl.textContent = 'Over 500 words. The response needs to land in the 300-500 word range.';
+  }
+  return total;
+};
+window.recountWords();
+</script>
+<script type="module" src="/capstones/_capstone-runtime.js"></script>
+<script type="module">
+  const runtimeSubmit = window.t4lSubmitProgrammeComponent;
+  const requiredFields = ['q1', 'q2', 'q3', 'q4'];
+
+  window.submitCaseStudy = function submitCaseStudy() {
+    const filled = requiredFields.filter((name) => {
+      const el = document.querySelector('[name="' + name + '"]');
+      return el && el.value && String(el.value).trim().length > 0;
+    }).length;
+
+    if (filled < requiredFields.length) {
+      const proceed = window.confirm(
+        "You haven't completed all sections yet. " +
+          filled +
+          ' of ' +
+          requiredFields.length +
+          ' fields filled. Submit anyway?',
+      );
+      if (!proceed) return;
+    }
+
+    const total =
+      typeof window.recountWords === 'function' ? window.recountWords() : 0;
+    if (total < 300 || total > 500) {
+      const warning =
+        total < 300
+          ? 'Total response is ' + total + ' words. The expected range is 300-500. Below 300 sits outside the range.'
+          : 'Total response is ' + total + ' words. The expected range is 300-500. Above 500 sits outside the range.';
+      const proceed = window.confirm(warning + '\n\nSubmit anyway?');
+      if (!proceed) return;
+    }
+
+    if (typeof runtimeSubmit === 'function') runtimeSubmit();
+  };
+</script>
+</body>
+</html>

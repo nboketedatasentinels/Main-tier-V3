@@ -18,8 +18,8 @@ import type { JourneyBucket, JourneyProgressAggregate, JourneyProgressLearner } 
  * Clicking a card shows ONLY that group's learners right below - so the admin
  * sees exactly who the card is talking about, no cross-page guessing.
  *
- * Numbers come from real pace-ratio classification (listenToJourneyProgress /
- * partnerProgress.calculateUserRiskStatus).
+ * Numbers come from real 2-week window status
+ * (On Track / Warning / Alert / Recovery via partnerProgress.calculateUserRiskStatus).
  */
 
 type GroupId = 'onTrack' | 'needsNudge' | 'atRisk' | 'notStarted'

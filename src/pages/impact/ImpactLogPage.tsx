@@ -158,7 +158,7 @@ export interface ImpactLogEntry {
   verifierEmail?: string
   /** Display name of the verifier (in or out of org). */
   verifierName?: string
-  /** Platform role for the verifier — always `verifier` for this flow. */
+  /** Platform role for the verifier - always `verifier` for this flow. */
   verifierRole?: 'verifier'
   /** Approval gate: pending until verifier approves/rejects via email. */
   verificationStatus?: 'pending' | 'approved' | 'rejected'
@@ -864,7 +864,7 @@ export const ImpactLogPage: React.FC = () => {
     const summary =
       parts.length > 0
         ? parts.join(' • ')
-        : 'Tracking my impact with Transformation Tier.'
+        : 'Tracking my impact with Transformation Leader.'
 
     return `Proud to share my recent impact: ${summary}`
   }
@@ -1512,7 +1512,7 @@ export const ImpactLogPage: React.FC = () => {
       const activityTitle = payload.title || 'Impact Activity'
       const pointsToAward = activity?.points ?? (journeyType === '6W' ? 2000 : 1000)
 
-      // Gate points on verifier approval — mark checklist pending and email verifier.
+      // Gate points on verifier approval - mark checklist pending and email verifier.
       try {
         await markImpactLogChecklistPending({ userId: user.uid, weekNumber })
       } catch (err) {
@@ -1523,12 +1523,12 @@ export const ImpactLogPage: React.FC = () => {
       try {
         const formatMoney = (value: unknown) => {
           const n = Number(value)
-          if (!Number.isFinite(n)) return '—'
+          if (!Number.isFinite(n)) return '-'
           return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
         }
         const formatNumber = (value: unknown) => {
           const n = Number(value)
-          if (!Number.isFinite(n)) return '—'
+          if (!Number.isFinite(n)) return '-'
           return n.toLocaleString()
         }
         const detail = (label: string, value: unknown) => {
@@ -1642,7 +1642,7 @@ export const ImpactLogPage: React.FC = () => {
         title: 'Impact submitted for verification',
         description: emailSent
           ? `We emailed ${trimmedVerifierName} (${trimmedVerifierEmail}). Points stay pending until they approve.`
-          : `Saved as pending. We could not confirm the email to ${trimmedVerifierEmail} — ask them to check spam, or resubmit if needed.`,
+          : `Saved as pending. We could not confirm the email to ${trimmedVerifierEmail} - ask them to check spam, or resubmit if needed.`,
         status: emailSent ? 'success' : 'warning',
         duration: 8000,
         isClosable: true,
@@ -3375,7 +3375,7 @@ export const ImpactLogPage: React.FC = () => {
                     </Text>
                     <Text fontSize="sm" color="text.muted" mb={3}>
                       Someone in or outside your organization. We email them this impact log.
-                      Role is Verifier — they must approve before you earn points. Until then it stays pending.
+                      Role is Verifier - they must approve before you earn points. Until then it stays pending.
                     </Text>
                     <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                       <FormControl isRequired>

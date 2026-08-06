@@ -67,13 +67,13 @@ function escapeHtml(value: string): string {
 }
 
 function formatDisplayValue(value: unknown): string {
-  if (value == null) return "—";
+  if (value == null) return "-";
   if (Array.isArray(value)) {
     const joined = value.map((v) => String(v).trim()).filter(Boolean).join(", ");
-    return joined || "—";
+    return joined || "-";
   }
   const text = String(value).trim();
-  return text.length ? text : "—";
+  return text.length ? text : "-";
 }
 
 async function authorizeCaller(req: Request): Promise<string | Response> {
@@ -141,7 +141,7 @@ function normalizeSections(body: Partial<Payload>): DetailSection[] {
         if (idx === -1) return { label: "Detail", value: raw };
         return {
           label: raw.slice(0, idx).trim() || "Detail",
-          value: raw.slice(idx + 1).trim() || "—",
+          value: raw.slice(idx + 1).trim() || "-",
         };
       }),
     },
@@ -207,7 +207,7 @@ function buildHtml(data: {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Impact verification request — ${APP_NAME}</title>
+  <title>Impact verification request - ${APP_NAME}</title>
 </head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:Georgia,'Times New Roman',Times,serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:36px 16px;">
@@ -416,7 +416,7 @@ Deno.serve(async (req) => {
     await getTransporter().sendMail({
       from: `"${APP_NAME}" <${from}>`,
       to,
-      subject: `Verification requested: ${activityTitle} — ${learnerName}`,
+      subject: `Verification requested: ${activityTitle} - ${learnerName}`,
       text,
       html,
     });

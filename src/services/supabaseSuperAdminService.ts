@@ -81,7 +81,7 @@ export const fetchUserRoleCounts = async (): Promise<{ free: number; paid: numbe
 // Full role breakdown for the User Management summary cards. Every profile is
 // bucketed by its NORMALIZED role (via normalizeRole) rather than an exact
 // `.eq('role', ...)` match, so legacy/variant strings (admin, company_admin,
-// mixed case, etc.) are counted correctly instead of silently dropped — which
+// mixed case, etc.) are counted correctly instead of silently dropped - which
 // was making the cards under-report. Platform admins (super_admins) are not a
 // card and are simply not bucketed.
 export const fetchRoleBreakdownCounts = async (): Promise<{
@@ -119,7 +119,7 @@ export const fetchRoleBreakdownCounts = async (): Promise<{
 
 // Count of people INVITED to an org who have not yet signed up. We exclude any
 // invite whose email already has a profile, so the moment an invitee logs in
-// they drop out of this count and appear in the role cards instead — the count
+// they drop out of this count and appear in the role cards instead - the count
 // stays accurate across sign-up. Deduped by email (a person invited to several
 // orgs is one pending person).
 export const fetchPendingInviteCount = async (): Promise<number> => {

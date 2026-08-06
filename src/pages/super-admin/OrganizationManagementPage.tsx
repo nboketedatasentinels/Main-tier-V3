@@ -660,7 +660,7 @@ export const OrganizationManagementPage: React.FC<OrganizationManagementPageProp
                                   color="brand.text"
                                 />
                                 <MenuList>
-                                  <MenuItem onClick={() => handleViewOrganization(org)}>View Organisation</MenuItem>
+                                  <MenuItem onClick={() => handleViewOrganization(org)}>View organization</MenuItem>
                                   {viewMode === 'active' ? (
                                     <>
                                       <MenuItem onClick={() => handleEditOrganization(org)}>Edit organization</MenuItem>
