@@ -270,15 +270,19 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     id: "weekly_session",
     baseId: "weekly_session",
     title: "Attend Weekly Session",
-    description: "Attend the scheduled weekly group session.",
+    description:
+      "Attend the scheduled weekly group session. You can confirm attendance; points stay pending until your partner assigns marks.",
     points: 1500,
     behaviorType: "ongoing",
     defaultMaxPerWindow: 2,
-    approvalType: "partner_issued",
+    approvalType: "partner_approved",
+    requiresApproval: true,
+    verification: "partner_approval",
     week: 1,
     category: "Community",
     flexibleWeeks: true,
-    frequencyNote: "One session per week, awarded by your partner.",
+    frequencyNote:
+      "One session per week. Learner confirmations stay pending until a partner assigns marks.",
   },
   {
     id: "webinar_workbook",

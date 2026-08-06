@@ -60,7 +60,11 @@ export const PartnerAssignmentPage: React.FC = () => {
   const partnerIssuedActivities = useMemo(
     () =>
       getActivitiesForJourney(journeyType).filter(
-        (activity) => activity.approvalType === 'partner_issued' && activity.id !== 'book_club'
+        (activity) =>
+          (activity.approvalType === 'partner_issued' && activity.id !== 'book_club') ||
+          // Partners can still assign weekly-session marks directly; learner
+          // confirmations otherwise sit pending in the approvals queue.
+          activity.id === 'weekly_session',
       ),
     [journeyType]
   );

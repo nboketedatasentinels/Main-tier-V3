@@ -59,6 +59,10 @@ import { AccountStatus, TransformationTier } from '@/types'
 import type { JourneyType } from '@/config/pointsConfig'
 import { normalizeRole, formatRoleLabel as formatStandardRoleLabel } from '@/utils/role'
 import { isFreeUser } from '@/utils/membership'
+import {
+  resolveUserOrganizationLabel,
+  userMatchesOrganizationFilter,
+} from '@/utils/userOrganizationFilter'
 
 const roleOptions: ManagedUserRole[] = ['user', 'partner', 'super_admin', 'mentor', 'ambassador', 'verifier']
 const roleDescriptions: Record<ManagedUserRole, string> = {
@@ -291,24 +295,29 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const accessibleUsers = useMemo(() => {
     if (isSuperAdmin || !assignedOrganizationIds?.length) return propUsers
     return propUsers.filter((user) => {
-      const organizationId = user.companyId
-      if (!organizationId) return false
-      return assignedOrganizationIds.includes(organizationId)
+      return assignedOrganizationIds.some((orgId) =>
+        userMatchesOrganizationFilter(user, { id: orgId }),
+      )
     })
   }, [assignedOrganizationIds, isSuperAdmin, propUsers])
 
   const filteredUsers = useMemo(() => {
     const now = new Date()
-    // The org dropdown value is the org id, but a user's org can be stored as the
-    // org id (company_id/organization_id) or the org code, so match on either.
+    // The org dropdown value is the org id. Users may store the link as company
+    // id, organization id, company code, or assignedOrganizations entries.
     const selectedOrg =
-      filters.organization === 'all' ? null : organizations.find((org) => org.id === filters.organization) ?? null
+      filters.organization === 'all'
+        ? null
+        : organizations.find((org) => org.id === filters.organization) ?? {
+            id: filters.organization,
+          }
     return accessibleUsers.filter((user) => {
       const searchText = filters.search.toLowerCase()
       const matchesSearch =
         user.name.toLowerCase().includes(searchText) ||
         (user.email || '').toLowerCase().includes(searchText) ||
-        (user.companyCode || '').toLowerCase().includes(searchText)
+        (user.companyCode || '').toLowerCase().includes(searchText) ||
+        (user.companyName || '').toLowerCase().includes(searchText)
 
       const normalizedTier = normalizeValue(user.transformationTier)
 
@@ -316,12 +325,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
       const matchesMembership =
         filters.membershipStatus === 'all' || membershipFilterKey(user) === filters.membershipStatus
       const matchesTier = filters.transformationTier === 'all' || normalizedTier === filters.transformationTier
-      const matchesOrg =
-        filters.organization === 'all' ||
-        user.companyId === filters.organization ||
-        (user.assignedOrganizations?.includes(filters.organization) ?? false) ||
-        (!!selectedOrg?.code &&
-          (user.companyCode === selectedOrg.code || user.companyId === selectedOrg.code))
+      const matchesOrg = userMatchesOrganizationFilter(user, selectedOrg)
 
       const matchesTimeframe = (() => {
         if (filters.timeframe === 'all') return true
@@ -395,28 +399,18 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
     [organizations],
   )
 
-  // Resolve the organization to show in the table. companyName is only stamped
-  // for some users; partners (assigned via the RPC) instead carry the link on
-  // company_id / organization_id / assignedOrganizations, so resolve the org
-  // name from the org list before falling back to "Independent".
+  // Resolve the organization to show in the table. When an org filter is active,
+  // prefer that org for multi-org partners so the row matches the filter choice.
+  const selectedFilterOrg = useMemo(() => {
+    if (filters.organization === 'all') return null
+    return organizations.find((org) => org.id === filters.organization) ?? null
+  }, [filters.organization, organizations])
+
   const resolveUserOrg = useCallback(
-    (user: ManagedUserRecord): { name: string; code: string | null } | null => {
-      if (user.companyName) return { name: user.companyName, code: user.companyCode ?? null }
-      const candidateId = user.companyId || user.assignedOrganizations?.find((id) => Boolean(id)) || null
-      if (candidateId) {
-        const org = organizations.find((o) => o.id === candidateId || o.code === candidateId)
-        if (org) return { name: org.name, code: org.code ?? null }
-        return { name: user.companyCode || candidateId, code: user.companyCode ?? null }
-      }
-      if (user.companyCode) {
-        const org = organizations.find((o) => o.code === user.companyCode)
-        return org
-          ? { name: org.name, code: org.code ?? null }
-          : { name: user.companyCode, code: user.companyCode }
-      }
-      return null
+    (user: ManagedUserRecord): { name: string; code: string | null; allNames: string[] } | null => {
+      return resolveUserOrganizationLabel(user, organizations, selectedFilterOrg)
     },
-    [organizations],
+    [organizations, selectedFilterOrg],
   )
 
   // Journey handling. Only individual learners (role 'user') sit on a journey.
@@ -1090,6 +1084,9 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                                   </Text>
                                   <Text fontSize="xs" color="gray.500" noOfLines={1}>
                                     {org.code || '-'}
+                                    {!selectedFilterOrg && org.allNames.length > 1
+                                      ? ` · +${org.allNames.length - 1} more`
+                                      : ''}
                                   </Text>
                                 </Stack>
                               ) : (

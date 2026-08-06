@@ -315,11 +315,13 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
   })
 
-  it('weekly session attendance is partner-issued (no learner proof flow)', () => {
+  it('weekly session attendance requires partner marks (pending until partner assigns)', () => {
     const weeklySession = getActivityDefinitionById({ activityId: 'weekly_session', journeyType: '6W' })
 
     expect(weeklySession).toBeTruthy()
-    expect(weeklySession?.approvalType).toBe('partner_issued')
+    expect(weeklySession?.approvalType).toBe('partner_approved')
+    expect(weeklySession?.requiresApproval).toBe(true)
+    expect(weeklySession?.verification).toBe('partner_approval')
   })
 
   it('resolves special activity ids as canonical ids', () => {

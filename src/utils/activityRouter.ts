@@ -73,6 +73,9 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
         break;
 
       case 'partner_issued':
+        // Partner must issue/award. If the learner reaches this path before the
+        // partner has issued, route to the proof/pending flow so points are not
+        // granted instantly.
         if ((activity as TActivity & { issuedByPartner?: boolean }).issuedByPartner) {
           await awardOrExplain({
             uid,
@@ -83,6 +86,8 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
             onSuccess,
             onError,
           });
+        } else {
+          onProofRequired(activity);
         }
         break;
 

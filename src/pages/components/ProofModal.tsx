@@ -14,6 +14,12 @@ import {
 } from '@chakra-ui/react'
 import type { ProofModalState } from '@/hooks/useWeeklyChecklistViewModel'
 
+/** Activities where a link is optional - confirmation notes are enough. */
+const OPTIONAL_PROOF_ACTIVITY_IDS = new Set(['weekly_session'])
+
+export const isOptionalProofActivity = (activityId?: string | null): boolean =>
+  Boolean(activityId && OPTIONAL_PROOF_ACTIVITY_IDS.has(activityId))
+
 export const ProofModal = ({
   state,
   isSubmitting,
@@ -28,11 +34,24 @@ export const ProofModal = ({
   onSubmit: () => Promise<void>
 }) => {
   const isResubmission = Boolean(state.rejectionReason)
+  const attendanceOnly = isOptionalProofActivity(state.activityId)
+  const canSubmit = attendanceOnly
+    ? true
+    : Boolean(state.proofUrl?.trim())
+
   return (
     <Modal isOpen={state.isOpen} onClose={onClose} isCentered>
       <ModalOverlay />
       <ModalContent>
-        <ModalHeader>{isResubmission ? 'Resubmit proof for partner review' : 'Submit proof for partner review'}</ModalHeader>
+        <ModalHeader>
+          {attendanceOnly
+            ? isResubmission
+              ? 'Resubmit weekly session attendance'
+              : 'Confirm weekly session attendance'
+            : isResubmission
+              ? 'Resubmit proof for partner review'
+              : 'Submit proof for partner review'}
+        </ModalHeader>
         <ModalCloseButton />
         <ModalBody>
           {state.rejectionReason ? (
@@ -41,22 +60,30 @@ export const ProofModal = ({
             </Text>
           ) : null}
           <Text mb={3} color="gray.600">
-            Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Submitting proof marks this activity as submitted; it becomes completed after approval.
+            {attendanceOnly
+              ? 'Confirm you attended. This stays pending until your partner assigns marks from the partner portal - you will not receive points yet.'
+              : 'Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Submitting proof marks this activity as submitted; it becomes completed after approval.'}
           </Text>
 
           <Stack spacing={3}>
-            <Input
-              type="url"
-              inputMode="url"
-              autoComplete="url"
-              placeholder="https://example.com/proof (required)"
-              value={state.proofUrl}
-              onChange={e => onChange({ proofUrl: e.target.value })}
-            />
+            {!attendanceOnly && (
+              <Input
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                placeholder="https://example.com/proof (required)"
+                value={state.proofUrl}
+                onChange={(e) => onChange({ proofUrl: e.target.value })}
+              />
+            )}
             <Textarea
-              placeholder="Notes (optional)"
+              placeholder={
+                attendanceOnly
+                  ? 'Optional notes (session date, host, etc.)'
+                  : 'Notes (optional)'
+              }
               value={state.notes}
-              onChange={e => onChange({ notes: e.target.value })}
+              onChange={(e) => onChange({ notes: e.target.value })}
             />
           </Stack>
         </ModalBody>
@@ -68,11 +95,11 @@ export const ProofModal = ({
           <Button
             colorScheme="purple"
             onClick={onSubmit}
-            isDisabled={!state.proofUrl?.trim() || isSubmitting}
+            isDisabled={!canSubmit || isSubmitting}
             isLoading={isSubmitting}
             loadingText="Submitting"
           >
-            Submit proof
+            {attendanceOnly ? 'Confirm attendance' : 'Submit proof'}
           </Button>
         </ModalFooter>
       </ModalContent>

@@ -51,8 +51,10 @@ function useManagedUsers() {
             email: userData.email,
             role: userData.role as ManagedUserRecord['role'],
             membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
-            // Check companyId first (set at signup), then fall back to assignedOrganizations (for admins)
-            companyId: userData.companyId || userData.assignedOrganizations?.[0] || null,
+            // Prefer real company/organization id. Do not invent companyId from
+            // assignedOrganizations[0] - that made multi-org partners look like
+            // they belonged only to the first org and confused the org filter.
+            companyId: userData.companyId || null,
             companyName: userData.companyName || null,
             companyCode: userData.companyCode || null,
             lastActive: userData.lastActive instanceof Date ? userData.lastActive : null,

@@ -76,7 +76,7 @@ This creates one mental model across the entire ecosystem.
 | Activity | Frequency | Approval Type | Points Each | 6-Week Max |
 |----------|-----------|---------------|-------------|------------|
 | Podcast + submit workbook | 9 | Partner Approved | 2,000 | 18,000 |
-| Attend Weekly Session | 6 | Partner Issued | 1,500 | 9,000 |
+| Attend Weekly Session | 6 | Partner Approved | 1,500 | 9,000 |
 | Attend webinar + Workbook | 1 | Partner Approved | 4,000 | 4,000 |
 | Peer to Peer Session | 3 | Self Reporting | 1,000 | 3,000 |
 | Impact Log Entry | 4 | Auto Marks | 1,000 | 4,000 |
@@ -97,7 +97,7 @@ This creates one mental model across the entire ecosystem.
 | Activity | Frequency | Approval Type | Points Each | Max |
 |----------|-----------|---------------|-------------|-----|
 | Podcast + submit workbook | 9 | Partner Approved | 2,000 | 18,000 |
-| Attend Weekly Session | 12 | Partner Issued | 1,500 | 18,000 |
+| Attend Weekly Session | 12 | Partner Approved | 1,500 | 18,000 |
 | Attend webinar + Workbook | 3 | Partner Approved | 4,000 | 12,000 |
 | Peer to Peer Session | 9 | Self Reporting | 1,000 | 9,000 |
 | Impact Log Entry | 6 | Auto Marks | 1,000 | 6,000 |
@@ -121,7 +121,7 @@ This creates one mental model across the entire ecosystem.
 | Activity | Frequency | Approval Type | Points Each | Max |
 |----------|-----------|---------------|-------------|-----|
 | Podcast + submit workbook | 18 | Partner Approved | 2,000 | 36,000 |
-| Attend Weekly Session | 24 | Partner Issued | 1,500 | 36,000 |
+| Attend Weekly Session | 24 | Partner Approved | 1,500 | 36,000 |
 | Attend webinar + Workbook | 6 | Partner Approved | 4,000 | 24,000 |
 | Peer to Peer Session | 18 | Self Reporting | 1,000 | 18,000 |
 | Impact Log Entry | 12 | Auto Marks | 1,000 | 12,000 |
@@ -145,7 +145,7 @@ This creates one mental model across the entire ecosystem.
 | Activity | Frequency | Approval Type | Points Each | Max |
 |----------|-----------|---------------|-------------|-----|
 | Podcast + submit workbook | 27 | Partner Approved | 2,000 | 54,000 |
-| Attend Weekly Session | 36 | Partner Issued | 1,500 | 54,000 |
+| Attend Weekly Session | 36 | Partner Approved | 1,500 | 54,000 |
 | Attend webinar + Workbook | 9 | Partner Approved | 4,000 | 36,000 |
 | Peer to Peer Session | 27 | Self Reporting | 1,000 | 27,000 |
 | Impact Log Entry | 18 | Auto Marks | 1,000 | 18,000 |

@@ -4,7 +4,7 @@ import { awardChecklistPoints } from '@/services/pointsService'
 import { handleActivityCompletion } from './activityRouter'
 
 vi.mock('@/services/pointsService', () => ({
-  awardChecklistPoints: vi.fn(async () => undefined),
+  awardChecklistPoints: vi.fn(async () => ({ awarded: true })),
 }))
 
 const awardChecklistPointsMock = vi.mocked(awardChecklistPoints)
@@ -25,16 +25,17 @@ const makeActivity = (overrides: Partial<ActivityDef> = {}): ActivityDef => ({
 })
 
 describe('handleActivityCompletion partner-issued flow', () => {
-  it('does not award points before partner issues the activity', async () => {
+  it('routes unissued partner activities to the pending proof flow (no instant points)', async () => {
     const onSuccess = vi.fn(async () => undefined)
     const onProofRequired = vi.fn()
     const onError = vi.fn()
+    const activity = makeActivity()
 
     await handleActivityCompletion({
       uid: 'user-1',
       journeyType: '6W',
       weekNumber: 1,
-      activity: makeActivity(),
+      activity,
       onProofRequired,
       onSuccess,
       onError,
@@ -42,7 +43,7 @@ describe('handleActivityCompletion partner-issued flow', () => {
 
     expect(awardChecklistPointsMock).not.toHaveBeenCalled()
     expect(onSuccess).not.toHaveBeenCalled()
-    expect(onProofRequired).not.toHaveBeenCalled()
+    expect(onProofRequired).toHaveBeenCalledWith(activity)
     expect(onError).not.toHaveBeenCalled()
   })
 
@@ -70,6 +71,7 @@ describe('handleActivityCompletion partner-issued flow', () => {
       }),
     )
     expect(onSuccess).toHaveBeenCalledWith('completed')
+    expect(onProofRequired).not.toHaveBeenCalled()
     expect(onError).not.toHaveBeenCalled()
   })
 })

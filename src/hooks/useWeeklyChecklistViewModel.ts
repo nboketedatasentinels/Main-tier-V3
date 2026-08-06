@@ -135,6 +135,8 @@ function shouldRequireSuperAdminReviewForFreeUser(activity: ActivityDef, isFreeT
 function shouldUseHonorSystemForFreeUser(activity: ActivityDef, isFreeTierMember: boolean): boolean {
   if (!isFreeTierMember) return false
   if (shouldRequireSuperAdminReviewForFreeUser(activity, isFreeTierMember)) return false
+  // Weekly session marks are always partner-assigned - never honor-self-award.
+  if (activity.id === 'weekly_session') return false
   return (
     activity.approvalType === 'partner_approved' ||
     activity.approvalType === 'partner_issued' ||
@@ -1235,42 +1237,50 @@ export function useWeeklyChecklistViewModel() {
       }
 
       const rawProofUrl = proofModal.proofUrl?.trim()
-      if (!rawProofUrl) {
+      const isWeeklySessionAttendance = activity.id === 'weekly_session'
+
+      // Weekly session: learner confirmation is enough. Points stay pending until
+      // the partner assigns marks. Other partner-approved activities still need a link.
+      if (!rawProofUrl && !isWeeklySessionAttendance) {
         triggerHaptic('warning')
         toast({ title: 'Proof required', description: 'Please provide a link before submitting.', status: 'warning' })
         return
       }
 
-      const rawProofUrlLower = rawProofUrl.toLowerCase()
-      const normalizedProofUrl =
-        rawProofUrlLower.startsWith('http://') || rawProofUrlLower.startsWith('https://')
-          ? rawProofUrl
-          : `https://${rawProofUrl}`
+      const ATTENDANCE_CONFIRMATION_URL = 'https://t4leader.com/attendance/confirmed'
+      let proofUrl = ATTENDANCE_CONFIRMATION_URL
+      if (rawProofUrl) {
+        const rawProofUrlLower = rawProofUrl.toLowerCase()
+        const normalizedProofUrl =
+          rawProofUrlLower.startsWith('http://') || rawProofUrlLower.startsWith('https://')
+            ? rawProofUrl
+            : `https://${rawProofUrl}`
 
-      let parsedProofUrl: URL
-      try {
-        parsedProofUrl = new URL(normalizedProofUrl)
-      } catch {
-        triggerHaptic('warning')
-        toast({
-          title: 'Invalid link',
-          description: 'Please enter a valid URL, like https://example.com/proof.',
-          status: 'warning',
-        })
-        return
+        let parsedProofUrl: URL
+        try {
+          parsedProofUrl = new URL(normalizedProofUrl)
+        } catch {
+          triggerHaptic('warning')
+          toast({
+            title: 'Invalid link',
+            description: 'Please enter a valid URL, like https://example.com/proof.',
+            status: 'warning',
+          })
+          return
+        }
+
+        if (parsedProofUrl.protocol !== 'http:' && parsedProofUrl.protocol !== 'https:') {
+          triggerHaptic('warning')
+          toast({
+            title: 'Invalid link',
+            description: 'Only http:// or https:// links are supported.',
+            status: 'warning',
+          })
+          return
+        }
+        proofUrl = parsedProofUrl.toString()
       }
 
-      if (parsedProofUrl.protocol !== 'http:' && parsedProofUrl.protocol !== 'https:') {
-        triggerHaptic('warning')
-        toast({
-          title: 'Invalid link',
-          description: 'Only http:// or https:// links are supported.',
-          status: 'warning',
-        })
-        return
-      }
-
-      const proofUrl = parsedProofUrl.toString()
       const submissionOrganizationId = shouldRequireSuperAdminReviewForFreeUser(activity, isFreeTierMember)
         ? null
         : userOrganizationId
@@ -1289,7 +1299,9 @@ export function useWeeklyChecklistViewModel() {
         activityTitle: activity.title,
         activityPoints: activity.points,
         proofUrl,
-        notes: proofModal.notes?.trim(),
+        notes:
+          proofModal.notes?.trim() ||
+          (isWeeklySessionAttendance ? 'Learner confirmed weekly session attendance.' : undefined),
         approvalType: activity.approvalType,
         attemptNumber,
       })
@@ -1308,8 +1320,10 @@ export function useWeeklyChecklistViewModel() {
 
       triggerHaptic('success')
       toast({
-        title: 'Proof submitted',
-        description: 'Nice work. Your proof is submitted for partner review and points will post after approval.',
+        title: isWeeklySessionAttendance ? 'Attendance submitted' : 'Proof submitted',
+        description: isWeeklySessionAttendance
+          ? 'Pending partner marks. Points will post after your partner assigns them.'
+          : 'Nice work. Your proof is submitted for partner review and points will post after approval.',
         status: 'success',
         duration: 4000,
       })
