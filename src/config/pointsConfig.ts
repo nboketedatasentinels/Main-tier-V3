@@ -496,7 +496,8 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     // Free-user intro checklist (no org). Product sheet / docs/points-system.md:
     // watch 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
     // shameless 1500 + ai tool 1000 = 15,000 / pass 9,000.
-    { activityId: "watch_podcast", totalFrequency: 3 },
+    // weekOverride: 1 so every scored row (and its Done frequency) sits under Week 1.
+    { activityId: "watch_podcast", totalFrequency: 3, weekOverride: 1 },
     {
       activityId: "webinar_workbook",
       totalFrequency: 1,
@@ -504,30 +505,35 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       titleOverride: "Attend Webinar + Workbook",
       approvalOverride: "partner_approved",
       requiresApprovalOverride: true,
+      weekOverride: 1,
     },
-    { activityId: "impact_log", totalFrequency: 2 },
+    { activityId: "impact_log", totalFrequency: 2, weekOverride: 1 },
     {
       activityId: "lift_module",
       totalFrequency: 1,
       pointsOverride: 3000,
       titleOverride: "LIFT Course Module Completed",
+      weekOverride: 1,
     },
     {
       activityId: "book_club",
       totalFrequency: 1,
       pointsOverride: 1500,
       titleOverride: "Attend Book Club Session",
+      weekOverride: 1,
     },
     {
       activityId: "shameless_circle",
       totalFrequency: 1,
       pointsOverride: 1500,
       titleOverride: "Attend Shameless Circle Session",
+      weekOverride: 1,
     },
     {
       activityId: "ai_tool_review",
       totalFrequency: 1,
       titleOverride: "Submit an AI Tool for Review",
+      weekOverride: 1,
     },
     // Starter Kit programme components (same parts as My Courses). 0 pts so they
     // do not affect the intro points table; content opens via the Week 1 cards.
@@ -536,18 +542,21 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       totalFrequency: 3,
       pointsOverride: 0,
       titleOverride: "Combined Capstone",
+      weekOverride: 1,
     },
     {
       activityId: "case_study",
       totalFrequency: 4,
       pointsOverride: 0,
       titleOverride: "Combined Case Studies",
+      weekOverride: 1,
     },
     {
       activityId: "practical",
       totalFrequency: 6,
       pointsOverride: 0,
       titleOverride: "Practicals Portfolio",
+      weekOverride: 1,
     },
   ],
   "6W": [
