@@ -13,13 +13,6 @@ import {
   Grid,
   HStack,
   Icon,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   Skeleton,
   Spinner,
   Progress,
@@ -51,7 +44,6 @@ import {
   ChevronUp,
   Crown,
   Medal,
-  Sparkles,
   Star,
   Target,
   TrendingDown,
@@ -75,12 +67,7 @@ import { Badge as BadgeDefinition, LeaderboardTimeframe, UserProfile, UserRole }
 import { OrganizationRecord } from '@/types/admin'
 import { db } from '@/services/firebase'
 import { fetchOrganizationsByIds } from '@/services/organizationService'
-import {
-  fetchVillageById,
-  fetchVillagesByIds,
-  removeMemberFromVillage,
-  VillageSummary,
-} from '@/services/villageService'
+import { fetchVillagesByIds } from '@/services/villageService'
 import { useAuth } from '@/hooks/useAuth'
 import { useLeaderboardContext, getLeaderboardContextLabels } from '@/hooks/leaderboard/useLeaderboardContext'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
@@ -92,7 +79,6 @@ import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
 import { cancelChallenge } from '@/services/challengeService'
 import { isFreeUser } from '@/utils/membership'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
-import { FREE_USERS_VILLAGE_NAME, isSharedFreeVillage } from '@/config/villages'
 import { format } from 'date-fns'
 
 interface FeaturedBadge {
@@ -182,7 +168,6 @@ export const LeadershipBoardPage: React.FC = () => {
     onClose: onUpgradeClose,
   } = useDisclosure()
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
-  const { isOpen: isLeaveOpen, onOpen: onLeaveOpen, onClose: onLeaveClose } = useDisclosure()
   const pointsColors = useToken('colors', [
     'brand.primary',
     'brand.dark',
@@ -203,11 +188,6 @@ export const LeadershipBoardPage: React.FC = () => {
   const [, setBadgesLoading] = useState(false)
   const [, setBadgesError] = useState<string | null>(null)
   const [pointsPulse, setPointsPulse] = useState(false)
-  const [villageDetails, setVillageDetails] = useState<VillageSummary | null>(null)
-  const [isVillageLoading, setIsVillageLoading] = useState(false)
-  const [villageError, setVillageError] = useState<string | null>(null)
-  const [isVillageCreator, setIsVillageCreator] = useState(false)
-  const [isLeavingVillage, setIsLeavingVillage] = useState(false)
   const [showFilterTip, setShowFilterTip] = useState(() => {
     const stored = localStorage.getItem('leaderboard-filter-tip')
     return stored !== 'dismissed'
@@ -721,93 +701,6 @@ export const LeadershipBoardPage: React.FC = () => {
   }
 
   const isFreeContext = context?.type === 'free'
-  const isVillageContext = context?.type === 'village'
-  const shouldShowVillageSection = isFreeContext || isVillageContext
-  const villageId = profile?.villageId ?? null
-
-  useEffect(() => {
-    let isActive = true
-
-    if (!shouldShowVillageSection || !villageId) {
-      setVillageDetails(null)
-      setVillageError(null)
-      setIsVillageCreator(false)
-      setIsVillageLoading(false)
-      return () => {
-        isActive = false
-      }
-    }
-
-    const loadVillage = async () => {
-      setIsVillageLoading(true)
-      setVillageError(null)
-      try {
-        const village = await fetchVillageById(villageId)
-        if (!isActive) return
-        if (!village) {
-          setVillageDetails(null)
-          setIsVillageCreator(false)
-          setVillageError('Village not found')
-          toast({ title: 'Village not found', status: 'error' })
-          return
-        }
-        setVillageDetails(village)
-        setIsVillageCreator(Boolean(profile?.id && village.creatorId === profile.id))
-      } catch (error) {
-        if (!isActive) return
-        console.error('Failed to fetch village details', error)
-        setVillageDetails(null)
-        setIsVillageCreator(false)
-        setVillageError('Unable to load village details')
-        toast({ title: 'Unable to load village details', status: 'error' })
-      } finally {
-        if (isActive) {
-          setIsVillageLoading(false)
-        }
-      }
-    }
-
-    void loadVillage()
-
-    return () => {
-      isActive = false
-    }
-  }, [shouldShowVillageSection, profile?.id, toast, villageId])
-
-  const handleLeaveVillage = useCallback(async () => {
-    if (!profile?.id || !villageId) return
-    if (isSharedFreeVillage(villageId)) {
-      toast({
-        title: 'Shared village',
-        description: `${FREE_USERS_VILLAGE_NAME} is the home community for free learners and can't be left.`,
-        status: 'info',
-      })
-      onLeaveClose()
-      return
-    }
-    setIsLeavingVillage(true)
-    try {
-      await removeMemberFromVillage({ villageId, userId: profile.id })
-      toast({ title: 'You have left the village', status: 'success' })
-      onLeaveClose()
-      setVillageDetails(null)
-      setIsVillageCreator(false)
-      await refreshProfile({ reason: 'leave-village', isManual: true })
-    } catch (error) {
-      console.error('Failed to leave village', error)
-      toast({
-        title: 'Unable to leave village',
-        description: error instanceof Error ? error.message : undefined,
-        status: 'error',
-      })
-    } finally {
-      setIsLeavingVillage(false)
-    }
-  }, [onLeaveClose, profile?.id, refreshProfile, toast, villageId])
-
-  const villageRouteId = villageDetails?.id ?? villageId
-  const villageActionDisabled = isVillageLoading || isLeavingVillage
-  const shouldShowVillageCard = Boolean(villageDetails && villageId && !villageError)
 
   return (
     <Stack spacing={8}>
@@ -1026,72 +919,6 @@ export const LeadershipBoardPage: React.FC = () => {
         <TabPanels>
           <TabPanel px={0}>
             <Stack spacing={6}>
-              {shouldShowVillageSection &&
-                ((isVillageLoading && villageId) || (shouldShowVillageCard && villageRouteId)) && (
-                <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
-                  <CardBody>
-                    {isVillageLoading && villageId ? (
-                      <VStack spacing={3} py={6} textAlign="center">
-                        <Spinner color="brand.primary" />
-                        <Text fontSize="sm" color="text.secondary">
-                          Loading your village details...
-                        </Text>
-                      </VStack>
-                    ) : (
-                      <VStack spacing={4} py={4} textAlign="center">
-                        <Icon as={isVillageCreator ? Crown : Users} color="brand.primary" boxSize={7} />
-                        <Text fontSize="xl" fontWeight="bold" color="text.primary">
-                          {isVillageCreator ? 'Village Creator' : 'Village Member'}
-                        </Text>
-                        <Text color="text.secondary">
-                          {isVillageCreator
-                            ? 'Manage your village ecosystem and invite new members.'
-                            : 'View your village ecosystem or leave anytime.'}
-                        </Text>
-                        <Stack
-                          direction={{ base: 'column', sm: 'row' }}
-                          spacing={3}
-                          w="full"
-                          justify="center"
-                        >
-                          <Button
-                            bg="#350e6f"
-                            color="white"
-                            _hover={{ bg: '#4a1499' }}
-                            leftIcon={<Icon as={Users} />}
-                            onClick={() => navigate(`/app/villages/${villageRouteId}/manage`)}
-                            isDisabled={villageActionDisabled}
-                          >
-                            {isVillageCreator ? 'Manage Village' : 'View Village'}
-                          </Button>
-                          {isVillageCreator ? (
-                            <Button
-                              bg="#350e6f"
-                              color="white"
-                              _hover={{ bg: '#4a1499' }}
-                              leftIcon={<Icon as={Sparkles} />}
-                              onClick={() => navigate(`/app/villages/${villageRouteId}/invite`)}
-                              isDisabled={villageActionDisabled}
-                            >
-                              Invite Members
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              colorScheme="red"
-                              onClick={onLeaveOpen}
-                              isLoading={isLeavingVillage}
-                              isDisabled={villageActionDisabled}
-                            >
-                              Leave Village
-                            </Button>
-                          )}
-                        </Stack>
-                      </VStack>
-                    )}
-                  </CardBody>
-                </Card>
-              )}
               <Grid templateColumns="1fr" gap={4}>
                 <Card bg="white" border="1px solid" borderColor="gray.100" boxShadow="sm" borderRadius="xl">
                   <CardHeader borderBottom="1px solid" borderColor="gray.100">
@@ -1648,32 +1475,6 @@ export const LeadershipBoardPage: React.FC = () => {
           </TabPanel>
         </TabPanels>
       </Tabs>
-
-      {shouldShowVillageSection && (
-        <Modal isOpen={isLeaveOpen} onClose={onLeaveClose} isCentered>
-          <ModalOverlay />
-          <ModalContent>
-            <ModalHeader>Leave village</ModalHeader>
-            <ModalCloseButton />
-            <ModalBody>
-              <Text fontWeight="semibold" mb={2}>
-                Are you sure you want to leave this village?
-              </Text>
-              <Text color="text.secondary">
-                You will need an invitation to rejoin.
-              </Text>
-            </ModalBody>
-            <ModalFooter>
-              <Button variant="ghost" mr={3} onClick={onLeaveClose} isDisabled={isLeavingVillage}>
-                Cancel
-              </Button>
-              <Button colorScheme="red" onClick={handleLeaveVillage} isLoading={isLeavingVillage}>
-                Leave Village
-              </Button>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-      )}
 
       <UpgradePromptModal
         featureName={upgradeFeatureName}
