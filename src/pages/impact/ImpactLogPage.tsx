@@ -79,10 +79,7 @@ import {
   Twitter,
   Instagram,
 } from 'lucide-react'
-import { addDoc, collection, deleteDoc, doc, getDocs, onSnapshot, orderBy, query, updateDoc, where } from 'firebase/firestore'
-import { FirebaseError } from 'firebase/app'
 import { format, isAfter, isBefore, startOfMonth, subMonths } from 'date-fns'
-import { db } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { ESGCategory } from '@/types'
 import {
@@ -113,6 +110,14 @@ import {
   markImpactLogChecklistPending,
   sendImpactVerificationEmail,
 } from '@/services/impactVerificationService'
+import {
+  countMyImpactLogs,
+  createImpactLog,
+  deleteImpactLog,
+  listCompanyImpactLogs,
+  listMyImpactLogs,
+  updateImpactLogVerificationStatus,
+} from '@/services/impactLogService'
 import PointsDashboard from '@/components/PointsDashboard'
 import { generateImpactPdfReport } from '@/reports/impactPdfReport'
 import { isValidUrl } from '@/utils/validation';
@@ -730,7 +735,7 @@ export const ImpactLogPage: React.FC = () => {
             if (status === 'pending') return
             const local = entries.find((e) => e.id === id)
             if (!local || local.verificationStatus === status) return
-            await updateDoc(doc(db, 'impact_logs', id), { verificationStatus: status })
+            await updateImpactLogVerificationStatus(id, status)
           }),
         )
       } catch (error) {
@@ -746,17 +751,24 @@ export const ImpactLogPage: React.FC = () => {
   useEffect(() => {
     if (!user?.uid) return
 
-    const q = query(collection(db, 'impact_logs'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'))
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ImpactLogEntry[]
-      setEntries(data)
-      setLoading(false)
-    }, (error) => {
-      console.error('[ImpactLog] Personal entries listener error:', error)
-      setLoading(false)
-    })
+    let cancelled = false
+    const load = async () => {
+      try {
+        const data = await listMyImpactLogs(user.uid)
+        if (!cancelled) {
+          setEntries(data as ImpactLogEntry[])
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('[ImpactLog] Personal entries load error:', error)
+        if (!cancelled) setLoading(false)
+      }
+    }
 
-    return () => unsubscribe()
+    void load()
+    return () => {
+      cancelled = true
+    }
   }, [user?.uid])
 
   useEffect(() => {
@@ -765,19 +777,20 @@ export const ImpactLogPage: React.FC = () => {
       return
     }
 
-    const q = query(
-      collection(db, 'impact_logs'),
-      where('companyId', '==', profile.companyId),
-      orderBy('createdAt', 'desc'),
-    )
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ImpactLogEntry[]
-      setCompanyEntries(data)
-    }, (error) => {
-      console.error('[ImpactLog] Company entries listener error:', error)
-    })
+    let cancelled = false
+    const load = async () => {
+      try {
+        const data = await listCompanyImpactLogs(profile.companyId!)
+        if (!cancelled) setCompanyEntries(data as ImpactLogEntry[])
+      } catch (error) {
+        console.error('[ImpactLog] Company entries load error:', error)
+      }
+    }
 
-    return () => unsubscribe()
+    void load()
+    return () => {
+      cancelled = true
+    }
   }, [profile?.companyId])
 
   const filteredEntries = useMemo(() => {
@@ -1315,7 +1328,7 @@ export const ImpactLogPage: React.FC = () => {
           createdAt: new Date().toISOString(),
         })
 
-        await addDoc(collection(db, 'impact_logs'), payload)
+        await createImpactLog(payload)
       }
 
       toast({
@@ -1328,8 +1341,12 @@ export const ImpactLogPage: React.FC = () => {
       setBulkFileName(null)
       setBulkValidCount(0)
       setBulkErrorCount(0)
+      if (user?.uid) {
+        const refreshed = await listMyImpactLogs(user.uid)
+        setEntries(refreshed as ImpactLogEntry[])
+      }
     } catch (error) {
-      const message = error instanceof FirebaseError ? error.message : 'Bulk upload failed.'
+      const message = (error as Error)?.message || 'Bulk upload failed.'
       toast({
         title: 'Bulk upload error',
         description: message,
@@ -1498,7 +1515,8 @@ export const ImpactLogPage: React.FC = () => {
         createdAt: new Date().toISOString(),
       })
 
-      const docRef = await addDoc(collection(db, 'impact_logs'), payload);
+      const created = await createImpactLog(payload)
+      const docRef = { id: created.id }
 
       const journeyType = resolveJourneyType();
       const activity = resolveImpactActivity(journeyType)
@@ -1632,11 +1650,17 @@ export const ImpactLogPage: React.FC = () => {
         console.error('[ImpactLog] Failed to create/send verifier request', err)
       }
 
-      const impactLogsQuery = query(collection(db, 'impact_logs'), where('userId', '==', user.uid));
-      const impactLogsSnapshot = await getDocs(impactLogsQuery);
-      if (impactLogsSnapshot.size >= 10) {
-        await awardBadge(user.uid, 'impact-master');
+      const logCount = await countMyImpactLogs(user.uid)
+      if (logCount >= 10) {
+        try {
+          await awardBadge(user.uid, 'impact-master')
+        } catch (badgeError) {
+          console.warn('[ImpactLog] Badge award skipped', badgeError)
+        }
       }
+
+      const refreshed = await listMyImpactLogs(user.uid)
+      setEntries(refreshed as ImpactLogEntry[])
 
       toast({
         title: 'Impact submitted for verification',
@@ -1651,9 +1675,7 @@ export const ImpactLogPage: React.FC = () => {
       onClose()
     } catch (error) {
       console.error('[ImpactLog] Submission failed:', error)
-      const errorMessage = error instanceof FirebaseError
-        ? `Firebase error: ${error.code} - ${error.message}`
-        : (error as Error)?.message || 'Unknown error occurred'
+      const errorMessage = (error as Error)?.message || 'Unknown error occurred'
 
       toast({
         title: 'Unable to log impact',
@@ -1678,7 +1700,7 @@ export const ImpactLogPage: React.FC = () => {
     }
 
     try {
-      await deleteDoc(doc(db, 'impact_logs', entry.id))
+      await deleteImpactLog(entry.id)
 
       const journeyType = resolveJourneyType()
       const activity = resolveImpactActivity(journeyType)
@@ -1699,13 +1721,15 @@ export const ImpactLogPage: React.FC = () => {
         }
       }
 
+      setEntries((prev) => prev.filter((item) => item.id !== entry.id))
+
       toast({
         title: 'Impact entry deleted',
         description: 'Your Impact Log entry has been removed.',
         status: 'success',
       })
     } catch (error) {
-      const errorMessage = error instanceof FirebaseError ? error.message : (error as Error)?.message || 'Unknown error'
+      const errorMessage = (error as Error)?.message || 'Unknown error'
       toast({
         title: 'Unable to delete impact entry',
         description: errorMessage,
@@ -1780,13 +1804,11 @@ export const ImpactLogPage: React.FC = () => {
   }
 
   const checkExistingEventEntry = async (eventId: string, userId: string): Promise<boolean> => {
-    const q = query(
-      collection(db, 'impact_logs'),
-      where('eventId', '==', eventId),
-      where('userId', '==', userId),
-    )
-    const snapshot = await getDocs(q)
-    return !snapshot.empty
+    const mine = await listMyImpactLogs(userId)
+    return mine.some((entry) => {
+      const raw = entry as ImpactLogEntry & { eventId?: string }
+      return raw.eventId === eventId || (entry as { sourceRecordId?: string }).sourceRecordId === eventId
+    })
   }
 
   const fetchSharedEvent = async (eventId: string) => {

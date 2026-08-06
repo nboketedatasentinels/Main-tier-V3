@@ -55,6 +55,7 @@ import {
   type JourneyType,
 } from '@/config/pointsConfig'
 import { awardChecklistPoints, revokeChecklistPoints } from '@/services/pointsService'
+import { listMyImpactLogs } from '@/services/impactLogService'
 import { SurfaceCard } from '@/components/primitives/SurfacePrimitives'
 import { ORG_COLLECTION } from '@/constants/organizations'
 import {
@@ -494,57 +495,59 @@ const WeeklyChecklistPage: React.FC = () => {
     const impactRange = getImpactLogDateRange(selectedWeek)
     if (!impactRange) return
 
-    const impactQuery = query(
-      collection(db, 'impact_logs'),
-      where('userId', '==', user.uid),
-      where('date', '>=', impactRange.start),
-      where('date', '<', impactRange.end),
-    )
-
-    const unsubscribe = onSnapshot(impactQuery, snapshot => {
-      const docs = snapshot.docs.map((d) => {
-        const data = d.data() as { verificationStatus?: string }
-        return { id: d.id, verificationStatus: data.verificationStatus }
-      })
-      const hasPending = docs.some((entry) => entry.verificationStatus === 'pending')
-      const hasApproved = docs.some(
-        (entry) => entry.verificationStatus === 'approved' || !entry.verificationStatus,
-      )
-      // Rejected-only weeks stay not_started so the learner can resubmit.
-      const nextStatus: ActivityStatus = hasPending
-        ? 'pending'
-        : hasApproved
-          ? 'completed'
-          : 'not_started'
-
-      setActivities(prev => {
-        const impactActivity = prev.find(activity => activity.id === 'impact_log')
-        if (!impactActivity) return prev
-        if (impactActivity.status === nextStatus) return prev
-
-        if (nextStatus === 'pending') {
-          toast({
-            title: 'Impact log awaiting verifier',
-            description: 'Points stay pending until your verifier approves.',
-            status: 'info',
-            duration: 3000,
-          })
-        } else if (nextStatus === 'completed') {
-          toast({
-            title: 'Impact Log recorded',
-            description: 'Your weekly checklist was updated automatically.',
-            status: 'success',
-            duration: 3000,
-          })
-        }
-
-        return prev.map(activity =>
-          activity.id === 'impact_log' ? { ...activity, status: nextStatus } : activity,
+    let cancelled = false
+    const load = async () => {
+      try {
+        const logs = await listMyImpactLogs(user.uid)
+        if (cancelled) return
+        const docs = logs.filter((entry) => {
+          const date = entry.date
+          return date >= impactRange.start && date < impactRange.end
+        })
+        const hasPending = docs.some((entry) => entry.verificationStatus === 'pending')
+        const hasApproved = docs.some(
+          (entry) => entry.verificationStatus === 'approved' || !entry.verificationStatus,
         )
-      })
-    })
+        const nextStatus: ActivityStatus = hasPending
+          ? 'pending'
+          : hasApproved
+            ? 'completed'
+            : 'not_started'
 
-    return () => unsubscribe()
+        setActivities((prev) => {
+          const impactActivity = prev.find((activity) => activity.id === 'impact_log')
+          if (!impactActivity) return prev
+          if (impactActivity.status === nextStatus) return prev
+
+          if (nextStatus === 'pending') {
+            toast({
+              title: 'Impact log awaiting verifier',
+              description: 'Points stay pending until your verifier approves.',
+              status: 'info',
+              duration: 3000,
+            })
+          } else if (nextStatus === 'completed') {
+            toast({
+              title: 'Impact Log recorded',
+              description: 'Your weekly checklist was updated automatically.',
+              status: 'success',
+              duration: 3000,
+            })
+          }
+
+          return prev.map((activity) =>
+            activity.id === 'impact_log' ? { ...activity, status: nextStatus } : activity,
+          )
+        })
+      } catch (error) {
+        console.warn('[WeeklyUpdates] Impact log status sync skipped', error)
+      }
+    }
+
+    void load()
+    return () => {
+      cancelled = true
+    }
   }, [getImpactLogDateRange, selectedWeek, toast, user])
 
   useEffect(() => {
