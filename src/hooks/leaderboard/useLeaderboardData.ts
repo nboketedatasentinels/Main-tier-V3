@@ -216,20 +216,33 @@ export const useLeaderboardData = ({
   }, [])
 
   useEffect(() => {
-    if (context?.type === 'organization') {
+    // Organisation + village both resolve via list_org_peers (SECURITY DEFINER),
+    // which matches company/org codes and typed village_id (shared free village).
+    if (context?.type === 'organization' || context?.type === 'village') {
       let cancelled = false
       setProfilesLoaded(false)
 
       void (async () => {
         try {
-          const orgScope = getOrgScope({
-            companyId: context.organizationId,
-            organizationId: context.organizationId,
-            companyCode: context.organizationCode,
-            organizationCode: context.organizationCode,
-          })
-          if (!orgScope.isValid) {
-            console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
+          if (context.type === 'organization') {
+            const orgScope = getOrgScope({
+              companyId: context.organizationId,
+              organizationId: context.organizationId,
+              companyCode: context.organizationCode,
+              organizationCode: context.organizationCode,
+            })
+            if (!orgScope.isValid) {
+              console.warn('[Leaderboard] Missing organization identifier for leaderboard query.')
+              if (!cancelled) {
+                setProfiles([])
+                setProfilesLoaded(true)
+              }
+              return
+            }
+          }
+
+          if (context.type === 'village' && !context.villageId) {
+            console.warn('[Leaderboard] Missing villageId for village leaderboard query.')
             if (!cancelled) {
               setProfiles([])
               setProfilesLoaded(true)
@@ -242,14 +255,14 @@ export const useLeaderboardData = ({
           setProfiles(members as unknown as UserProfile[])
           setProfilesLoaded(true)
           setErrorMessage(null)
-          console.log('[Leaderboard] Organization profiles loaded (Supabase)', {
+          console.log('[Leaderboard] Peer-scope profiles loaded (Supabase)', {
             contextType: context.type,
             count: members.length,
           })
         } catch (error) {
           if (cancelled) return
           handleSnapshotError(
-            'organization_profiles',
+            context.type === 'village' ? 'village_profiles' : 'organization_profiles',
             error,
             setProfilesLoaded,
             profilesRetry,
@@ -332,9 +345,8 @@ export const useLeaderboardData = ({
       return undefined
     }
 
-    // Village / community / cluster still use Firestore until those scopes are
-    // migrated. Soft-fail permission errors so the page does not toast forever
-    // after the Supabase auth cutover (no Firebase session).
+    // Community / cluster still use Firestore until those scopes are migrated.
+    // Soft-fail auth errors so the page does not toast forever after cutover.
     setProfilesLoaded(false)
     console.log('[Leaderboard] Profiles query constraints', { contextType: context?.type, constraints })
     const profilesQuery = query(collection(db, 'profiles'), ...constraints)
@@ -356,7 +368,7 @@ export const useLeaderboardData = ({
           setProfiles([])
           setProfilesLoaded(true)
           setErrorMessage(
-            'Leaderboard scope for this account still needs a Supabase migration. Organisation boards work; village/community scopes are next.',
+            'Community leaderboard is temporarily unavailable. Organisation and village boards work via Supabase.',
           )
           return
         }
@@ -378,7 +390,7 @@ export const useLeaderboardData = ({
   }, [clearRetryTimeout, context, handleSnapshotError, profilesRetry])
 
   useEffect(() => {
-    if (context?.type === 'organization') {
+    if (context?.type === 'organization' || context?.type === 'village') {
       let cancelled = false
       setTransactionsLoaded(false)
 
@@ -404,8 +416,9 @@ export const useLeaderboardData = ({
               points: row.points,
               category,
               createdAt: row.createdAt,
-              companyId: context.organizationId || undefined,
-              companyCode: context.organizationCode || undefined,
+              companyId: context.type === 'organization' ? context.organizationId || undefined : undefined,
+              companyCode: context.type === 'organization' ? context.organizationCode || undefined : undefined,
+              villageId: context.type === 'village' ? context.villageId || undefined : undefined,
             }
           })
 
@@ -415,7 +428,7 @@ export const useLeaderboardData = ({
         } catch (error) {
           if (cancelled) return
           // Profiles + total_points are enough for all-time rank; don't hard-fail.
-          console.warn('[Leaderboard] Org points ledger unavailable; using profile totals', error)
+          console.warn('[Leaderboard] Peer-scope points ledger unavailable; using profile totals', error)
           setTransactions([])
           setTransactionsLoaded(true)
         }

@@ -22,6 +22,7 @@ export type SupabasePeerRow = {
   journey_type?: string | null
   total_points?: number | null
   level?: number | null
+  village_id?: string | null
   data?: Record<string, unknown> | null
 }
 
@@ -77,8 +78,8 @@ export const mapSupabasePeerToRecord = (row: SupabasePeerRow): Record<string, un
     timezone: (data.timezone as string | undefined) ?? undefined,
     interests: data.interests,
     goals: data.goals,
-    corporateVillageId: data.corporateVillageId ?? data.villageId,
-    villageId: data.villageId ?? data.corporateVillageId,
+    corporateVillageId: data.corporateVillageId ?? data.villageId ?? row.village_id,
+    villageId: row.village_id ?? data.villageId ?? data.corporateVillageId,
     cohortIdentifier: data.cohortIdentifier,
     calendarLink: data.calendarLink,
     identityTag: data.identityTag,
