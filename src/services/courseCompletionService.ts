@@ -280,7 +280,7 @@ export const markCourseCompleted = async (
       courseId: course.id,
       courseTitle: course.title,
       points: activity.points,
-      actionUrl: '/app/courses',
+      actionUrl: '/app/weekly-glance',
     },
   }).catch(error => {
     console.error('[CourseCompletion] Failed to send learner notification', error)

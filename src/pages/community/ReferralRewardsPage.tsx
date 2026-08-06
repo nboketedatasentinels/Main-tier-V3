@@ -258,7 +258,7 @@ const ReferralRewardsPage: React.FC = () => {
   const shareMessage = 'Join me on Transformation Leader and start your growth journey!'
   const messageWithLink = `${shareMessage} ${referralLink}`
   const aiStackingCourseLink =
-    getCourseDetailsFromMapping(AI_STACKING_TITLE)?.link ?? `${baseAppUrl.replace(/\/$/, '')}/app/courses`
+    getCourseDetailsFromMapping(AI_STACKING_TITLE)?.link ?? `${baseAppUrl.replace(/\/$/, '')}/app/weekly-glance`
 
   const openShareUrl = useCallback((url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')

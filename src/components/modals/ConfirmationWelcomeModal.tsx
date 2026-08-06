@@ -87,7 +87,7 @@ export const ConfirmationWelcomeModal: React.FC<ConfirmationWelcomeModalProps> =
       { label: 'Open my dashboard', href: dashboardPath, icon: Sparkles },
       { label: 'Log my first impact', href: '/app/impact', icon: Target },
       { label: 'Join the ecosystem', href: '/app/announcements', icon: Users },
-      { label: 'Browse courses', href: '/app/courses', icon: BookOpenCheck },
+      { label: 'Open weekly checklist', href: '/app/weekly-checklist', icon: BookOpenCheck },
     ],
     [dashboardPath],
   )

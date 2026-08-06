@@ -28,7 +28,7 @@ import { PodcastSeriesPanel } from '@/components/courses/PodcastSeriesPanel'
 import { ProgrammeComponentPartsPanel } from '@/components/courses/ProgrammeComponentParts'
 import type { ProgrammeComponentType } from '@/config/pillarProgrammeComponents'
 
-const PROGRAMME_COMPONENTS_HREF = '/app/courses#programme-components'
+const PROGRAMME_COMPONENTS_HREF = '/app/weekly-checklist'
 
 /**
  * Checklist activities that are pillar programme components. Expanding one

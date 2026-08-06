@@ -56,7 +56,6 @@ import { ProfilePage } from '@/pages/profile/ProfilePage'
 import { WeeklyUpdatesPage } from '@/pages/WeeklyChecklistPage'
 import { WeeklyGlancePage } from '@/pages/journeys/WeeklyGlancePage'
 import { LearnerDashboardPage } from '@/pages/journeys/LearnerDashboardPage'
-import { MyCoursesPage } from '@/pages/courses/MyCoursesPage'
 import { PeerConnectPage } from '@/pages/peer/PeerConnectPage'
 import { LeadershipCouncilPage } from '@/pages/leadership/LeadershipCouncilPage'
 import { AnnouncementsPage } from '@/pages/community/AnnouncementsPage'
@@ -302,7 +301,7 @@ export const AppRoutes = () => {
           <Route path="leaderboard" element={<Navigate to="/app/leadership-board" replace />} />
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
           <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
-          <Route path="courses" element={<MyCoursesPage />} />
+          <Route path="courses" element={<Navigate to="/app/weekly-glance" replace />} />
           <Route
             path="peer-connect"
             element={
