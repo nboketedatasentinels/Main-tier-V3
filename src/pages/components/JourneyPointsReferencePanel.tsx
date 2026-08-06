@@ -46,7 +46,8 @@ const isLeadershipActivity = (activityId: string) =>
   activityId === 'mentor_meetup' || activityId === 'ambassador_session'
 
 const shouldShowJourneyPointsPanel = (journeyType: JourneyType) =>
-  journeyType === '4W' || isMonthBasedJourney(journeyType)
+  // 4W intro sheet was removed from weekly-checklist; month journeys keep theirs.
+  isMonthBasedJourney(journeyType)
 
 type JourneyPointsReferencePanelProps = {
   journeyType: JourneyType
