@@ -11,12 +11,10 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { ArrowUpRight, MessageSquare, Mic, Play, Youtube } from 'lucide-react'
-import { SHAMELESS_CIRCLE_WHATSAPP_URL } from '@/config/communityLinks'
+import { ArrowUpRight, Mic, Play, Youtube } from 'lucide-react'
 
 const YOUTUBE_EMBED_SRC = 'https://www.youtube.com/embed/Du71f-J9s2A?si=gcMvAtmRINGoIvYU'
 const YOUTUBE_CHANNEL_URL = 'https://www.youtube.com/@T4Leaders/podcasts'
-const WHATSAPP_CIRCLE_URL = SHAMELESS_CIRCLE_WHATSAPP_URL
 
 export const ShamelessTuesdayPodcastPage: React.FC = () => (
   <Stack spacing={6} pb={10}>
@@ -151,24 +149,6 @@ export const ShamelessTuesdayPodcastPage: React.FC = () => (
               w="full"
             >
               More episodes
-            </Button>
-            <Button
-              as={chakra.a}
-              href={WHATSAPP_CIRCLE_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              size="md"
-              variant="outline"
-              color="gray.700"
-              borderColor="gray.300"
-              _hover={{ bg: 'gray.50', borderColor: '#350e6f', color: '#350e6f' }}
-              leftIcon={<Icon as={MessageSquare} boxSize={4} />}
-              rightIcon={<Icon as={ArrowUpRight} boxSize={3.5} />}
-              borderRadius="md"
-              fontWeight="semibold"
-              w="full"
-            >
-              Join the Shameless Circle
             </Button>
           </Stack>
         </Stack>
