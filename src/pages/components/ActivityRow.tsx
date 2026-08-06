@@ -530,13 +530,13 @@ export const ActivityRow = ({
               )}
             </HStack>
 
-            {activity.description && (
+            {activity.description && !isProgrammeComponent && (
               <Text fontSize="sm" color="gray.700" lineHeight="1.6">
                 {activity.description}
               </Text>
             )}
 
-            {activity.freeTierNotice && (
+            {activity.freeTierNotice && !isProgrammeComponent && (
               <HStack spacing={2} color="#350e6f" fontSize="sm">
                 <Icon as={CheckCircle2} boxSize={4} />
                 <Text>{activity.freeTierNotice}</Text>

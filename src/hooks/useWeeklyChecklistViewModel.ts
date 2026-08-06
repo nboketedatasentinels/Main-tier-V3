@@ -96,6 +96,7 @@ function isAdminProfile(profile: { role?: string; userRole?: string } | null | u
 const FREE_TIER_HONOR_NOTICE = 'Free tier uses self-reported honor completion (no proof upload required).'
 const FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE =
   'Free tier AI tool submissions are reviewed by super admin.'
+const PROGRAMME_COMPONENT_ACTIVITY_IDS = new Set(['capstone', 'case_study', 'practical'])
 const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>> = {
   shameless_circle: {
     label: 'Join Shameless Circle',
@@ -607,11 +608,13 @@ export function useWeeklyChecklistViewModel() {
           (effectiveDef.approvalType === 'partner_issued' ? false : undefined),
         issuedBy: previous?.issuedBy ?? undefined,
         issuedAt: previous?.issuedAt ?? undefined,
-        freeTierNotice: shouldRequireSuperAdminReviewForFreeUser(def, isFreeTierMember)
-          ? FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE
-          : honorSystemForFreeUser
-            ? FREE_TIER_HONOR_NOTICE
-            : undefined,
+        freeTierNotice: PROGRAMME_COMPONENT_ACTIVITY_IDS.has(def.id)
+          ? undefined
+          : shouldRequireSuperAdminReviewForFreeUser(def, isFreeTierMember)
+            ? FREE_TIER_SUPER_ADMIN_REVIEW_NOTICE
+            : honorSystemForFreeUser
+              ? FREE_TIER_HONOR_NOTICE
+              : undefined,
         completedCount: ledgerCache.totalCompletedAllTime[def.id] ?? 0,
       }
     })
