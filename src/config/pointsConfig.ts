@@ -423,11 +423,13 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     visibility: { requiresCoach: true },
   },
 
-  // ── Pillar components (6W only) - partner-issued ──
+  // ── Pillar components - partner-issued ──
   // Each pillar has a capstone, case studies, and a practicals portfolio.
-  // Capstone / case study award checklist points. Practicals are reviewed the
-  // same way but contribute 0 checklist points so the 6W journey stays at
+  // Capstone / case study award checklist points on 6W. Practicals are reviewed
+  // the same way but contribute 0 checklist points so the 6W journey stays at
   // exactly 60,000 max (see the handwritten weekly-checklist table).
+  // Free 4W practitioners also see these activities (0 pts) so they can open
+  // the same Starter Kit parts as on My Courses.
   {
     id: "capstone",
     baseId: "capstone",
@@ -517,6 +519,26 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       titleOverride: "Attend Shameless Circle Session",
     },
     { activityId: "ai_tool_review", totalFrequency: 1 },
+    // Starter Kit programme components (same parts as My Courses). 0 pts so the
+    // intro 15,000 max stays locked; content opens via the parts panel.
+    {
+      activityId: "capstone",
+      totalFrequency: 3,
+      pointsOverride: 0,
+      titleOverride: "Combined Capstone",
+    },
+    {
+      activityId: "case_study",
+      totalFrequency: 4,
+      pointsOverride: 0,
+      titleOverride: "Combined Case Studies",
+    },
+    {
+      activityId: "practical",
+      totalFrequency: 6,
+      pointsOverride: 0,
+      titleOverride: "Practicals Portfolio",
+    },
   ],
   "6W": [
     { activityId: "podcast_workbook", totalFrequency: 3, pointsOverride: 1000 },
@@ -622,6 +644,8 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     passMarkPoints: 9000,
     // watch 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
     // shameless 1500 + ai tool 1000 = 15,000.
+    // Capstone / case study / practical are on the checklist at 0 pts so free
+    // practitioners can open Starter Kit parts without changing the intro max.
     maxPossiblePoints: 15000,
     mode: "intro",
     timelineDisplay: "duration",

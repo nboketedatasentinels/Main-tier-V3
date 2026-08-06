@@ -59,6 +59,17 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('ai_tool_review')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('shameless_circle')?.activityPolicy?.maxTotal).toBe(1)
 
+    // Starter Kit programme components (same parts as My Courses / pillar cards).
+    expect(byId.get('capstone')?.title).toBe('Combined Capstone')
+    expect(byId.get('capstone')?.points).toBe(0)
+    expect(byId.get('capstone')?.activityPolicy?.maxTotal).toBe(3)
+    expect(byId.get('case_study')?.title).toBe('Combined Case Studies')
+    expect(byId.get('case_study')?.points).toBe(0)
+    expect(byId.get('case_study')?.activityPolicy?.maxTotal).toBe(4)
+    expect(byId.get('practical')?.title).toBe('Practicals Portfolio')
+    expect(byId.get('practical')?.points).toBe(0)
+    expect(byId.get('practical')?.activityPolicy?.maxTotal).toBe(6)
+
     expect(crossById.get('watch_podcast')).toMatchObject({ frequency: 3, pointsEach: 1000, maxPoints: 3000 })
     expect(crossById.get('webinar_workbook')).toMatchObject({ frequency: 1, pointsEach: 3000, maxPoints: 3000 })
     expect(crossById.get('impact_log')).toMatchObject({ frequency: 2, pointsEach: 1000, maxPoints: 2000 })
@@ -66,6 +77,9 @@ describe('pointsConfig module activities', () => {
     expect(crossById.get('book_club')).toMatchObject({ frequency: 1, pointsEach: 1500, maxPoints: 1500 })
     expect(crossById.get('shameless_circle')).toMatchObject({ frequency: 1, pointsEach: 1500, maxPoints: 1500 })
     expect(crossById.get('ai_tool_review')).toMatchObject({ frequency: 1, pointsEach: 1000, maxPoints: 1000 })
+    expect(crossById.get('capstone')).toMatchObject({ frequency: 3, pointsEach: 0, maxPoints: 0 })
+    expect(crossById.get('case_study')).toMatchObject({ frequency: 4, pointsEach: 0, maxPoints: 0 })
+    expect(crossById.get('practical')).toMatchObject({ frequency: 6, pointsEach: 0, maxPoints: 0 })
   })
 
   it('uses a 13,500 point two-week target for the 6-week journey', () => {
