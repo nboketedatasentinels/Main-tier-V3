@@ -16,6 +16,7 @@
  * Those will be filled in as their tables are migrated.
  */
 import { supabase } from '@/services/supabase'
+import { coerceProgramDurationMonths } from '@/config/courseCatalogue'
 import type {
   AdminUserRecord,
   EngagementRiskAggregate,
@@ -730,7 +731,13 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     organizationJourneyType: (row.journey_type as OrganizationRecord['organizationJourneyType']) ?? undefined,
     programDurationWeeks: (row.program_duration_weeks as number) ?? undefined,
     // The form drives off programDuration (in months) - stored in settings.
-    programDuration: (settings.programDurationMonths as number) ?? undefined,
+    // Coerce strings so 3M+ course dropdowns resolve the catalogue correctly.
+    programDuration:
+      coerceProgramDurationMonths(
+        (settings.programDurationMonths as number | string | null | undefined) ??
+          (settings.programDuration as number | string | null | undefined) ??
+          null,
+      ) ?? undefined,
     cohortStartDate: (() => {
       const raw = row.cohort_start_date
       if (!raw) return undefined

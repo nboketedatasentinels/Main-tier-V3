@@ -166,7 +166,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [courses, setCourses] = useState<CourseOption[]>([])
+  // Seed from the T4L catalogue so 3M+ dropdowns never render empty while
+  // Firestore/network course fetch is in flight or fails.
+  const [courses, setCourses] = useState<CourseOption[]>(() => getMonthlyJourneyCourseOptions())
   const [results, setResults] = useState<BulkInvitationResult | null>(null)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
   const [inviteDrafts, setInviteDrafts] = useState<InviteDraftEntry[]>([])
@@ -192,7 +194,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const resultsModal = useDisclosure()
 
   const courseLimit = useMemo(() => {
-    const option = programDurations.find((duration) => duration.value === form.programDuration)
+    const duration = Number(form.programDuration)
+    if (!Number.isFinite(duration)) return 0
+    const option = programDurations.find(
+      (entry) => entry.value === duration || Math.abs(entry.value - duration) < 0.0001,
+    )
     return option?.courseCount ?? 0
   }, [form.programDuration])
   const programCadence = useMemo(() => resolveProgramCadence(form.programDuration), [form.programDuration])
@@ -213,8 +219,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     [form.cohortStartDate],
   )
   const sortedCourses = useMemo(() => {
-    if (isMonthlyJourney) return getMonthlyJourneyCourseOptions()
-    return [...courses].sort((a, b) => a.title.localeCompare(b.title))
+    const catalogue = getMonthlyJourneyCourseOptions()
+    // 3M / 6M / 9M: always the curated catalogue (1 course per month).
+    if (isMonthlyJourney) return catalogue
+    const fromFetch = [...courses].sort((a, b) => a.title.localeCompare(b.title))
+    // Never leave the Select empty if the async course fetch fails.
+    return fromFetch.length ? fromFetch : catalogue
   }, [courses, isMonthlyJourney])
   const courseTitleById = useMemo(() => {
     const map = new Map<string, string>()
@@ -322,7 +332,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   useEffect(() => {
     if (!isOpen) {
       setForm(emptyOrganization)
-      setCourses([])
+      setCourses(getMonthlyJourneyCourseOptions())
       setResults(null)
       setMonthlyAssignments({})
       setInviteDrafts([])
@@ -338,9 +348,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
     const fetchData = async () => {
       try {
         const [courseOptions] = await Promise.all([fetchAvailableCourses()])
-        setCourses(courseOptions)
+        setCourses(courseOptions.length ? courseOptions : getMonthlyJourneyCourseOptions())
       } catch (error) {
         console.error(error)
+        setCourses(getMonthlyJourneyCourseOptions())
         toast({ title: 'Unable to load form data', status: 'error' })
       }
     }
@@ -1130,9 +1141,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                                 {label}
                               </Badge>
                               <Text fontSize="sm" color="gray.600">
-                                {courseId
-                                  ? courses.find((course) => course.id === courseId)?.title || courseId
-                                  : 'Unassigned'}
+                                {courseId ? courseTitleById.get(courseId) || courseId : 'Unassigned'}
                               </Text>
                             </HStack>
                           </Flex>

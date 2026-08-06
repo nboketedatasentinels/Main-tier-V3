@@ -162,7 +162,9 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 }) => {
   const toast = useToast()
   const [form, setForm] = useState<OrganizationRecord>(emptyOrganization)
-  const [courses, setCourses] = useState<CourseOption[]>([])
+  // Seed from the T4L catalogue so 3M+ "Select course" dropdowns are populated
+  // immediately (do not wait on Firestore/network fetch).
+  const [courses, setCourses] = useState<CourseOption[]>(() => getMonthlyJourneyCourseOptions())
   const [isLoading, setIsLoading] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [monthlyAssignments, setMonthlyAssignments] = useState<MonthlyCourseAssignments>({})
@@ -182,7 +184,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
 
   const courseLimit = useMemo(() => {
-    const option = programDurations.find((duration) => duration.value === form.programDuration)
+    const duration = Number(form.programDuration)
+    if (!Number.isFinite(duration)) return 0
+    const option = programDurations.find(
+      (entry) => entry.value === duration || Math.abs(entry.value - duration) < 0.0001,
+    )
     return option?.courseCount ?? 0
   }, [form.programDuration])
   const programCadence = useMemo(() => resolveProgramCadence(form.programDuration), [form.programDuration])
@@ -219,9 +225,19 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   )
 
   const sortedCourses = useMemo(() => {
-    if (isMonthlyJourney) return getMonthlyJourneyCourseOptions()
-    return [...courses].sort((a, b) => a.title.localeCompare(b.title))
+    const catalogue = getMonthlyJourneyCourseOptions()
+    if (isMonthlyJourney) return catalogue
+    const fromFetch = [...courses].sort((a, b) => a.title.localeCompare(b.title))
+    return fromFetch.length ? fromFetch : catalogue
   }, [courses, isMonthlyJourney])
+  const courseTitleById = useMemo(() => {
+    const map = new Map<string, string>()
+    sortedCourses.forEach((course) => map.set(course.id, course.title))
+    courses.forEach((course) => {
+      if (!map.has(course.id)) map.set(course.id, course.title)
+    })
+    return map
+  }, [courses, sortedCourses])
   const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
   const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
   const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
@@ -277,7 +293,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setForm(emptyOrganization)
-      setCourses([])
+      setCourses(getMonthlyJourneyCourseOptions())
       setMonthlyAssignments({})
       setOriginalCohortStartDate(null)
       setMembers([])
@@ -316,7 +332,8 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         if (active) setCourses(options)
       })
       .catch(() => {
-        if (active) setCourses([])
+        // Keep the local catalogue so admin course dropdowns stay usable.
+        if (active) setCourses(getMonthlyJourneyCourseOptions())
       })
       .finally(() => {
         if (active) setIsLoading(false)
@@ -1106,9 +1123,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                                 {label}
                               </Badge>
                               <Text fontSize="sm" color="gray.600">
-                                {courseId
-                                  ? courses.find((course) => course.id === courseId)?.title || courseId
-                                  : 'Unassigned'}
+                                {courseId ? courseTitleById.get(courseId) || courseId : 'Unassigned'}
                               </Text>
                             </HStack>
                           </Flex>

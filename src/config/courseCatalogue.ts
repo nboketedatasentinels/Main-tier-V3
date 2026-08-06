@@ -206,9 +206,22 @@ export const MONTHLY_JOURNEY_COURSE_IDS = new Set(
   MONTHLY_JOURNEY_COURSE_CATALOGUE.map((course) => course.id),
 )
 
+/** Coerce duration from form/DB (jsonb may arrive as string). */
+export const coerceProgramDurationMonths = (
+  programDuration?: number | string | null,
+): number | null => {
+  if (programDuration === undefined || programDuration === null || programDuration === '') {
+    return null
+  }
+  const parsed = typeof programDuration === 'number' ? programDuration : Number(programDuration)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
 /** True when program duration is month-based (3 / 6 / 9 months), not 6-week. */
-export const isMonthlyJourneyDuration = (programDuration?: number | null): boolean =>
-  typeof programDuration === 'number' && programDuration >= 3
+export const isMonthlyJourneyDuration = (programDuration?: number | string | null): boolean => {
+  const parsed = coerceProgramDurationMonths(programDuration)
+  return parsed !== null && parsed >= 3
+}
 
 export const getMonthlyJourneyCourseOptions = (): CourseOption[] =>
   MONTHLY_JOURNEY_COURSE_CATALOGUE.map((course) => ({
