@@ -107,7 +107,7 @@ import { revokeChecklistPoints } from '@/services/pointsService'
 import {
   createImpactVerification,
   fetchVerificationStatusByImpactLogIds,
-  markImpactLogChecklistPending,
+  markImpactLogChecklistAwarded,
   sendImpactVerificationEmail,
 } from '@/services/impactVerificationService'
 import {
@@ -1530,11 +1530,26 @@ export const ImpactLogPage: React.FC = () => {
       const activityTitle = payload.title || 'Impact Activity'
       const pointsToAward = activity?.points ?? (journeyType === '6W' ? 2000 : 1000)
 
-      // Gate points on verifier approval - mark checklist pending and email verifier.
-      try {
-        await markImpactLogChecklistPending({ userId: user.uid, weekNumber })
-      } catch (err) {
-        console.warn('[ImpactLog] Failed to mark checklist pending', err)
+      // Award checklist points immediately so Journey Progress + Done (e.g. 1/2)
+      // update as soon as the impact is logged. Verifier email still goes out for
+      // the audit trail; approve is idempotent on the same claim_ref.
+      let pointsAwarded = false
+      let awardMessage: string | undefined
+      if (activity) {
+        try {
+          const award = await markImpactLogChecklistAwarded({
+            userId: user.uid,
+            weekNumber,
+            journeyType,
+            activity,
+            impactLogId: docRef.id,
+          })
+          pointsAwarded = award.awarded
+          awardMessage = award.message
+        } catch (err) {
+          console.warn('[ImpactLog] Failed to award checklist points', err)
+          awardMessage = (err as Error)?.message
+        }
       }
 
       let emailSent = false
@@ -1663,11 +1678,18 @@ export const ImpactLogPage: React.FC = () => {
       setEntries(refreshed as ImpactLogEntry[])
 
       toast({
-        title: 'Impact submitted for verification',
-        description: emailSent
-          ? `We emailed ${trimmedVerifierName} (${trimmedVerifierEmail}). Points stay pending until they approve.`
-          : `Saved as pending. We could not confirm the email to ${trimmedVerifierEmail} - ask them to check spam, or resubmit if needed.`,
-        status: emailSent ? 'success' : 'warning',
+        title: pointsAwarded
+          ? `Impact logged · +${pointsToAward.toLocaleString()} pts`
+          : 'Impact logged',
+        description: pointsAwarded
+          ? emailSent
+            ? `Checklist updated. We also emailed ${trimmedVerifierName} (${trimmedVerifierEmail}).`
+            : 'Checklist occurrence and journey points were updated.'
+          : awardMessage ||
+            (emailSent
+              ? `Saved. We emailed ${trimmedVerifierName}. Points may still be catching up - refresh Weekly Checklist.`
+              : 'Saved. Open Weekly Checklist and refresh if points are not visible yet.'),
+        status: pointsAwarded ? 'success' : 'warning',
         duration: 8000,
         isClosable: true,
       })

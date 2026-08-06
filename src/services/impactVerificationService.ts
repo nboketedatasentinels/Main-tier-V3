@@ -1,5 +1,7 @@
 import { supabase } from '@/services/supabase'
 import { upsertChecklistActivity } from '@/services/checklistService'
+import { awardChecklistPoints } from '@/services/pointsService'
+import type { ActivityDef, JourneyType } from '@/config/pointsConfig'
 
 const SEND_FN = 'send-impact-verification-email'
 const RESOLVE_FN = 'resolve-impact-verification'
@@ -116,7 +118,7 @@ export async function sendImpactVerificationEmail(params: {
   }
 }
 
-/** Mark checklist impact_log as pending while waiting on the verifier. */
+/** Mark checklist impact_log pending while waiting on the verifier. */
 export async function markImpactLogChecklistPending(params: {
   userId: string
   weekNumber: number
@@ -132,6 +134,95 @@ export async function markImpactLogChecklistPending(params: {
       notes: 'Awaiting verifier approval',
     },
   })
+}
+
+/**
+ * Award checklist impact_log points for one Impact Log entry and mark that week
+ * completed. Idempotent via claimRef = impactLogId (verifier approve reuses the
+ * same ledger id and no-ops if already awarded).
+ */
+export async function markImpactLogChecklistAwarded(params: {
+  userId: string
+  weekNumber: number
+  journeyType: JourneyType
+  activity: ActivityDef
+  impactLogId: string
+}): Promise<{ awarded: boolean; message?: string }> {
+  const award = await awardChecklistPoints({
+    uid: params.userId,
+    journeyType: params.journeyType,
+    weekNumber: params.weekNumber,
+    activity: params.activity,
+    source: 'impact_log',
+    claimRef: params.impactLogId,
+  })
+
+  await upsertChecklistActivity({
+    userId: params.userId,
+    weekNumber: params.weekNumber,
+    activityId: 'impact_log',
+    patch: {
+      status: award.awarded || award.reason === 'already_awarded' ? 'completed' : 'pending',
+      hasInteracted: true,
+      rejectionReason: null,
+      notes: award.awarded
+        ? 'Impact logged - checklist points awarded'
+        : award.reason === 'already_awarded'
+          ? 'Impact log already counted'
+          : award.message || 'Impact logged',
+    },
+  })
+
+  return { awarded: Boolean(award.awarded), message: award.message }
+}
+
+/**
+ * Backfill: any non-rejected impact_logs that never wrote to points_ledger get
+ * awarded now (idempotent). Used when opening Weekly Checklist so already-logged
+ * impacts still move Done (0/2 → 1/2) and Journey Progress.
+ */
+export async function syncImpactLogsToChecklist(params: {
+  userId: string
+  journeyType: JourneyType
+  journeyStartDate?: string | Date | null
+  currentWeek?: number | null
+}): Promise<number> {
+  const { getActivitiesForJourney, JOURNEY_META } = await import('@/config/pointsConfig')
+  const { listMyImpactLogs } = await import('@/services/impactLogService')
+
+  const activity = getActivitiesForJourney(params.journeyType).find((a) => a.id === 'impact_log')
+  if (!activity) return 0
+
+  const meta = JOURNEY_META[params.journeyType]
+  const resolveWeek = (dateString: string): number => {
+    if (!params.journeyStartDate) {
+      return Math.min(Math.max(1, params.currentWeek ?? 1), meta.weeks)
+    }
+    const startDate = new Date(params.journeyStartDate)
+    const impactDate = new Date(dateString)
+    const diffDays = Math.floor((impactDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+    return Math.min(Math.max(1, Math.floor(diffDays / 7) + 1), meta.weeks)
+  }
+
+  const logs = await listMyImpactLogs(params.userId)
+  let awardedCount = 0
+  for (const log of logs) {
+    if (log.verificationStatus === 'rejected') continue
+    if (!log.date) continue
+    try {
+      const result = await markImpactLogChecklistAwarded({
+        userId: params.userId,
+        weekNumber: resolveWeek(log.date),
+        journeyType: params.journeyType,
+        activity,
+        impactLogId: log.id,
+      })
+      if (result.awarded) awardedCount += 1
+    } catch (error) {
+      console.warn('[impactVerification] sync award skipped', log.id, error)
+    }
+  }
+  return awardedCount
 }
 
 async function invokeResolve(params: {

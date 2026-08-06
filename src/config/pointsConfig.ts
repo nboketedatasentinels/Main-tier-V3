@@ -314,7 +314,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     id: "impact_log",
     baseId: "impact_log",
     title: "Impact Log Entry",
-    description: "Log an impact story to capture outcomes and progress. A verifier must approve before points are awarded.",
+    description: "Log an impact story to capture outcomes and progress.",
     points: 1000,
     behaviorType: "window_limited",
     approvalType: "auto",
@@ -322,7 +322,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     week: 4,
     category: "Impact",
     flexibleWeeks: true,
-    frequencyNote: "Record your impact regularly. Points pending verifier approval.",
+    frequencyNote: "Record your impact regularly. Each log counts toward checklist points.",
   },
   {
     id: "lift_module",

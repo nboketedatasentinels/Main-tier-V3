@@ -37,6 +37,7 @@ import { normalizeRole } from '@/utils/role'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { revokeChecklistPoints } from '@/services/pointsService'
+import { syncImpactLogsToChecklist } from '@/services/impactVerificationService'
 import { handleActivityCompletion } from '@/utils/activityRouter'
 import { triggerHaptic } from '@/utils/haptics'
 import type { PointsVerificationRequest } from '@/services/pointsVerificationService'
@@ -399,6 +400,30 @@ export function useWeeklyChecklistViewModel() {
   // one-shot fetches (not realtime), so an award must trigger a reload.
   const [ledgerRefreshKey, setLedgerRefreshKey] = useState(0)
   const refreshLedger = useCallback(() => setLedgerRefreshKey((k) => k + 1), [])
+
+  // Link Impact Log entries → checklist occurrences + points_ledger. Covers logs
+  // submitted before awards were wired, and refreshes Done (0/2 → 1/2) + Journey
+  // Progress when the learner opens Weekly Checklist.
+  useEffect(() => {
+    if (!user?.uid || !journey?.journeyType) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const awarded = await syncImpactLogsToChecklist({
+          userId: user.uid,
+          journeyType: journey.journeyType,
+          journeyStartDate: journey.journeyStartDate,
+          currentWeek: journey.currentWeek,
+        })
+        if (!cancelled && awarded > 0) refreshLedger()
+      } catch (error) {
+        console.warn('[WeeklyChecklist] impact log sync skipped', error)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.uid, journey?.journeyType, journey?.journeyStartDate, journey?.currentWeek, refreshLedger])
 
   useEffect(() => {
     if (!user) return
