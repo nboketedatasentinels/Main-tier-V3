@@ -18,10 +18,9 @@ import { getPointsPerCourse } from '@/config/pointsConfig'
 import type { CourseAvailability } from '@/components/courses/AssignedCourseCard'
 import type { UserProfile } from '@/types'
 import { isFreeUser } from '@/utils/membership'
-import { FREE_COURSE } from '@/constants/courseConfig'
 
-/** Free learners (no org) see this course beside Rules of Engagement on weekly glance. */
-const FREE_USER_COURSE_TITLE = FREE_COURSE.title
+/** Complementary course shown beside Rules of Engagement for free (non-org) learners. */
+const FREE_USER_COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
 
 export interface AssignedCourse {
   id: string
@@ -89,18 +88,13 @@ const buildCourse = (courseId: string) => {
 }
 
 const buildFreeUserCourse = (): AssignedCourse | null => {
-  const details = getCourseDetailsFromMapping(FREE_USER_COURSE_TITLE)
-  const metadata = getCourseMetadataFromMapping(FREE_USER_COURSE_TITLE)
-  if (!details && !FREE_COURSE.externalUrl) return null
+  const course = buildCourse(FREE_USER_COMPLEMENTARY_COURSE_ID)
+  if (!course) return null
+  const details = getCourseDetailsFromMapping(course.title)
   return {
-    id: details?.slug ?? 'foundations-of-leadership',
-    title: FREE_USER_COURSE_TITLE,
-    description: details?.description ?? 'Lead cohesive teams with clarity and trust.',
-    link: FREE_COURSE.externalUrl || details?.link,
-    estimatedMinutes: metadata?.estimatedMinutes,
-    difficulty: metadata?.difficulty,
+    ...course,
     points: details?.points ?? null,
-    periodLabel: 'Starter course',
+    periodLabel: 'Complementary',
     periodNoun: 'week',
     dateRange: undefined,
     unlockDate: null,
@@ -113,8 +107,8 @@ const buildFreeUserCourse = (): AssignedCourse | null => {
  * availability rules the full My Courses timeline uses. Blocks with no course
  * assigned are dropped, so this is "the courses I was given", in order.
  *
- * Free non-org learners get the starter complementary course so weekly glance
- * can keep the video + course flex row populated.
+ * Free non-org learners get Transformational Leadership (complementary) so
+ * weekly glance can keep the video + course flex row populated.
  *
  * Used by the weekly glance dashboard; My Courses keeps its own timeline
  * because it also renders empty blocks and Firestore-sourced course docs.
