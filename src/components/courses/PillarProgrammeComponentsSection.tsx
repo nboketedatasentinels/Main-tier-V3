@@ -59,7 +59,7 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar, card
   const pillarLabel = PILLAR_METADATA[pillar].shortName
 
   const cards = (
-    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} alignItems="start">
       {entries.map((entry) => (
         <ProgrammeComponentCard key={entry.id} entry={entry} />
       ))}
@@ -214,7 +214,9 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
       border="1px solid"
       borderColor="gray.200"
       overflow="hidden"
-      h="full"
+      // Height follows content only - never stretch to match an expanded sibling.
+      h="auto"
+      alignSelf="start"
       display="flex"
       flexDirection="column"
       transition="all 0.2s ease"
@@ -230,12 +232,7 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
     >
       <Box h="3px" bg={visual.brand} />
 
-      <Stack
-        spacing={4}
-        p={{ base: 4, md: 5 }}
-        flex="1"
-        justify="space-between"
-      >
+      <Stack spacing={4} p={{ base: 4, md: 5 }}>
         <Stack
           spacing={4}
           as={isExpandable ? 'button' : undefined}
