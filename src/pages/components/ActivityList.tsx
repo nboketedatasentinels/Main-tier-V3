@@ -115,6 +115,12 @@ interface ActivityListProps {
   pendingWeeksByActivity: Record<string, Set<number>>
   isWeekLocked: boolean
   isAdmin: boolean
+  /**
+   * Intro (4W) journeys: keep one row per activity under its start week with the
+   * correct Done frequency (e.g. 0/3 podcast, 0/2 impact). Do not fan the same
+   * "0 / 3" label across duplicate week rows.
+   */
+  pinMultiClaimsToStartWeek?: boolean
   onOpenCurrentWeek: () => void
   onMarkCompleted: (activity: ActivityState, weekOverride?: number) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
@@ -186,6 +192,7 @@ export const ActivityList = ({
   pendingWeeksByActivity,
   isWeekLocked,
   isAdmin,
+  pinMultiClaimsToStartWeek = false,
   onOpenCurrentWeek,
   onMarkCompleted,
   onOpenProof,
@@ -326,6 +333,21 @@ export const ActivityList = ({
           activity.availability.state === 'available'
         if (isTodo) {
           const used = (activity.completedCount ?? 0) + pendingWeeks.size
+          // Intro journeys: one row under the start week with the sheet frequency
+          // in Done (e.g. 0/3). Longer journeys still fan claims across weeks.
+          if (pinMultiClaimsToStartWeek) {
+            pushWeekRow(startWeek, {
+              activity,
+              weekOverride: startWeek,
+              occurrence: 0,
+              occurrenceNumber: totalCap > 1 ? used + 1 : undefined,
+              occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+              rowKind: 'todo',
+            })
+            todoTotalCount += 1
+            todoPointsTotal += (activity.points ?? 0) * Math.max(1, totalCap - used)
+            return
+          }
           const remaining = Math.max(1, totalCap - used)
           const usedWeeks = new Set<number>([...completedWeeks, ...pendingWeeks])
           for (let i = 0; i < remaining; i++) {
@@ -389,6 +411,21 @@ export const ActivityList = ({
       const usedTotal = completedWeeks.size + pendingWeeks.size
       const remaining = maxTotal === Infinity ? 0 : Math.max(0, maxTotal - usedTotal)
       if (remaining === 0) return
+
+      // Intro journeys: one row under start week with the full frequency in Done.
+      if (pinMultiClaimsToStartWeek) {
+        pushWeekRow(startWeek, {
+          activity,
+          weekOverride: startWeek,
+          occurrence: 0,
+          occurrenceNumber: maxTotal !== Infinity && maxTotal > 1 ? usedTotal + 1 : undefined,
+          occurrenceTotal: maxTotal !== Infinity && maxTotal > 1 ? maxTotal : undefined,
+          rowKind: 'todo',
+        })
+        todoTotalCount += 1
+        todoPointsTotal += (activity.points ?? 0) * remaining
+        return
+      }
 
       // Respect per-window caps (e.g. peer_to_peer maxPerWindow=1). Previously
       // week 2 stayed actionable after a week-1 claim in the same window, and
@@ -474,6 +511,7 @@ export const ActivityList = ({
     completedWeeksByActivity,
     pendingWeeksByActivity,
     programDurationWeeks,
+    pinMultiClaimsToStartWeek,
   ])
 
   const sortedTodoWeeks = useMemo(

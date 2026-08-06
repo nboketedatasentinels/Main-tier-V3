@@ -32,6 +32,7 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         pendingWeeksByActivity={vm.pendingWeeksByActivity}
         isWeekLocked={vm.isWeekLocked}
         isAdmin={vm.isAdmin}
+        pinMultiClaimsToStartWeek={vm.journey?.journeyType === '4W'}
         onOpenCurrentWeek={() => vm.setSelectedWeek(vm.journey?.currentWeek ?? vm.selectedWeek)}
         onMarkCompleted={vm.markCompleted}
         onMarkNotStarted={vm.markNotStarted}
