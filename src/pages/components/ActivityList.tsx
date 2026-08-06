@@ -253,7 +253,7 @@ export const ActivityList = ({
         weekOverride: week,
         occurrence: occurrenceNumber,
         occurrenceNumber: occurrenceNumber ?? Math.min(activity.completedCount ?? 1, totalCap),
-        occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+        occurrenceTotal: Math.max(1, totalCap),
         rowKind: 'done',
       })
     }
@@ -271,7 +271,7 @@ export const ActivityList = ({
         weekOverride: week,
         occurrence: occurrenceNumber,
         occurrenceNumber: occurrenceNumber ?? Math.min((activity.completedCount ?? 0) + 1, totalCap),
-        occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+        occurrenceTotal: Math.max(1, totalCap),
         rowKind: 'pending',
       })
     }
@@ -338,7 +338,7 @@ export const ActivityList = ({
               weekOverride: targetWeek,
               occurrence: i,
               occurrenceNumber,
-              occurrenceTotal: totalCap > 1 ? totalCap : undefined,
+              occurrenceTotal: Math.max(1, totalCap),
               rowKind: 'todo',
             })
             todoTotalCount += 1
@@ -425,7 +425,8 @@ export const ActivityList = ({
           weekOverride: w,
           occurrence: assigned,
           occurrenceNumber,
-          occurrenceTotal: maxTotal !== Infinity && maxTotal > 1 ? maxTotal : undefined,
+          occurrenceTotal:
+            maxTotal === Infinity ? 1 : Math.max(1, maxTotal),
           rowKind: 'todo',
         })
         todoTotalCount += 1
@@ -784,7 +785,7 @@ export const ActivityList = ({
                           onOpenProof={(a) => onOpenProof(a, weekOverride)}
                           onRefreshLedger={onRefreshLedger}
                           occurrenceNumber={occurrenceNumber}
-                          occurrenceTotal={totalCap > 1 ? totalCap : undefined}
+                          occurrenceTotal={Math.max(1, totalCap)}
                           pendingCount={
                             pendingWeeksByActivity[activity.id]?.size ?? 0
                           }

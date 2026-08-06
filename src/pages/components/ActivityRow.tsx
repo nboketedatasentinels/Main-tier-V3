@@ -193,9 +193,13 @@ export const ActivityRow = ({
     isActionInFlight
 
   const visualState = getVisualState(activity)
-  const totalFrequency = occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
+  // Journey frequency from the points sheet (1, 2, 3, …) — same on every week row.
+  const totalFrequency = Math.max(
+    1,
+    occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1,
+  )
   const completedCount = activity.completedCount ?? 0
-  const hasFrequency = totalFrequency > 1
+  const hasMultipleOccurrences = totalFrequency > 1
   // Pending submissions count toward progress so DONE doesn't stay at 0/6
   // while the learner is locked out of re-submitting.
   const pendingClaims = Math.max(
@@ -204,19 +208,27 @@ export const ActivityRow = ({
     visualState === 'pending_review' ? 1 : 0,
   )
   const consumedCount = completedCount + pendingClaims
-  // Line-through ONLY when every occurrence is fully approved (e.g. 3/3).
-  const isFullyComplete =
-    activity.availability.state === 'permanently_exhausted' ||
-    (hasFrequency
-      ? completedCount >= totalFrequency
-      : visualState === 'completed' || (weekClaimComplete && visualState !== 'pending_review'))
-  const showStrike = isFullyComplete
   // Journey-total progress (e.g. 1/2) must look the same in every week row -
   // never derive the numerator from the week-local occurrence index.
-  const displayDoneCount = hasFrequency
-    ? Math.min(totalFrequency, Math.max(0, consumedCount))
-    : 0
-  const occurrenceLabel = hasFrequency ? `${displayDoneCount} / ${totalFrequency}` : null
+  const displayDoneCount = Math.min(totalFrequency, Math.max(0, consumedCount))
+  // Line-through + lock ONLY when every occurrence is fully approved (e.g. 3/3).
+  const isFullyComplete =
+    activity.availability.state === 'permanently_exhausted' ||
+    completedCount >= totalFrequency ||
+    (totalFrequency === 1 &&
+      (visualState === 'completed' ||
+        (weekClaimComplete && visualState !== 'pending_review')))
+  const showStrike = isFullyComplete
+  // Done column:
+  //   once  → "1" until done, then "1 / 1"
+  //   twice → "0 / 2" → "1 / 2" → "2 / 2"
+  //   thrice → "0 / 3" → "1 / 3" → … → "3 / 3"
+  const occurrenceLabel =
+    totalFrequency === 1
+      ? displayDoneCount >= 1 || isFullyComplete
+        ? '1 / 1'
+        : '1'
+      : `${displayDoneCount} / ${totalFrequency}`
   const statusBadgeLabel = isFullyComplete
     ? 'Completed'
     : visualState === 'pending_review'
@@ -237,12 +249,12 @@ export const ActivityRow = ({
     if (isAdmin) return null
     if (lockedByWeek) return `This activity opens after Week ${currentWeek}.`
     if (visualState === 'pending_review' && !isFullyComplete) {
-      return hasFrequency
+      return hasMultipleOccurrences
         ? `Submitted for this week (${displayDoneCount} of ${totalFrequency}) - awaiting partner review.`
         : 'Submitted for this week - awaiting partner review.'
     }
     if (weekClaimComplete && !isFullyComplete) {
-      return hasFrequency
+      return hasMultipleOccurrences
         ? `Done for this week (${displayDoneCount} of ${totalFrequency}). More occurrences unlock in later weeks.`
         : "You've already submitted this for the week."
     }
@@ -281,9 +293,13 @@ export const ActivityRow = ({
   // Which claim this row is for (2 of 3 → "Do it a 2nd time").
   const claimAttempt =
     occurrenceNumber ??
-    (hasFrequency ? Math.min(totalFrequency, Math.max(1, completedCount + 1)) : 1)
+    (hasMultipleOccurrences
+      ? Math.min(totalFrequency, Math.max(1, completedCount + 1))
+      : 1)
   const attemptSuffix =
-    hasFrequency && claimAttempt > 1 ? ` a ${ordinalLabel(claimAttempt)} time` : ''
+    hasMultipleOccurrences && claimAttempt > 1
+      ? ` a ${ordinalLabel(claimAttempt)} time`
+      : ''
 
   const ctaLabel = (() => {
     if (isFullyComplete) return 'Completed'
@@ -367,10 +383,13 @@ export const ActivityRow = ({
       id={`activity-${activity.id}`}
       borderTop="1px solid"
       borderColor="gray.100"
-      bg={showDetails ? 'gray.50' : 'transparent'}
+      bg={
+        isFullyComplete ? 'gray.50' : showDetails ? 'gray.50' : 'transparent'
+      }
       _hover={canExpand ? { bg: 'gray.50' } : undefined}
       transition="background-color 0.12s"
-      opacity={isFullyComplete ? 0.85 : 1}
+      opacity={isFullyComplete ? 0.55 : 1}
+      pointerEvents={isFullyComplete ? 'none' : 'auto'}
     >
       <Box
         as="button"
@@ -434,18 +453,14 @@ export const ActivityRow = ({
               >
                 +{activity.points.toLocaleString()} pts
               </Text>
-              {occurrenceLabel && (
-                <>
-                  <Text>·</Text>
-                  <Text
-                    fontWeight="semibold"
-                    color={showStrike ? 'gray.400' : 'gray.600'}
-                    textDecoration={showStrike ? 'line-through' : 'none'}
-                  >
-                    {occurrenceLabel}
-                  </Text>
-                </>
-              )}
+              <Text>·</Text>
+              <Text
+                fontWeight="semibold"
+                color={showStrike ? 'gray.400' : 'gray.600'}
+                textDecoration={showStrike ? 'line-through' : 'none'}
+              >
+                {occurrenceLabel}
+              </Text>
             </HStack>
           </Stack>
 
@@ -455,10 +470,10 @@ export const ActivityRow = ({
             color={showStrike ? 'gray.400' : 'gray.600'}
             display={{ base: 'none', md: 'block' }}
             textAlign="left"
-            fontWeight={hasFrequency ? 'semibold' : 'normal'}
+            fontWeight="semibold"
             textDecoration={showStrike ? 'line-through' : 'none'}
           >
-            {occurrenceLabel ?? '-'}
+            {occurrenceLabel}
           </Text>
 
           {/* Approval type (desktop) */}
