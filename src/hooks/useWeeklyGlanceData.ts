@@ -3,10 +3,12 @@ import type { Timestamp } from 'firebase/firestore'
 import { supabase } from '@/services/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { getWeekKey, getCurrentWeekNumber, getJourneyTiming } from '@/utils/weekCalculations'
-import { JOURNEY_META, getActivityDefinitionById } from '@/config/pointsConfig'
+import { JOURNEY_META, getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { InspirationQuote } from '@/types'
 import { leadershipQuotes } from '@/services/quotes'
 import { UserProfileExtended } from '@/services/userProfileService'
+import { isFreeUser } from '@/utils/membership'
+import { syncImpactLogsToChecklist } from '@/services/impactVerificationService'
 
 export interface WeeklyPoints {
   id: string
@@ -477,7 +479,7 @@ export const useWeeklyGlanceData = () => {
     }
   }, [profileId])
 
-  /* ---- recent ledger entries ---- */
+  /* ---- recent ledger entries (+ impact-log sync so glance matches checklist) ---- */
   useEffect(() => {
     if (!profileId) {
       setLoading(prev => ({ ...prev, ledger: false }))
@@ -485,9 +487,26 @@ export const useWeeklyGlanceData = () => {
     }
     let isActive = true
 
-    const run = async () => {
+    const loadLedger = async () => {
       setLoading(prev => ({ ...prev, ledger: true }))
       try {
+        const resolvedJourney = (
+          journeyType || (isFreeUser(profile) ? '4W' : '6W')
+        ) as JourneyType
+
+        // Backfill impact_log awards that failed before the award RPC fix.
+        try {
+          await syncImpactLogsToChecklist({
+            userId: profileId,
+            journeyType: resolvedJourney,
+            journeyStartDate: profile?.journeyStartDate,
+            currentWeek: weekNumber,
+          })
+        } catch (syncError) {
+          console.warn('[WeeklyGlance] impact log sync skipped', syncError)
+        }
+        if (!isActive) return
+
         const { data: rows, error } = await supabase
           .from('points_ledger')
           .select('*')
@@ -502,7 +521,7 @@ export const useWeeklyGlanceData = () => {
             const row = r as Row
             const activityDef = getActivityDefinitionById({
               activityId: row.activity_id as string,
-              journeyType,
+              journeyType: resolvedJourney,
             })
             return {
               id: row.id as string,
@@ -521,11 +540,24 @@ export const useWeeklyGlanceData = () => {
       }
     }
 
-    void run()
+    void loadLedger()
+
+    const channel = supabase
+      .channel(`glance_ledger_${profileId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'points_ledger', filter: `uid=eq.${profileId}` },
+        () => {
+          void loadLedger()
+        },
+      )
+      .subscribe()
+
     return () => {
       isActive = false
+      void supabase.removeChannel(channel)
     }
-  }, [profileId, journeyType])
+  }, [profileId, journeyType, profile, weekNumber])
 
   /* ---- focus areas (from organization settings) ---- */
   useEffect(() => {

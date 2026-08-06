@@ -1127,7 +1127,7 @@ export const WeeklyGlancePage = () => {
                 Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}
               </Text>
             </HStack>
-            <Skeleton isLoaded={!data.loading.points} rounded="md">
+            <Skeleton isLoaded={!data.loading.ledger} rounded="md">
               <Text fontSize="xs" fontWeight="semibold" color="gray.600">
                 {journeyProgress}% of pass mark
               </Text>
@@ -1153,7 +1153,7 @@ export const WeeklyGlancePage = () => {
 
         {/* KPI Strip */}
         <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={4}>
-          <Skeleton isLoaded={!data.loading.points} rounded="xl">
+          <Skeleton isLoaded={!data.loading.ledger} rounded="xl">
             <KpiTile
               label="Points earned"
               value={totalEarned.toLocaleString()}
