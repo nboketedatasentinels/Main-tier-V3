@@ -493,7 +493,9 @@ interface JourneyActivityEntry {
 
 const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[]>> = {
   "4W": [
-    // Free-user intro checklist (no org): limited activities, max 15,000 / pass 9,000.
+    // Free-user intro checklist (no org). Product sheet / docs/points-system.md:
+    // watch 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
+    // shameless 1500 + ai tool 1000 = 15,000 / pass 9,000.
     { activityId: "watch_podcast", totalFrequency: 3 },
     {
       activityId: "webinar_workbook",
@@ -504,7 +506,12 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       requiresApprovalOverride: true,
     },
     { activityId: "impact_log", totalFrequency: 2 },
-    { activityId: "lift_module", totalFrequency: 1, pointsOverride: 3000 },
+    {
+      activityId: "lift_module",
+      totalFrequency: 1,
+      pointsOverride: 3000,
+      titleOverride: "LIFT Course Module Completed",
+    },
     {
       activityId: "book_club",
       totalFrequency: 1,
@@ -517,9 +524,13 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       pointsOverride: 1500,
       titleOverride: "Attend Shameless Circle Session",
     },
-    { activityId: "ai_tool_review", totalFrequency: 1 },
-    // Starter Kit programme components (same parts as My Courses). 0 pts so the
-    // intro 15,000 max stays locked; content opens via the parts panel.
+    {
+      activityId: "ai_tool_review",
+      totalFrequency: 1,
+      titleOverride: "Submit an AI Tool for Review",
+    },
+    // Starter Kit programme components (same parts as My Courses). 0 pts so they
+    // do not affect the intro points table; content opens via the Week 1 cards.
     {
       activityId: "capstone",
       totalFrequency: 3,
@@ -641,10 +652,10 @@ export const JOURNEY_META: Record<JourneyType, JourneyMetaEntry> = {
     weeklyTarget: 3750,
     windowTarget: 7500,
     passMarkPoints: 9000,
+    // Product intro sheet (points each × frequency):
     // watch 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
-    // shameless 1500 + ai tool 1000 = 15,000.
-    // Capstone / case study / practical are on the checklist at 0 pts so free
-    // practitioners can open Starter Kit parts without changing the intro max.
+    // shameless 1500 + ai tool 1000 = 15,000. Capstone / case study / practical
+    // stay on the checklist at 0 pts and do not change this total.
     maxPossiblePoints: 15000,
     mode: "intro",
     timelineDisplay: "duration",

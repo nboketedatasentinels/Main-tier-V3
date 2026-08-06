@@ -52,10 +52,13 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
 
     expect(byId.get('lift_module')?.points).toBe(3000)
+    expect(byId.get('lift_module')?.title).toBe('LIFT Course Module Completed')
     expect(byId.get('book_club')?.points).toBe(1500)
     expect(byId.get('book_club')?.title).toBe('Attend Book Club Session')
     expect(byId.get('shameless_circle')?.points).toBe(1500)
     expect(byId.get('shameless_circle')?.title).toBe('Attend Shameless Circle Session')
+    expect(byId.get('ai_tool_review')?.points).toBe(1000)
+    expect(byId.get('ai_tool_review')?.title).toBe('Submit an AI Tool for Review')
     expect(byId.get('ai_tool_review')?.activityPolicy?.maxTotal).toBe(1)
     expect(byId.get('shameless_circle')?.activityPolicy?.maxTotal).toBe(1)
 

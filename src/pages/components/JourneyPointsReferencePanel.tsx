@@ -67,6 +67,11 @@ export const JourneyPointsReferencePanel = ({
   const isIntroJourney = journeyType === '4W'
   const checklistTitle = JOURNEY_CHECKLIST_TITLES[journeyType] ?? journeyType
   const crossRef = getJourneyPointsCrossReference(journeyType)
+  // Intro sheet only lists scored activities - keep 0-pt programme components
+  // off the reference table (they still appear as Week 1 cards).
+  const activityRows = isIntroJourney
+    ? crossRef.activityBreakdown.filter((row) => row.maxPoints > 0)
+    : crossRef.activityBreakdown
   const hasMentor = leadershipAvailability?.hasMentor ?? true
   const hasAmbassador = leadershipAvailability?.hasAmbassador ?? true
   const passMark = calculatePassMark(journeyType, hasMentor, hasAmbassador)
@@ -119,7 +124,7 @@ export const JourneyPointsReferencePanel = ({
             </Tr>
           </Thead>
           <Tbody>
-            {crossRef.activityBreakdown.map((row) => {
+            {activityRows.map((row) => {
               const leadership = isLeadershipActivity(row.activityId)
               const missingLeadership =
                 (row.activityId === 'mentor_meetup' && !hasMentor) ||
