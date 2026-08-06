@@ -100,17 +100,17 @@ const RESTRICTED_FREE_FEATURES: RestrictedFeatureConfig[] = [
       'One-on-one peer matching',
       'Session scheduling and confirmations',
       'Progress accountability workflows',
-      'Access to premium networking tools',
+      'Access to networking tools',
     ],
   },
   {
     pathPrefix: '/app/leadership-council',
     featureName: 'Leadership Council',
-    tooltip: 'Upgrade required to join premium leadership council sessions.',
+    tooltip: 'Upgrade required to join leadership council sessions.',
     benefits: [
       'Leadership council live sessions',
       'Advanced facilitation playbooks',
-      'Premium discussion circles',
+      'Discussion circles',
       'Leadership growth tracking',
     ],
   },
@@ -275,7 +275,6 @@ export const MainLayout: React.FC = () => {
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, isPrimary: true },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'My Courses', path: '/app/courses', icon: BookOpen, badge: { label: '1 new' }, isPrimary: true },
-          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
         ],
@@ -289,6 +288,7 @@ export const MainLayout: React.FC = () => {
           { label: 'WhatsApp Access', path: '/app/whatsapp-access', icon: MessageCircle },
           { label: 'Tools', path: '/app/tools', icon: Wrench },
           { label: 'Feedback', path: '/app/feedback', icon: MessageSquare },
+          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
         ],
       },
     ],
@@ -321,7 +321,7 @@ export const MainLayout: React.FC = () => {
       onUpgradeModalOpen()
       toast({
         title: 'Upgrade required',
-        description: `${feature.featureName} is available on paid plans.`,
+        description: `${feature.featureName} is available after you upgrade.`,
         status: 'info',
         duration: 3500,
         isClosable: true,
@@ -913,10 +913,10 @@ export const MainLayout: React.FC = () => {
       <PlatformTour isOpen={showTour} onClose={handleTourClosed} />
 
       <UpgradePromptModal
-        featureName={selectedRestrictedFeature?.featureName ?? 'Premium Feature'}
+        featureName={selectedRestrictedFeature?.featureName ?? 'This feature'}
         benefits={
           selectedRestrictedFeature?.benefits ?? [
-            'Unlock paid-only collaboration features',
+            'Unlock collaboration features with an upgrade',
             'Access advanced leadership tools',
             'Use the full journey and ecosystem toolkit',
           ]

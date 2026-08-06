@@ -60,8 +60,8 @@ export const UpgradePage: React.FC = () => {
               <Stack spacing={3}>
                 <Heading size="md">Your membership is active</Heading>
                 <Text color="gray.600">
-                  Premium access is already unlocked for your account. Jump back into the dashboard to explore your
-                  paid features.
+                  Full access is already unlocked for your account. Jump back into the dashboard to explore your
+                  upgraded features.
                 </Text>
                 <Button alignSelf="flex-start" colorScheme="purple" onClick={() => navigate('/app/leaderboard')}>
                   Go to Dashboard
@@ -79,15 +79,15 @@ export const UpgradePage: React.FC = () => {
           >
             <Icon as={Sparkles} color="white" opacity={0.2} boxSize={28} position="absolute" right={-6} top={-6} />
             <Stack spacing={4} maxW="3xl">
-              <Tag size="lg" colorScheme="purple" w="fit-content">
-                Premium Upgrade Journey
+                <Tag size="lg" colorScheme="purple" w="fit-content">
+                Upgrade Journey
               </Tag>
               <Heading size="2xl">
-                {isPaid ? 'Premium access confirmed' : 'Unlock your full leadership potential'}
+                {isPaid ? 'Full access confirmed' : 'Unlock your full leadership potential'}
               </Heading>
               <Text fontSize="lg" color="gray.700">
                 {isPaid
-                  ? 'You are already upgraded. Explore paid features and live cohorts from your dashboard.'
+                  ? 'You are already upgraded. Explore full-access features and live cohorts from your dashboard.'
                   : 'Enroll in our 6-week journey cohorts or request a custom upgrade pathway. We\'ll respond within 24 hours.'}
                 {source ? ` (via ${source})` : ''}
               </Text>
@@ -102,7 +102,7 @@ export const UpgradePage: React.FC = () => {
                       Request Upgrade
                     </Button>
                     <Button variant="outline" size="lg" colorScheme="purple" onClick={() => navigate('/login')}>
-                      Already Paid? Sign In
+                      Already upgraded? Sign In
                     </Button>
                   </>
                 )}
@@ -119,7 +119,7 @@ export const UpgradePage: React.FC = () => {
 
           {!isPaid && (
             <UpgradeCtaCard
-              headline="Unlock Premium Features"
+              headline="Unlock full access"
               benefits={['Unlimited impact entries', 'Advanced analytics', 'Priority support']}
               onClick={onOpen}
               storageKey="upgrade-page-cta"

@@ -122,7 +122,7 @@ export const CompanyCodeModal: React.FC<CompanyCodeModalProps> = ({
     await refreshProfile({ reason: 'company-code-upgrade' })
 
     toast({
-      title: 'You are now a paid member',
+      title: 'You are upgraded',
       description: claimedOrgName
         ? `Connected to ${claimedOrgName}. Your membership has been upgraded.`
         : 'Company code saved successfully. Your membership has been upgraded.',

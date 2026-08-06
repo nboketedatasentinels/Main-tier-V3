@@ -17,7 +17,7 @@ export const FreeTierGuard: React.FC<FreeTierGuardProps> = ({
   children,
   fallbackPath,
   title = 'Upgrade required',
-  description = 'This area is available on paid plans. Upgrade to continue.',
+  description = 'This area is available after you upgrade. Continue when you are ready.',
   blockedRoles = ['free_user'],
 }) => {
   const { profile } = useAuth()

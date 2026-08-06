@@ -195,7 +195,7 @@ export const LeadershipBoardPage: React.FC = () => {
   const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
-  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('This feature')
   const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [virtualOffset, setVirtualOffset] = useState(0)
   const [leaderboardPage, setLeaderboardPage] = useState(1)
@@ -235,7 +235,7 @@ export const LeadershipBoardPage: React.FC = () => {
       'Access one-on-one peer matching',
       'Join guided peer accountability sessions',
       'Track weekly collaboration momentum',
-      'Unlock premium networking workflows',
+      'Unlock networking workflows',
     ])
     onUpgradeOpen()
   }, [onUpgradeOpen])
@@ -1677,7 +1677,7 @@ export const LeadershipBoardPage: React.FC = () => {
 
       <UpgradePromptModal
         featureName={upgradeFeatureName}
-        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock collaboration features with an upgrade']}
         isOpen={isUpgradeOpen}
         onClose={onUpgradeClose}
       />

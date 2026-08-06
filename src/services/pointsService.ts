@@ -79,7 +79,7 @@ const normalizeClaimRef = (params: { claimRef: string; byteBudget: number }) => 
   return `${truncatedPrefix}${suffix}`;
 };
 
-const buildLedgerDocumentId = (params: {
+export const buildLedgerDocumentId = (params: {
   uid: string;
   weekNumber: number;
   activityId: string;

@@ -1162,7 +1162,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
             </Text>
             <HStack spacing={3} flexWrap="wrap">
               <Badge colorScheme="purple" borderRadius="full">
-                Premium access
+                Full access
               </Badge>
               <Text color="purple.700" fontSize="sm">
                 All courses are unlocked for your account.

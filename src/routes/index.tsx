@@ -308,7 +308,7 @@ export const AppRoutes = () => {
             element={
               <FreeTierGuard
                 fallbackPath="/app/weekly-glance"
-                description="Peer Connect is available on paid plans."
+                description="Peer Connect is available after you upgrade."
                 title="Upgrade to connect"
               >
                 <PeerConnectPage />
@@ -320,7 +320,7 @@ export const AppRoutes = () => {
             element={
               <FreeTierGuard
                 fallbackPath="/app/weekly-glance"
-                description="Leadership Council is available on paid plans."
+                description="Leadership Council is available after you upgrade."
                 title="Upgrade to access"
               >
                 <LeadershipCouncilPage />

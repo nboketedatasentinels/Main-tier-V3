@@ -195,7 +195,7 @@ export const CompanyDashboard: React.FC = () => {
   const { isOpen: isUpgradeOpen, onOpen: onUpgradeOpen, onClose: onUpgradeClose } = useDisclosure()
 
   const [upgradeDismissed, setUpgradeDismissed] = useState(false)
-  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('This feature')
   const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const [faq, setFaq] = useState(faqFallback)
   const [liftProgress, setLiftProgress] = useState<LiftProgress | null>(null)
@@ -401,7 +401,7 @@ export const CompanyDashboard: React.FC = () => {
     setUpgradeFeatureName('Leadership Council')
     setUpgradeBenefits([
       'Schedule leadership council sessions',
-      'Get premium mentor collaboration tools',
+      'Get mentor collaboration tools',
       'Access advanced leadership tracks',
       'Build consistent accountability routines',
     ])
@@ -557,7 +557,7 @@ export const CompanyDashboard: React.FC = () => {
         >
           <Box>
             <Heading size="md" color="white">Upgrade for the full experience</Heading>
-            <Text color="white">Unlock vlogs, premium courses, and ecosystem challenges</Text>
+            <Text color="white">Unlock vlogs, courses, and ecosystem challenges</Text>
           </Box>
           <HStack spacing={3}>
             <Button as={RouterLink} to="/upgrade" colorScheme="yellow" rightIcon={<ArrowUpRight size={16} />}>
@@ -1025,7 +1025,7 @@ export const CompanyDashboard: React.FC = () => {
                   {isFreeTierUser ? (
                     <VStack align="flex-start" spacing={2} mt={1}>
                       <Text color="gray.600" fontSize="sm">
-                        Upgrade for premium challenges.
+                        Upgrade to unlock challenges.
                       </Text>
                       <Button size="sm" colorScheme="purple" as={RouterLink} to="/upgrade">
                         View plans
@@ -1133,7 +1133,7 @@ export const CompanyDashboard: React.FC = () => {
 
       <UpgradePromptModal
         featureName={upgradeFeatureName}
-        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock collaboration features with an upgrade']}
         isOpen={isUpgradeOpen}
         onClose={onUpgradeClose}
       />

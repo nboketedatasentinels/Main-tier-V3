@@ -83,7 +83,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
               <Flex align="center" gap={2}>
                 <Icon as={Crown} color="white" />
                 <Badge colorScheme="yellow" bg="accent.warning" color="text.primary">
-                  Premium Access
+                  Full Access
                 </Badge>
               </Flex>
               <Text fontSize="xl" fontWeight="bold" color="white">

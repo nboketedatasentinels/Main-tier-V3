@@ -78,6 +78,7 @@ import {
 } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage'
+import { CompanyCodeModal } from '@/components/modals/CompanyCodeModal'
 import { storage } from '@/services/firebase'
 import { supabase } from '@/services/supabase'
 import { mergeUserProfileData } from '@/services/partnerUserMetadataService'
@@ -172,16 +173,16 @@ const statusColorMap: Record<ProfileData['accountStatus'], string> = {
 
 const membershipCopy: Record<ProfileData['membershipStatus'], { title: string; description: string; badge: string; statusMessage: string }> = {
   paid: {
-    title: 'Paid Membership',
+    title: 'Full Access',
     description: 'Full access to all features and content',
     badge: 'Active',
-    statusMessage: 'You have a paid membership with access to every benefit on the platform.',
+    statusMessage: 'You have full access to every benefit on the platform.',
   },
   free: {
     title: 'Free Account',
     description: 'Limited access to basic features',
     badge: 'Limited',
-    statusMessage: 'You are on the free tier; upgrade to unlock everything shown in the comparison below.',
+    statusMessage: 'You are on the free tier. Upgrade to unlock everything shown in the comparison below.',
   },
 }
 
@@ -294,6 +295,7 @@ export const ProfilePage: React.FC = () => {
   }, [shareableInviteCode])
   const [isLeaveVillageOpen, setIsLeaveVillageOpen] = useState(false)
   const [isLeavingVillage, setIsLeavingVillage] = useState(false)
+  const [isCompanyCodeModalOpen, setIsCompanyCodeModalOpen] = useState(false)
   const cancelLeaveRef = useRef<HTMLButtonElement | null>(null)
 
   const hasAccountSettingsChanges = useMemo(() => {
@@ -1514,6 +1516,31 @@ export const ProfilePage: React.FC = () => {
                     </Card>
                   )}
 
+                  {/* Free learners: no fake/masked org code - clear empty state + claim CTA */}
+                  {isFreeMember && (
+                    <Card borderColor="brand.border" boxShadow="card" w="full">
+                      <CardHeader pb={2}>
+                        <Text fontWeight="semibold" fontSize="sm">Organization</Text>
+                      </CardHeader>
+                      <CardBody pt={2}>
+                        <VStack align="stretch" spacing={3}>
+                          <Text fontSize="sm" color="brand.subtleText">
+                            No organisation yet. You are on the free learner path.
+                          </Text>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            leftIcon={<Building size={14} />}
+                            onClick={() => setIsCompanyCodeModalOpen(true)}
+                            alignSelf="flex-start"
+                          >
+                            Add company code
+                          </Button>
+                        </VStack>
+                      </CardBody>
+                    </Card>
+                  )}
+
                   {/* Village Info Card (free members with a village) */}
                   {shouldShowVillageCard && (
                     <Card borderColor="brand.border" boxShadow="card" w="full">
@@ -2233,7 +2260,7 @@ export const ProfilePage: React.FC = () => {
                       <Text>Feature</Text>
                       <Text textAlign="center">Free</Text>
                       <Text textAlign="center" bg="purple.50" color="brand.text" rounded="md" py={1}>
-                        Paid
+                        Upgrade
                       </Text>
                     </Grid>
                     {[{
@@ -2293,6 +2320,15 @@ export const ProfilePage: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CompanyCodeModal
+        isOpen={isCompanyCodeModalOpen}
+        onClose={() => setIsCompanyCodeModalOpen(false)}
+        onSuccess={async () => {
+          await refreshProfile({ reason: 'company-code-upgrade' })
+          setIsCompanyCodeModalOpen(false)
+        }}
+      />
     </Box>
   )
 }

@@ -137,6 +137,7 @@ export const SignUpPage: React.FC = () => {
       isChecking: isCheckingCode,
       isValid: companyCodeValid,
       error: companyCodeError,
+      required: false,
     })
     if (companyCodeBlocker) return companyCodeBlocker
 
@@ -193,6 +194,7 @@ export const SignUpPage: React.FC = () => {
       setLoading(true)
       const { firstName, lastName } = nameParts
       const email = formData.email.trim().toLowerCase()
+      const trimmedCompanyCode = formData.companyCode.trim().toUpperCase()
       const { error: signUpError, userId } = await signUp(
         email,
         formData.password,
@@ -202,9 +204,13 @@ export const SignUpPage: React.FC = () => {
           fullName: formData.fullName.trim(),
           phoneNumber: formData.phoneNumber.trim(),
           gender: formData.gender || undefined,
-          companyCode: formData.companyCode.trim(),
-          companyId: validatedOrganization?.id,
-          companyName: validatedOrganization?.name,
+          ...(trimmedCompanyCode
+            ? {
+                companyCode: trimmedCompanyCode,
+                companyId: validatedOrganization?.id,
+                companyName: validatedOrganization?.name,
+              }
+            : {}),
         },
         referralCodeToUse
       )
@@ -359,19 +365,22 @@ export const SignUpPage: React.FC = () => {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-text-secondary">
-            Company Code <span className="text-danger">*</span>
+            Company Code (optional)
           </label>
           <div className="relative">
             <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
             <input
               value={formData.companyCode}
               onChange={e => handleChange("companyCode", e.target.value.slice(0, 6).toUpperCase())}
-              placeholder="6-digit code"
+              placeholder="6-character org code"
               maxLength={6}
+              autoComplete="off"
               className="h-10 w-full rounded-md border border-border-control bg-surface-subtle pl-9 pr-3 text-sm uppercase tracking-widest text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-primary"
-              required
             />
           </div>
+          <p className="mt-1.5 text-xs text-text-muted">
+            Have an organisation invite? Enter it here. Otherwise leave blank to join as a free learner.
+          </p>
           {isCheckingCode && (
             <div className="mt-2 inline-flex items-center gap-2 text-sm text-text-secondary transition-all">
               <Spinner size="xs" />
@@ -384,7 +393,7 @@ export const SignUpPage: React.FC = () => {
               <span>Valid company code ({validatedOrganization.name})</span>
             </div>
           )}
-          {companyCodeValid === false && !isCheckingCode && (
+          {formData.companyCode.trim().length > 0 && companyCodeValid === false && !isCheckingCode && (
             <div className="mt-2 inline-flex items-center gap-2 text-sm text-danger">
               <XCircle className="h-4 w-4" />
               <span>{companyCodeError || "Invalid or inactive company code"}</span>

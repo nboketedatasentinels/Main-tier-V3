@@ -7,7 +7,19 @@ import {
 } from '@/utils/companyCodeSignupGate'
 
 describe('getCompanyCodeSignupBlocker', () => {
-  it('requires a code', () => {
+  it('allows an empty code when not required (free signup)', () => {
+    expect(
+      getCompanyCodeSignupBlocker({
+        code: '',
+        isChecking: false,
+        isValid: null,
+        error: null,
+        required: false,
+      }),
+    ).toBeNull()
+  })
+
+  it('requires a code by default (claim / partner flows)', () => {
     expect(
       getCompanyCodeSignupBlocker({
         code: '',
@@ -18,13 +30,14 @@ describe('getCompanyCodeSignupBlocker', () => {
     ).toBe('Company code is required.')
   })
 
-  it('requires six characters', () => {
+  it('requires six characters when a code is entered', () => {
     expect(
       getCompanyCodeSignupBlocker({
         code: 'ABC',
         isChecking: false,
         isValid: null,
         error: null,
+        required: false,
       }),
     ).toBe('Company code must be 6 characters.')
   })
@@ -35,6 +48,7 @@ describe('getCompanyCodeSignupBlocker', () => {
       isChecking: true,
       isValid: null,
       error: null,
+      required: false,
     })
     expect(message).toBe('Verifying your company code…')
     for (const forbidden of FORBIDDEN_COMPANY_CODE_UX_MESSAGES) {
@@ -49,6 +63,7 @@ describe('getCompanyCodeSignupBlocker', () => {
         isChecking: false,
         isValid: false,
         error: 'Company code not found.',
+        required: false,
       }),
     ).toBe('Company code not found.')
   })
@@ -60,6 +75,7 @@ describe('getCompanyCodeSignupBlocker', () => {
         isChecking: false,
         isValid: true,
         error: null,
+        required: false,
       }),
     ).toBeNull()
   })
@@ -71,18 +87,21 @@ describe('getCompanyCodeSignupBlocker', () => {
         isChecking: true,
         isValid: null,
         error: null,
+        required: false,
       }),
       getCompanyCodeSignupBlocker({
         code: 'ORBF55',
         isChecking: false,
         isValid: null,
         error: null,
+        required: false,
       }),
       getCompanyCodeSignupBlocker({
         code: 'ORBF55',
         isChecking: false,
         isValid: false,
         error: 'Company is not active.',
+        required: false,
       }),
     ]
     for (const message of scenarios) {
@@ -105,6 +124,16 @@ describe('signup company-code regression guard', () => {
     // Do not reintroduce the unauthenticated skip that caused the bug.
     expect(source).not.toMatch(/auth\.currentUser/)
     expect(source).not.toMatch(/verified after sign-?up/i)
+  })
+
+  it('keeps company code optional on free signup', () => {
+    const source = readFileSync(
+      resolve(process.cwd(), 'src/pages/auth/SignUpPage.tsx'),
+      'utf8',
+    )
+    expect(source).toMatch(/Company [Cc]ode \(optional\)/)
+    expect(source).toContain('required: false')
+    expect(source).not.toMatch(/Company Code\s*<span[^>]*>\s*\*/)
   })
 
   it('keeps validateCompanyCode on the public lookup RPC (works before login)', () => {

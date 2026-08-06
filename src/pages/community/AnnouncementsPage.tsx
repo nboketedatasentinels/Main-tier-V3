@@ -64,7 +64,6 @@ import {
   type Announcement,
   type AnnouncementTier,
 } from '@/hooks/useAnnouncements'
-import { useEventsFeed } from '@/hooks/useEventsFeed'
 import { WhatsAppCommunityCard } from '@/components/community/WhatsAppCommunityCard'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
@@ -1146,23 +1145,11 @@ const AnnouncementsTab: React.FC = () => {
 
 export const EventsTab: React.FC = () => {
   const { profile } = useAuth()
-  const { events, loading: eventsLoading, error } = useEventsFeed()
   const isAdmin =
     profile?.role === UserRole.SUPER_ADMIN || profile?.role === UserRole.AMBASSADOR || profile?.role === UserRole.PARTNER
 
-  const description = events.length
-    ? 'All upcoming workshops, gatherings, learning sessions, and book club meetups now live on T4Leader. Head there to explore the full schedule and RSVP.'
-    : "See what's coming up and reserve your spot."
-
   return (
     <Stack spacing={4}>
-      {error && (
-        <Alert status="error" borderRadius="xl" borderWidth={1} borderColor="red.200" bg="red.50">
-          <AlertIcon />
-          <AlertDescription fontSize="sm">{error}</AlertDescription>
-        </Alert>
-      )}
-
       {isAdmin && (
         <Box borderWidth={1} borderColor="border.subtle" bg="surface.default" borderRadius="3xl" p={6} boxShadow="sm">
           <Stack spacing={2}>
@@ -1173,8 +1160,8 @@ export const EventsTab: React.FC = () => {
               Events are managed in the external admin portal
             </Heading>
             <Text color="text.secondary" fontSize="sm">
-              Use the dedicated events management site to create, update, or archive events. Updates made there will appear here
-              for everyone once published.
+              Use the dedicated events management site to create, update, or archive events. Learners open the public
+              schedule on T4Leader.
             </Text>
             <Button
               as={chakra.a}
@@ -1218,7 +1205,8 @@ export const EventsTab: React.FC = () => {
             Experience what's happening next
           </Heading>
           <Text color="text.secondary" fontSize={{ base: 'sm', md: 'md' }}>
-            {description}
+            All upcoming workshops, gatherings, learning sessions, and book club meetups live on T4Leader. Head there to
+            explore the full schedule and RSVP.
           </Text>
           <HStack spacing={4} flexDirection={{ base: 'column', md: 'row' }} align="center" justify="center">
             <Button
@@ -1234,11 +1222,6 @@ export const EventsTab: React.FC = () => {
               View Events
             </Button>
           </HStack>
-          {eventsLoading && (
-            <Text color="text.muted" fontSize="xs" letterSpacing="widest">
-              Refreshing events feed...
-            </Text>
-          )}
         </VStack>
       </Box>
     </Stack>

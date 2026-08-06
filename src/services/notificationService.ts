@@ -43,21 +43,33 @@ type NotificationRow = {
   data: Record<string, unknown> | null
 }
 
-const mapNotificationRow = (row: NotificationRow): NotificationRecord => ({
-  ...(row.data ?? {}),
-  id: row.id,
-  user_id: row.uid ?? undefined,
-  type: (row.type ?? row.notification_type ?? 'unknown') as NotificationType,
-  notification_type: row.notification_type ?? undefined,
-  category: row.category ?? undefined,
-  title: row.title ?? undefined,
-  message: row.message ?? '',
-  is_read: row.is_read ?? false,
-  read: row.is_read ?? false,
-  related_id: row.related_id ?? undefined,
-  action_response: row.action_response ?? null,
-  created_at: row.created_at ?? undefined,
-})
+const mapNotificationRow = (row: NotificationRow): NotificationRecord => {
+  const data = row.data ?? {}
+  const nestedMetadata =
+    data.metadata && typeof data.metadata === 'object' && !Array.isArray(data.metadata)
+      ? (data.metadata as Record<string, unknown>)
+      : null
+  // Push popups read `metadata.priority`. Writers put priority either nested
+  // under data.metadata or flat on data - normalize both shapes.
+  const metadata = nestedMetadata ?? data
+
+  return {
+    ...data,
+    id: row.id,
+    user_id: row.uid ?? undefined,
+    type: (row.type ?? row.notification_type ?? 'unknown') as NotificationType,
+    notification_type: row.notification_type ?? undefined,
+    category: row.category ?? undefined,
+    title: row.title ?? undefined,
+    message: row.message ?? '',
+    is_read: row.is_read ?? false,
+    read: row.is_read ?? false,
+    related_id: row.related_id ?? undefined,
+    action_response: row.action_response ?? null,
+    created_at: row.created_at ?? undefined,
+    metadata,
+  }
+}
 
 // Monotonic suffix so every realtime subscription gets a distinct channel topic
 // (see the comment at the channel() call below for why this is required).

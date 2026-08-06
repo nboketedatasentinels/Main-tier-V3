@@ -34,7 +34,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
   const { profile } = useAuth()
   const isFreeTierUser = isFreeUser(profile)
   const { isOpen: isUpgradeOpen, onOpen: onUpgradeOpen, onClose: onUpgradeClose } = useDisclosure()
-  const [upgradeFeatureName, setUpgradeFeatureName] = useState('Premium Feature')
+  const [upgradeFeatureName, setUpgradeFeatureName] = useState('This feature')
   const [upgradeBenefits, setUpgradeBenefits] = useState<string[]>([])
   const mentorProfile = data?.mentorProfile ?? null
   const ambassadorProfile = data?.ambassadorProfile ?? null
@@ -58,7 +58,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
     setUpgradeBenefits([
       'Join leadership council sessions',
       'Book structured mentor conversations',
-      'Access premium leadership frameworks',
+      'Access leadership frameworks',
       'Get deeper accountability support',
     ])
     onUpgradeOpen()
@@ -70,7 +70,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
       'Access peer matching',
       'Schedule accountability sessions',
       'Track peer session outcomes',
-      'Build momentum with premium networking tools',
+      'Build momentum with networking tools',
     ])
     onUpgradeOpen()
   }, [onUpgradeOpen])
@@ -291,7 +291,7 @@ export const SupportTeamCard = ({ data, loading, peerMatches, peerMatchesLoading
 
       <UpgradePromptModal
         featureName={upgradeFeatureName}
-        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock premium collaboration features']}
+        benefits={upgradeBenefits.length ? upgradeBenefits : ['Unlock collaboration features with an upgrade']}
         isOpen={isUpgradeOpen}
         onClose={onUpgradeClose}
       />

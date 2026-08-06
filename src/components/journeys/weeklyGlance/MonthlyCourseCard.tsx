@@ -83,7 +83,7 @@ export const MonthlyCourseCard = ({ role, membershipStatus, transformationTier, 
         <Stack spacing={3}>
           <Text fontWeight="bold" color="text.primary">Course of the Month</Text>
           <Text color="text.primary" fontSize="sm">
-            Paid members need to be assigned to a company program to see their monthly course.
+            Members with full access need to be assigned to a company program to see their monthly course.
           </Text>
           <Alert status="info" rounded="md" variant="subtle">
             <AlertIcon />

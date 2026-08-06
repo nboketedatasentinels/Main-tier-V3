@@ -134,23 +134,69 @@ export const PartnerAssignmentPage: React.FC = () => {
 
     setLoading(true);
     try {
-      await Promise.all(
-        selectedLearners.map(learnerId =>
+      const partnerName =
+        profile?.fullName ||
+        [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim() ||
+        profile?.email ||
+        null;
+
+      const results = await Promise.allSettled(
+        selectedLearners.map((learnerId) =>
           assignActivityToLearner({
             partnerId: user.uid,
             learnerId,
             activityId: selectedActivity,
-            weekNumber
-          })
-        )
+            weekNumber,
+            partnerName,
+          }),
+        ),
       );
 
-      toast({
-        title: 'Issue successful',
-        description: `Activity issued to ${selectedLearners.length} learners.`,
-        status: 'success'
-      });
-      setSelectedLearners([]);
+      const succeeded = results.filter((r) => r.status === 'fulfilled');
+      const failed = results.filter((r) => r.status === 'rejected');
+      const alreadyAwardedCount = succeeded.filter(
+        (r) => r.status === 'fulfilled' && r.value.alreadyAwarded,
+      ).length;
+
+      if (failed.length === 0) {
+        toast({
+          title: 'Issue successful',
+          description:
+            alreadyAwardedCount > 0
+              ? `Marks recorded for ${succeeded.length} learner${succeeded.length === 1 ? '' : 's'} (${alreadyAwardedCount} already had points for this week).`
+              : `Activity issued to ${succeeded.length} learner${succeeded.length === 1 ? '' : 's'}.`,
+          status: 'success',
+        });
+        setSelectedLearners([]);
+        return;
+      }
+
+      const firstFailure = failed[0];
+      const firstMessage =
+        firstFailure.status === 'rejected' && firstFailure.reason instanceof Error
+          ? firstFailure.reason.message
+          : 'Something went wrong while issuing the activity.';
+
+      if (succeeded.length > 0) {
+        toast({
+          title: 'Partially issued',
+          description: `${succeeded.length} succeeded, ${failed.length} failed. ${firstMessage}`,
+          status: 'warning',
+          duration: 9000,
+          isClosable: true,
+        });
+        setSelectedLearners(
+          selectedLearners.filter((_, index) => results[index]?.status === 'rejected'),
+        );
+      } else {
+        toast({
+          title: 'Issue failed',
+          description: firstMessage,
+          status: 'error',
+          duration: 9000,
+          isClosable: true,
+        });
+      }
     } catch (error) {
       console.error(error);
       const message = error instanceof Error && error.message
@@ -204,7 +250,10 @@ export const PartnerAssignmentPage: React.FC = () => {
       <VStack spacing={8} align="stretch">
         <Box>
           <Heading size="lg">Partner Activity Issuing</Heading>
-          <Text color="gray.500">Issue partner-issued activities so learners can complete them in their weekly checklist.</Text>
+          <Text color="gray.500">
+            Issue marks for partner activities (weekly sessions, webinars, LIFT modules, and more). Points go to the
+            learner checklist immediately.
+          </Text>
         </Box>
 
         <Box p={6} bg={bgColor} borderRadius="lg" border="1px" borderColor={borderColor}>

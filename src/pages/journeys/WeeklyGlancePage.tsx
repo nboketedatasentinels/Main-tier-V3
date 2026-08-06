@@ -45,14 +45,13 @@ import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVi
 import { useAssignedCourses, type AssignedCourse } from '@/hooks/useAssignedCourses'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { resolveCourseCompletion, useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
-import { canAccessCourse, isFreeUser } from '@/utils/membership'
+import { canAccessCourse } from '@/utils/membership'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
 import { getOrganizationJourney } from '@/services/supabaseOrgService'
 import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
-import { FREE_USERS_VILLAGE_NAME, isSharedFreeVillage } from '@/config/villages'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import { CORE_VALUES, PERSONALITY_TYPES } from '@/config/personality-data'
@@ -830,13 +829,6 @@ export const WeeklyGlancePage = () => {
   }, [bothTestsCompleted, pendingCourse, requestOpenCourse, toast])
 
   const shouldShowBuildVillageCard = canCreateVillage(profile)
-  const showSharedFreeVillageCard =
-    Boolean(profile?.villageId) &&
-    (isSharedFreeVillage(profile?.villageId) || isFreeUser(profile)) &&
-    !profile?.companyId &&
-    !profile?.companyCode &&
-    !profile?.organizationId
-
 
   const personalityIncomplete = useMemo(() => {
     if (data.loading.profile) return false
@@ -1242,64 +1234,6 @@ export const WeeklyGlancePage = () => {
             </Stack>
           )}
         </Flex>
-
-        {showSharedFreeVillageCard && (
-          <Box
-            bg="white"
-            p={6}
-            borderRadius="xl"
-            border="1px solid"
-            borderColor="purple.200"
-            boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-          >
-            <Flex
-              direction={{ base: 'column', md: 'row' }}
-              justify="space-between"
-              align={{ base: 'flex-start', md: 'center' }}
-              gap={4}
-            >
-              <HStack spacing={3} align="flex-start">
-                <Flex
-                  w={10}
-                  h={10}
-                  bg="#350e6f"
-                  borderRadius="xl"
-                  align="center"
-                  justify="center"
-                  flexShrink={0}
-                >
-                  <Box as={Users} w={5} h={5} color="white" />
-                </Flex>
-                <Stack spacing={1}>
-                  <Heading size="sm" color="gray.900">
-                    {FREE_USERS_VILLAGE_NAME}
-                  </Heading>
-                  <Text fontSize="sm" color="gray.600">
-                    Shared free community - peer match with other free learners and compare marks on the Leadership Board.
-                  </Text>
-                </Stack>
-              </HStack>
-              <HStack spacing={2} flexShrink={0}>
-                <Button
-                  onClick={() => navigate('/app/peer-connect')}
-                  bg="brand.primary"
-                  color="white"
-                  _hover={{ bg: 'brand.dark' }}
-                  size="md"
-                >
-                  Peer Connect
-                </Button>
-                <Button
-                  onClick={() => navigate('/app/leadership-board')}
-                  variant="outline"
-                  size="md"
-                >
-                  View marks
-                </Button>
-              </HStack>
-            </Flex>
-          </Box>
-        )}
 
         {shouldShowBuildVillageCard && (
           <Box

@@ -237,7 +237,7 @@ const WeeklyChecklistPage: React.FC = () => {
     if (!profile) return 'Member';
     const tier = profile.transformationTier?.toString().toLowerCase() ?? '';
     if (tier.includes('corporate')) return 'Corporate';
-    return isFreeUser(profile) ? 'Free Tier' : 'Premium';
+    return isFreeUser(profile) ? 'Free Tier' : 'Full Access';
   }, [profile]);
 
   const journeyStartDate = useMemo(() => {

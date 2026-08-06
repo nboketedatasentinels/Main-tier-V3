@@ -39,7 +39,7 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({ featureN
             <Box bg="yellow.100" color="yellow.600" p={2} borderRadius="full">
               <Icon as={LockKeyhole} />
             </Box>
-            <Text>Premium Feature</Text>
+            <Text>Upgrade required</Text>
           </Flex>
         </ModalHeader>
         <ModalCloseButton />
@@ -48,7 +48,7 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({ featureN
             <Text fontWeight="bold" fontSize="lg">
               Unlock {featureName}
             </Text>
-            <Text color="gray.600">Upgrade to access this premium feature.</Text>
+            <Text color="gray.600">Upgrade to unlock this feature and continue your journey.</Text>
             <List spacing={2}>
               {benefits.map((benefit) => (
                 <ListItem key={benefit} display="flex" alignItems="center" gap={2}>
