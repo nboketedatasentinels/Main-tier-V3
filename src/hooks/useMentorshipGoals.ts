@@ -29,6 +29,18 @@ const emptyGoals: MentorshipGoalsDoc = {
   updatedBy: null,
 }
 
+const isFirestorePermissionError = (err: unknown): boolean => {
+  const code =
+    typeof err === 'object' && err && 'code' in err
+      ? String((err as { code?: unknown }).code ?? '')
+      : ''
+  const message = err instanceof Error ? err.message : String(err ?? '')
+  return (
+    code === 'permission-denied' ||
+    /insufficient permissions|permission-denied|Missing or insufficient/i.test(message)
+  )
+}
+
 export const useMentorshipGoals = (
   learnerId?: string | null,
   assignedMentorId?: string | null,
@@ -73,6 +85,15 @@ export const useMentorshipGoals = (
         setLoading(false)
       },
       (err) => {
+        if (isFirestorePermissionError(err)) {
+          // Mentorship goals still live in Firestore; under Supabase-only auth
+          // treat as empty so Leadership Council stays usable.
+          console.warn('[useMentorshipGoals] Firestore unavailable under Supabase auth; empty goals.')
+          setState(emptyGoals)
+          setError(null)
+          setLoading(false)
+          return
+        }
         console.error('[useMentorshipGoals] load failed', err)
         setError(err.message)
         setLoading(false)
@@ -108,6 +129,12 @@ export const useMentorshipGoals = (
           { merge: true },
         )
       } catch (err) {
+        if (isFirestorePermissionError(err)) {
+          const message =
+            'Goals can’t be saved yet while mentor data is migrating. Please try again later.'
+          setError(message)
+          throw new Error(message)
+        }
         const message = err instanceof Error ? err.message : 'Failed to save goals.'
         setError(message)
         throw err instanceof Error ? err : new Error(message)

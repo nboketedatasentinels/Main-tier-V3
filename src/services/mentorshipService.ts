@@ -19,6 +19,19 @@ import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConf
 
 const MENTORSHIP_SESSIONS = 'mentorship_sessions'
 
+/** Firestore denies these under Supabase-only auth - treat as empty, not a UI error. */
+const isFirestorePermissionError = (err: unknown): boolean => {
+  const code =
+    typeof err === 'object' && err && 'code' in err
+      ? String((err as { code?: unknown }).code ?? '')
+      : ''
+  const message = err instanceof Error ? err.message : String(err ?? '')
+  return (
+    code === 'permission-denied' ||
+    /insufficient permissions|permission-denied|Missing or insufficient/i.test(message)
+  )
+}
+
 export type MentorshipSessionStatus =
   | 'requested'
   | 'scheduled'
@@ -389,6 +402,13 @@ const subscribeToSessionsByField = (
       onUpdate(sessions)
     },
     (err) => {
+      if (isFirestorePermissionError(err)) {
+        console.warn(
+          `[MentorshipService] Firestore unavailable under Supabase auth (${fieldName}); returning empty.`,
+        )
+        onUpdate([])
+        return
+      }
       console.error(`[MentorshipService] ${fieldName} subscription error:`, err)
       onError?.(err instanceof Error ? err : new Error(String(err)))
     },

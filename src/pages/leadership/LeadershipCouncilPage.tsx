@@ -163,7 +163,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     byStatus: sessionsByStatus,
     loading: sessionsLoading,
     error: sessionsError,
-  } = useLearnerMentorshipSessions(profile?.id ?? null)
+  } = useLearnerMentorshipSessions(mentorProfile?.id ? profile?.id ?? null : null)
   const [cancellingSessionId, setCancellingSessionId] = useState<string | null>(null)
 
   const [scheduleDate, setScheduleDate] = useState('')
@@ -223,7 +223,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     error: goalsError,
     save: saveGoals,
   } = useMentorshipGoals(
-    isLeadershipEligible ? profile?.id ?? null : null,
+    isLeadershipEligible && mentorProfile?.id ? profile?.id ?? null : null,
     mentorProfile?.id ?? null,
   )
 

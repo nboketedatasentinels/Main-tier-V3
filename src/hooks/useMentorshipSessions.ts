@@ -46,6 +46,15 @@ const useMentorshipSessionsSubscription = (
         setLoading(false)
       },
       (err) => {
+        // Soft-handle Firestore permission denials (Supabase-only auth).
+        if (
+          /insufficient permissions|permission-denied|Missing or insufficient/i.test(err.message)
+        ) {
+          setSessions([])
+          setError(null)
+          setLoading(false)
+          return
+        }
         setError(err.message)
         setLoading(false)
       },
