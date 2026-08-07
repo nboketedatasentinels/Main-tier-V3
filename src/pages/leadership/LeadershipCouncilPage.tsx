@@ -46,11 +46,8 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import {
-  AlertTriangle,
   Building2,
   Calendar,
-  CheckCircle2,
-  Clock3,
   Download,
   Eye,
   ExternalLink,
@@ -229,101 +226,6 @@ export const LeadershipCouncilPage: React.FC = () => {
     isLeadershipEligible ? profile?.id ?? null : null,
     mentorProfile?.id ?? null,
   )
-
-  const journeyBlockedDescription = currentJourneyLabel
-    ? `Available on 3-month, 6-month, and 9-month journeys - you're on the ${currentJourneyLabel}.`
-    : 'Available on 3-month, 6-month, and 9-month journeys.'
-  const gatingSteps: ReadonlyArray<{
-    id: 'organization' | 'support' | 'mentor' | 'ambassador'
-    title: string
-    description: string
-    status: 'complete' | 'pending' | 'blocked'
-  }> = !isLeadershipEligible
-    ? [
-        {
-          id: 'organization',
-          title: 'Organization linked',
-          description: journeyBlockedDescription,
-          status: 'blocked',
-        },
-        {
-          id: 'support',
-          title: 'Assignments checked',
-          description: journeyBlockedDescription,
-          status: 'blocked',
-        },
-        {
-          id: 'mentor',
-          title: 'Mentor ready',
-          description: journeyBlockedDescription,
-          status: 'blocked',
-        },
-        {
-          id: 'ambassador',
-          title: 'Coach ready',
-          description: journeyBlockedDescription,
-          status: 'blocked',
-        },
-      ]
-    : [
-        {
-          id: 'organization',
-          title: 'Organization linked',
-          description: hasOrganization
-            ? 'Organization connection confirmed.'
-            : 'Add an organization to unlock assignments.',
-          status: hasOrganization ? (organizationReady ? 'complete' : 'pending') : 'blocked',
-        },
-        {
-          id: 'support',
-          title: 'Assignments checked',
-          description: supportAssignmentsReady
-            ? supportAssignmentStatus.exists
-              ? 'Your support assignments are recorded for this organisation.'
-              : 'Checked - your admin hasn’t recorded assignments yet.'
-            : 'Checking your support assignments.',
-          status: supportAssignmentsReady
-            ? supportAssignmentStatus.exists
-              ? 'complete'
-              : 'blocked'
-            : 'pending',
-        },
-        {
-          id: 'mentor',
-          title: 'Mentor ready',
-          description: mentorProfile
-            ? 'Mentor assigned - you can share goals and request a session.'
-            : pendingMentorEmail
-              ? `Mentor invited (${pendingMentorEmail}) - waiting for them to join.`
-              : assignmentsLoading
-                ? 'Loading your mentor assignment.'
-                : 'Your admin hasn’t assigned a mentor yet.',
-          status: mentorProfile || pendingMentorEmail ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
-        },
-        {
-          id: 'ambassador',
-          title: 'Coach ready',
-          description: ambassadorProfile
-            ? 'Coach ready - coaching sessions will appear here when scheduled.'
-            : pendingAmbassadorEmail
-              ? `Coach invited (${pendingAmbassadorEmail}) - waiting for them to join.`
-              : assignmentsLoading
-                ? 'Loading your coach assignment.'
-                : 'Coach coaching hasn’t been set up for your organization yet.',
-          status:
-            ambassadorProfile || pendingAmbassadorEmail
-              ? 'complete'
-              : assignmentsLoading
-                ? 'pending'
-                : 'blocked',
-        },
-      ]
-
-  const gateStatusIcon = (status: 'complete' | 'pending' | 'blocked') => {
-    if (status === 'complete') return CheckCircle2
-    if (status === 'pending') return Clock3
-    return AlertTriangle
-  }
 
   const retryAssignments = useCallback(() => {
     refresh()
@@ -704,50 +606,6 @@ export const LeadershipCouncilPage: React.FC = () => {
           </Text>
         </HStack>
       )}
-
-      {isLeadershipEligible &&
-        !assignmentsLoading &&
-        gatingSteps.some((s) => s.status !== 'complete') && (
-          <Box
-            bg="white"
-            border="1px solid"
-            borderColor="gray.200"
-            borderRadius="xl"
-            px={{ base: 4, md: 5 }}
-            py={3}
-          >
-            <SimpleGrid columns={{ base: 2, md: 4 }} spacing={2}>
-              {gatingSteps.map((step) => {
-                const tone =
-                  step.status === 'complete'
-                    ? { bg: 'green.50', border: 'green.200', color: 'green.700', icon: 'green.500' }
-                    : step.status === 'pending'
-                      ? { bg: 'yellow.50', border: 'yellow.200', color: 'yellow.800', icon: 'yellow.500' }
-                      : { bg: 'gray.50', border: 'gray.200', color: 'gray.500', icon: 'gray.400' }
-                return (
-                  <Tooltip key={step.id} label={step.description} placement="top" hasArrow openDelay={200}>
-                    <HStack
-                      spacing={2}
-                      bg={tone.bg}
-                      border="1px solid"
-                      borderColor={tone.border}
-                      borderRadius="md"
-                      px={3}
-                      py={2}
-                      align="center"
-                      cursor="default"
-                    >
-                      <Icon as={gateStatusIcon(step.status)} color={tone.icon} boxSize={3.5} />
-                      <Text fontSize="xs" fontWeight="semibold" color={tone.color} noOfLines={1}>
-                        {step.title.replace(' ready', '').replace(' linked', '').replace(' checked', '')}
-                      </Text>
-                    </HStack>
-                  </Tooltip>
-                )
-              })}
-            </SimpleGrid>
-          </Box>
-        )}
 
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
