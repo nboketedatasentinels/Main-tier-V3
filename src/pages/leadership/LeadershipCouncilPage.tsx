@@ -780,30 +780,23 @@ export const LeadershipCouncilPage: React.FC = () => {
                         <Text color="gray.700" fontSize="sm" fontWeight="medium">
                           {pendingPartnerEmail}
                         </Text>
-                        {/* Plain mailto anchor - most reliable way to open the OS mail app. */}
-                        <Link
-                          href={`mailto:${pendingPartnerEmail.trim()}`}
-                          display="inline-flex"
-                          alignItems="center"
-                          justifyContent="center"
+                        <Button
+                          size="sm"
                           mt={1}
-                          px={4}
-                          h={8}
-                          borderRadius="md"
                           bg="#350e6f"
                           color="white"
-                          fontSize="sm"
-                          fontWeight="semibold"
-                          lineHeight="1"
-                          _hover={{ bg: '#27062e', textDecoration: 'none', color: 'white' }}
-                          _focusVisible={{
-                            outline: '2px solid',
-                            outlineColor: '#350e6f',
-                            outlineOffset: '2px',
+                          _hover={{ bg: '#27062e' }}
+                          onClick={() => {
+                            const to = pendingPartnerEmail.trim()
+                            if (!to) return
+                            // Open Gmail compose in the browser (not the OS mail app).
+                            const subject = encodeURIComponent('Message from Transformation Leader')
+                            const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${subject}`
+                            window.open(url, '_blank', 'noopener,noreferrer')
                           }}
                         >
                           Email partner
-                        </Link>
+                        </Button>
                       </Flex>
                     )}
                     {!partnerLoading && !partnerProfile && !pendingPartnerEmail && (
