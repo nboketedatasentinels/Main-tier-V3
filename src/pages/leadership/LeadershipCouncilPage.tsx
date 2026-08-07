@@ -782,12 +782,23 @@ export const LeadershipCouncilPage: React.FC = () => {
                         </Text>
                         <Button
                           as="a"
-                          href={`mailto:${pendingPartnerEmail}`}
+                          href={`mailto:${pendingPartnerEmail.trim()}`}
                           size="sm"
                           mt={1}
                           bg="white"
                           color="#27062e"
                           _hover={{ bg: 'whiteAlpha.900' }}
+                          onClick={(event) => {
+                            // Ensure the mail client opens even if the host
+                            // button styling interferes with the anchor href.
+                            const email = pendingPartnerEmail.trim()
+                            if (!email) {
+                              event.preventDefault()
+                              return
+                            }
+                            event.preventDefault()
+                            window.location.href = `mailto:${email}`
+                          }}
                         >
                           Email partner
                         </Button>
