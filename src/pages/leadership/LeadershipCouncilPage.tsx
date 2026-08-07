@@ -1073,6 +1073,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                           learnerId={profile.id}
                           learnerName={displayNameForProfile(profile)}
                           companyId={profile.companyId ?? null}
+                          coachPending={!ambassadorProfile && Boolean(pendingAmbassadorEmail)}
+                          pendingCoachEmail={pendingAmbassadorEmail}
                         />
                       </>
                     )}

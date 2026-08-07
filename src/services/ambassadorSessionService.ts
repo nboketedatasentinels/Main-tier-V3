@@ -120,6 +120,32 @@ const mapBooking = (id: string, data: Record<string, unknown>): CoachBooking => 
 
 const bookingIdFor = (slotId: string, learnerId: string) => `${slotId}__${learnerId}`
 
+/** Firestore denies these under Supabase-only auth - treat as empty, not a UI error. */
+const isFirestorePermissionError = (err: unknown): boolean => {
+  const code =
+    typeof err === 'object' && err && 'code' in err
+      ? String((err as { code?: unknown }).code ?? '')
+      : ''
+  const message = err instanceof Error ? err.message : String(err ?? '')
+  return (
+    code === 'permission-denied' ||
+    /insufficient permissions|permission-denied|Missing or insufficient/i.test(message)
+  )
+}
+
+const softPermissionOrError = (
+  err: unknown,
+  onEmpty: () => void,
+  onError?: (error: Error) => void,
+) => {
+  if (isFirestorePermissionError(err)) {
+    console.warn('[CoachSessionService] Firestore unavailable under Supabase auth; returning empty.', err)
+    onEmpty()
+    return
+  }
+  onError?.(err instanceof Error ? err : new Error(String(err)))
+}
+
 async function getJourneyContext(
   uid: string,
 ): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
@@ -540,7 +566,7 @@ const subscribeToSlotsBy = (
   return onSnapshot(
     q,
     (snapshot) => onUpdate(snapshot.docs.map((d) => mapSlot(d.id, d.data()))),
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+    (err) => softPermissionOrError(err, () => onUpdate([]), onError),
   )
 }
 
@@ -571,7 +597,7 @@ export const subscribeToSlotBookings = (
       )
       onUpdate(bookings)
     },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+    (err) => softPermissionOrError(err, () => onUpdate([]), onError),
   )
 }
 
@@ -592,7 +618,7 @@ export const subscribeToLearnerBookings = (
       )
       onUpdate(bookings)
     },
-    (err) => onError?.(err instanceof Error ? err : new Error(String(err))),
+    (err) => softPermissionOrError(err, () => onUpdate([]), onError),
   )
 }
 

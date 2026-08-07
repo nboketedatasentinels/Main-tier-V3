@@ -31,6 +31,9 @@ interface LearnerAmbassadorBookingsProps {
   learnerId: string
   learnerName: string
   companyId: string | null
+  /** When the coach is invited but hasn't joined yet, skip the dead Firestore load. */
+  coachPending?: boolean
+  pendingCoachEmail?: string | null
 }
 
 const bookingStatusBadge = (booking: CoachBooking): { label: string; scheme: string } => {
@@ -52,15 +55,21 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
   learnerId,
   learnerName,
   companyId,
+  coachPending = false,
+  pendingCoachEmail = null,
 }) => {
   const toast = useToast()
-  const { slots, loading: slotsLoading, error: slotsError } = useOpenSlotsForOrg(companyId)
+  // Don't hit Firestore when the coach hasn't joined - those collections are
+  // denied under Supabase-only auth and would surface a permissions error.
+  const { slots, loading: slotsLoading, error: slotsError } = useOpenSlotsForOrg(
+    coachPending ? null : companyId,
+  )
   const {
     bookings,
     byStatus,
     loading: bookingsLoading,
     error: bookingsError,
-  } = useLearnerBookings(learnerId)
+  } = useLearnerBookings(coachPending ? null : learnerId)
   const [bookingBusyId, setBookingBusyId] = useState<string | null>(null)
   const [cancellingId, setCancellingId] = useState<string | null>(null)
 
@@ -263,8 +272,37 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
     )
   }
 
+  if (coachPending) {
+    return (
+      <Flex
+        direction="column"
+        align="center"
+        textAlign="center"
+        p={5}
+        gap={2}
+        border="1px dashed"
+        borderColor="border.subtle"
+        rounded="lg"
+      >
+        <Icon as={Calendar} color="text.muted" />
+        <Text fontWeight="semibold">Sessions unlock after your coach joins</Text>
+        <Text fontSize="sm" color="text.secondary">
+          {pendingCoachEmail
+            ? `${pendingCoachEmail} can post coaching slots once they accept the invite.`
+            : 'Your coach can post coaching slots once they accept the invite.'}
+        </Text>
+      </Flex>
+    )
+  }
+
   const loading = slotsLoading || bookingsLoading
-  const error = slotsError || bookingsError
+  const rawError = slotsError || bookingsError
+  // Permission failures are already softened in the service; if one slips
+  // through, treat it as "no sessions" rather than a red banner.
+  const error =
+    rawError && /insufficient permissions|permission-denied|Missing or insufficient/i.test(rawError)
+      ? null
+      : rawError
 
   return (
     <Stack spacing={5}>
