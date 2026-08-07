@@ -754,7 +754,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
+      <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="outside">
         <ModalOverlay />
         <ModalContent>
           <ModalHeader>Create organization</ModalHeader>
@@ -821,8 +821,11 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       value={form.programDuration?.toString() || ''}
                       onChange={(e) => {
                         const next = Number(e.target.value)
+                        const previous = form.programDuration
                         updateField('programDuration', next)
                         if (next !== 1.5) updateField('pillar', undefined)
+                        // Switching 6W ↔ 3M/6M/9M must not keep old pillar course picks.
+                        if (next !== previous) setMonthlyAssignments({})
                       }}
                     >
                       {programDurations.map((option) => (
@@ -887,6 +890,134 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       )}
                       <FormErrorMessage>Pillar is required for the 6-week journey.</FormErrorMessage>
                     </FormControl>
+                  </GridItem>
+                ) : null}
+                {showCourseAssignments ? (
+                  <GridItem colSpan={{ base: 1, md: 2 }}>
+                    <Box
+                      borderWidth="1px"
+                      borderRadius="lg"
+                      p={4}
+                      bg="purple.50"
+                      borderColor="purple.100"
+                    >
+                      <Text fontWeight="medium" mb={1}>
+                        {assignmentSectionLabel}
+                      </Text>
+                      <Text fontSize="sm" color="gray.600" mb={3}>
+                        {isMonthlyJourney
+                          ? `Assign exactly ${courseLimit} courses (1 per month). Open each dropdown and pick from the T4L catalogue.`
+                          : '6-week courses are assigned automatically from the selected pillar and saved to the organization. Window 1 is shown first to learners.'}
+                      </Text>
+                      <Stack spacing={3}>
+                        {Array.from({ length: courseLimit }, (_, index) => {
+                          const monthNumber = index + 1
+                          const monthKey = String(monthNumber)
+                          const assignedCourse = monthlyAssignments[monthKey] || ''
+                          const dateRange = cohortStartDate
+                            ? (() => {
+                                const { startDate, endDate } = getProgramSegmentDateRange({
+                                  cohortStartDate,
+                                  segmentIndex: index,
+                                  cadence: programCadence,
+                                })
+                                return formatMonthRange(startDate, endDate)
+                              })()
+                            : undefined
+                          const isEmpty = !assignedCourse
+                          const isPillarLocked = Boolean(form.pillar && form.programDuration === 1.5)
+                          const pillarPlanEntry =
+                            isPillarLocked && form.pillar
+                              ? PILLAR_COURSE_PLAN[form.pillar][index]
+                              : null
+                          const selectValue = pillarPlanEntry?.courseId || assignedCourse
+                          const courseOptions =
+                            sortedCourses.length > 0
+                              ? sortedCourses
+                              : getMonthlyJourneyCourseOptions()
+                          return (
+                            <Box key={monthKey} borderWidth="1px" borderRadius="lg" p={3} bg="white">
+                              <Flex justify="space-between" align="center" mb={2}>
+                                <HStack spacing={2}>
+                                  <Badge colorScheme={!selectValue ? 'red' : 'green'} borderRadius="full">
+                                    {pillarPlanEntry
+                                      ? formatPillarWeekRange(pillarPlanEntry.weekRange)
+                                      : `Course ${monthNumber} of ${courseLimit}`}
+                                  </Badge>
+                                  {dateRange && (
+                                    <Text fontSize="sm" color="gray.600">
+                                      {dateRange}
+                                    </Text>
+                                  )}
+                                </HStack>
+                                <HStack spacing={1}>
+                                  <IconButton
+                                    aria-label="Move course up"
+                                    size="sm"
+                                    icon={<ChevronUp size={16} />}
+                                    onClick={() => swapMonthlyAssignments(index, index - 1)}
+                                    isDisabled={isPillarLocked || index === 0}
+                                    variant="ghost"
+                                  />
+                                  <IconButton
+                                    aria-label="Move course down"
+                                    size="sm"
+                                    icon={<ChevronDown size={16} />}
+                                    onClick={() => swapMonthlyAssignments(index, index + 1)}
+                                    isDisabled={isPillarLocked || index === courseLimit - 1}
+                                    variant="ghost"
+                                  />
+                                </HStack>
+                              </Flex>
+                              <Select
+                                placeholder={isPillarLocked ? undefined : 'Select course'}
+                                value={selectValue}
+                                onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
+                                bg="white"
+                                isDisabled={isPillarLocked}
+                              >
+                                {courseOptions.map((course) => (
+                                  <option key={course.id} value={course.id}>
+                                    {course.title}
+                                  </option>
+                                ))}
+                              </Select>
+                              {isEmpty && !isPillarLocked && (
+                                <Text fontSize="xs" color="red.500" mt={2}>
+                                  Course assignment required for this {assignmentUnit}.
+                                </Text>
+                              )}
+                              {isPillarLocked && pillarPlanEntry ? (
+                                <Text fontSize="xs" color="gray.600" mt={2}>
+                                  Auto-assigned from pillar: {pillarPlanEntry.title}
+                                </Text>
+                              ) : null}
+                              {!isPillarLocked && courseOptions.length === 0 ? (
+                                <Text fontSize="xs" color="red.500" mt={2}>
+                                  No courses available in the catalogue.
+                                </Text>
+                              ) : null}
+                            </Box>
+                          )
+                        })}
+                      </Stack>
+                      <Text mt={2} fontSize="sm" color={remainingCourses > 0 ? 'gray.600' : 'green.500'}>
+                        {`${Math.max(remainingCourses, 0)} course(s) remaining to assign`}
+                      </Text>
+                      {duplicateCourses.length > 0 && (
+                        <Alert status="warning" mt={3} borderRadius="md">
+                          <AlertIcon />
+                          Duplicate courses assigned for multiple {assignmentUnitPlural}:{' '}
+                          {duplicateCourses.join(', ')}.
+                        </Alert>
+                      )}
+                      {emptyMonths.length > 0 && courseLimit > 0 && (
+                        <Alert status="error" mt={3} borderRadius="md">
+                          <AlertIcon />
+                          {emptyMonths.length} {assignmentUnit}(s) still need course assignments.
+                        </Alert>
+                      )}
+                    </Box>
                   </GridItem>
                 ) : null}
                 <GridItem>
@@ -973,123 +1104,9 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                 </GridItem>
               </Grid>
 
-              {showCourseAssignments && (
-              <Box>
-                <Text fontWeight="medium" mb={1}>
-                  {assignmentSectionLabel}
-                </Text>
-                <Text fontSize="sm" color="gray.600" mb={3}>
-                  {isMonthlyJourney
-                    ? `Assign exactly ${courseLimit} courses (1 per month). Learners only see these courses, in this order: Course 1 first, Course 2 second, and so on.`
-                    : '6-week courses are assigned automatically from the selected pillar and saved to the organization. Window 1 is shown first to learners.'}
-                </Text>
-                {courseLimit === 0 ? (
-                  <Text fontSize="sm" color="gray.600">
-                    Select a program duration to enable {assignmentUnit} assignments.
-                  </Text>
-                ) : null}
-                <Stack spacing={3}>
-                  {Array.from({ length: courseLimit }, (_, index) => {
-                    const monthNumber = index + 1
-                    const monthKey = String(monthNumber)
-                    const assignedCourse = monthlyAssignments[monthKey] || ''
-                    const dateRange = cohortStartDate
-                      ? (() => {
-                          const { startDate, endDate } = getProgramSegmentDateRange({
-                            cohortStartDate,
-                            segmentIndex: index,
-                            cadence: programCadence,
-                          })
-                          return formatMonthRange(startDate, endDate)
-                        })()
-                      : undefined
-                    const isEmpty = !assignedCourse
-                    const isPillarLocked = Boolean(form.pillar && form.programDuration === 1.5)
-                    const pillarPlanEntry =
-                      isPillarLocked && form.pillar
-                        ? PILLAR_COURSE_PLAN[form.pillar][index]
-                        : null
-                    const selectValue = pillarPlanEntry?.courseId || assignedCourse
-                    return (
-                      <Box key={monthKey} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
-                        <Flex justify="space-between" align="center" mb={2}>
-                          <HStack spacing={2}>
-                            <Badge colorScheme={!selectValue ? 'red' : 'green'} borderRadius="full">
-                              {pillarPlanEntry
-                                ? formatPillarWeekRange(pillarPlanEntry.weekRange)
-                                : `Course ${monthNumber} of ${courseLimit}`}
-                            </Badge>
-                            {dateRange && (
-                              <Text fontSize="sm" color="gray.600">
-                                {dateRange}
-                              </Text>
-                            )}
-                          </HStack>
-                          <HStack spacing={1}>
-                            <IconButton
-                              aria-label="Move course up"
-                              size="sm"
-                              icon={<ChevronUp size={16} />}
-                              onClick={() => swapMonthlyAssignments(index, index - 1)}
-                              isDisabled={isPillarLocked || index === 0}
-                              variant="ghost"
-                            />
-                            <IconButton
-                              aria-label="Move course down"
-                              size="sm"
-                              icon={<ChevronDown size={16} />}
-                              onClick={() => swapMonthlyAssignments(index, index + 1)}
-                              isDisabled={isPillarLocked || index === courseLimit - 1}
-                              variant="ghost"
-                            />
-                          </HStack>
-                        </Flex>
-                        <Select
-                          placeholder={isPillarLocked ? undefined : 'Select course'}
-                          value={selectValue}
-                          onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
-                          bg="white"
-                          isDisabled={isPillarLocked}
-                        >
-                          {sortedCourses.map((course) => (
-                            <option key={course.id} value={course.id}>
-                              {course.title}
-                            </option>
-                          ))}
-                        </Select>
-                        {isEmpty && !isPillarLocked && (
-                          <Text fontSize="xs" color="red.500" mt={2}>
-                            Course assignment required for this {assignmentUnit}.
-                          </Text>
-                        )}
-                        {isPillarLocked && pillarPlanEntry ? (
-                          <Text fontSize="xs" color="gray.600" mt={2}>
-                            Auto-assigned from pillar: {pillarPlanEntry.title}
-                          </Text>
-                        ) : null}
-                      </Box>
-                    )
-                  })}
-                </Stack>
-                <Text mt={2} fontSize="sm" color={remainingCourses > 0 ? 'gray.600' : 'green.500'}>
-                  {courseLimit === 0
-                    ? `Select a program duration to assign courses to ${assignmentUnitPlural}`
-                    : `${Math.max(remainingCourses, 0)} course(s) remaining to assign`}
-                </Text>
-                {duplicateCourses.length > 0 && (
-                  <Alert status="warning" mt={3} borderRadius="md">
-                    <AlertIcon />
-                    Duplicate courses assigned for multiple {assignmentUnitPlural}: {duplicateCourses.join(', ')}.
-                  </Alert>
-                )}
-                {emptyMonths.length > 0 && courseLimit > 0 && (
-                  <Alert status="error" mt={3} borderRadius="md">
-                    <AlertIcon />
-                    {emptyMonths.length} {assignmentUnit}(s) still need course assignments.
-                  </Alert>
-                )}
-                {courseLimit > 0 && (
-                  <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="white">
+              {showCourseAssignments && courseLimit > 0 && (
+                <Box>
+                  <Box borderWidth="1px" borderRadius="lg" p={3} bg="white">
                     <HStack justify="space-between" mb={2}>
                       <Text fontWeight="semibold">{assignmentBreakdownLabel}</Text>
                       <HStack spacing={2} color="purple.600">
@@ -1109,8 +1126,6 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       ))}
                     </Stack>
                   </Box>
-                )}
-                {courseLimit > 0 && (
                   <Box mt={4} borderWidth="1px" borderRadius="lg" p={3} bg="gray.50">
                     <Text fontWeight="semibold" mb={2}>
                       Learner dashboard preview
@@ -1127,17 +1142,38 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         })
                         const label =
                           availability === 'current'
-                            ? (programCadence === 'biweekly' ? 'Current window' : 'Current month')
+                            ? programCadence === 'biweekly'
+                              ? 'Current window'
+                              : 'Current month'
                             : availability === 'completed'
                               ? 'Completed'
                               : availability === 'past'
                                 ? 'Ended'
                                 : 'Locked'
                         return (
-                          <Flex key={monthNumber} justify="space-between" align="center" p={2} bg="white" borderRadius="md">
-                            <Text fontWeight="medium">{getProgramSegmentLabel(monthNumber, programCadence)}</Text>
+                          <Flex
+                            key={monthNumber}
+                            justify="space-between"
+                            align="center"
+                            p={2}
+                            bg="white"
+                            borderRadius="md"
+                          >
+                            <Text fontWeight="medium">
+                              {getProgramSegmentLabel(monthNumber, programCadence)}
+                            </Text>
                             <HStack spacing={2}>
-                              <Badge colorScheme={availability === 'current' ? 'green' : availability === 'completed' ? 'purple' : availability === 'past' ? 'orange' : 'gray'}>
+                              <Badge
+                                colorScheme={
+                                  availability === 'current'
+                                    ? 'green'
+                                    : availability === 'completed'
+                                      ? 'purple'
+                                      : availability === 'past'
+                                        ? 'orange'
+                                        : 'gray'
+                                }
+                              >
                                 {label}
                               </Badge>
                               <Text fontSize="sm" color="gray.600">
@@ -1149,8 +1185,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       })}
                     </Stack>
                   </Box>
-                )}
-              </Box>
+                </Box>
               )}
 
               <Box>

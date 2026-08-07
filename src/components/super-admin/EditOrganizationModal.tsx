@@ -775,7 +775,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
 
   return (
     <>
-    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="inside">
+    <Modal isOpen={isOpen} onClose={onClose} size="5xl" scrollBehavior="outside">
       <ModalOverlay />
       <ModalContent>
         <ModalHeader>Edit organization</ModalHeader>
@@ -896,8 +896,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       value={form.programDuration?.toString() || ''}
                       onChange={(e) => {
                         const next = Number(e.target.value)
+                        const previous = form.programDuration
                         updateField('programDuration', next)
                         if (next !== 1.5) updateField('pillar', undefined)
+                        if (next !== previous) setMonthlyAssignments({})
                       }}
                     >
                       {programDurations.map((option) => (
@@ -1055,7 +1057,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                           onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                           bg="white"
                         >
-                          {sortedCourses.map((course) => (
+                          {(sortedCourses.length
+                            ? sortedCourses
+                            : getMonthlyJourneyCourseOptions()
+                          ).map((course) => (
                             <option key={course.id} value={course.id}>
                               {course.title}
                             </option>
@@ -1069,7 +1074,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                       </Box>
                     )
                   })}
-                  {!sortedCourses.length && (
+                  {!(sortedCourses.length ? sortedCourses : getMonthlyJourneyCourseOptions()).length && (
                     <Text fontSize="sm" color="gray.600">
                       No courses available yet.
                     </Text>
