@@ -567,7 +567,11 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "practical", totalFrequency: 6 },
   ],
   "3M": [
-    // Matches the 3-month weekly-checklist product table (max 113,000 / pass 75,000).
+    // 3-month weekly checklist (product sheet):
+    // Podcast 9x2000, Weekly session 12x1500, Webinar 3x4000, Peer-to-peer 9x1000,
+    // Impact 6x1000, LIFT 3x3000, LinkedIn 7x500, Book club 3x2500,
+    // Peer matching 12x1000, Challenger 6x1000, Mentor 3x2000, Coach 3x2000
+    // = 113,000 max / 75,000 pass (67k without mentor+coach, 71k without one).
     { activityId: "podcast_workbook", totalFrequency: 9 },
     { activityId: "weekly_session", totalFrequency: 12 },
     {
@@ -580,12 +584,17 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     },
     { activityId: "peer_to_peer", totalFrequency: 9 },
     { activityId: "impact_log", totalFrequency: 6 },
-    { activityId: "lift_module", totalFrequency: 3, pointsOverride: 3000 },
+    {
+      activityId: "lift_module",
+      totalFrequency: 3,
+      pointsOverride: 3000,
+      titleOverride: "LIFT Course Module Completed",
+    },
     { activityId: "linkedin", totalFrequency: 7 },
     { activityId: "book_club", totalFrequency: 3, pointsOverride: 2500, titleOverride: "Book Club" },
     { activityId: "peer_matching", totalFrequency: 12 },
     { activityId: "challenger", totalFrequency: 6 },
-    { activityId: "mentor_meetup", totalFrequency: 3 },
+    { activityId: "mentor_meetup", totalFrequency: 3, titleOverride: "Mentor Meet Up" },
     {
       activityId: "ambassador_session",
       totalFrequency: 3,
