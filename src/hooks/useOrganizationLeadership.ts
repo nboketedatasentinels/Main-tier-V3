@@ -27,6 +27,12 @@ export interface SupportAssignments {
   ambassadorId: string | null
 }
 
+export interface LeadershipPending {
+  partnerEmail: string | null
+  mentorEmail: string | null
+  ambassadorEmail: string | null
+}
+
 export interface LeadershipErrors {
   organization?: string
   supportAssignments?: string
@@ -65,6 +71,12 @@ const emptySources: LeadershipAssignmentSources = {
   partner: null,
 }
 
+const emptyPending: LeadershipPending = {
+  partnerEmail: null,
+  mentorEmail: null,
+  ambassadorEmail: null,
+}
+
 export interface ProfileAssignments {
   mentorId?: string | null
   ambassadorId?: string | null
@@ -76,6 +88,11 @@ type LeadershipRpcResult = {
     partnerId?: string | null
     mentorId?: string | null
     ambassadorId?: string | null
+  }
+  pending?: {
+    partnerEmail?: string | null
+    mentorEmail?: string | null
+    ambassadorEmail?: string | null
   }
   assignmentSources?: {
     partner?: LeadershipAssignmentSource
@@ -136,6 +153,7 @@ export const useOrganizationLeadership = (
   const [assignments, setAssignments] = useState<LeadershipAssignments>(emptyAssignments)
   const [assignmentSources, setAssignmentSources] = useState<LeadershipAssignmentSources>(emptySources)
   const [profiles, setProfiles] = useState<LeadershipProfiles>(emptyProfiles)
+  const [pending, setPending] = useState<LeadershipPending>(emptyPending)
   const [errors, setErrors] = useState<LeadershipErrors>({})
   const [loading, setLoading] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -152,6 +170,7 @@ export const useOrganizationLeadership = (
       setAssignments(emptyAssignments)
       setAssignmentSources(emptySources)
       setProfiles(emptyProfiles)
+      setPending(emptyPending)
       setErrors({})
       setLoading(false)
       setOrganizationExists(false)
@@ -195,6 +214,11 @@ export const useOrganizationLeadership = (
           mentor: payload.assignmentSources?.mentor ?? null,
           ambassador: payload.assignmentSources?.ambassador ?? null,
         })
+        setPending({
+          partnerEmail: payload.pending?.partnerEmail ?? null,
+          mentorEmail: payload.pending?.mentorEmail ?? null,
+          ambassadorEmail: payload.pending?.ambassadorEmail ?? null,
+        })
 
         const partner = toExtendedProfile(payload.profiles?.partner ?? null)
         const mentor = toExtendedProfile(payload.profiles?.mentor ?? null)
@@ -222,6 +246,7 @@ export const useOrganizationLeadership = (
         setAssignments(emptyAssignments)
         setAssignmentSources(emptySources)
         setProfiles(emptyProfiles)
+        setPending(emptyPending)
         setErrors({
           organization: 'Failed to load organization leadership.',
         })
@@ -255,16 +280,33 @@ export const useOrganizationLeadership = (
   const supportAssignment = useMemo<SupportAssignmentStatus>(
     () => ({
       id: userId ?? null,
-      exists: Boolean(assignments.mentorId || assignments.ambassadorId),
+      exists: Boolean(
+        assignments.mentorId ||
+          assignments.ambassadorId ||
+          assignments.partnerId ||
+          pending.mentorEmail ||
+          pending.ambassadorEmail ||
+          pending.partnerEmail,
+      ),
       loaded: organizationLoaded,
     }),
-    [assignments.ambassadorId, assignments.mentorId, organizationLoaded, userId],
+    [
+      assignments.ambassadorId,
+      assignments.mentorId,
+      assignments.partnerId,
+      organizationLoaded,
+      pending.ambassadorEmail,
+      pending.mentorEmail,
+      pending.partnerEmail,
+      userId,
+    ],
   )
 
   return {
     assignments,
     assignmentSources,
     profiles,
+    pending,
     errors,
     loading,
     loadingAssignments: loading,

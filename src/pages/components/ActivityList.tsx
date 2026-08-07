@@ -766,9 +766,6 @@ export const ActivityList = ({
                       Current
                     </Text>
                   )}
-                  <Text fontSize="xs" color={isCurrent ? '#350e6f' : 'gray.500'}>
-                    {periodRows.length + (showCards ? 3 : 0)}
-                  </Text>
                   {periodPoints > 0 && (
                     <Text
                       fontSize="xs"
@@ -1012,9 +1009,6 @@ export const ActivityList = ({
                       Current
                     </Text>
                   )}
-                  <Text fontSize="xs" color={isCurrent ? '#350e6f' : 'gray.500'}>
-                    {periodItems.length}
-                  </Text>
                   {periodPoints > 0 && (
                     <Text
                       fontSize="xs"

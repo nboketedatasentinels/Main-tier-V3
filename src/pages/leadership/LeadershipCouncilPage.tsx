@@ -146,10 +146,14 @@ export const LeadershipCouncilPage: React.FC = () => {
     organization,
     assignmentSources,
     supportAssignment: supportAssignmentStatus,
+    pending,
   } = useOrganizationLeadership(profile?.companyId, profile?.id, profile)
   const mentorProfile = profiles.mentor as LeadershipProfile | null
   const ambassadorProfile = profiles.ambassador as LeadershipProfile | null
   const partnerProfile = profiles.partner as PartnerProfile | null
+  const pendingPartnerEmail = pending.partnerEmail
+  const pendingMentorEmail = pending.mentorEmail
+  const pendingAmbassadorEmail = pending.ambassadorEmail
   const mentorError = errors.organization || errors.supportAssignments || errors.mentor
   const ambassadorError = errors.organization || errors.supportAssignments || errors.ambassador
   const partnerError = errors.organization || errors.partner
@@ -275,7 +279,7 @@ export const LeadershipCouncilPage: React.FC = () => {
           title: 'Assignments checked',
           description: supportAssignmentsReady
             ? supportAssignmentStatus.exists
-              ? 'Your mentor and coach assignments are in place.'
+              ? 'Your support assignments are recorded for this organisation.'
               : 'Checked - your admin hasn’t recorded assignments yet.'
             : 'Checking your support assignments.',
           status: supportAssignmentsReady
@@ -289,20 +293,29 @@ export const LeadershipCouncilPage: React.FC = () => {
           title: 'Mentor ready',
           description: mentorProfile
             ? 'Mentor assigned - you can share goals and request a session.'
-            : assignmentsLoading
-              ? 'Loading your mentor assignment.'
-              : 'Your admin hasn’t assigned a mentor yet.',
-          status: mentorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
+            : pendingMentorEmail
+              ? `Mentor invited (${pendingMentorEmail}) - waiting for them to join.`
+              : assignmentsLoading
+                ? 'Loading your mentor assignment.'
+                : 'Your admin hasn’t assigned a mentor yet.',
+          status: mentorProfile || pendingMentorEmail ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
         },
         {
           id: 'ambassador',
           title: 'Coach ready',
           description: ambassadorProfile
             ? 'Coach ready - coaching sessions will appear here when scheduled.'
-            : assignmentsLoading
-              ? 'Loading your coach assignment.'
-              : 'Coach coaching hasn’t been set up for your organization yet.',
-          status: ambassadorProfile ? 'complete' : assignmentsLoading ? 'pending' : 'blocked',
+            : pendingAmbassadorEmail
+              ? `Coach invited (${pendingAmbassadorEmail}) - waiting for them to join.`
+              : assignmentsLoading
+                ? 'Loading your coach assignment.'
+                : 'Coach coaching hasn’t been set up for your organization yet.',
+          status:
+            ambassadorProfile || pendingAmbassadorEmail
+              ? 'complete'
+              : assignmentsLoading
+                ? 'pending'
+                : 'blocked',
         },
       ]
 
@@ -834,7 +847,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                       <Heading size="md" color="white" letterSpacing="-0.01em">
                         {partnerProfile
                           ? displayNameForProfile(partnerProfile)
-                          : 'No partner assigned'}
+                          : pendingPartnerEmail
+                            ? pendingPartnerEmail
+                            : 'No partner assigned'}
                       </Heading>
                     </Stack>
                   </CardHeader>
@@ -900,7 +915,31 @@ export const LeadershipCouncilPage: React.FC = () => {
                         )}
                       </Stack>
                     )}
-                    {!partnerLoading && !partnerProfile && (
+                    {!partnerLoading && !partnerProfile && pendingPartnerEmail && (
+                      <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
+                        <Icon as={Shield} boxSize={9} color="whiteAlpha.700" />
+                        <Heading size="sm" color="white">Partner assigned</Heading>
+                        <Text color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                          {pendingPartnerEmail}
+                        </Text>
+                        <Text color="whiteAlpha.800" fontSize="sm">
+                          They’re set as your Transformation Partner. Once they create their
+                          account, their full profile will appear here.
+                        </Text>
+                        <Button
+                          as="a"
+                          href={`mailto:${pendingPartnerEmail}`}
+                          size="sm"
+                          mt={1}
+                          bg="white"
+                          color="#27062e"
+                          _hover={{ bg: 'whiteAlpha.900' }}
+                        >
+                          Email partner
+                        </Button>
+                      </Flex>
+                    )}
+                    {!partnerLoading && !partnerProfile && !pendingPartnerEmail && (
                       <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
                         <Icon as={Shield} boxSize={9} color="whiteAlpha.700" />
                         <Heading size="sm" color="white">Partner not set up</Heading>
@@ -943,15 +982,24 @@ export const LeadershipCouncilPage: React.FC = () => {
                           Coach
                         </Text>
                         <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                          {ambassadorProfile ? displayNameForProfile(ambassadorProfile) : 'No coach assigned'}
+                          {ambassadorProfile
+                            ? displayNameForProfile(ambassadorProfile)
+                            : pendingAmbassadorEmail
+                              ? pendingAmbassadorEmail
+                              : 'No coach assigned'}
                         </Heading>
-                        {ambassadorProfile?.availabilityStatus && (
+                        {(ambassadorProfile?.availabilityStatus ||
+                          (!ambassadorProfile && pendingAmbassadorEmail)) && (
                           <Badge
-                            colorScheme={badgeColor(ambassadorProfile.availabilityStatus)}
+                            colorScheme={
+                              ambassadorProfile?.availabilityStatus
+                                ? badgeColor(ambassadorProfile.availabilityStatus)
+                                : 'orange'
+                            }
                             variant="subtle"
                             alignSelf="flex-start"
                           >
-                            {ambassadorProfile.availabilityStatus}
+                            {ambassadorProfile?.availabilityStatus || 'Pending signup'}
                           </Badge>
                         )}
                       </Stack>
@@ -986,7 +1034,21 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    {!assignmentsLoading && !ambassadorProfile && !ambassadorError && (
+                    {!assignmentsLoading && !ambassadorProfile && !ambassadorError && pendingAmbassadorEmail && (
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
+                        <Icon as={User} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">Coach invited</Heading>
+                        <Text color="gray.700" fontSize="sm" fontWeight="medium">
+                          {pendingAmbassadorEmail}
+                        </Text>
+                        <Text color="gray.600" fontSize="sm">
+                          They’re assigned as your coach. Once they accept the invite and join,
+                          their full profile will appear here.
+                        </Text>
+                      </Flex>
+                    )}
+
+                    {!assignmentsLoading && !ambassadorProfile && !ambassadorError && !pendingAmbassadorEmail && (
                       <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
                         <Icon as={User} boxSize={9} color="gray.400" />
                         <Heading size="sm" color="#27062e">No coach assigned</Heading>
@@ -1037,12 +1099,21 @@ export const LeadershipCouncilPage: React.FC = () => {
                           {isSamePerson ? 'Mentor & Coach' : 'Mentor'}
                         </Text>
                         <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                          {mentorProfile ? displayNameForProfile(mentorProfile) : 'No mentor assigned'}
+                          {mentorProfile
+                            ? displayNameForProfile(mentorProfile)
+                            : pendingMentorEmail
+                              ? pendingMentorEmail
+                              : 'No mentor assigned'}
                         </Heading>
                         <HStack spacing={2} flexWrap="wrap">
                           {mentorProfile?.availabilityStatus && (
                             <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
                               {mentorProfile.availabilityStatus}
+                            </Badge>
+                          )}
+                          {!mentorProfile && pendingMentorEmail && (
+                            <Badge colorScheme="orange" variant="subtle">
+                              Pending signup
                             </Badge>
                           )}
                           {mentorSourceLabel && (
@@ -1081,7 +1152,21 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Alert>
                     )}
 
-                    {!assignmentsLoading && !mentorProfile && !mentorError && (
+                    {!assignmentsLoading && !mentorProfile && !mentorError && pendingMentorEmail && (
+                      <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
+                        <Icon as={User} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">Mentor invited</Heading>
+                        <Text color="gray.700" fontSize="sm" fontWeight="medium">
+                          {pendingMentorEmail}
+                        </Text>
+                        <Text color="gray.600" fontSize="sm">
+                          They’re assigned as your mentor. Once they join the platform, their
+                          full profile will appear here.
+                        </Text>
+                      </Flex>
+                    )}
+
+                    {!assignmentsLoading && !mentorProfile && !mentorError && !pendingMentorEmail && (
                       <Flex direction="column" align="center" textAlign="center" p={6} gap={2}>
                         <Icon as={User} boxSize={9} color="gray.400" />
                         <Heading size="sm" color="#27062e">No mentor assigned</Heading>
