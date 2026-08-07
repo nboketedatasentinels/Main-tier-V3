@@ -898,8 +898,8 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       borderWidth="1px"
                       borderRadius="lg"
                       p={4}
-                      bg="purple.50"
-                      borderColor="purple.100"
+                      bg="gray.50"
+                      borderColor="gray.200"
                     >
                       <Text fontWeight="medium" mb={1}>
                         {assignmentSectionLabel}
@@ -974,7 +974,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                                 value={selectValue}
                                 onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                                 bg="white"
+                                color="gray.900"
                                 isDisabled={isPillarLocked}
+                                opacity={1}
+                                _disabled={{
+                                  color: 'gray.900',
+                                  opacity: 1,
+                                  cursor: 'not-allowed',
+                                  bg: 'white',
+                                }}
                               >
                                 {courseOptions.map((course) => (
                                   <option key={course.id} value={course.id}>
