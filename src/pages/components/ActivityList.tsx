@@ -17,7 +17,6 @@ import type { JourneyType } from '@/config/pointsConfig'
 import { getVisibleActivities } from '@/utils/activityStateManager'
 import { isMonthBasedJourney } from '@/utils/journeyType'
 import {
-  getWindowNumber,
   PARALLEL_WINDOW_SIZE_WEEKS,
 } from '@/utils/windowCalculations'
 import { ActivityRow } from './ActivityRow'
