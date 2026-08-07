@@ -13,7 +13,9 @@ import {
 } from '@chakra-ui/react'
 import { ChevronDown, ChevronRight, PartyPopper } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
+import type { JourneyType } from '@/config/pointsConfig'
 import { getVisibleActivities } from '@/utils/activityStateManager'
+import { isMonthBasedJourney } from '@/utils/journeyType'
 import {
   getWindowNumber,
   PARALLEL_WINDOW_SIZE_WEEKS,
@@ -24,6 +26,12 @@ import { useUserPillar } from '@/hooks/useUserPillar'
 
 /** Checklist activity ids that mirror the Capstone / Case Study / Practical cards. */
 const PROGRAMME_COMPONENT_ACTIVITY_IDS = new Set(['capstone', 'case_study', 'practical'])
+
+const WEEKS_PER_MONTH = 4
+
+/** Map a journey week (1-based) onto its calendar month bucket for 3M/6M/9M. */
+const weekToMonth = (week: number): number =>
+  Math.max(1, Math.ceil(Math.max(1, week) / WEEKS_PER_MONTH))
 
 type WeekRowKind = 'todo' | 'pending' | 'done'
 
@@ -111,6 +119,8 @@ interface ActivityListProps {
   selectedWeek: number
   currentWeek: number
   programDurationWeeks: number
+  /** When 3M/6M/9M, checklist sections are labelled by month instead of week. */
+  journeyType?: JourneyType | null
   completedWeeksByActivity: Record<string, Set<number>>
   pendingWeeksByActivity: Record<string, Set<number>>
   isWeekLocked: boolean
@@ -182,6 +192,7 @@ export const ActivityList = ({
   selectedWeek,
   currentWeek,
   programDurationWeeks,
+  journeyType = null,
   completedWeeksByActivity,
   pendingWeeksByActivity,
   isWeekLocked,
@@ -196,6 +207,9 @@ export const ActivityList = ({
   // Free practitioners (Starter Kit) see the same Capstone / Case Study /
   // Practical cards under Week 1 as on My Courses - not as scattered rows.
   const showProgrammeCardsUnderWeek1 = pillar === 'starter_kit'
+  const useMonths = Boolean(journeyType && isMonthBasedJourney(journeyType))
+  const periodNoun = useMonths ? 'month' : 'week'
+  const currentPeriod = useMonths ? weekToMonth(currentWeek) : currentWeek
 
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
 
@@ -487,6 +501,51 @@ export const ActivityList = ({
     [grouped.pendingByWeek],
   )
 
+  /** Week or month keys used as section headers in To do / In review. */
+  const sortedTodoPeriods = useMemo(() => {
+    if (!useMonths) return sortedTodoWeeks
+    return Array.from(new Set(sortedTodoWeeks.map(weekToMonth))).sort((a, b) => a - b)
+  }, [sortedTodoWeeks, useMonths])
+
+  const sortedPendingPeriods = useMemo(() => {
+    if (!useMonths) return sortedPendingWeeks
+    return Array.from(new Set(sortedPendingWeeks.map(weekToMonth))).sort((a, b) => a - b)
+  }, [sortedPendingWeeks, useMonths])
+
+  const rowsForTodoPeriod = (period: number): TodoRow[] => {
+    if (!useMonths) return grouped.todoByWeek.get(period) ?? []
+    const rows: TodoRow[] = []
+    const startWeek = (period - 1) * WEEKS_PER_MONTH + 1
+    const endWeek = period * WEEKS_PER_MONTH
+    for (let week = startWeek; week <= endWeek; week += 1) {
+      rows.push(...(grouped.todoByWeek.get(week) ?? []))
+    }
+    return rows
+  }
+
+  const itemsForPendingPeriod = (
+    period: number,
+  ): Array<{ activity: ActivityState; week: number }> => {
+    if (!useMonths) {
+      return (grouped.pendingByWeek.get(period) ?? []).map((activity) => ({
+        activity,
+        week: period,
+      }))
+    }
+    const items: Array<{ activity: ActivityState; week: number }> = []
+    const startWeek = (period - 1) * WEEKS_PER_MONTH + 1
+    const endWeek = period * WEEKS_PER_MONTH
+    for (let week = startWeek; week <= endWeek; week += 1) {
+      for (const activity of grouped.pendingByWeek.get(week) ?? []) {
+        items.push({ activity, week })
+      }
+    }
+    return items
+  }
+
+  const periodLabel = (period: number) =>
+    useMonths ? `Month ${period}` : `Week ${period}`
+
   const firstActionableRow = useMemo<TodoRow | null>(() => {
     for (const week of sortedTodoWeeks) {
       const rows = grouped.todoByWeek.get(week) ?? []
@@ -558,7 +617,7 @@ export const ActivityList = ({
             You're all caught up
           </Heading>
           <Text color="gray.500" fontSize="sm" textAlign="center">
-            New activities will unlock as each week opens. Come back soon.
+            New activities will unlock as each {periodNoun} opens. Come back soon.
           </Text>
         </Center>
       </Box>
@@ -591,17 +650,16 @@ export const ActivityList = ({
   )
 
   const renderTodoSection = () => {
-    const weekKeys = Array.from(grouped.todoByWeek.keys()).sort((a, b) => a - b)
-    // Always surface Week 1 when Starter Kit cards belong there, even if no
-    // other To-do rows are scheduled for that week yet.
-    const displayWeekKeys =
-      showProgrammeCardsUnderWeek1 && !weekKeys.includes(1)
-        ? [1, ...weekKeys]
-        : weekKeys
-    if (displayWeekKeys.length === 0) return null
+    // Always surface Month/Week 1 when Starter Kit cards belong there, even if
+    // no other To-do rows are scheduled for that period yet.
+    const displayPeriodKeys =
+      showProgrammeCardsUnderWeek1 && !sortedTodoPeriods.includes(1)
+        ? [1, ...sortedTodoPeriods]
+        : sortedTodoPeriods
+    if (displayPeriodKeys.length === 0) return null
     const isCollapsed = collapsedSections.todo
-    const visibleRowCount = displayWeekKeys.reduce(
-      (sum, week) => sum + (grouped.todoByWeek.get(week)?.length ?? 0),
+    const visibleRowCount = displayPeriodKeys.reduce(
+      (sum, period) => sum + rowsForTodoPeriod(period).length,
       0,
     )
     return (
@@ -646,17 +704,17 @@ export const ActivityList = ({
 
         <Collapse in={!isCollapsed} animateOpacity>
           <ColumnHeader />
-          {displayWeekKeys.map((week) => {
-            const weekRows = grouped.todoByWeek.get(week) ?? []
-            const showCards = showProgrammeCardsUnderWeek1 && week === 1
-            if (weekRows.length === 0 && !showCards) return null
-            const isWeekCollapsed = Boolean(collapsedTodoWeeks[week])
-            const weekPoints = weekRows
+          {displayPeriodKeys.map((period) => {
+            const periodRows = rowsForTodoPeriod(period)
+            const showCards = showProgrammeCardsUnderWeek1 && period === 1
+            if (periodRows.length === 0 && !showCards) return null
+            const isPeriodCollapsed = Boolean(collapsedTodoWeeks[period])
+            const periodPoints = periodRows
               .filter((row) => (row.rowKind ?? 'todo') === 'todo')
               .reduce((sum, row) => sum + (row.activity.points ?? 0), 0)
-            const isCurrent = week === currentWeek
+            const isCurrent = period === currentPeriod
             return (
-              <Box key={`todo-week-${week}`}>
+              <Box key={`todo-period-${period}`}>
                 <Flex
                   as="button"
                   type="button"
@@ -671,7 +729,7 @@ export const ActivityList = ({
                   boxShadow={isCurrent ? 'inset 4px 0 0 #350e6f' : undefined}
                   borderTop="1px solid"
                   borderColor={isCurrent ? '#e8dcf4' : 'gray.100'}
-                  onClick={() => toggleTodoWeek(week)}
+                  onClick={() => toggleTodoWeek(period)}
                   _hover={{ bg: isCurrent ? '#f0e8f7' : 'gray.100' }}
                   _focusVisible={{
                     outline: '2px solid',
@@ -680,7 +738,7 @@ export const ActivityList = ({
                   }}
                 >
                   <Icon
-                    as={isWeekCollapsed ? ChevronRight : ChevronDown}
+                    as={isPeriodCollapsed ? ChevronRight : ChevronDown}
                     boxSize={3.5}
                     color={isCurrent ? '#350e6f' : 'gray.500'}
                   />
@@ -691,7 +749,7 @@ export const ActivityList = ({
                     textTransform="uppercase"
                     letterSpacing="0.06em"
                   >
-                    Week {week}
+                    {periodLabel(period)}
                   </Text>
                   {isCurrent && (
                     <Text
@@ -709,24 +767,24 @@ export const ActivityList = ({
                     </Text>
                   )}
                   <Text fontSize="xs" color={isCurrent ? '#350e6f' : 'gray.500'}>
-                    {weekRows.length + (showCards ? 3 : 0)}
+                    {periodRows.length + (showCards ? 3 : 0)}
                   </Text>
-                  {weekPoints > 0 && (
+                  {periodPoints > 0 && (
                     <Text
                       fontSize="xs"
                       color="#350e6f"
                       fontWeight="semibold"
                       ml="auto"
                     >
-                      +{weekPoints.toLocaleString()} pts
+                      +{periodPoints.toLocaleString()} pts
                     </Text>
                   )}
                 </Flex>
-                <Collapse in={!isWeekCollapsed} animateOpacity>
+                <Collapse in={!isPeriodCollapsed} animateOpacity>
                   {showCards && (
                     <PillarProgrammeComponentsSection pillar={pillar} cardsOnly />
                   )}
-                  {weekRows.map(
+                  {periodRows.map(
                     ({
                       activity,
                       weekOverride,
@@ -892,17 +950,17 @@ export const ActivityList = ({
         </Flex>
 
         <Collapse in={!isCollapsed} animateOpacity>
-          {sortedPendingWeeks.map((week) => {
-            const weekItems = grouped.pendingByWeek.get(week) ?? []
-            if (weekItems.length === 0) return null
-            const isWeekCollapsed = Boolean(collapsedPendingWeeks[week])
-            const weekPoints = weekItems.reduce(
-              (sum, a) => sum + (a.points ?? 0),
+          {sortedPendingPeriods.map((period) => {
+            const periodItems = itemsForPendingPeriod(period)
+            if (periodItems.length === 0) return null
+            const isPeriodCollapsed = Boolean(collapsedPendingWeeks[period])
+            const periodPoints = periodItems.reduce(
+              (sum, { activity }) => sum + (activity.points ?? 0),
               0,
             )
-            const isCurrent = week === currentWeek
+            const isCurrent = period === currentPeriod
             return (
-              <Box key={`pending-week-${week}`}>
+              <Box key={`pending-period-${period}`}>
                 <Flex
                   as="button"
                   type="button"
@@ -917,7 +975,7 @@ export const ActivityList = ({
                   boxShadow={isCurrent ? 'inset 4px 0 0 #350e6f' : undefined}
                   borderTop="1px solid"
                   borderColor={isCurrent ? '#e8dcf4' : 'gray.100'}
-                  onClick={() => togglePendingWeek(week)}
+                  onClick={() => togglePendingWeek(period)}
                   _hover={{ bg: isCurrent ? '#f0e8f7' : 'gray.100' }}
                   _focusVisible={{
                     outline: '2px solid',
@@ -926,7 +984,7 @@ export const ActivityList = ({
                   }}
                 >
                   <Icon
-                    as={isWeekCollapsed ? ChevronRight : ChevronDown}
+                    as={isPeriodCollapsed ? ChevronRight : ChevronDown}
                     boxSize={3.5}
                     color={isCurrent ? '#350e6f' : 'gray.500'}
                   />
@@ -937,7 +995,7 @@ export const ActivityList = ({
                     textTransform="uppercase"
                     letterSpacing="0.06em"
                   >
-                    Week {week}
+                    {periodLabel(period)}
                   </Text>
                   {isCurrent && (
                     <Text
@@ -955,22 +1013,22 @@ export const ActivityList = ({
                     </Text>
                   )}
                   <Text fontSize="xs" color={isCurrent ? '#350e6f' : 'gray.500'}>
-                    {weekItems.length}
+                    {periodItems.length}
                   </Text>
-                  {weekPoints > 0 && (
+                  {periodPoints > 0 && (
                     <Text
                       fontSize="xs"
                       color="#350e6f"
                       fontWeight="semibold"
                       ml="auto"
                     >
-                      +{weekPoints.toLocaleString()} pts
+                      +{periodPoints.toLocaleString()} pts
                     </Text>
                   )}
                 </Flex>
-                <Collapse in={!isWeekCollapsed} animateOpacity>
-                  {weekItems.map((activity, idx) => {
-                    const rowKey = `${activity.id}-pending-week-${week}-${idx}`
+                <Collapse in={!isPeriodCollapsed} animateOpacity>
+                  {periodItems.map(({ activity, week }, idx) => {
+                    const rowKey = `${activity.id}-pending-period-${period}-${week}-${idx}`
                     const rowActivity: ActivityState = {
                       ...activity,
                       status: 'pending',

@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { supabase } from '@/services/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { JOURNEY_META } from '@/config/pointsConfig'
-import { getJourneyLabel } from '@/utils/journeyType'
+import { getJourneyLabel, isMonthBasedJourney, JOURNEY_MONTH_COUNTS } from '@/utils/journeyType'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { calculatePassMark } from '@/utils/completion'
 import type { JourneyConfig } from '@/hooks/useWeeklyChecklistViewModel'
@@ -43,6 +43,15 @@ export const JourneyHeader = ({
   const currentWeek = journeyTiming?.currentWeek ?? journey?.currentWeek ?? 1
   const cycleNumber = journeyTiming?.currentCycle ?? Math.ceil(currentWeek / 2)
   const totalCycles = journeyTiming?.totalCycles ?? Math.max(1, Math.ceil(totalWeeks / 2))
+  const useMonths = Boolean(journey?.journeyType && isMonthBasedJourney(journey.journeyType))
+  const currentMonth = Math.max(1, Math.ceil(currentWeek / 4))
+  const totalMonths =
+    journey?.journeyType && isMonthBasedJourney(journey.journeyType)
+      ? JOURNEY_MONTH_COUNTS[journey.journeyType]
+      : Math.max(1, Math.ceil(totalWeeks / 4))
+  const timingLabel = useMonths
+    ? `Month ${currentMonth} of ${totalMonths}`
+    : `Week ${currentWeek} of ${totalWeeks} · Cycle ${cycleNumber} of ${totalCycles}`
 
   const passMark = useMemo(() => {
     if (!journey) return JOURNEY_META['6W']?.passMarkPoints ?? 0
@@ -119,7 +128,7 @@ export const JourneyHeader = ({
             {getJourneyLabel(journey.journeyType)} · Journey progress
           </Text>
           <Text fontSize="xs" color="gray.400">
-            Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}
+            {timingLabel}
           </Text>
         </HStack>
         <Text
