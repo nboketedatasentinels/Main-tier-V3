@@ -924,15 +924,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Text>
                     )}
 
-                    {profile?.id && (
+                    {profile?.id && ambassadorProfile && (
                       <>
                         <Divider my={5} />
                         <LearnerAmbassadorBookings
                           learnerId={profile.id}
                           learnerName={displayNameForProfile(profile)}
                           companyId={profile.companyId ?? null}
-                          coachPending={!ambassadorProfile && Boolean(pendingAmbassadorEmail)}
-                          pendingCoachEmail={pendingAmbassadorEmail}
                         />
                       </>
                     )}
