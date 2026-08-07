@@ -22,6 +22,7 @@ export const WeeklyChecklistLayout = ({ vm }: { vm: VM }) => {
         programDurationWeeks={vm.journey?.programDurationWeeks ?? vm.selectedWeek}
         journeyType={vm.journey?.journeyType ?? null}
         completedWeeksByActivity={vm.completedWeeksByActivity}
+        completedCountByActivityMonth={vm.completedCountByActivityMonth}
         pendingWeeksByActivity={vm.pendingWeeksByActivity}
         isWeekLocked={vm.isWeekLocked}
         isAdmin={vm.isAdmin}

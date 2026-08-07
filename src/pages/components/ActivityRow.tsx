@@ -127,6 +127,11 @@ interface ActivityRowProps {
   /** 1-based claim index for this row when the activity allows multiple. */
   occurrenceNumber?: number
   occurrenceTotal?: number
+  /**
+   * When set (month journeys), Done column uses this numerator instead of
+   * journey-wide completedCount — e.g. Month 1 podcast shows 0/3 not 0/9.
+   */
+  occurrenceDone?: number
   /** How many claims are awaiting partner review (count toward DONE progress). */
   pendingCount?: number
   /** This week's claim is consumed (submitted/approved) - not the same as fully maxed. */
@@ -150,6 +155,7 @@ export const ActivityRow = ({
   onRefreshLedger,
   occurrenceNumber,
   occurrenceTotal,
+  occurrenceDone,
   pendingCount = 0,
   weekClaimComplete = false,
   isActionInFlight,
@@ -193,7 +199,8 @@ export const ActivityRow = ({
     isActionInFlight
 
   const visualState = getVisualState(activity)
-  // Journey frequency from the points sheet (1, 2, 3, …) — same on every week row.
+  // Journey frequency from the points sheet (1, 2, 3, …) — or month-local
+  // quota when occurrenceDone/occurrenceTotal are provided for 3M/6M/9M.
   const totalFrequency = Math.max(
     1,
     occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1,
@@ -207,14 +214,19 @@ export const ActivityRow = ({
     pendingCount,
     visualState === 'pending_review' ? 1 : 0,
   )
-  const consumedCount = completedCount + pendingClaims
-  // Journey-total progress (e.g. 1/2) must look the same in every week row -
-  // never derive the numerator from the week-local occurrence index.
+  const consumedCount =
+    typeof occurrenceDone === 'number'
+      ? occurrenceDone
+      : completedCount + pendingClaims
+  // Progress numerator: month-local when provided, otherwise journey-total.
   const displayDoneCount = Math.min(totalFrequency, Math.max(0, consumedCount))
-  // Line-through + lock ONLY when every occurrence is fully approved (e.g. 3/3).
+  // Line-through + lock ONLY when this row's frequency is fully used
+  // (month quota e.g. 3/3, or journey max e.g. 9/9).
   const isFullyComplete =
     activity.availability.state === 'permanently_exhausted' ||
-    completedCount >= totalFrequency ||
+    (typeof occurrenceDone === 'number'
+      ? occurrenceDone >= totalFrequency
+      : completedCount >= totalFrequency) ||
     (totalFrequency === 1 &&
       (visualState === 'completed' ||
         (weekClaimComplete && visualState !== 'pending_review')))
@@ -234,7 +246,9 @@ export const ActivityRow = ({
     : visualState === 'pending_review'
       ? STATUS_TEXT.pending_review
       : weekClaimComplete
-        ? 'Done this week'
+        ? typeof occurrenceDone === 'number'
+          ? 'Done this month'
+          : 'Done this week'
         : STATUS_TEXT[visualState]
 
   const approvalLabel =

@@ -18,6 +18,38 @@ export const JOURNEY_MONTH_COUNTS: Record<JourneyType, number> = {
   '9M': 9,
 }
 
+/** Checklist month length for 3M/6M/9M bucketing (4 journey weeks = 1 month). */
+export const WEEKS_PER_MONTH = 4
+
+/** 1-based month from a 1-based journey week. */
+export const weekToMonth = (week: number): number =>
+  Math.max(1, Math.ceil(Math.max(1, week) / WEEKS_PER_MONTH))
+
+/** Inclusive week range for a 1-based checklist month. */
+export const getMonthWeekRange = (month: number): { start: number; end: number } => {
+  const safeMonth = Math.max(1, month)
+  return {
+    start: (safeMonth - 1) * WEEKS_PER_MONTH + 1,
+    end: safeMonth * WEEKS_PER_MONTH,
+  }
+}
+
+/**
+ * Split a journey frequency across months (front-load remainders).
+ * Example: 9 over 3 months → 3,3,3; 7 over 3 months → 3,2,2; 12 over 3 → 4,4,4.
+ */
+export const getMonthOccurrenceQuota = (
+  maxTotal: number,
+  month: number,
+  monthCount: number,
+): number => {
+  if (maxTotal <= 0) return 0
+  if (monthCount <= 1) return maxTotal
+  const base = Math.floor(maxTotal / monthCount)
+  const rem = maxTotal % monthCount
+  return base + (month <= rem ? 1 : 0)
+}
+
 const JOURNEY_WEEKS_MAP: Record<number, JourneyType> = {
   4: '4W',
   6: '6W',

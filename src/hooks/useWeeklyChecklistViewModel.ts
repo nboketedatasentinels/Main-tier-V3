@@ -378,6 +378,8 @@ export function useWeeklyChecklistViewModel() {
     lastCompletedWeekByActivity: Record<string, number>
     lastCompletedTimestamp: Record<string, number>
     completedWeeksByActivity: Record<string, Set<number>>
+    /** Claim counts keyed by activity → month (1-based). */
+    completedCountByActivityMonth: Record<string, Record<number, number>>
   }>({
     weekCompleted: new Set(),
     weekCounts: {},
@@ -386,6 +388,7 @@ export function useWeeklyChecklistViewModel() {
     lastCompletedWeekByActivity: {},
     lastCompletedTimestamp: {},
     completedWeeksByActivity: {},
+    completedCountByActivityMonth: {},
   })
 
   // Per-week tracking of submissions awaiting partner approval. Built from a
@@ -457,6 +460,7 @@ export function useWeeklyChecklistViewModel() {
       const totalCompletedAllTime: Record<string, number> = {}
       const lastCompletedTimestamp: Record<string, number> = {}
       const completedWeeksByActivity: Record<string, Set<number>> = {}
+      const completedCountByActivityMonth: Record<string, Record<number, number>> = {}
 
       ;(data ?? []).forEach((r) => {
         const row = r as { activity_id?: string; week_number?: number; created_at?: string }
@@ -475,6 +479,10 @@ export function useWeeklyChecklistViewModel() {
           const set = completedWeeksByActivity[activityId] ?? new Set<number>()
           set.add(wk)
           completedWeeksByActivity[activityId] = set
+          const month = Math.max(1, Math.ceil(wk / 4))
+          const byMonth = completedCountByActivityMonth[activityId] ?? {}
+          byMonth[month] = (byMonth[month] ?? 0) + 1
+          completedCountByActivityMonth[activityId] = byMonth
         }
 
         // Current window (cycle-based)
@@ -503,6 +511,7 @@ export function useWeeklyChecklistViewModel() {
         totalCompletedAllTime,
         lastCompletedTimestamp,
         completedWeeksByActivity,
+        completedCountByActivityMonth,
       })
       setLedgerLoaded(true)
     }
@@ -1451,6 +1460,7 @@ export function useWeeklyChecklistViewModel() {
     allWeeksProgress,
     leadershipAvailability,
     completedWeeksByActivity: ledgerCache.completedWeeksByActivity,
+    completedCountByActivityMonth: ledgerCache.completedCountByActivityMonth,
     pendingWeeksByActivity,
 
     // derived

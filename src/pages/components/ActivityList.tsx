@@ -15,7 +15,14 @@ import { ChevronDown, ChevronRight, PartyPopper } from 'lucide-react'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import type { JourneyType } from '@/config/pointsConfig'
 import { getVisibleActivities } from '@/utils/activityStateManager'
-import { isMonthBasedJourney } from '@/utils/journeyType'
+import {
+  getMonthOccurrenceQuota,
+  getMonthWeekRange,
+  isMonthBasedJourney,
+  JOURNEY_MONTH_COUNTS,
+  weekToMonth,
+  WEEKS_PER_MONTH,
+} from '@/utils/journeyType'
 import {
   PARALLEL_WINDOW_SIZE_WEEKS,
 } from '@/utils/windowCalculations'
@@ -26,12 +33,6 @@ import { useUserPillar } from '@/hooks/useUserPillar'
 /** Checklist activity ids that mirror the Capstone / Case Study / Practical cards. */
 const PROGRAMME_COMPONENT_ACTIVITY_IDS = new Set(['capstone', 'case_study', 'practical'])
 
-const WEEKS_PER_MONTH = 4
-
-/** Map a journey week (1-based) onto its calendar month bucket for 3M/6M/9M. */
-const weekToMonth = (week: number): number =>
-  Math.max(1, Math.ceil(Math.max(1, week) / WEEKS_PER_MONTH))
-
 type WeekRowKind = 'todo' | 'pending' | 'done'
 
 type TodoRow = {
@@ -41,6 +42,8 @@ type TodoRow = {
   /** 1-based claim number for this row (e.g. 2 of 3). */
   occurrenceNumber?: number
   occurrenceTotal?: number
+  /** Month-local completed count for display (month journeys). */
+  occurrenceDone?: number
   rowKind?: WeekRowKind
 }
 
@@ -88,6 +91,8 @@ interface ActivityListProps {
   /** When 3M/6M/9M, checklist sections are labelled by month instead of week. */
   journeyType?: JourneyType | null
   completedWeeksByActivity: Record<string, Set<number>>
+  /** Claim counts by activity → month (1-based). Used for month-local 0/3 style progress. */
+  completedCountByActivityMonth?: Record<string, Record<number, number>>
   pendingWeeksByActivity: Record<string, Set<number>>
   isWeekLocked: boolean
   isAdmin: boolean
@@ -164,6 +169,7 @@ export const ActivityList = ({
   programDurationWeeks,
   journeyType = null,
   completedWeeksByActivity,
+  completedCountByActivityMonth = {},
   pendingWeeksByActivity,
   isWeekLocked,
   isAdmin,
@@ -269,6 +275,86 @@ export const ActivityList = ({
         pendingWeeksByActivity[activity.id] ?? new Set<number>()
       const totalCap = activity.activityPolicy?.maxTotal ?? 1
       const sortedCompleted = Array.from(completedWeeks).sort((a, b) => a - b)
+      const journeyDone = activity.completedCount ?? 0
+
+      // Month-based journeys: one row per month with that month's quota
+      // (podcast 9 → 0/3 each month, weekly session 12 → 0/4 each month).
+      if (useMonths && isRecurring && totalCap > 1) {
+        const monthCount =
+          (journeyType && JOURNEY_MONTH_COUNTS[journeyType]) ||
+          Math.max(1, Math.ceil(totalWeeks / WEEKS_PER_MONTH))
+
+        for (let month = 1; month <= monthCount; month += 1) {
+          const monthCap = getMonthOccurrenceQuota(totalCap, month, monthCount)
+          if (monthCap <= 0) continue
+
+          const monthDone =
+            completedCountByActivityMonth[activity.id]?.[month] ?? 0
+          const { start: monthStart, end: monthEnd } = getMonthWeekRange(month)
+          let monthPending = 0
+          pendingWeeks.forEach((w) => {
+            if (w >= monthStart && w <= monthEnd) monthPending += 1
+          })
+          const usedInMonth = monthDone + monthPending
+          const claimWeek =
+            selectedWeek >= monthStart && selectedWeek <= monthEnd
+              ? selectedWeek
+              : monthStart
+          const occurrenceNumber =
+            totalCap > 1 ? Math.min(Math.max(1, journeyDone + 1), totalCap) : undefined
+
+          if (monthDone >= monthCap) {
+            pushWeekRow(claimWeek, {
+              activity,
+              weekOverride: claimWeek,
+              occurrence: month,
+              occurrenceNumber,
+              occurrenceTotal: monthCap,
+              occurrenceDone: monthCap,
+              rowKind: 'done',
+            })
+            doneTotalCount += 1
+            donePointsTotal += activity.points ?? 0
+            continue
+          }
+
+          if (monthPending > 0 && usedInMonth >= monthCap) {
+            pushWeekRow(claimWeek, {
+              activity,
+              weekOverride: claimWeek,
+              occurrence: month,
+              occurrenceNumber,
+              occurrenceTotal: monthCap,
+              occurrenceDone: Math.min(monthCap, usedInMonth),
+              rowKind: 'pending',
+            })
+            pendingTotalCount += 1
+            pendingPointsTotal += activity.points ?? 0
+            continue
+          }
+
+          if (
+            activity.availability.state === 'locked' &&
+            activity.availability.reason !== 'weekly_cooldown'
+          ) {
+            locked.push(activity)
+            continue
+          }
+
+          pushWeekRow(claimWeek, {
+            activity,
+            weekOverride: claimWeek,
+            occurrence: month,
+            occurrenceNumber,
+            occurrenceTotal: monthCap,
+            occurrenceDone: Math.min(monthCap, monthDone),
+            rowKind: 'todo',
+          })
+          todoTotalCount += 1
+          todoPointsTotal += activity.points ?? 0
+        }
+        return
+      }
 
       // Every recorded completion goes into Done under its actual weekNumber
       // AND stays visible in that week row (strikethrough + occurrence).
@@ -421,8 +507,12 @@ export const ActivityList = ({
   }, [
     ordered,
     completedWeeksByActivity,
+    completedCountByActivityMonth,
     pendingWeeksByActivity,
     programDurationWeeks,
+    selectedWeek,
+    useMonths,
+    journeyType,
   ])
 
   const sortedTodoWeeks = useMemo(
@@ -722,14 +812,18 @@ export const ActivityList = ({
                       occurrence,
                       occurrenceNumber,
                       occurrenceTotal,
+                      occurrenceDone,
                       rowKind,
                     }) => {
                       const kind = rowKind ?? 'todo'
                       const rowKey = `${activity.id}-week-${weekOverride}-${occurrence ?? 0}-${kind}`
                       const totalCap =
                         occurrenceTotal ?? activity.activityPolicy?.maxTotal ?? 1
+                      const journeyCap = activity.activityPolicy?.maxTotal ?? 1
                       const fullyDone =
-                        (activity.completedCount ?? 0) >= totalCap ||
+                        (typeof occurrenceDone === 'number'
+                          ? occurrenceDone >= totalCap
+                          : (activity.completedCount ?? 0) >= journeyCap) ||
                         activity.availability.state === 'permanently_exhausted'
                       const rowActivity =
                         kind === 'done'
@@ -785,8 +879,11 @@ export const ActivityList = ({
                           onRefreshLedger={onRefreshLedger}
                           occurrenceNumber={occurrenceNumber}
                           occurrenceTotal={Math.max(1, totalCap)}
+                          occurrenceDone={occurrenceDone}
                           pendingCount={
-                            pendingWeeksByActivity[activity.id]?.size ?? 0
+                            typeof occurrenceDone === 'number'
+                              ? 0
+                              : pendingWeeksByActivity[activity.id]?.size ?? 0
                           }
                           weekClaimComplete={kind === 'done'}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
