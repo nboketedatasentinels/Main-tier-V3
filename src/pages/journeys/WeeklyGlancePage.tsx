@@ -40,11 +40,11 @@ import {
 } from 'lucide-react'
 
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
-import { AssignedCourseCard } from '@/components/courses/AssignedCourseCard'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
+import { AssignedCoursesCarousel } from '@/components/journeys/weeklyGlance/AssignedCoursesCarousel'
 import { useAssignedCourses, type AssignedCourse } from '@/hooks/useAssignedCourses'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
-import { resolveCourseCompletion, useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
+import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
 import { canAccessCourse } from '@/utils/membership'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
 import { useAuth } from '@/hooks/useAuth'
@@ -1197,34 +1197,13 @@ export const WeeklyGlancePage = () => {
 
           {showAssignedCourses && (
             <Stack flex={{ base: 'none', md: '1 1 0%' }} minW={0} w="full" spacing={4}>
-              {assignedLoading && !assignedCourses.length ? (
-                <Stack spacing={4}>
-                  <Skeleton h="170px" rounded="xl" />
-                  <Skeleton h="170px" rounded="xl" />
-                </Stack>
-              ) : (
-                <Stack spacing={4} h="full">
-                  {assignedCourses.map((course) => (
-                    <AssignedCourseCard
-                      key={`${course.periodLabel}-${course.id}`}
-                      periodLabel={course.periodLabel}
-                      periodNoun={course.periodNoun}
-                      hasAssignment
-                      course={course}
-                      availability={course.availability}
-                      dateRange={course.dateRange}
-                      unlockDate={course.unlockDate}
-                      points={course.points}
-                      completion={resolveCourseCompletion(completionsByKey, course)}
-                      hasAccess={canAccessCourse(profile, course.title, course.id)}
-                      showProgress={false}
-                      showAction={false}
-                      density="compact"
-                      onCardClick={() => handleCourseCardClick(course)}
-                    />
-                  ))}
-                </Stack>
-              )}
+              <AssignedCoursesCarousel
+                courses={assignedCourses}
+                loading={assignedLoading}
+                completionsByKey={completionsByKey}
+                profile={profile}
+                onCourseClick={handleCourseCardClick}
+              />
             </Stack>
           )}
         </Flex>
