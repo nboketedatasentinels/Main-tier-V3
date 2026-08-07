@@ -791,7 +791,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                             if (!to) return
                             // Open Gmail compose in the browser (not the OS mail app).
                             const subject = encodeURIComponent('Message from Transformation Leader')
-                            const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${subject}`
+                            const body = encodeURIComponent('Please write your email here')
+                            const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${subject}&body=${body}`
                             window.open(url, '_blank', 'noopener,noreferrer')
                           }}
                         >

@@ -62,7 +62,7 @@ export const ProofModal = ({
           <Text mb={3} color="gray.600">
             {attendanceOnly
               ? 'Confirm you attended. This stays pending until your partner assigns marks from the partner portal - you will not receive points yet.'
-              : 'Add a link (Drive, Dropbox, Notion, screenshot URL) and optional notes. Submitting proof marks this activity as submitted; it becomes completed after approval.'}
+              : 'Add a link (Dropbox, Notion, screenshot URL) and optional notes. Submitting proof marks this activity as submitted; it becomes completed after approval.'}
           </Text>
 
           <Stack spacing={3}>
