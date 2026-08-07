@@ -293,8 +293,10 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
   const visibleTimeframeFilter = useMemo(() => propUsers.some((user) => !!user.lastActive), [propUsers])
 
   const accessibleUsers = useMemo(() => {
-    if (isSuperAdmin || !assignedOrganizationIds?.length) return propUsers
-    return propUsers.filter((user) => {
+    // Platform admins manage the console; never list them in User Management.
+    const withoutAdmins = propUsers.filter((user) => normalizeRole(user.role) !== 'super_admin')
+    if (isSuperAdmin || !assignedOrganizationIds?.length) return withoutAdmins
+    return withoutAdmins.filter((user) => {
       return assignedOrganizationIds.some((orgId) =>
         userMatchesOrganizationFilter(user, { id: orgId }),
       )

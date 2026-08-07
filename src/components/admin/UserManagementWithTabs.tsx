@@ -164,6 +164,8 @@ export const UserManagementWithTabs = () => {
   const memo = useMemo(() => {
     return {
       users,
+      // Hide platform admins from Users Management — they are not managed here.
+      managedUsers: users.filter((u) => normalizeRole(u.role) !== 'super_admin'),
       organizations,
     }
   }, [users, organizations])
@@ -199,7 +201,7 @@ export const UserManagementWithTabs = () => {
         <TabPanels>
           <TabPanel px={0}>
             {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
-            <UsersManagementTab users={memo.users} loading={loading} />
+            <UsersManagementTab users={memo.managedUsers} loading={loading} />
           </TabPanel>
 
           <TabPanel px={0}>
