@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { Box, Flex, IconButton, Skeleton, Stack } from '@chakra-ui/react'
+import { useEffect, useState } from 'react'
+import { Box, Flex, IconButton, Skeleton, Text } from '@chakra-ui/react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { AssignedCourseCard } from '@/components/courses/AssignedCourseCard'
 import type { AssignedCourse } from '@/hooks/useAssignedCourses'
@@ -17,8 +17,8 @@ type AssignedCoursesCarouselProps = {
 }
 
 /**
- * Horizontal course carousel with chevron controls for Weekly Glance.
- * One compact card peeks as the slide; arrows scroll by card width.
+ * One-course-at-a-time carousel for Weekly Glance.
+ * Chevrons step through assigned courses; only the active slide is mounted.
  */
 export const AssignedCoursesCarousel = ({
   courses,
@@ -27,143 +27,87 @@ export const AssignedCoursesCarousel = ({
   profile,
   onCourseClick,
 }: AssignedCoursesCarouselProps) => {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(false)
-
-  const updateScrollState = useCallback(() => {
-    const el = scrollerRef.current
-    if (!el) {
-      setCanScrollLeft(false)
-      setCanScrollRight(false)
-      return
-    }
-    const maxScroll = el.scrollWidth - el.clientWidth
-    setCanScrollLeft(el.scrollLeft > 4)
-    setCanScrollRight(maxScroll > 4 && el.scrollLeft < maxScroll - 4)
-  }, [])
+  const [index, setIndex] = useState(0)
 
   useEffect(() => {
-    updateScrollState()
-    const el = scrollerRef.current
-    if (!el) return
-    el.addEventListener('scroll', updateScrollState, { passive: true })
-    const resizeObserver = new ResizeObserver(() => updateScrollState())
-    resizeObserver.observe(el)
-    return () => {
-      el.removeEventListener('scroll', updateScrollState)
-      resizeObserver.disconnect()
-    }
-  }, [courses.length, loading, updateScrollState])
-
-  const scrollByCard = (direction: -1 | 1) => {
-    const el = scrollerRef.current
-    if (!el) return
-    const firstCard = el.querySelector<HTMLElement>('[data-course-slide]')
-    const amount = firstCard?.offsetWidth ?? el.clientWidth * 0.85
-    el.scrollBy({ left: direction * (amount + 16), behavior: 'smooth' })
-  }
+    setIndex((prev) => {
+      if (courses.length === 0) return 0
+      return Math.min(prev, courses.length - 1)
+    })
+  }, [courses.length])
 
   if (loading && !courses.length) {
-    return (
-      <Stack spacing={4}>
-        <Skeleton h="170px" rounded="xl" />
-      </Stack>
-    )
+    return <Skeleton h="170px" rounded="xl" w="full" />
   }
 
   if (!courses.length) return null
 
+  const active = courses[index]
+  if (!active) return null
+
+  const canGoPrev = index > 0
+  const canGoNext = index < courses.length - 1
   const showControls = courses.length > 1
 
   return (
-    <Box position="relative" w="full" h="full">
+    <Box position="relative" w="full">
       {showControls && (
-        <Flex
-          position="absolute"
-          top={2}
-          right={2}
-          zIndex={2}
-          gap={1}
-          pointerEvents="none"
-        >
-          <IconButton
-            aria-label="Previous course"
-            icon={<ChevronLeft size={18} />}
-            size="sm"
-            variant="solid"
-            bg="white"
-            color="#350e6f"
-            border="1px solid"
-            borderColor="gray.200"
-            shadow="sm"
-            pointerEvents="auto"
-            isDisabled={!canScrollLeft}
-            onClick={() => scrollByCard(-1)}
-            _hover={{ bg: 'gray.50' }}
-            _disabled={{ opacity: 0.35, cursor: 'default' }}
-          />
-          <IconButton
-            aria-label="Next course"
-            icon={<ChevronRight size={18} />}
-            size="sm"
-            variant="solid"
-            bg="white"
-            color="#350e6f"
-            border="1px solid"
-            borderColor="gray.200"
-            shadow="sm"
-            pointerEvents="auto"
-            isDisabled={!canScrollRight}
-            onClick={() => scrollByCard(1)}
-            _hover={{ bg: 'gray.50' }}
-            _disabled={{ opacity: 0.35, cursor: 'default' }}
-          />
+        <Flex align="center" justify="space-between" mb={2} gap={2}>
+          <Text fontSize="xs" fontWeight="semibold" color="gray.500">
+            Course {index + 1} of {courses.length}
+          </Text>
+          <Flex gap={1}>
+            <IconButton
+              aria-label="Previous course"
+              icon={<ChevronLeft size={18} />}
+              size="sm"
+              variant="solid"
+              bg="white"
+              color="#350e6f"
+              border="1px solid"
+              borderColor="gray.200"
+              shadow="sm"
+              isDisabled={!canGoPrev}
+              onClick={() => setIndex((i) => Math.max(0, i - 1))}
+              _hover={{ bg: 'gray.50' }}
+              _disabled={{ opacity: 0.35, cursor: 'default' }}
+            />
+            <IconButton
+              aria-label="Next course"
+              icon={<ChevronRight size={18} />}
+              size="sm"
+              variant="solid"
+              bg="white"
+              color="#350e6f"
+              border="1px solid"
+              borderColor="gray.200"
+              shadow="sm"
+              isDisabled={!canGoNext}
+              onClick={() => setIndex((i) => Math.min(courses.length - 1, i + 1))}
+              _hover={{ bg: 'gray.50' }}
+              _disabled={{ opacity: 0.35, cursor: 'default' }}
+            />
+          </Flex>
         </Flex>
       )}
 
-      <Flex
-        ref={scrollerRef}
-        overflowX="auto"
-        overflowY="hidden"
-        gap={4}
-        h="full"
-        pb={1}
-        scrollSnapType="x mandatory"
-        css={{
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-          '&::-webkit-scrollbar': { display: 'none' },
-        }}
-      >
-        {courses.map((course) => (
-          <Box
-            key={`${course.periodLabel}-${course.id}`}
-            data-course-slide
-            flex="0 0 100%"
-            minW="100%"
-            maxW="100%"
-            scrollSnapAlign="start"
-          >
-            <AssignedCourseCard
-              periodLabel={course.periodLabel}
-              periodNoun={course.periodNoun}
-              hasAssignment
-              course={course}
-              availability={course.availability}
-              dateRange={course.dateRange}
-              unlockDate={course.unlockDate}
-              points={course.points}
-              completion={resolveCourseCompletion(completionsByKey, course)}
-              hasAccess={canAccessCourse(profile, course.title, course.id)}
-              showProgress={false}
-              showAction={false}
-              density="compact"
-              onCardClick={() => onCourseClick(course)}
-            />
-          </Box>
-        ))}
-      </Flex>
+      <AssignedCourseCard
+        key={`${active.periodLabel}-${active.id}-${index}`}
+        periodLabel={active.periodLabel}
+        periodNoun={active.periodNoun}
+        hasAssignment
+        course={active}
+        availability={active.availability}
+        dateRange={active.dateRange}
+        unlockDate={active.unlockDate}
+        points={active.points}
+        completion={resolveCourseCompletion(completionsByKey, active)}
+        hasAccess={canAccessCourse(profile, active.title, active.id)}
+        showProgress={false}
+        showAction={false}
+        density="compact"
+        onCardClick={() => onCourseClick(active)}
+      />
     </Box>
   )
 }
