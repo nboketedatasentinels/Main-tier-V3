@@ -780,28 +780,30 @@ export const LeadershipCouncilPage: React.FC = () => {
                         <Text color="gray.700" fontSize="sm" fontWeight="medium">
                           {pendingPartnerEmail}
                         </Text>
-                        <Button
-                          as="a"
+                        {/* Plain mailto anchor - most reliable way to open the OS mail app. */}
+                        <Link
                           href={`mailto:${pendingPartnerEmail.trim()}`}
-                          size="sm"
+                          display="inline-flex"
+                          alignItems="center"
+                          justifyContent="center"
                           mt={1}
+                          px={4}
+                          h={8}
+                          borderRadius="md"
                           bg="#350e6f"
                           color="white"
-                          _hover={{ bg: '#27062e' }}
-                          onClick={(event) => {
-                            // Ensure the mail client opens even if the host
-                            // button styling interferes with the anchor href.
-                            const email = pendingPartnerEmail.trim()
-                            if (!email) {
-                              event.preventDefault()
-                              return
-                            }
-                            event.preventDefault()
-                            window.location.href = `mailto:${email}`
+                          fontSize="sm"
+                          fontWeight="semibold"
+                          lineHeight="1"
+                          _hover={{ bg: '#27062e', textDecoration: 'none', color: 'white' }}
+                          _focusVisible={{
+                            outline: '2px solid',
+                            outlineColor: '#350e6f',
+                            outlineOffset: '2px',
                           }}
                         >
                           Email partner
-                        </Button>
+                        </Link>
                       </Flex>
                     )}
                     {!partnerLoading && !partnerProfile && !pendingPartnerEmail && (
