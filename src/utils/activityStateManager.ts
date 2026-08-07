@@ -101,44 +101,28 @@ export const calculateActivityAvailability = (
     return { state: 'locked', reason: 'missing_ambassador', isScheduledForWeek: false }
   }
 
-  // 2. Policy-driven Availability
-  if (policy?.type === 'one_time') {
-    const maxTotal = policy.maxTotal ?? 1
-    if (totalCompletedAllTime >= maxTotal) {
-      return { state: 'permanently_exhausted', reason: 'one_time_used', isScheduledForWeek: true }
+  // 2. Policy-driven Availability — maxTotal is the only hard claim cap.
+  // Learners can keep completing until journey frequency is reached; per-week /
+  // per-window soft targets no longer lock the next occurrence.
+  const maxTotal = policy?.maxTotal ?? (policy?.type === 'one_time' ? 1 : null)
+  if (maxTotal != null && totalCompletedAllTime >= maxTotal) {
+    return {
+      state: 'permanently_exhausted',
+      reason: policy?.type === 'one_time' ? 'one_time_used' : 'window_cap_reached',
+      isScheduledForWeek: true,
     }
   }
 
-  // 2b. Weekly cooldown for multi-attempt activities (7 calendar days between submissions)
-  const isMultiAttempt = policy?.type !== 'one_time' && totalCompletedAllTime > 0
-  if (isMultiAttempt && context.lastCompletedTimestamp) {
-    const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
-    const msSinceLast = Date.now() - context.lastCompletedTimestamp
-    if (msSinceLast < SEVEN_DAYS_MS) {
-      const cooldownUntil = new Date(context.lastCompletedTimestamp + SEVEN_DAYS_MS)
-      return {
-        state: 'locked',
-        reason: 'weekly_cooldown',
-        cooldownUntil,
-        isScheduledForWeek: true,
-      }
+  // 3. Legacy per-week / per-window caps only apply when no maxTotal is set
+  // (open-ended ongoing activities without a journey frequency).
+  if (maxTotal == null) {
+    if (behavior.maxPerWeek && weekCount >= behavior.maxPerWeek) {
+      return { state: 'exhausted', reason: 'max_per_week', isScheduledForWeek: true }
     }
-  }
 
-  if (policy?.type === 'window_limited') {
-    const maxPerWindow = policy.maxPerWindow ?? 1
-    if (windowCount >= maxPerWindow) {
-      return { state: 'next_window', reason: 'window_cap_reached', isScheduledForWeek: true }
+    if (behavior.maxPerWindow && windowCount >= behavior.maxPerWindow) {
+      return { state: 'exhausted', reason: 'max_per_window', isScheduledForWeek: true }
     }
-  }
-
-  // 3. Frequency Limits (legacy and ongoing)
-  if (behavior.maxPerWeek && weekCount >= behavior.maxPerWeek) {
-    return { state: 'exhausted', reason: 'max_per_week', isScheduledForWeek: true }
-  }
-
-  if (behavior.maxPerWindow && windowCount >= behavior.maxPerWindow) {
-    return { state: 'exhausted', reason: 'max_per_window', isScheduledForWeek: true }
   }
 
   // 4. Scheduling Checks

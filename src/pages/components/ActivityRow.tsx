@@ -255,7 +255,7 @@ export const ActivityRow = ({
     }
     if (weekClaimComplete && !isFullyComplete) {
       return hasMultipleOccurrences
-        ? `Done for this week (${displayDoneCount} of ${totalFrequency}). More occurrences unlock in later weeks.`
+        ? `Completed ${displayDoneCount} of ${totalFrequency}. You can still do another occurrence.`
         : "You've already submitted this for the week."
     }
     if (lockedByInteraction) return "You've already submitted this for the week."

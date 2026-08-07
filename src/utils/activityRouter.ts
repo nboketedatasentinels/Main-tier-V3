@@ -6,6 +6,8 @@ interface CompletionParams<TActivity extends ActivityDef> {
   journeyType: JourneyType;
   weekNumber: number;
   activity: TActivity;
+  /** Distinguishes repeat claims in the same week (e.g. occ-2). */
+  claimRef?: string;
   onProofRequired: (activity: TActivity) => void;
   onSuccess: (status: 'completed' | 'pending' | 'not_started') => Promise<void>;
   onError: (error: unknown) => void;
@@ -14,13 +16,14 @@ interface CompletionParams<TActivity extends ActivityDef> {
 async function awardOrExplain<TActivity extends ActivityDef>(
   params: Omit<CompletionParams<TActivity>, 'onProofRequired'> & { source: string },
 ) {
-  const { uid, journeyType, weekNumber, activity, source, onSuccess, onError } = params;
+  const { uid, journeyType, weekNumber, activity, claimRef, source, onSuccess, onError } = params;
   const result = await awardChecklistPoints({
     uid,
     journeyType,
     weekNumber,
     activity,
     source,
+    claimRef,
   });
 
   if (!result.awarded) {
@@ -39,7 +42,8 @@ async function awardOrExplain<TActivity extends ActivityDef>(
 export async function handleActivityCompletion<TActivity extends ActivityDef>(
   params: CompletionParams<TActivity>,
 ) {
-  const { uid, journeyType, weekNumber, activity, onProofRequired, onSuccess, onError } = params;
+  const { uid, journeyType, weekNumber, activity, claimRef, onProofRequired, onSuccess, onError } =
+    params;
 
   try {
     switch (activity.approvalType) {
@@ -49,6 +53,7 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
           journeyType,
           weekNumber,
           activity,
+          claimRef,
           source: 'instant:auto',
           onSuccess,
           onError,
@@ -61,6 +66,7 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
           journeyType,
           weekNumber,
           activity,
+          claimRef,
           source: 'instant:self',
           onSuccess,
           onError,
@@ -82,6 +88,7 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
             journeyType,
             weekNumber,
             activity,
+            claimRef,
             source: 'instant:partner-issued-claim',
             onSuccess,
             onError,
@@ -107,6 +114,7 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
             journeyType,
             weekNumber,
             activity,
+            claimRef,
             source: 'weekly_checklist',
             onSuccess,
             onError,

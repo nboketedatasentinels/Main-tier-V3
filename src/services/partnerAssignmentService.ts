@@ -27,8 +27,9 @@ const ELIGIBLE_LEARNER_COLUMNS =
 const { JOURNEY_META, getMonthNumber } = pointsConfig
 
 const getActivityLimits = (activity: { activityPolicy?: { maxPerWeek?: number | null; maxPerWindow?: number | null; maxTotal?: number | null }; maxPerWeek?: number | null; maxPerMonth?: number | null }) => ({
-  maxPerWeek: activity.activityPolicy?.maxPerWeek ?? activity.maxPerWeek ?? null,
-  maxPerWindow: activity.activityPolicy?.maxPerWindow ?? activity.maxPerMonth ?? null,
+  // maxTotal is the only hard claim cap (matches pointsService award path).
+  maxPerWeek: null as number | null,
+  maxPerWindow: null as number | null,
   maxTotal: activity.activityPolicy?.maxTotal ?? null,
 })
 

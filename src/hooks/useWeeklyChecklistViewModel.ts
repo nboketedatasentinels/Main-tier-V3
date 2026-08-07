@@ -945,8 +945,19 @@ export function useWeeklyChecklistViewModel() {
       if (isAdmin) return true
       if (!journey) return false
       if (isWeekLocked) return false
-      if (activity.hasInteracted && activity.status !== 'rejected') return false
       if (activity.approvalType === 'partner_issued' && !activity.issuedByPartner) return false
+      if (activity.availability.state === 'permanently_exhausted') return false
+      if (activity.availability.state === 'locked') return false
+
+      const maxTotal = activity.activityPolicy?.maxTotal
+      const done = activity.completedCount ?? 0
+      // Recurring activities stay mutable until journey frequency is reached.
+      if (maxTotal != null) {
+        if (done >= maxTotal && activity.status !== 'rejected') return false
+        return true
+      }
+
+      if (activity.hasInteracted && activity.status !== 'rejected') return false
       if (activity.availability.state !== 'available') return false
       return true
     },
@@ -1062,7 +1073,7 @@ export function useWeeklyChecklistViewModel() {
   ])
 
   const markCompleted = useCallback(
-    async (activity: ActivityState | undefined, weekOverride?: number) => {
+    async (activity: ActivityState | undefined, weekOverride?: number, claimRef?: string) => {
       if (!user || !journey) return
 
       if (!activity?.id) {
@@ -1101,6 +1112,7 @@ export function useWeeklyChecklistViewModel() {
           journeyType: journey.journeyType,
           weekNumber: targetWeek,
           activity,
+          claimRef,
           onProofRequired: (act) => openProofModal(act, targetWeek),
           onSuccess: async (status) => {
             await setActivityStatusLocal(activity.id, { status, hasInteracted: true, rejectionReason: null })
@@ -1252,12 +1264,29 @@ export function useWeeklyChecklistViewModel() {
           toast({ title: 'Future week', description: 'Proof submission opens when this week becomes active.', status: 'warning' })
           return
         }
-        if (activity.availability.state !== 'available' && activity.status !== 'rejected') {
+        if (activity.availability.state === 'permanently_exhausted') {
           triggerHaptic('warning')
           toast({ title: 'Opens soon', description: 'This activity is not open for proof submission yet.', status: 'warning' })
           return
         }
-        if (activity.hasInteracted && activity.status !== 'rejected') {
+        if (activity.availability.state === 'locked' && activity.status !== 'rejected') {
+          triggerHaptic('warning')
+          toast({ title: 'Opens soon', description: 'This activity is not open for proof submission yet.', status: 'warning' })
+          return
+        }
+        const maxTotal = activity.activityPolicy?.maxTotal
+        const done = activity.completedCount ?? 0
+        const pendingCount = pendingWeeksByActivity[activity.id]?.size ?? 0
+        if (maxTotal != null && done + pendingCount >= maxTotal && activity.status !== 'rejected') {
+          triggerHaptic('warning')
+          toast({ title: 'Selection saved', description: 'You have already used every occurrence of this activity.', status: 'warning' })
+          return
+        }
+        if (
+          maxTotal == null &&
+          activity.hasInteracted &&
+          activity.status !== 'rejected'
+        ) {
           triggerHaptic('warning')
           toast({ title: 'Selection saved', description: 'This submission is already in progress for this week.', status: 'warning' })
           return
@@ -1400,6 +1429,7 @@ export function useWeeklyChecklistViewModel() {
     isFreeTierMember,
     journey,
     markActivityPendingForWeek,
+    pendingWeeksByActivity,
     proofModal.activityId,
     proofModal.notes,
     proofModal.proofUrl,

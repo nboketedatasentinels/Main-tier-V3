@@ -48,58 +48,25 @@ type TodoRow = {
 type Bucket = 'todo' | 'pending' | 'done' | 'locked'
 
 const projectForWeek = (activity: ActivityState): ActivityState => {
-  // Each per-week duplicate is, by construction, a week the activity has not
-  // been completed in yet. Strip the global completion flags that the VM sets
-  // off the activity-id (status from selectedWeek, hasInteracted from the
-  // optimistic mutation) so the row renders as actionable in its own week.
-  //
-  // Clear only "next_window" / window-cap locks: those are computed against
-  // the currently selected week, while this row may target a later window that
-  // still has capacity (eligible-week scheduling enforces per-window caps).
-  // Never clear weekly_cooldown - the award RPC enforces the same 7-day gate.
+  // Each actionable duplicate is a claim slot that has not been completed yet.
+  // Strip global completion flags the VM sets from the selected-week ledger so
+  // the row renders as actionable for its own occurrence.
   let next: ActivityState = activity
   if (activity.status === 'completed' || activity.hasInteracted) {
     next = { ...next, status: 'not_started', hasInteracted: false }
   }
   const reason = activity.availability.reason
-  const isSelectedWeekWindowLock =
-    activity.availability.state === 'next_window' || reason === 'window_cap_reached'
-  if (isSelectedWeekWindowLock) {
+  const isSoftCapLock =
+    activity.availability.state === 'next_window' ||
+    reason === 'window_cap_reached' ||
+    reason === 'weekly_cooldown'
+  if (isSoftCapLock) {
     next = {
       ...next,
       availability: { state: 'available', isScheduledForWeek: true },
     }
   }
   return next
-}
-
-/** Weeks that still have room under maxPerWindow (and aren't already claimed). */
-const getWindowAwareEligibleWeeks = (params: {
-  startWeek: number
-  totalWeeks: number
-  completedWeeks: Set<number>
-  pendingWeeks: Set<number>
-  maxPerWindow: number | null
-}): number[] => {
-  const { startWeek, totalWeeks, completedWeeks, pendingWeeks, maxPerWindow } = params
-  const usedByWindow = new Map<number, number>()
-  const bump = (week: number) => {
-    const win = getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS)
-    usedByWindow.set(win, (usedByWindow.get(win) ?? 0) + 1)
-  }
-  completedWeeks.forEach(bump)
-  pendingWeeks.forEach(bump)
-
-  const eligible: number[] = []
-  for (let w = startWeek; w <= totalWeeks; w++) {
-    if (completedWeeks.has(w) || pendingWeeks.has(w)) continue
-    if (maxPerWindow != null) {
-      const win = getWindowNumber(w, PARALLEL_WINDOW_SIZE_WEEKS)
-      if ((usedByWindow.get(win) ?? 0) >= maxPerWindow) continue
-    }
-    eligible.push(w)
-  }
-  return eligible
 }
 
 const isRecurringActivity = (activity: ActivityState): boolean => {
@@ -126,7 +93,11 @@ interface ActivityListProps {
   isWeekLocked: boolean
   isAdmin: boolean
   onOpenCurrentWeek: () => void
-  onMarkCompleted: (activity: ActivityState, weekOverride?: number) => Promise<void>
+  onMarkCompleted: (
+    activity: ActivityState,
+    weekOverride?: number,
+    claimRef?: string,
+  ) => Promise<void>
   onMarkNotStarted: (activity: ActivityState) => Promise<void>
   onOpenProof: (activity: ActivityState, weekOverride?: number) => void
   onRefreshLedger?: () => void
@@ -392,70 +363,34 @@ export const ActivityList = ({
         return
       }
 
-      // Cooldown is still active: keep completed/pending rows visible, but do
-      // not offer another "I did this" until the 7-day wait ends (matches RPC).
-      if (activity.availability.reason === 'weekly_cooldown') {
-        return
-      }
-
-      const maxTotal = activity.activityPolicy?.maxTotal ?? Infinity
-      const maxPerWindow = activity.activityPolicy?.maxPerWindow ?? null
-      const usedTotal = completedWeeks.size + pendingWeeks.size
-      const remaining = maxTotal === Infinity ? 0 : Math.max(0, maxTotal - usedTotal)
+      const pendingCount = pendingWeeks.size
+      const usedTotal = totalDone + pendingCount
+      const remaining = Math.max(0, totalCap - usedTotal)
       if (remaining === 0) return
 
-      // Respect per-window caps (e.g. peer_to_peer maxPerWindow=1). Previously
-      // week 2 stayed actionable after a week-1 claim in the same window, and
-      // the award RPC rejected with "Window activity limit reached".
-      const eligibleWeeks = getWindowAwareEligibleWeeks({
-        startWeek,
-        totalWeeks,
-        completedWeeks,
-        pendingWeeks,
-        maxPerWindow,
+      // Keep offering the next occurrence on the week/month the learner is
+      // viewing until maxTotal is reached — do not wait for a later week.
+      const claimWeek = Math.max(startWeek, selectedWeek)
+      const occurrenceNumber = totalCap > 1 ? usedTotal + 1 : undefined
+      pushWeekRow(claimWeek, {
+        activity,
+        weekOverride: claimWeek,
+        occurrence: 0,
+        occurrenceNumber,
+        occurrenceTotal: Math.max(1, totalCap),
+        rowKind: 'todo',
       })
-      if (eligibleWeeks.length === 0) return
-
-      const reservedWindows = new Map<number, number>()
-      const bumpReserved = (week: number) => {
-        const win = getWindowNumber(week, PARALLEL_WINDOW_SIZE_WEEKS)
-        reservedWindows.set(win, (reservedWindows.get(win) ?? 0) + 1)
-      }
-      completedWeeks.forEach(bumpReserved)
-      pendingWeeks.forEach(bumpReserved)
-
-      let assigned = 0
-      for (const w of eligibleWeeks) {
-        if (assigned >= remaining) break
-        if (maxPerWindow != null) {
-          const win = getWindowNumber(w, PARALLEL_WINDOW_SIZE_WEEKS)
-          if ((reservedWindows.get(win) ?? 0) >= maxPerWindow) continue
-          reservedWindows.set(win, (reservedWindows.get(win) ?? 0) + 1)
-        }
-        const occurrenceNumber =
-          maxTotal !== Infinity && maxTotal > 1 ? usedTotal + assigned + 1 : undefined
-        pushWeekRow(w, {
-          activity,
-          weekOverride: w,
-          occurrence: assigned,
-          occurrenceNumber,
-          occurrenceTotal:
-            maxTotal === Infinity ? 1 : Math.max(1, maxTotal),
-          rowKind: 'todo',
-        })
-        todoTotalCount += 1
-        todoPointsTotal += activity.points ?? 0
-        assigned += 1
-      }
+      todoTotalCount += 1
+      todoPointsTotal += activity.points ?? 0
     })
 
-    // Deduplicate week rows: prefer done > pending > todo for the same
-    // activity+week so a completed claim never also shows as actionable.
+    // Deduplicate within the same kind only so a completed claim can sit beside
+    // the next actionable occurrence in the same week.
     const kindRank: Record<WeekRowKind, number> = { done: 3, pending: 2, todo: 1 }
     todoByWeek.forEach((rows, week) => {
       const best = new Map<string, TodoRow>()
       rows.forEach((row) => {
-        const key = `${row.activity.id}::${row.weekOverride}`
+        const key = `${row.activity.id}::${row.weekOverride}::${row.rowKind ?? 'todo'}`
         const prev = best.get(key)
         const rank = kindRank[row.rowKind ?? 'todo']
         if (!prev || rank > kindRank[prev.rowKind ?? 'todo']) {
@@ -836,7 +771,17 @@ export const ActivityList = ({
                           }
                           onOpenCurrentWeek={onOpenCurrentWeek}
                           onFocusAvailableActivity={focusFirstActionableActivity}
-                          onMarkCompleted={(a) => onMarkCompleted(a, weekOverride)}
+                          onMarkCompleted={(a) =>
+                            onMarkCompleted(
+                              a,
+                              weekOverride,
+                              // First claim keeps the legacy ledger id (no claimRef).
+                              // Later same-activity claims need a distinct ref.
+                              occurrenceNumber != null && occurrenceNumber > 1
+                                ? `occ-${occurrenceNumber}`
+                                : undefined,
+                            )
+                          }
                           onOpenProof={(a) => onOpenProof(a, weekOverride)}
                           onRefreshLedger={onRefreshLedger}
                           occurrenceNumber={occurrenceNumber}

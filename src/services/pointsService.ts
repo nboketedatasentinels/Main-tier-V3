@@ -25,8 +25,11 @@ import { recordUserActivity } from "./userProfileService";
 const { JOURNEY_META, getMonthNumber } = pointsConfig;
 
 const getActivityLimits = (activity: ActivityDef) => ({
-  maxPerWeek: activity.activityPolicy?.maxPerWeek ?? activity.maxPerWeek ?? null,
-  maxPerWindow: activity.activityPolicy?.maxPerWindow ?? activity.maxPerMonth ?? null,
+  // Journey frequency (maxTotal) is the only hard claim cap. Per-week / per-window
+  // limits used to block the next occurrence after one claim; learners can now
+  // keep completing until maxTotal is reached.
+  maxPerWeek: null as number | null,
+  maxPerWindow: null as number | null,
   maxTotal: activity.activityPolicy?.maxTotal ?? null,
 });
 

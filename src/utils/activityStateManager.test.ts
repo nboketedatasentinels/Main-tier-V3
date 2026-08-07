@@ -28,9 +28,9 @@ describe('calculateActivityAvailability', () => {
     expect(result.state).toBe('available')
   })
 
-  it('returns next_window for window-limited activity at window cap', () => {
+  it('stays available for window-limited activity under maxTotal even after a window claim', () => {
     const activity = makeActivity({
-      activityPolicy: { type: 'window_limited', maxPerWindow: 1 },
+      activityPolicy: { type: 'window_limited', maxPerWindow: 1, maxTotal: 3 },
       flexibleWeeks: true,
     })
 
@@ -42,7 +42,26 @@ describe('calculateActivityAvailability', () => {
     })
 
     expect(result).toMatchObject({
-      state: 'next_window',
+      state: 'available',
+      isScheduledForWeek: true,
+    })
+  })
+
+  it('returns permanently_exhausted when journey maxTotal is reached', () => {
+    const activity = makeActivity({
+      activityPolicy: { type: 'window_limited', maxPerWindow: 1, maxTotal: 3 },
+      flexibleWeeks: true,
+    })
+
+    const result = calculateActivityAvailability(activity, {
+      windowWeek: 1,
+      weekCount: 0,
+      windowCount: 1,
+      totalCompletedAllTime: 3,
+    })
+
+    expect(result).toMatchObject({
+      state: 'permanently_exhausted',
       reason: 'window_cap_reached',
     })
   })
@@ -66,7 +85,7 @@ describe('calculateActivityAvailability', () => {
     })
   })
 
-  it('returns locked when activity is scheduled for a different week', () => {
+  it('does not lock fixed-week activities for a different selected week', () => {
     const activity = makeActivity({ week: 3, flexibleWeeks: false })
 
     const result = calculateActivityAvailability(activity, {
@@ -76,13 +95,14 @@ describe('calculateActivityAvailability', () => {
       totalCompletedAllTime: 0,
     })
 
+    // Scheduling no longer gates availability - week placement is UI-only.
     expect(result).toMatchObject({
-      state: 'locked',
-      reason: 'scheduled',
+      state: 'available',
+      isScheduledForWeek: false,
     })
   })
 
-  it('keeps flexible activities locked until their configured unlock week', () => {
+  it('keeps flexible activities available before their configured unlock week', () => {
     const activity = makeActivity({ week: 3, flexibleWeeks: true })
 
     const beforeUnlock = calculateActivityAvailability(activity, {
@@ -92,8 +112,7 @@ describe('calculateActivityAvailability', () => {
       totalCompletedAllTime: 0,
     })
     expect(beforeUnlock).toMatchObject({
-      state: 'locked',
-      reason: 'scheduled',
+      state: 'available',
       isScheduledForWeek: false,
     })
 
