@@ -690,19 +690,19 @@ export const LeadershipCouncilPage: React.FC = () => {
                     '6-week, 3-month, 6-month, and 9-month journeys',
                   )
                 ) : (
-                <Card borderColor="#350e6f" borderWidth="1px" bg="#27062e" borderRadius="2xl" overflow="hidden">
+                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl" overflow="hidden">
                   <CardHeader pb={2}>
                     <Stack spacing={2}>
                       <Text
                         fontSize="xs"
                         textTransform="uppercase"
-                        color="whiteAlpha.800"
+                        color="#350e6f"
                         fontWeight="bold"
                         letterSpacing="0.14em"
                       >
                         Transformation Partner
                       </Text>
-                      <Heading size="md" color="white" letterSpacing="-0.01em">
+                      <Heading size="md" color="#27062e" letterSpacing="-0.01em">
                         {partnerProfile
                           ? displayNameForProfile(partnerProfile)
                           : pendingPartnerEmail
@@ -714,8 +714,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                   <CardBody>
                     {partnerLoading && (
                       <Flex direction="column" align="center" gap={3} p={6}>
-                        <Spinner color="white" />
-                        <Text color="whiteAlpha.800">Loading transformation partner...</Text>
+                        <Spinner color="#350e6f" />
+                        <Text color="gray.600">Loading transformation partner...</Text>
                       </Flex>
                     )}
                     {!partnerLoading && partnerProfile && (
@@ -729,10 +729,10 @@ export const LeadershipCouncilPage: React.FC = () => {
                               bg="#350e6f"
                             />
                             <Stack spacing={0.5}>
-                              <Text color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                              <Text color="gray.800" fontSize="sm" fontWeight="medium">
                                 {partnerProfile.title || 'Transformation Partner'}
                               </Text>
-                              <Text color="whiteAlpha.700" fontSize="xs">
+                              <Text color="gray.500" fontSize="xs">
                                 {partnerProfile.officeLocation || partnerProfile.timezone || 'Global support'}
                               </Text>
                             </Stack>
@@ -752,17 +752,17 @@ export const LeadershipCouncilPage: React.FC = () => {
                         </HStack>
 
                         {partnerProfile.bio && (
-                          <Text color="whiteAlpha.900" fontSize="sm" lineHeight="1.65">
+                          <Text color="gray.700" fontSize="sm" lineHeight="1.65">
                             {partnerProfile.bio}
                           </Text>
                         )}
 
                         {partnerProfile.email && (
                           <HStack spacing={2} pt={1}>
-                            <Icon as={ExternalLink} color="whiteAlpha.700" boxSize={3.5} />
+                            <Icon as={ExternalLink} color="gray.500" boxSize={3.5} />
                             <Link
                               href={`mailto:${partnerProfile.email}`}
-                              color="white"
+                              color="#350e6f"
                               fontSize="sm"
                               fontWeight="medium"
                               textDecoration="underline"
@@ -775,9 +775,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
                     {!partnerLoading && !partnerProfile && pendingPartnerEmail && (
                       <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
-                        <Icon as={Shield} boxSize={9} color="whiteAlpha.700" />
-                        <Heading size="sm" color="white">Partner assigned</Heading>
-                        <Text color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
+                        <Icon as={Shield} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">Partner assigned</Heading>
+                        <Text color="gray.700" fontSize="sm" fontWeight="medium">
                           {pendingPartnerEmail}
                         </Text>
                         <Button
@@ -785,9 +785,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                           href={`mailto:${pendingPartnerEmail.trim()}`}
                           size="sm"
                           mt={1}
-                          bg="white"
-                          color="#27062e"
-                          _hover={{ bg: 'whiteAlpha.900' }}
+                          bg="#350e6f"
+                          color="white"
+                          _hover={{ bg: '#27062e' }}
                           onClick={(event) => {
                             // Ensure the mail client opens even if the host
                             // button styling interferes with the anchor href.
@@ -806,9 +806,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
                     {!partnerLoading && !partnerProfile && !pendingPartnerEmail && (
                       <Flex direction="column" align="center" gap={2} p={6} textAlign="center">
-                        <Icon as={Shield} boxSize={9} color="whiteAlpha.700" />
-                        <Heading size="sm" color="white">Partner not set up</Heading>
-                        <Text color="whiteAlpha.800" fontSize="sm">
+                        <Icon as={Shield} boxSize={9} color="gray.400" />
+                        <Heading size="sm" color="#27062e">Partner not set up</Heading>
+                        <Text color="gray.600" fontSize="sm">
                           {partnerError || 'Ask your admin to set up your partner profile.'}
                         </Text>
                         <Button
@@ -816,9 +816,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                           leftIcon={<RefreshCcw size={16} />}
                           onClick={retryAssignments}
                           mt={1}
-                          bg="white"
-                          color="#27062e"
-                          _hover={{ bg: 'whiteAlpha.900' }}
+                          bg="#350e6f"
+                          color="white"
+                          _hover={{ bg: '#27062e' }}
                         >
                           Try again
                         </Button>
