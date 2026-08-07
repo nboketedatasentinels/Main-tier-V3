@@ -780,10 +780,6 @@ export const LeadershipCouncilPage: React.FC = () => {
                         <Text color="whiteAlpha.900" fontSize="sm" fontWeight="medium">
                           {pendingPartnerEmail}
                         </Text>
-                        <Text color="whiteAlpha.800" fontSize="sm">
-                          They’re set as your Transformation Partner. Once they create their
-                          account, their full profile will appear here.
-                        </Text>
                         <Button
                           as="a"
                           href={`mailto:${pendingPartnerEmail}`}
