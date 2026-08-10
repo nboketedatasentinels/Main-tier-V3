@@ -275,6 +275,7 @@ export const MainLayout: React.FC = () => {
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
+          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
         ],
       },
       {
@@ -286,7 +287,6 @@ export const MainLayout: React.FC = () => {
           { label: 'Tools', path: '/app/tools', icon: Wrench },
           { label: 'Join Community', path: '/app/whatsapp-access', icon: MessageCircle },
           { label: 'Feedback', path: '/app/feedback', icon: MessageSquare },
-          { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
         ],
       },
     ],
