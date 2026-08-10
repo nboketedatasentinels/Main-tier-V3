@@ -27,6 +27,7 @@ import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalcu
 import { PodcastSeriesPanel } from '@/components/courses/PodcastSeriesPanel'
 import { ProgrammeComponentPartsPanel } from '@/components/courses/ProgrammeComponentParts'
 import type { ProgrammeComponentType } from '@/config/pillarProgrammeComponents'
+import type { Pillar } from '@/types/pillar'
 
 const PROGRAMME_COMPONENTS_HREF = '/app/weekly-checklist'
 
@@ -136,6 +137,16 @@ interface ActivityRowProps {
   pendingCount?: number
   /** This week's claim is consumed (submitted/approved) - not the same as fully maxed. */
   weekClaimComplete?: boolean
+  /**
+   * Month journeys: pillar for Capstone / Case Study / Practical parts
+   * (from that month's assigned course).
+   */
+  programmePillar?: Pillar | null
+  /**
+   * Month 3 / 6 / 9: Capstone / Case Study / Practical are graded Pass/Fail
+   * (no checklist points).
+   */
+  programmePassFail?: boolean
   isActionInFlight: boolean
 }
 
@@ -158,6 +169,8 @@ export const ActivityRow = ({
   occurrenceDone,
   pendingCount = 0,
   weekClaimComplete = false,
+  programmePillar = null,
+  programmePassFail = false,
   isActionInFlight,
 }: ActivityRowProps) => {
   const navigate = useNavigate()
@@ -256,14 +269,22 @@ export const ActivityRow = ({
 
   // Month rows expose remaining capacity (e.g. 0/3 at 2,000 → +6,000).
   // Per-claim CTAs still use activity.points below.
-  const pointsPerClaim = activity.points ?? 0
+  // Months 3 / 6 / 9 programme components are Pass/Fail (no points).
+  const pointsPerClaim = programmePassFail ? 0 : activity.points ?? 0
   const displayPoints =
     typeof occurrenceDone === 'number' && typeof occurrenceTotal === 'number'
       ? pointsPerClaim * Math.max(0, occurrenceTotal - occurrenceDone)
       : pointsPerClaim
+  const pointsLabel = programmePassFail
+    ? 'Pass / Fail'
+    : `+${displayPoints.toLocaleString()} pts`
 
   const ptsSuffix =
-    pointsPerClaim > 0 ? ` · +${pointsPerClaim.toLocaleString()} pts` : ''
+    programmePassFail
+      ? ' · Pass / Fail'
+      : pointsPerClaim > 0
+        ? ` · +${pointsPerClaim.toLocaleString()} pts`
+        : ''
 
   const lockReason = (() => {
     if (isAdmin) return null
@@ -471,7 +492,7 @@ export const ActivityRow = ({
                 fontWeight="semibold"
                 textDecoration={showStrike ? 'line-through' : 'none'}
               >
-                +{displayPoints.toLocaleString()} pts
+                {pointsLabel}
               </Text>
               <Text>·</Text>
               <Text
@@ -512,7 +533,7 @@ export const ActivityRow = ({
             </Badge>
           </Box>
 
-          {/* Points (desktop) */}
+          {/* Points (desktop) — Pass/Fail for month 3/6/9 programme components */}
           <Text
             fontSize="xs"
             fontWeight="semibold"
@@ -521,7 +542,7 @@ export const ActivityRow = ({
             textAlign="right"
             textDecoration={showStrike ? 'line-through' : 'none'}
           >
-            +{displayPoints.toLocaleString()} pts
+            {pointsLabel}
           </Text>
 
           <Icon
@@ -605,7 +626,10 @@ export const ActivityRow = ({
             )}
 
             {isProgrammeComponent && programmeComponentType && (
-              <ProgrammeComponentPartsPanel type={programmeComponentType} />
+              <ProgrammeComponentPartsPanel
+                type={programmeComponentType}
+                pillarOverride={programmePillar}
+              />
             )}
 
             {activity.id !== 'podcast_workbook' && !isProgrammeComponent && (

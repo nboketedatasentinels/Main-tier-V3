@@ -204,13 +204,19 @@ export async function updateSubmissionReview(
 }
 
 /**
- * Points a pillar component is worth, for display before approving. Pillar
- * points live on the 6W journey config (capstone/case_study/practical).
- * Practical is defined at 0 pts so the journey max stays 60,000.
+ * Points a pillar component is worth, for display before approving.
+ * 6W uses checklist points; 3M / 6M / 9M keep these at 0 (Pass/Fail mark).
  */
-export function getComponentPoints(componentType: ProgrammeComponentType | null): number {
+export function getComponentPoints(
+  componentType: ProgrammeComponentType | null,
+  journeyType: JourneyType = '6W',
+): number {
   if (!componentType) return 0
-  return getActivityDefinitionById({ activityId: componentType, journeyType: '6W' })?.points ?? 0
+  return (
+    getActivityDefinitionById({ activityId: componentType, journeyType })?.points ??
+    getActivityDefinitionById({ activityId: componentType, journeyType: '6W' })?.points ??
+    0
+  )
 }
 
 export interface ApproveAndAwardResult {
@@ -291,23 +297,41 @@ export async function approveSubmissionAndAward(params: {
     reviewerName,
   })
 
-  // Only notify the learner when new points were actually awarded.
-  if (awardResult.awarded && activity.points > 0) {
+  // Notify the learner: points when earned, otherwise a Pass mark (3M/6M/9M).
+  if (awardResult.awarded) {
     try {
-      await createInAppNotification({
-        userId: submission.uid,
-        type: 'approval',
-        title: `🎉 +${activity.points.toLocaleString()} points awarded`,
-        message: `Your partner approved "${submission.componentTitle || activity.title}" and awarded you ${activity.points.toLocaleString()} points.`,
-        metadata: {
-          priority: 'push',
-          activityId: activity.id,
-          componentId: submission.componentId,
-          points: activity.points,
-          source: 'partner_issued',
-        },
-        relatedId: activity.id,
-      })
+      if (activity.points > 0) {
+        await createInAppNotification({
+          userId: submission.uid,
+          type: 'approval',
+          title: `🎉 +${activity.points.toLocaleString()} points awarded`,
+          message: `Your partner approved "${submission.componentTitle || activity.title}" and awarded you ${activity.points.toLocaleString()} points.`,
+          metadata: {
+            priority: 'push',
+            activityId: activity.id,
+            componentId: submission.componentId,
+            points: activity.points,
+            source: 'partner_issued',
+          },
+          relatedId: activity.id,
+        })
+      } else {
+        await createInAppNotification({
+          userId: submission.uid,
+          type: 'approval',
+          title: 'Passed',
+          message: `Your partner marked "${submission.componentTitle || activity.title}" as Pass.`,
+          metadata: {
+            priority: 'push',
+            activityId: activity.id,
+            componentId: submission.componentId,
+            points: 0,
+            outcome: 'pass',
+            source: 'partner_issued',
+          },
+          relatedId: activity.id,
+        })
+      }
     } catch (notifyErr) {
       // Non-fatal: points + review already wrote successfully.
       console.warn('[programmeComponentSubmissionService] learner notify failed', notifyErr)

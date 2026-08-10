@@ -600,6 +600,26 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       totalFrequency: 3,
       titleOverride: "Ambassador Session",
     },
+    // Month-local programme components (0 pts - keep 113k max). Content pillar
+    // follows that month's assigned course (see resolvePillarForMonth).
+    {
+      activityId: "capstone",
+      totalFrequency: 3,
+      pointsOverride: 0,
+      titleOverride: "Capstone",
+    },
+    {
+      activityId: "case_study",
+      totalFrequency: 3,
+      pointsOverride: 0,
+      titleOverride: "Case Study",
+    },
+    {
+      activityId: "practical",
+      totalFrequency: 3,
+      pointsOverride: 0,
+      titleOverride: "Practicals",
+    },
   ],
   "6M": [
     { activityId: "podcast_workbook", totalFrequency: 18 },
@@ -625,6 +645,24 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       totalFrequency: 6,
       titleOverride: "Ambassador Session",
     },
+    {
+      activityId: "capstone",
+      totalFrequency: 6,
+      pointsOverride: 0,
+      titleOverride: "Capstone",
+    },
+    {
+      activityId: "case_study",
+      totalFrequency: 6,
+      pointsOverride: 0,
+      titleOverride: "Case Study",
+    },
+    {
+      activityId: "practical",
+      totalFrequency: 6,
+      pointsOverride: 0,
+      titleOverride: "Practicals",
+    },
   ],
   "9M": [
     { activityId: "podcast_workbook", totalFrequency: 27 },
@@ -649,6 +687,24 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       activityId: "ambassador_session",
       totalFrequency: 9,
       titleOverride: "Ambassador Session",
+    },
+    {
+      activityId: "capstone",
+      totalFrequency: 9,
+      pointsOverride: 0,
+      titleOverride: "Capstone",
+    },
+    {
+      activityId: "case_study",
+      totalFrequency: 9,
+      pointsOverride: 0,
+      titleOverride: "Case Study",
+    },
+    {
+      activityId: "practical",
+      totalFrequency: 9,
+      pointsOverride: 0,
+      titleOverride: "Practicals",
     },
   ],
 };

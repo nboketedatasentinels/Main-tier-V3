@@ -228,6 +228,10 @@ describe('pointsConfig module activities', () => {
       maxPoints: 6000,
       approvalType: 'ambassador_issued',
     })
+    // Month-local pillar components (0 pts) — content follows that month's course.
+    expect(byId.get('capstone')).toMatchObject({ frequency: 3, pointsEach: 0, maxPoints: 0 })
+    expect(byId.get('case_study')).toMatchObject({ frequency: 3, pointsEach: 0, maxPoints: 0 })
+    expect(byId.get('practical')).toMatchObject({ frequency: 3, pointsEach: 0, maxPoints: 0 })
   })
 
   it('matches the 6-month weekly-checklist product table', () => {
@@ -267,6 +271,9 @@ describe('pointsConfig module activities', () => {
       maxPoints: 12000,
       approvalType: 'ambassador_issued',
     })
+    expect(byId.get('capstone')).toMatchObject({ frequency: 6, pointsEach: 0, maxPoints: 0 })
+    expect(byId.get('case_study')).toMatchObject({ frequency: 6, pointsEach: 0, maxPoints: 0 })
+    expect(byId.get('practical')).toMatchObject({ frequency: 6, pointsEach: 0, maxPoints: 0 })
   })
 
   it('matches the 9-month weekly-checklist product table', () => {
@@ -306,6 +313,9 @@ describe('pointsConfig module activities', () => {
       maxPoints: 18000,
       approvalType: 'ambassador_issued',
     })
+    expect(byId.get('capstone')).toMatchObject({ frequency: 9, pointsEach: 0, maxPoints: 0 })
+    expect(byId.get('case_study')).toMatchObject({ frequency: 9, pointsEach: 0, maxPoints: 0 })
+    expect(byId.get('practical')).toMatchObject({ frequency: 9, pointsEach: 0, maxPoints: 0 })
 
     expect(crossRef.pointVariants).toEqual(
       expect.arrayContaining([

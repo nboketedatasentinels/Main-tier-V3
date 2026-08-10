@@ -63,6 +63,9 @@ import {
   type ProgrammeSubmissionStatus,
 } from '@/services/programmeComponentSubmissionService'
 import { getDisplayName } from '@/utils/displayName'
+import { isJourneyType, isMonthBasedJourney } from '@/utils/journeyType'
+import type { JourneyType } from '@/config/pointsConfig'
+import { supabase } from '@/services/supabase'
 
 const PLUM = '#27062e'
 const ROYAL = '#350e6f'
@@ -527,6 +530,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const [notes, setNotes] = useState('')
   const [score, setScore] = useState<string>('')
   const [saving, setSaving] = useState(false)
+  const [learnerJourneyType, setLearnerJourneyType] = useState<JourneyType | null>(null)
 
   useEffect(() => {
     if (!submission) return
@@ -535,9 +539,40 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     setScore(submission.score !== null ? String(submission.score) : '')
   }, [submission])
 
+  useEffect(() => {
+    if (!submission?.uid) {
+      setLearnerJourneyType(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('journey_type, data')
+        .eq('id', submission.uid)
+        .maybeSingle()
+      if (cancelled) return
+      const raw =
+        (data?.journey_type as string | null) ||
+        ((data?.data as { journeyType?: string } | null)?.journeyType ?? null)
+      setLearnerJourneyType(isJourneyType(raw) ? raw : null)
+    })().catch(() => {
+      if (!cancelled) setLearnerJourneyType(null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [submission?.uid])
+
   if (!submission) return null
 
   const typeMeta = submission.componentType ? TYPE_META[submission.componentType] : null
+  const journeyForPoints = learnerJourneyType ?? '6W'
+  const componentPoints = getComponentPoints(submission.componentType, journeyForPoints)
+  // 3M / 6M / 9M programme components are graded Pass/Fail (0 checklist points).
+  const passFailMode =
+    (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) ||
+    componentPoints === 0
 
   const handleSave = async () => {
     if (!reviewerId) {
@@ -551,7 +586,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
       const cleanNotes = notes.trim() === '' ? null : notes.trim()
 
       if (status === 'approved') {
-        // Approving awards the component's points to the learner (idempotent).
+        // Approving awards points on 6W; on month journeys this is a Pass mark.
         const result = await approveSubmissionAndAward({
           submission,
           reviewerId,
@@ -559,18 +594,29 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           partnerNotes: cleanNotes,
           score: cleanScore,
         })
+        const isPassMark = passFailMode || result.points === 0
         onSaved({
           status: 'success',
           title: !result.pointsEligible
-            ? 'Approved'
+            ? isPassMark
+              ? 'Passed'
+              : 'Approved'
             : result.alreadyAwarded
-              ? 'Already awarded'
-              : `Approved · +${result.points.toLocaleString()} pts`,
+              ? isPassMark
+                ? 'Already marked Pass'
+                : 'Already awarded'
+              : isPassMark
+                ? 'Passed'
+                : `Approved · +${result.points.toLocaleString()} pts`,
           description: !result.pointsEligible
-            ? 'Your review and feedback were saved. This component is reviewed but does not award points.'
+            ? 'Your review and feedback were saved. This component is graded Pass/Fail and does not award points.'
             : result.alreadyAwarded
-              ? 'This submission was already credited, so no new points were added. Your feedback was saved.'
-              : `${result.points.toLocaleString()} points were awarded to the learner and they have been notified.`,
+              ? isPassMark
+                ? 'This submission was already marked Pass. Your feedback was saved.'
+                : 'This submission was already credited, so no new points were added. Your feedback was saved.'
+              : isPassMark
+                ? 'Marked as Pass. The learner has been notified — no checklist points are awarded.'
+                : `${result.points.toLocaleString()} points were awarded to the learner and they have been notified.`,
         })
       } else {
         await updateSubmissionReview(submission.id, {
@@ -582,7 +628,10 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         })
         onSaved({
           status: 'success',
-          title: 'Review saved',
+          title:
+            passFailMode && status === 'needs_revision'
+              ? 'Marked as Fail / needs revision'
+              : 'Review saved',
           description: 'The learner will see your decision and feedback.',
         })
       }
@@ -713,7 +762,23 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     rounded="md"
                   >
                     <Icon as={Award} boxSize={4} color={ROYAL} mt="1px" />
-                    {getComponentPoints(submission.componentType) > 0 ? (
+                    {passFailMode ? (
+                      <Text fontSize="xs" color="gray.700">
+                        This is a{' '}
+                        <Text as="span" fontWeight="semibold">
+                          Pass / Fail
+                        </Text>{' '}
+                        assessment — no checklist points. Set status to{' '}
+                        <Text as="span" fontWeight="semibold">
+                          Approved
+                        </Text>{' '}
+                        for Pass, or{' '}
+                        <Text as="span" fontWeight="semibold">
+                          Needs revision
+                        </Text>{' '}
+                        for Fail.
+                      </Text>
+                    ) : componentPoints > 0 ? (
                       <Text fontSize="xs" color="gray.700">
                         Setting status to{' '}
                         <Text as="span" fontWeight="semibold">
@@ -721,7 +786,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         </Text>{' '}
                         awards{' '}
                         <Text as="span" fontWeight="bold" color={PLUM}>
-                          {getComponentPoints(submission.componentType).toLocaleString()} pts
+                          {componentPoints.toLocaleString()} pts
                         </Text>{' '}
                         to the learner. Re-approving won't award twice.
                       </Text>
@@ -748,14 +813,18 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                   >
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s} value={s}>
-                        {STATUS_META[s].label}
+                        {passFailMode && s === 'approved'
+                          ? 'Pass (Approved)'
+                          : passFailMode && s === 'needs_revision'
+                            ? 'Fail (Needs revision)'
+                            : STATUS_META[s].label}
                       </option>
                     ))}
                   </Select>
                 </FormControl>
                 <FormControl>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    Score (optional, 0-100)
+                    {passFailMode ? 'Optional score note (0-100)' : 'Score (optional, 0-100)'}
                   </FormLabel>
                   <NumberInput
                     size="sm"

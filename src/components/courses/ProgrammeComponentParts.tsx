@@ -8,6 +8,7 @@ import {
   type ProgrammeComponentType,
 } from '@/config/pillarProgrammeComponents'
 import { useUserPillar } from '@/hooks/useUserPillar'
+import type { Pillar } from '@/types/pillar'
 
 /**
  * Shared "parts dropdown" rows for the three pillar programme components
@@ -105,13 +106,16 @@ export const ProgrammeComponentPartsList: React.FC<{
  * `type`, and renders its parts (or its single deliverable). Used by the
  * weekly checklist, where only the activity id is known.
  */
-export const ProgrammeComponentPartsPanel: React.FC<{ type: ProgrammeComponentType }> = ({
-  type,
-}) => {
-  const { pillar, loading } = useUserPillar()
+export const ProgrammeComponentPartsPanel: React.FC<{
+  type: ProgrammeComponentType
+  /** When set (e.g. month course pillar on 3M), overrides the org/user pillar. */
+  pillarOverride?: Pillar | null
+}> = ({ type, pillarOverride = null }) => {
+  const { pillar: userPillar, loading } = useUserPillar()
+  const pillar = pillarOverride ?? userPillar
   const label = PROGRAMME_COMPONENT_LABEL[type].toLowerCase()
 
-  if (loading) {
+  if (loading && !pillarOverride) {
     return <PlainNote>Loading your {label}…</PlainNote>
   }
 

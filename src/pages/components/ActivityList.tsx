@@ -29,6 +29,10 @@ import {
 import { ActivityRow } from './ActivityRow'
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { useUserPillar } from '@/hooks/useUserPillar'
+import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
+import { resolvePillarForMonth, isProgrammePassFailMonth } from '@/utils/monthCoursePillar'
+import type { Pillar } from '@/types/pillar'
 
 /** Checklist activity ids that mirror the Capstone / Case Study / Practical cards. */
 const PROGRAMME_COMPONENT_ACTIVITY_IDS = new Set(['capstone', 'case_study', 'practical'])
@@ -188,6 +192,13 @@ export const ActivityList = ({
   onRefreshLedger,
   isActivityBusy,
 }: ActivityListProps) => {
+  const { profile } = useAuth()
+  const organizationId =
+    (profile as { organizationId?: string | null; orgId?: string | null } | null)
+      ?.organizationId ??
+    (profile as { organizationId?: string | null; orgId?: string | null } | null)?.orgId ??
+    null
+  const { program } = useOrganizationProgramCourses(organizationId)
   const { pillar } = useUserPillar()
   // Free practitioners (Starter Kit) see the same Capstone / Case Study /
   // Practical cards under Week 1 as on My Courses - not as scattered rows.
@@ -196,10 +207,16 @@ export const ActivityList = ({
   const periodNoun = useMonths ? 'month' : 'week'
   const currentPeriod = useMonths ? weekToMonth(currentWeek) : currentWeek
 
+  const pillarForMonth = (month: number): Pillar | null =>
+    resolvePillarForMonth(month, program?.monthlyAssignments) ??
+    (useMonths ? null : pillar)
+
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
 
   const ordered = useMemo(() => {
     const withId = visibleActivities.filter((activity) => activity?.id)
+    // Starter Kit: cards under Week 1. Month journeys keep Capstone / Case Study /
+    // Practical rows so each month can use that month's course pillar.
     if (!showProgrammeCardsUnderWeek1) return withId
     return withId.filter((activity) => !PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id))
   }, [visibleActivities, showProgrammeCardsUnderWeek1])
@@ -284,6 +301,8 @@ export const ActivityList = ({
     ordered.forEach((activity) => {
       const startWeek = Math.max(1, activity.week ?? 1)
       const isRecurring = isRecurringActivity(activity)
+      const isMonthProgrammeComponent =
+        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id)
       const completedWeeks =
         completedWeeksByActivity[activity.id] ?? new Set<number>()
       const pendingWeeks =
@@ -294,7 +313,9 @@ export const ActivityList = ({
 
       // Month-based journeys: one row per month with that month's quota
       // (podcast 9 → 0/3 each month, weekly session 12 → 0/4 each month).
-      if (useMonths && isRecurring && totalCap > 1) {
+      // Capstone / case study / practical are one_time in config but still need
+      // one month-local row so content can follow that month's course pillar.
+      if (useMonths && (isRecurring || isMonthProgrammeComponent) && totalCap > 1) {
         const monthCount =
           (journeyType && JOURNEY_MONTH_COUNTS[journeyType]) ||
           Math.max(1, Math.ceil(totalWeeks / WEEKS_PER_MONTH))
@@ -493,7 +514,7 @@ export const ActivityList = ({
     todoByWeek.forEach((rows, week) => {
       const best = new Map<string, TodoRow>()
       rows.forEach((row) => {
-        const key = `${row.activity.id}::${row.weekOverride}::${row.rowKind ?? 'todo'}`
+        const key = `${row.activity.id}::${row.weekOverride}::${row.occurrence ?? ''}::${row.rowKind ?? 'todo'}`
         const prev = best.get(key)
         const rank = kindRank[row.rowKind ?? 'todo']
         if (!prev || rank > kindRank[prev.rowKind ?? 'todo']) {
@@ -766,6 +787,7 @@ export const ActivityList = ({
           <ColumnHeader />
           {displayPeriodKeys.map((period) => {
             const periodRows = rowsForTodoPeriod(period)
+            const monthPillar = useMonths ? pillarForMonth(period) : null
             const showCards = showProgrammeCardsUnderWeek1 && period === 1
             if (periodRows.length === 0 && !showCards) return null
             const isPeriodCollapsed = Boolean(collapsedTodoWeeks[period])
@@ -880,6 +902,20 @@ export const ActivityList = ({
                                 hasInteracted: true,
                               }
                             : projectForWeek(activity)
+                      const rowPillar =
+                        useMonths &&
+                        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
+                        typeof occurrence === 'number'
+                          ? pillarForMonth(occurrence)
+                          : monthPillar &&
+                              PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id)
+                            ? monthPillar
+                            : null
+                      const rowPassFail =
+                        useMonths &&
+                        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
+                        typeof occurrence === 'number' &&
+                        isProgrammePassFailMonth(occurrence)
                       return (
                         <ActivityRow
                           key={rowKey}
@@ -922,6 +958,8 @@ export const ActivityList = ({
                               : pendingWeeksByActivity[activity.id]?.size ?? 0
                           }
                           weekClaimComplete={kind === 'done'}
+                          programmePillar={rowPillar}
+                          programmePassFail={rowPassFail}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                         />
                       )
