@@ -12,8 +12,7 @@ import {
   type JourneyType,
 } from '@/config/pointsConfig'
 import { resolveJourneyType, isJourneyType } from '@/utils/journeyType'
-import { expectedPassMarkPointsNow } from '@/utils/journeyPace'
-import { calculatePartnerWindowRisk } from '@/utils/windowStatus'
+import { classifyJourneyPace } from '@/utils/journeyPace'
 import { getOrganizationJourney } from '@/services/supabaseOrgService'
 import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { supabase } from '@/services/supabase'
@@ -928,50 +927,28 @@ export function useWeeklyChecklistViewModel() {
     const elapsedWeeks = Math.min(totalWeeks, daysSinceStart / 7)
     const timeProgress = totalWeeks > 0 ? elapsedWeeks / totalWeeks : 0
     const journeyEnded = timeProgress >= 1
-    const expectedPointsNow = expectedPassMarkPointsNow({
+
+    // Same day-based pass-mark classifier as Weekly Glance + Super Admin.
+    const pace = classifyJourneyPace({
+      totalEarned: accumulatedPoints,
       passMark: passMarkPoints,
       daysElapsed: daysSinceStart,
       totalWeeks,
     })
-    const currentWeekNum = Math.min(
-      totalWeeks,
-      Math.max(1, Math.ceil(daysSinceStart / 7) || 1),
-    )
-    // Same classifier Super Admin uses (week-1 grace + window risk).
-    const risk = calculatePartnerWindowRisk({
-      journeyType: journey.journeyType,
-      currentWeek: currentWeekNum,
-      totalPoints: accumulatedPoints,
-      earnedPointsByWeek: Object.fromEntries(
-        allWeeksProgress.map((w) => [w.weekNumber, w.pointsEarned ?? 0]),
-      ),
-      programDurationWeeks: totalWeeks,
-    })
-    const deficit = Math.max(
-      0,
-      Math.round(
-        risk.points_deficit ??
-          Math.max(0, expectedPointsNow - accumulatedPoints),
-      ),
-    )
+    const deficit = pace.deficit
     const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks))
     const pointsNeeded = Math.max(0, passMarkPoints - accumulatedPoints)
     const weeklyNeeded = weeksLeft > 0 ? Math.ceil(pointsNeeded / weeksLeft) : 0
 
     type UrgencyLevel = 'critical' | 'behind' | 'warning' | 'on_track'
     let level: UrgencyLevel = 'on_track'
-    if (journeyEnded && accumulatedPoints < passMarkPoints) {
-      level = 'critical'
-    } else if (risk.level === 'critical') {
-      level = 'critical'
-    } else if (risk.level === 'behind') {
-      level = 'behind'
-    } else if (risk.level === 'warning') {
-      level = 'warning'
-    }
+    if (pace.level === 'critical') level = 'critical'
+    else if (pace.level === 'behind') level = 'behind'
+    else if (pace.level === 'warning') level = 'warning'
+    else if (journeyEnded && accumulatedPoints < passMarkPoints) level = 'critical'
 
     return { level, deficit, journeyEnded, pointsNeeded, weeksLeft, weeklyNeeded }
-  }, [journey, accumulatedPoints, passMarkPoints, allWeeksProgress])
+  }, [journey, accumulatedPoints, passMarkPoints])
 
   /* ------------------------------------------------------------------ */
   /* Admin-safe override policy                                           */

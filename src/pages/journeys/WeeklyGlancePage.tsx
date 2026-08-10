@@ -650,15 +650,6 @@ export const WeeklyGlancePage = () => {
   const journeyProgress =
     passMark > 0 ? Math.min(100, Math.round((totalEarned / passMark) * 100)) : 0
   const daysElapsed = journeyTiming?.totalDaysElapsed ?? 0
-  const earnedPointsByWeek = useMemo(() => {
-    const map: Record<number, number> = {}
-    for (const entry of data.ledgerEntries ?? []) {
-      const week = entry.weekNumber
-      if (!week || week < 1) continue
-      map[week] = (map[week] ?? 0) + (entry.points ?? 0)
-    }
-    return map
-  }, [data.ledgerEntries])
   const pace = useMemo(
     () =>
       computeJourneyPace({
@@ -668,17 +659,8 @@ export const WeeklyGlancePage = () => {
         totalWeeks,
         journeyType: effectiveJourneyType,
         currentWeek,
-        earnedPointsByWeek,
       }),
-    [
-      totalEarned,
-      passMark,
-      daysElapsed,
-      totalWeeks,
-      effectiveJourneyType,
-      currentWeek,
-      earnedPointsByWeek,
-    ],
+    [totalEarned, passMark, daysElapsed, totalWeeks, effectiveJourneyType, currentWeek],
   )
 
   // Courses sit beside the video; keep the column out of the layout entirely

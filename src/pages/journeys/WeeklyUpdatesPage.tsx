@@ -62,7 +62,7 @@ import {
   JOURNEY_LABELS,
   resolveJourneyType,
 } from '@/utils/journeyType'
-import { expectedPassMarkPointsNow } from '@/utils/journeyPace'
+import { classifyJourneyPace } from '@/utils/journeyPace'
 import { getWindowNumber, getWindowRange, getWindowWeekNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import {
   calculateActivityAvailability,
@@ -744,26 +744,24 @@ const WeeklyChecklistPage: React.FC = () => {
     const elapsedWeeks = Math.min(totalWeeks, Math.max(0, daysSinceStart) / 7);
     const timeProgress = totalWeeks > 0 ? elapsedWeeks / totalWeeks : 0;
     const journeyEnded = timeProgress >= 1;
-    const expectedPointsNow = expectedPassMarkPointsNow({
+    const pace = classifyJourneyPace({
+      totalEarned: journeyProgress.totalEarned,
       passMark: passMarkPoints,
       daysElapsed: Math.max(0, daysSinceStart),
       totalWeeks,
     });
-    const paceRatio = expectedPointsNow > 0 ? journeyProgress.totalEarned / expectedPointsNow : 1;
-    const deficit = Math.max(0, Math.round(expectedPointsNow - journeyProgress.totalEarned));
+    const deficit = pace.deficit;
     const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks));
     const pointsNeeded = Math.max(0, passMarkPoints - journeyProgress.totalEarned);
     const weeklyNeeded = weeksLeft > 0 ? Math.ceil(pointsNeeded / weeksLeft) : 0;
 
     type UrgencyLevel = 'critical' | 'behind' | 'warning' | 'on_track';
     let level: UrgencyLevel = 'on_track';
-    if (journeyEnded && journeyProgress.totalEarned < passMarkPoints) {
+    if (pace.level === 'critical' || (journeyEnded && journeyProgress.totalEarned < passMarkPoints)) {
       level = 'critical';
-    } else if (paceRatio < 0.4) {
-      level = 'critical';
-    } else if (paceRatio < 0.65) {
+    } else if (pace.level === 'behind') {
       level = 'behind';
-    } else if (paceRatio < 0.85) {
+    } else if (pace.level === 'warning') {
       level = 'warning';
     }
 

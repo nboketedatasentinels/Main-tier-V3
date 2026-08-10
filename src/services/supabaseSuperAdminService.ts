@@ -33,6 +33,10 @@ import type {
 } from '@/types/admin'
 import type { UserProfileExtended } from '@/services/userProfileService'
 import { calculateUserRiskStatus, getProgramWeekNumber } from '@/utils/partnerProgress'
+import {
+  classifyJourneyPace,
+  paceLevelToAdminBucket,
+} from '@/utils/journeyPace'
 import { normalizeRole } from '@/utils/role'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -289,8 +293,28 @@ export const listenToJourneyProgress = (
         } else {
           const meta = JOURNEY_META[journeyType as JourneyType]
           const passMark = meta?.passMarkPoints ?? 0
+          const totalWeeks = meta?.weeks ?? 0
           if (passMark && totalPoints >= passMark) {
             bucket = 'completed'
+          } else if (passMark && totalWeeks > 0) {
+            // Same day-based pass-mark pace as the learner Pace tile.
+            const start = raw.journey_start_date
+              ? Date.parse(raw.journey_start_date)
+              : Number.NaN
+            const daysElapsed = Number.isFinite(start)
+              ? Math.max(0, (Date.now() - start) / (1000 * 60 * 60 * 24))
+              : Math.max(0, (currentWeek - 1) * 7)
+            const pace = classifyJourneyPace({
+              totalEarned: totalPoints,
+              passMark,
+              daysElapsed,
+              totalWeeks,
+            })
+            deficit = pace.deficit
+            bucket =
+              pace.level === 'just_starting'
+                ? 'onTrack'
+                : paceLevelToAdminBucket(pace.level)
           } else {
             const risk = calculateUserRiskStatus(currentWeek, {}, {}, undefined, {
               journeyType,
