@@ -408,7 +408,7 @@ export const PartnerDashboard: React.FC = () => {
     const org = overviewOrganizations[0]
     setJourneyReportLoading(true)
     try {
-      const report = buildPartnerJourneyReportData(org, overviewUsers)
+      const report = await buildPartnerJourneyReportData(org, overviewUsers)
       await generatePartnerJourneyPdfReport(report)
       toast({
         title: 'Report downloaded',

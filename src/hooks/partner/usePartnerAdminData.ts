@@ -78,6 +78,8 @@ export interface PartnerUser {
   ageRange?: string
   /** Gender from signup (`profiles.data.gender`), when present. */
   gender?: string
+  /** Professional role from signup (`profiles.data.jobRole`), when present. */
+  jobRole?: string
   // Inferred from the raw profile role: 'free_user' → 'free', everything else
   // (paid_member, mentor, coach) → 'paid'. Used for paid/free tab split.
   membershipTier?: 'free' | 'paid'
@@ -950,6 +952,10 @@ export const usePartnerAdminData = (
                 gender:
                   typeof (data as Record<string, unknown>).gender === 'string'
                     ? ((data as Record<string, unknown>).gender as string)
+                    : undefined,
+                jobRole:
+                  typeof (data as Record<string, unknown>).jobRole === 'string'
+                    ? ((data as Record<string, unknown>).jobRole as string)
                     : undefined,
                 // Raw profile role can be 'free_user' / 'paid_member' / etc. -
                 // wider than the narrow PartnerUser.role enum on the type.
