@@ -49,6 +49,15 @@ type TodoRow = {
 
 type Bucket = 'todo' | 'pending' | 'done' | 'locked'
 
+/** Points still available on a checklist row (honours month quotas). */
+const rowAvailablePoints = (row: TodoRow): number => {
+  const pts = row.activity.points ?? 0
+  if (typeof row.occurrenceDone === 'number' && typeof row.occurrenceTotal === 'number') {
+    return pts * Math.max(0, row.occurrenceTotal - row.occurrenceDone)
+  }
+  return pts
+}
+
 const projectForWeek = (activity: ActivityState): ActivityState => {
   // Each actionable duplicate is a claim slot that has not been completed yet.
   // Strip global completion flags the VM sets from the selected-week ledger so
@@ -196,9 +205,8 @@ export const ActivityList = ({
   }, [visibleActivities, showProgrammeCardsUnderWeek1])
 
   // Full journey capacity (points × occurrence caps) - e.g. 60,000 for 6W.
-  // Do NOT derive the header from currently open To-do rows: partner-issued
-  // activities (weekly sessions, LIFT, webinars, pillar work) sit in Coming up
-  // until issued and were silently dropping the total (e.g. 42k instead of 60k).
+  // Week-based journeys keep this for the To-do header: only the next claim
+  // sits in To-do rows, so summing open rows would under-count.
   const journeyPointsTotal = useMemo(
     () =>
       ordered.reduce((sum, activity) => {
@@ -213,6 +221,7 @@ export const ActivityList = ({
     const doneByWeek = new Map<number, ActivityState[]>()
     const pendingByWeek = new Map<number, ActivityState[]>()
     const locked: ActivityState[] = []
+    const lockedIds = new Set<string>()
     let todoTotalCount = 0
     let todoPointsTotal = 0
     let doneTotalCount = 0
@@ -221,6 +230,12 @@ export const ActivityList = ({
     let pendingPointsTotal = 0
 
     const totalWeeks = Math.max(1, programDurationWeeks)
+
+    const pushLocked = (activity: ActivityState) => {
+      if (lockedIds.has(activity.id)) return
+      lockedIds.add(activity.id)
+      locked.push(activity)
+    }
 
     const pushWeekRow = (week: number, row: TodoRow) => {
       const list = todoByWeek.get(week) ?? []
@@ -314,11 +329,13 @@ export const ActivityList = ({
               rowKind: 'done',
             })
             doneTotalCount += 1
-            donePointsTotal += activity.points ?? 0
+            donePointsTotal += (activity.points ?? 0) * monthCap
             continue
           }
 
           if (monthPending > 0 && usedInMonth >= monthCap) {
+            const pendingPts =
+              (activity.points ?? 0) * Math.max(0, monthCap - monthDone)
             pushWeekRow(claimWeek, {
               activity,
               weekOverride: claimWeek,
@@ -329,7 +346,7 @@ export const ActivityList = ({
               rowKind: 'pending',
             })
             pendingTotalCount += 1
-            pendingPointsTotal += activity.points ?? 0
+            pendingPointsTotal += pendingPts
             continue
           }
 
@@ -337,10 +354,11 @@ export const ActivityList = ({
             activity.availability.state === 'locked' &&
             activity.availability.reason !== 'weekly_cooldown'
           ) {
-            locked.push(activity)
+            pushLocked(activity)
             continue
           }
 
+          const remainingInMonth = Math.max(0, monthCap - monthDone)
           pushWeekRow(claimWeek, {
             activity,
             weekOverride: claimWeek,
@@ -351,7 +369,7 @@ export const ActivityList = ({
             rowKind: 'todo',
           })
           todoTotalCount += 1
-          todoPointsTotal += activity.points ?? 0
+          todoPointsTotal += (activity.points ?? 0) * remainingInMonth
         }
         return
       }
@@ -416,7 +434,7 @@ export const ActivityList = ({
           }
           return
         }
-        locked.push(activity)
+        pushLocked(activity)
         return
       }
 
@@ -444,7 +462,7 @@ export const ActivityList = ({
         activity.availability.state === 'locked' &&
         activity.availability.reason !== 'weekly_cooldown'
       ) {
-        locked.push(activity)
+        pushLocked(activity)
         return
       }
 
@@ -513,6 +531,24 @@ export const ActivityList = ({
     selectedWeek,
     useMonths,
     journeyType,
+  ])
+
+  // Month journeys: header = remaining To-do capacity (+ Coming up), so it
+  // matches the sum of Month 1/2/3 row totals. Week journeys keep full journey
+  // capacity (see journeyPointsTotal).
+  const todoSectionAvailablePoints = useMemo(() => {
+    if (!useMonths) return journeyPointsTotal
+    const lockedPts = grouped.locked.reduce((sum, activity) => {
+      const freq = Math.max(1, activity.activityPolicy?.maxTotal ?? 1)
+      const done = activity.completedCount ?? 0
+      return sum + (activity.points ?? 0) * Math.max(0, freq - done)
+    }, 0)
+    return grouped.todoPointsTotal + lockedPts
+  }, [
+    useMonths,
+    journeyPointsTotal,
+    grouped.locked,
+    grouped.todoPointsTotal,
   ])
 
   const sortedTodoWeeks = useMemo(
@@ -719,9 +755,9 @@ export const ActivityList = ({
           <Text fontSize="xs" color="gray.500">
             {visibleRowCount + (showProgrammeCardsUnderWeek1 ? 3 : 0)}
           </Text>
-          {journeyPointsTotal > 0 && (
+          {todoSectionAvailablePoints > 0 && (
             <Text fontSize="xs" color="#350e6f" fontWeight="semibold" ml="auto">
-              +{journeyPointsTotal.toLocaleString()} pts available
+              +{todoSectionAvailablePoints.toLocaleString()} pts available
             </Text>
           )}
         </Flex>
@@ -735,7 +771,7 @@ export const ActivityList = ({
             const isPeriodCollapsed = Boolean(collapsedTodoWeeks[period])
             const periodPoints = periodRows
               .filter((row) => (row.rowKind ?? 'todo') === 'todo')
-              .reduce((sum, row) => sum + (row.activity.points ?? 0), 0)
+              .reduce((sum, row) => sum + rowAvailablePoints(row), 0)
             const isCurrent = period === currentPeriod
             return (
               <Box key={`todo-period-${period}`}>

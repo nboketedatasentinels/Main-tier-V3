@@ -254,10 +254,16 @@ export const ActivityRow = ({
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
 
+  // Month rows expose remaining capacity (e.g. 0/3 at 2,000 → +6,000).
+  // Per-claim CTAs still use activity.points below.
+  const pointsPerClaim = activity.points ?? 0
+  const displayPoints =
+    typeof occurrenceDone === 'number' && typeof occurrenceTotal === 'number'
+      ? pointsPerClaim * Math.max(0, occurrenceTotal - occurrenceDone)
+      : pointsPerClaim
+
   const ptsSuffix =
-    typeof activity.points === 'number' && activity.points > 0
-      ? ` · +${activity.points} pts`
-      : ''
+    pointsPerClaim > 0 ? ` · +${pointsPerClaim.toLocaleString()} pts` : ''
 
   const lockReason = (() => {
     if (isAdmin) return null
@@ -465,7 +471,7 @@ export const ActivityRow = ({
                 fontWeight="semibold"
                 textDecoration={showStrike ? 'line-through' : 'none'}
               >
-                +{activity.points.toLocaleString()} pts
+                +{displayPoints.toLocaleString()} pts
               </Text>
               <Text>·</Text>
               <Text
@@ -515,7 +521,7 @@ export const ActivityRow = ({
             textAlign="right"
             textDecoration={showStrike ? 'line-through' : 'none'}
           >
-            +{activity.points.toLocaleString()} pts
+            +{displayPoints.toLocaleString()} pts
           </Text>
 
           <Icon
