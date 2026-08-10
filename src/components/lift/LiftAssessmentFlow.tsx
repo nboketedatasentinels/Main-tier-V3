@@ -449,8 +449,34 @@ const Countdown: React.FC<{ onDone: () => void }> = ({ onDone }) => {
   )
 }
 
-// ── Contact capture: the moment the assessment is done, before results show.
-// Framed as the unlock - "your profile + points are ready, tell us where to send them."
+/** Render CONTACT_FIELDS in config order, pairing consecutive half-width fields. */
+const renderContactFieldRows = (
+  fields: ContactField[],
+  renderField: (field: ContactField) => React.ReactNode,
+): React.ReactNode[] => {
+  const rows: React.ReactNode[] = []
+  let i = 0
+  while (i < fields.length) {
+    const field = fields[i]
+    const next = fields[i + 1]
+    if (field.half && next?.half) {
+      rows.push(
+        <SimpleGrid key={`${field.id}-${next.id}`} columns={{ base: 1, sm: 2 }} spacing={4}>
+          {renderField(field)}
+          {renderField(next)}
+        </SimpleGrid>,
+      )
+      i += 2
+    } else {
+      rows.push(renderField(field))
+      i += 1
+    }
+  }
+  return rows
+}
+
+// ── Contact capture: collected UP-FRONT before the questions begin.
+// Framed as the unlock - "your profile is ready once you finish; tell us where to send it."
 const ContactDetails: React.FC<{
   onSubmit: (contact: Partial<IntakeAnswers>) => void
   submitting: boolean
@@ -518,9 +544,6 @@ const ContactDetails: React.FC<{
     }
     onSubmit(contact)
   }
-
-  const half = CONTACT_FIELDS.filter((f) => f.half)
-  const full = CONTACT_FIELDS.filter((f) => !f.half)
 
   const renderField = (field: ContactField) => {
     const value = values[field.id] ?? ''
@@ -658,12 +681,9 @@ const ContactDetails: React.FC<{
           </Box>
         </Flex>
 
-        {/* The form */}
+        {/* The form — preserve CONTACT_FIELDS order; pair consecutive half-width fields. */}
         <VStack align="stretch" spacing={4}>
-          <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
-            {half.map(renderField)}
-          </SimpleGrid>
-          {full.map(renderField)}
+          {renderContactFieldRows(CONTACT_FIELDS, renderField)}
         </VStack>
 
         <Button

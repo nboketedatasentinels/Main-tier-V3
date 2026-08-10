@@ -484,6 +484,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     password: string,
     userData: Partial<UserProfile> & {
       gender?: string
+      ageRange?: string
       phoneNumber?: string
       companyCode?: string
       companyId?: string
@@ -536,11 +537,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // If a session exists (email confirmation off), persist the extra signup
       // fields onto the freshly-provisioned profile row. The long tail
-      // (phone/gender/company code) lives in `data` jsonb.
+      // (phone/gender/age range/company code) lives in `data` jsonb.
       if (newUserId && data.session) {
         const extras: Record<string, unknown> = {}
         if (userData.phoneNumber) extras.phoneNumber = userData.phoneNumber
         if (userData.gender) extras.gender = userData.gender
+        if (userData.ageRange) extras.ageRange = userData.ageRange
         if (referralCode?.trim()) extras.referralCode = referralCode.trim()
         if (userData.companyCode) extras.pendingCompanyCode = userData.companyCode.trim().toUpperCase()
 

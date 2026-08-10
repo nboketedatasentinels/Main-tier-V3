@@ -28,6 +28,7 @@ import {
 } from '@chakra-ui/react'
 import { Eye } from 'lucide-react'
 import { listLiftAssessments, listLiftLeads, type LiftAssessmentRow } from '@/services/liftAssessmentService'
+import { ageRangeLabel } from '@/config/demographics'
 import {
   TIER_OWNERS,
   ITEMS,
@@ -56,6 +57,7 @@ const CONTACT_ROWS: { key: string; label: string }[] = [
   { key: 'organisation', label: 'Organisation' },
   { key: 'country', label: 'Country' },
   { key: 'gender', label: 'Gender' },
+  { key: 'ageRange', label: 'Age range' },
 ]
 
 const hasContact = (row: LiftAssessmentRow): boolean =>
@@ -108,7 +110,11 @@ const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; o
                         {c.label}
                       </Text>
                       <Text fontSize="sm" fontWeight="medium">
-                        {c.key === 'gender' ? genderLabel(row.intake.gender) : row.intake[c.key] || '-'}
+                        {c.key === 'gender'
+                          ? genderLabel(row.intake.gender)
+                          : c.key === 'ageRange'
+                            ? ageRangeLabel(row.intake.ageRange) || '-'
+                            : row.intake[c.key] || '-'}
                       </Text>
                     </Box>
                   ))}

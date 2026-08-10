@@ -12,6 +12,8 @@
  * and L3/L5 drive the coaching trigger - so change `text`, never `id`.
  */
 
+import { AGE_RANGE_OPTIONS } from '@/config/demographics'
+
 export type PillarKey = 'L' | 'I' | 'F' | 'T'
 
 export type Archetype =
@@ -178,7 +180,7 @@ export const INTAKE_FIELDS: IntakeField[] = [
 export const TIER_A_SENIORITY = new Set(['c_suite', 'vp_head'])
 export const TIER_B_ROLES = new Set(['senior_manager', 'manager', 'team_lead'])
 
-// ── Contact capture (lead details collected AFTER the questions) ──────────────
+// ── Contact capture (lead details collected UP-FRONT, before the questions) ───
 // Shown once the assessment is answered, just before results are revealed. The
 // values are merged into `intake` (jsonb) so they persist on both the signed-in
 // save and the anonymous pending-lift hand-off - no schema change needed.
@@ -189,6 +191,7 @@ export type ContactFieldId =
   | 'organisation'
   | 'country'
   | 'gender'
+  | 'ageRange'
   | 'phone'
 
 export interface ContactField {
@@ -307,6 +310,13 @@ export const CONTACT_FIELDS: ContactField[] = [
     options: COUNTRIES.map((c) => ({ value: c, label: c })),
   },
   { id: 'gender', label: 'Gender', type: 'select', required: true, options: GENDER_OPTIONS },
+  {
+    id: 'ageRange',
+    label: 'Age range',
+    type: 'select',
+    required: true,
+    options: AGE_RANGE_OPTIONS,
+  },
   {
     id: 'phone',
     label: 'Phone number (optional)',

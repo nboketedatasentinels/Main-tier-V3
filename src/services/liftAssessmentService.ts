@@ -131,6 +131,7 @@ export const createLiftLead = async (intake: IntakeAnswers): Promise<string | nu
     organisation: intake.organisation ?? null,
     country: intake.country ?? null,
     gender: intake.gender ?? null,
+    age_range: intake.ageRange ?? null,
     phone: intake.phone ?? null,
     intake,
   })
@@ -192,6 +193,7 @@ export const submitLiftLead = async (
     organisation: intake.organisation ?? null,
     country: intake.country ?? null,
     gender: intake.gender ?? null,
+    age_range: intake.ageRange ?? null,
     phone: intake.phone ?? null,
     intake,
     item_scores: itemScores,
@@ -237,7 +239,7 @@ const mapLeadRow = (row: Raw): LiftAssessmentRow => {
 
 /**
  * Admin/partner: list all ANONYMOUS leads from the public funnel (no account).
- * Contact details (organisation, country, gender, phone, ...) live inside each
+ * Contact details (organisation, country, gender, age range, phone, ...) live inside each
  * row's `intake`, so the admin view reads them straight off `row.intake`.
  */
 export const listLiftLeads = async (): Promise<LiftAssessmentRow[]> => {

@@ -41,6 +41,7 @@ export interface IntakeAnswers {
   organisation?: string
   country?: string
   gender?: string
+  ageRange?: string
   phone?: string
   [key: string]: string | undefined
 }
