@@ -30,7 +30,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { format, formatDistanceToNow } from 'date-fns'
-import { CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Eye, EyeOff, HeartHandshake, Key, Mail, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
+import { CalendarClock, ChevronDown, ClipboardCheck, ClipboardList, Clock, Download, Eye, EyeOff, HeartHandshake, Key, Mail, Save, Sparkles, UserCheck, User, Users } from 'lucide-react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/services/supabase'
 import { createIntervention, updateIntervention } from '@/services/partnerInterventionsService'
@@ -48,6 +48,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { buildPartnerNavItems } from '@/utils/navigationItems'
+import { buildPartnerJourneyReportData } from '@/services/partnerJourneyReportService'
+import { generatePartnerJourneyPdfReport } from '@/reports/partnerJourneyPdfReport'
 import { logger } from '@/utils/partnerDashboardUtils'
 import { getDisplayName } from '@/utils/displayName'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
@@ -389,6 +391,43 @@ export const PartnerDashboard: React.FC = () => {
       orgName: org.name ?? '',
     }
   }, [overviewOrganizations, scopedOrgKey])
+
+  const [journeyReportLoading, setJourneyReportLoading] = useState(false)
+
+  const handleDownloadJourneyReport = useCallback(async () => {
+    if (!scopedOrgKey || overviewOrganizations.length !== 1) {
+      toast({
+        title: 'Select one organisation',
+        description: 'Choose a single organisation to download its journey report.',
+        status: 'info',
+        duration: 4000,
+      })
+      return
+    }
+
+    const org = overviewOrganizations[0]
+    setJourneyReportLoading(true)
+    try {
+      const report = buildPartnerJourneyReportData(org, overviewUsers)
+      await generatePartnerJourneyPdfReport(report)
+      toast({
+        title: 'Report downloaded',
+        description: `${report.orgName} journey PDF is ready.`,
+        status: 'success',
+        duration: 4000,
+      })
+    } catch (error) {
+      console.error('[PartnerDashboard] Journey report PDF failed', error)
+      toast({
+        title: 'Could not generate report',
+        description: 'Please try again in a moment.',
+        status: 'error',
+        duration: 5000,
+      })
+    } finally {
+      setJourneyReportLoading(false)
+    }
+  }, [overviewOrganizations, overviewUsers, scopedOrgKey, toast])
 
   const { metrics: overviewMetrics } = usePartnerMetrics({
     users: overviewUsers,
@@ -789,11 +828,38 @@ export const PartnerDashboard: React.FC = () => {
               borderRadius="full"
               bg="yellow.50"
             />
-            <HStack justify="space-between" fontSize="xs" color="brand.subtleText">
+            <HStack justify="space-between" align="center" fontSize="xs" color="brand.subtleText" wrap="wrap" spacing={3}>
               <Text>Started {format(journeyProgress.startDate, 'MMM d, yyyy')}</Text>
               <Text>Ends {format(journeyProgress.endDate, 'MMM d, yyyy')}</Text>
+              <Button
+                size="sm"
+                variant="outline"
+                colorScheme="purple"
+                leftIcon={<Download size={14} />}
+                onClick={() => void handleDownloadJourneyReport()}
+                isLoading={journeyReportLoading}
+                loadingText="Building PDF"
+              >
+                {journeyProgress.isComplete ? 'Download end-of-journey PDF' : 'Download journey PDF'}
+              </Button>
             </HStack>
           </Stack>
+        )}
+
+        {scopedOrgKey && overviewOrganizations.length === 1 && journeyProgress?.unconfigured && (
+          <HStack justify="flex-end">
+            <Button
+              size="sm"
+              variant="outline"
+              colorScheme="purple"
+              leftIcon={<Download size={14} />}
+              onClick={() => void handleDownloadJourneyReport()}
+              isLoading={journeyReportLoading}
+              loadingText="Building PDF"
+            >
+              Download journey PDF
+            </Button>
+          </HStack>
         )}
 
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>

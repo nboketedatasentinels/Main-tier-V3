@@ -74,6 +74,10 @@ export interface PartnerUser {
   /** The learner's actual results, so partners can read what they scored. */
   personalityType?: string
   coreValues?: string[]
+  /** Demographic band from signup (`profiles.data.ageRange`), when present. */
+  ageRange?: string
+  /** Gender from signup (`profiles.data.gender`), when present. */
+  gender?: string
   // Inferred from the raw profile role: 'free_user' → 'free', everything else
   // (paid_member, mentor, coach) → 'paid'. Used for paid/free tab split.
   membershipTier?: 'free' | 'paid'
@@ -939,6 +943,14 @@ export const usePartnerAdminData = (
                 coreValues: Array.isArray(data.coreValues)
                   ? (data.coreValues as string[])
                   : undefined,
+                ageRange:
+                  typeof (data as Record<string, unknown>).ageRange === 'string'
+                    ? ((data as Record<string, unknown>).ageRange as string)
+                    : undefined,
+                gender:
+                  typeof (data as Record<string, unknown>).gender === 'string'
+                    ? ((data as Record<string, unknown>).gender as string)
+                    : undefined,
                 // Raw profile role can be 'free_user' / 'paid_member' / etc. -
                 // wider than the narrow PartnerUser.role enum on the type.
                 membershipTier: (data.role as string | undefined) === 'free_user' ? 'free' : 'paid',
