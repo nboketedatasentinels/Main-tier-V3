@@ -131,19 +131,22 @@ export interface IntakeField {
   options: IntakeOption[]
 }
 
+/** Shared professional-role options (LIFT intake + learner signup). */
+export const ROLE_OPTIONS: IntakeOption[] = [
+  { value: 'c_suite', label: 'C-suite/ Managing Director' },
+  { value: 'vp_head', label: 'VP/ Head of Function/ Department' },
+  { value: 'senior_manager', label: 'Senior Manager' },
+  { value: 'manager', label: 'Manager' },
+  { value: 'team_lead', label: 'Team lead' },
+  { value: 'early_career', label: 'Early Career Professional' },
+  { value: 'student', label: 'Student' },
+]
+
 export const INTAKE_FIELDS: IntakeField[] = [
   {
     id: 'role',
     label: 'Which best describes your role?',
-    options: [
-      { value: 'c_suite', label: 'C-suite/ Managing Director' },
-      { value: 'vp_head', label: 'VP/ Head of Function/ Department' },
-      { value: 'senior_manager', label: 'Senior Manager' },
-      { value: 'manager', label: 'Manager' },
-      { value: 'team_lead', label: 'Team lead' },
-      { value: 'early_career', label: 'Early Career Professional' },
-      { value: 'student', label: 'Student' },
-    ],
+    options: ROLE_OPTIONS,
   },
   {
     id: 'teamSize',

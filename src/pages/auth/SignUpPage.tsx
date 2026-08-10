@@ -10,7 +10,7 @@ import { validateReferralCode } from "@/services/referralService"
 import { useCompanyCodeValidation } from "@/hooks/useCompanyCodeValidation"
 import { getCompanyCodeSignupBlocker } from "@/utils/companyCodeSignupGate"
 import { GenderOption, UserRole } from "@/types"
-import { AGE_RANGE_OPTIONS, type AgeRangeOption } from "@/config/demographics"
+import { ROLE_OPTIONS } from "@/config/liftAssessment"
 import { getLandingPathForRole } from "@/utils/roleRouting"
 import { TermsOfUseModal } from "@/components/modals/TermsOfUseModal"
 import { CompanyCodeModal } from "@/components/modals/CompanyCodeModal"
@@ -19,7 +19,7 @@ import { PRIVACY_STATEMENT_URL } from "@/config/app"
 interface FormData {
   fullName: string
   gender: GenderOption | ""
-  ageRange: AgeRangeOption | ""
+  jobRole: string
   email: string
   phoneNumber: string
   password: string
@@ -37,7 +37,7 @@ export const SignUpPage: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
     gender: "",
-    ageRange: "",
+    jobRole: "",
     email: "",
     phoneNumber: "",
     password: "",
@@ -121,7 +121,7 @@ export const SignUpPage: React.FC = () => {
   const validate = () => {
     if (!formData.fullName.trim()) return "Full name is required."
     if (!formData.gender) return "Gender is required."
-    if (!formData.ageRange) return "Age range is required."
+    if (!formData.jobRole) return "Role is required."
 
     const email = formData.email.trim()
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -208,7 +208,7 @@ export const SignUpPage: React.FC = () => {
           fullName: formData.fullName.trim(),
           phoneNumber: formData.phoneNumber.trim(),
           gender: formData.gender || undefined,
-          ageRange: formData.ageRange || undefined,
+          jobRole: formData.jobRole || undefined,
           ...(trimmedCompanyCode
             ? {
                 companyCode: trimmedCompanyCode,
@@ -334,18 +334,18 @@ export const SignUpPage: React.FC = () => {
 
         <div>
           <label className="mb-1 block text-sm font-medium text-text-secondary">
-            Age range <span className="text-danger">*</span>
+            Which best describes your role? <span className="text-danger">*</span>
           </label>
           <select
-            value={formData.ageRange}
-            onChange={e => handleChange("ageRange", e.target.value as AgeRangeOption)}
+            value={formData.jobRole}
+            onChange={e => handleChange("jobRole", e.target.value)}
             className="h-10 w-full rounded-md border border-border-control bg-surface-subtle px-3 text-sm text-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary"
             required
           >
             <option value="" disabled>
-              Select age range
+              Select role
             </option>
-            {AGE_RANGE_OPTIONS.map(option => (
+            {ROLE_OPTIONS.map(option => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

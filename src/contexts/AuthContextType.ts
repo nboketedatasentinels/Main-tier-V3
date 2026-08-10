@@ -36,7 +36,7 @@ export interface AuthContextType {
     password: string,
     userData: Partial<UserProfile> & {
       gender?: string
-      ageRange?: string
+      jobRole?: string
       phoneNumber?: string
       companyCode?: string
       companyId?: string
