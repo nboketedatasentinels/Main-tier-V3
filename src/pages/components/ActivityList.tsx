@@ -204,9 +204,9 @@ export const ActivityList = ({
   // Practical cards under Week 1 as on My Courses - not as scattered rows.
   const showProgrammeCardsUnderWeek1 = pillar === 'starter_kit'
   const useMonths = Boolean(journeyType && isMonthBasedJourney(journeyType))
-  // 3M / 6M / 9M: same card CSS as 6W / My Courses, under each month, with
-  // that month's course pillar (and Pass/Fail on months 3 / 6 / 9).
-  const showProgrammeCardsUnderMonths = useMonths
+  // 3M only: Capstone / Case Study / Practical cards (same CSS as My Courses)
+  // as the last block under each month, pillar from that month's course.
+  const showProgrammeCardsUnderMonths = journeyType === '3M'
   const periodNoun = useMonths ? 'month' : 'week'
   const currentPeriod = useMonths ? weekToMonth(currentWeek) : currentWeek
 
@@ -218,8 +218,8 @@ export const ActivityList = ({
 
   const ordered = useMemo(() => {
     const withId = visibleActivities.filter((activity) => activity?.id)
-    // Starter Kit + month journeys: cards carry Capstone / Case Study /
-    // Practical (not scattered checklist rows).
+    // Starter Kit + 3M: cards carry Capstone / Case Study / Practical.
+    // 6M / 9M keep checklist rows with month-local pillar content.
     if (!showProgrammeCardsUnderWeek1 && !showProgrammeCardsUnderMonths) return withId
     return withId.filter((activity) => !PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id))
   }, [visibleActivities, showProgrammeCardsUnderWeek1, showProgrammeCardsUnderMonths])
@@ -902,13 +902,6 @@ export const ActivityList = ({
                   {showWeek1Cards && (
                     <PillarProgrammeComponentsSection pillar={pillar} cardsOnly />
                   )}
-                  {showMonthCards && monthPillar && (
-                    <PillarProgrammeComponentsSection
-                      pillar={monthPillar}
-                      cardsOnly
-                      passFailMark={monthPassFail}
-                    />
-                  )}
                   {periodRows.map(
                     ({
                       activity,
@@ -948,6 +941,19 @@ export const ActivityList = ({
                                 hasInteracted: true,
                               }
                             : projectForWeek(activity)
+                      const rowPillar =
+                        useMonths &&
+                        !showProgrammeCardsUnderMonths &&
+                        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
+                        typeof occurrence === 'number'
+                          ? pillarForMonth(occurrence)
+                          : null
+                      const rowPassFail =
+                        useMonths &&
+                        !showProgrammeCardsUnderMonths &&
+                        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
+                        typeof occurrence === 'number' &&
+                        isProgrammePassFailMonth(occurrence)
                       return (
                         <ActivityRow
                           key={rowKey}
@@ -990,10 +996,20 @@ export const ActivityList = ({
                               : pendingWeeksByActivity[activity.id]?.size ?? 0
                           }
                           weekClaimComplete={kind === 'done'}
+                          programmePillar={rowPillar}
+                          programmePassFail={rowPassFail}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                         />
                       )
                     },
+                  )}
+                  {/* 3M only: Capstone / Case Study / Practical as last activities each month */}
+                  {showMonthCards && monthPillar && (
+                    <PillarProgrammeComponentsSection
+                      pillar={monthPillar}
+                      cardsOnly
+                      passFailMark={monthPassFail}
+                    />
                   )}
                 </Collapse>
               </Box>
