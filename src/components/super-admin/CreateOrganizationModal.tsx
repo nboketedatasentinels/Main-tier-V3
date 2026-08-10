@@ -100,6 +100,8 @@ import {
 import {
   getMonthlyJourneyCourseOptions,
   isMonthlyJourneyDuration,
+  evaluateSinglePillarCourseSet,
+  wouldCreateSinglePillarCourseSet,
 } from '@/config/courseCatalogue'
 import { resolveJourneyType } from '@/utils/journeyType'
 
@@ -263,6 +265,10 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         courseId: monthlyAssignments[String(index + 1)] || '',
       })).filter((entry) => !entry.courseId),
     [monthlyAssignments, courseLimit],
+  )
+  const singlePillarCourseSet = useMemo(
+    () => (isMonthlyJourney ? evaluateSinglePillarCourseSet(monthlyAssignments) : { blocked: false }),
+    [isMonthlyJourney, monthlyAssignments],
   )
   const inviteStats = useMemo(() => {
     const total = inviteDrafts.length
@@ -539,6 +545,25 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   }
 
   const handleMonthlyAssignmentChange = (monthKey: string, courseId: string) => {
+    if (isMonthlyJourney && courseId) {
+      const check = wouldCreateSinglePillarCourseSet({
+        assignments: monthlyAssignments,
+        monthKey,
+        nextCourseId: courseId,
+      })
+      if (check.blocked) {
+        toast({
+          title: 'Pillar mix required',
+          description:
+            check.message ??
+            'All courses cannot belong to the same pillar. Pick at least one from a different pillar.',
+          status: 'warning',
+          duration: 6000,
+          isClosable: true,
+        })
+        return
+      }
+    }
     setMonthlyAssignments((prev) => ({
       ...prev,
       [monthKey]: courseId,
@@ -599,6 +624,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
             ? 'Select a pillar so both 6-week courses are assigned'
             : `Assign a course for every month (${missingMonths.length} still empty)`,
         )
+      }
+      if (form.programDuration !== 1.5) {
+        const pillarMix = evaluateSinglePillarCourseSet(assignmentsToSave)
+        if (pillarMix.blocked) {
+          throw new Error(
+            pillarMix.message ??
+              'All courses cannot belong to the same pillar. Pick at least one from a different pillar.',
+          )
+        }
       }
       if (!form.teamSize || form.teamSize <= 0) {
         throw new Error('Cohort size must be greater than 0 to assign a cluster')
@@ -906,7 +940,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       </Text>
                       <Text fontSize="sm" color="gray.600" mb={3}>
                         {isMonthlyJourney
-                          ? `Assign exactly ${courseLimit} courses (1 per month). Open each dropdown and pick from the T4L catalogue.`
+                          ? `Assign exactly ${courseLimit} courses (1 per month). Open each dropdown and pick from the T4L catalogue. At least two pillars must be represented — all courses cannot be from the same pillar.`
                           : '6-week courses are assigned automatically from the selected pillar and saved to the organization. Window 1 is shown first to learners.'}
                       </Text>
                       <Stack spacing={3}>
@@ -1023,6 +1057,12 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                         <Alert status="error" mt={3} borderRadius="md">
                           <AlertIcon />
                           {emptyMonths.length} {assignmentUnit}(s) still need course assignments.
+                        </Alert>
+                      )}
+                      {singlePillarCourseSet.blocked && (
+                        <Alert status="error" mt={3} borderRadius="md">
+                          <AlertIcon />
+                          {singlePillarCourseSet.message}
                         </Alert>
                       )}
                     </Box>

@@ -229,3 +229,62 @@ export const getMonthlyJourneyCourseOptions = (): CourseOption[] =>
     title: course.title,
     description: course.description,
   })).sort((a, b) => a.title.localeCompare(b.title))
+
+export const getCatalogueCourseById = (courseId?: string | null): CatalogueCourse | undefined => {
+  if (!courseId?.trim()) return undefined
+  return MONTHLY_JOURNEY_COURSE_CATALOGUE.find((course) => course.id === courseId.trim())
+}
+
+export const SINGLE_PILLAR_COURSE_SET_MESSAGE =
+  'All courses cannot belong to the same pillar. Choose at least one course from a different pillar (2 from one pillar is fine — not all 3+).'
+
+/**
+ * Month-based journeys (3M/6M/9M): once 3 or more courses are assigned, they
+ * must not all share a single catalogue pillar.
+ */
+export const evaluateSinglePillarCourseSet = (
+  assignments: Record<string, string>,
+): { blocked: boolean; pillar?: CataloguePillarCode; pillarLabel?: string; message?: string } => {
+  const selected = Object.values(assignments)
+    .map((id) => id?.trim())
+    .filter((id): id is string => Boolean(id))
+
+  if (selected.length < 3) {
+    return { blocked: false }
+  }
+
+  const pillars = selected.map((id) => getCatalogueCourseById(id)?.pillar)
+  if (pillars.some((p) => !p)) {
+    // Unknown catalogue ids - don't block on missing metadata.
+    return { blocked: false }
+  }
+
+  const first = pillars[0]
+  const allSame = pillars.every((p) => p === first)
+  if (!allSame || !first) {
+    return { blocked: false }
+  }
+
+  const pillarLabel =
+    getCatalogueCourseById(selected[0])?.pillarLabel ?? first
+
+  return {
+    blocked: true,
+    pillar: first,
+    pillarLabel,
+    message: `${SINGLE_PILLAR_COURSE_SET_MESSAGE} Right now every selected course is under “${pillarLabel}”.`,
+  }
+}
+
+/** Preview applying a month slot change, then run the single-pillar check. */
+export const wouldCreateSinglePillarCourseSet = (params: {
+  assignments: Record<string, string>
+  monthKey: string
+  nextCourseId: string
+}): ReturnType<typeof evaluateSinglePillarCourseSet> => {
+  const next = {
+    ...params.assignments,
+    [params.monthKey]: params.nextCourseId,
+  }
+  return evaluateSinglePillarCourseSet(next)
+}
