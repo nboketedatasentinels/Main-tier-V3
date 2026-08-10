@@ -35,9 +35,18 @@ interface Props {
   pillar: Pillar | null
   /** When true, render only the three cards (no section chrome). Used under Week 1 on the checklist. */
   cardsOnly?: boolean
+  /**
+   * Month 3 / 6 / 9 checklist: Capstone / Case Study / Practical are graded
+   * Pass/Fail (no checklist points). Shows a mark badge above the cards.
+   */
+  passFailMark?: boolean
 }
 
-export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar, cardsOnly = false }) => {
+export const PillarProgrammeComponentsSection: React.FC<Props> = ({
+  pillar,
+  cardsOnly = false,
+  passFailMark = false,
+}) => {
   const location = useLocation()
   const containerRef = useRef<HTMLDivElement | null>(null)
 
@@ -61,7 +70,7 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar, card
   const cards = (
     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} alignItems="start">
       {entries.map((entry) => (
-        <ProgrammeComponentCard key={entry.id} entry={entry} />
+        <ProgrammeComponentCard key={entry.id} entry={entry} passFailMark={passFailMark} />
       ))}
     </SimpleGrid>
   )
@@ -69,6 +78,25 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({ pillar, card
   if (cardsOnly) {
     return (
       <Box px={{ base: 3, md: 4 }} py={4} bg="white" borderBottom="1px solid" borderColor="gray.100">
+        {passFailMark && (
+          <HStack spacing={2} mb={3} flexWrap="wrap">
+            <Badge
+              bg="#f4f0fb"
+              color="#350e6f"
+              textTransform="none"
+              fontSize="xs"
+              fontWeight="semibold"
+              px={2.5}
+              py={1}
+              borderRadius="full"
+            >
+              Pass / Fail mark
+            </Badge>
+            <Text fontSize="xs" color="gray.500">
+              No checklist points — your partner grades Pass or Fail.
+            </Text>
+          </HStack>
+        )}
         {cards}
       </Box>
     )
@@ -182,7 +210,10 @@ const cleanTitle = (raw: string): string => raw.replace(/\s*\(.*?\)\s*$/, '').tr
 const PART_BUTTON_BG = '#350e6f'
 const PART_BUTTON_BG_HOVER = '#27062e'
 
-const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ entry }) => {
+const ProgrammeComponentCard: React.FC<{
+  entry: ProgrammeComponentEntry
+  passFailMark?: boolean
+}> = ({ entry, passFailMark = false }) => {
   const location = useLocation()
   const visual = TYPE_VISUALS[entry.type]
   const status = STATUS_BADGE[entry.status]
@@ -307,7 +338,9 @@ const ProgrammeComponentCard: React.FC<{ entry: ProgrammeComponentEntry }> = ({ 
             </Heading>
             {hasParts ? (
               <Text fontSize="xs" color="gray.500" fontWeight="medium">
-                {partCount} parts &middot; all required
+                {passFailMark
+                  ? `${partCount} parts · Pass / Fail`
+                  : `${partCount} parts · all required`}
               </Text>
             ) : (
               entry.description && (

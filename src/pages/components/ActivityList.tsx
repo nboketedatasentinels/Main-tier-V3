@@ -204,6 +204,9 @@ export const ActivityList = ({
   // Practical cards under Week 1 as on My Courses - not as scattered rows.
   const showProgrammeCardsUnderWeek1 = pillar === 'starter_kit'
   const useMonths = Boolean(journeyType && isMonthBasedJourney(journeyType))
+  // 3M / 6M / 9M: same card CSS as 6W / My Courses, under each month, with
+  // that month's course pillar (and Pass/Fail on months 3 / 6 / 9).
+  const showProgrammeCardsUnderMonths = useMonths
   const periodNoun = useMonths ? 'month' : 'week'
   const currentPeriod = useMonths ? weekToMonth(currentWeek) : currentWeek
 
@@ -215,11 +218,11 @@ export const ActivityList = ({
 
   const ordered = useMemo(() => {
     const withId = visibleActivities.filter((activity) => activity?.id)
-    // Starter Kit: cards under Week 1. Month journeys keep Capstone / Case Study /
-    // Practical rows so each month can use that month's course pillar.
-    if (!showProgrammeCardsUnderWeek1) return withId
+    // Starter Kit + month journeys: cards carry Capstone / Case Study /
+    // Practical (not scattered checklist rows).
+    if (!showProgrammeCardsUnderWeek1 && !showProgrammeCardsUnderMonths) return withId
     return withId.filter((activity) => !PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id))
-  }, [visibleActivities, showProgrammeCardsUnderWeek1])
+  }, [visibleActivities, showProgrammeCardsUnderWeek1, showProgrammeCardsUnderMonths])
 
   // Full journey capacity (points × occurrence caps) - e.g. 60,000 for 6W.
   // Week-based journeys keep this for the To-do header: only the next claim
@@ -731,18 +734,34 @@ export const ActivityList = ({
   )
 
   const renderTodoSection = () => {
-    // Always surface Month/Week 1 when Starter Kit cards belong there, even if
-    // no other To-do rows are scheduled for that period yet.
-    const displayPeriodKeys =
-      showProgrammeCardsUnderWeek1 && !sortedTodoPeriods.includes(1)
-        ? [1, ...sortedTodoPeriods]
-        : sortedTodoPeriods
+    // Ensure Week 1 / every month appears when programme cards belong there,
+    // even if no other To-do rows are scheduled for that period yet.
+    const monthCount =
+      showProgrammeCardsUnderMonths && journeyType
+        ? JOURNEY_MONTH_COUNTS[journeyType] ?? 0
+        : 0
+    const displayPeriodKeys = (() => {
+      if (showProgrammeCardsUnderWeek1 && !sortedTodoPeriods.includes(1)) {
+        return [1, ...sortedTodoPeriods]
+      }
+      if (showProgrammeCardsUnderMonths && monthCount > 0) {
+        const keys = new Set(sortedTodoPeriods)
+        for (let m = 1; m <= monthCount; m += 1) keys.add(m)
+        return Array.from(keys).sort((a, b) => a - b)
+      }
+      return sortedTodoPeriods
+    })()
     if (displayPeriodKeys.length === 0) return null
     const isCollapsed = collapsedSections.todo
     const visibleRowCount = displayPeriodKeys.reduce(
       (sum, period) => sum + rowsForTodoPeriod(period).length,
       0,
     )
+    const programmeCardCount = showProgrammeCardsUnderWeek1
+      ? 3
+      : showProgrammeCardsUnderMonths
+        ? displayPeriodKeys.filter((period) => Boolean(pillarForMonth(period))).length * 3
+        : 0
     return (
       <Box key="todo">
         <Flex
@@ -774,7 +793,7 @@ export const ActivityList = ({
             {SECTION_TITLES.todo}
           </Text>
           <Text fontSize="xs" color="gray.500">
-            {visibleRowCount + (showProgrammeCardsUnderWeek1 ? 3 : 0)}
+            {visibleRowCount + programmeCardCount}
           </Text>
           {todoSectionAvailablePoints > 0 && (
             <Text fontSize="xs" color="#350e6f" fontWeight="semibold" ml="auto">
@@ -788,13 +807,18 @@ export const ActivityList = ({
           {displayPeriodKeys.map((period) => {
             const periodRows = rowsForTodoPeriod(period)
             const monthPillar = useMonths ? pillarForMonth(period) : null
-            const showCards = showProgrammeCardsUnderWeek1 && period === 1
+            const showWeek1Cards = showProgrammeCardsUnderWeek1 && period === 1
+            const showMonthCards =
+              showProgrammeCardsUnderMonths && Boolean(monthPillar)
+            const showCards = showWeek1Cards || showMonthCards
             if (periodRows.length === 0 && !showCards) return null
             const isPeriodCollapsed = Boolean(collapsedTodoWeeks[period])
             const periodPoints = periodRows
               .filter((row) => (row.rowKind ?? 'todo') === 'todo')
               .reduce((sum, row) => sum + rowAvailablePoints(row), 0)
             const isCurrent = period === currentPeriod
+            const monthPassFail =
+              showMonthCards && isProgrammePassFailMonth(period)
             return (
               <Box key={`todo-period-${period}`}>
                 <Flex
@@ -848,6 +872,21 @@ export const ActivityList = ({
                       Current
                     </Text>
                   )}
+                  {monthPassFail && (
+                    <Text
+                      fontSize="2xs"
+                      fontWeight="bold"
+                      color="#350e6f"
+                      bg="#f4f0fb"
+                      px={2}
+                      py={0.5}
+                      borderRadius="full"
+                      textTransform="uppercase"
+                      letterSpacing="0.04em"
+                    >
+                      Pass / Fail
+                    </Text>
+                  )}
                   {periodPoints > 0 && (
                     <Text
                       fontSize="xs"
@@ -860,8 +899,15 @@ export const ActivityList = ({
                   )}
                 </Flex>
                 <Collapse in={!isPeriodCollapsed} animateOpacity>
-                  {showCards && (
+                  {showWeek1Cards && (
                     <PillarProgrammeComponentsSection pillar={pillar} cardsOnly />
+                  )}
+                  {showMonthCards && monthPillar && (
+                    <PillarProgrammeComponentsSection
+                      pillar={monthPillar}
+                      cardsOnly
+                      passFailMark={monthPassFail}
+                    />
                   )}
                   {periodRows.map(
                     ({
@@ -902,20 +948,6 @@ export const ActivityList = ({
                                 hasInteracted: true,
                               }
                             : projectForWeek(activity)
-                      const rowPillar =
-                        useMonths &&
-                        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
-                        typeof occurrence === 'number'
-                          ? pillarForMonth(occurrence)
-                          : monthPillar &&
-                              PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id)
-                            ? monthPillar
-                            : null
-                      const rowPassFail =
-                        useMonths &&
-                        PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
-                        typeof occurrence === 'number' &&
-                        isProgrammePassFailMonth(occurrence)
                       return (
                         <ActivityRow
                           key={rowKey}
@@ -958,8 +990,6 @@ export const ActivityList = ({
                               : pendingWeeksByActivity[activity.id]?.size ?? 0
                           }
                           weekClaimComplete={kind === 'done'}
-                          programmePillar={rowPillar}
-                          programmePassFail={rowPassFail}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                         />
                       )
