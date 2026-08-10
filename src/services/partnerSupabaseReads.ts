@@ -315,6 +315,10 @@ const mapMemberRow = (row: SupabaseProfileRow): Record<string, unknown> => {
     createdAt: row.created_at ?? undefined,
     created_at: row.created_at ?? undefined,
     updatedAt: row.updated_at ?? undefined,
+    updated_at: row.updated_at ?? undefined,
+    // Explicit activity stamps from jsonb (also present via ...jsonb spread).
+    lastActiveAt: (jsonb.lastActiveAt as string) ?? (jsonb.last_active_at as string) ?? undefined,
+    last_active_at: (jsonb.last_active_at as string) ?? (jsonb.lastActiveAt as string) ?? undefined,
   }
 }
 

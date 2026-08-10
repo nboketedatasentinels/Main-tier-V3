@@ -43,6 +43,44 @@ export const normalizeTimestamp = (value?: unknown): string | null => {
   return null
 }
 
+/**
+ * Best-known "last active" time for dashboards.
+ *
+ * Prefer explicit activity stamps (`lastActiveAt`), then profile `updated_at`
+ * (bumped when points are awarded / profile changes), then signup/`created_at`.
+ * Returns the latest valid ISO so an engaged learner never shows as "Never".
+ */
+export const resolveLastActiveAt = (
+  sources: Record<string, unknown> | null | undefined,
+): string | undefined => {
+  if (!sources) return undefined
+  const candidates = [
+    sources.lastActiveAt,
+    sources.last_active_at,
+    sources.lastActive,
+    sources.last_active,
+    sources.updatedAt,
+    sources.updated_at,
+    sources.registrationDate,
+    sources.registration_date,
+    sources.createdAt,
+    sources.created_at,
+  ]
+  let bestMs = -Infinity
+  let bestIso: string | undefined
+  for (const value of candidates) {
+    const iso = normalizeTimestamp(value)
+    if (!iso) continue
+    const ms = Date.parse(iso)
+    if (!Number.isFinite(ms)) continue
+    if (ms > bestMs) {
+      bestMs = ms
+      bestIso = iso
+    }
+  }
+  return bestIso
+}
+
 // ============================================================================
 // FIX #10: Conditional logging that respects environment
 // ============================================================================

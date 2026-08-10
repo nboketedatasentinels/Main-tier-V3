@@ -361,28 +361,56 @@ export const upgradeUserToOrganization = async (params: {
 }
 
 /**
- * Records user activity by updating lastActiveAt timestamp.
- * Call this when users perform significant actions like:
- * - Completing activities/checklists
- * - Earning points
- * - Logging in
- * - Viewing dashboard
+ * Records user activity by updating lastActiveAt on the Supabase profile
+ * (and best-effort on legacy Firestore docs).
+ *
+ * Call when users perform significant actions: login, checklist claims, etc.
  */
 export const recordUserActivity = async (userId: string): Promise<void> => {
   if (!userId?.trim()) return
 
-  const payload = {
-    lastActiveAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  }
+  const nowIso = new Date().toISOString()
 
   try {
+    const { data: row, error: readError } = await supabase
+      .from('profiles')
+      .select('data')
+      .eq('id', userId)
+      .maybeSingle()
+    if (readError) throw readError
+
+    const prev =
+      row?.data && typeof row.data === 'object' && !Array.isArray(row.data)
+        ? (row.data as Record<string, unknown>)
+        : {}
+
+    const { error: writeError } = await supabase
+      .from('profiles')
+      .update({
+        data: {
+          ...prev,
+          lastActiveAt: nowIso,
+          last_active_at: nowIso,
+        },
+        updated_at: nowIso,
+      })
+      .eq('id', userId)
+    if (writeError) throw writeError
+  } catch (error) {
+    console.warn('[recordUserActivity] Failed to record Supabase activity:', error)
+  }
+
+  // Legacy Firestore mirror - ignore failures after the auth cutover.
+  try {
+    const payload = {
+      lastActiveAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }
     await Promise.all([
       setDoc(doc(db, 'users', userId), payload, { merge: true }),
       setDoc(doc(db, 'profiles', userId), payload, { merge: true }),
     ])
-  } catch (error) {
-    // Silently fail - don't break user actions due to activity tracking
-    console.warn('[recordUserActivity] Failed to record activity:', error)
+  } catch {
+    // no-op
   }
 }

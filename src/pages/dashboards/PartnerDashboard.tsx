@@ -226,9 +226,8 @@ export const PartnerDashboard: React.FC = () => {
     })
   }, [snapshotUsers, scopedOrgKey, selectedOrg])
 
-  // Learner sign-in history for the selected org, most-recent first. Backed by
-  // the platform's last-active timestamp (the only sign-in signal we track);
-  // learners with no recorded activity sort last and render as "Never".
+  // Learner activity history for the selected org, most-recent first.
+  // Uses resolveLastActiveAt cascade (lastActiveAt → updated_at → signup).
   const loginTableRef = useRef<HTMLDivElement>(null)
   const [showLoginsTable, setShowLoginsTable] = useState(false)
   const toggleLoginsTable = useCallback(() => {
@@ -664,14 +663,14 @@ export const PartnerDashboard: React.FC = () => {
                     color="brand.subtleText"
                     fontWeight="semibold"
                   >
-                    Learner logins
+                    Learner activity
                   </Text>
                   <Text fontWeight="bold" color="brand.text">
                     {recentLoginRows.length} learner{recentLoginRows.length === 1 ? '' : 's'}
                     {mostRecentLoginLabel ? ` · latest ${mostRecentLoginLabel}` : ''}
                   </Text>
                   <Text fontSize="sm" color="brand.subtleText">
-                    See when each learner last signed in
+                    See when each learner was last active
                   </Text>
                 </Stack>
               </HStack>
@@ -1107,9 +1106,9 @@ export const PartnerDashboard: React.FC = () => {
                 <HStack spacing={3} align="center">
                   <IconTile><Clock size={18} /></IconTile>
                   <Stack spacing={0}>
-                    <Text fontWeight="bold" color="brand.text">Learner logins</Text>
+                    <Text fontWeight="bold" color="brand.text">Learner activity</Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      Most recent sign-ins first
+                      Most recent activity first
                       {selectedOrg && selectedOrg !== 'all' ? ' · this organization' : ''}
                     </Text>
                   </Stack>
@@ -1147,7 +1146,7 @@ export const PartnerDashboard: React.FC = () => {
                       <Tr>
                         <Th>Learner</Th>
                         <Th>Email</Th>
-                        <Th whiteSpace="nowrap">Last login</Th>
+                        <Th whiteSpace="nowrap">Last active</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
@@ -1160,7 +1159,7 @@ export const PartnerDashboard: React.FC = () => {
                             color={row.lastLogin ? 'brand.text' : 'brand.subtleText'}
                             fontStyle={row.lastLogin ? undefined : 'italic'}
                           >
-                            {row.lastLogin ? format(row.lastLogin, 'd MMM yyyy, h:mm a') : 'Never'}
+                            {row.lastLogin ? format(row.lastLogin, 'd MMM yyyy, h:mm a') : 'No activity yet'}
                           </Td>
                         </Tr>
                       ))}

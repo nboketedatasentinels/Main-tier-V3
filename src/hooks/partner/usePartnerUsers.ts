@@ -9,6 +9,7 @@ import {
   normalizeTimestamp,
   normalizeOrgKey,
   createOrgKeySet,
+  resolveLastActiveAt,
   type DashboardDebugInfo,
   type MismatchSample,
 } from '@/utils/partnerDashboardUtils'
@@ -455,13 +456,8 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                     normalizedRegistrationDate
                 ) || normalizedRegistrationDate
 
-              // For lastActive: only use actual activity tracking data (lastActiveAt)
-              // This is set by recordUserActivity when users perform actions
-              const normalizedLastActive =
-                normalizeTimestamp(
-                  data.lastActiveAt ||
-                    data.last_active_at
-                ) || undefined
+              // Prefer lastActiveAt, else updated_at (points awards bump it), else signup.
+              const normalizedLastActive = resolveLastActiveAt(data as Record<string, unknown>)
 
               const currentWeek = getProgramWeekNumber(normalizedProgramStart || undefined)
               const progress = mapWeeklyPointsToProgress(
@@ -521,8 +517,7 @@ export const usePartnerUsers = (options: UsePartnerUsersOptions) => {
                 name: displayName,
                 fullName: data.fullName || data.full_name || displayName,
                 createdAt: normalizedCreatedAt || undefined,
-                lastActiveAt:
-                  normalizeTimestamp(data.lastActiveAt || data.last_active_at) || undefined,
+                lastActiveAt: normalizedLastActive,
                 programStartDate: normalizedProgramStart || undefined,
                 email: data.email || '',
                 companyCode,

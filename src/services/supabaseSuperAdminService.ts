@@ -37,6 +37,7 @@ import {
   classifyJourneyPace,
   paceLevelToAdminBucket,
 } from '@/utils/journeyPace'
+import { resolveLastActiveAt } from '@/utils/partnerDashboardUtils'
 import { normalizeRole } from '@/utils/role'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 
@@ -529,6 +530,7 @@ type ProfileRow = {
   email?: string | null
   role?: string | null
   created_at?: string | null
+  updated_at?: string | null
   total_points?: number | null
   company_id?: string | null
   organization_id?: string | null
@@ -867,7 +869,7 @@ export const fetchOrganizationMembers = async (org: {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, first_name, last_name, email, role, membership_status, created_at, total_points, data')
+    .select('id, full_name, first_name, last_name, email, role, membership_status, created_at, updated_at, total_points, data')
     .or(orClauses.join(','))
     .order('full_name', { ascending: true })
   if (error) throw new Error(error.message)
@@ -882,10 +884,15 @@ export const fetchOrganizationMembers = async (org: {
       [raw.first_name, raw.last_name].filter(Boolean).join(' ').trim() ||
       raw.email ||
       'Unknown'
-    // Activity isn't a first-class column; it's tracked inside the `data` jsonb
-    // (lastActiveAt / last_active_at), the same source the partner dashboard reads.
+    // Same cascade as the partner dashboard: lastActiveAt → updated_at → created_at.
     const jsonb = (raw.data ?? {}) as Record<string, unknown>
-    const lastActiveRaw = jsonb.lastActiveAt ?? jsonb.last_active_at
+    const lastActiveAt = resolveLastActiveAt({
+      ...jsonb,
+      updated_at: raw.updated_at,
+      updatedAt: raw.updated_at,
+      created_at: raw.created_at,
+      createdAt: raw.created_at,
+    })
     members.push({
       id: raw.id,
       name,
@@ -894,7 +901,7 @@ export const fetchOrganizationMembers = async (org: {
       membershipStatus: raw.membership_status ?? null,
       createdAt: raw.created_at ?? null,
       totalPoints: raw.total_points ?? null,
-      lastActiveAt: typeof lastActiveRaw === 'string' ? lastActiveRaw : null,
+      lastActiveAt: lastActiveAt ?? null,
     })
   }
   return members

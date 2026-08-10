@@ -15,6 +15,7 @@ import { claimOrganizationCode, acceptOrgInvitations } from '@/services/supabase
 import { resolveEffectiveOrganization, resolveEffectiveRole } from '@/utils/authz'
 import { ensureFreeUserVillage } from '@/services/villageService'
 import { isFreeUser } from '@/utils/membership'
+import { recordUserActivity } from '@/services/userProfileService'
 
 interface AuthProviderProps {
   children: React.ReactNode
@@ -364,6 +365,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setProfileLoading(false)
       setLoading(false)
       setProfileStatus('ready')
+
+      // Stamp last-active on real sign-in / first session load (not token refresh).
+      if (origin === 'init' || origin === 'SIGNED_IN') {
+        void recordUserActivity(supaUser.id).catch(() => {})
+      }
     }
 
     // Initial session (covers a normal load and the post-OAuth/magic-link redirect).
