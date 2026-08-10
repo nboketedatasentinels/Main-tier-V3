@@ -12,6 +12,8 @@ import {
   type JourneyType,
 } from '@/config/pointsConfig'
 import { resolveJourneyType, isJourneyType } from '@/utils/journeyType'
+import { expectedPassMarkPointsNow } from '@/utils/journeyPace'
+import { calculatePartnerWindowRisk } from '@/utils/windowStatus'
 import { getOrganizationJourney } from '@/services/supabaseOrgService'
 import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { supabase } from '@/services/supabase'
@@ -920,13 +922,38 @@ export function useWeeklyChecklistViewModel() {
     if (!journey) return null
     const totalWeeks = journey.programDurationWeeks
     const startDate = journey.journeyStartDate ? new Date(journey.journeyStartDate) : null
-    const daysSinceStart = startDate ? Math.max(0, (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24)) : 0
+    const daysSinceStart = startDate
+      ? Math.max(0, (Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24))
+      : 0
     const elapsedWeeks = Math.min(totalWeeks, daysSinceStart / 7)
     const timeProgress = totalWeeks > 0 ? elapsedWeeks / totalWeeks : 0
     const journeyEnded = timeProgress >= 1
-    const expectedPointsNow = timeProgress * passMarkPoints
-    const paceRatio = expectedPointsNow > 0 ? accumulatedPoints / expectedPointsNow : 1
-    const deficit = Math.max(0, Math.round(expectedPointsNow - accumulatedPoints))
+    const expectedPointsNow = expectedPassMarkPointsNow({
+      passMark: passMarkPoints,
+      daysElapsed: daysSinceStart,
+      totalWeeks,
+    })
+    const currentWeekNum = Math.min(
+      totalWeeks,
+      Math.max(1, Math.ceil(daysSinceStart / 7) || 1),
+    )
+    // Same classifier Super Admin uses (week-1 grace + window risk).
+    const risk = calculatePartnerWindowRisk({
+      journeyType: journey.journeyType,
+      currentWeek: currentWeekNum,
+      totalPoints: accumulatedPoints,
+      earnedPointsByWeek: Object.fromEntries(
+        allWeeksProgress.map((w) => [w.weekNumber, w.pointsEarned ?? 0]),
+      ),
+      programDurationWeeks: totalWeeks,
+    })
+    const deficit = Math.max(
+      0,
+      Math.round(
+        risk.points_deficit ??
+          Math.max(0, expectedPointsNow - accumulatedPoints),
+      ),
+    )
     const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks))
     const pointsNeeded = Math.max(0, passMarkPoints - accumulatedPoints)
     const weeklyNeeded = weeksLeft > 0 ? Math.ceil(pointsNeeded / weeksLeft) : 0
@@ -935,16 +962,16 @@ export function useWeeklyChecklistViewModel() {
     let level: UrgencyLevel = 'on_track'
     if (journeyEnded && accumulatedPoints < passMarkPoints) {
       level = 'critical'
-    } else if (paceRatio < 0.4) {
+    } else if (risk.level === 'critical') {
       level = 'critical'
-    } else if (paceRatio < 0.65) {
+    } else if (risk.level === 'behind') {
       level = 'behind'
-    } else if (paceRatio < 0.85) {
+    } else if (risk.level === 'warning') {
       level = 'warning'
     }
 
     return { level, deficit, journeyEnded, pointsNeeded, weeksLeft, weeklyNeeded }
-  }, [journey, accumulatedPoints, passMarkPoints])
+  }, [journey, accumulatedPoints, passMarkPoints, allWeeksProgress])
 
   /* ------------------------------------------------------------------ */
   /* Admin-safe override policy                                           */

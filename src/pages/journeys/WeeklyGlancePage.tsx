@@ -25,6 +25,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import { FirestoreError } from 'firebase/firestore'
 import { supabase } from '@/services/supabase'
 import { resolveJourneyType } from '@/utils/journeyType'
+import { computeJourneyPace } from '@/utils/journeyPace'
 import type { JourneyType } from '@/config/pointsConfig'
 import {
   ArrowUpRight,
@@ -77,57 +78,6 @@ function canCreateVillage(profile: UserProfile | null | undefined) {
   void profile
   void isCorporateUser
   return false
-}
-
-interface PaceInfo {
-  label: string
-  detail: string
-  tone: 'green' | 'yellow' | 'red'
-}
-
-/**
- * Pace measures the learner against a per-day linear target.
- *
- *   timeProgress       = daysElapsed / (totalWeeks * 7)
- *   expectedPointsNow  = timeProgress * journey max points
- *   delta%             = earned / expectedPointsNow - 1
- *
- * For a 6-week / 60,000-point journey the per-week ramp is:
- *   end of week 1 -> 10,000   week 4 -> 40,000
- *   end of week 2 -> 20,000   week 5 -> 50,000
- *   end of week 3 -> 30,000   week 6 -> 60,000
- *
- * Days 0-1 fall back to a "Just starting" label so a brand-new learner is not
- * flagged as 100% below pace on their first morning.
- */
-function computeJourneyPace(params: {
-  totalEarned: number
-  journeyMax: number
-  daysElapsed: number
-  totalWeeks: number
-}): PaceInfo {
-  const { totalEarned, journeyMax, daysElapsed, totalWeeks } = params
-  const totalDays = totalWeeks * 7
-
-  if (journeyMax <= 0 || totalDays <= 0) {
-    return { label: 'Just starting', detail: 'Tracking begins once your journey starts', tone: 'yellow' }
-  }
-
-  if (daysElapsed < 1) {
-    return { label: 'Just starting', detail: 'Pace tracking starts after day 1', tone: 'yellow' }
-  }
-
-  const timeProgress = Math.min(1, daysElapsed / totalDays)
-  const expectedPointsNow = timeProgress * journeyMax
-  const deltaPct = expectedPointsNow > 0 ? Math.round((totalEarned / expectedPointsNow - 1) * 100) : 0
-
-  if (deltaPct >= 5) {
-    return { label: 'Ahead of pace', detail: `${Math.abs(deltaPct)}% above expected`, tone: 'green' }
-  }
-  if (deltaPct <= -10) {
-    return { label: 'Behind pace', detail: `${Math.abs(deltaPct)}% below expected`, tone: 'red' }
-  }
-  return { label: 'On track', detail: 'Pace matches your journey timeline', tone: 'green' }
 }
 
 type KpiTheme = 'purple' | 'orange' | 'green' | 'yellow' | 'red' | 'blue'
@@ -690,7 +640,6 @@ export const WeeklyGlancePage = () => {
     }
   }, [profile?.id])
 
-  const journeyMax = JOURNEY_META[effectiveJourneyType]?.maxPossiblePoints ?? 0
   const passMark = JOURNEY_META[effectiveJourneyType]?.passMarkPoints ?? 0
   const totalEarned = useMemo(
     () => (data.ledgerEntries ?? []).reduce((sum, entry) => sum + (entry.points ?? 0), 0),
@@ -701,15 +650,35 @@ export const WeeklyGlancePage = () => {
   const journeyProgress =
     passMark > 0 ? Math.min(100, Math.round((totalEarned / passMark) * 100)) : 0
   const daysElapsed = journeyTiming?.totalDaysElapsed ?? 0
+  const earnedPointsByWeek = useMemo(() => {
+    const map: Record<number, number> = {}
+    for (const entry of data.ledgerEntries ?? []) {
+      const week = entry.weekNumber
+      if (!week || week < 1) continue
+      map[week] = (map[week] ?? 0) + (entry.points ?? 0)
+    }
+    return map
+  }, [data.ledgerEntries])
   const pace = useMemo(
     () =>
       computeJourneyPace({
         totalEarned,
-        journeyMax,
+        passMark,
         daysElapsed,
         totalWeeks,
+        journeyType: effectiveJourneyType,
+        currentWeek,
+        earnedPointsByWeek,
       }),
-    [totalEarned, journeyMax, daysElapsed, totalWeeks],
+    [
+      totalEarned,
+      passMark,
+      daysElapsed,
+      totalWeeks,
+      effectiveJourneyType,
+      currentWeek,
+      earnedPointsByWeek,
+    ],
   )
 
   // Courses sit beside the video; keep the column out of the layout entirely

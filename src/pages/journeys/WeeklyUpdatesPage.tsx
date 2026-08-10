@@ -62,6 +62,7 @@ import {
   JOURNEY_LABELS,
   resolveJourneyType,
 } from '@/utils/journeyType'
+import { expectedPassMarkPointsNow } from '@/utils/journeyPace'
 import { getWindowNumber, getWindowRange, getWindowWeekNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import {
   calculateActivityAvailability,
@@ -743,7 +744,11 @@ const WeeklyChecklistPage: React.FC = () => {
     const elapsedWeeks = Math.min(totalWeeks, Math.max(0, daysSinceStart) / 7);
     const timeProgress = totalWeeks > 0 ? elapsedWeeks / totalWeeks : 0;
     const journeyEnded = timeProgress >= 1;
-    const expectedPointsNow = timeProgress * passMarkPoints;
+    const expectedPointsNow = expectedPassMarkPointsNow({
+      passMark: passMarkPoints,
+      daysElapsed: Math.max(0, daysSinceStart),
+      totalWeeks,
+    });
     const paceRatio = expectedPointsNow > 0 ? journeyProgress.totalEarned / expectedPointsNow : 1;
     const deficit = Math.max(0, Math.round(expectedPointsNow - journeyProgress.totalEarned));
     const weeksLeft = Math.max(0, Math.ceil(totalWeeks - elapsedWeeks));
