@@ -41,7 +41,7 @@ import {
   Switch,
   VStack,
 } from '@chakra-ui/react'
-import { CheckCircle2, ChevronDown, ChevronUp, Clock, ShieldAlert } from 'lucide-react'
+import { CheckCircle2, ChevronDown, ChevronUp, Clock, Minus, Plus, ShieldAlert } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import {
   mergeUserProfileData,
@@ -158,7 +158,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [savingNudgePreference, setSavingNudgePreference] = useState(false)
   const [savingFollowUpNote, setSavingFollowUpNote] = useState(false)
   const [adjustmentReason, setAdjustmentReason] = useState('')
-  const [adjustmentValue, setAdjustmentValue] = useState(0)
+  /** Draft cycle points while adjusting (− / number / +). Null when not editing. */
+  const [draftPoints, setDraftPoints] = useState<number | null>(null)
   const [loadingAdjustment, setLoadingAdjustment] = useState(false)
   const [selection, setSelection] = useState<string[]>([])
   const [processingBulk, setProcessingBulk] = useState(false)
@@ -166,10 +167,34 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
   const [selectedRequest, setSelectedRequest] = useState<PointsVerificationRequest | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const drawer = useDisclosure()
-  const adjustmentModal = useDisclosure()
   const rejectionModal = useDisclosure()
   const toast = useToast()
   const { profile } = useAuth()
+
+  /** Points stepped on each + / − tap. */
+  const ADJUST_STEP = 100
+
+  const adjustingOpen = draftPoints !== null
+
+  const draftDelta =
+    adjustingOpen && selectedUser != null ? draftPoints - selectedUser.weeklyEarned : 0
+
+  const cycleTarget = useMemo(() => {
+    if (!selectedUser) return 1
+    if (selectedUser.weeklyRequired > 0) return selectedUser.weeklyRequired
+    // Fallback scale so the graph still moves when org target is missing.
+    return Math.max(selectedUser.weeklyEarned, draftPoints ?? 0, 5000)
+  }, [selectedUser, draftPoints])
+
+  const previewEarned =
+    selectedUser == null
+      ? 0
+      : adjustingOpen
+        ? Math.max(0, draftPoints)
+        : selectedUser.weeklyEarned
+
+  const previewPercent = Math.min(100, Math.round((previewEarned / Math.max(cycleTarget, 1)) * 100))
+  const targetMet = previewEarned >= cycleTarget && (selectedUser?.weeklyRequired ?? 0) > 0
 
   // Extract organization IDs for server-side approval filtering
   const partnerOrganizationIds = useMemo(
@@ -380,12 +405,32 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     }
   }
 
-  const handleAdjustment = async () => {
+  const resetAdjustmentDraft = () => {
+    setDraftPoints(null)
+    setAdjustmentReason('')
+  }
+
+  const openAdjustment = () => {
     if (!selectedUser) return
-    if (adjustmentValue <= 0) {
+    setDraftPoints(selectedUser.weeklyEarned)
+    setAdjustmentReason('')
+  }
+
+  const bumpDraftPoints = (direction: 1 | -1) => {
+    setDraftPoints((prev) => {
+      const base = prev ?? selectedUser?.weeklyEarned ?? 0
+      return Math.max(0, base + direction * ADJUST_STEP)
+    })
+  }
+
+  const handleAdjustment = async () => {
+    if (!selectedUser || draftPoints === null) return
+    const delta = draftPoints - selectedUser.weeklyEarned
+    if (delta === 0) {
       toast({
-        title: 'Points must be positive',
-        status: 'warning',
+        title: 'No change yet',
+        description: 'Use + or − to change the points, then apply.',
+        status: 'info',
         duration: 3000,
         isClosable: true,
       })
@@ -393,17 +438,41 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
     }
     setLoadingAdjustment(true)
     try {
-      await updateUserPoints(selectedUser.id, adjustmentValue, adjustmentReason || 'Manual adjustment')
+      await updateUserPoints(
+        selectedUser.id,
+        delta,
+        adjustmentReason ||
+          (delta > 0 ? 'Partner points credit' : 'Partner points reduction'),
+      )
+      const nextEarned = Math.max(0, draftPoints)
+      const nextPercent =
+        selectedUser.weeklyRequired > 0
+          ? Math.min(100, Math.round((nextEarned / selectedUser.weeklyRequired) * 100))
+          : selectedUser.progressPercent
+      setSelectedUser({
+        ...selectedUser,
+        weeklyEarned: nextEarned,
+        progressPercent: nextPercent,
+      })
       toast({
-        title: 'Points updated',
-        description: `${adjustmentValue} points applied to ${selectedUser.name}`,
+        title: delta > 0 ? 'Points added' : 'Points reduced',
+        description:
+          delta > 0
+            ? `+${Math.abs(delta).toLocaleString()} points added for ${selectedUser.name}`
+            : `${Math.abs(delta).toLocaleString()} points removed from ${selectedUser.name}`,
         status: 'success',
         duration: 4000,
         isClosable: true,
       })
-      setAdjustmentValue(0)
-      setAdjustmentReason('')
-      adjustmentModal.onClose()
+      resetAdjustmentDraft()
+    } catch (error) {
+      toast({
+        title: 'Could not adjust points',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      })
     } finally {
       setLoadingAdjustment(false)
     }
@@ -1048,6 +1117,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         onClose={() => {
           drawer.onClose()
           setSelectedUser(null)
+          resetAdjustmentDraft()
         }}
         size="md"
       >
@@ -1071,28 +1141,164 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                   <Badge colorScheme={riskColor[selectedUser.riskStatus]}>Risk: {selectedUser.riskStatus}</Badge>
                 </HStack>
                 <Divider />
-                <Stack spacing={2}>
-                  <Text fontWeight="semibold">Cycle progress</Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Points accumulated: {selectedUser.weeklyEarned} / {selectedUser.weeklyRequired} in the current 2-week cycle.
-                  </Text>
-                  <HStack spacing={2}>
-                    <Box bg="brand.accent" borderRadius="full" h="10px" flex={1} position="relative">
-                      <Box
-                        position="absolute"
-                        left={0}
-                        top={0}
-                        bottom={0}
-                        borderRadius="full"
-                        bg={selectedUser.weeklyEarned >= selectedUser.weeklyRequired ? 'green.400' : 'indigo.500'}
-                        width={`${Math.min(100, (selectedUser.weeklyEarned / Math.max(selectedUser.weeklyRequired, 1)) * 100)}%`}
-                      />
-                    </Box>
-                    <Text fontSize="sm">{selectedUser.progressPercent}%</Text>
+                <Stack
+                  spacing={3}
+                  p={3}
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  borderRadius="lg"
+                  bg="gray.50"
+                >
+                  <HStack justify="space-between" align="center">
+                    <Text fontWeight="semibold">Cycle progress</Text>
+                    {draftDelta !== 0 && (
+                      <Badge
+                        colorScheme={draftDelta > 0 ? 'green' : 'orange'}
+                        textTransform="none"
+                      >
+                        {draftDelta > 0 ? '+' : ''}
+                        {draftDelta.toLocaleString()} pts
+                      </Badge>
+                    )}
                   </HStack>
-                  <Button size="sm" onClick={adjustmentModal.onOpen} colorScheme="purple">
-                    Adjust points
-                  </Button>
+                  <Text fontSize="sm" color="brand.subtleText">
+                    Points accumulated:{' '}
+                    <Text as="span" fontWeight="semibold" color="gray.800">
+                      {previewEarned.toLocaleString()}
+                    </Text>
+                    {' / '}
+                    {(selectedUser.weeklyRequired > 0
+                      ? selectedUser.weeklyRequired
+                      : cycleTarget
+                    ).toLocaleString()}{' '}
+                    in the current 2-week cycle
+                    {selectedUser.weeklyRequired <= 0 ? ' (estimated scale)' : ''}.
+                  </Text>
+                  <Box bg="gray.200" borderRadius="full" h="12px" w="100%" position="relative" overflow="hidden">
+                    <Box
+                      position="absolute"
+                      left={0}
+                      top={0}
+                      bottom={0}
+                      borderRadius="full"
+                      bg={
+                        draftDelta < 0
+                          ? 'orange.400'
+                          : targetMet
+                            ? 'green.400'
+                            : '#350e6f'
+                      }
+                      width={`${previewPercent}%`}
+                      transition="width 0.25s ease, background 0.2s ease"
+                    />
+                  </Box>
+                  <HStack justify="space-between">
+                    <Text fontSize="xs" color="gray.500">
+                      {previewPercent}% of cycle target
+                    </Text>
+                  </HStack>
+
+                  {/* −  actual points  + */}
+                  <HStack
+                    spacing={4}
+                    justify="center"
+                    align="center"
+                    py={2}
+                    px={3}
+                    bg="white"
+                    borderWidth="1px"
+                    borderColor="#e6dbef"
+                    borderRadius="lg"
+                  >
+                    <Button
+                      aria-label="Reduce points"
+                      onClick={() => {
+                        if (!adjustingOpen) openAdjustment()
+                        bumpDraftPoints(-1)
+                      }}
+                      isDisabled={previewEarned <= 0 || loadingAdjustment}
+                      colorScheme="orange"
+                      variant="outline"
+                      borderRadius="full"
+                      w={12}
+                      h={12}
+                      minW={12}
+                      p={0}
+                    >
+                      <Minus size={22} />
+                    </Button>
+                    <Stack spacing={0} align="center" minW="120px">
+                      <Text
+                        fontSize="2xl"
+                        fontWeight="bold"
+                        color="#27062e"
+                        lineHeight="1.1"
+                        sx={{ fontVariantNumeric: 'tabular-nums' }}
+                      >
+                        {previewEarned.toLocaleString()}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        points
+                      </Text>
+                    </Stack>
+                    <Button
+                      aria-label="Add points"
+                      onClick={() => {
+                        if (!adjustingOpen) openAdjustment()
+                        bumpDraftPoints(1)
+                      }}
+                      isDisabled={loadingAdjustment}
+                      colorScheme="purple"
+                      variant="solid"
+                      bg="#350e6f"
+                      _hover={{ bg: '#27062e' }}
+                      borderRadius="full"
+                      w={12}
+                      h={12}
+                      minW={12}
+                      p={0}
+                    >
+                      <Plus size={22} />
+                    </Button>
+                  </HStack>
+                  <Text fontSize="xs" color="gray.500" textAlign="center">
+                    Each tap changes points by {ADJUST_STEP.toLocaleString()}.
+                  </Text>
+
+                  {adjustingOpen && draftDelta !== 0 ? (
+                    <Stack spacing={2}>
+                      <FormControl>
+                        <FormLabel fontSize="xs" mb={1}>
+                          Reason
+                        </FormLabel>
+                        <Input
+                          size="sm"
+                          value={adjustmentReason}
+                          placeholder="Mentor follow-up, correction, etc."
+                          onChange={(e) => setAdjustmentReason(e.target.value)}
+                          bg="white"
+                        />
+                      </FormControl>
+                      <HStack justify="flex-end" spacing={2}>
+                        <Button size="sm" variant="ghost" onClick={resetAdjustmentDraft}>
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          colorScheme={draftDelta < 0 ? 'orange' : 'purple'}
+                          onClick={() => void handleAdjustment()}
+                          isLoading={loadingAdjustment}
+                        >
+                          Apply {draftDelta > 0 ? '+' : ''}
+                          {draftDelta.toLocaleString()} pts
+                        </Button>
+                      </HStack>
+                    </Stack>
+                  ) : adjustingOpen ? (
+                    <Button size="sm" variant="ghost" onClick={resetAdjustmentDraft} alignSelf="center">
+                      Done
+                    </Button>
+                  ) : null}
                 </Stack>
                 <Stack spacing={2}>
                   <Text fontWeight="semibold">Risk reasons</Text>
@@ -1200,46 +1406,6 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
               isLoading={selectedRequest ? approvalActionId === selectedRequest.id : false}
             >
               Reject request
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-
-      <Modal isOpen={adjustmentModal.isOpen} onClose={adjustmentModal.onClose} size="md">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Manual points adjustment</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={3}>
-              <FormControl>
-                <FormLabel>Points</FormLabel>
-                <Input
-                  type="number"
-                  value={adjustmentValue}
-                  onChange={e => setAdjustmentValue(Number(e.target.value))}
-                  min={0}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Reason</FormLabel>
-                <Input
-                  value={adjustmentReason}
-                  placeholder="Mentor follow-up, activity approval, etc."
-                  onChange={e => setAdjustmentReason(e.target.value)}
-                />
-              </FormControl>
-              <Text fontSize="sm" color="brand.subtleText">
-                Adjustments are logged to the admin activity trail and reflected in weekly_points for this learner.
-              </Text>
-            </Stack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={adjustmentModal.onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="purple" onClick={handleAdjustment} isLoading={loadingAdjustment}>
-              Apply points
             </Button>
           </ModalFooter>
         </ModalContent>

@@ -6,6 +6,7 @@ import { usePartnerAdminData as usePartnerAdminSnapshotData } from '@/hooks/part
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { listenToUserNotifications } from '@/services/notificationService'
 import { recordEngagementAction } from '@/services/engagementService'
+import { adjustUserPointsByPartner } from '@/services/pointsService'
 import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import type { NotificationRecord } from '@/types/notifications'
@@ -284,42 +285,52 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
     [rawNotifications, matchesSelectedOrg],
   )
 
-  // ============================================================================
-  // FIX #9: updateUserPoints now properly persists to Firestore
-  // ============================================================================
+  // Partner-only manual add/reduce via SECURITY DEFINER RPC + audit trail.
   const updateUserPoints = useCallback(
     async (userId: string, delta: number, reason: string) => {
       if (!profile?.id) {
         logger.warn('[PartnerDashboard] Cannot update points: no profile ID')
         return
       }
+      if (!Number.isFinite(delta) || delta === 0) {
+        throw new Error('Enter a non-zero points amount')
+      }
 
-      // Optimistic update for immediate UI feedback
-      // Note: This will be reconciled when the Firestore snapshot updates
-      // The real persistence happens through recordEngagementAction
-      
       try {
-        await recordEngagementAction({
-          userId,
-          actionLabel: reason,
-          actorId: profile.id,
-          actorName: profile.fullName ?? null,
-          additionalData: {
-            action_type: 'manual_points_adjustment',
-            delta,
-            // This should trigger a cloud function to update weekly_points
-            requires_points_update: true,
-          },
-        })
-
-        logger.debug('[PartnerDashboard] Points adjustment recorded', {
-          userId,
+        const result = await adjustUserPointsByPartner({
+          uid: userId,
           delta,
           reason,
         })
+
+        // Audit trail (non-fatal if engagement logging fails).
+        try {
+          await recordEngagementAction({
+            userId,
+            actionLabel: reason,
+            actorId: profile.id,
+            actorName: profile.fullName ?? null,
+            additionalData: {
+              action_type: 'manual_points_adjustment',
+              delta: result.delta,
+              requested_delta: delta,
+              total_points: result.totalPoints,
+              requires_points_update: false,
+            },
+          })
+        } catch (auditError) {
+          logger.warn('[PartnerDashboard] Points adjusted but audit log failed', auditError)
+        }
+
+        logger.debug('[PartnerDashboard] Points adjustment applied', {
+          userId,
+          delta: result.delta,
+          totalPoints: result.totalPoints,
+          reason,
+        })
       } catch (error) {
-        logger.error('[PartnerDashboard] Failed to record points adjustment', error)
-        throw error // Re-throw so caller can handle
+        logger.error('[PartnerDashboard] Failed to adjust points', error)
+        throw error
       }
     },
     [profile?.id, profile?.fullName]

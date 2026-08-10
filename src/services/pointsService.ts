@@ -263,6 +263,55 @@ const friendlyAwardLimitMessage = (raw: string, title?: string | null) => {
   return raw;
 };
 
+/**
+ * Partner/admin manual points credit or debit (SECURITY DEFINER RPC).
+ * Positive delta adds; negative delta reduces (floored at 0 total).
+ */
+export async function adjustUserPointsByPartner(params: {
+  uid: string
+  delta: number
+  reason: string
+  weekNumber?: number
+  weeklyTarget?: number
+}): Promise<{
+  adjusted: boolean
+  delta: number
+  totalPoints: number
+  reason?: string
+}> {
+  const { uid, delta, reason, weekNumber, weeklyTarget } = params
+  if (!uid) throw new Error('[PointsService] uid is required')
+  if (!Number.isFinite(delta) || delta === 0) {
+    throw new Error('[PointsService] delta must be a non-zero number')
+  }
+
+  const { data, error } = await supabase.rpc('partner_adjust_user_points', {
+    p: {
+      uid,
+      delta: Math.trunc(delta),
+      reason: reason.trim() || (delta > 0 ? 'Partner points credit' : 'Partner points reduction'),
+      week: weekNumber ?? null,
+      weekly_target: weeklyTarget ?? 0,
+    },
+  })
+
+  if (error) throw new Error(error.message || 'Could not adjust points')
+
+  const result = (data ?? {}) as {
+    adjusted?: boolean
+    delta?: number
+    total_points?: number
+    reason?: string
+  }
+
+  return {
+    adjusted: Boolean(result.adjusted),
+    delta: result.delta ?? 0,
+    totalPoints: result.total_points ?? 0,
+    reason: result.reason,
+  }
+}
+
 export async function reconcileUserPointsFromLedger(uid: string): Promise<{
   totalPoints: number;
   level: number;
