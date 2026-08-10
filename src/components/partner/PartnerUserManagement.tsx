@@ -15,7 +15,6 @@ import {
   FormControl,
   FormLabel,
   HStack,
-  Input,
   Link,
   Modal,
   ModalBody,
@@ -436,14 +435,20 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
       })
       return
     }
+    const cleanReason = adjustmentReason.trim()
+    if (cleanReason.length < 3) {
+      toast({
+        title: 'Reason required',
+        description: 'Tell the learner why their points changed (shown in their notification).',
+        status: 'warning',
+        duration: 4000,
+        isClosable: true,
+      })
+      return
+    }
     setLoadingAdjustment(true)
     try {
-      await updateUserPoints(
-        selectedUser.id,
-        delta,
-        adjustmentReason ||
-          (delta > 0 ? 'Partner points credit' : 'Partner points reduction'),
-      )
+      await updateUserPoints(selectedUser.id, delta, cleanReason)
       const nextEarned = Math.max(0, draftPoints)
       const nextPercent =
         selectedUser.weeklyRequired > 0
@@ -458,8 +463,8 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
         title: delta > 0 ? 'Points added' : 'Points reduced',
         description:
           delta > 0
-            ? `+${Math.abs(delta).toLocaleString()} points added for ${selectedUser.name}`
-            : `${Math.abs(delta).toLocaleString()} points removed from ${selectedUser.name}`,
+            ? `+${Math.abs(delta).toLocaleString()} points added — learner notified with your reason.`
+            : `${Math.abs(delta).toLocaleString()} points removed — learner notified with your reason.`,
         status: 'success',
         duration: 4000,
         isClosable: true,
@@ -1267,18 +1272,23 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
 
                   {adjustingOpen && draftDelta !== 0 ? (
                     <Stack spacing={2}>
-                      <FormControl>
+                      <FormControl isRequired>
                         <FormLabel fontSize="xs" mb={1}>
-                          Reason
+                          Reason (sent to the learner)
                         </FormLabel>
-                        <Input
+                        <Textarea
                           size="sm"
                           value={adjustmentReason}
-                          placeholder="Mentor follow-up, correction, etc."
+                          placeholder="e.g. Bonus for webinar attendance / Correction for duplicate claim"
                           onChange={(e) => setAdjustmentReason(e.target.value)}
                           bg="white"
+                          minH="72px"
                         />
                       </FormControl>
+                      <Text fontSize="xs" color="gray.500">
+                        The learner gets an in-app notification with the points change and this
+                        reason.
+                      </Text>
                       <HStack justify="flex-end" spacing={2}>
                         <Button size="sm" variant="ghost" onClick={resetAdjustmentDraft}>
                           Cancel
@@ -1288,6 +1298,7 @@ export const PartnerUserManagement: React.FC<PartnerUserManagementProps> = ({
                           colorScheme={draftDelta < 0 ? 'orange' : 'purple'}
                           onClick={() => void handleAdjustment()}
                           isLoading={loadingAdjustment}
+                          isDisabled={adjustmentReason.trim().length < 3}
                         >
                           Apply {draftDelta > 0 ? '+' : ''}
                           {draftDelta.toLocaleString()} pts

@@ -285,11 +285,16 @@ export async function adjustUserPointsByPartner(params: {
     throw new Error('[PointsService] delta must be a non-zero number')
   }
 
+  const cleanReason = reason.trim()
+  if (cleanReason.length < 3) {
+    throw new Error('[PointsService] A reason is required for the learner notification')
+  }
+
   const { data, error } = await supabase.rpc('partner_adjust_user_points', {
     p: {
       uid,
       delta: Math.trunc(delta),
-      reason: reason.trim() || (delta > 0 ? 'Partner points credit' : 'Partner points reduction'),
+      reason: cleanReason,
       week: weekNumber ?? null,
       weekly_target: weeklyTarget ?? 0,
     },

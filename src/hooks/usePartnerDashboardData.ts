@@ -7,6 +7,7 @@ import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { listenToUserNotifications } from '@/services/notificationService'
 import { recordEngagementAction } from '@/services/engagementService'
 import { adjustUserPointsByPartner } from '@/services/pointsService'
+import { notifySupabaseUser } from '@/services/notificationService'
 import { logger, normalizeOrgKey } from '@/utils/partnerDashboardUtils'
 import type { DataWarning } from '@/components/admin/RiskAnalysisCard'
 import type { NotificationRecord } from '@/types/notifications'
@@ -295,19 +296,60 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
       if (!Number.isFinite(delta) || delta === 0) {
         throw new Error('Enter a non-zero points amount')
       }
+      const cleanReason = reason.trim()
+      if (cleanReason.length < 3) {
+        throw new Error('Add a short reason so the learner knows why points changed')
+      }
 
       try {
         const result = await adjustUserPointsByPartner({
           uid: userId,
           delta,
-          reason,
+          reason: cleanReason,
         })
+
+        // Client-side notify as a backup if the RPC notify block soft-failed.
+        // Deduped by messaging: same title/body the learner should see once
+        // from RPC; this only runs when adjust succeeded.
+        const applied = result.delta
+        if (result.adjusted && applied !== 0) {
+          const absPts = Math.abs(applied).toLocaleString()
+          try {
+            await notifySupabaseUser({
+              userId,
+              type: 'approval',
+              category: 'important_updates',
+              title:
+                applied > 0
+                  ? `Your points increased by ${absPts}`
+                  : `Your points decreased by ${absPts}`,
+              message:
+                applied > 0
+                  ? `Your partner added ${absPts} points to your dashboard.\n\nReason: ${cleanReason}`
+                  : `Your partner removed ${absPts} points from your dashboard.\n\nReason: ${cleanReason}`,
+              relatedId: 'partner_manual_adjustment',
+              data: {
+                priority: 'push',
+                delta: applied,
+                source: 'partner_manual_adjustment',
+                reason: cleanReason,
+                partnerId: profile.id,
+                totalPoints: result.totalPoints,
+              },
+            })
+          } catch (notifyError) {
+            logger.warn(
+              '[PartnerDashboard] Points adjusted but learner notification failed',
+              notifyError,
+            )
+          }
+        }
 
         // Audit trail (non-fatal if engagement logging fails).
         try {
           await recordEngagementAction({
             userId,
-            actionLabel: reason,
+            actionLabel: cleanReason,
             actorId: profile.id,
             actorName: profile.fullName ?? null,
             additionalData: {
@@ -315,6 +357,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
               delta: result.delta,
               requested_delta: delta,
               total_points: result.totalPoints,
+              reason: cleanReason,
               requires_points_update: false,
             },
           })
@@ -326,7 +369,7 @@ export const usePartnerDashboardData = (options?: UsePartnerDashboardDataOptions
           userId,
           delta: result.delta,
           totalPoints: result.totalPoints,
-          reason,
+          reason: cleanReason,
         })
       } catch (error) {
         logger.error('[PartnerDashboard] Failed to adjust points', error)
