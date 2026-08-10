@@ -58,6 +58,8 @@ const CONTACT_ROWS: { key: string; label: string }[] = [
   { key: 'country', label: 'Country' },
   { key: 'gender', label: 'Gender' },
   { key: 'ageRange', label: 'Age range' },
+  { key: 'shareWithEmployer', label: 'Share with employer' },
+  { key: 'employerEmail', label: 'Employer email' },
 ]
 
 const hasContact = (row: LiftAssessmentRow): boolean =>
@@ -114,7 +116,11 @@ const AnswersModal: React.FC<{ row: LiftAssessmentRow | null; isOpen: boolean; o
                           ? genderLabel(row.intake.gender)
                           : c.key === 'ageRange'
                             ? ageRangeLabel(row.intake.ageRange) || '-'
-                            : row.intake[c.key] || '-'}
+                            : c.key === 'shareWithEmployer'
+                              ? row.intake.shareWithEmployer === 'yes'
+                                ? 'Yes'
+                                : 'No'
+                              : row.intake[c.key] || '-'}
                       </Text>
                     </Box>
                   ))}

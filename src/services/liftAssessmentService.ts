@@ -133,6 +133,8 @@ export const createLiftLead = async (intake: IntakeAnswers): Promise<string | nu
     gender: intake.gender ?? null,
     age_range: intake.ageRange ?? null,
     phone: intake.phone ?? null,
+    share_with_employer: intake.shareWithEmployer === 'yes',
+    employer_email: intake.shareWithEmployer === 'yes' ? (intake.employerEmail ?? null) : null,
     intake,
   })
   if (error) throw new Error(error.message)
@@ -195,6 +197,8 @@ export const submitLiftLead = async (
     gender: intake.gender ?? null,
     age_range: intake.ageRange ?? null,
     phone: intake.phone ?? null,
+    share_with_employer: intake.shareWithEmployer === 'yes',
+    employer_email: intake.shareWithEmployer === 'yes' ? (intake.employerEmail ?? null) : null,
     intake,
     item_scores: itemScores,
     pillar_l: result.pillars.L,

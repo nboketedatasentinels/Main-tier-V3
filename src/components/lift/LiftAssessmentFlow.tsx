@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Box,
   Button,
+  Checkbox,
   Flex,
   FormControl,
   FormErrorMessage,
+  FormHelperText,
   FormLabel,
   HStack,
   Input,
@@ -522,6 +524,24 @@ const ContactDetails: React.FC<{
         next[field.id] = `${field.label} is required`
       }
     }
+
+    const shareWithEmployer = values.shareWithEmployer === 'yes'
+    if (shareWithEmployer) {
+      const employerEmailError = validateWorkEmail(values.employerEmail ?? '')
+      if (employerEmailError) {
+        next.employerEmail =
+          employerEmailError === 'Work email is required'
+            ? 'Enter your employer’s work email to share your results'
+            : employerEmailError
+      } else {
+        const learnerEmail = (values.email ?? '').trim().toLowerCase()
+        const employerEmail = (values.employerEmail ?? '').trim().toLowerCase()
+        if (learnerEmail && employerEmail === learnerEmail) {
+          next.employerEmail = 'Use your employer’s email, not your own'
+        }
+      }
+    }
+
     setErrors(next)
     if (Object.keys(next).length > 0) return
 
@@ -542,6 +562,12 @@ const ContactDetails: React.FC<{
     } else {
       delete contact.phone
     }
+
+    if (shareWithEmployer) {
+      contact.shareWithEmployer = 'yes'
+      contact.employerEmail = (values.employerEmail ?? '').trim().toLowerCase()
+    }
+
     onSubmit(contact)
   }
 
@@ -684,6 +710,61 @@ const ContactDetails: React.FC<{
         {/* The form — preserve CONTACT_FIELDS order; pair consecutive half-width fields. */}
         <VStack align="stretch" spacing={4}>
           {renderContactFieldRows(CONTACT_FIELDS, renderField)}
+
+          <Box
+            borderWidth="1px"
+            borderColor="gray.200"
+            borderRadius="xl"
+            px={4}
+            py={4}
+            bg="gray.50"
+          >
+            <Checkbox
+              isChecked={values.shareWithEmployer === 'yes'}
+              onChange={(e) => {
+                const checked = e.target.checked
+                setValues((v) => ({
+                  ...v,
+                  shareWithEmployer: checked ? 'yes' : '',
+                  ...(checked ? {} : { employerEmail: '' }),
+                }))
+                setErrors((errs) => ({ ...errs, employerEmail: '', shareWithEmployer: '' }))
+              }}
+              alignItems="flex-start"
+              colorScheme="purple"
+              spacing={3}
+            >
+              <Text fontSize="sm" fontWeight="medium" color={PLUM} lineHeight="short">
+                I&apos;m happy for Transformation Leader to share my LIFT results with my employer
+              </Text>
+            </Checkbox>
+
+            {values.shareWithEmployer === 'yes' && (
+              <FormControl mt={4} isInvalid={Boolean(errors.employerEmail)} isRequired>
+                <FormLabel fontSize="sm" fontWeight="semibold" color={PLUM} mb={1.5}>
+                  Employer email
+                </FormLabel>
+                <Input
+                  type="email"
+                  value={values.employerEmail ?? ''}
+                  onChange={(e) => setField('employerEmail', e.target.value.toLowerCase())}
+                  placeholder="hr@company.com"
+                  size="lg"
+                  borderRadius="xl"
+                  borderWidth="2px"
+                  borderColor="gray.200"
+                  bg="white"
+                  _hover={{ borderColor: 'gray.300' }}
+                  _focus={{ borderColor: GOLD, boxShadow: `0 0 0 1px ${GOLD}` }}
+                  _placeholder={{ color: 'gray.400' }}
+                />
+                <FormHelperText fontSize="xs" color="gray.500">
+                  We&apos;ll send a copy of your results to this address.
+                </FormHelperText>
+                <FormErrorMessage fontSize="xs">{errors.employerEmail}</FormErrorMessage>
+              </FormControl>
+            )}
+          </Box>
         </VStack>
 
         <Button

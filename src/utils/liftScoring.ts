@@ -43,6 +43,9 @@ export interface IntakeAnswers {
   gender?: string
   ageRange?: string
   phone?: string
+  /** 'yes' when the learner consents to share results with their employer. */
+  shareWithEmployer?: string
+  employerEmail?: string
   [key: string]: string | undefined
 }
 
