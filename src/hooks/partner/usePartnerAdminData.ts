@@ -430,7 +430,7 @@ export const usePartnerAdminData = (
                 code: data.code || data.id || '',
                 name: data.name || data.code || data.id || 'Unknown organization',
                 status: (data.status as PartnerOrganization['status']) || 'active',
-                activeUsers: data.activeUsers ?? 0,
+                activeUsers: data.activeUsers ?? data.memberCount ?? 0,
                 newThisWeek: data.newThisWeek ?? 0,
                 lastActive: typeof data.lastActive === 'string' ? data.lastActive : undefined,
                 tags: data.tags || [],
@@ -469,7 +469,7 @@ export const usePartnerAdminData = (
                 code: data.code || data.id || '',
                 name: data.name || data.code || data.id || 'Unknown organization',
                 status: (data.status as PartnerOrganization['status']) || 'active',
-                activeUsers: data.activeUsers ?? 0,
+                activeUsers: data.activeUsers ?? data.memberCount ?? 0,
                 newThisWeek: data.newThisWeek ?? 0,
                 lastActive: data.lastActive,
                 tags: data.tags || [],
@@ -1073,12 +1073,62 @@ export const usePartnerAdminData = (
 
   const analytics = usePartnerMetrics({ users, organizations })
 
+  // Prefer live learner counts from the already-loaded profiles over the
+  // organizations.member_count column (which can lag) and the unused
+  // activeUsers field (always 0 after the Supabase cutover).
+  const organizationsWithCounts = useMemo(() => {
+    const weekAgoMs = Date.now() - 7 * 24 * 60 * 60 * 1000
+
+    const matchesOrg = (user: PartnerUser, org: PartnerOrganization): boolean => {
+      const orgId = org.id?.trim().toLowerCase()
+      const orgCode = org.code?.trim().toLowerCase()
+      const userOrgId = user.organizationId?.trim().toLowerCase()
+      const userCode = user.companyCode?.trim().toLowerCase()
+      return Boolean(
+        (orgId && (userOrgId === orgId || userCode === orgId)) ||
+          (orgCode && (userOrgId === orgCode || userCode === orgCode)),
+      )
+    }
+
+    return organizations.map((org) => {
+      const members = users.filter((user) => matchesOrg(user, org))
+      const seen = new Set<string>()
+      let activeUsers = 0
+      let newThisWeek = 0
+      for (const member of members) {
+        const key = (member.id || member.email || '').trim().toLowerCase()
+        if (key) {
+          if (seen.has(key)) continue
+          seen.add(key)
+        }
+        activeUsers += 1
+        const registered = member.registrationDate
+        if (registered) {
+          const ts = new Date(registered).getTime()
+          if (Number.isFinite(ts) && ts >= weekAgoMs) newThisWeek += 1
+        }
+      }
+
+      // While users are still loading, keep member_count from the org row.
+      // Once loaded, trust the live learner count (even if zero).
+      if (usersLoading) {
+        return org
+      }
+
+      return {
+        ...org,
+        activeUsers,
+        newThisWeek,
+      }
+    })
+  }, [organizations, users, usersLoading])
+
   const snapshot: PartnerAdminDataSnapshot = useMemo(
     () => ({
       partnerId: partnerId ?? null,
       assignments: activeAssignments,
       assignedOrganizationIds,
-      organizations,
+      organizations: organizationsWithCounts,
       users,
       analytics,
       organizationLookup,
@@ -1092,7 +1142,7 @@ export const usePartnerAdminData = (
       assignedOrganizationIds,
       lastUsersSuccessAt,
       organizationLookup,
-      organizations,
+      organizationsWithCounts,
       partnerId,
       users,
     ],
