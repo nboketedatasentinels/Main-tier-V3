@@ -146,86 +146,127 @@ const CourseSurveysPage: React.FC = () => {
         {/* Step 1: Pre / Post chooser */}
         {!kind && (
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            <Button
-              h="auto"
-              py={8}
-              px={6}
-              bg="#350e6f"
-              color="white"
-              _hover={{ bg: '#27062e' }}
+            <Box
+              as="button"
+              textAlign="left"
+              w="full"
+              bg="white"
+              borderWidth="1px"
+              borderColor="gray.200"
               borderRadius="xl"
+              px={5}
+              py={5}
+              transition="border-color 0.15s, box-shadow 0.15s"
+              _hover={{ borderColor: 'gray.300', boxShadow: 'sm' }}
               onClick={() => selectKind('pre')}
-              justifyContent="flex-start"
             >
-              <VStack align="start" spacing={2} w="full">
-                <HStack spacing={3}>
-                  <Icon as={ClipboardList} boxSize={6} />
-                  <Text fontSize="xl" fontWeight="bold">
+              <HStack spacing={4} align="center">
+                <Flex
+                  w={11}
+                  h={11}
+                  borderRadius="lg"
+                  bg="gray.50"
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon as={ClipboardList} boxSize={5} color="gray.700" />
+                </Flex>
+                <VStack align="start" spacing={0.5} minW={0}>
+                  <Text fontSize="lg" fontWeight="bold" color="gray.900">
                     Pre-course assessment
                   </Text>
-                </HStack>
-                <Text fontSize="sm" opacity={0.85} fontWeight="normal" textAlign="left">
-                  {counts.pre} learner surveys
-                  {counts.preExt > 0 ? ` · ${counts.preExt} external rater` : ''}
-                </Text>
-              </VStack>
-            </Button>
+                  <Text fontSize="sm" color="gray.600" fontWeight="normal">
+                    {counts.pre} learner surveys
+                    {counts.preExt > 0 ? ` · ${counts.preExt} external rater` : ''}
+                  </Text>
+                </VStack>
+              </HStack>
+            </Box>
 
-            <Button
-              h="auto"
-              py={8}
-              px={6}
-              bg="#f4540c"
-              color="white"
-              _hover={{ bg: '#d9480a' }}
+            <Box
+              as="button"
+              textAlign="left"
+              w="full"
+              bg="white"
+              borderWidth="1px"
+              borderColor="gray.200"
               borderRadius="xl"
+              px={5}
+              py={5}
+              transition="border-color 0.15s, box-shadow 0.15s"
+              _hover={{ borderColor: 'gray.300', boxShadow: 'sm' }}
               onClick={() => selectKind('post')}
-              justifyContent="flex-start"
             >
-              <VStack align="start" spacing={2} w="full">
-                <HStack spacing={3}>
-                  <Icon as={CheckCircle2} boxSize={6} />
-                  <Text fontSize="xl" fontWeight="bold">
+              <HStack spacing={4} align="center">
+                <Flex
+                  w={11}
+                  h={11}
+                  borderRadius="lg"
+                  bg="gray.50"
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  align="center"
+                  justify="center"
+                  flexShrink={0}
+                >
+                  <Icon as={CheckCircle2} boxSize={5} color="gray.700" />
+                </Flex>
+                <VStack align="start" spacing={0.5} minW={0}>
+                  <Text fontSize="lg" fontWeight="bold" color="gray.900">
                     Post-course assessment
                   </Text>
-                </HStack>
-                <Text fontSize="sm" opacity={0.85} fontWeight="normal" textAlign="left">
-                  {counts.post} learner surveys
-                  {counts.postExt > 0 ? ` · ${counts.postExt} external rater` : ''}
-                </Text>
-              </VStack>
-            </Button>
+                  <Text fontSize="sm" color="gray.600" fontWeight="normal">
+                    {counts.post} learner surveys
+                    {counts.postExt > 0 ? ` · ${counts.postExt} external rater` : ''}
+                  </Text>
+                </VStack>
+              </HStack>
+            </Box>
           </SimpleGrid>
         )}
 
         {/* Step 2: list + detail */}
         {kind && (
-          <Stack spacing={4}>
-            <HStack spacing={3} flexWrap="wrap">
-              <Button
-                leftIcon={<Icon as={ArrowLeft} boxSize={4} />}
-                variant="ghost"
-                onClick={backToKinds}
-                size="sm"
-              >
-                All assessments
-              </Button>
-              <Badge
-                bg={kind === 'pre' ? '#350e6f' : '#f4540c'}
-                color="white"
-                borderRadius="full"
-                px={3}
-                py={1}
-              >
-                {kind === 'pre' ? 'Pre-course' : 'Post-course'}
-              </Badge>
-              <Text fontSize="sm" color="gray.600">
-                {surveys.length} shown
-              </Text>
-            </HStack>
+          <Stack spacing={5}>
+            <Flex
+              justify="space-between"
+              align={{ base: 'flex-start', md: 'center' }}
+              gap={3}
+              flexWrap="wrap"
+            >
+              <HStack spacing={3} flexWrap="wrap">
+                <Button
+                  leftIcon={<Icon as={ArrowLeft} boxSize={4} />}
+                  variant="ghost"
+                  onClick={backToKinds}
+                  size="sm"
+                  color="gray.700"
+                >
+                  All assessments
+                </Button>
+                <Badge
+                  variant="outline"
+                  borderColor="gray.300"
+                  color="gray.800"
+                  borderRadius="full"
+                  px={3}
+                  py={1}
+                  textTransform="none"
+                  fontWeight="semibold"
+                >
+                  {kind === 'pre' ? 'Pre-course' : 'Post-course'}
+                </Badge>
+                <Text fontSize="sm" color="gray.500">
+                  {surveys.length} shown
+                </Text>
+              </HStack>
+            </Flex>
 
             <Flex gap={3} flexWrap="wrap" align="center">
-              <InputGroup maxW={{ base: 'full', md: '360px' }}>
+              <InputGroup maxW={{ base: 'full', md: '400px' }}>
                 <InputLeftElement pointerEvents="none">
                   <Icon as={Search} color="gray.400" boxSize={4} />
                 </InputLeftElement>
@@ -234,191 +275,241 @@ const CourseSurveysPage: React.FC = () => {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   bg="white"
+                  borderColor="gray.200"
+                  borderRadius="lg"
                 />
               </InputGroup>
               <Button
                 size="sm"
                 variant={showExternalRater ? 'solid' : 'outline'}
                 colorScheme="gray"
+                borderRadius="lg"
                 onClick={() => setShowExternalRater((v) => !v)}
               >
                 {showExternalRater ? 'Hide' : 'Show'} external rater
               </Button>
             </Flex>
 
-            <Flex
-              direction={{ base: 'column', lg: 'row' }}
-              gap={4}
-              align="stretch"
-              minH={{ lg: '420px' }}
-            >
-              {/* List */}
+            {surveys.length === 0 ? (
               <Box
-                flex="1"
+                p={8}
+                bg="white"
                 borderWidth="1px"
                 borderColor="gray.200"
                 borderRadius="xl"
-                bg="white"
-                overflow="hidden"
               >
-                <Box px={4} py={3} borderBottomWidth="1px" borderColor="gray.100">
-                  <Text fontWeight="semibold" fontSize="sm" color="gray.800">
-                    Surveys
-                  </Text>
-                </Box>
-                <Stack spacing={0} maxH={{ base: '360px', lg: '560px' }} overflowY="auto">
-                  {surveys.length === 0 && (
-                    <Box p={6}>
-                      <Text color="gray.500" fontSize="sm">
-                        No surveys match this filter.
-                      </Text>
-                    </Box>
-                  )}
-                  {surveys.map((row) => {
-                    const active = selected?.surveyId === row.surveyId && selected?.collectorUrl === row.collectorUrl
-                    return (
-                      <Box
-                        key={`${row.surveyId}-${row.collectorUrl}`}
-                        as="button"
-                        textAlign="left"
-                        w="full"
-                        px={4}
-                        py={3}
-                        borderBottomWidth="1px"
-                        borderColor="gray.100"
-                        bg={active ? 'purple.50' : 'white'}
-                        borderLeftWidth="3px"
-                        borderLeftColor={active ? '#350e6f' : 'transparent'}
-                        _hover={{ bg: active ? 'purple.50' : 'gray.50' }}
-                        onClick={() => setSelected(row)}
-                      >
-                        <Text fontWeight="semibold" fontSize="sm" color="gray.900" noOfLines={2}>
-                          {row.surveyTitle}
-                        </Text>
-                        {isExternalRater(row) && (
-                          <Badge mt={1} colorScheme="orange" fontSize="2xs">
-                            External rater
-                          </Badge>
-                        )}
-                      </Box>
-                    )
-                  })}
-                </Stack>
+                <Text color="gray.500" fontSize="sm">
+                  No surveys match this filter.
+                </Text>
               </Box>
+            ) : (
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                {surveys.map((row) => {
+                  const active =
+                    selected?.surveyId === row.surveyId &&
+                    selected?.collectorUrl === row.collectorUrl
+                  return (
+                    <Box
+                      key={`${row.surveyId}-${row.collectorUrl}`}
+                      as="button"
+                      textAlign="left"
+                      w="full"
+                      h="full"
+                      bg="white"
+                      borderWidth="1px"
+                      borderColor={active ? '#350e6f' : 'gray.200'}
+                      borderRadius="xl"
+                      px={5}
+                      py={5}
+                      boxShadow={active ? 'sm' : 'none'}
+                      transition="border-color 0.15s, box-shadow 0.15s"
+                      _hover={{
+                        borderColor: active ? '#350e6f' : 'gray.300',
+                        boxShadow: 'sm',
+                      }}
+                      onClick={() => setSelected(row)}
+                    >
+                      <HStack spacing={4} align="flex-start">
+                        <Flex
+                          w={11}
+                          h={11}
+                          borderRadius="lg"
+                          bg="gray.50"
+                          borderWidth="1px"
+                          borderColor="gray.200"
+                          align="center"
+                          justify="center"
+                          flexShrink={0}
+                        >
+                          <Icon
+                            as={kind === 'pre' ? ClipboardList : CheckCircle2}
+                            boxSize={5}
+                            color="gray.700"
+                          />
+                        </Flex>
+                        <Box minW={0} flex="1">
+                          <Text
+                            fontWeight="semibold"
+                            fontSize="md"
+                            color="gray.900"
+                            lineHeight="1.45"
+                            noOfLines={3}
+                          >
+                            {row.surveyTitle}
+                          </Text>
+                          {isExternalRater(row) && (
+                            <Badge
+                              mt={2}
+                              colorScheme="orange"
+                              fontSize="2xs"
+                              borderRadius="md"
+                              textTransform="none"
+                            >
+                              External rater
+                            </Badge>
+                          )}
+                        </Box>
+                      </HStack>
+                    </Box>
+                  )
+                })}
+              </SimpleGrid>
+            )}
 
-              {/* Detail */}
-              <Box
-                flex="1.1"
-                borderWidth="1px"
-                borderColor="gray.200"
-                borderRadius="xl"
-                bg="white"
-                p={5}
-              >
-                {!selected ? (
-                  <Flex h="full" minH="200px" align="center" justify="center">
-                    <Text color="gray.500" fontSize="sm">
-                      Select a survey to view details
+            {/* Detail panel */}
+            <Box
+              borderWidth="1px"
+              borderColor="gray.200"
+              borderRadius="xl"
+              bg="white"
+              p={{ base: 5, md: 6 }}
+              minH="200px"
+            >
+              {!selected ? (
+                <Flex h="full" minH="140px" align="center" justify="center" px={4}>
+                  <Text color="gray.500" fontSize="sm" textAlign="center">
+                    Select a survey card above to view details
+                  </Text>
+                </Flex>
+              ) : (
+                <Stack spacing={6}>
+                  <Box>
+                    <Text
+                      fontSize="xs"
+                      textTransform="uppercase"
+                      letterSpacing="0.08em"
+                      color="gray.500"
+                      mb={2}
+                    >
+                      {selected.kind === 'pre' ? 'Pre-course' : 'Post-course'} assessment
                     </Text>
-                  </Flex>
-                ) : (
-                  <Stack spacing={5}>
-                    <Box>
+                    <Heading size="md" color="gray.900" lineHeight="1.35">
+                      {selected.surveyTitle}
+                    </Heading>
+                  </Box>
+
+                  <Stack spacing={2}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      color="gray.500"
+                      textTransform="uppercase"
+                      letterSpacing="0.06em"
+                    >
+                      Collector link
+                    </Text>
+                    <Link
+                      href={selected.collectorUrl}
+                      isExternal
+                      color="#350e6f"
+                      fontWeight="medium"
+                      fontSize="sm"
+                      wordBreak="break-all"
+                      lineHeight="1.5"
+                    >
+                      {selected.collectorUrl}
+                      <Icon as={ExternalLink} boxSize={3.5} ml={1} display="inline" />
+                    </Link>
+                    <HStack spacing={2} pt={2} flexWrap="wrap">
+                      <Button
+                        size="sm"
+                        leftIcon={<Icon as={ExternalLink} boxSize={3.5} />}
+                        bg="#350e6f"
+                        color="white"
+                        _hover={{ bg: '#27062e' }}
+                        borderRadius="lg"
+                        as="a"
+                        href={selected.collectorUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Open survey
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        borderRadius="lg"
+                        leftIcon={<Icon as={Copy} boxSize={3.5} />}
+                        onClick={() => copyUrl(selected.collectorUrl)}
+                      >
+                        Copy link
+                      </Button>
+                    </HStack>
+                  </Stack>
+
+                  {selected.surveyId && (
+                    <Stack spacing={2}>
                       <Text
                         fontSize="xs"
-                        textTransform="uppercase"
-                        letterSpacing="0.08em"
+                        fontWeight="semibold"
                         color="gray.500"
-                        mb={1}
+                        textTransform="uppercase"
+                        letterSpacing="0.06em"
                       >
-                        {selected.kind === 'pre' ? 'Pre-course' : 'Post-course'} assessment
+                        SurveyMonkey ID
                       </Text>
-                      <Heading size="md" color="gray.900" lineHeight="1.3">
-                        {selected.surveyTitle}
-                      </Heading>
-                    </Box>
+                      <Text fontSize="sm" color="gray.800" fontFamily="mono">
+                        {selected.surveyId}
+                      </Text>
+                    </Stack>
+                  )}
 
-                    <Stack spacing={1}>
-                      <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase">
-                        Collector link
-                      </Text>
-                      <HStack spacing={2} flexWrap="wrap">
-                        <Link
-                          href={selected.collectorUrl}
-                          isExternal
-                          color="#350e6f"
-                          fontWeight="medium"
-                          fontSize="sm"
-                          wordBreak="break-all"
-                        >
-                          {selected.collectorUrl}
-                          <Icon as={ExternalLink} boxSize={3.5} ml={1} display="inline" />
-                        </Link>
-                      </HStack>
-                      <HStack spacing={2} pt={1}>
-                        <Button
-                          size="sm"
-                          leftIcon={<Icon as={ExternalLink} boxSize={3.5} />}
-                          bg="#350e6f"
-                          color="white"
-                          _hover={{ bg: '#27062e' }}
-                          as="a"
-                          href={selected.collectorUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Open survey
-                        </Button>
-                        <Button
-                          size="sm"
+                  <Stack spacing={3}>
+                    <Text
+                      fontSize="xs"
+                      fontWeight="semibold"
+                      color="gray.500"
+                      textTransform="uppercase"
+                      letterSpacing="0.06em"
+                    >
+                      Course matchers
+                    </Text>
+                    <Text fontSize="sm" color="gray.600" lineHeight="1.5">
+                      Used to match this survey to a T4L course title when a learner opens a
+                      course.
+                    </Text>
+                    <Flex gap={2} flexWrap="wrap">
+                      {selected.courseMatchers.map((matcher) => (
+                        <Badge
+                          key={matcher}
                           variant="outline"
-                          leftIcon={<Icon as={Copy} boxSize={3.5} />}
-                          onClick={() => copyUrl(selected.collectorUrl)}
+                          borderColor="gray.200"
+                          color="gray.700"
+                          borderRadius="md"
+                          px={2.5}
+                          py={1}
+                          fontWeight="medium"
+                          textTransform="none"
+                          bg="gray.50"
                         >
-                          Copy link
-                        </Button>
-                      </HStack>
-                    </Stack>
-
-                    {selected.surveyId && (
-                      <Stack spacing={1}>
-                        <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase">
-                          SurveyMonkey ID
-                        </Text>
-                        <Text fontSize="sm" color="gray.800" fontFamily="mono">
-                          {selected.surveyId}
-                        </Text>
-                      </Stack>
-                    )}
-
-                    <Stack spacing={2}>
-                      <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase">
-                        Course matchers
-                      </Text>
-                      <Text fontSize="xs" color="gray.600">
-                        Used to match this survey to a T4L course title when a learner opens a course.
-                      </Text>
-                      <Flex gap={2} flexWrap="wrap">
-                        {selected.courseMatchers.map((matcher) => (
-                          <Badge
-                            key={matcher}
-                            variant="subtle"
-                            colorScheme="purple"
-                            borderRadius="md"
-                            px={2}
-                            py={1}
-                            fontWeight="medium"
-                            textTransform="none"
-                          >
-                            {matcher}
-                          </Badge>
-                        ))}
-                      </Flex>
-                    </Stack>
+                          {matcher}
+                        </Badge>
+                      ))}
+                    </Flex>
                   </Stack>
-                )}
-              </Box>
-            </Flex>
+                </Stack>
+              )}
+            </Box>
           </Stack>
         )}
       </Stack>
