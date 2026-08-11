@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Badge,
@@ -44,6 +44,7 @@ const CourseSurveysPage: React.FC = () => {
   const navigate = useNavigate()
   const { organizations } = usePartnerOrganizations()
   const { selectedOrg: selectedOrgId, setSelectedOrg: setSelectedOrgId } = usePartnerSelectedOrg()
+  const detailRef = useRef<HTMLDivElement | null>(null)
 
   const [kind, setKind] = useState<CourseSurveyKind | null>(null)
   const [selected, setSelected] = useState<CourseSurveyLink | null>(null)
@@ -94,6 +95,35 @@ const CourseSurveysPage: React.FC = () => {
     } catch {
       toast({ status: 'error', title: 'Could not copy link', duration: 2500 })
     }
+  }
+
+  const scrollToDetails = () => {
+    const el = detailRef.current
+    if (!el) return
+
+    // PartnerLayout scrolls inside an overflow container, not the window.
+    let parent: HTMLElement | null = el.parentElement
+    while (parent) {
+      const style = window.getComputedStyle(parent)
+      const canScroll =
+        /(auto|scroll)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight + 1
+      if (canScroll) {
+        const parentRect = parent.getBoundingClientRect()
+        const elRect = el.getBoundingClientRect()
+        const top = elRect.top - parentRect.top + parent.scrollTop - 24
+        parent.scrollTo({ top, behavior: 'smooth' })
+        return
+      }
+      parent = parent.parentElement
+    }
+
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const openSurveyDetails = (row: CourseSurveyLink) => {
+    setSelected(row)
+    // Allow the detail panel to render/update before scrolling.
+    window.setTimeout(scrollToDetails, 50)
   }
 
   const selectKind = (next: CourseSurveyKind) => {
@@ -312,6 +342,7 @@ const CourseSurveysPage: React.FC = () => {
                     <Box
                       key={`${row.surveyId}-${row.collectorUrl}`}
                       as="button"
+                      type="button"
                       textAlign="left"
                       w="full"
                       h="full"
@@ -327,7 +358,7 @@ const CourseSurveysPage: React.FC = () => {
                         borderColor: active ? '#350e6f' : 'gray.300',
                         boxShadow: 'sm',
                       }}
-                      onClick={() => setSelected(row)}
+                      onClick={() => openSurveyDetails(row)}
                     >
                       <HStack spacing={4} align="flex-start">
                         <Flex
@@ -357,6 +388,9 @@ const CourseSurveysPage: React.FC = () => {
                           >
                             {row.surveyTitle}
                           </Text>
+                          <Text mt={2} fontSize="xs" color="gray.500">
+                            Click to view details below
+                          </Text>
                           {isExternalRater(row) && (
                             <Badge
                               mt={2}
@@ -376,19 +410,23 @@ const CourseSurveysPage: React.FC = () => {
               </SimpleGrid>
             )}
 
-            {/* Detail panel */}
+            {/* Detail panel at end of page — scroll target on click */}
             <Box
+              ref={detailRef}
+              id="course-survey-details"
+              scrollMarginTop="24px"
               borderWidth="1px"
-              borderColor="gray.200"
+              borderColor={selected ? '#350e6f' : 'gray.200'}
               borderRadius="xl"
               bg="white"
               p={{ base: 5, md: 6 }}
               minH="200px"
+              boxShadow={selected ? 'md' : 'none'}
             >
               {!selected ? (
                 <Flex h="full" minH="140px" align="center" justify="center" px={4}>
                   <Text color="gray.500" fontSize="sm" textAlign="center">
-                    Select a survey card above to view details
+                    Select a survey card above to view details here
                   </Text>
                 </Flex>
               ) : (
