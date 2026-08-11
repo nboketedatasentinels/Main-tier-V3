@@ -153,99 +153,126 @@ const CourseSurveysPage: React.FC = () => {
       }}
       onNavigate={handleNavigate}
     >
-      <Stack spacing={6}>
-        <Heading size="lg" color="gray.900">
-          Course survey assessments
-        </Heading>
-
-        {/* Step 1: Pre / Post chooser */}
+      <Stack spacing={6} minH={{ base: 'auto', md: 'calc(100vh - 120px)' }}>
+        {/* Step 1: Pre / Post chooser — centered & larger */}
         {!kind && (
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-            <Box
-              as="button"
-              textAlign="left"
-              w="full"
-              bg="white"
-              borderWidth="1px"
-              borderColor="gray.200"
-              borderRadius="xl"
-              px={5}
-              py={5}
-              transition="border-color 0.15s, box-shadow 0.15s"
-              _hover={{ borderColor: 'gray.300', boxShadow: 'sm' }}
-              onClick={() => selectKind('pre')}
+          <Flex
+            flex="1"
+            direction="column"
+            align="center"
+            justify="center"
+            px={{ base: 2, md: 6 }}
+            py={{ base: 8, md: 4 }}
+            w="full"
+          >
+            <Heading
+              size={{ base: 'lg', md: 'xl' }}
+              color="gray.900"
+              textAlign="center"
+              mb={{ base: 8, md: 10 }}
             >
-              <HStack spacing={4} align="center">
-                <Flex
-                  w={11}
-                  h={11}
-                  borderRadius="lg"
-                  bg="gray.50"
-                  borderWidth="1px"
-                  borderColor="gray.200"
-                  align="center"
-                  justify="center"
-                  flexShrink={0}
-                >
-                  <Icon as={ClipboardList} boxSize={5} color="gray.700" />
-                </Flex>
-                <VStack align="start" spacing={0.5} minW={0}>
-                  <Text fontSize="lg" fontWeight="bold" color="gray.900">
-                    Pre-course assessment
-                  </Text>
-                  <Text fontSize="sm" color="gray.600" fontWeight="normal">
-                    {counts.pre} learner surveys
-                    {counts.preExt > 0 ? ` · ${counts.preExt} external rater` : ''}
-                  </Text>
-                </VStack>
-              </HStack>
-            </Box>
+              Course survey assessments
+            </Heading>
 
-            <Box
-              as="button"
-              textAlign="left"
+            <SimpleGrid
+              columns={{ base: 1, md: 2 }}
+              spacing={{ base: 5, md: 6 }}
               w="full"
-              bg="white"
-              borderWidth="1px"
-              borderColor="gray.200"
-              borderRadius="xl"
-              px={5}
-              py={5}
-              transition="border-color 0.15s, box-shadow 0.15s"
-              _hover={{ borderColor: 'gray.300', boxShadow: 'sm' }}
-              onClick={() => selectKind('post')}
+              maxW="960px"
             >
-              <HStack spacing={4} align="center">
-                <Flex
-                  w={11}
-                  h={11}
-                  borderRadius="lg"
-                  bg="gray.50"
-                  borderWidth="1px"
-                  borderColor="gray.200"
-                  align="center"
-                  justify="center"
-                  flexShrink={0}
-                >
-                  <Icon as={CheckCircle2} boxSize={5} color="gray.700" />
-                </Flex>
-                <VStack align="start" spacing={0.5} minW={0}>
-                  <Text fontSize="lg" fontWeight="bold" color="gray.900">
-                    Post-course assessment
-                  </Text>
-                  <Text fontSize="sm" color="gray.600" fontWeight="normal">
-                    {counts.post} learner surveys
-                    {counts.postExt > 0 ? ` · ${counts.postExt} external rater` : ''}
-                  </Text>
-                </VStack>
-              </HStack>
-            </Box>
-          </SimpleGrid>
+              <Box
+                as="button"
+                type="button"
+                textAlign="left"
+                w="full"
+                minH={{ base: '140px', md: '180px' }}
+                bg="white"
+                borderWidth="1px"
+                borderColor="gray.200"
+                borderRadius="2xl"
+                px={{ base: 6, md: 8 }}
+                py={{ base: 7, md: 9 }}
+                transition="border-color 0.15s, box-shadow 0.15s, transform 0.15s"
+                _hover={{ borderColor: 'gray.300', boxShadow: 'md', transform: 'translateY(-2px)' }}
+                onClick={() => selectKind('pre')}
+              >
+                <HStack spacing={{ base: 4, md: 5 }} align="center" h="full">
+                  <Flex
+                    w={{ base: 14, md: 16 }}
+                    h={{ base: 14, md: 16 }}
+                    borderRadius="xl"
+                    bg="gray.50"
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    align="center"
+                    justify="center"
+                    flexShrink={0}
+                  >
+                    <Icon as={ClipboardList} boxSize={{ base: 7, md: 8 }} color="gray.700" />
+                  </Flex>
+                  <VStack align="start" spacing={1} minW={0}>
+                    <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="gray.900">
+                      Pre-course assessment
+                    </Text>
+                    <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" fontWeight="normal">
+                      {counts.pre} learner surveys
+                      {counts.preExt > 0 ? ` · ${counts.preExt} external rater` : ''}
+                    </Text>
+                  </VStack>
+                </HStack>
+              </Box>
+
+              <Box
+                as="button"
+                type="button"
+                textAlign="left"
+                w="full"
+                minH={{ base: '140px', md: '180px' }}
+                bg="white"
+                borderWidth="1px"
+                borderColor="gray.200"
+                borderRadius="2xl"
+                px={{ base: 6, md: 8 }}
+                py={{ base: 7, md: 9 }}
+                transition="border-color 0.15s, box-shadow 0.15s, transform 0.15s"
+                _hover={{ borderColor: 'gray.300', boxShadow: 'md', transform: 'translateY(-2px)' }}
+                onClick={() => selectKind('post')}
+              >
+                <HStack spacing={{ base: 4, md: 5 }} align="center" h="full">
+                  <Flex
+                    w={{ base: 14, md: 16 }}
+                    h={{ base: 14, md: 16 }}
+                    borderRadius="xl"
+                    bg="gray.50"
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    align="center"
+                    justify="center"
+                    flexShrink={0}
+                  >
+                    <Icon as={CheckCircle2} boxSize={{ base: 7, md: 8 }} color="gray.700" />
+                  </Flex>
+                  <VStack align="start" spacing={1} minW={0}>
+                    <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="gray.900">
+                      Post-course assessment
+                    </Text>
+                    <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" fontWeight="normal">
+                      {counts.post} learner surveys
+                      {counts.postExt > 0 ? ` · ${counts.postExt} external rater` : ''}
+                    </Text>
+                  </VStack>
+                </HStack>
+              </Box>
+            </SimpleGrid>
+          </Flex>
         )}
 
         {/* Step 2: list + detail */}
         {kind && (
           <Stack spacing={5}>
+            <Heading size="lg" color="gray.900">
+              Course survey assessments
+            </Heading>
             <Flex
               justify="space-between"
               align={{ base: 'flex-start', md: 'center' }}
