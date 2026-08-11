@@ -81,6 +81,8 @@ const buildCourseRows = (
   return rows
 }
 
+import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
+
 const CourseApprovalsPage: React.FC = () => {
   const toast = useToast()
   const navigate = useNavigate()
@@ -88,24 +90,7 @@ const CourseApprovalsPage: React.FC = () => {
   const { organizations, loading: orgsLoading } = usePartnerOrganizations()
 
   const handleNavigate = useCallback(
-    (key: string) => {
-      if (key === 'course-approvals') return
-      if (key === 'partner-assignment') {
-        navigate('/partner/partner-assignment')
-        return
-      }
-      if (key === 'learner-assignments') {
-        navigate('/partner/learner-assignments')
-        return
-      }
-      // State-based dashboard pages (overview, users, at-risk, etc.) - pass via
-      // ?page= so the dashboard opens directly on the requested page.
-      if (key === 'overview') {
-        navigate('/partner/dashboard')
-        return
-      }
-      navigate(`/partner/dashboard?page=${encodeURIComponent(key)}`)
-    },
+    (key: string) => handlePartnerSidebarNavigate(navigate, key, 'course-approvals'),
     [navigate],
   )
 

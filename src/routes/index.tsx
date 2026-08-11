@@ -74,6 +74,7 @@ const PartnerAssignmentPage = lazy(() => import('@/pages/admin/PartnerAssignment
 const LearnerAssignmentsPage = lazy(() => import('@/pages/partner/LearnerAssignmentsPage'))
 const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPage'))
 const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
+const CourseSurveysPage = lazy(() => import('@/pages/partner/CourseSurveysPage'))
 const LiftResultsPage = lazy(() => import('@/pages/journeys/LiftResultsPage'))
 const LiftAssessmentsAdminPage = lazy(() => import('@/pages/super-admin/LiftAssessmentsAdminPage'))
 const OrganizationsAdminPage = lazy(() => import('@/pages/super-admin/OrganizationsAdminPage'))
@@ -242,6 +243,7 @@ export const AppRoutes = () => {
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
+          <Route path="course-surveys" element={<CourseSurveysPage />} />
           <Route path="notifications" element={<PartnerNotificationsPage />} />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>

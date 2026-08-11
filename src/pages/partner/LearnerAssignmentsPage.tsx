@@ -48,6 +48,7 @@ import {
 } from '@/services/learnerAssignmentService'
 import { getDisplayName } from '@/utils/displayName'
 import { getJourneyLabel } from '@/utils/journeyType'
+import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
 
 type FilterMode = 'all' | 'unassigned' | 'zero_sessions'
 
@@ -63,22 +64,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
   const { organizations, loading: orgsLoading } = usePartnerOrganizations()
 
   const handleNavigate = useCallback(
-    (key: string) => {
-      if (key === 'learner-assignments') return
-      if (key === 'partner-assignment') {
-        navigate('/partner/partner-assignment')
-        return
-      }
-      if (key === 'course-approvals') {
-        navigate('/partner/course-approvals')
-        return
-      }
-      if (key === 'overview') {
-        navigate('/partner/dashboard')
-        return
-      }
-      navigate(`/partner/dashboard?page=${encodeURIComponent(key)}`)
-    },
+    (key: string) => handlePartnerSidebarNavigate(navigate, key, 'learner-assignments'),
     [navigate],
   )
 

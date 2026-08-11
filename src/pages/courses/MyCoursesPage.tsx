@@ -1259,7 +1259,7 @@ const PaidLibraryCoursesPage: React.FC<{ userId?: string | null; profile: UserPr
                         canOpen && course.link
                           ? (e: React.MouseEvent) => {
                               e.preventDefault()
-                              requestOpenCourse(course.link!)
+                              requestOpenCourse(course.link!, course.title)
                             }
                           : undefined
                       }

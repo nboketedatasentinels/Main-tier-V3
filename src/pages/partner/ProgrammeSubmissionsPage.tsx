@@ -53,6 +53,7 @@ import PartnerLayout from '@/layouts/PartnerLayout'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
+import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
 import {
   subscribeToSubmissionsByOrgIds,
   updateSubmissionReview,
@@ -122,26 +123,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
   const drawer = useDisclosure()
 
   const handleNavigate = useCallback(
-    (key: string) => {
-      if (key === 'programme-submissions') return
-      if (key === 'partner-assignment') {
-        navigate('/partner/partner-assignment')
-        return
-      }
-      if (key === 'learner-assignments') {
-        navigate('/partner/learner-assignments')
-        return
-      }
-      if (key === 'course-approvals') {
-        navigate('/partner/course-approvals')
-        return
-      }
-      if (key === 'overview') {
-        navigate('/partner/dashboard')
-        return
-      }
-      navigate(`/partner/dashboard?page=${encodeURIComponent(key)}`)
-    },
+    (key: string) => handlePartnerSidebarNavigate(navigate, key, 'programme-submissions'),
     [navigate],
   )
 

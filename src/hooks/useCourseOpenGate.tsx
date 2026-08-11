@@ -3,10 +3,14 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
 import { markPreCourseSurveyCompleted } from '@/services/preCourseSurveyService'
 import { PreCourseSurveyModal } from '@/components/modals/PreCourseSurveyModal'
+import { resolvePreCourseSurveyUrl } from '@/config/courseSurveys'
 
 interface UseCourseOpenGateResult {
-  /** Call this from an onClick handler with the destination URL. */
-  requestOpenCourse: (url: string) => void
+  /**
+   * Call from an onClick handler with the destination URL.
+   * Pass courseTitle when available so the correct Pre survey opens.
+   */
+  requestOpenCourse: (url: string, courseTitle?: string) => void
   /** Render this once at the top of your page. */
   surveyModal: React.ReactNode
   /** True once the user has done the pre-course survey. */
@@ -18,6 +22,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
   const uid = profile?.id ?? null
   const { state, loading } = usePreCourseSurvey(uid)
   const [pendingUrl, setPendingUrl] = useState<string | null>(null)
+  const [pendingCourseTitle, setPendingCourseTitle] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const openInNewTab = (url: string) => {
@@ -25,7 +30,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
   }
 
   const requestOpenCourse = useCallback(
-    (url: string) => {
+    (url: string, courseTitle?: string) => {
       if (!url) return
       // While we don't know yet, default to opening (avoids blocking on slow networks).
       if (loading) {
@@ -36,6 +41,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
         openInNewTab(url)
         return
       }
+      setPendingCourseTitle(courseTitle?.trim() || null)
       setPendingUrl(url)
     },
     [loading, state.completed],
@@ -48,6 +54,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
       await markPreCourseSurveyCompleted(uid)
       const target = pendingUrl
       setPendingUrl(null)
+      setPendingCourseTitle(null)
       if (target) openInNewTab(target)
     } finally {
       setSubmitting(false)
@@ -58,7 +65,11 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
     <PreCourseSurveyModal
       isOpen={pendingUrl !== null}
       isSubmitting={submitting}
-      onClose={() => setPendingUrl(null)}
+      surveyUrl={resolvePreCourseSurveyUrl(pendingCourseTitle)}
+      onClose={() => {
+        setPendingUrl(null)
+        setPendingCourseTitle(null)
+      }}
       onCompleted={handleCompleted}
     />
   )

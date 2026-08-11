@@ -17,13 +17,18 @@ import {
 } from '@chakra-ui/react'
 import { ArrowRight, CheckCircle2, ClipboardList, ExternalLink, Lock } from 'lucide-react'
 
-export const PRE_COURSE_SURVEY_URL = 'https://www.surveymonkey.com/r/KFM9TPH'
+import { DEFAULT_PRE_COURSE_SURVEY_URL } from '@/config/courseSurveys'
+
+/** @deprecated Prefer DEFAULT_PRE_COURSE_SURVEY_URL / resolvePreCourseSurveyUrl */
+export const PRE_COURSE_SURVEY_URL = DEFAULT_PRE_COURSE_SURVEY_URL
 
 interface PreCourseSurveyModalProps {
   isOpen: boolean
   onClose: () => void
   onCompleted: () => Promise<void> | void
   isSubmitting?: boolean
+  /** Course-specific SurveyMonkey collector URL. */
+  surveyUrl?: string
 }
 
 export function PreCourseSurveyModal({
@@ -31,6 +36,7 @@ export function PreCourseSurveyModal({
   onClose,
   onCompleted,
   isSubmitting = false,
+  surveyUrl = DEFAULT_PRE_COURSE_SURVEY_URL,
 }: PreCourseSurveyModalProps) {
   const toast = useToast()
   const [hasOpenedSurvey, setHasOpenedSurvey] = useState(false)
@@ -40,7 +46,7 @@ export function PreCourseSurveyModal({
   }, [isOpen])
 
   const handleOpenSurvey = () => {
-    window.open(PRE_COURSE_SURVEY_URL, '_blank', 'noopener,noreferrer')
+    window.open(surveyUrl, '_blank', 'noopener,noreferrer')
     setHasOpenedSurvey(true)
   }
 

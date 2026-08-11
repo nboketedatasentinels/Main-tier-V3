@@ -151,8 +151,8 @@ export interface AssignedCourseCardProps {
   showProgress?: boolean
   /** Open / Unlocks-on CTA. Off on the dashboard, where space is tight. */
   showAction?: boolean
-  /** Required whenever showAction is left on. */
-  onOpenCourse?: (link: string) => void
+  /** Required whenever showAction is left on. Pass course title for Pre survey matching. */
+  onOpenCourse?: (link: string, courseTitle?: string) => void
   /**
    * Turns the whole card into a button - hover lift, pointer, focus ring and
    * an arrow affordance. Used where the CTA button is hidden.
@@ -553,7 +553,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                     canOpen && course?.link
                       ? (e: React.MouseEvent) => {
                           e.preventDefault()
-                          onOpenCourse?.(course.link!)
+                          onOpenCourse?.(course.link!, course.title)
                         }
                       : undefined
                   }

@@ -724,7 +724,7 @@ export const WeeklyGlancePage = () => {
       }
 
       setPendingCourse(null)
-      requestOpenCourse(course.link)
+      requestOpenCourse(course.link, course.title)
     },
     [bothTestsCompleted, navigate, openPersonalityPrompt, profile, requestOpenCourse, toast],
   )
@@ -764,7 +764,7 @@ export const WeeklyGlancePage = () => {
                 rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
                 onClick={() => {
                   onClose()
-                  if (course.link) requestOpenCourse(course.link)
+                  if (course.link) requestOpenCourse(course.link, course.title)
                 }}
               >
                 Open course
