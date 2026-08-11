@@ -42,6 +42,8 @@ interface PartnerLayoutProps {
   navSections?: NavigationSection[]
   activeItem?: string
   onNavigate?: (key: string) => void
+  /** Hide the default "Welcome back" header + org filter strip. */
+  hideWelcomeHeader?: boolean
 }
 
 export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
@@ -52,6 +54,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
   navSections,
   activeItem,
   onNavigate,
+  hideWelcomeHeader = false,
 }) => {
   const sidebarWidth = '280px'
   const disclosure = useDisclosure()
@@ -372,20 +375,32 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         minH={0}
       >
         <Box flex={1} overflowY="auto" sx={{ '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
-          <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap={{ base: 'wrap', md: 'nowrap' }}>
-            <VStack align="flex-start" spacing={1}>
-              <Text fontSize="sm" color="brand.subtleText">
-                Partner Dashboard
-              </Text>
-              <Text fontSize={{ base: '2xl', md: '3xl' }} lineHeight="shorter" fontWeight="bold" color="brand.text" wordBreak="break-word">
-                Welcome back
-              </Text>
-              <Text color="brand.subtleText" maxW="760px">
-                Your partner workspace for learners, organizations, and interventions.
-              </Text>
-            </VStack>
-            {headerControls}
-          </Flex>
+          {hideWelcomeHeader ? (
+            <Flex justify="flex-end" align="center" mb={4} gap={3} display={{ base: 'flex', md: 'none' }}>
+              <NotificationDropdown />
+              <IconButton
+                aria-label="Open navigation"
+                icon={<Menu />}
+                variant="outline"
+                onClick={disclosure.onOpen}
+              />
+            </Flex>
+          ) : (
+            <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} mb={6} gap={4} wrap={{ base: 'wrap', md: 'nowrap' }}>
+              <VStack align="flex-start" spacing={1}>
+                <Text fontSize="sm" color="brand.subtleText">
+                  Partner Dashboard
+                </Text>
+                <Text fontSize={{ base: '2xl', md: '3xl' }} lineHeight="shorter" fontWeight="bold" color="brand.text" wordBreak="break-word">
+                  Welcome back
+                </Text>
+                <Text color="brand.subtleText" maxW="760px">
+                  Your partner workspace for learners, organizations, and interventions.
+                </Text>
+              </VStack>
+              {headerControls}
+            </Flex>
+          )}
 
           {children}
         </Box>

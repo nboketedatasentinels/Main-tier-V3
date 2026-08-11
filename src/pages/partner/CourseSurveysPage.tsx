@@ -141,6 +141,7 @@ const CourseSurveysPage: React.FC = () => {
   return (
     <PartnerLayout
       activeItem="course-surveys"
+      hideWelcomeHeader
       organizations={layoutOrgs}
       selectedOrg={selectedOrgId || 'all'}
       onSelectOrg={(orgValue) => {
@@ -153,25 +154,9 @@ const CourseSurveysPage: React.FC = () => {
       onNavigate={handleNavigate}
     >
       <Stack spacing={6}>
-        <Flex
-          justify="space-between"
-          align={{ base: 'flex-start', md: 'center' }}
-          gap={4}
-          flexWrap="wrap"
-        >
-          <Box>
-            <Heading size="lg" color="gray.900">
-              Course survey assessments
-            </Heading>
-            <Text color="gray.600" mt={1} maxW="3xl">
-              Browse Pre and Post course SurveyMonkey assessments synced from your SurveyMonkey
-              account. Open a survey to view its collector link and course matching details.
-            </Text>
-          </Box>
-          <Badge colorScheme="purple" borderRadius="full" px={3} py={1} fontSize="sm">
-            {COURSE_SURVEY_LINKS.length} surveys
-          </Badge>
-        </Flex>
+        <Heading size="lg" color="gray.900">
+          Course survey assessments
+        </Heading>
 
         {/* Step 1: Pre / Post chooser */}
         {!kind && (
