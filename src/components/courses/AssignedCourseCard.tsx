@@ -153,6 +153,8 @@ export interface AssignedCourseCardProps {
   showAction?: boolean
   /** Required whenever showAction is left on. Pass course title for Pre survey matching. */
   onOpenCourse?: (link: string, courseTitle?: string) => void
+  /** After partner-verified completion — open learner Post assessment. */
+  onPostAssessment?: (courseTitle: string) => void
   /**
    * Turns the whole card into a button - hover lift, pointer, focus ring and
    * an arrow affordance. Used where the CTA button is hidden.
@@ -196,6 +198,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
   showProgress = true,
   showAction = true,
   onOpenCourse,
+  onPostAssessment,
   onCardClick,
   density = 'comfortable',
 }) => {
@@ -526,6 +529,20 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                 Loading
               </Button>
             ) : (
+              <Stack spacing={2}>
+                {isApproved && !postAssessmentDone && course?.title && onPostAssessment && (
+                  <Button
+                    size="sm"
+                    bg="#f4540c"
+                    color="white"
+                    borderRadius="md"
+                    fontWeight="semibold"
+                    w="full"
+                    onClick={() => onPostAssessment(course.title)}
+                  >
+                    Complete post-assessment
+                  </Button>
+                )}
               <Tooltip
                 label={
                   !hasCourse
@@ -596,6 +613,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
                             : 'Open course'}
                 </Button>
               </Tooltip>
+              </Stack>
             )}
           </Box>
         )}

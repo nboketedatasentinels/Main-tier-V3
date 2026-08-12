@@ -77,7 +77,7 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
       { key: 'partner-assignment', label: 'Issue Activities', icon: ClipboardCheck },
       { key: 'course-approvals', label: 'Course Approvals', icon: BookOpen },
       { key: 'programme-submissions', label: 'Programme Submissions', icon: ClipboardList },
-      { key: 'course-surveys', label: 'Course Surveys', icon: ListChecks },
+      { key: 'course-surveys', label: 'Assessments', icon: ListChecks },
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
     ],
   },

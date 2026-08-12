@@ -72,7 +72,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
       users: 'Users',
       'partner-assignment': 'Issue',
       'course-approvals': 'Approvals',
-      'course-surveys': 'Surveys',
+      'course-surveys': 'Assessments',
       'organization-management': 'Orgs',
     }),
     [],

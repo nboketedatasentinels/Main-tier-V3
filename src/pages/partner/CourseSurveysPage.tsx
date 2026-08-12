@@ -1,55 +1,87 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Badge,
   Box,
   Button,
+  Checkbox,
+  CheckboxGroup,
   Flex,
+  FormControl,
+  FormLabel,
   Heading,
   HStack,
   Icon,
   Input,
-  InputGroup,
-  InputLeftElement,
-  Link,
   SimpleGrid,
   Stack,
+  Table,
+  Tbody,
+  Td,
   Text,
+  Th,
+  Thead,
+  Tr,
   useToast,
-  VStack,
+  Wrap,
+  WrapItem,
 } from '@chakra-ui/react'
-import {
-  ClipboardList,
-  Copy,
-  ExternalLink,
-  Search,
-  ArrowLeft,
-  CheckCircle2,
-} from 'lucide-react'
+import { ArrowLeft, BarChart3, ClipboardList, Mail, Users } from 'lucide-react'
 import PartnerLayout from '@/layouts/PartnerLayout'
+import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
+import { useLearnerOverview } from '@/hooks/useLearnerOverview'
+import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import { CourseAssessmentReportCardView } from '@/components/assessments/CourseAssessmentReportCardView'
 import {
-  COURSE_SURVEY_LINKS,
-  type CourseSurveyKind,
-  type CourseSurveyLink,
-} from '@/config/courseSurveys'
+  buildLearnerAssessmentReportCards,
+  emailOrgAssessmentReport,
+  listReportSendLog,
+  REPORT_AUDIENCE_OPTIONS,
+  resolveOrgAssessmentPhase,
+  type CourseAssessmentReportSendRow,
+  type LearnerAssessmentReportCard,
+  type ReportAudienceRole,
+} from '@/services/courseAssessmentReportService'
+import { getDisplayName } from '@/utils/displayName'
 import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
 
-const isExternalRater = (row: CourseSurveyLink): boolean =>
-  /external\s*rater/i.test(row.surveyTitle)
+type PageMode = 'workspace' | 'rate_one'
+
+const phaseLabel = (phase: string) => {
+  if (phase === 'completed') return 'Journey complete'
+  if (phase === 'near_end') return 'Near journey end'
+  return 'In progress'
+}
 
 const CourseSurveysPage: React.FC = () => {
-  const toast = useToast()
   const navigate = useNavigate()
+  const toast = useToast()
+  const { profile } = useAuth()
   const { organizations } = usePartnerOrganizations()
   const { selectedOrg: selectedOrgId, setSelectedOrg: setSelectedOrgId } = usePartnerSelectedOrg()
-  const detailRef = useRef<HTMLDivElement | null>(null)
+  const { rows: learnerRows, loading: learnersLoading } = useLearnerOverview(selectedOrgId || null)
 
-  const [kind, setKind] = useState<CourseSurveyKind | null>(null)
-  const [selected, setSelected] = useState<CourseSurveyLink | null>(null)
-  const [search, setSearch] = useState('')
-  const [showExternalRater, setShowExternalRater] = useState(false)
+  const [mode, setMode] = useState<PageMode>('workspace')
+  const [rateLearnerId, setRateLearnerId] = useState<string | null>(null)
+  const [cards, setCards] = useState<LearnerAssessmentReportCard[]>([])
+  const [cardsLoading, setCardsLoading] = useState(false)
+  const [sendLog, setSendLog] = useState<CourseAssessmentReportSendRow[]>([])
+  const [sending, setSending] = useState(false)
+
+  const [recipientRoles, setRecipientRoles] = useState<ReportAudienceRole[]>([
+    'sponsor',
+    'hr',
+    'senior_mgmt',
+  ])
+  const [emailsByRole, setEmailsByRole] = useState<Record<ReportAudienceRole, string>>({
+    sponsor: '',
+    hr: '',
+    senior_mgmt: '',
+    line_manager: '',
+    other: '',
+  })
 
   const handleNavigate = useCallback(
     (key: string) => handlePartnerSidebarNavigate(navigate, key, 'course-surveys'),
@@ -64,78 +96,112 @@ const CourseSurveysPage: React.FC = () => {
     [organizations],
   )
 
-  const counts = useMemo(() => {
-    const pre = COURSE_SURVEY_LINKS.filter((r) => r.kind === 'pre' && !isExternalRater(r)).length
-    const post = COURSE_SURVEY_LINKS.filter((r) => r.kind === 'post' && !isExternalRater(r)).length
-    const preExt = COURSE_SURVEY_LINKS.filter((r) => r.kind === 'pre' && isExternalRater(r)).length
-    const postExt = COURSE_SURVEY_LINKS.filter((r) => r.kind === 'post' && isExternalRater(r)).length
-    return { pre, post, preExt, postExt }
-  }, [])
+  const selectedOrg = organizations.find((o) => o.id === selectedOrgId) ?? null
+  const orgName = selectedOrg?.name || 'Organization'
 
-  const surveys = useMemo(() => {
-    if (!kind) return []
-    const q = search.trim().toLowerCase()
-    return COURSE_SURVEY_LINKS.filter((row) => {
-      if (row.kind !== kind) return false
-      if (!showExternalRater && isExternalRater(row)) return false
-      if (!q) return true
-      return (
-        row.surveyTitle.toLowerCase().includes(q) ||
-        row.collectorUrl.toLowerCase().includes(q) ||
-        row.courseMatchers.some((m) => m.toLowerCase().includes(q)) ||
-        (row.surveyId || '').includes(q)
-      )
-    }).sort((a, b) => a.surveyTitle.localeCompare(b.surveyTitle))
-  }, [kind, search, showExternalRater])
+  const learnerInputs = useMemo(
+    () =>
+      learnerRows.map((row) => ({
+        id: row.learnerId,
+        name: getDisplayName(row.learner, 'Learner'),
+        email: row.learner.email ?? null,
+        journeyStatus: row.learner.journeyStatus ?? null,
+        currentWeek: row.learner.currentWeek ?? null,
+        journeyType: row.learner.journeyType ?? null,
+      })),
+    [learnerRows],
+  )
 
-  const copyUrl = async (url: string) => {
+  const refresh = useCallback(async () => {
+    if (!selectedOrgId || !learnerInputs.length) {
+      setCards([])
+      setSendLog([])
+      return
+    }
+    setCardsLoading(true)
     try {
-      await navigator.clipboard.writeText(url)
-      toast({ status: 'success', title: 'Link copied', duration: 2000 })
-    } catch {
-      toast({ status: 'error', title: 'Could not copy link', duration: 2500 })
+      const [nextCards, log] = await Promise.all([
+        buildLearnerAssessmentReportCards({ learners: learnerInputs }),
+        listReportSendLog(selectedOrgId),
+      ])
+      setCards(nextCards)
+      setSendLog(log)
+    } catch (err) {
+      console.error('[CourseSurveysPage] refresh failed', err)
+      toast({ status: 'error', title: 'Could not load assessment workspace' })
+    } finally {
+      setCardsLoading(false)
     }
-  }
+  }, [selectedOrgId, learnerInputs, toast])
 
-  const scrollToDetails = () => {
-    const el = detailRef.current
-    if (!el) return
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
 
-    // PartnerLayout scrolls inside an overflow container, not the window.
-    let parent: HTMLElement | null = el.parentElement
-    while (parent) {
-      const style = window.getComputedStyle(parent)
-      const canScroll =
-        /(auto|scroll)/.test(style.overflowY) && parent.scrollHeight > parent.clientHeight + 1
-      if (canScroll) {
-        const parentRect = parent.getBoundingClientRect()
-        const elRect = el.getBoundingClientRect()
-        const top = elRect.top - parentRect.top + parent.scrollTop - 24
-        parent.scrollTo({ top, behavior: 'smooth' })
-        return
+  const orgPhase = useMemo(
+    () => resolveOrgAssessmentPhase(cards.map((c) => c.phase)),
+    [cards],
+  )
+
+  const nearEndCards = useMemo(
+    () => cards.filter((c) => c.phase === 'near_end' || c.phase === 'completed'),
+    [cards],
+  )
+  const showPostQueue = orgPhase === 'near_end' || nearEndCards.some((c) => !c.partnerPostDone)
+  const showFinalReport = orgPhase === 'completed' || cards.some((c) => c.phase === 'completed')
+
+  const rateTarget = useMemo(() => {
+    if (!rateLearnerId) return null
+    return learnerInputs.find((l) => l.id === rateLearnerId) ?? null
+  }, [rateLearnerId, learnerInputs])
+
+  const handleSendReport = async () => {
+    if (!profile?.id || !selectedOrgId) return
+    const recipients = recipientRoles
+      .map((role) => ({
+        role,
+        email: emailsByRole[role]?.trim() || '',
+      }))
+      .filter((r) => Boolean(r.email))
+
+    if (!recipients.length) {
+      toast({
+        status: 'warning',
+        title: 'Add recipient emails',
+        description: 'Enter at least one address for the selected audiences.',
+      })
+      return
+    }
+
+    setSending(true)
+    try {
+      const result = await emailOrgAssessmentReport({
+        organizationId: selectedOrgId,
+        organizationName: orgName,
+        sentBy: profile.id,
+        recipients,
+        cards,
+      })
+      if (result.status === 'sent') {
+        toast({ status: 'success', title: 'Report emailed', duration: 3000 })
+      } else if (result.status === 'partial') {
+        toast({
+          status: 'warning',
+          title: 'Partial send',
+          description: result.error,
+        })
+      } else {
+        toast({
+          status: 'error',
+          title: 'Could not send report',
+          description: result.error,
+        })
       }
-      parent = parent.parentElement
+      const log = await listReportSendLog(selectedOrgId)
+      setSendLog(log)
+    } finally {
+      setSending(false)
     }
-
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
-  const openSurveyDetails = (row: CourseSurveyLink) => {
-    setSelected(row)
-    // Allow the detail panel to render/update before scrolling.
-    window.setTimeout(scrollToDetails, 50)
-  }
-
-  const selectKind = (next: CourseSurveyKind) => {
-    setKind(next)
-    setSelected(null)
-    setSearch('')
-  }
-
-  const backToKinds = () => {
-    setKind(null)
-    setSelected(null)
-    setSearch('')
   }
 
   return (
@@ -153,413 +219,322 @@ const CourseSurveysPage: React.FC = () => {
       }}
       onNavigate={handleNavigate}
     >
-      <Stack spacing={6} minH={{ base: 'auto', md: 'calc(100vh - 120px)' }}>
-        {/* Step 1: Pre / Post chooser — centered & larger */}
-        {!kind && (
-          <Flex
-            flex="1"
-            direction="column"
-            align="center"
-            justify="center"
-            px={{ base: 2, md: 6 }}
-            py={{ base: 8, md: 4 }}
-            w="full"
-          >
-            <Heading
-              size={{ base: 'lg', md: 'xl' }}
-              color="gray.900"
-              textAlign="center"
-              mb={{ base: 8, md: 10 }}
-            >
-              Course survey assessments
+      <Stack spacing={6}>
+        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} flexWrap="wrap">
+          <Box>
+            <Heading size="lg" color="gray.900">
+              Course assessments
             </Heading>
-
-            <SimpleGrid
-              columns={{ base: 1, md: 2 }}
-              spacing={{ base: 5, md: 6 }}
-              w="full"
-              maxW="960px"
+            <Text color="gray.600" fontSize="sm" mt={1}>
+              Per learner × per course. Partners complete Post near journey end; final org reports
+              after completion. Learners only see their own report card.
+            </Text>
+          </Box>
+          {selectedOrgId && (
+            <Badge
+              colorScheme={
+                orgPhase === 'completed' ? 'green' : orgPhase === 'near_end' ? 'orange' : 'gray'
+              }
+              borderRadius="full"
+              px={3}
+              py={1}
+              textTransform="none"
             >
-              <Box
-                as="button"
-                type="button"
-                textAlign="left"
-                w="full"
-                minH={{ base: '140px', md: '180px' }}
-                bg="white"
-                borderWidth="1px"
-                borderColor="gray.200"
-                borderRadius="2xl"
-                px={{ base: 6, md: 8 }}
-                py={{ base: 7, md: 9 }}
-                transition="border-color 0.15s, box-shadow 0.15s, transform 0.15s"
-                _hover={{ borderColor: 'gray.300', boxShadow: 'md', transform: 'translateY(-2px)' }}
-                onClick={() => selectKind('pre')}
-              >
-                <HStack spacing={{ base: 4, md: 5 }} align="center" h="full">
-                  <Flex
-                    w={{ base: 14, md: 16 }}
-                    h={{ base: 14, md: 16 }}
-                    borderRadius="xl"
-                    bg="gray.50"
-                    borderWidth="1px"
-                    borderColor="gray.200"
-                    align="center"
-                    justify="center"
-                    flexShrink={0}
-                  >
-                    <Icon as={ClipboardList} boxSize={{ base: 7, md: 8 }} color="gray.700" />
-                  </Flex>
-                  <VStack align="start" spacing={1} minW={0}>
-                    <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="gray.900">
-                      Pre-course assessment
-                    </Text>
-                    <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" fontWeight="normal">
-                      {counts.pre} learner surveys
-                      {counts.preExt > 0 ? ` · ${counts.preExt} external rater` : ''}
-                    </Text>
-                  </VStack>
-                </HStack>
-              </Box>
+              {phaseLabel(orgPhase)}
+            </Badge>
+          )}
+        </Flex>
 
-              <Box
-                as="button"
-                type="button"
-                textAlign="left"
-                w="full"
-                minH={{ base: '140px', md: '180px' }}
-                bg="white"
-                borderWidth="1px"
-                borderColor="gray.200"
-                borderRadius="2xl"
-                px={{ base: 6, md: 8 }}
-                py={{ base: 7, md: 9 }}
-                transition="border-color 0.15s, box-shadow 0.15s, transform 0.15s"
-                _hover={{ borderColor: 'gray.300', boxShadow: 'md', transform: 'translateY(-2px)' }}
-                onClick={() => selectKind('post')}
-              >
-                <HStack spacing={{ base: 4, md: 5 }} align="center" h="full">
-                  <Flex
-                    w={{ base: 14, md: 16 }}
-                    h={{ base: 14, md: 16 }}
-                    borderRadius="xl"
-                    bg="gray.50"
-                    borderWidth="1px"
-                    borderColor="gray.200"
-                    align="center"
-                    justify="center"
-                    flexShrink={0}
-                  >
-                    <Icon as={CheckCircle2} boxSize={{ base: 7, md: 8 }} color="gray.700" />
-                  </Flex>
-                  <VStack align="start" spacing={1} minW={0}>
-                    <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="gray.900">
-                      Post-course assessment
-                    </Text>
-                    <Text fontSize={{ base: 'sm', md: 'md' }} color="gray.600" fontWeight="normal">
-                      {counts.post} learner surveys
-                      {counts.postExt > 0 ? ` · ${counts.postExt} external rater` : ''}
-                    </Text>
-                  </VStack>
-                </HStack>
-              </Box>
-            </SimpleGrid>
-          </Flex>
+        {!selectedOrgId && (
+          <Box p={6} bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="xl">
+            <Text color="gray.500" fontSize="sm">
+              Select an organization to open the assessment workspace.
+            </Text>
+          </Box>
         )}
 
-        {/* Step 2: list + detail */}
-        {kind && (
-          <Stack spacing={5}>
-            <Heading size="lg" color="gray.900">
-              Course survey assessments
-            </Heading>
-            <Flex
-              justify="space-between"
-              align={{ base: 'flex-start', md: 'center' }}
-              gap={3}
-              flexWrap="wrap"
+        {selectedOrgId && mode === 'rate_one' && profile?.id && rateTarget && (
+          <Stack spacing={4}>
+            <Button
+              leftIcon={<Icon as={ArrowLeft} boxSize={4} />}
+              variant="ghost"
+              size="sm"
+              w="fit-content"
+              onClick={() => {
+                setMode('workspace')
+                setRateLearnerId(null)
+                void refresh()
+              }}
             >
-              <HStack spacing={3} flexWrap="wrap">
-                <Button
-                  leftIcon={<Icon as={ArrowLeft} boxSize={4} />}
-                  variant="ghost"
-                  onClick={backToKinds}
-                  size="sm"
-                  color="gray.700"
-                >
-                  All assessments
-                </Button>
-                <Badge
-                  variant="outline"
-                  borderColor="gray.300"
-                  color="gray.800"
-                  borderRadius="full"
-                  px={3}
-                  py={1}
-                  textTransform="none"
-                  fontWeight="semibold"
-                >
-                  {kind === 'pre' ? 'Pre-course' : 'Post-course'}
-                </Badge>
+              Back to workspace
+            </Button>
+            <RateLearnerCourseAssessment
+              respondentId={profile.id}
+              raterRole="partner"
+              learners={[
+                {
+                  id: rateTarget.id,
+                  name: rateTarget.name,
+                  currentWeek: rateTarget.currentWeek,
+                  journeyType: rateTarget.journeyType,
+                  journeyStatus: rateTarget.journeyStatus,
+                },
+              ]}
+              forcedKind="post"
+              onSubmitted={() => {
+                void refresh()
+              }}
+            />
+          </Stack>
+        )}
+
+        {selectedOrgId && mode === 'workspace' && (
+          <Stack spacing={6}>
+            {learnersLoading || cardsLoading ? (
+              <Text fontSize="sm" color="gray.500">
+                Loading learners and assessment results…
+              </Text>
+            ) : cards.length === 0 ? (
+              <Box p={6} bg="white" borderWidth="1px" borderColor="gray.200" borderRadius="xl">
                 <Text fontSize="sm" color="gray.500">
-                  {surveys.length} shown
-                </Text>
-              </HStack>
-            </Flex>
-
-            <Flex gap={3} flexWrap="wrap" align="center">
-              <InputGroup maxW={{ base: 'full', md: '400px' }}>
-                <InputLeftElement pointerEvents="none">
-                  <Icon as={Search} color="gray.400" boxSize={4} />
-                </InputLeftElement>
-                <Input
-                  placeholder="Search by course or survey title…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  bg="white"
-                  borderColor="gray.200"
-                  borderRadius="lg"
-                />
-              </InputGroup>
-              <Button
-                size="sm"
-                variant={showExternalRater ? 'solid' : 'outline'}
-                colorScheme="gray"
-                borderRadius="lg"
-                onClick={() => setShowExternalRater((v) => !v)}
-              >
-                {showExternalRater ? 'Hide' : 'Show'} external rater
-              </Button>
-            </Flex>
-
-            {surveys.length === 0 ? (
-              <Box
-                p={8}
-                bg="white"
-                borderWidth="1px"
-                borderColor="gray.200"
-                borderRadius="xl"
-              >
-                <Text color="gray.500" fontSize="sm">
-                  No surveys match this filter.
+                  No learners in this organization yet.
                 </Text>
               </Box>
             ) : (
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                {surveys.map((row) => {
-                  const active =
-                    selected?.surveyId === row.surveyId &&
-                    selected?.collectorUrl === row.collectorUrl
-                  return (
-                    <Box
-                      key={`${row.surveyId}-${row.collectorUrl}`}
-                      as="button"
-                      type="button"
-                      textAlign="left"
-                      w="full"
-                      h="full"
-                      bg="white"
-                      borderWidth="1px"
-                      borderColor={active ? '#350e6f' : 'gray.200'}
-                      borderRadius="xl"
-                      px={5}
-                      py={5}
-                      boxShadow={active ? 'sm' : 'none'}
-                      transition="border-color 0.15s, box-shadow 0.15s"
-                      _hover={{
-                        borderColor: active ? '#350e6f' : 'gray.300',
-                        boxShadow: 'sm',
-                      }}
-                      onClick={() => openSurveyDetails(row)}
-                    >
-                      <HStack spacing={4} align="flex-start">
-                        <Flex
-                          w={11}
-                          h={11}
-                          borderRadius="lg"
-                          bg="gray.50"
+              <>
+                {orgPhase === 'early' && (
+                  <Box
+                    p={5}
+                    bg="white"
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    borderRadius="xl"
+                  >
+                    <HStack spacing={3} mb={2}>
+                      <Icon as={ClipboardList} boxSize={5} color="gray.700" />
+                      <Heading size="sm">Waiting for near journey end</Heading>
+                    </HStack>
+                    <Text fontSize="sm" color="gray.600">
+                      Post assessments for each learner appear here when the cohort reaches the final
+                      stretch. Final org reports unlock after journey completion.
+                    </Text>
+                  </Box>
+                )}
+
+                {showPostQueue && (
+                  <Box
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    borderRadius="xl"
+                    bg="white"
+                    p={{ base: 4, md: 5 }}
+                  >
+                    <HStack spacing={3} mb={4}>
+                      <Icon as={Users} boxSize={5} color="gray.700" />
+                      <Box>
+                        <Heading size="sm">Post assessments by learner</Heading>
+                        <Text fontSize="sm" color="gray.600">
+                          Near journey end — complete a partner Post for each learner
+                        </Text>
+                      </Box>
+                    </HStack>
+
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+                      {nearEndCards.map((card) => (
+                        <Box
+                          key={card.learnerId}
                           borderWidth="1px"
                           borderColor="gray.200"
-                          align="center"
-                          justify="center"
-                          flexShrink={0}
+                          borderRadius="lg"
+                          p={4}
                         >
-                          <Icon
-                            as={kind === 'pre' ? ClipboardList : CheckCircle2}
-                            boxSize={5}
-                            color="gray.700"
-                          />
-                        </Flex>
-                        <Box minW={0} flex="1">
-                          <Text
-                            fontWeight="semibold"
-                            fontSize="md"
-                            color="gray.900"
-                            lineHeight="1.45"
-                            noOfLines={3}
-                          >
-                            {row.surveyTitle}
-                          </Text>
-                          <Text mt={2} fontSize="xs" color="gray.500">
-                            Click to view details below
-                          </Text>
-                          {isExternalRater(row) && (
-                            <Badge
-                              mt={2}
-                              colorScheme="orange"
-                              fontSize="2xs"
-                              borderRadius="md"
-                              textTransform="none"
+                          <Flex justify="space-between" gap={3} align="flex-start">
+                            <Box minW={0}>
+                              <Text fontWeight="semibold" noOfLines={1}>
+                                {card.learnerName}
+                              </Text>
+                              <Text fontSize="xs" color="gray.500" mt={1}>
+                                {phaseLabel(card.phase)}
+                                {card.currentWeek != null && card.totalWeeks != null
+                                  ? ` · W${card.currentWeek}/${card.totalWeeks}`
+                                  : ''}
+                              </Text>
+                              <Badge
+                                mt={2}
+                                colorScheme={card.partnerPostDone ? 'green' : 'orange'}
+                                textTransform="none"
+                              >
+                                {card.partnerPostDone ? 'Partner Post done' : 'Partner Post needed'}
+                              </Badge>
+                            </Box>
+                            <Button
+                              size="sm"
+                              bg="#350e6f"
+                              color="white"
+                              _hover={{ bg: '#27062e' }}
+                              onClick={() => {
+                                setRateLearnerId(card.learnerId)
+                                setMode('rate_one')
+                              }}
                             >
-                              External rater
-                            </Badge>
-                          )}
+                              {card.partnerPostDone ? 'Update Post' : 'Take Post'}
+                            </Button>
+                          </Flex>
                         </Box>
-                      </HStack>
-                    </Box>
-                  )
-                })}
-              </SimpleGrid>
-            )}
-
-            {/* Detail panel at end of page — scroll target on click */}
-            <Box
-              ref={detailRef}
-              id="course-survey-details"
-              scrollMarginTop="24px"
-              borderWidth="1px"
-              borderColor={selected ? '#350e6f' : 'gray.200'}
-              borderRadius="xl"
-              bg="white"
-              p={{ base: 5, md: 6 }}
-              minH="200px"
-              boxShadow={selected ? 'md' : 'none'}
-            >
-              {!selected ? (
-                <Flex h="full" minH="140px" align="center" justify="center" px={4}>
-                  <Text color="gray.500" fontSize="sm" textAlign="center">
-                    Select a survey card above to view details here
-                  </Text>
-                </Flex>
-              ) : (
-                <Stack spacing={6}>
-                  <Box>
-                    <Text
-                      fontSize="xs"
-                      textTransform="uppercase"
-                      letterSpacing="0.08em"
-                      color="gray.500"
-                      mb={2}
-                    >
-                      {selected.kind === 'pre' ? 'Pre-course' : 'Post-course'} assessment
-                    </Text>
-                    <Heading size="md" color="gray.900" lineHeight="1.35">
-                      {selected.surveyTitle}
-                    </Heading>
+                      ))}
+                    </SimpleGrid>
                   </Box>
+                )}
 
-                  <Stack spacing={2}>
-                    <Text
-                      fontSize="xs"
-                      fontWeight="semibold"
-                      color="gray.500"
-                      textTransform="uppercase"
-                      letterSpacing="0.06em"
-                    >
-                      Collector link
-                    </Text>
-                    <Link
-                      href={selected.collectorUrl}
-                      isExternal
-                      color="#350e6f"
-                      fontWeight="medium"
-                      fontSize="sm"
-                      wordBreak="break-all"
-                      lineHeight="1.5"
-                    >
-                      {selected.collectorUrl}
-                      <Icon as={ExternalLink} boxSize={3.5} ml={1} display="inline" />
-                    </Link>
-                    <HStack spacing={2} pt={2} flexWrap="wrap">
+                {showFinalReport && (
+                  <Box
+                    borderWidth="1px"
+                    borderColor="gray.200"
+                    borderRadius="xl"
+                    bg="white"
+                    p={{ base: 4, md: 5 }}
+                  >
+                    <HStack spacing={3} mb={4}>
+                      <Icon as={BarChart3} boxSize={5} color="gray.700" />
+                      <Box>
+                        <Heading size="sm">Final org report</Heading>
+                        <Text fontSize="sm" color="gray.600">
+                          Combined Pre/Post (+ rater views) for everyone in the organization
+                        </Text>
+                      </Box>
+                    </HStack>
+
+                    <Stack spacing={4}>
+                      {cards.map((card) => (
+                        <CourseAssessmentReportCardView
+                          key={card.learnerId}
+                          card={card}
+                          title={card.learnerName}
+                        />
+                      ))}
+                    </Stack>
+
+                    <Box mt={6} pt={5} borderTopWidth="1px" borderColor="gray.100">
+                      <HStack spacing={2} mb={3}>
+                        <Icon as={Mail} boxSize={4} />
+                        <Heading size="xs">Email combined report</Heading>
+                      </HStack>
+                      <Text fontSize="sm" color="gray.600" mb={3}>
+                        Send to sponsor / HR / senior management / line manager. A send log is kept
+                        for this organization.
+                      </Text>
+
+                      <CheckboxGroup
+                        value={recipientRoles}
+                        onChange={(vals) => setRecipientRoles(vals as ReportAudienceRole[])}
+                      >
+                        <Wrap spacing={4} mb={4}>
+                          {REPORT_AUDIENCE_OPTIONS.map((opt) => (
+                            <WrapItem key={opt.id}>
+                              <Checkbox value={opt.id}>{opt.label}</Checkbox>
+                            </WrapItem>
+                          ))}
+                        </Wrap>
+                      </CheckboxGroup>
+
+                      <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} mb={4}>
+                        {REPORT_AUDIENCE_OPTIONS.filter((o) => recipientRoles.includes(o.id)).map(
+                          (opt) => (
+                            <FormControl key={opt.id}>
+                              <FormLabel fontSize="sm">{opt.label} email</FormLabel>
+                              <Input
+                                type="email"
+                                placeholder={`${opt.id}@company.com`}
+                                value={emailsByRole[opt.id]}
+                                onChange={(e) =>
+                                  setEmailsByRole((prev) => ({
+                                    ...prev,
+                                    [opt.id]: e.target.value,
+                                  }))
+                                }
+                                borderRadius="lg"
+                              />
+                            </FormControl>
+                          ),
+                        )}
+                      </SimpleGrid>
+
                       <Button
-                        size="sm"
-                        leftIcon={<Icon as={ExternalLink} boxSize={3.5} />}
                         bg="#350e6f"
                         color="white"
                         _hover={{ bg: '#27062e' }}
                         borderRadius="lg"
-                        as="a"
-                        href={selected.collectorUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        leftIcon={<Icon as={Mail} boxSize={4} />}
+                        isLoading={sending}
+                        onClick={() => void handleSendReport()}
                       >
-                        Open survey
+                        Email report
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        borderRadius="lg"
-                        leftIcon={<Icon as={Copy} boxSize={3.5} />}
-                        onClick={() => copyUrl(selected.collectorUrl)}
-                      >
-                        Copy link
-                      </Button>
-                    </HStack>
-                  </Stack>
+                    </Box>
+                  </Box>
+                )}
 
-                  {selected.surveyId && (
-                    <Stack spacing={2}>
-                      <Text
-                        fontSize="xs"
-                        fontWeight="semibold"
-                        color="gray.500"
-                        textTransform="uppercase"
-                        letterSpacing="0.06em"
-                      >
-                        SurveyMonkey ID
-                      </Text>
-                      <Text fontSize="sm" color="gray.800" fontFamily="mono">
-                        {selected.surveyId}
-                      </Text>
-                    </Stack>
+                <Box
+                  borderWidth="1px"
+                  borderColor="gray.200"
+                  borderRadius="xl"
+                  bg="white"
+                  p={{ base: 4, md: 5 }}
+                >
+                  <Heading size="sm" mb={3}>
+                    Send log
+                  </Heading>
+                  {sendLog.length === 0 ? (
+                    <Text fontSize="sm" color="gray.500">
+                      No report emails sent yet for this organization.
+                    </Text>
+                  ) : (
+                    <Box overflowX="auto">
+                      <Table size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th>When</Th>
+                            <Th>Recipients</Th>
+                            <Th>Roles</Th>
+                            <Th>Status</Th>
+                            <Th isNumeric>Learners</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {sendLog.map((row) => (
+                            <Tr key={row.id}>
+                              <Td>{new Date(row.sent_at).toLocaleString()}</Td>
+                              <Td>
+                                {(row.recipients || [])
+                                  .map((r) => r.email)
+                                  .filter(Boolean)
+                                  .join(', ') || '—'}
+                              </Td>
+                              <Td>{(row.recipient_roles || []).join(', ') || '—'}</Td>
+                              <Td>
+                                <Badge
+                                  colorScheme={
+                                    row.status === 'sent'
+                                      ? 'green'
+                                      : row.status === 'partial'
+                                        ? 'orange'
+                                        : 'red'
+                                  }
+                                  textTransform="none"
+                                >
+                                  {row.status}
+                                </Badge>
+                              </Td>
+                              <Td isNumeric>{row.learner_count}</Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
                   )}
-
-                  <Stack spacing={3}>
-                    <Text
-                      fontSize="xs"
-                      fontWeight="semibold"
-                      color="gray.500"
-                      textTransform="uppercase"
-                      letterSpacing="0.06em"
-                    >
-                      Course matchers
-                    </Text>
-                    <Text fontSize="sm" color="gray.600" lineHeight="1.5">
-                      Used to match this survey to a T4L course title when a learner opens a
-                      course.
-                    </Text>
-                    <Flex gap={2} flexWrap="wrap">
-                      {selected.courseMatchers.map((matcher) => (
-                        <Badge
-                          key={matcher}
-                          variant="outline"
-                          borderColor="gray.200"
-                          color="gray.700"
-                          borderRadius="md"
-                          px={2.5}
-                          py={1}
-                          fontWeight="medium"
-                          textTransform="none"
-                          bg="gray.50"
-                        >
-                          {matcher}
-                        </Badge>
-                      ))}
-                    </Flex>
-                  </Stack>
-                </Stack>
-              )}
-            </Box>
+                </Box>
+              </>
+            )}
           </Stack>
         )}
       </Stack>

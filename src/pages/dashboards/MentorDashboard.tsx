@@ -65,6 +65,7 @@ import { differenceInCalendarDays, format, isToday } from 'date-fns'
 import { useNavigate } from 'react-router-dom'
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { MentorSessionsPanel } from '@/components/mentor/MentorSessionsPanel'
+import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import { useAuth } from '@/hooks/useAuth'
 import {
   deriveFallbackRisk,
@@ -1140,6 +1141,19 @@ export const MentorDashboard: React.FC = () => {
                         <Text fontWeight="bold">{selectedMentee.weeklyActivity} completed</Text>
                       </Box>
                     </SimpleGrid>
+                    {profile?.id && (
+                      <RateLearnerCourseAssessment
+                        respondentId={profile.id}
+                        raterRole="mentor"
+                        learners={[
+                          {
+                            id: selectedMentee.id,
+                            name: selectedMentee.name,
+                          },
+                        ]}
+                        forcedKind="post"
+                      />
+                    )}
                     <Button variant="primary" leftIcon={<Icon as={CheckCircle2} />}>
                       Mark alerts resolved
                     </Button>

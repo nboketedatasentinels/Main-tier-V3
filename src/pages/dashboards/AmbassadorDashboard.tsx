@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
@@ -30,7 +30,9 @@ import {
 import { Flame, Gift, Megaphone, Share2, Target, TrendingUp, Users } from 'lucide-react'
 import { AmbassadorLayout } from '@/layouts/AmbassadorLayout'
 import { AmbassadorSessionsPanel } from '@/components/ambassador/AmbassadorSessionsPanel'
+import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import { useAuth } from '@/hooks/useAuth'
+import { fetchAssignedCoachees } from '@/services/learnerAssignmentService'
 import { getDisplayName } from '@/utils/displayName'
 
 type ReferralMetric = {
@@ -73,6 +75,34 @@ const engagementHighlights = [
 export const AmbassadorDashboard: React.FC = () => {
   const { profile } = useAuth()
   const ambassadorName = profile?.fullName || profile?.firstName || 'Coach'
+  const [coachees, setCoachees] = useState<{ id: string; name: string }[]>([])
+
+  useEffect(() => {
+    if (!profile?.id) {
+      setCoachees([])
+      return
+    }
+    let cancelled = false
+    void fetchAssignedCoachees(profile.id)
+      .then((rows) => {
+        if (cancelled) return
+        setCoachees(
+          rows.map((learner) => ({
+            id: learner.id!,
+            name: getDisplayName(learner, 'Learner'),
+          })),
+        )
+      })
+      .catch((err) => {
+        console.error('[AmbassadorDashboard] coachees load failed', err)
+        if (!cancelled) setCoachees([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [profile?.id])
+
+  const rateLearners = useMemo(() => coachees, [coachees])
 
   return (
     <AmbassadorLayout
@@ -81,6 +111,14 @@ export const AmbassadorDashboard: React.FC = () => {
       avatarUrl={profile?.avatarUrl}
     >
       <Stack spacing={6}>
+        {profile?.id && rateLearners.length > 0 && (
+          <RateLearnerCourseAssessment
+            respondentId={profile.id}
+            raterRole="coach"
+            learners={rateLearners}
+            forcedKind="post"
+          />
+        )}
         <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={6} wrap="wrap">
           <Stack spacing={2}>
             <Text fontSize="2xl" fontWeight="bold" color="brand.text">

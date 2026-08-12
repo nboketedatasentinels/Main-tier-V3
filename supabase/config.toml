@@ -20,3 +20,7 @@ verify_jwt = false
 # Public token-gated approve/reject for external verifiers (no login required).
 [functions.resolve-impact-verification]
 verify_jwt = false
+
+# Partner-emailed course assessment org reports; JWT + role checked in-function.
+[functions.send-course-assessment-report]
+verify_jwt = false

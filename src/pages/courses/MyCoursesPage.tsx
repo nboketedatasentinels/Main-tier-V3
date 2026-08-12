@@ -46,12 +46,21 @@ import {
   isMonthBasedJourney,
 } from '@/utils/journeyType'
 import { AssignedCourseCard, type CourseAvailability } from '@/components/courses/AssignedCourseCard'
+import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import { CourseAssessmentReportCardView } from '@/components/assessments/CourseAssessmentReportCardView'
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
+import { useLearnerCourseAssessmentStatus } from '@/hooks/useLearnerCourseAssessmentStatus'
 import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import { getPointsPerCourse } from '@/config/pointsConfig'
+import { fetchAssignedLineManagerLearners } from '@/services/learnerAssignmentService'
+import {
+  buildLearnerAssessmentReportCards,
+  type LearnerAssessmentReportCard,
+} from '@/services/courseAssessmentReportService'
+import { getDisplayName } from '@/utils/displayName'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -613,8 +622,65 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const { program, loading: programLoading } = useOrganizationProgramCourses(organizationId)
   const { loading: progressLoading } = useUserCourseProgress(userId)
   const { completionsByKey } = useUserCourseCompletions(userId)
-  const { requestOpenCourse, surveyModal } = useCourseOpenGate()
+  const { requestOpenCourse, requestPostAssessment, surveyModal } = useCourseOpenGate()
   const { state: preCourseSurveyState } = usePreCourseSurvey(userId ?? null)
+  const { statusForTitle, refresh: refreshAssessmentStatus } = useLearnerCourseAssessmentStatus(
+    userId ?? null,
+  )
+  const [managedLearners, setManagedLearners] = useState<{ id: string; name: string }[]>([])
+  const [ownReportCard, setOwnReportCard] = useState<LearnerAssessmentReportCard | null>(null)
+
+  useEffect(() => {
+    if (!userId) {
+      setManagedLearners([])
+      return
+    }
+    let cancelled = false
+    void fetchAssignedLineManagerLearners(userId)
+      .then((rows) => {
+        if (cancelled) return
+        setManagedLearners(
+          rows
+            .filter((l) => Boolean(l.id))
+            .map((l) => ({ id: l.id!, name: getDisplayName(l, 'Learner') })),
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setManagedLearners([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId])
+
+  useEffect(() => {
+    if (!userId || !profile) {
+      setOwnReportCard(null)
+      return
+    }
+    let cancelled = false
+    void buildLearnerAssessmentReportCards({
+      learners: [
+        {
+          id: userId,
+          name: getDisplayName(profile, 'You'),
+          email: profile.email,
+          journeyStatus: profile.journeyStatus ?? null,
+          currentWeek: profile.currentWeek ?? null,
+          journeyType: profile.journeyType ?? null,
+        },
+      ],
+    })
+      .then((cards) => {
+        if (!cancelled) setOwnReportCard(cards[0] ?? null)
+      })
+      .catch(() => {
+        if (!cancelled) setOwnReportCard(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [userId, profile])
 
   const [courseMap, setCourseMap] = useState<Record<string, NormalizedCourse>>({})
   const [loadingCourses, setLoadingCourses] = useState(true)
@@ -874,6 +940,18 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
   return (
     <Stack spacing={8} py={2} as="section">
+      {userId && managedLearners.length > 0 && (
+        <RateLearnerCourseAssessment
+          respondentId={userId}
+          raterRole="line_manager"
+          learners={managedLearners}
+        />
+      )}
+      <CourseAssessmentReportCardView
+        card={ownReportCard}
+        title="Your assessment report"
+        emptyMessage="Your Pre/Post scores will appear here after you submit assessments. Partners see the full org report."
+      />
       {hasOrganization && hasProgram && program?.pillar && (
         <Box
           bgGradient="linear(to-r, #350e6f, #8b5a3c)"
@@ -1029,10 +1107,21 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                         ? canAccessCourse(profile, entry.course.title, entry.course.id)
                         : false
                     }
-                    preAssessmentDone={preCourseSurveyState.completed}
+                    preAssessmentDone={
+                      entry.course
+                        ? statusForTitle(entry.course.title).pre || preCourseSurveyState.completed
+                        : preCourseSurveyState.completed
+                    }
+                    postAssessmentDone={
+                      entry.course ? statusForTitle(entry.course.title).post : false
+                    }
                     isLoading={Boolean(overallLoading && entry.courseId && !entry.course)}
                     isMissing={Boolean(!overallLoading && entry.courseId && !entry.course)}
                     onOpenCourse={requestOpenCourse}
+                    onPostAssessment={(title) => {
+                      requestPostAssessment(title)
+                      window.setTimeout(() => refreshAssessmentStatus(), 1500)
+                    }}
                   />
                 )
               })}

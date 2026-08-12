@@ -87,6 +87,8 @@ export interface UserProfile {
   // Leadership relations
   mentorId?: string
   ambassadorId?: string
+  /** Line manager who rates learner Pre + Post course assessments */
+  lineManagerId?: string | null
   mentorOverrideId?: string | null
   ambassadorOverrideId?: string | null
   isActiveCoach?: boolean

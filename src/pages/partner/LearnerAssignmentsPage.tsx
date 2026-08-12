@@ -43,6 +43,7 @@ import { useLearnerOverview, type LearnerOverviewRow } from '@/hooks/useLearnerO
 import { fetchOrganizationJourneyType } from '@/services/organizationService'
 import {
   assignMentorToLearner,
+  assignLineManagerToLearner,
   fetchMentorsForOrg,
   type OrgMentorOption,
 } from '@/services/learnerAssignmentService'
@@ -75,6 +76,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
   const [mentorsLoading, setMentorsLoading] = useState(false)
   const [mentorsError, setMentorsError] = useState<string | null>(null)
   const [assigningLearnerId, setAssigningLearnerId] = useState<string | null>(null)
+  const [assigningLineManagerId, setAssigningLineManagerId] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<FilterMode>('all')
 
@@ -182,6 +184,25 @@ export const LearnerAssignmentsPage: React.FC = () => {
       toast({ title: 'Could not update mentor', description, status: 'error' })
     } finally {
       setAssigningLearnerId(null)
+    }
+  }
+
+  const handleAssignLineManager = async (row: LearnerOverviewRow, lineManagerId: string) => {
+    setAssigningLineManagerId(row.learnerId)
+    try {
+      await assignLineManagerToLearner({
+        learnerId: row.learnerId,
+        lineManagerId: lineManagerId || null,
+      })
+      toast({
+        title: lineManagerId ? 'Line manager assigned' : 'Line manager cleared',
+        status: 'success',
+      })
+    } catch (err) {
+      const description = err instanceof Error ? err.message : 'Try again in a moment.'
+      toast({ title: 'Could not update line manager', description, status: 'error' })
+    } finally {
+      setAssigningLineManagerId(null)
     }
   }
 
@@ -388,6 +409,7 @@ export const LearnerAssignmentsPage: React.FC = () => {
                         <Th>Learner</Th>
                         <Th>Journey</Th>
                         {showMentorColumns && <Th>Mentor</Th>}
+                        <Th>Line manager</Th>
                         {showMentorColumns && <Th isNumeric>Mentor sessions</Th>}
                         {showMentorColumns && <Th isNumeric>Coach sessions</Th>}
                         <Th isNumeric>Total points</Th>
@@ -439,6 +461,23 @@ export const LearnerAssignmentsPage: React.FC = () => {
                               </Select>
                             </Td>
                           )}
+                          <Td>
+                            <Select
+                              size="sm"
+                              value={row.learner.lineManagerId ?? ''}
+                              placeholder={mentorsLoading ? 'Loading…' : 'Unassigned'}
+                              onChange={(e) => handleAssignLineManager(row, e.target.value)}
+                              isDisabled={assigningLineManagerId === row.learnerId || mentorsLoading}
+                              minW="200px"
+                            >
+                              <option value="">Unassigned</option>
+                              {mentors.map((mentor) => (
+                                <option key={`lm-${mentor.id}`} value={mentor.id}>
+                                  {mentor.fullName}
+                                </option>
+                              ))}
+                            </Select>
+                          </Td>
                           {showMentorColumns && (
                             <Td isNumeric>
                               <Stack spacing={0} align="flex-end">

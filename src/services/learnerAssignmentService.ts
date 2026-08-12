@@ -53,6 +53,7 @@ const mapProfileRowToLearner = (row: Record<string, unknown>): UserProfile => {
     journeyType: row.journey_type ?? data.journeyType,
     mentorId: row.mentor_id ?? data.mentorId ?? null,
     ambassadorId: row.ambassador_id ?? data.ambassadorId ?? null,
+    lineManagerId: row.line_manager_id ?? data.lineManagerId ?? null,
     totalPoints: (row.total_points as number) ?? data.totalPoints ?? 0,
     createdAt: row.created_at ?? data.createdAt,
     updatedAt: row.updated_at ?? data.updatedAt,
@@ -166,6 +167,57 @@ export const assignMentorToLearner = async (params: AssignMentorParams): Promise
     ['mentorId'],
     actor,
   )
+}
+
+export interface AssignLineManagerParams {
+  learnerId: string
+  lineManagerId: string | null
+}
+
+/** Assign line manager on Supabase profiles (Pre + Post rater for the learner). */
+export const assignLineManagerToLearner = async (
+  params: AssignLineManagerParams,
+): Promise<void> => {
+  const { learnerId, lineManagerId } = params
+  if (!learnerId) throw new Error('Learner id is required.')
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      line_manager_id: lineManagerId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', learnerId)
+  if (error) throw new Error(error.message)
+}
+
+/** Learners assigned to a coach (profiles.ambassador_id). */
+export const fetchAssignedCoachees = async (coachId: string): Promise<UserProfile[]> => {
+  if (!coachId) return []
+  const { data, error } = await supabase.from('profiles').select('*').eq('ambassador_id', coachId)
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? [])
+    .map((row) => mapProfileRowToLearner(row as Record<string, unknown>))
+    .filter((learner) => {
+      const role = normalizeRole(learner.role)
+      return role === 'free_user' || role === 'paid_member'
+    })
+}
+
+/** Learners who have this user as line_manager_id. */
+export const fetchAssignedLineManagerLearners = async (
+  lineManagerId: string,
+): Promise<UserProfile[]> => {
+  if (!lineManagerId) return []
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('line_manager_id', lineManagerId)
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? []).map((row) => mapProfileRowToLearner(row as Record<string, unknown>))
 }
 
 export interface LearnerSessionStats {
