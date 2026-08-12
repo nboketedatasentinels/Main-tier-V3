@@ -20,7 +20,7 @@ const GOLD = '#eab130'
 
 // Where the public funnel sends people to unlock the full breakdown.
 const BOOKING_URL =
-  'https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ0K_YpzXDULQVZ0LGCIxH3K-no0TTHaBQ5jFNLUq6CC1lx_LFMyuwDUMLeByAHVx1ih5phOnIRF'
+  'https://calendar.google.com/calendar/u/0/appointments/schedules/AcZssZ1qvP5rCwSk7OL6DmXNy3psMLAXgSfSXfiIwFQe1EiOmODLiuTlSA03lA50k9yBzKiDJGecbLgT'
 
 export interface LiftResultViewProps {
   pillars: Record<PillarKey, number>
