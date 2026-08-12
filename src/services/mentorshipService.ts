@@ -109,18 +109,42 @@ const mapSession = (id: string, data: Record<string, unknown>): MentorshipSessio
 
 async function getJourneyContext(
   uid: string,
-): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
+): Promise<{ journeyType: JourneyType; weekNumber: number; mentorId: string | null } | null> {
+  try {
+    const { supabase } = await import('@/services/supabase')
+    const { data } = await supabase
+      .from('profiles')
+      .select('journey_type, current_week, mentor_id, data')
+      .eq('id', uid)
+      .maybeSingle()
+    if (data) {
+      const nested = (data.data as Record<string, unknown> | null) || {}
+      const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
+      if (journeyType) {
+        return {
+          journeyType,
+          weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
+          mentorId: (data.mentor_id as string | null) ?? (nested.mentorId as string | null) ?? null,
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[MentorshipService] Supabase journey context failed, trying Firestore:', err)
+  }
+
   try {
     const profileSnap = await getDoc(doc(db, 'profiles', uid))
     if (!profileSnap.exists()) return null
     const profile = profileSnap.data() as {
       journeyType?: JourneyType
       currentWeek?: number
+      mentorId?: string | null
     }
     if (!profile.journeyType) return null
     return {
       journeyType: profile.journeyType,
       weekNumber: Math.max(1, Number(profile.currentWeek ?? 1)),
+      mentorId: profile.mentorId ?? null,
     }
   } catch (err) {
     console.error('[MentorshipService] Failed to resolve journey context:', err)
@@ -342,7 +366,8 @@ export async function completeMentorshipSession(params: {
   if (shouldAwardPoints && learnerId) {
     try {
       const context = await getJourneyContext(learnerId)
-      if (context) {
+      // Points only when the learner actually has a mentor assigned (org/person gate).
+      if (context?.mentorId) {
         const activity = getActivityDefinitionById({
           activityId: 'mentor_meetup',
           journeyType: context.journeyType,
@@ -360,12 +385,24 @@ export async function completeMentorshipSession(params: {
           console.warn(
             `[MentorshipService] mentor_meetup activity not available for ${context.journeyType}; points skipped.`,
           )
+          shouldAwardPoints = false
         }
+      } else {
+        console.warn(
+          '[MentorshipService] No mentor assigned on learner profile; attendance confirmed without points.',
+        )
+        shouldAwardPoints = false
+        await updateDoc(sessionRef, {
+          points_awarded: false,
+          points_awarded_at: null,
+          updated_at: serverTimestamp(),
+        }).catch(() => undefined)
       }
     } catch (err) {
       console.error('[MentorshipService] Failed to award points on completion:', err)
       // Intentional: session stays marked complete so the mentor UI reflects reality.
       // Admins can reconcile points via pointsService.reconcileUserPointsFromLedger.
+      shouldAwardPoints = false
     }
   }
 

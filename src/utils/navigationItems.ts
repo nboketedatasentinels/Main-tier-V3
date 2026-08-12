@@ -94,9 +94,9 @@ export const buildMentorNavItems = (): NavigationSection[] => [
     title: 'Mentorship',
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
-      { key: 'schedule', label: 'Schedule & alerts', icon: CalendarClock },
-      { key: 'progress', label: 'Performance insights', icon: TrendingUp },
-      { key: 'mentees', label: 'Mentees & directory', icon: Users },
+      { key: 'mentees', label: 'My mentees', icon: Users },
+      { key: 'schedule', label: 'Meetings', icon: CalendarClock },
+      { key: 'assessments', label: 'Post assessments', icon: TrendingUp },
     ],
   },
 ]

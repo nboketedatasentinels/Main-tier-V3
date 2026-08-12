@@ -52,6 +52,8 @@ interface ActionState {
 
 interface MentorSessionsPanelProps {
   mentorId: string
+  /** When false, attendance can still be confirmed but points messaging is suppressed. */
+  pointsIssuanceEnabled?: boolean
 }
 
 const statusBadge = (status: MentorshipSessionStatus): { label: string; scheme: string } => {
@@ -172,7 +174,10 @@ const SessionRow: React.FC<{ session: MentorshipSession; actions?: React.ReactNo
   )
 }
 
-export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({ mentorId }) => {
+export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
+  mentorId,
+  pointsIssuanceEnabled = true,
+}) => {
   const toast = useToast()
   const { byStatus, sessions, loading, error } = useMentorMentorshipSessions(mentorId)
   const [action, setAction] = useState<ActionState | null>(null)
@@ -238,9 +243,14 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({ mentor
         toast({ title: 'Request declined', status: 'info' })
       } else if (mode === 'complete') {
         const result = await completeMentorshipSession({ sessionId: session.id })
+        const awarded = pointsIssuanceEnabled && result.pointsAwarded
         toast({
-          title: result.pointsAwarded ? 'Session marked complete · points awarded' : 'Session already marked complete',
-          status: 'success',
+          title: awarded
+            ? 'Attendance confirmed · mentor meetup points issued'
+            : result.pointsAwarded
+              ? 'Attendance confirmed'
+              : 'Session marked complete (points not issued — learner needs an assigned mentor)',
+          status: awarded || result.pointsAwarded ? 'success' : 'info',
         })
       } else if (mode === 'cancel') {
         await cancelMentorshipSession({
@@ -286,7 +296,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({ mentor
           <Box>
             <Heading size="sm">Mentorship sessions</Heading>
             <Text fontSize="sm" color="text.secondary">
-              Confirm requests, mark sessions complete to award learner points.
+              Learner requests → you accept. Confirm attendance to issue mentor meetup points when
+              the learner has a mentor assigned.
             </Text>
           </Box>
           <HStack spacing={3}>

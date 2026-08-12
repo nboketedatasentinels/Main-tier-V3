@@ -123,6 +123,8 @@ export interface UserProfile {
   fcmTokens?: string[]
   personalityType?: string
   coreValues?: string[]
+  /** Age band from demographics (often stored in profiles.data). */
+  ageRange?: string
   /** Collected alongside the personality profile; lives in the `data` jsonb. */
   country?: string
   region?: string

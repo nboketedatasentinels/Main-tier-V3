@@ -38,6 +38,10 @@ const mapProfileToMemberOption = (
  */
 const mapProfileRowToLearner = (row: Record<string, unknown>): UserProfile => {
   const data = (row.data as Record<string, unknown>) || {}
+  const coreValuesRaw = row.core_values ?? data.coreValues
+  const coreValues = Array.isArray(coreValuesRaw)
+    ? coreValuesRaw.filter((v): v is string => typeof v === 'string')
+    : undefined
   return {
     ...data,
     id: row.id,
@@ -51,10 +55,15 @@ const mapProfileRowToLearner = (row: Record<string, unknown>): UserProfile => {
     companyId: row.company_id ?? data.companyId ?? null,
     companyCode: row.company_code ?? data.companyCode ?? null,
     journeyType: row.journey_type ?? data.journeyType,
+    currentWeek: (row.current_week as number) ?? data.currentWeek,
+    journeyStatus: (row.journey_status as string) ?? data.journeyStatus,
     mentorId: row.mentor_id ?? data.mentorId ?? null,
     ambassadorId: row.ambassador_id ?? data.ambassadorId ?? null,
     lineManagerId: row.line_manager_id ?? data.lineManagerId ?? null,
     totalPoints: (row.total_points as number) ?? data.totalPoints ?? 0,
+    personalityType: (row.personality_type as string) ?? data.personalityType,
+    coreValues,
+    ageRange: (row.age_range as string) ?? data.ageRange,
     createdAt: row.created_at ?? data.createdAt,
     updatedAt: row.updated_at ?? data.updatedAt,
   } as unknown as UserProfile
@@ -194,6 +203,21 @@ export const assignLineManagerToLearner = async (
 export const fetchAssignedCoachees = async (coachId: string): Promise<UserProfile[]> => {
   if (!coachId) return []
   const { data, error } = await supabase.from('profiles').select('*').eq('ambassador_id', coachId)
+
+  if (error) throw new Error(error.message)
+
+  return (data ?? [])
+    .map((row) => mapProfileRowToLearner(row as Record<string, unknown>))
+    .filter((learner) => {
+      const role = normalizeRole(learner.role)
+      return role === 'free_user' || role === 'paid_member'
+    })
+}
+
+/** Learners assigned to a mentor (profiles.mentor_id). Supabase source of truth. */
+export const fetchAssignedMenteesForMentor = async (mentorId: string): Promise<UserProfile[]> => {
+  if (!mentorId) return []
+  const { data, error } = await supabase.from('profiles').select('*').eq('mentor_id', mentorId)
 
   if (error) throw new Error(error.message)
 
