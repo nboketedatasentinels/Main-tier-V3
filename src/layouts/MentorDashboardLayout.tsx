@@ -112,7 +112,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   const shortName = useMemo(() => mentorName?.split(' ')[0] || 'Mentor', [mentorName])
 
   return (
-    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="brand.accent" overflow="hidden">
+    <Flex minH={APP_VIEWPORT_HEIGHT} h={APP_VIEWPORT_HEIGHT} bg="white" overflow="hidden">
       <Box
         as="nav"
         w={sidebarWidth}
