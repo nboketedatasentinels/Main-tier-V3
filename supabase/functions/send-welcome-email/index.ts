@@ -26,6 +26,8 @@ const APP_NAME = "Transformation Leader";
 // Access code partners enter on the sign-up page (kept in sync with
 // src/pages/partner/PartnerSignupPage.tsx). Shown only in the partner email.
 const PARTNER_ACCESS_CODE = "t4l.ds.Admin.2025#";
+// Kept in sync with src/pages/mentor/MentorSignupPage.tsx
+const MENTOR_ACCESS_CODE = "t4l.ds.Mentor.2025#";
 const PLUM = "#27062e"; // header band background behind the banner image
 // Monochrome palette for the email body (header banner stays full-colour).
 const INK = "#111827"; // near-black - headings, code, button
@@ -44,7 +46,7 @@ type WelcomeRole = "partner" | "mentor" | "ambassador" | "user";
 // bounce them to login); mentors and ambassadors open the main app.
 const CTA_LINK: Record<WelcomeRole, string> = {
   partner: "https://app.t4leader.com/partner-signup",
-  mentor: "https://app.t4leader.com/",
+  mentor: "https://app.t4leader.com/mentor-signup",
   ambassador: "https://app.t4leader.com/",
   user: "https://app.t4leader.com/signup",
 };
@@ -188,6 +190,12 @@ function buildWelcomeHtml(data: WelcomePayload): string {
           PARTNER_ACCESS_CODE,
           "Enter this code on the partner sign-up page to activate your account.",
         )
+      : data.role === "mentor"
+        ? codeCard(
+            "Your mentor access code",
+            MENTOR_ACCESS_CODE,
+            "Enter this code on the mentor sign-up page to activate your account.",
+          )
       : orgCode
         ? codeCard(
             org ? `Your ${org} company code` : "Your company code",
@@ -310,6 +318,12 @@ function buildWelcomeText(data: WelcomePayload): string {
           `Your partner access code: ${PARTNER_ACCESS_CODE}`,
           "(Enter this code on the partner sign-up page to activate your account.)",
         ]
+      : data.role === "mentor"
+        ? [
+            "",
+            `Your mentor access code: ${MENTOR_ACCESS_CODE}`,
+            "(Enter this code on the mentor sign-up page to activate your account.)",
+          ]
       : orgCode
         ? [
             "",
