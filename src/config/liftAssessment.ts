@@ -297,7 +297,7 @@ export const DIAL_CODES: string[] = Array.from(new Set(Object.values(COUNTRY_DIA
 export const CONTACT_FIELDS: ContactField[] = [
   { id: 'firstName', label: 'First name', type: 'text', placeholder: 'Jordan', required: true, half: true },
   { id: 'lastName', label: 'Last name', type: 'text', placeholder: 'Mensah', required: true, half: true },
-  { id: 'email', label: 'Work email', type: 'email', placeholder: 'you@company.com', required: true },
+  { id: 'email', label: 'Work email — where we send your assessment results', type: 'email', placeholder: 'you@company.com', required: true },
   {
     id: 'organisation',
     label: 'Organisation',

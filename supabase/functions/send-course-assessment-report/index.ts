@@ -140,7 +140,10 @@ Deno.serve(async (req) => {
     const fromEmailMatch = fromAddressRaw.match(/<([^>]+)>/);
     const fromEmail = (fromEmailMatch?.[1] || fromAddressRaw).trim();
     const transport = getTransporter();
-    const html = wrapHtml(body.organizationName, htmlBody);
+    const html =
+      /<!DOCTYPE|<html[\s>]/i.test(htmlBody)
+        ? htmlBody
+        : wrapHtml(body.organizationName, htmlBody);
     const text =
       body.textBody?.trim() ||
       htmlBody.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();

@@ -160,6 +160,21 @@ export const listCourseAssessmentsForSubjects = async (
   return (data as CourseAssessmentOrgAggregateRow[]) ?? []
 }
 
+/** Full rows including answers — required for matched Pre/Post report math. */
+export const listCourseAssessmentResponsesForSubjects = async (
+  subjectUserIds: string[],
+): Promise<CourseAssessmentResponseRow[]> => {
+  if (!subjectUserIds.length) return []
+  const { data, error } = await supabase
+    .from('course_assessment_responses')
+    .select('*')
+    .in('subject_user_id', subjectUserIds)
+    .order('submitted_at', { ascending: false })
+
+  if (error) throw error
+  return (data as CourseAssessmentResponseRow[]) ?? []
+}
+
 export const submitCourseAssessmentResponse = async (params: {
   respondentId: string
   subjectUserId: string

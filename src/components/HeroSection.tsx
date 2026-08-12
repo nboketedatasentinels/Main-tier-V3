@@ -58,7 +58,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       </p>
 
       {/* CTA */}
-      <div className="mt-10 flex flex-col items-center gap-4">
+        <div className="mt-10 flex flex-col items-center gap-4">
         <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
           {hasSecondary && (
             <button
@@ -78,6 +78,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </button>
         </div>
         <p className="text-sm text-neutral-500">{note}</p>
+        {hasSecondary && (
+          <p className="mx-auto max-w-md text-center text-xs leading-relaxed text-neutral-500">
+            About 4 minutes, then your full profile — emailed to your work address so you never lose
+            it. By continuing you agree to our Terms of Use and Privacy Policy. Your details are
+            private and used only to deliver your results.
+          </p>
+        )}
       </div>
 
       {/* Divider */}

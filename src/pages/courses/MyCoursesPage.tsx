@@ -57,7 +57,7 @@ import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import { getPointsPerCourse } from '@/config/pointsConfig'
 import { fetchAssignedLineManagerLearners } from '@/services/learnerAssignmentService'
 import {
-  buildLearnerAssessmentReportCards,
+  buildAssessmentReportWorkspace,
   type LearnerAssessmentReportCard,
 } from '@/services/courseAssessmentReportService'
 import { getDisplayName } from '@/utils/displayName'
@@ -659,7 +659,8 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       return
     }
     let cancelled = false
-    void buildLearnerAssessmentReportCards({
+    void buildAssessmentReportWorkspace({
+      organizationName: 'Your report',
       learners: [
         {
           id: userId,
@@ -668,11 +669,16 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
           journeyStatus: profile.journeyStatus ?? null,
           currentWeek: profile.currentWeek ?? null,
           journeyType: profile.journeyType ?? null,
+          personalityType: profile.personalityType ?? null,
+          coreValues: Array.isArray(profile.coreValues) ? (profile.coreValues as string[]) : [],
+          totalPoints: profile.totalPoints ?? null,
         },
       ],
+      mode: 'learner',
+      viewerLearnerId: userId,
     })
-      .then((cards) => {
-        if (!cancelled) setOwnReportCard(cards[0] ?? null)
+      .then((workspace) => {
+        if (!cancelled) setOwnReportCard(workspace.cards[0] ?? null)
       })
       .catch(() => {
         if (!cancelled) setOwnReportCard(null)

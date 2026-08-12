@@ -43,14 +43,22 @@ export const findNativeCourseAssessment = (
   )
 
   let best: CourseAssessmentDefinition | null = null
-  let bestLen = 0
+  let bestScore = -1
   for (const row of candidates) {
     for (const matcher of [row.courseKey, ...row.courseMatchers]) {
       const needle = normalize(matcher)
       if (!needle) continue
-      if ((haystack.includes(needle) || needle.includes(haystack)) && needle.length > bestLen) {
+      if (!(haystack.includes(needle) || needle.includes(haystack))) continue
+
+      const ratingCount = row.questions.filter((q) => q.type === 'rating').length
+      // Prefer standard 1–10 course scales (~5–15 items). Huge imports (e.g. 96)
+      // are instrument dumps and must not win matching.
+      const sizePenalty =
+        ratingCount === 0 ? 1000 : ratingCount > 20 ? ratingCount * 10 : ratingCount < 3 ? 50 : 0
+      const score = needle.length * 100 - sizePenalty
+      if (score > bestScore) {
         best = row
-        bestLen = needle.length
+        bestScore = score
       }
     }
   }

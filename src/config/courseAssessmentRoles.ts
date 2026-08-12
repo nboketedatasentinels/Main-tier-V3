@@ -3,7 +3,8 @@
  *
  * Learner: Pre before course unlock · Post after course complete
  * Line manager: Pre + Post about the learner
- * Mentor / Coach / Partner: Post only (Partner near end of journey)
+ * Mentor / Coach: Post only
+ * Partner: Pre + Post (needed for matched observer growth; Post still emphasized near journey end)
  */
 import type { CourseAssessmentKind } from '@/config/nativeCourseAssessments'
 
@@ -24,7 +25,8 @@ export const COURSE_ASSESSMENT_ROLE_MATRIX: Record<
   line_manager: { pre: true, post: true, label: 'Line manager' },
   mentor: { pre: false, post: true, label: 'Mentor' },
   coach: { pre: false, post: true, label: 'Coach' },
-  partner: { pre: false, post: true, label: 'Partner' },
+  // Partner Pre enabled so matched Manager+Partner growth is computable (sample methodology).
+  partner: { pre: true, post: true, label: 'Partner' },
 }
 
 export const canRoleSubmitKind = (

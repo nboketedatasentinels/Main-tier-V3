@@ -10,10 +10,12 @@ import {
   FormLabel,
   HStack,
   Input,
+  Link,
   Select,
   SimpleGrid,
   Spinner,
   Text,
+  useDisclosure,
   VStack,
 } from '@chakra-ui/react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -34,6 +36,8 @@ import {
   type PillarKey,
 } from '@/config/liftAssessment'
 import { computeLiftResult, type ItemScores, type IntakeAnswers, type LiftResult } from '@/utils/liftScoring'
+import { TermsOfUseModal } from '@/components/modals/TermsOfUseModal'
+import { PRIVACY_STATEMENT_URL } from '@/config/app'
 
 const PLUM = '#27062e'
 const GOLD = '#eab130'
@@ -485,6 +489,8 @@ const ContactDetails: React.FC<{
 }> = ({ onSubmit, submitting }) => {
   const [values, setValues] = useState<Record<string, string>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
+  const termsModal = useDisclosure()
 
   const setField = (id: string, value: string) => {
     setValues((v) => {
@@ -540,6 +546,10 @@ const ContactDetails: React.FC<{
           next.employerEmail = 'Use your employer’s email, not your own'
         }
       }
+    }
+
+    if (!acceptedTerms) {
+      next.acceptTerms = 'Please accept the Terms of Use and Privacy Policy to continue'
     }
 
     setErrors(next)
@@ -662,6 +672,11 @@ const ContactDetails: React.FC<{
           />
         )}
         <FormErrorMessage fontSize="xs">{error}</FormErrorMessage>
+        {field.id === 'email' && !error && (
+          <FormHelperText fontSize="xs" color="gray.500">
+            This is where we send your completed LIFT assessment profile.
+          </FormHelperText>
+        )}
       </FormControl>
     )
   }
@@ -675,7 +690,7 @@ const ContactDetails: React.FC<{
       transition={{ duration: 0.4, ease: 'easeOut' }}
     >
       <VStack align="stretch" spacing={6}>
-        {/* Gold strip - sets the expectation for what's next */}
+        {/* Gold strip - first info after the countdown */}
         <Flex
           align="center"
           gap={3}
@@ -765,6 +780,69 @@ const ContactDetails: React.FC<{
               </FormControl>
             )}
           </Box>
+
+          {/* Terms — sourced from the first info after the countdown */}
+          <Box
+            borderWidth="1px"
+            borderColor={errors.acceptTerms ? 'red.300' : 'gray.200'}
+            borderRadius="xl"
+            px={4}
+            py={4}
+            bg="white"
+          >
+            <Text fontSize="sm" color="gray.600" mb={3} lineHeight="1.55">
+              About 4 minutes, then your full profile. We&apos;ll email your LIFT profile to the work
+              email you provide so you never lose it. Your details are private and used only to
+              deliver your results.
+            </Text>
+            <Checkbox
+              isChecked={acceptedTerms}
+              onChange={(e) => {
+                setAcceptedTerms(e.target.checked)
+                if (e.target.checked) {
+                  setErrors((errs) => ({ ...errs, acceptTerms: '' }))
+                }
+              }}
+              alignItems="flex-start"
+              colorScheme="purple"
+              spacing={3}
+              isInvalid={Boolean(errors.acceptTerms)}
+            >
+              <Text fontSize="sm" color={PLUM} lineHeight="short">
+                I accept the{' '}
+                <Link
+                  as="button"
+                  type="button"
+                  color={PLUM}
+                  fontWeight="bold"
+                  textDecoration="underline"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    termsModal.onOpen()
+                  }}
+                >
+                  Terms of Use
+                </Link>{' '}
+                and{' '}
+                <Link
+                  href={PRIVACY_STATEMENT_URL}
+                  isExternal
+                  color={PLUM}
+                  fontWeight="bold"
+                  textDecoration="underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Privacy Policy
+                </Link>
+              </Text>
+            </Checkbox>
+            {errors.acceptTerms && (
+              <Text mt={2} fontSize="xs" color="red.500">
+                {errors.acceptTerms}
+              </Text>
+            )}
+          </Box>
         </VStack>
 
         <Button
@@ -790,6 +868,16 @@ const ContactDetails: React.FC<{
           <Text fontSize="xs">Your details are private and used only to deliver your results.</Text>
         </Flex>
       </VStack>
+
+      <TermsOfUseModal
+        isOpen={termsModal.isOpen}
+        onClose={termsModal.onClose}
+        onAccept={() => {
+          setAcceptedTerms(true)
+          setErrors((errs) => ({ ...errs, acceptTerms: '' }))
+          termsModal.onClose()
+        }}
+      />
     </MotionBox>
   )
 }

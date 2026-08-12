@@ -1,15 +1,28 @@
 import { supabase } from '@/services/supabase'
 import {
-  listCourseAssessmentsForSubjects,
-  type CourseAssessmentOrgAggregateRow,
+  listCourseAssessmentResponsesForSubjects,
+  type CourseAssessmentResponseRow,
 } from '@/services/courseAssessmentService'
 import {
-  COURSE_ASSESSMENT_ROLE_MATRIX,
-  isPartnerPostWindowSuggested,
-  type CourseAssessmentRaterRole,
-} from '@/config/courseAssessmentRoles'
-import { getJourneyWeeks, isJourneyType } from '@/utils/journeyType'
+  computeCohortReportMath,
+  type CohortReportMath,
+  type IntegrityFlag,
+} from '@/services/courseAssessmentReportMath'
+import { isPartnerPostWindowSuggested as softWindow } from '@/config/courseAssessmentRoles'
+import { getJourneyWeeks, isJourneyType, getJourneyLabel } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
+import {
+  buildCourseAssessmentHtmlReport,
+  type ReportLearnerProfile,
+} from '@/reports/courseAssessmentHtmlReport'
+import {
+  detectIdentityDuplicates,
+  fetchEngagementSnapshots,
+  type IdentityDupeFlag,
+  type LearnerEngagementSnapshot,
+} from '@/services/courseAssessmentReportNarratives'
+import { PERSONALITY_TYPES } from '@/config/personality-data'
+import { ageRangeLabel } from '@/config/demographics'
 
 export type ReportAudienceRole = 'sponsor' | 'hr' | 'senior_mgmt' | 'line_manager' | 'other'
 
@@ -32,14 +45,23 @@ export interface LearnerAssessmentReportCard {
   totalWeeks?: number | null
   phase: OrgAssessmentPhase
   partnerPostDone: boolean
+  overallObserverGrowth: number | null
+  overallObserverPre: number | null
+  overallObserverPost: number | null
   courses: Array<{
     courseKey: string
     courseTitle: string
     preSelf: number | null
     postSelf: number | null
     delta: number | null
+    observerPre: number | null
+    observerPost: number | null
+    observerMatchedGrowth: number | null
+    bandEnd: string | null
     raterPosts: Array<{ role: string; avg: number | null }>
+    flags: IntegrityFlag[]
   }>
+  flags: IntegrityFlag[]
 }
 
 export interface CourseAssessmentReportSendRow {
@@ -57,6 +79,19 @@ export interface CourseAssessmentReportSendRow {
   sent_at: string
 }
 
+export interface BuiltAssessmentReportWorkspace {
+  cards: LearnerAssessmentReportCard[]
+  cohort: CohortReportMath
+  profiles: ReportLearnerProfile[]
+  orgPhase: OrgAssessmentPhase
+  partnerHtml: string
+  offlineFlags: IntegrityFlag[]
+  engagementByLearner: Record<string, LearnerEngagementSnapshot>
+  identityFlags: IdentityDupeFlag[]
+}
+
+// Re-export soft window helper name used by pages
+export { softWindow as isPartnerPostWindowSuggested }
 const phaseForLearner = (params: {
   journeyStatus?: string | null
   currentWeek?: number | null
@@ -66,7 +101,7 @@ const phaseForLearner = (params: {
   const jt = isJourneyType(params.journeyType) ? (params.journeyType as JourneyType) : null
   const totalWeeks = jt ? getJourneyWeeks(jt) : null
   if (
-    isPartnerPostWindowSuggested({
+    softWindow({
       journeyStatus: params.journeyStatus,
       currentWeek: params.currentWeek,
       totalWeeks,
@@ -86,74 +121,71 @@ export const resolveOrgAssessmentPhase = (
   return 'early'
 }
 
-const buildCourseCards = (
-  learnerId: string,
-  rows: CourseAssessmentOrgAggregateRow[],
-): LearnerAssessmentReportCard['courses'] => {
-  const mine = rows.filter((r) => r.subject_user_id === learnerId)
-  const byCourse = new Map<string, CourseAssessmentOrgAggregateRow[]>()
-  for (const row of mine) {
-    const list = byCourse.get(row.course_key) ?? []
-    list.push(row)
-    byCourse.set(row.course_key, list)
-  }
-
-  return Array.from(byCourse.entries()).map(([courseKey, courseRows]) => {
-    const title = courseRows[0]?.course_title || courseKey
-    const preSelf =
-      courseRows.find((r) => r.kind === 'pre' && r.audience === 'self')?.score_avg ?? null
-    const postSelf =
-      courseRows.find((r) => r.kind === 'post' && r.audience === 'self')?.score_avg ?? null
-    const raterPosts = courseRows
-      .filter((r) => r.kind === 'post' && r.audience === 'external_rater')
-      .map((r) => ({
-        role:
-          (r.rater_role && COURSE_ASSESSMENT_ROLE_MATRIX[r.rater_role as CourseAssessmentRaterRole]
-            ?.label) ||
-          r.rater_role ||
-          'Rater',
-        avg: r.score_avg,
-      }))
-    const delta =
-      typeof preSelf === 'number' && typeof postSelf === 'number'
-        ? Math.round((postSelf - preSelf) * 100) / 100
-        : null
-    return {
-      courseKey,
-      courseTitle: title,
-      preSelf,
-      postSelf,
-      delta,
-      raterPosts,
-    }
-  })
+const personalityLabel = (type?: string | null): string | null => {
+  if (!type) return null
+  const hit = PERSONALITY_TYPES.find((p) => p.type === type)
+  return hit ? hit.name : null
 }
 
-export const buildLearnerAssessmentReportCards = async (params: {
-  learners: Array<{
-    id: string
-    name: string
-    email?: string | null
-    journeyStatus?: string | null
-    currentWeek?: number | null
-    journeyType?: string | null
-  }>
-}): Promise<LearnerAssessmentReportCard[]> => {
-  const ids = params.learners.map((l) => l.id).filter(Boolean)
-  const rows = await listCourseAssessmentsForSubjects(ids)
+const toInitials = (name: string): string =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('') || '?'
 
-  return params.learners.map((learner) => {
+export interface ReportLearnerInput {
+  id: string
+  name: string
+  email?: string | null
+  journeyStatus?: string | null
+  currentWeek?: number | null
+  journeyType?: string | null
+  roleLabel?: string | null
+  ageRange?: string | null
+  personalityType?: string | null
+  coreValues?: string[]
+  totalPoints?: number | null
+}
+
+export const buildAssessmentReportWorkspace = async (params: {
+  organizationName: string
+  learners: ReportLearnerInput[]
+  mode?: 'partner' | 'learner'
+  viewerLearnerId?: string
+}): Promise<BuiltAssessmentReportWorkspace> => {
+  const ids = params.learners.map((l) => l.id).filter(Boolean)
+  const rows: CourseAssessmentResponseRow[] = await listCourseAssessmentResponsesForSubjects(ids)
+  const cohort = computeCohortReportMath({ learnerIds: ids, rows })
+  const mathById = new Map(cohort.learners.map((l) => [l.learnerId, l]))
+
+  const profiles: ReportLearnerProfile[] = params.learners.map((l) => ({
+    id: l.id,
+    name: l.name,
+    initials: toInitials(l.name),
+    email: l.email,
+    roleLabel: l.roleLabel,
+    ageRange: l.ageRange ? ageRangeLabel(l.ageRange) || l.ageRange : null,
+    personalityType: l.personalityType,
+    personalityLabel: personalityLabel(l.personalityType),
+    coreValues: l.coreValues,
+    totalPoints: l.totalPoints,
+  }))
+
+  const cards: LearnerAssessmentReportCard[] = params.learners.map((learner) => {
     const jt = isJourneyType(learner.journeyType)
       ? (learner.journeyType as JourneyType)
       : null
     const phase = phaseForLearner(learner)
-    const courses = buildCourseCards(learner.id, rows)
+    const math = mathById.get(learner.id)
     const partnerPostDone = rows.some(
       (r) =>
         r.subject_user_id === learner.id &&
         r.kind === 'post' &&
         r.rater_role === 'partner',
     )
+
     return {
       learnerId: learner.id,
       learnerName: learner.name,
@@ -163,43 +195,124 @@ export const buildLearnerAssessmentReportCards = async (params: {
       totalWeeks: jt ? getJourneyWeeks(jt) : null,
       phase,
       partnerPostDone,
-      courses,
+      overallObserverGrowth: math?.overallObserverGrowth ?? null,
+      overallObserverPre: math?.overallObserverPre ?? null,
+      overallObserverPost: math?.overallObserverPost ?? null,
+      courses: (math?.courses ?? []).map((c) => ({
+        courseKey: c.courseKey,
+        courseTitle: c.courseTitle,
+        preSelf: c.selfPre,
+        postSelf: c.selfPost,
+        delta: c.selfMatchedGrowth,
+        observerPre: c.observerPre,
+        observerPost: c.observerPost,
+        observerMatchedGrowth: c.observerMatchedGrowth,
+        bandEnd: c.bandEnd,
+        raterPosts: c.raters
+          .filter((r) => r.raterRole !== 'learner')
+          .map((r) => ({ role: r.roleLabel, avg: r.postAvg })),
+        flags: c.flags,
+      })),
+      flags: math?.flags ?? [],
     }
   })
+
+  const orgPhase = resolveOrgAssessmentPhase(cards.map((c) => c.phase))
+  const journeyTypes = params.learners
+    .map((l) => l.journeyType)
+    .filter((t): t is string => Boolean(t))
+  const primaryJourney = journeyTypes[0]
+  const journeyLabel =
+    primaryJourney && isJourneyType(primaryJourney)
+      ? getJourneyLabel(primaryJourney)
+      : primaryJourney || 'Journey'
+
+  const engagementByLearner = await fetchEngagementSnapshots({
+    learners: params.learners.map((l) => ({
+      id: l.id,
+      totalPoints: l.totalPoints,
+      journeyType: l.journeyType,
+    })),
+  })
+
+  const identityFlags = detectIdentityDuplicates(
+    params.learners.map((l) => ({ id: l.id, name: l.name })),
+  )
+
+  const identityOffline: IntegrityFlag[] = identityFlags.map((f) => ({
+    code: 'offline_required',
+    severity: 'blocker',
+    message: f.message,
+    offline: true,
+  }))
+
+  const { html: partnerHtml } = buildCourseAssessmentHtmlReport({
+    organizationName: params.organizationName,
+    journeyLabel,
+    mode: params.mode === 'learner' ? 'learner' : 'partner',
+    viewerLearnerId: params.viewerLearnerId,
+    profiles,
+    cohort,
+    enrolledCount: params.learners.length,
+    engagementByLearner,
+    identityFlags,
+  })
+
+  const offlineFlags = [
+    ...cohort.flags.filter((f) => f.offline),
+    ...identityOffline,
+  ]
+
+  return {
+    cards,
+    cohort,
+    profiles,
+    orgPhase,
+    partnerHtml,
+    offlineFlags,
+    engagementByLearner,
+    identityFlags,
+  }
+}
+
+/** @deprecated Prefer buildAssessmentReportWorkspace — kept for simple card lists */
+export const buildLearnerAssessmentReportCards = async (params: {
+  learners: ReportLearnerInput[]
+  organizationName?: string
+}): Promise<LearnerAssessmentReportCard[]> => {
+  const workspace = await buildAssessmentReportWorkspace({
+    organizationName: params.organizationName || 'Organization',
+    learners: params.learners,
+  })
+  return workspace.cards
 }
 
 export const buildOrgReportHtml = (params: {
   organizationName: string
   cards: LearnerAssessmentReportCard[]
+  cohort?: CohortReportMath
+  profiles?: ReportLearnerProfile[]
 }): { html: string; text: string; preview: string } => {
-  const lines: string[] = []
-  lines.push(`<p><strong>${params.organizationName}</strong> — combined Pre/Post course assessment report</p>`)
-  lines.push(`<p>${params.cards.length} learner(s). Generated ${new Date().toLocaleString()}.</p>`)
-
-  for (const card of params.cards) {
-    lines.push(`<h3 style="margin:20px 0 8px">${card.learnerName}</h3>`)
-    if (!card.courses.length) {
-      lines.push(`<p style="color:#6b7280">No assessment submissions yet.</p>`)
-      continue
-    }
-    lines.push(
-      `<table style="width:100%;border-collapse:collapse;font-size:13px" border="1" cellpadding="6">
-        <thead><tr style="background:#f8fafc"><th align="left">Course</th><th>Pre</th><th>Post</th><th>Δ</th><th align="left">Raters (Post)</th></tr></thead><tbody>`,
-    )
-    for (const course of card.courses) {
-      const raters =
-        course.raterPosts.map((r) => `${r.role}: ${r.avg ?? '—'}`).join('; ') || '—'
-      lines.push(
-        `<tr><td>${course.courseTitle}</td><td align="center">${course.preSelf ?? '—'}</td><td align="center">${course.postSelf ?? '—'}</td><td align="center">${course.delta ?? '—'}</td><td>${raters}</td></tr>`,
-      )
-    }
-    lines.push(`</tbody></table>`)
+  if (params.cohort && params.profiles) {
+    return buildCourseAssessmentHtmlReport({
+      organizationName: params.organizationName,
+      mode: 'partner',
+      profiles: params.profiles,
+      cohort: params.cohort,
+      enrolledCount: params.profiles.length,
+    })
   }
-
+  // Fallback minimal table if cohort not supplied
+  const lines = [
+    `<p><strong>${params.organizationName}</strong> — course assessment report</p>`,
+    ...params.cards.map((card) => {
+      const growth = card.overallObserverGrowth
+      return `<h3>${card.learnerName}</h3><p>Observer growth: ${growth ?? '—'}</p>`
+    }),
+  ]
   const html = lines.join('\n')
   const text = html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  const preview = text.slice(0, 280)
-  return { html, text, preview }
+  return { html, text, preview: text.slice(0, 280) }
 }
 
 export const listReportSendLog = async (
@@ -221,7 +334,11 @@ export const emailOrgAssessmentReport = async (params: {
   organizationName: string
   sentBy: string
   recipients: Array<{ email: string; role: ReportAudienceRole }>
-  cards: LearnerAssessmentReportCard[]
+  html: string
+  text?: string
+  learnerCount: number
+  learnerIds: string[]
+  offlineFlags?: IntegrityFlag[]
 }): Promise<{ success: boolean; status: 'sent' | 'partial' | 'failed'; error?: string }> => {
   const recipients = params.recipients
     .map((r) => ({ email: r.email.trim().toLowerCase(), role: r.role }))
@@ -231,11 +348,11 @@ export const emailOrgAssessmentReport = async (params: {
     return { success: false, status: 'failed', error: 'Add at least one recipient email' }
   }
 
-  const { html, text, preview } = buildOrgReportHtml({
-    organizationName: params.organizationName,
-    cards: params.cards,
-  })
-  const subject = `${params.organizationName} — Course assessment report`
+  const text =
+    params.text ||
+    params.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const preview = text.slice(0, 280)
+  const subject = `${params.organizationName} — Course assessment performance report`
 
   let status: 'sent' | 'partial' | 'failed' = 'failed'
   let errorMessage: string | null = null
@@ -244,13 +361,12 @@ export const emailOrgAssessmentReport = async (params: {
     const { data, error } = await supabase.functions.invoke<{
       success?: boolean
       partial?: boolean
-      failed?: number
     }>('send-course-assessment-report', {
       body: {
         recipients,
         subject,
         organizationName: params.organizationName,
-        htmlBody: html,
+        htmlBody: params.html,
         textBody: text,
       },
     })
@@ -258,9 +374,7 @@ export const emailOrgAssessmentReport = async (params: {
     if (data?.success) status = 'sent'
     else if (data?.partial) status = 'partial'
     else status = 'failed'
-    if (status !== 'sent') {
-      errorMessage = 'One or more emails failed to send'
-    }
+    if (status !== 'sent') errorMessage = 'One or more emails failed to send'
   } catch (err) {
     status = 'failed'
     errorMessage = err instanceof Error ? err.message : String(err)
@@ -275,10 +389,11 @@ export const emailOrgAssessmentReport = async (params: {
     subject,
     body_preview: preview,
     report_snapshot: {
-      learnerCount: params.cards.length,
-      learnerIds: params.cards.map((c) => c.learnerId),
+      learnerCount: params.learnerCount,
+      learnerIds: params.learnerIds,
+      offlineFlags: params.offlineFlags ?? [],
     },
-    learner_count: params.cards.length,
+    learner_count: params.learnerCount,
     status,
     error_message: errorMessage,
     sent_at: new Date().toISOString(),

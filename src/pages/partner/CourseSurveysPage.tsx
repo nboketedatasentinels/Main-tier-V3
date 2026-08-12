@@ -35,15 +35,15 @@ import { useLearnerOverview } from '@/hooks/useLearnerOverview'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import { CourseAssessmentReportCardView } from '@/components/assessments/CourseAssessmentReportCardView'
 import {
-  buildLearnerAssessmentReportCards,
+  buildAssessmentReportWorkspace,
   emailOrgAssessmentReport,
   listReportSendLog,
   REPORT_AUDIENCE_OPTIONS,
-  resolveOrgAssessmentPhase,
   type CourseAssessmentReportSendRow,
   type LearnerAssessmentReportCard,
   type ReportAudienceRole,
 } from '@/services/courseAssessmentReportService'
+import type { IntegrityFlag } from '@/services/courseAssessmentReportMath'
 import { getDisplayName } from '@/utils/displayName'
 import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
 
@@ -66,6 +66,9 @@ const CourseSurveysPage: React.FC = () => {
   const [mode, setMode] = useState<PageMode>('workspace')
   const [rateLearnerId, setRateLearnerId] = useState<string | null>(null)
   const [cards, setCards] = useState<LearnerAssessmentReportCard[]>([])
+  const [partnerHtml, setPartnerHtml] = useState('')
+  const [offlineFlags, setOfflineFlags] = useState<IntegrityFlag[]>([])
+  const [orgPhase, setOrgPhase] = useState<'early' | 'near_end' | 'completed'>('early')
   const [cardsLoading, setCardsLoading] = useState(false)
   const [sendLog, setSendLog] = useState<CourseAssessmentReportSendRow[]>([])
   const [sending, setSending] = useState(false)
@@ -108,6 +111,19 @@ const CourseSurveysPage: React.FC = () => {
         journeyStatus: row.learner.journeyStatus ?? null,
         currentWeek: row.learner.currentWeek ?? null,
         journeyType: row.learner.journeyType ?? null,
+        roleLabel:
+          typeof row.learner.transformationTier === 'string'
+            ? row.learner.transformationTier
+            : null,
+        ageRange:
+          (row.learner as { ageRange?: string }).ageRange ??
+          (row.learner as { age_range?: string }).age_range ??
+          null,
+        personalityType: row.learner.personalityType ?? null,
+        coreValues: Array.isArray(row.learner.coreValues)
+          ? (row.learner.coreValues as string[])
+          : [],
+        totalPoints: row.learner.totalPoints ?? null,
       })),
     [learnerRows],
   )
@@ -115,16 +131,26 @@ const CourseSurveysPage: React.FC = () => {
   const refresh = useCallback(async () => {
     if (!selectedOrgId || !learnerInputs.length) {
       setCards([])
+      setPartnerHtml('')
+      setOfflineFlags([])
+      setOrgPhase('early')
       setSendLog([])
       return
     }
     setCardsLoading(true)
     try {
-      const [nextCards, log] = await Promise.all([
-        buildLearnerAssessmentReportCards({ learners: learnerInputs }),
+      const [workspace, log] = await Promise.all([
+        buildAssessmentReportWorkspace({
+          organizationName: orgName,
+          learners: learnerInputs,
+          mode: 'partner',
+        }),
         listReportSendLog(selectedOrgId),
       ])
-      setCards(nextCards)
+      setCards(workspace.cards)
+      setPartnerHtml(workspace.partnerHtml)
+      setOfflineFlags(workspace.offlineFlags)
+      setOrgPhase(workspace.orgPhase)
       setSendLog(log)
     } catch (err) {
       console.error('[CourseSurveysPage] refresh failed', err)
@@ -132,16 +158,11 @@ const CourseSurveysPage: React.FC = () => {
     } finally {
       setCardsLoading(false)
     }
-  }, [selectedOrgId, learnerInputs, toast])
+  }, [selectedOrgId, learnerInputs, orgName, toast])
 
   useEffect(() => {
     void refresh()
   }, [refresh])
-
-  const orgPhase = useMemo(
-    () => resolveOrgAssessmentPhase(cards.map((c) => c.phase)),
-    [cards],
-  )
 
   const nearEndCards = useMemo(
     () => cards.filter((c) => c.phase === 'near_end' || c.phase === 'completed'),
@@ -157,6 +178,10 @@ const CourseSurveysPage: React.FC = () => {
 
   const handleSendReport = async () => {
     if (!profile?.id || !selectedOrgId) return
+    if (!partnerHtml) {
+      toast({ status: 'warning', title: 'Report not ready yet' })
+      return
+    }
     const recipients = recipientRoles
       .map((role) => ({
         role,
@@ -180,7 +205,10 @@ const CourseSurveysPage: React.FC = () => {
         organizationName: orgName,
         sentBy: profile.id,
         recipients,
-        cards,
+        html: partnerHtml,
+        learnerCount: cards.length,
+        learnerIds: cards.map((c) => c.learnerId),
+        offlineFlags,
       })
       if (result.status === 'sent') {
         toast({ status: 'success', title: 'Report emailed', duration: 3000 })
@@ -226,8 +254,9 @@ const CourseSurveysPage: React.FC = () => {
               Course assessments
             </Heading>
             <Text color="gray.600" fontSize="sm" mt={1}>
-              Per learner × per course. Partners complete Post near journey end; final org reports
-              after completion. Learners only see their own report card.
+              Per learner × per course. Partners submit Pre and Post (Post emphasized near journey
+              end) so matched observer growth is computable. Final org reports after completion.
+              Learners only see their own report card.
             </Text>
           </Box>
           {selectedOrgId && (
@@ -280,7 +309,6 @@ const CourseSurveysPage: React.FC = () => {
                   journeyStatus: rateTarget.journeyStatus,
                 },
               ]}
-              forcedKind="post"
               onSubmitted={() => {
                 void refresh()
               }}
@@ -394,15 +422,54 @@ const CourseSurveysPage: React.FC = () => {
                     bg="white"
                     p={{ base: 4, md: 5 }}
                   >
-                    <HStack spacing={3} mb={4}>
-                      <Icon as={BarChart3} boxSize={5} color="gray.700" />
-                      <Box>
-                        <Heading size="sm">Final org report</Heading>
-                        <Text fontSize="sm" color="gray.600">
-                          Combined Pre/Post (+ rater views) for everyone in the organization
-                        </Text>
-                      </Box>
+                    <HStack spacing={3} mb={4} justify="space-between" align="flex-start" flexWrap="wrap">
+                      <HStack spacing={3} align="flex-start">
+                        <Icon as={BarChart3} boxSize={5} color="gray.700" mt={1} />
+                        <Box>
+                          <Heading size="sm">Final org report</Heading>
+                          <Text fontSize="sm" color="gray.600">
+                            Matched observer Pre→Post growth (Manager/Partner). Self is separate.
+                            Document includes methodology & integrity rules.
+                          </Text>
+                        </Box>
+                      </HStack>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        borderRadius="lg"
+                        onClick={() => {
+                          if (!partnerHtml) return
+                          const w = window.open('', '_blank', 'noopener,noreferrer')
+                          if (w) {
+                            w.document.write(partnerHtml)
+                            w.document.close()
+                          }
+                        }}
+                        isDisabled={!partnerHtml}
+                      >
+                        Open full report
+                      </Button>
                     </HStack>
+
+                    {offlineFlags.length > 0 && (
+                      <Box
+                        mb={4}
+                        p={3}
+                        bg="orange.50"
+                        borderWidth="1px"
+                        borderColor="orange.200"
+                        borderRadius="lg"
+                      >
+                        <Text fontSize="sm" fontWeight="semibold" color="orange.800" mb={1}>
+                          Offline review flagged — numbers must stay right
+                        </Text>
+                        {offlineFlags.map((f) => (
+                          <Text key={`${f.code}-${f.message}`} fontSize="xs" color="orange.700">
+                            • {f.message}
+                          </Text>
+                        ))}
+                      </Box>
+                    )}
 
                     <Stack spacing={4}>
                       {cards.map((card) => (
@@ -420,8 +487,8 @@ const CourseSurveysPage: React.FC = () => {
                         <Heading size="xs">Email combined report</Heading>
                       </HStack>
                       <Text fontSize="sm" color="gray.600" mb={3}>
-                        Send to sponsor / HR / senior management / line manager. A send log is kept
-                        for this organization.
+                        Emails the full performance document (same structure as the sample: exec
+                        summary, per-person pages, methodology). Send log kept per org.
                       </Text>
 
                       <CheckboxGroup
