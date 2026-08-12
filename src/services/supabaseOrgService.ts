@@ -83,8 +83,9 @@ export const lookupEmailRole = async (email: string): Promise<EmailRoleLookup> =
 }
 
 /**
- * Throws when `email` is already tied to a different role than `intendedRole`.
- * Same-role reuse (e.g. partner on another org, user on another org) is allowed.
+ * Throws when `email` is already tied to a different *privileged* role than
+ * `intendedRole` (partner ↔ mentor ↔ coach ↔ admin). Learner/user emails may be
+ * promoted into a leadership role. Same-role reuse across orgs is allowed.
  */
 export const assertEmailAvailableForRole = async (
   email: string,
@@ -99,6 +100,10 @@ export const assertEmailAvailableForRole = async (
   const currentBucket = roleConflictBucket(existing.role)
   const intendedBucket = roleConflictBucket(intendedRole)
   if (currentBucket === intendedBucket) return
+
+  const privileged = new Set(['partner', 'mentor', 'ambassador', 'super_admin'])
+  // Learner / unpaid → mentor|partner|coach is an allowed promotion path.
+  if (currentBucket === 'user' && privileged.has(intendedBucket)) return
 
   throw new Error(
     `${normalized} is already assigned as a ${formatRoleConflictLabel(existing.role)}. ` +
@@ -798,6 +803,7 @@ export const assignLeadershipToOrg = async (
   const { error } = await supabase
     .from('profiles')
     .update({
+      role,
       organization_id: orgId,
       company_id: orgId,
       company_code: org?.code ?? null,

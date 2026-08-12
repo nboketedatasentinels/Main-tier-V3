@@ -41,9 +41,8 @@ const HEADER_IMAGE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAtgAAACYCAYAAADeFJ5AAAAMP2l
 
 type WelcomeRole = "partner" | "mentor" | "ambassador" | "user";
 
-// Role-specific CTA destination. Partners and members land on their sign-up
-// flow (they are emailed before an account exists, so a dashboard link would
-// bounce them to login); mentors and ambassadors open the main app.
+// Role-specific CTA destination. Partners and mentors are emailed before an
+// account may exist, so CTAs land on their dedicated sign-up pages.
 const CTA_LINK: Record<WelcomeRole, string> = {
   partner: "https://app.t4leader.com/partner-signup",
   mentor: "https://app.t4leader.com/mentor-signup",
@@ -111,7 +110,7 @@ const ROLE_COPY: Record<WelcomeRole, RoleCopy> = {
       "Review progress and award points for meaningful work",
       "Encourage momentum through every two-week window",
     ],
-    cta: "Open Mentor Dashboard",
+    cta: "Create your mentor account",
   },
   ambassador: {
     label: "Ambassador",
