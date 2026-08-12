@@ -1,5 +1,5 @@
 /**
- * Mentor coaching insights — rule/template based, clearly labeled AI-generated.
+ * Mentor coaching insights: rule/template based, clearly labeled AI-generated.
  * Not a live LLM call; copy is deterministic from personality + values + journey.
  */
 import {
@@ -70,7 +70,7 @@ const personalityGrowthHints: Partial<Record<PersonalityType, string[]>> = {
   INTJ: ['Invite more stakeholder dialogue before locking the plan'],
   INTP: ['Translate insight into a visible next action with a deadline'],
   ENTJ: ['Slow down to hear quieter voices before deciding'],
-  ENTP: ['Close loops — pick one idea and finish it'],
+  ENTP: ['Close loops: pick one idea and finish it'],
   INFJ: ['Protect energy; not every tension needs absorbing'],
   INFP: ['Name a concrete experiment when ideals feel distant'],
   ENFJ: ['Avoid over-owning others’ development outcomes'],
@@ -156,7 +156,7 @@ export const buildAiInference = (input: MentorMenteeInsightInput): AiInferenceBl
     )
   } else {
     lines.push(
-      `${input.name}'s coaching style is still forming — lead with curiosity about how they make decisions under pressure.`,
+      `${input.name}'s coaching style is still forming. Lead with curiosity about how they make decisions under pressure.`,
     )
   }
   lines.push(
@@ -168,7 +168,7 @@ export const buildAiInference = (input: MentorMenteeInsightInput): AiInferenceBl
     )
   } else {
     lines.push(
-      `Close each session with one observable commitment and a date — that converts insight into journey points and real behavior.`,
+      `Close each session with one observable commitment and a date. That converts insight into journey points and real behavior.`,
     )
   }
 
@@ -189,7 +189,7 @@ const sessionBlueprints = [
       'Where they feel stuck this fortnight',
       'Preferred feedback style',
     ],
-    tip: 'Co-create 1–2 mentorship goals the learner owns in writing.',
+    tip: 'Co-create 1-2 mentorship goals the learner owns in writing.',
   },
   {
     title: 'Practice & stretch',
@@ -255,5 +255,5 @@ export const mentoringTipsLibrary = [
   'Ask for a concrete story (“tell me about Tuesday”) instead of abstract self-ratings.',
   'Mirror one strength you observed, then ask what support would make the stretch safer.',
   'End every session with a written commitment the learner can paste into their checklist.',
-  'If values and behavior diverge, explore the conflict gently — that is often the real work.',
+  'If values and behavior diverge, explore the conflict gently. That is often the real work.',
 ]

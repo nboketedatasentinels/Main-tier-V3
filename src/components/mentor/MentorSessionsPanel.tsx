@@ -249,7 +249,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             ? 'Attendance confirmed · mentor meetup points issued'
             : result.pointsAwarded
               ? 'Attendance confirmed'
-              : 'Session marked complete (points not issued — learner needs an assigned mentor)',
+              : 'Session marked complete (points not issued; learner needs an assigned mentor)',
           status: awarded || result.pointsAwarded ? 'success' : 'info',
         })
       } else if (mode === 'cancel') {

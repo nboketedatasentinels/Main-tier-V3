@@ -183,7 +183,7 @@ const MenteeProfilePanel: React.FC<{ mentee: UserProfile }> = ({ mentee }) => {
             </Wrap>
           ) : (
             <Text mt={2} fontSize="sm" color="gray.500">
-              Values not captured yet — ask them to complete the Personal Values activity.
+              Values not captured yet. Ask them to complete the Personal Values activity.
             </Text>
           )}
         </Box>
@@ -389,7 +389,7 @@ export const MentorDashboard: React.FC = () => {
                 Guide your mentees with clarity.
               </Text>
               <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
-                Partner-grade view of who you mentor — values, personality, meeting flow, coaching tips,
+                Partner-grade view of who you mentor: values, personality, meeting flow, coaching tips,
                 and end-of-course post assessments. Learners only ever see their own side.
               </Text>
               <HStack mt={6} spacing={3} flexWrap="wrap">
@@ -588,7 +588,7 @@ export const MentorDashboard: React.FC = () => {
             ) : (
               <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
                 <Text fontSize="sm" color="gray.600">
-                  Assign mentees first — post assessments appear here for each learner on your roster.
+                  Assign mentees first. Post assessments appear here for each learner on your roster.
                 </Text>
               </Box>
             )}
