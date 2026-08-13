@@ -43,6 +43,7 @@ import {
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { AssignedCoursesCarousel } from '@/components/journeys/weeklyGlance/AssignedCoursesCarousel'
+import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
 import { useAssignedCourses, type AssignedCourse } from '@/hooks/useAssignedCourses'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
@@ -329,6 +330,20 @@ export const WeeklyGlancePage = () => {
   } = useAssignedCourses()
   const { completionsByKey } = useUserCourseCompletions(profile?.id)
   const { requestOpenCourse, surveyModal } = useCourseOpenGate()
+
+  const orgCourseTitles = useMemo(() => {
+    const titles: string[] = []
+    const seen = new Set<string>()
+    for (const course of assignedCourses) {
+      const title = course.title?.trim()
+      if (!title) continue
+      const key = title.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      titles.push(title)
+    }
+    return titles
+  }, [assignedCourses])
 
   // Course a learner tried to open before finishing their personality profile,
   // so we can offer it back to them the moment they finish.
@@ -1158,6 +1173,47 @@ export const WeeklyGlancePage = () => {
             </Stack>
           )}
         </Flex>
+
+        {profile?.id && hasCourseOrganization && orgCourseTitles.length > 0 ? (
+          <Box
+            bg="white"
+            borderRadius="xl"
+            border="1px solid"
+            borderColor="gray.200"
+            p={{ base: 4, md: 6 }}
+          >
+            <Box mb={5}>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+                color="gray.500"
+              >
+                Course assessments
+              </Text>
+              <Heading size="sm" mt={1} color="gray.900">
+                Pre and post for your programme
+              </Heading>
+              <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
+                Complete Pre before each course and Post when you finish. Courses follow your
+                organisation programme ({orgCourseTitles.join(', ')}).
+              </Text>
+            </Box>
+            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+              <SelfCourseAssessment
+                userId={profile.id}
+                forcedKind="pre"
+                allowedCourseTitles={orgCourseTitles}
+              />
+              <SelfCourseAssessment
+                userId={profile.id}
+                forcedKind="post"
+                allowedCourseTitles={orgCourseTitles}
+              />
+            </SimpleGrid>
+          </Box>
+        ) : null}
 
         {shouldShowBuildVillageCard && (
           <Box

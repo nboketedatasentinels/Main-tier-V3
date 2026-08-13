@@ -41,9 +41,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
+import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { getLeaderboardContextLabels, useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
+import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
+import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { canViewerSeeCandidateOnLeaderboard } from '@/utils/leaderboardPrivacy'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
@@ -106,6 +109,23 @@ export const PaidMemberDashboard: React.FC = () => {
   const badgesState = useUserBadges()
   const userBadges = badgesState?.userBadges ?? []
   const badgeCount = userBadges.length
+
+  const organizationId = profile?.organizationId || profile?.companyId || null
+  const { program: orgProgram } = useOrganizationProgramCourses(organizationId)
+  const orgCourseTitles = useMemo(() => {
+    const ids = orgProgram?.orderedCourseIds ?? []
+    const titles: string[] = []
+    const seen = new Set<string>()
+    for (const id of ids) {
+      const title = getCatalogueCourseById(id)?.title?.trim()
+      if (!title) continue
+      const key = title.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      titles.push(title)
+    }
+    return titles
+  }, [orgProgram])
 
   const leaderboardContext = useLeaderboardContext(profile)
   const leaderboardLabels = useMemo(() => getLeaderboardContextLabels(leaderboardContext), [leaderboardContext])
@@ -247,6 +267,63 @@ export const PaidMemberDashboard: React.FC = () => {
         </HStack>
       </Flex>
 
+      {profile?.id && organizationId ? (
+        <Box
+          borderRadius="xl"
+          border="1px solid"
+          borderColor="gray.200"
+          bg="white"
+          p={{ base: 4, md: 6 }}
+        >
+          <Flex
+            justify="space-between"
+            align={{ base: 'flex-start', md: 'center' }}
+            gap={4}
+            mb={5}
+            flexWrap="wrap"
+          >
+            <Box>
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+                color="gray.500"
+              >
+                Course assessments
+              </Text>
+              <Text mt={1} fontSize="xl" fontWeight="700" color="gray.900">
+                Pre and post for your programme
+              </Text>
+              <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
+                {orgCourseTitles.length
+                  ? `Scoped to your organisation courses: ${orgCourseTitles.join(', ')}.`
+                  : 'Complete Pre before each course and Post when you finish.'}
+              </Text>
+            </Box>
+            <Button
+              size="sm"
+              variant="outline"
+              borderColor="gray.300"
+              onClick={() => navigate('/app/weekly-glance')}
+            >
+              Open my courses
+            </Button>
+          </Flex>
+          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+            <SelfCourseAssessment
+              userId={profile.id}
+              forcedKind="pre"
+              allowedCourseTitles={orgCourseTitles}
+            />
+            <SelfCourseAssessment
+              userId={profile.id}
+              forcedKind="post"
+              allowedCourseTitles={orgCourseTitles}
+            />
+          </SimpleGrid>
+        </Box>
+      ) : null}
       <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>
         <Card bg="brand.royalPurple">
           <CardBody>

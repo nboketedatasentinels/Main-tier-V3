@@ -1,4 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/services/supabase', () => ({
+  supabase: {
+    rpc: vi.fn(),
+    from: vi.fn(),
+  },
+}))
+
+vi.mock('@/services/userProfileService', () => ({
+  fetchUserProfileById: vi.fn(),
+}))
+
 import { calculatePassMark } from './completion'
 
 describe('calculatePassMark', () => {

@@ -47,12 +47,14 @@ import {
 } from '@/utils/journeyType'
 import { AssignedCourseCard, type CourseAvailability } from '@/components/courses/AssignedCourseCard'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
 import { CourseAssessmentReportCardView } from '@/components/assessments/CourseAssessmentReportCardView'
 import { PillarProgrammeComponentsSection } from '@/components/courses/PillarProgrammeComponentsSection'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { useLearnerCourseAssessmentStatus } from '@/hooks/useLearnerCourseAssessmentStatus'
 import { usePreCourseSurvey } from '@/hooks/usePreCourseSurvey'
+import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { PILLAR_PROGRAMME_COMPONENTS } from '@/config/pillarProgrammeComponents'
 import { getPointsPerCourse } from '@/config/pointsConfig'
 import { fetchAssignedLineManagerLearners } from '@/services/learnerAssignmentService'
@@ -630,6 +632,21 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const [managedLearners, setManagedLearners] = useState<{ id: string; name: string }[]>([])
   const [ownReportCard, setOwnReportCard] = useState<LearnerAssessmentReportCard | null>(null)
 
+  const orgCourseTitles = useMemo(() => {
+    const ids = program?.orderedCourseIds ?? []
+    const titles: string[] = []
+    const seen = new Set<string>()
+    for (const id of ids) {
+      const title = getCatalogueCourseById(id)?.title?.trim()
+      if (!title) continue
+      const key = title.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      titles.push(title)
+    }
+    return titles
+  }, [program])
+
   useEffect(() => {
     if (!userId) {
       setManagedLearners([])
@@ -946,12 +963,100 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
 
   return (
     <Stack spacing={8} py={2} as="section">
+      {userId ? (
+        <Stack spacing={4}>
+          <Box>
+            <Text
+              fontSize="xs"
+              fontWeight="semibold"
+              letterSpacing="0.12em"
+              textTransform="uppercase"
+              color="gray.500"
+            >
+              Start of course
+            </Text>
+            <Heading size="md" mt={1} color="gray.900">
+              Your pre-assessments
+            </Heading>
+            <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
+              {orgCourseTitles.length
+                ? `Complete Pre for each course on your organisation programme (${orgCourseTitles.join(', ')}).`
+                : 'Complete Pre for each course on your organisation programme before you begin.'}
+            </Text>
+          </Box>
+          <SelfCourseAssessment
+            userId={userId}
+            forcedKind="pre"
+            allowedCourseTitles={organizationId ? orgCourseTitles : null}
+            onSubmitted={() => refreshAssessmentStatus()}
+          />
+        </Stack>
+      ) : null}
+
+      {userId ? (
+        <Stack spacing={4}>
+          <Box>
+            <Text
+              fontSize="xs"
+              fontWeight="semibold"
+              letterSpacing="0.12em"
+              textTransform="uppercase"
+              color="gray.500"
+            >
+              End of course
+            </Text>
+            <Heading size="md" mt={1} color="gray.900">
+              Your post-assessments
+            </Heading>
+            <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
+              After you finish a course, submit the Post rating for that programme course.
+            </Text>
+          </Box>
+          <SelfCourseAssessment
+            userId={userId}
+            forcedKind="post"
+            allowedCourseTitles={organizationId ? orgCourseTitles : null}
+            onSubmitted={() => refreshAssessmentStatus()}
+          />
+        </Stack>
+      ) : null}
+
       {userId && managedLearners.length > 0 && (
-        <RateLearnerCourseAssessment
-          respondentId={userId}
-          raterRole="line_manager"
-          learners={managedLearners}
-        />
+        <Stack spacing={4}>
+          <Box>
+            <Text
+              fontSize="xs"
+              fontWeight="semibold"
+              letterSpacing="0.12em"
+              textTransform="uppercase"
+              color="gray.500"
+            >
+              Line manager
+            </Text>
+            <Heading size="md" mt={1} color="gray.900">
+              Rate your learners
+            </Heading>
+            <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
+              Pre and Post ratings about people you manage, scoped to their organisation courses.
+            </Text>
+          </Box>
+          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+            <RateLearnerCourseAssessment
+              respondentId={userId}
+              raterRole="line_manager"
+              learners={managedLearners}
+              forcedKind="pre"
+              allowedCourseTitles={organizationId ? orgCourseTitles : null}
+            />
+            <RateLearnerCourseAssessment
+              respondentId={userId}
+              raterRole="line_manager"
+              learners={managedLearners}
+              forcedKind="post"
+              allowedCourseTitles={organizationId ? orgCourseTitles : null}
+            />
+          </SimpleGrid>
+        </Stack>
       )}
       <CourseAssessmentReportCardView
         card={ownReportCard}

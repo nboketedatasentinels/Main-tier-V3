@@ -44,6 +44,11 @@ interface RateLearnerCourseAssessmentProps {
   learners: RateLearnerOption[]
   /** Optional fixed course title (skips course picker) */
   courseTitle?: string | null
+  /**
+   * When set, course picker is limited to native assessments matching these
+   * catalogue titles (e.g. the org's assigned programme courses).
+   */
+  allowedCourseTitles?: string[] | null
   /** When set, only allow this kind */
   forcedKind?: CourseAssessmentKind
   onSubmitted?: () => void
@@ -58,6 +63,7 @@ export function RateLearnerCourseAssessment({
   raterRole,
   learners,
   courseTitle,
+  allowedCourseTitles,
   forcedKind,
   onSubmitted,
 }: RateLearnerCourseAssessmentProps) {
@@ -74,6 +80,19 @@ export function RateLearnerCourseAssessment({
   const [checking, setChecking] = useState(false)
 
   const courseOptions = useMemo(() => {
+    const titles = (allowedCourseTitles ?? []).map((t) => t.trim()).filter(Boolean)
+    if (titles.length > 0) {
+      const seen = new Set<string>()
+      const matched = titles
+        .map((title) => findNativeCourseAssessment(title, kind, 'external_rater'))
+        .filter((row): row is NonNullable<typeof row> => Boolean(row))
+      return matched.filter((row) => {
+        if (seen.has(row.courseKey)) return false
+        seen.add(row.courseKey)
+        return true
+      })
+    }
+
     const rows = listNativeCourseAssessments(kind, 'external_rater')
     const seen = new Set<string>()
     return rows.filter((r) => {
@@ -81,7 +100,7 @@ export function RateLearnerCourseAssessment({
       seen.add(r.courseKey)
       return true
     })
-  }, [kind])
+  }, [kind, allowedCourseTitles])
 
   const selectedLearner = learners.find((l) => l.id === subjectId) ?? null
 
@@ -152,6 +171,21 @@ export function RateLearnerCourseAssessment({
     )
   }
 
+  const kindLabel = forcedKind === 'pre' ? 'Pre-course' : forcedKind === 'post' ? 'Post-course' : null
+  const isOrgScoped = allowedCourseTitles != null
+  const scopedToOrgCourses = isOrgScoped && allowedCourseTitles.length > 0
+  const noMatchingCourses = !courseTitle && isOrgScoped && courseOptions.length === 0
+
+  if (noMatchingCourses) {
+    return (
+      <Text fontSize="sm" color="gray.500">
+        {allowedCourseTitles.length === 0
+          ? 'This organisation has no programme courses assigned yet. Ask a partner to set monthly course assignments.'
+          : `No native ${kind === 'pre' ? 'pre' : 'post'}-course assessments match this organisation's assigned courses yet.`}
+      </Text>
+    )
+  }
+
   return (
     <Box borderWidth="1px" borderColor="gray.200" borderRadius="xl" bg="white" p={{ base: 4, md: 5 }}>
       <HStack spacing={3} mb={4}>
@@ -169,10 +203,12 @@ export function RateLearnerCourseAssessment({
         </Flex>
         <Box>
           <Heading size="sm" color="gray.900">
-            Rate a learner
+            {kindLabel ? `${kindLabel} assessment` : 'Rate a learner'}
           </Heading>
           <Text fontSize="sm" color="gray.600">
-            {matrix.label}: {matrix.pre ? 'Pre + Post' : 'Post only'} · per learner × course
+            {matrix.label}
+            {kindLabel ? ` · ${kindLabel}` : matrix.pre ? ' · Pre + Post' : ' · Post only'}
+            {scopedToOrgCourses ? ' · org programme courses' : ' · per learner × course'}
           </Text>
         </Box>
       </HStack>

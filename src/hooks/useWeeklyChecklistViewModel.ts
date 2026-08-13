@@ -18,7 +18,6 @@ import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { supabase } from '@/services/supabase'
 import { calculateActivityAvailability } from '@/utils/activityStateManager'
 import { db } from '@/services/firebase'
-import { ORG_COLLECTION } from '@/constants/organizations'
 import {
   collection,
   doc,
@@ -46,7 +45,7 @@ import {
   PendingRequestExistsError,
   submitPointsVerificationRequestAtomic,
 } from '@/services/pointsRequestSubmissionService'
-import { resolveLeadershipAvailability, type LeadershipAvailability } from '@/utils/leadershipAvailability'
+import { resolveLeadershipAvailability, fetchLeadershipAvailability, type LeadershipAvailability } from '@/utils/leadershipAvailability'
 
 export type ActivityStatus = 'not_started' | 'pending' | 'rejected' | 'completed'
 
@@ -223,33 +222,31 @@ export function useWeeklyChecklistViewModel() {
   const isWeekLocked = false
 
   useEffect(() => {
-    if (!profile?.companyId) {
-      setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
+    let cancelled = false
+
+    if (!profile?.id) {
+      setLeadershipAvailability({ hasMentor: false, hasAmbassador: false })
       return
     }
 
-    const orgRef = doc(db, ORG_COLLECTION, profile.companyId)
-    return onSnapshot(
-      orgRef,
-      (snapshot) => {
-        const organizationData = snapshot.exists() ? (snapshot.data() as Record<string, unknown>) : null
-        setLeadershipAvailability(
-          resolveLeadershipAvailability({
-            organizationData,
-            profile,
-          }),
-        )
-      },
-      () => {
-        setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
-      },
-    )
+    // Prefer profile-only resolve immediately so UI is not blank while RPC loads.
+    setLeadershipAvailability(resolveLeadershipAvailability({ profile }))
+
+    void fetchLeadershipAvailability({ profile }).then((availability) => {
+      if (!cancelled) setLeadershipAvailability(availability)
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [
-    profile?.companyId,
+    profile?.id,
     profile?.mentorId,
     profile?.mentorOverrideId,
     profile?.ambassadorId,
     profile?.ambassadorOverrideId,
+    profile?.companyId,
+    profile?.organizationId,
   ])
 
   /* ------------------------------------------------------------------ */

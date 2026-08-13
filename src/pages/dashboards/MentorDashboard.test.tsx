@@ -37,6 +37,27 @@ vi.mock('@/components/assessments/RateLearnerCourseAssessment', () => ({
   RateLearnerCourseAssessment: () => <div data-testid="rate-panel">rate</div>,
 }))
 
+vi.mock('@/hooks/useOrganizationProgramCourses', () => ({
+  useOrganizationProgramCourses: () => ({
+    program: {
+      orderedCourseIds: ['course-1'],
+      monthlyAssignments: {},
+      totalMonths: 1,
+      cohortStartDate: null,
+      courseAssignments: ['course-1'],
+      journeyType: '3M',
+      programDurationWeeks: 12,
+      pillar: null,
+    },
+    loading: false,
+    error: null,
+  }),
+}))
+
+vi.mock('@/config/courseCatalogue', () => ({
+  getCatalogueCourseById: () => ({ id: 'course-1', title: 'Leading Self' }),
+}))
+
 vi.mock('@/services/learnerAssignmentService', () => ({
   fetchAssignedMenteesForMentor: vi.fn(async () => [
     {
@@ -51,6 +72,7 @@ vi.mock('@/services/learnerAssignmentService', () => ({
       journeyType: '3M',
       currentWeek: 4,
       mentorId: 'mentor-1',
+      organizationId: 'org-1',
     },
   ]),
 }))
@@ -77,6 +99,8 @@ describe('MentorDashboard', () => {
     })
     expect(screen.getAllByText(/AI-generated/i).length).toBeGreaterThan(0)
     expect(screen.getByTestId('sessions-panel')).toBeInTheDocument()
-    expect(screen.getByTestId('rate-panel')).toBeInTheDocument()
+    expect(screen.getAllByTestId('rate-panel').length).toBe(2)
+    expect(screen.getByText(/Mentee pre-assessments/i)).toBeInTheDocument()
+    expect(screen.getByText(/Pre assessments/i)).toBeInTheDocument()
   })
 })

@@ -24,6 +24,7 @@ import {
 import {
   CalendarClock,
   ClipboardCheck,
+  ClipboardList,
   Lightbulb,
   Search,
   Sparkles,
@@ -35,6 +36,7 @@ import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { MentorSessionsPanel } from '@/components/mentor/MentorSessionsPanel'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { fetchAssignedMenteesForMentor } from '@/services/learnerAssignmentService'
 import {
   buildAiInference,
@@ -42,6 +44,7 @@ import {
   buildStrengthsWeaknessesWriteUp,
   mentoringTipsLibrary,
 } from '@/services/mentorCoachingInsights'
+import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
 import { ageRangeLabel } from '@/config/demographics'
 import { getDisplayName } from '@/utils/displayName'
@@ -49,7 +52,7 @@ import { getJourneyLabel, isJourneyType } from '@/utils/journeyType'
 import { buildMentorNavItems } from '@/utils/navigationItems'
 import type { UserProfile } from '@/types'
 
-type SectionKey = 'overview' | 'mentees' | 'schedule' | 'assessments'
+type SectionKey = 'overview' | 'mentees' | 'schedule' | 'pre-assessments' | 'assessments'
 
 const personalityLabel = (type?: string | null): string | null => {
   if (!type) return null
@@ -335,6 +338,24 @@ export const MentorDashboard: React.FC = () => {
   const tipOfDay = mentoringTipsLibrary[new Date().getDay() % mentoringTipsLibrary.length]
   const navSections = useMemo(() => buildMentorNavItems(), [])
 
+  const menteeOrgId = selected?.organizationId || selected?.companyId || null
+  const { program: orgProgram } = useOrganizationProgramCourses(menteeOrgId)
+
+  const orgCourseTitles = useMemo(() => {
+    const ids = orgProgram?.orderedCourseIds ?? []
+    const titles: string[] = []
+    const seen = new Set<string>()
+    for (const id of ids) {
+      const title = getCatalogueCourseById(id)?.title?.trim()
+      if (!title) continue
+      const key = title.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      titles.push(title)
+    }
+    return titles
+  }, [orgProgram])
+
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
     const el = document.getElementById(`mentor-${key}`)
@@ -390,7 +411,8 @@ export const MentorDashboard: React.FC = () => {
               </Text>
               <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
                 Partner-grade view of who you mentor: values, personality, meeting flow, coaching tips,
-                and end-of-course post assessments. Learners only ever see their own side.
+                and pre/post course assessments for your organisation&apos;s programme. Learners only
+                ever see their own side.
               </Text>
               <HStack mt={6} spacing={3} flexWrap="wrap">
                 <Button
@@ -418,18 +440,38 @@ export const MentorDashboard: React.FC = () => {
               </HStack>
             </Box>
             <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '220px' }}>
-              {[
-                { label: 'Mentees', value: mentees.length, icon: Users },
-                { label: 'Post assessments', value: 'End of course', icon: ClipboardCheck },
-              ].map((stat) => (
+              {(
+                [
+                  { label: 'Mentees', value: mentees.length, icon: Users, section: 'mentees' as SectionKey },
+                  {
+                    label: 'Pre assessments',
+                    value: orgCourseTitles.length
+                      ? `${orgCourseTitles.length} course${orgCourseTitles.length === 1 ? '' : 's'}`
+                      : 'Org courses',
+                    icon: ClipboardList,
+                    section: 'pre-assessments' as SectionKey,
+                  },
+                  {
+                    label: 'Post assessments',
+                    value: 'End of course',
+                    icon: ClipboardCheck,
+                    section: 'assessments' as SectionKey,
+                  },
+                ] as const
+              ).map((stat) => (
                 <Box
                   key={stat.label}
+                  as="button"
+                  textAlign="left"
                   bg="gray.50"
                   border="1px solid"
                   borderColor="gray.200"
                   borderRadius="lg"
                   px={4}
                   py={3}
+                  cursor="pointer"
+                  _hover={{ bg: 'gray.100', borderColor: 'gray.300' }}
+                  onClick={() => scrollTo(stat.section)}
                 >
                   <HStack spacing={3}>
                     <Icon as={stat.icon} color="gray.600" />
@@ -571,10 +613,44 @@ export const MentorDashboard: React.FC = () => {
           </SectionShell>
 
           <SectionShell
+            id="mentor-pre-assessments"
+            eyebrow="Start of course"
+            title="Mentee pre-assessments"
+            subtitle={
+              orgCourseTitles.length
+                ? `Rate each mentee on the courses assigned to their organisation (${orgCourseTitles.join(', ')}).`
+                : 'Rate each mentee on the courses assigned to their organisation. Select a mentee with an org programme to load courses.'
+            }
+          >
+            {profile?.id && assessmentLearners.length > 0 ? (
+              <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
+                <RateLearnerCourseAssessment
+                  respondentId={profile.id}
+                  raterRole="mentor"
+                  learners={assessmentLearners}
+                  forcedKind="pre"
+                  allowedCourseTitles={menteeOrgId ? orgCourseTitles : null}
+                />
+              </Box>
+            ) : (
+              <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                <Text fontSize="sm" color="gray.600">
+                  Assign mentees first. Pre assessments appear here for each learner on your roster,
+                  scoped to their organisation&apos;s programme courses.
+                </Text>
+              </Box>
+            )}
+          </SectionShell>
+
+          <SectionShell
             id="mentor-assessments"
             eyebrow="End of course"
             title="Mentee post-assessments"
-            subtitle="When a mentee finishes a course, complete the mentor Post rating about them. Pre is not required for mentors."
+            subtitle={
+              orgCourseTitles.length
+                ? `When a mentee finishes a course, complete the mentor Post rating. Courses follow their organisation programme (${orgCourseTitles.join(', ')}).`
+                : 'When a mentee finishes a course, complete the mentor Post rating about them.'
+            }
           >
             {profile?.id && assessmentLearners.length > 0 ? (
               <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
@@ -583,6 +659,7 @@ export const MentorDashboard: React.FC = () => {
                   raterRole="mentor"
                   learners={assessmentLearners}
                   forcedKind="post"
+                  allowedCourseTitles={menteeOrgId ? orgCourseTitles : null}
                 />
               </Box>
             ) : (

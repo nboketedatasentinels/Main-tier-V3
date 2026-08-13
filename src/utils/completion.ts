@@ -1,11 +1,8 @@
-import { doc, getDoc } from 'firebase/firestore';
 import { JOURNEY_META, JourneyType, type JourneyPointsVariantKey, getActivitiesForJourney } from '@/config/pointsConfig';
 import { getActivityFrequencyLimits } from '@/utils/activityStateManager';
 import { WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations';
 import { fetchUserProfileById } from '@/services/userProfileService';
-import { db } from '@/services/firebase';
-import { ORG_COLLECTION } from '@/constants/organizations';
-import { resolveLeadershipAvailability } from '@/utils/leadershipAvailability';
+import { fetchLeadershipAvailability } from '@/utils/leadershipAvailability';
 
 export interface PassMarkResult {
   baseThreshold: number;
@@ -176,19 +173,7 @@ export const evaluateJourneyCompletion = async (
   }
 
   const totalPoints = profile.totalPoints || 0;
-  const organizationId = profile.companyId || profile.organizationId || null;
-  let organizationData: Record<string, unknown> | null = null;
-  if (organizationId) {
-    const organizationSnapshot = await getDoc(doc(db, ORG_COLLECTION, organizationId));
-    if (organizationSnapshot.exists()) {
-      organizationData = organizationSnapshot.data() as Record<string, unknown>;
-    }
-  }
-
-  const { hasMentor, hasAmbassador } = resolveLeadershipAvailability({
-    organizationData,
-    profile,
-  });
+  const { hasMentor, hasAmbassador } = await fetchLeadershipAvailability({ profile });
 
   const passMarkResult = calculatePassMark(journeyType, hasMentor, hasAmbassador);
   const isCompleted = totalPoints >= passMarkResult.adjustedThreshold;

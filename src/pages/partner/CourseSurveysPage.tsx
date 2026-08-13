@@ -32,6 +32,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { useLearnerOverview } from '@/hooks/useLearnerOverview'
+import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import { CourseAssessmentReportCardView } from '@/components/assessments/CourseAssessmentReportCardView'
 import {
@@ -44,8 +45,10 @@ import {
   type ReportAudienceRole,
 } from '@/services/courseAssessmentReportService'
 import type { IntegrityFlag } from '@/services/courseAssessmentReportMath'
+import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { getDisplayName } from '@/utils/displayName'
 import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
+import type { CourseAssessmentKind } from '@/config/nativeCourseAssessments'
 
 type PageMode = 'workspace' | 'rate_one'
 
@@ -65,6 +68,7 @@ const CourseSurveysPage: React.FC = () => {
 
   const [mode, setMode] = useState<PageMode>('workspace')
   const [rateLearnerId, setRateLearnerId] = useState<string | null>(null)
+  const [rateForcedKind, setRateForcedKind] = useState<CourseAssessmentKind | null>(null)
   const [cards, setCards] = useState<LearnerAssessmentReportCard[]>([])
   const [partnerHtml, setPartnerHtml] = useState('')
   const [offlineFlags, setOfflineFlags] = useState<IntegrityFlag[]>([])
@@ -72,6 +76,22 @@ const CourseSurveysPage: React.FC = () => {
   const [cardsLoading, setCardsLoading] = useState(false)
   const [sendLog, setSendLog] = useState<CourseAssessmentReportSendRow[]>([])
   const [sending, setSending] = useState(false)
+
+  const { program: orgProgram } = useOrganizationProgramCourses(selectedOrgId || null)
+  const orgCourseTitles = useMemo(() => {
+    const ids = orgProgram?.orderedCourseIds ?? []
+    const titles: string[] = []
+    const seen = new Set<string>()
+    for (const id of ids) {
+      const title = getCatalogueCourseById(id)?.title?.trim()
+      if (!title) continue
+      const key = title.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      titles.push(title)
+    }
+    return titles
+  }, [orgProgram])
 
   const [recipientRoles, setRecipientRoles] = useState<ReportAudienceRole[]>([
     'sponsor',
@@ -292,6 +312,7 @@ const CourseSurveysPage: React.FC = () => {
               onClick={() => {
                 setMode('workspace')
                 setRateLearnerId(null)
+                setRateForcedKind(null)
                 void refresh()
               }}
             >
@@ -309,6 +330,8 @@ const CourseSurveysPage: React.FC = () => {
                   journeyStatus: rateTarget.journeyStatus,
                 },
               ]}
+              forcedKind={rateForcedKind ?? undefined}
+              allowedCourseTitles={selectedOrgId ? orgCourseTitles : null}
               onSubmitted={() => {
                 void refresh()
               }}
@@ -330,6 +353,37 @@ const CourseSurveysPage: React.FC = () => {
               </Box>
             ) : (
               <>
+                {profile?.id ? (
+                  <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                    <RateLearnerCourseAssessment
+                      respondentId={profile.id}
+                      raterRole="partner"
+                      learners={learnerInputs.map((l) => ({
+                        id: l.id,
+                        name: l.name,
+                        currentWeek: l.currentWeek,
+                        journeyType: l.journeyType,
+                        journeyStatus: l.journeyStatus,
+                      }))}
+                      forcedKind="pre"
+                      allowedCourseTitles={orgCourseTitles}
+                    />
+                    <RateLearnerCourseAssessment
+                      respondentId={profile.id}
+                      raterRole="partner"
+                      learners={learnerInputs.map((l) => ({
+                        id: l.id,
+                        name: l.name,
+                        currentWeek: l.currentWeek,
+                        journeyType: l.journeyType,
+                        journeyStatus: l.journeyStatus,
+                      }))}
+                      forcedKind="post"
+                      allowedCourseTitles={orgCourseTitles}
+                    />
+                  </SimpleGrid>
+                ) : null}
+
                 {orgPhase === 'early' && (
                   <Box
                     p={5}
@@ -340,11 +394,12 @@ const CourseSurveysPage: React.FC = () => {
                   >
                     <HStack spacing={3} mb={2}>
                       <Icon as={ClipboardList} boxSize={5} color="gray.700" />
-                      <Heading size="sm">Waiting for near journey end</Heading>
+                      <Heading size="sm">Pre now · Post near journey end</Heading>
                     </HStack>
                     <Text fontSize="sm" color="gray.600">
-                      Post assessments for each learner appear here when the cohort reaches the final
-                      stretch. Final org reports unlock after journey completion.
+                      Use Pre assessments above while the cohort is in progress. The Post queue below
+                      lights up in the final stretch. Final org reports unlock after journey
+                      completion.
                     </Text>
                   </Box>
                 )}
@@ -402,6 +457,7 @@ const CourseSurveysPage: React.FC = () => {
                               _hover={{ bg: '#27062e' }}
                               onClick={() => {
                                 setRateLearnerId(card.learnerId)
+                                setRateForcedKind('post')
                                 setMode('rate_one')
                               }}
                             >
