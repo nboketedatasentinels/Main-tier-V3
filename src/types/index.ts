@@ -108,6 +108,8 @@ export interface UserProfile {
   onboardingComplete?: boolean
   onboardingSkipped?: boolean
   hasSeenDashboardTour?: boolean
+  /** ISO timestamp when mentor acknowledged Mentor Guidelines (first-login modal) */
+  mentorGuidelinesAcknowledgedAt?: string
 
   // Role-Based Features
   transformationTier?: TransformationTier | string

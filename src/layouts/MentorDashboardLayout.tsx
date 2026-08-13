@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
   Box,
@@ -21,6 +21,7 @@ import {
 } from '@chakra-ui/react'
 import { LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { MentorGuidelinesModal } from '@/components/mentor/MentorGuidelinesModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
 
@@ -89,10 +90,30 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   avatarUrl,
   navSections,
 }) => {
-  const { signOut, signingOut } = useAuth()
+  const { signOut, signingOut, profile, profileLoading, profileStatus } = useAuth()
   const toast = useToast()
   const sections = useMemo(() => navSections || buildMentorNavItems(), [navSections])
   const primaryNavItems = useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
+  const [showGuidelinesModal, setShowGuidelinesModal] = useState(false)
+
+  useEffect(() => {
+    if (profileLoading || profileStatus !== 'ready' || !profile?.id) return
+    if (profile.mentorGuidelinesAcknowledgedAt) {
+      setShowGuidelinesModal(false)
+      return
+    }
+    try {
+      const cached = localStorage.getItem('t4l.mentor_guidelines_acknowledged')
+      if (cached) {
+        setShowGuidelinesModal(false)
+        return
+      }
+    } catch {
+      // ignore
+    }
+    setShowGuidelinesModal(true)
+  }, [profile?.id, profile?.mentorGuidelinesAcknowledgedAt, profileLoading, profileStatus])
+
   const handleLogout = async () => {
     const result = await signOut()
     if (result.error) {
@@ -251,6 +272,11 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           </Stack>
         </Box>
       </Flex>
+
+      <MentorGuidelinesModal
+        isOpen={showGuidelinesModal}
+        onAcknowledged={() => setShowGuidelinesModal(false)}
+      />
 
       {primaryNavItems.length > 0 && (
         <Box

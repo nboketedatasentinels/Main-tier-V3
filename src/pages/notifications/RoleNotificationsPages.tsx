@@ -7,6 +7,7 @@ import { AmbassadorLayout } from '@/layouts/AmbassadorLayout'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { useAuth } from '@/hooks/useAuth'
+import { resolveMentorNavDestination } from '@/utils/mentorNavigation'
 import { NotificationsPage } from './NotificationsPage'
 
 /**
@@ -93,7 +94,14 @@ export const MentorNotificationsPage = () => {
     <MentorDashboardLayout
       activeItem="notifications"
       mentorName={`${profile?.firstName || 'Mentor'} ${profile?.lastName || ''}`.trim()}
-      onNavigate={() => navigate('/mentor/dashboard')}
+      onNavigate={(key) => {
+        const dest = resolveMentorNavDestination(key)
+        if (dest.kind === 'route') {
+          navigate(dest.path)
+          return
+        }
+        navigate('/mentor/dashboard', { state: { mentorSection: dest.section } })
+      }}
     >
       <NotificationsPage subtitle="Messages and updates about you and your mentees." />
     </MentorDashboardLayout>

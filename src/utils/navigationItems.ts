@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   MessageSquare,
   LockKeyhole,
+  ScrollText,
   Settings,
   Sparkles,
   Users,
@@ -97,7 +98,7 @@ export const buildMentorNavItems = (): NavigationSection[] => [
       { key: 'schedule', label: 'Meetings', icon: CalendarClock },
       { key: 'pre-assessments', label: 'Pre assessments', icon: ClipboardList },
       { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
-      { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
+      { key: 'guidelines', label: 'Mentor guidelines', icon: ScrollText },
     ],
   },
 ]

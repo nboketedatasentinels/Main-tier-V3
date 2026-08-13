@@ -27,6 +27,7 @@ import {
   ArrowRight,
   RefreshCw,
 } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { MentorSessionsPanel } from '@/components/mentor/MentorSessionsPanel'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
@@ -45,9 +46,13 @@ import { isJourneyType } from '@/utils/journeyType'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import { resolveCourseSurveyKind } from '@/utils/courseSurveyWindow'
 import { buildMentorNavItems } from '@/utils/navigationItems'
+import {
+  resolveMentorNavDestination,
+  type MentorDashboardSection,
+} from '@/utils/mentorNavigation'
 import type { UserProfile } from '@/types'
 
-type SectionKey = 'overview' | 'mentees' | 'schedule' | 'pre-assessments' | 'assessments'
+type SectionKey = MentorDashboardSection
 
 const personalityLabel = (type?: string | null): string | null => {
   if (!type) return null
@@ -92,6 +97,8 @@ const SectionShell: React.FC<{
 
 export const MentorDashboard: React.FC = () => {
   const { profile } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [activeSection, setActiveSection] = useState<SectionKey>('overview')
   const [mentees, setMentees] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -161,6 +168,23 @@ export const MentorDashboard: React.FC = () => {
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  useEffect(() => {
+    const section = (location.state as { mentorSection?: SectionKey } | null)?.mentorSection
+    if (!section) return
+    const timer = window.setTimeout(() => scrollTo(section), 80)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
+
+  const handleNavigate = (key: string) => {
+    const dest = resolveMentorNavDestination(key)
+    if (dest.kind === 'route') {
+      navigate(dest.path)
+      return
+    }
+    scrollTo(dest.section)
+  }
+
   const assessmentLearners = useMemo(
     () =>
       mentees.map((m) => ({
@@ -196,7 +220,7 @@ export const MentorDashboard: React.FC = () => {
   return (
     <MentorDashboardLayout
       activeItem={activeSection}
-      onNavigate={(key) => scrollTo(key as SectionKey)}
+      onNavigate={handleNavigate}
       mentorName={profile ? getDisplayName(profile) : 'Mentor'}
       mentorRoleLabel="Mentor"
       navSections={navSections}

@@ -41,6 +41,9 @@ const SuperAdminDashboard = lazy(() =>
 const MentorDashboard = lazy(() =>
   import('@/pages/dashboards/MentorDashboard').then(m => ({ default: m.MentorDashboard }))
 )
+const MentorGuidelinesPage = lazy(() =>
+  import('@/pages/mentor/MentorGuidelinesPage').then(m => ({ default: m.MentorGuidelinesPage }))
+)
 const AmbassadorDashboard = lazy(() =>
   import('@/pages/dashboards/AmbassadorDashboard').then(m => ({ default: m.AmbassadorDashboard }))
 )
@@ -211,6 +214,7 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<MentorDashboard />} />
+          <Route path="guidelines" element={<MentorGuidelinesPage />} />
           <Route path="user/:userId" element={<UserProfileManagementPage viewContext="mentor" />} />
           <Route path="notifications" element={<MentorNotificationsPage />} />
           <Route index element={<Navigate to="/mentor/dashboard" replace />} />
