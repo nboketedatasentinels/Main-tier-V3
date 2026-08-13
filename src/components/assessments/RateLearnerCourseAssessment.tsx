@@ -25,9 +25,11 @@ import {
 import {
   findNativeCourseAssessment,
   listNativeCourseAssessments,
+  type CourseAssessmentDefinition,
   type CourseAssessmentKind,
 } from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment, getCourseAssessmentResponse } from '@/services/courseAssessmentService'
+import { hydrateCourseAssessmentFromSurveyMonkey } from '@/services/surveyMonkeyService'
 
 export interface RateLearnerOption {
   id: string
@@ -78,6 +80,7 @@ export function RateLearnerCourseAssessment({
   const [selectedCourseKey, setSelectedCourseKey] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [liveDefinition, setLiveDefinition] = useState<CourseAssessmentDefinition | null>(null)
 
   const courseOptions = useMemo(() => {
     const titles = (allowedCourseTitles ?? []).map((t) => t.trim()).filter(Boolean)
@@ -154,10 +157,20 @@ export function RateLearnerCourseAssessment({
           duration: 3500,
         })
       }
+      const hydrated = await hydrateCourseAssessmentFromSurveyMonkey(definition)
+      setLiveDefinition(hydrated.definition)
+      if (hydrated.source === 'catalog') {
+        toast({
+          status: 'warning',
+          title: 'Using saved survey copy',
+          description: 'Could not reach SurveyMonkey live. Showing the last imported questions.',
+          duration: 4000,
+        })
+      }
       setModalOpen(true)
     } catch (err) {
       console.error('[RateLearnerCourseAssessment]', err)
-      toast({ status: 'error', title: 'Could not check existing response' })
+      toast({ status: 'error', title: 'Could not load SurveyMonkey questions' })
     } finally {
       setChecking(false)
     }
@@ -285,14 +298,18 @@ export function RateLearnerCourseAssessment({
 
       <NativeCourseAssessmentModal
         isOpen={modalOpen}
-        definition={definition}
-        courseTitle={courseTitle || definition?.courseKey}
+        definition={liveDefinition}
+        courseTitle={courseTitle || liveDefinition?.courseKey || definition?.courseKey}
         respondentId={respondentId}
         subjectUserId={subjectId}
         raterRole={raterRole}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false)
+          setLiveDefinition(null)
+        }}
         onCompleted={() => {
           setModalOpen(false)
+          setLiveDefinition(null)
           toast({ status: 'success', title: 'Assessment saved', duration: 2500 })
           onSubmitted?.()
         }}

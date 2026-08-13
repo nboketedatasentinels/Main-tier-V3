@@ -3,6 +3,8 @@
  * Import Pre/Post course assessment questions from SurveyMonkey into
  * src/config/nativeCourseAssessments.catalog.json
  *
+ * Faithful pull: expands matrix rows, keeps identity fields, and uses SM scales.
+ *
  * Requires SURVEYMONKEY_ACCESS_TOKEN in local .env
  * Usage: node scripts/import-native-course-assessments.mjs
  */
@@ -58,7 +60,12 @@ function isExternal(title) {
 function stripHtml(s) {
   return (s || '')
     .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
     .replace(/\s+/g, ' ')
     .trim()
 }
@@ -73,6 +80,80 @@ function courseKey(title) {
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase()
+}
+
+function resolveScale(choices) {
+  const weights = (choices || [])
+    .map((c) => c.weight)
+    .filter((w) => typeof w === 'number' && Number.isFinite(w))
+  if (weights.length > 0) return { min: Math.min(...weights), max: Math.max(...weights) }
+
+  const parsed = (choices || [])
+    .map((c) => Number.parseInt(String(c.text || '').trim(), 10))
+    .filter((n) => Number.isFinite(n))
+  if (parsed.length > 0) return { min: Math.min(...parsed), max: Math.max(...parsed) }
+
+  return { min: 1, max: 10 }
+}
+
+function parseQuestions(pages) {
+  const questions = []
+  for (const page of pages || []) {
+    for (const q of page.questions || []) {
+      const heading = stripHtml((q.headings || []).map((h) => h.heading || '').join(' '))
+      const family = (q.family || '').toLowerCase()
+      const subtype = (q.subtype || '').toLowerCase()
+
+      if (family === 'presentation') {
+        if (heading) questions.push({ type: 'info', text: heading })
+        continue
+      }
+
+      if (family === 'matrix' && (subtype === 'rating' || subtype === 'single' || !subtype)) {
+        const rows = (q.answers?.rows || [])
+          .map((row) => stripHtml(row.text || ''))
+          .filter(Boolean)
+        const scale = resolveScale(q.answers?.choices)
+        if (rows.length > 0) {
+          if (heading) questions.push({ type: 'info', text: heading })
+          for (const row of rows) {
+            questions.push({ type: 'rating', text: row, min: scale.min, max: scale.max })
+          }
+          continue
+        }
+        if (heading) {
+          questions.push({ type: 'rating', text: heading, min: scale.min, max: scale.max })
+        }
+        continue
+      }
+
+      if (family === 'single_choice' || family === 'multiple_choice') {
+        const choices = (q.answers?.choices || [])
+          .map((c) => stripHtml(c.text || ''))
+          .filter(Boolean)
+        if (!heading) continue
+        questions.push({ type: 'single_choice', text: heading, choices })
+        continue
+      }
+
+      if (family === 'open_ended') {
+        if (!heading) continue
+        questions.push({
+          type: subtype === 'essay' || subtype === 'multi' ? 'long_text' : 'short_text',
+          text: heading,
+        })
+        continue
+      }
+
+      if (family === 'datetime' || family === 'demographic') {
+        if (heading) questions.push({ type: 'short_text', text: heading })
+        continue
+      }
+
+      if (heading) questions.push({ type: 'long_text', text: heading })
+    }
+  }
+  return questions
 }
 
 async function main() {
@@ -98,34 +179,6 @@ async function main() {
     i += 1
     process.stderr.write(`\r[${i}] ${(s.title || '').slice(0, 60)}`)
     const detail = await smFetch(token, `/surveys/${s.id}/details`)
-    const questions = []
-    for (const page of detail.pages || []) {
-      for (const q of page.questions || []) {
-        const heading = stripHtml((q.headings || []).map((h) => h.heading).join(' '))
-        if (!heading) continue
-        if (q.family === 'presentation') {
-          questions.push({ type: 'info', text: heading })
-          continue
-        }
-        if (q.family === 'matrix' && q.subtype === 'rating') {
-          questions.push({ type: 'rating', text: heading, min: 1, max: 10 })
-          continue
-        }
-        if (q.family === 'single_choice') {
-          const choices = (q.answers?.choices || []).map((c) => c.text).filter(Boolean)
-          if (choices.length > 30) continue
-          questions.push({ type: 'single_choice', text: heading, choices })
-          continue
-        }
-        if (q.family === 'open_ended') {
-          if (/^(email|first name|last name|organization|phone|participant)/i.test(heading)) continue
-          questions.push({
-            type: q.subtype === 'essay' ? 'long_text' : 'short_text',
-            text: heading,
-          })
-        }
-      }
-    }
     out.push({
       surveyMonkeyId: String(s.id),
       title: s.title,
@@ -133,7 +186,7 @@ async function main() {
       audience: isExternal(s.title) ? 'external_rater' : 'self',
       courseKey: courseKey(s.title),
       courseMatchers: [courseKey(s.title)].filter(Boolean),
-      questions,
+      questions: parseQuestions(detail.pages),
     })
   }
   process.stderr.write('\n')

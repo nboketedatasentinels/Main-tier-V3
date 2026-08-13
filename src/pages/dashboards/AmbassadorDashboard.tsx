@@ -41,6 +41,9 @@ import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCou
 import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles'
 import { fetchAssignedCoachees } from '@/services/learnerAssignmentService'
 import { getDisplayName } from '@/utils/displayName'
+import { JOURNEY_META } from '@/config/pointsConfig'
+import { isJourneyType } from '@/utils/journeyType'
+import { resolveCourseSurveyKind, courseSurveySectionTitle } from '@/utils/courseSurveyWindow'
 import type { UserProfile } from '@/types'
 
 type ReferralMetric = {
@@ -127,6 +130,24 @@ export const AmbassadorDashboard: React.FC = () => {
   const { program: orgProgram } = useOrganizationProgramCourses(coacheeOrgId)
   const orgCourseTitles = useOrgProgrammeCourseTitles(orgProgram)
 
+  const courseSurveyKind = useMemo(() => {
+    const subject = coachees[0]
+    const journeyType =
+      typeof subject?.journeyType === 'string' && isJourneyType(subject.journeyType)
+        ? subject.journeyType
+        : null
+    const weeks =
+      subject?.programDurationWeeks ||
+      (journeyType ? JOURNEY_META[journeyType].weeks : null) ||
+      orgProgram?.programDurationWeeks ||
+      null
+    return resolveCourseSurveyKind({
+      journeyStartDate: subject?.journeyStartDate,
+      programDurationWeeks: weeks,
+      currentWeek: subject?.currentWeek,
+    })
+  }, [coachees, orgProgram?.programDurationWeeks])
+
   return (
     <AmbassadorLayout
       activeItem="overview"
@@ -147,7 +168,7 @@ export const AmbassadorDashboard: React.FC = () => {
               <Badge colorScheme="green" variant="subtle">
                 Recognition enabled
               </Badge>
-              <PreCourseSurveyButton size="sm" />
+              <PreCourseSurveyButton size="sm" kind={courseSurveyKind} />
             </HStack>
           </Stack>
           <Stack spacing={2} align="flex-end">
@@ -176,36 +197,31 @@ export const AmbassadorDashboard: React.FC = () => {
             <Icon as={ClipboardList} boxSize={5} color="gray.700" mt={1} />
             <Box>
               <Heading size="sm" color="gray.900">
-                Course assessments
+                {courseSurveySectionTitle(courseSurveyKind)}
               </Heading>
               <Text fontSize="sm" color="gray.600" mt={1}>
-                {orgCourseTitles.length
-                  ? `Pre and Post ratings for coachees on their organisation programme (${orgCourseTitles.join(', ')}).`
-                  : 'Pre and Post ratings for coachees, scoped to courses the admin assigned to their organisation.'}
+                {courseSurveyKind === 'post'
+                  ? orgCourseTitles.length
+                    ? `Final 3 weeks: Post ratings for coachees (${orgCourseTitles.join(', ')}).`
+                    : 'Final 3 weeks: complete Post ratings for coachees.'
+                  : orgCourseTitles.length
+                    ? `Pre ratings for coachees on their organisation programme (${orgCourseTitles.join(', ')}). Post unlocks in the last 3 weeks.`
+                    : 'Pre ratings for coachees, scoped to admin-assigned organisation courses. Post unlocks in the last 3 weeks.'}
               </Text>
             </Box>
           </HStack>
 
           {profile?.id && rateLearners.length > 0 ? (
-            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-              <RateLearnerCourseAssessment
-                respondentId={profile.id}
-                raterRole="coach"
-                learners={rateLearners}
-                forcedKind="pre"
-                allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
-              />
-              <RateLearnerCourseAssessment
-                respondentId={profile.id}
-                raterRole="coach"
-                learners={rateLearners}
-                forcedKind="post"
-                allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
-              />
-            </SimpleGrid>
+            <RateLearnerCourseAssessment
+              respondentId={profile.id}
+              raterRole="coach"
+              learners={rateLearners}
+              forcedKind={courseSurveyKind}
+              allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
+            />
           ) : (
             <Text fontSize="sm" color="gray.500">
-              Assign coachees first. Pre assessments appear here for each learner on your roster,
+              Assign coachees first. Assessments appear here for each learner on your roster,
               scoped to their organisation&apos;s programme courses.
             </Text>
           )}

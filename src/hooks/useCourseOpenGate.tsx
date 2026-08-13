@@ -1,8 +1,12 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { NativeCourseAssessmentModal } from '@/components/modals/NativeCourseAssessmentModal'
-import { findNativeCourseAssessment } from '@/config/nativeCourseAssessments'
+import {
+  findNativeCourseAssessment,
+  type CourseAssessmentDefinition,
+} from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment } from '@/services/courseAssessmentService'
+import { hydrateCourseAssessmentFromSurveyMonkey } from '@/services/surveyMonkeyService'
 import { resolvePreCourseSurveyUrl } from '@/config/courseSurveys'
 import { PreCourseSurveyModal } from '@/components/modals/PreCourseSurveyModal'
 import { markPreCourseSurveyCompleted } from '@/services/preCourseSurveyService'
@@ -36,6 +40,8 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
   const [checking, setChecking] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [legacyOpen, setLegacyOpen] = useState(false)
+  const [liveDefinition, setLiveDefinition] = useState<CourseAssessmentDefinition | null>(null)
+  const [hydrateReady, setHydrateReady] = useState(false)
 
   const openInNewTab = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
@@ -46,12 +52,32 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
     setPendingCourseTitle(null)
     setPendingMode(null)
     setLegacyOpen(false)
+    setLiveDefinition(null)
+    setHydrateReady(false)
   }
 
-  const nativeDefinition =
+  const catalogDefinition =
     pendingMode && pendingCourseTitle
       ? findNativeCourseAssessment(pendingCourseTitle, pendingMode, 'self')
       : null
+
+  useEffect(() => {
+    if (!catalogDefinition || legacyOpen) {
+      setLiveDefinition(null)
+      setHydrateReady(false)
+      return
+    }
+    let cancelled = false
+    setHydrateReady(false)
+    void hydrateCourseAssessmentFromSurveyMonkey(catalogDefinition).then((hydrated) => {
+      if (cancelled) return
+      setLiveDefinition(hydrated.definition)
+      setHydrateReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [catalogDefinition?.surveyMonkeyId, legacyOpen, pendingMode, pendingCourseTitle])
 
   const requestOpenCourse = useCallback(
     async (url: string, courseTitle?: string) => {
@@ -150,11 +176,13 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
     }
   }, [uid, pendingUrl])
 
+  const activeDefinition = liveDefinition
+
   const surveyModal =
-    pendingMode && nativeDefinition && !legacyOpen && uid ? (
+    pendingMode && hydrateReady && activeDefinition && !legacyOpen && uid ? (
       <NativeCourseAssessmentModal
         isOpen
-        definition={nativeDefinition}
+        definition={activeDefinition}
         courseTitle={pendingCourseTitle}
         respondentId={uid}
         subjectUserId={uid}

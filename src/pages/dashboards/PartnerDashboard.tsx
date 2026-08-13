@@ -51,6 +51,10 @@ import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCou
 import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 import { getJourneyLabel } from '@/utils/journeyType'
+import {
+  courseSurveySectionTitle,
+  resolveCourseSurveyKind,
+} from '@/utils/courseSurveyWindow'
 import { useAuth } from '@/hooks/useAuth'
 import { logOrganizationAccessAttempt } from '@/services/organizationService'
 import { recordEngagementAction } from '@/services/engagementService'
@@ -399,6 +403,14 @@ export const PartnerDashboard: React.FC = () => {
     }
   }, [overviewOrganizations, scopedOrgKey])
 
+  const courseSurveyKind = useMemo(() => {
+    if (!journeyProgress || journeyProgress.unconfigured) return 'pre' as const
+    return resolveCourseSurveyKind({
+      journeyStartDate: journeyProgress.startDate,
+      programDurationWeeks: journeyProgress.totalDays / 7,
+    })
+  }, [journeyProgress])
+
   const [journeyReportLoading, setJourneyReportLoading] = useState(false)
 
   const handleDownloadJourneyReport = useCallback(async () => {
@@ -699,7 +711,7 @@ export const PartnerDashboard: React.FC = () => {
       <Stack spacing={8}>
         {selectedOrgId ? (
           <Flex justify="flex-end">
-            <PreCourseSurveyButton size="sm" />
+            <PreCourseSurveyButton size="sm" kind={courseSurveyKind} />
           </Flex>
         ) : null}
         <Card
@@ -830,17 +842,20 @@ export const PartnerDashboard: React.FC = () => {
                       Course assessments
                     </Text>
                     <Text fontWeight="bold" color="brand.text">
-                      Pre and Post for this organisation
+                      {courseSurveySectionTitle(courseSurveyKind)} for this organisation
                     </Text>
                     <Text fontSize="sm" color="brand.subtleText">
-                      {orgProgrammeCourseTitles.length
-                        ? `Scoped to admin-assigned courses: ${orgProgrammeCourseTitles.join(', ')}.`
-                        : 'Scoped to courses the admin assigned on this organisation programme.'}
+                      {courseSurveyKind === 'post'
+                        ? 'Final 3 weeks: complete the Post rating for each learner on admin-assigned courses.'
+                        : orgProgrammeCourseTitles.length
+                          ? `Scoped to admin-assigned courses: ${orgProgrammeCourseTitles.join(', ')}.`
+                          : 'Scoped to courses the admin assigned on this organisation programme.'}
                     </Text>
                   </Stack>
                 </HStack>
                 <PreCourseSurveyButton
                   size="sm"
+                  kind={courseSurveyKind}
                   onClick={() =>
                     document
                       .getElementById(PRE_COURSE_SURVEY_SECTION_ID)
@@ -850,22 +865,13 @@ export const PartnerDashboard: React.FC = () => {
               </HStack>
 
               {courseAssessmentLearners.length > 0 ? (
-                <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-                  <RateLearnerCourseAssessment
-                    respondentId={profile.id}
-                    raterRole="partner"
-                    learners={courseAssessmentLearners}
-                    forcedKind="pre"
-                    allowedCourseTitles={orgProgrammeCourseTitles}
-                  />
-                  <RateLearnerCourseAssessment
-                    respondentId={profile.id}
-                    raterRole="partner"
-                    learners={courseAssessmentLearners}
-                    forcedKind="post"
-                    allowedCourseTitles={orgProgrammeCourseTitles}
-                  />
-                </SimpleGrid>
+                <RateLearnerCourseAssessment
+                  respondentId={profile.id}
+                  raterRole="partner"
+                  learners={courseAssessmentLearners}
+                  forcedKind={courseSurveyKind}
+                  allowedCourseTitles={orgProgrammeCourseTitles}
+                />
               ) : (
                 <Text fontSize="sm" color="brand.subtleText">
                   No learners in this organisation yet.

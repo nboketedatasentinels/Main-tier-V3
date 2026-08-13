@@ -52,6 +52,7 @@ import { getLeaderboardContextLabels, useLeaderboardContext } from '@/hooks/lead
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { canViewerSeeCandidateOnLeaderboard } from '@/utils/leaderboardPrivacy'
+import { resolveCourseSurveyKind, courseSurveySectionTitle } from '@/utils/courseSurveyWindow'
 import { WeeklyInspirationCard } from './components/WeeklyInspirationCard'
 import { JourneyCompletionBanner } from '@/components/journeys/JourneyCompletionBanner'
 import pointsConfig from '@/config/pointsConfig'
@@ -185,6 +186,16 @@ export const PaidMemberDashboard: React.FC = () => {
   }, [profile?.journeyType, profile?.programDurationWeeks])
   const currentWeek = profile?.currentWeek || 1
 
+  const courseSurveyKind = useMemo(
+    () =>
+      resolveCourseSurveyKind({
+        journeyStartDate: profile?.journeyStartDate,
+        programDurationWeeks: journeyWeeks,
+        currentWeek,
+      }),
+    [profile?.journeyStartDate, journeyWeeks, currentWeek],
+  )
+
   const completedActivities = useMemo(
     () => activities.filter(activity => activity.completed).length,
     [activities],
@@ -253,7 +264,7 @@ export const PaidMemberDashboard: React.FC = () => {
           </Text>
           {organizationId ? (
             <Box mt={3}>
-              <PreCourseSurveyButton size="sm" />
+              <PreCourseSurveyButton size="sm" kind={courseSurveyKind} />
             </Box>
           ) : null}
         </Box>
@@ -304,12 +315,16 @@ export const PaidMemberDashboard: React.FC = () => {
                 Course assessments
               </Text>
               <Text mt={1} fontSize="xl" fontWeight="700" color="gray.900">
-                Pre and post for your programme
+                {courseSurveySectionTitle(courseSurveyKind)}
               </Text>
               <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
-                {orgCourseTitles.length
-                  ? `Scoped to your organisation courses: ${orgCourseTitles.join(', ')}.`
-                  : 'Complete Pre before each course and Post when you finish.'}
+                {courseSurveyKind === 'post'
+                  ? orgCourseTitles.length
+                    ? `Final stretch: Post for ${orgCourseTitles.join(', ')}.`
+                    : 'Final stretch: complete your Post-course survey.'
+                  : orgCourseTitles.length
+                    ? `Scoped to your organisation courses: ${orgCourseTitles.join(', ')}. Post unlocks in the last 3 weeks.`
+                    : 'Complete Pre before each course. Post unlocks in the last 3 weeks.'}
               </Text>
             </Box>
             <Button
@@ -321,18 +336,11 @@ export const PaidMemberDashboard: React.FC = () => {
               Open my courses
             </Button>
           </Flex>
-          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-            <SelfCourseAssessment
-              userId={profile.id}
-              forcedKind="pre"
-              allowedCourseTitles={orgCourseTitles}
-            />
-            <SelfCourseAssessment
-              userId={profile.id}
-              forcedKind="post"
-              allowedCourseTitles={orgCourseTitles}
-            />
-          </SimpleGrid>
+          <SelfCourseAssessment
+            userId={profile.id}
+            forcedKind={courseSurveyKind}
+            allowedCourseTitles={orgCourseTitles}
+          />
         </Box>
       ) : null}
       <SimpleGrid columns={{ base: 1, md: 4 }} spacing={6}>

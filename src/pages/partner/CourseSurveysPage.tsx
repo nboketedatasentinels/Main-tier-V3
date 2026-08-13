@@ -50,6 +50,10 @@ import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { getDisplayName } from '@/utils/displayName'
 import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
 import type { CourseAssessmentKind } from '@/config/nativeCourseAssessments'
+import {
+  courseSurveySectionTitle,
+  resolveCourseSurveyKind,
+} from '@/utils/courseSurveyWindow'
 
 type PageMode = 'workspace' | 'rate_one'
 
@@ -189,7 +193,22 @@ const CourseSurveysPage: React.FC = () => {
     () => cards.filter((c) => c.phase === 'near_end' || c.phase === 'completed'),
     [cards],
   )
-  const showPostQueue = orgPhase === 'near_end' || nearEndCards.some((c) => !c.partnerPostDone)
+  const courseSurveyKind = useMemo(() => {
+    const weeks = orgProgram?.programDurationWeeks ?? null
+    if (orgProgram?.cohortStartDate && weeks) {
+      return resolveCourseSurveyKind({
+        journeyStartDate: orgProgram.cohortStartDate,
+        programDurationWeeks: weeks,
+      })
+    }
+    // Fallback when programme dates are missing: soft workspace phase.
+    if (orgPhase === 'near_end' || orgPhase === 'completed') return 'post' as const
+    return 'pre' as const
+  }, [orgProgram?.cohortStartDate, orgProgram?.programDurationWeeks, orgPhase])
+
+  const showPostQueue =
+    courseSurveyKind === 'post' &&
+    (orgPhase === 'near_end' || nearEndCards.some((c) => !c.partnerPostDone))
   const showFinalReport = orgPhase === 'completed' || cards.some((c) => c.phase === 'completed')
 
   const rateTarget = useMemo(() => {
@@ -275,13 +294,13 @@ const CourseSurveysPage: React.FC = () => {
               Course assessments
             </Heading>
             <Text color="gray.600" fontSize="sm" mt={1}>
-              Per learner × per course. Partners submit Pre and Post (Post emphasized near journey
-              end) so matched observer growth is computable. Final org reports after completion.
-              Learners only see their own report card.
+              Per learner × per course. Partners submit Pre for most of the journey; the CTA switches
+              to Post in the final 3 weeks so matched observer growth is computable. Final org reports
+              after completion. Learners only see their own report card.
             </Text>
           </Box>
           <HStack spacing={3} flexWrap="wrap">
-            {selectedOrgId ? <PreCourseSurveyButton size="sm" /> : null}
+            {selectedOrgId ? <PreCourseSurveyButton size="sm" kind={courseSurveyKind} /> : null}
             {selectedOrgId && (
               <Badge
                 colorScheme={
@@ -358,7 +377,7 @@ const CourseSurveysPage: React.FC = () => {
             ) : (
               <>
                 {profile?.id ? (
-                  <SimpleGrid id="pre-course-survey" scrollMarginTop="96px" columns={{ base: 1, lg: 2 }} spacing={4}>
+                  <Box id="pre-course-survey" scrollMarginTop="96px">
                     <RateLearnerCourseAssessment
                       respondentId={profile.id}
                       raterRole="partner"
@@ -369,26 +388,13 @@ const CourseSurveysPage: React.FC = () => {
                         journeyType: l.journeyType,
                         journeyStatus: l.journeyStatus,
                       }))}
-                      forcedKind="pre"
+                      forcedKind={courseSurveyKind}
                       allowedCourseTitles={orgCourseTitles}
                     />
-                    <RateLearnerCourseAssessment
-                      respondentId={profile.id}
-                      raterRole="partner"
-                      learners={learnerInputs.map((l) => ({
-                        id: l.id,
-                        name: l.name,
-                        currentWeek: l.currentWeek,
-                        journeyType: l.journeyType,
-                        journeyStatus: l.journeyStatus,
-                      }))}
-                      forcedKind="post"
-                      allowedCourseTitles={orgCourseTitles}
-                    />
-                  </SimpleGrid>
+                  </Box>
                 ) : null}
 
-                {orgPhase === 'early' && (
+                {courseSurveyKind === 'pre' && (
                   <Box
                     p={5}
                     bg="white"
@@ -398,12 +404,12 @@ const CourseSurveysPage: React.FC = () => {
                   >
                     <HStack spacing={3} mb={2}>
                       <Icon as={ClipboardList} boxSize={5} color="gray.700" />
-                      <Heading size="sm">Pre now · Post near journey end</Heading>
+                      <Heading size="sm">{courseSurveySectionTitle('pre')} · Post in final 3 weeks</Heading>
                     </HStack>
                     <Text fontSize="sm" color="gray.600">
-                      Use Pre assessments above while the cohort is in progress. The Post queue below
-                      lights up in the final stretch. Final org reports unlock after journey
-                      completion.
+                      Use Pre assessments above while the cohort is in progress. The button and form
+                      switch to Post in the last 3 weeks of the journey. Final org reports unlock
+                      after journey completion.
                     </Text>
                   </Box>
                 )}

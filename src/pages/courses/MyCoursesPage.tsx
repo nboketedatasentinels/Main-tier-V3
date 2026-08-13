@@ -63,6 +63,10 @@ import {
   type LearnerAssessmentReportCard,
 } from '@/services/courseAssessmentReportService'
 import { getDisplayName } from '@/utils/displayName'
+import {
+  courseSurveySectionTitle,
+  resolveCourseSurveyKind,
+} from '@/utils/courseSurveyWindow'
 import type { UserProfile } from '@/types'
 
 interface NormalizedCourse {
@@ -781,6 +785,15 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const journeyLabel = journeyType ? getJourneyLabel(journeyType) : null
   const isWeeklyTimeline = journeyType ? !isMonthBasedJourney(journeyType) : false
   const totalWeeks = program?.programDurationWeeks ?? (journeyType ? getJourneyWeeks(journeyType) : null)
+  const courseSurveyKind = useMemo(
+    () =>
+      resolveCourseSurveyKind({
+        journeyStartDate: program?.cohortStartDate ?? profile?.journeyStartDate ?? null,
+        programDurationWeeks: totalWeeks,
+        currentWeek: profile?.currentWeek ?? null,
+      }),
+    [program?.cohortStartDate, profile?.journeyStartDate, profile?.currentWeek, totalWeeks],
+  )
   const journeyTimelineDisplay = journeyType ? getJourneyTimelineDisplayMode(journeyType) : 'duration'
   const pointsPerCourse = getPointsPerCourse(journeyType)
   const fallbackAssignments = useMemo(() => {
@@ -964,7 +977,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   return (
     <Stack spacing={8} py={2} as="section">
       {userId ? (
-        <Stack spacing={4}>
+        <Stack spacing={4} id="pre-course-survey" scrollMarginTop="96px">
           <Box>
             <Text
               fontSize="xs"
@@ -973,48 +986,24 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
               textTransform="uppercase"
               color="gray.500"
             >
-              Start of course
+              {courseSurveyKind === 'post' ? 'End of course' : 'Start of course'}
             </Text>
             <Heading size="md" mt={1} color="gray.900">
-              Your pre-assessments
+              {courseSurveySectionTitle(courseSurveyKind)}
             </Heading>
             <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
-              {orgCourseTitles.length
-                ? `Complete Pre for each course on your organisation programme (${orgCourseTitles.join(', ')}).`
-                : 'Complete Pre for each course on your organisation programme before you begin.'}
+              {courseSurveyKind === 'post'
+                ? orgCourseTitles.length
+                  ? `Final 3 weeks: complete Post for each course on your organisation programme (${orgCourseTitles.join(', ')}).`
+                  : 'Final 3 weeks: complete the Post rating for each programme course.'
+                : orgCourseTitles.length
+                  ? `Complete Pre for each course on your organisation programme (${orgCourseTitles.join(', ')}).`
+                  : 'Complete Pre for each course on your organisation programme before you begin.'}
             </Text>
           </Box>
           <SelfCourseAssessment
             userId={userId}
-            forcedKind="pre"
-            allowedCourseTitles={organizationId ? orgCourseTitles : null}
-            onSubmitted={() => refreshAssessmentStatus()}
-          />
-        </Stack>
-      ) : null}
-
-      {userId ? (
-        <Stack spacing={4}>
-          <Box>
-            <Text
-              fontSize="xs"
-              fontWeight="semibold"
-              letterSpacing="0.12em"
-              textTransform="uppercase"
-              color="gray.500"
-            >
-              End of course
-            </Text>
-            <Heading size="md" mt={1} color="gray.900">
-              Your post-assessments
-            </Heading>
-            <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
-              After you finish a course, submit the Post rating for that programme course.
-            </Text>
-          </Box>
-          <SelfCourseAssessment
-            userId={userId}
-            forcedKind="post"
+            forcedKind={courseSurveyKind}
             allowedCourseTitles={organizationId ? orgCourseTitles : null}
             onSubmitted={() => refreshAssessmentStatus()}
           />
@@ -1037,25 +1026,18 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
               Rate your learners
             </Heading>
             <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
-              Pre and Post ratings about people you manage, scoped to their organisation courses.
+              {courseSurveyKind === 'post'
+                ? 'Final 3 weeks: Post ratings about people you manage, scoped to their organisation courses.'
+                : 'Pre ratings about people you manage, scoped to their organisation courses.'}
             </Text>
           </Box>
-          <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-            <RateLearnerCourseAssessment
-              respondentId={userId}
-              raterRole="line_manager"
-              learners={managedLearners}
-              forcedKind="pre"
-              allowedCourseTitles={organizationId ? orgCourseTitles : null}
-            />
-            <RateLearnerCourseAssessment
-              respondentId={userId}
-              raterRole="line_manager"
-              learners={managedLearners}
-              forcedKind="post"
-              allowedCourseTitles={organizationId ? orgCourseTitles : null}
-            />
-          </SimpleGrid>
+          <RateLearnerCourseAssessment
+            respondentId={userId}
+            raterRole="line_manager"
+            learners={managedLearners}
+            forcedKind={courseSurveyKind}
+            allowedCourseTitles={organizationId ? orgCourseTitles : null}
+          />
         </Stack>
       )}
       <CourseAssessmentReportCardView

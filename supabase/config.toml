@@ -24,3 +24,10 @@ verify_jwt = false
 # Partner-emailed course assessment org reports; JWT + role checked in-function.
 [functions.send-course-assessment-report]
 verify_jwt = false
+
+# Browser-invoked SurveyMonkey live question pull; requires user Bearer + SM token secret.
+[functions.surveymonkey-survey-details]
+verify_jwt = false
+
+[functions.surveymonkey-list-surveys]
+verify_jwt = false

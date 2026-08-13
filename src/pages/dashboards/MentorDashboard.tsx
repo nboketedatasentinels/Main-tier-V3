@@ -52,6 +52,8 @@ import { PERSONALITY_TYPES } from '@/config/personality-data'
 import { ageRangeLabel } from '@/config/demographics'
 import { getDisplayName } from '@/utils/displayName'
 import { getJourneyLabel, isJourneyType } from '@/utils/journeyType'
+import { JOURNEY_META } from '@/config/pointsConfig'
+import { resolveCourseSurveyKind } from '@/utils/courseSurveyWindow'
 import { buildMentorNavItems } from '@/utils/navigationItems'
 import type { UserProfile } from '@/types'
 
@@ -377,6 +379,26 @@ export const MentorDashboard: React.FC = () => {
     [mentees],
   )
 
+  const courseSurveyKind = useMemo(() => {
+    const subject = selected
+    const journeyType =
+      typeof subject?.journeyType === 'string' && isJourneyType(subject.journeyType)
+        ? subject.journeyType
+        : null
+    const weeks =
+      subject?.programDurationWeeks ||
+      (journeyType ? JOURNEY_META[journeyType].weeks : null) ||
+      orgProgram?.programDurationWeeks ||
+      null
+    return resolveCourseSurveyKind({
+      journeyStartDate: subject?.journeyStartDate,
+      programDurationWeeks: weeks,
+      currentWeek: subject?.currentWeek,
+    })
+  }, [selected, orgProgram?.programDurationWeeks])
+
+  const activeAssessmentSection = courseSurveyKind === 'post' ? 'assessments' : 'pre-assessments'
+
   return (
     <MentorDashboardLayout
       activeItem={activeSection}
@@ -428,7 +450,10 @@ export const MentorDashboard: React.FC = () => {
                 >
                   Open mentees
                 </Button>
-                <PreCourseSurveyButton onClick={() => scrollTo('pre-assessments')} />
+                <PreCourseSurveyButton
+                  kind={courseSurveyKind}
+                  onClick={() => scrollTo(activeAssessmentSection)}
+                />
                 <Button
                   variant="outline"
                   borderColor="gray.300"
@@ -447,20 +472,21 @@ export const MentorDashboard: React.FC = () => {
               {(
                 [
                   { label: 'Mentees', value: mentees.length, icon: Users, section: 'mentees' as SectionKey },
-                  {
-                    label: 'Pre assessments',
-                    value: orgCourseTitles.length
-                      ? `${orgCourseTitles.length} course${orgCourseTitles.length === 1 ? '' : 's'}`
-                      : 'Org courses',
-                    icon: ClipboardList,
-                    section: 'pre-assessments' as SectionKey,
-                  },
-                  {
-                    label: 'Post assessments',
-                    value: 'End of course',
-                    icon: ClipboardCheck,
-                    section: 'assessments' as SectionKey,
-                  },
+                  courseSurveyKind === 'pre'
+                    ? {
+                        label: 'Pre assessments',
+                        value: orgCourseTitles.length
+                          ? `${orgCourseTitles.length} course${orgCourseTitles.length === 1 ? '' : 's'}`
+                          : 'Org courses',
+                        icon: ClipboardList,
+                        section: 'pre-assessments' as SectionKey,
+                      }
+                    : {
+                        label: 'Post assessments',
+                        value: 'Final 3 weeks',
+                        icon: ClipboardCheck,
+                        section: 'assessments' as SectionKey,
+                      },
                 ] as const
               ).map((stat) => (
                 <Box
@@ -616,6 +642,7 @@ export const MentorDashboard: React.FC = () => {
             )}
           </SectionShell>
 
+          {courseSurveyKind === 'pre' ? (
           <SectionShell
             id="mentor-pre-assessments"
             eyebrow="Start of course"
@@ -645,15 +672,15 @@ export const MentorDashboard: React.FC = () => {
               </Box>
             )}
           </SectionShell>
-
+          ) : (
           <SectionShell
             id="mentor-assessments"
             eyebrow="End of course"
             title="Mentee post-assessments"
             subtitle={
               orgCourseTitles.length
-                ? `When a mentee finishes a course, complete the mentor Post rating. Courses follow their organisation programme (${orgCourseTitles.join(', ')}).`
-                : 'When a mentee finishes a course, complete the mentor Post rating about them.'
+                ? `Final 3 weeks: complete the mentor Post rating. Courses follow their organisation programme (${orgCourseTitles.join(', ')}).`
+                : 'Final 3 weeks: complete the mentor Post rating about them.'
             }
           >
             {profile?.id && assessmentLearners.length > 0 ? (
@@ -674,6 +701,7 @@ export const MentorDashboard: React.FC = () => {
               </Box>
             )}
           </SectionShell>
+          )}
         </Stack>
       </Box>
     </MentorDashboardLayout>

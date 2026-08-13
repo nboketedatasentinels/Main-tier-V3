@@ -1,6 +1,11 @@
 /**
- * Native course Pre/Post assessment catalog (imported from SurveyMonkey).
- * Regenerate with: node scripts/import-native-course-assessments.mjs
+ * Native course Pre/Post assessment catalog.
+ *
+ * Catalog rows map course titles → SurveyMonkey survey ids.
+ * At runtime the app live-pulls questions from SurveyMonkey (exact wording).
+ * This JSON is the offline fallback + matcher index.
+ *
+ * Regenerate fallback snapshot: node scripts/import-native-course-assessments.mjs
  */
 import catalogJson from './nativeCourseAssessments.catalog.json'
 

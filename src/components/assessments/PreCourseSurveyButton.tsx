@@ -1,31 +1,39 @@
 import { Button, type ButtonProps } from '@chakra-ui/react'
-import { ClipboardList } from 'lucide-react'
+import { ClipboardCheck, ClipboardList } from 'lucide-react'
+import type { CourseAssessmentKind } from '@/config/nativeCourseAssessments'
+import { courseSurveyButtonLabel } from '@/utils/courseSurveyWindow'
 
-const PRE_COURSE_SURVEY_SECTION_ID = 'pre-course-survey'
+const COURSE_SURVEY_SECTION_ID = 'pre-course-survey'
 
-export const scrollToPreCourseSurvey = () => {
+export const scrollToCourseSurvey = () => {
   document
-    .getElementById(PRE_COURSE_SURVEY_SECTION_ID)
+    .getElementById(COURSE_SURVEY_SECTION_ID)
     ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-type PreCourseSurveyButtonProps = Omit<ButtonProps, 'children' | 'leftIcon' | 'onClick'> & {
+type CourseSurveyButtonProps = Omit<ButtonProps, 'children' | 'leftIcon' | 'onClick'> & {
   onClick?: () => void
+  /** Defaults to pre. Pass post in the final 3 weeks of the journey. */
+  kind?: CourseAssessmentKind
   label?: string
 }
 
 /**
- * Shared CTA so learner / mentor / coach / partner dashboards all surface the
- * same obvious "Pre-course survey" action.
+ * Shared CTA: Pre-course survey for most of the journey, Post-course survey
+ * in the final 3 weeks.
  */
 export function PreCourseSurveyButton({
-  onClick = scrollToPreCourseSurvey,
-  label = 'Pre-course survey',
+  onClick = scrollToCourseSurvey,
+  kind = 'pre',
+  label,
   ...buttonProps
-}: PreCourseSurveyButtonProps) {
+}: CourseSurveyButtonProps) {
+  const resolvedLabel = label ?? courseSurveyButtonLabel(kind)
+  const Icon = kind === 'post' ? ClipboardCheck : ClipboardList
+
   return (
     <Button
-      leftIcon={<ClipboardList size={16} />}
+      leftIcon={<Icon size={16} />}
       bg="#350e6f"
       color="white"
       _hover={{ bg: '#27062e' }}
@@ -33,9 +41,12 @@ export function PreCourseSurveyButton({
       onClick={onClick}
       {...buttonProps}
     >
-      {label}
+      {resolvedLabel}
     </Button>
   )
 }
 
-export { PRE_COURSE_SURVEY_SECTION_ID }
+/** @deprecated Use COURSE_SURVEY_SECTION_ID — kept for existing section anchors. */
+export const PRE_COURSE_SURVEY_SECTION_ID = COURSE_SURVEY_SECTION_ID
+export { COURSE_SURVEY_SECTION_ID }
+export const scrollToPreCourseSurvey = scrollToCourseSurvey

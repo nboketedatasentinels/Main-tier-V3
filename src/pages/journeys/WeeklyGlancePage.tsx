@@ -48,6 +48,7 @@ import {
   PRE_COURSE_SURVEY_SECTION_ID,
   PreCourseSurveyButton,
 } from '@/components/assessments/PreCourseSurveyButton'
+import { resolveCourseSurveyKind, courseSurveySectionTitle } from '@/utils/courseSurveyWindow'
 import { useAssignedCourses, type AssignedCourse } from '@/hooks/useAssignedCourses'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
@@ -687,6 +688,16 @@ export const WeeklyGlancePage = () => {
   const showAssignedCourses =
     (assignedLoading && hasCourseOrganization) || assignedCourses.length > 0
 
+  const courseSurveyKind = useMemo(
+    () =>
+      resolveCourseSurveyKind({
+        journeyStartDate: journeyTiming?.journeyStart ?? profile?.journeyStartDate,
+        programDurationWeeks: totalWeeks,
+        currentWeek,
+      }),
+    [journeyTiming?.journeyStart, profile?.journeyStartDate, totalWeeks, currentWeek],
+  )
+
   /** Scroll the personality card into view and flash a ring around it. */
   const focusPersonalityCard = useCallback(() => {
     closePersonalityPrompt()
@@ -1098,7 +1109,7 @@ export const WeeklyGlancePage = () => {
               </Text>
             </HStack>
             <HStack spacing={3} flexWrap="wrap">
-              {hasCourseOrganization ? <PreCourseSurveyButton size="sm" /> : null}
+              {hasCourseOrganization ? <PreCourseSurveyButton size="sm" kind={courseSurveyKind} /> : null}
               <Skeleton isLoaded={!data.loading.ledger} rounded="md">
                 <Text fontSize="xs" fontWeight="semibold" color="gray.600">
                   {journeyProgress}% of pass mark
@@ -1202,27 +1213,24 @@ export const WeeklyGlancePage = () => {
                 Course assessments
               </Text>
               <Heading size="sm" mt={1} color="gray.900">
-                Pre and post for your programme
+                {courseSurveySectionTitle(courseSurveyKind)}
               </Heading>
               <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
-                {orgCourseTitles.length
-                  ? `Complete Pre before each course and Post when you finish. Courses follow your organisation programme (${orgCourseTitles.join(', ')}).`
-                  : 'Complete Pre before each course and Post when you finish. Courses appear once your admin assigns the organisation programme.'}
+                {courseSurveyKind === 'post'
+                  ? orgCourseTitles.length
+                    ? `You are in the final stretch. Complete Post for your organisation programme (${orgCourseTitles.join(', ')}).`
+                    : 'You are in the final stretch. Complete the Post-course survey for your programme courses.'
+                  : orgCourseTitles.length
+                    ? `Complete Pre for each course on your organisation programme (${orgCourseTitles.join(', ')}). Post unlocks in the last 3 weeks.`
+                    : 'Complete Pre for each course. Post unlocks in the last 3 weeks of the journey.'}
               </Text>
             </Box>
             {orgCourseTitles.length > 0 ? (
-              <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-                <SelfCourseAssessment
-                  userId={profile.id}
-                  forcedKind="pre"
-                  allowedCourseTitles={orgCourseTitles}
-                />
-                <SelfCourseAssessment
-                  userId={profile.id}
-                  forcedKind="post"
-                  allowedCourseTitles={orgCourseTitles}
-                />
-              </SimpleGrid>
+              <SelfCourseAssessment
+                userId={profile.id}
+                forcedKind={courseSurveyKind}
+                allowedCourseTitles={orgCourseTitles}
+              />
             ) : (
               <Text fontSize="sm" color="gray.500">
                 No programme courses assigned yet. Ask your partner or admin to set monthly course
