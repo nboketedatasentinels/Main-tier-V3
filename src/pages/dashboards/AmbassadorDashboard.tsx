@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   Badge,
   Box,
+  Button,
   Card,
   CardBody,
   Divider,
@@ -44,6 +45,7 @@ import { getDisplayName } from '@/utils/displayName'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import { isJourneyType } from '@/utils/journeyType'
 import { resolveCourseSurveyKind, courseSurveySectionTitle } from '@/utils/courseSurveyWindow'
+import { LearnerSessionPrep } from '@/components/session-prep/LearnerSessionPrep'
 import type { UserProfile } from '@/types'
 
 type ReferralMetric = {
@@ -87,6 +89,7 @@ export const AmbassadorDashboard: React.FC = () => {
   const { profile } = useAuth()
   const ambassadorName = profile?.fullName || profile?.firstName || 'Coach'
   const [coachees, setCoachees] = useState<UserProfile[]>([])
+  const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!profile?.id) {
@@ -96,7 +99,12 @@ export const AmbassadorDashboard: React.FC = () => {
     let cancelled = false
     void fetchAssignedCoachees(profile.id)
       .then((rows) => {
-        if (!cancelled) setCoachees(rows)
+        if (cancelled) return
+        setCoachees(rows)
+        setSelectedCoacheeId((prev) => {
+          if (prev && rows.some((r) => r.id === prev)) return prev
+          return rows[0]?.id ?? null
+        })
       })
       .catch((err) => {
         console.error('[AmbassadorDashboard] coachees load failed', err)
@@ -106,6 +114,9 @@ export const AmbassadorDashboard: React.FC = () => {
       cancelled = true
     }
   }, [profile?.id])
+
+  const selectedCoachee =
+    coachees.find((c) => c.id === selectedCoacheeId) ?? coachees[0] ?? null
 
   const rateLearners = useMemo(
     () =>
@@ -226,6 +237,27 @@ export const AmbassadorDashboard: React.FC = () => {
             </Text>
           )}
         </Box>
+
+        {coachees.length > 0 ? (
+          <Stack spacing={4}>
+            <HStack spacing={2} flexWrap="wrap">
+              {coachees.map((c) => (
+                <Button
+                  key={c.id}
+                  size="sm"
+                  variant={selectedCoachee?.id === c.id ? 'solid' : 'outline'}
+                  colorScheme="purple"
+                  onClick={() => setSelectedCoacheeId(c.id ?? null)}
+                >
+                  {getDisplayName(c)}
+                </Button>
+              ))}
+            </HStack>
+            {selectedCoachee ? (
+              <LearnerSessionPrep audience="coach" learner={selectedCoachee} windowStatus="warning" />
+            ) : null}
+          </Stack>
+        ) : null}
 
         <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4}>
           {referralMetrics.map((metric) => (

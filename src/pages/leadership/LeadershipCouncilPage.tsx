@@ -62,6 +62,7 @@ import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { MENTORSHIP_GOALS_MAX_LENGTH, useMentorshipGoals } from '@/hooks/useMentorshipGoals'
+import { LeaderSessionPrep } from '@/components/session-prep/LeaderSessionPrep'
 import { useLearnerMentorshipSessions } from '@/hooks/useMentorshipSessions'
 import {
   cancelMentorshipSession,
@@ -1120,6 +1121,14 @@ export const LeadershipCouncilPage: React.FC = () => {
                             </>
                           )}
                         </Box>
+
+                        {profile ? (
+                          <LeaderSessionPrep
+                            learner={profile}
+                            mentor={mentorProfile}
+                            goals={savedGoals || goalsDraft}
+                          />
+                        ) : null}
 
                         <HStack spacing={3} flexWrap="wrap">
                           <Tooltip

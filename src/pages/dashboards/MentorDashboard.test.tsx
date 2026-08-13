@@ -37,6 +37,10 @@ vi.mock('@/components/assessments/RateLearnerCourseAssessment', () => ({
   RateLearnerCourseAssessment: () => <div data-testid="rate-panel">rate</div>,
 }))
 
+vi.mock('@/components/session-prep/LearnerSessionPrep', () => ({
+  LearnerSessionPrep: () => <div data-testid="session-prep">session prep</div>,
+}))
+
 vi.mock('@/hooks/useOrganizationProgramCourses', () => ({
   useOrganizationProgramCourses: () => ({
     program: {
@@ -97,7 +101,7 @@ describe('MentorDashboard', () => {
     await waitFor(() => {
       expect(screen.getAllByText('Ada Lovelace').length).toBeGreaterThan(0)
     })
-    expect(screen.getAllByText(/AI-generated/i).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('session-prep')).toBeInTheDocument()
     expect(screen.getByTestId('sessions-panel')).toBeInTheDocument()
     expect(screen.getAllByTestId('rate-panel').length).toBe(1)
     expect(screen.getByText(/Mentee pre-assessments/i)).toBeInTheDocument()

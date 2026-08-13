@@ -1,6 +1,8 @@
 import { supabase } from '@/services/supabase'
 import { updateUserProfile } from '@/services/userProfileService'
-import { normalizeRole } from '@/utils/role'
+import { listOrgPeers } from '@/services/supabasePeerService'
+import { getDisplayName } from '@/utils/displayName'
+import { isLearnerRole, normalizeRole } from '@/utils/role'
 import type { UserProfile } from '@/types'
 
 // Monotonic suffix so each learner subscription gets a distinct channel topic.
@@ -86,6 +88,17 @@ const extractName = (data: Record<string, unknown>, fallback = 'Unknown member')
   if (typeof data.name === 'string' && data.name.trim()) return data.name.trim()
   if (typeof data.email === 'string' && data.email.trim()) return data.email.trim()
   return fallback
+}
+
+/** Map list_org_peers camelCase records into UserProfile for mentor/coach dashboards. */
+const mapPeerRecordToLearner = (peer: Record<string, unknown>): UserProfile => {
+  const role = normalizeRole(peer.role)
+  return {
+    ...peer,
+    id: peer.id,
+    email: (peer.email as string) || '',
+    role,
+  } as unknown as UserProfile
 }
 
 /**
@@ -199,34 +212,91 @@ export const assignLineManagerToLearner = async (
   if (error) throw new Error(error.message)
 }
 
-/** Learners assigned to a coach (profiles.ambassador_id). */
+/** Learners assigned to a coach (profiles.ambassador_id) + org learners when coach is org-linked. */
 export const fetchAssignedCoachees = async (coachId: string): Promise<UserProfile[]> => {
   if (!coachId) return []
+
+  const byId = new Map<string, UserProfile>()
+
   const { data, error } = await supabase.from('profiles').select('*').eq('ambassador_id', coachId)
-
-  if (error) throw new Error(error.message)
-
-  return (data ?? [])
-    .map((row) => mapProfileRowToLearner(row as Record<string, unknown>))
-    .filter((learner) => {
+  if (error) {
+    console.warn('[fetchAssignedCoachees] ambassador_id query failed', error.message)
+  } else {
+    for (const row of data ?? []) {
+      const learner = mapProfileRowToLearner(row as Record<string, unknown>)
+      if (!learner.id || learner.id === coachId) continue
       const role = normalizeRole(learner.role)
-      return role === 'free_user' || role === 'paid_member'
-    })
+      if (role === 'free_user' || role === 'paid_member') {
+        byId.set(learner.id, learner)
+      }
+    }
+  }
+
+  try {
+    const peers = await listOrgPeers({ includeSelf: false })
+    for (const peer of peers) {
+      const learner = mapPeerRecordToLearner(peer)
+      if (!learner.id || learner.id === coachId || byId.has(learner.id)) continue
+      if (!isLearnerRole(learner.role)) continue
+      byId.set(learner.id, learner)
+    }
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code
+    if (code !== 'no-organization') {
+      console.warn('[fetchAssignedCoachees] org peers fallback failed', err)
+    }
+  }
+
+  return Array.from(byId.values()).sort((a, b) =>
+    getDisplayName(a).localeCompare(getDisplayName(b)),
+  )
 }
 
-/** Learners assigned to a mentor (profiles.mentor_id). Supabase source of truth. */
+/**
+ * Learners for a mentor dashboard:
+ * 1) Explicit profiles.mentor_id assignments
+ * 2) All learners in the mentor's organisation (org mentor = automatic mentees)
+ *
+ * Org peers come from list_org_peers (SECURITY DEFINER) so RLS cannot hide
+ * org mates when mentor_id was never stamped on each learner row.
+ */
 export const fetchAssignedMenteesForMentor = async (mentorId: string): Promise<UserProfile[]> => {
   if (!mentorId) return []
+
+  const byId = new Map<string, UserProfile>()
+
   const { data, error } = await supabase.from('profiles').select('*').eq('mentor_id', mentorId)
-
-  if (error) throw new Error(error.message)
-
-  return (data ?? [])
-    .map((row) => mapProfileRowToLearner(row as Record<string, unknown>))
-    .filter((learner) => {
+  if (error) {
+    console.warn('[fetchAssignedMenteesForMentor] mentor_id query failed', error.message)
+  } else {
+    for (const row of data ?? []) {
+      const learner = mapProfileRowToLearner(row as Record<string, unknown>)
+      if (!learner.id || learner.id === mentorId) continue
       const role = normalizeRole(learner.role)
-      return role === 'free_user' || role === 'paid_member'
-    })
+      if (role === 'free_user' || role === 'paid_member') {
+        byId.set(learner.id, learner)
+      }
+    }
+  }
+
+  try {
+    const peers = await listOrgPeers({ includeSelf: false })
+    for (const peer of peers) {
+      const learner = mapPeerRecordToLearner(peer)
+      if (!learner.id || learner.id === mentorId || byId.has(learner.id)) continue
+      if (!isLearnerRole(learner.role)) continue
+      byId.set(learner.id, learner)
+    }
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code
+    if (code !== 'no-organization') {
+      console.warn('[fetchAssignedMenteesForMentor] org peers fallback failed', err)
+    }
+  }
+
+  return Array.from(byId.values()).sort((a, b) =>
+    getDisplayName(a).localeCompare(getDisplayName(b)),
+  )
 }
 
 /** Learners who have this user as line_manager_id. */

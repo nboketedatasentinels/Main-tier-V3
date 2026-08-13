@@ -3,7 +3,6 @@ import {
   Alert,
   AlertIcon,
   Avatar,
-  Badge,
   Box,
   Button,
   Flex,
@@ -16,10 +15,7 @@ import {
   SimpleGrid,
   Skeleton,
   Stack,
-  Tag,
   Text,
-  Wrap,
-  WrapItem,
 } from '@chakra-ui/react'
 import {
   CalendarClock,
@@ -27,7 +23,6 @@ import {
   ClipboardList,
   Lightbulb,
   Search,
-  Sparkles,
   Users,
   ArrowRight,
   RefreshCw,
@@ -38,20 +33,15 @@ import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearne
 import {
   PreCourseSurveyButton,
 } from '@/components/assessments/PreCourseSurveyButton'
+import { LearnerSessionPrep } from '@/components/session-prep/LearnerSessionPrep'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { fetchAssignedMenteesForMentor } from '@/services/learnerAssignmentService'
-import {
-  buildAiInference,
-  buildMentoringSessionPlan,
-  buildStrengthsWeaknessesWriteUp,
-  mentoringTipsLibrary,
-} from '@/services/mentorCoachingInsights'
+import { mentoringTipsLibrary } from '@/services/mentorCoachingInsights'
 import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
-import { ageRangeLabel } from '@/config/demographics'
 import { getDisplayName } from '@/utils/displayName'
-import { getJourneyLabel, isJourneyType } from '@/utils/journeyType'
+import { isJourneyType } from '@/utils/journeyType'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import { resolveCourseSurveyKind } from '@/utils/courseSurveyWindow'
 import { buildMentorNavItems } from '@/utils/navigationItems'
@@ -99,202 +89,6 @@ const SectionShell: React.FC<{
     {children}
   </Box>
 )
-
-const MenteeProfilePanel: React.FC<{ mentee: UserProfile }> = ({ mentee }) => {
-  const name = getDisplayName(mentee)
-  const insightInput = {
-    name,
-    personalityType: mentee.personalityType,
-    coreValues: mentee.coreValues,
-    ageRange: ageRangeLabel(mentee.ageRange) || mentee.ageRange,
-    journeyType: typeof mentee.journeyType === 'string' ? mentee.journeyType : null,
-    currentWeek: mentee.currentWeek ?? null,
-    courseTitles: [],
-  }
-  const writeUp = buildStrengthsWeaknessesWriteUp(insightInput)
-  const ai = buildAiInference(insightInput)
-  const plan = buildMentoringSessionPlan(insightInput)
-  const journey =
-    mentee.journeyType && isJourneyType(mentee.journeyType)
-      ? getJourneyLabel(mentee.journeyType)
-      : mentee.journeyType || 'Journey'
-
-  return (
-    <Box
-      borderRadius="xl"
-      overflow="hidden"
-      border="1px solid"
-      borderColor="gray.200"
-      bg="white"
-    >
-      <Box
-        px={{ base: 5, md: 6 }}
-        py={5}
-        bg="white"
-        borderBottom="1px solid"
-        borderColor="gray.100"
-      >
-        <Flex gap={4} align="center" flexWrap="wrap">
-          <Avatar name={name} size="lg" bg="gray.100" color="gray.700" />
-          <Box flex="1" minW="200px">
-            <Text fontSize="xl" fontWeight="700" letterSpacing="-0.02em" color="gray.900">
-              {name}
-            </Text>
-            <Text fontSize="sm" color="gray.500">
-              {mentee.email}
-            </Text>
-            <HStack mt={3} spacing={2} flexWrap="wrap">
-              <Badge bg="gray.100" color="gray.700" borderRadius="md" px={2.5} py={0.5} fontWeight="medium">
-                {journey}
-              </Badge>
-              {mentee.currentWeek ? (
-                <Badge bg="gray.100" color="gray.700" borderRadius="md" px={2.5} py={0.5} fontWeight="medium">
-                  Week {mentee.currentWeek}
-                </Badge>
-              ) : null}
-              {ageRangeLabel(mentee.ageRange) || mentee.ageRange ? (
-                <Badge bg="gray.100" color="gray.700" borderRadius="md" px={2.5} py={0.5} fontWeight="medium">
-                  {ageRangeLabel(mentee.ageRange) || mentee.ageRange}
-                </Badge>
-              ) : null}
-              {personalityLabel(mentee.personalityType) ? (
-                <Badge
-                  bg="#350e6f"
-                  color="white"
-                  borderRadius="md"
-                  px={2.5}
-                  py={0.5}
-                  fontWeight="medium"
-                >
-                  {personalityLabel(mentee.personalityType)}
-                </Badge>
-              ) : null}
-            </HStack>
-          </Box>
-        </Flex>
-      </Box>
-
-      <Stack spacing={6} p={{ base: 5, md: 6 }}>
-        <Box>
-          <Text fontSize="xs" fontWeight="semibold" color="gray.500" letterSpacing="0.08em" textTransform="uppercase">
-            Core values
-          </Text>
-          {mentee.coreValues?.length ? (
-            <Wrap mt={2} spacing={2}>
-              {mentee.coreValues.map((value) => (
-                <WrapItem key={value}>
-                  <Tag borderRadius="md" bg="gray.50" color="gray.800" border="1px solid" borderColor="gray.200" px={3} py={1}>
-                    {value}
-                  </Tag>
-                </WrapItem>
-              ))}
-            </Wrap>
-          ) : (
-            <Text mt={2} fontSize="sm" color="gray.500">
-              Values not captured yet. Ask them to complete the Personal Values activity.
-            </Text>
-          )}
-        </Box>
-
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-          <Box p={4} borderRadius="lg" bg="gray.50" border="1px solid" borderColor="gray.100">
-            <Text fontWeight="600" color="gray.900" mb={2} fontSize="sm">
-              Strengths
-            </Text>
-            <Stack spacing={1}>
-              {writeUp.strengths.map((s) => (
-                <Text key={s} fontSize="sm" color="gray.700">
-                  · {s}
-                </Text>
-              ))}
-            </Stack>
-          </Box>
-          <Box p={4} borderRadius="lg" bg="gray.50" border="1px solid" borderColor="gray.100">
-            <Text fontWeight="600" color="gray.900" mb={2} fontSize="sm">
-              Growth edges
-            </Text>
-            <Stack spacing={1}>
-              {writeUp.growthEdges.map((s) => (
-                <Text key={s} fontSize="sm" color="gray.700">
-                  · {s}
-                </Text>
-              ))}
-            </Stack>
-          </Box>
-        </SimpleGrid>
-        <Text fontSize="sm" color="gray.600" lineHeight="1.65">
-          {writeUp.summary}
-        </Text>
-
-        <Box
-          p={4}
-          borderRadius="lg"
-          border="1px solid"
-          borderColor="gray.200"
-          bg="white"
-        >
-          <HStack mb={2} spacing={2}>
-            <Icon as={Sparkles} color="gray.600" boxSize={4} />
-            <Badge colorScheme="gray" borderRadius="md" variant="subtle">
-              {ai.label}
-            </Badge>
-          </HStack>
-          <Stack spacing={2}>
-            {ai.lines.map((line) => (
-              <Text key={line} fontSize="sm" color="gray.800" lineHeight="1.6">
-                {line}
-              </Text>
-            ))}
-          </Stack>
-          <Text mt={3} fontSize="xs" color="gray.500">
-            {ai.disclaimer}
-          </Text>
-        </Box>
-
-        <Box>
-          <HStack mb={3} spacing={2}>
-            <Icon as={Lightbulb} color="gray.600" boxSize={4} />
-            <Text fontWeight="600" color="gray.900" fontSize="sm">
-              Suggested session plan · {plan.recommendedSessionCount} meetings on {plan.journeyLabel}
-            </Text>
-          </HStack>
-          <SimpleGrid columns={{ base: 1, md: plan.sessions.length > 3 ? 2 : plan.sessions.length }} spacing={3}>
-            {plan.sessions.map((session) => (
-              <Box
-                key={session.index}
-                p={4}
-                borderRadius="lg"
-                border="1px solid"
-                borderColor="gray.200"
-                bg="white"
-              >
-                <Text fontSize="xs" fontWeight="semibold" color="gray.500" letterSpacing="0.06em">
-                  SESSION {session.index}
-                </Text>
-                <Text fontWeight="600" color="gray.900" mt={1}>
-                  {session.title}
-                </Text>
-                <Text fontSize="sm" color="gray.600" mt={1}>
-                  {session.focus}
-                </Text>
-                <Stack mt={3} spacing={1}>
-                  {session.suggestedTopics.map((topic) => (
-                    <Text key={topic} fontSize="xs" color="gray.700">
-                      · {topic}
-                    </Text>
-                  ))}
-                </Stack>
-                <Text mt={3} fontSize="xs" color="gray.500" fontWeight="medium">
-                  Tip: {session.tip}
-                </Text>
-              </Box>
-            ))}
-          </SimpleGrid>
-        </Box>
-      </Stack>
-    </Box>
-  )
-}
 
 export const MentorDashboard: React.FC = () => {
   const { profile } = useAuth()
@@ -537,7 +331,7 @@ export const MentorDashboard: React.FC = () => {
             id="mentor-mentees"
             eyebrow="Directory"
             title="Who you mentor"
-            subtitle="Only learners assigned to you. Open a profile for values, personality, strengths/growth edges, and AI coaching notes."
+            subtitle="Only learners in your organisation (and explicit mentor assignments). Open a profile for Session Prep."
             action={
               <Button
                 leftIcon={<RefreshCw size={14} />}
@@ -580,8 +374,9 @@ export const MentorDashboard: React.FC = () => {
             ) : filtered.length === 0 ? (
               <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
                 <Text color="gray.600" fontSize="sm">
-                  No mentees assigned yet. When a partner or admin sets you as a learner&apos;s mentor,
-                  they appear here.
+                  No mentees assigned yet. Learners in your organisation appear here automatically
+                  once you are linked to that organisation. Explicit mentor assignments also show
+                  up here.
                 </Text>
               </Box>
             ) : (
@@ -624,7 +419,7 @@ export const MentorDashboard: React.FC = () => {
                     )
                   })}
                 </Stack>
-                {selected ? <MenteeProfilePanel mentee={selected} /> : null}
+                {selected ? (<LearnerSessionPrep audience="mentor" learner={selected} windowStatus="warning" />) : null}
               </Grid>
             )}
           </SectionShell>

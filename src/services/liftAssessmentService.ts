@@ -83,6 +83,42 @@ export const getOwnLiftAssessment = async (uid: string): Promise<LiftAssessmentR
   return data ? mapRow(data as Raw) : null
 }
 
+/**
+ * Session Prep LIFT snapshot for a learner (owner, partner/admin, assigned
+ * mentor/coach, or org mentor/coach). Uses SECURITY DEFINER RPC.
+ */
+export const getSessionPrepLift = async (
+  learnerId: string,
+): Promise<{
+  pillars: Record<PillarKey, number>
+  liftIndex: number
+  developmentEdge: PillarKey | null
+} | null> => {
+  const { data, error } = await supabase.rpc('get_session_prep_lift', {
+    p_learner_id: learnerId,
+  })
+  if (error) throw new Error(error.message)
+  const payload = (data ?? {}) as {
+    ok?: boolean
+    error?: string
+    lift?: {
+      pillars?: Record<PillarKey, number>
+      liftIndex?: number
+      developmentEdge?: PillarKey | null
+    } | null
+  }
+  if (!payload.ok) {
+    if (payload.error === 'forbidden' || payload.error === 'learner_not_found') return null
+    throw new Error(payload.error || 'Failed to load session prep LIFT')
+  }
+  if (!payload.lift?.pillars) return null
+  return {
+    pillars: payload.lift.pillars,
+    liftIndex: payload.lift.liftIndex ?? 0,
+    developmentEdge: payload.lift.developmentEdge ?? null,
+  }
+}
+
 /** Persist a completed assessment (one row per user; uid is the PK). */
 export const submitLiftAssessment = async (
   uid: string,
