@@ -42,6 +42,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { ActivityCard } from '@/components/dashboard/ActivityCard'
 import { BadgeCard } from '@/components/dashboard/BadgeCard'
 import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
+import {
+  PRE_COURSE_SURVEY_SECTION_ID,
+  PreCourseSurveyButton,
+} from '@/components/assessments/PreCourseSurveyButton'
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { useLeaderboardData } from '@/hooks/leaderboard/useLeaderboardData'
 import { getLeaderboardContextLabels, useLeaderboardContext } from '@/hooks/leaderboard/useLeaderboardContext'
@@ -247,6 +251,11 @@ export const PaidMemberDashboard: React.FC = () => {
           <Text color="brand.subtleText" opacity={0.9}>
             You are on track for week {currentWeek}. Keep the momentum going today.
           </Text>
+          {organizationId ? (
+            <Box mt={3}>
+              <PreCourseSurveyButton size="sm" />
+            </Box>
+          ) : null}
         </Box>
         <HStack spacing={4}>
           <VStack align="flex-end" spacing={1} display={{ base: 'none', md: 'flex' }}>
@@ -269,6 +278,8 @@ export const PaidMemberDashboard: React.FC = () => {
 
       {profile?.id && organizationId ? (
         <Box
+          id={PRE_COURSE_SURVEY_SECTION_ID}
+          scrollMarginTop="96px"
           borderRadius="xl"
           border="1px solid"
           borderColor="gray.200"

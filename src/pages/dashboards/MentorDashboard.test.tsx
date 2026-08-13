@@ -101,6 +101,7 @@ describe('MentorDashboard', () => {
     expect(screen.getByTestId('sessions-panel')).toBeInTheDocument()
     expect(screen.getAllByTestId('rate-panel').length).toBe(2)
     expect(screen.getByText(/Mentee pre-assessments/i)).toBeInTheDocument()
-    expect(screen.getByText(/Pre assessments/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Pre assessments/i).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /Pre-course survey/i })).toBeInTheDocument()
   })
 })

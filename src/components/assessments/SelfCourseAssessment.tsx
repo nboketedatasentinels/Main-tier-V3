@@ -193,7 +193,7 @@ export function SelfCourseAssessment({
           onClick={() => void start()}
           isDisabled={!definition}
         >
-          Start {kind === 'pre' ? 'pre' : 'post'}-course assessment
+          Start {kind === 'pre' ? 'Pre-course survey' : 'Post-course survey'}
         </Button>
       </Stack>
 

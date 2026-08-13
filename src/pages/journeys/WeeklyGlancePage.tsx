@@ -44,6 +44,10 @@ import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { AssignedCoursesCarousel } from '@/components/journeys/weeklyGlance/AssignedCoursesCarousel'
 import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
+import {
+  PRE_COURSE_SURVEY_SECTION_ID,
+  PreCourseSurveyButton,
+} from '@/components/assessments/PreCourseSurveyButton'
 import { useAssignedCourses, type AssignedCourse } from '@/hooks/useAssignedCourses'
 import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
@@ -1093,11 +1097,14 @@ export const WeeklyGlancePage = () => {
                 Week {currentWeek} of {totalWeeks} · Cycle {cycleNumber} of {totalCycles}
               </Text>
             </HStack>
-            <Skeleton isLoaded={!data.loading.ledger} rounded="md">
-              <Text fontSize="xs" fontWeight="semibold" color="gray.600">
-                {journeyProgress}% of pass mark
-              </Text>
-            </Skeleton>
+            <HStack spacing={3} flexWrap="wrap">
+              {hasCourseOrganization ? <PreCourseSurveyButton size="sm" /> : null}
+              <Skeleton isLoaded={!data.loading.ledger} rounded="md">
+                <Text fontSize="xs" fontWeight="semibold" color="gray.600">
+                  {journeyProgress}% of pass mark
+                </Text>
+              </Skeleton>
+            </HStack>
           </Flex>
           <Box h="6px" bg="gray.100" borderRadius="full" overflow="hidden">
             <MotionBox
@@ -1174,8 +1181,10 @@ export const WeeklyGlancePage = () => {
           )}
         </Flex>
 
-        {profile?.id && hasCourseOrganization && orgCourseTitles.length > 0 ? (
+        {profile?.id && hasCourseOrganization ? (
           <Box
+            id={PRE_COURSE_SURVEY_SECTION_ID}
+            scrollMarginTop="96px"
             bg="white"
             borderRadius="xl"
             border="1px solid"
@@ -1196,22 +1205,30 @@ export const WeeklyGlancePage = () => {
                 Pre and post for your programme
               </Heading>
               <Text mt={1} fontSize="sm" color="gray.600" maxW="640px">
-                Complete Pre before each course and Post when you finish. Courses follow your
-                organisation programme ({orgCourseTitles.join(', ')}).
+                {orgCourseTitles.length
+                  ? `Complete Pre before each course and Post when you finish. Courses follow your organisation programme (${orgCourseTitles.join(', ')}).`
+                  : 'Complete Pre before each course and Post when you finish. Courses appear once your admin assigns the organisation programme.'}
               </Text>
             </Box>
-            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
-              <SelfCourseAssessment
-                userId={profile.id}
-                forcedKind="pre"
-                allowedCourseTitles={orgCourseTitles}
-              />
-              <SelfCourseAssessment
-                userId={profile.id}
-                forcedKind="post"
-                allowedCourseTitles={orgCourseTitles}
-              />
-            </SimpleGrid>
+            {orgCourseTitles.length > 0 ? (
+              <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                <SelfCourseAssessment
+                  userId={profile.id}
+                  forcedKind="pre"
+                  allowedCourseTitles={orgCourseTitles}
+                />
+                <SelfCourseAssessment
+                  userId={profile.id}
+                  forcedKind="post"
+                  allowedCourseTitles={orgCourseTitles}
+                />
+              </SimpleGrid>
+            ) : (
+              <Text fontSize="sm" color="gray.500">
+                No programme courses assigned yet. Ask your partner or admin to set monthly course
+                assignments.
+              </Text>
+            )}
           </Box>
         ) : null}
 

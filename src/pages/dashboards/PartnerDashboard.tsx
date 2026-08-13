@@ -42,6 +42,13 @@ import { usePointsApprovalQueue } from '@/hooks/partner/usePointsApprovalQueue'
 import { usePartnerMetrics } from '@/hooks/partner/usePartnerMetrics'
 import { usePartnerDashboardData, type PartnerUser } from '@/hooks/usePartnerDashboardData'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
+import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import {
+  PRE_COURSE_SURVEY_SECTION_ID,
+  PreCourseSurveyButton,
+} from '@/components/assessments/PreCourseSurveyButton'
+import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
+import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles'
 import { JOURNEY_META, type JourneyType } from '@/config/pointsConfig'
 import { getJourneyLabel } from '@/utils/journeyType'
 import { useAuth } from '@/hooks/useAuth'
@@ -495,6 +502,22 @@ export const PartnerDashboard: React.FC = () => {
     return match?.id || null
   }, [organizations, selectedOrg])
 
+  const { program: selectedOrgProgram } = useOrganizationProgramCourses(selectedOrgId)
+  const orgProgrammeCourseTitles = useOrgProgrammeCourseTitles(selectedOrgProgram)
+
+  const courseAssessmentLearners = useMemo(
+    () =>
+      overviewUsers
+        .filter((user) => Boolean(user.id))
+        .map((user) => ({
+          id: user.id!,
+          name: getDisplayName(user),
+          currentWeek: user.currentWeek,
+          journeyType: typeof user.journeyType === 'string' ? user.journeyType : undefined,
+        })),
+    [overviewUsers],
+  )
+
   useEffect(() => {
     if (effectiveRole !== 'partner' || !selectedOrgId) {
       setPartnerOrgAccess(true)
@@ -674,6 +697,11 @@ export const PartnerDashboard: React.FC = () => {
       && overviewMetrics.managedCompanies === 0
     return (
       <Stack spacing={8}>
+        {selectedOrgId ? (
+          <Flex justify="flex-end">
+            <PreCourseSurveyButton size="sm" />
+          </Flex>
+        ) : null}
         <Card
           {...surfaceCardProps}
           role="button"
@@ -782,6 +810,80 @@ export const PartnerDashboard: React.FC = () => {
             </HStack>
           </CardBody>
         </Card>
+
+        {selectedOrgId && profile?.id ? (
+          <Card {...surfaceCardProps} id={PRE_COURSE_SURVEY_SECTION_ID} scrollMarginTop={4}>
+            <CardBody p={{ base: 4, md: 6 }}>
+              <HStack spacing={3} mb={4} align="flex-start" justify="space-between" flexWrap="wrap">
+                <HStack spacing={3} align="flex-start">
+                  <IconTile>
+                    <ClipboardCheck size={18} />
+                  </IconTile>
+                  <Stack spacing={0.5}>
+                    <Text
+                      fontSize="xs"
+                      letterSpacing="0.06em"
+                      textTransform="uppercase"
+                      color="brand.subtleText"
+                      fontWeight="semibold"
+                    >
+                      Course assessments
+                    </Text>
+                    <Text fontWeight="bold" color="brand.text">
+                      Pre and Post for this organisation
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      {orgProgrammeCourseTitles.length
+                        ? `Scoped to admin-assigned courses: ${orgProgrammeCourseTitles.join(', ')}.`
+                        : 'Scoped to courses the admin assigned on this organisation programme.'}
+                    </Text>
+                  </Stack>
+                </HStack>
+                <PreCourseSurveyButton
+                  size="sm"
+                  onClick={() =>
+                    document
+                      .getElementById(PRE_COURSE_SURVEY_SECTION_ID)
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                />
+              </HStack>
+
+              {courseAssessmentLearners.length > 0 ? (
+                <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                  <RateLearnerCourseAssessment
+                    respondentId={profile.id}
+                    raterRole="partner"
+                    learners={courseAssessmentLearners}
+                    forcedKind="pre"
+                    allowedCourseTitles={orgProgrammeCourseTitles}
+                  />
+                  <RateLearnerCourseAssessment
+                    respondentId={profile.id}
+                    raterRole="partner"
+                    learners={courseAssessmentLearners}
+                    forcedKind="post"
+                    allowedCourseTitles={orgProgrammeCourseTitles}
+                  />
+                </SimpleGrid>
+              ) : (
+                <Text fontSize="sm" color="brand.subtleText">
+                  No learners in this organisation yet.
+                </Text>
+              )}
+
+              <Button
+                mt={4}
+                size="sm"
+                variant="outline"
+                borderColor="border.control"
+                onClick={() => navigate('/partner/course-surveys')}
+              >
+                Open full assessment workspace
+              </Button>
+            </CardBody>
+          </Card>
+        ) : null}
 
         {journeyProgress && journeyProgress.unconfigured && (
           <Box

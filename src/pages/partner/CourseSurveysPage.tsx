@@ -34,6 +34,7 @@ import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { useLearnerOverview } from '@/hooks/useLearnerOverview'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import { PreCourseSurveyButton } from '@/components/assessments/PreCourseSurveyButton'
 import { CourseAssessmentReportCardView } from '@/components/assessments/CourseAssessmentReportCardView'
 import {
   buildAssessmentReportWorkspace,
@@ -279,19 +280,22 @@ const CourseSurveysPage: React.FC = () => {
               Learners only see their own report card.
             </Text>
           </Box>
-          {selectedOrgId && (
-            <Badge
-              colorScheme={
-                orgPhase === 'completed' ? 'green' : orgPhase === 'near_end' ? 'orange' : 'gray'
-              }
-              borderRadius="full"
-              px={3}
-              py={1}
-              textTransform="none"
-            >
-              {phaseLabel(orgPhase)}
-            </Badge>
-          )}
+          <HStack spacing={3} flexWrap="wrap">
+            {selectedOrgId ? <PreCourseSurveyButton size="sm" /> : null}
+            {selectedOrgId && (
+              <Badge
+                colorScheme={
+                  orgPhase === 'completed' ? 'green' : orgPhase === 'near_end' ? 'orange' : 'gray'
+                }
+                borderRadius="full"
+                px={3}
+                py={1}
+                textTransform="none"
+              >
+                {phaseLabel(orgPhase)}
+              </Badge>
+            )}
+          </HStack>
         </Flex>
 
         {!selectedOrgId && (
@@ -354,7 +358,7 @@ const CourseSurveysPage: React.FC = () => {
             ) : (
               <>
                 {profile?.id ? (
-                  <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+                  <SimpleGrid id="pre-course-survey" scrollMarginTop="96px" columns={{ base: 1, lg: 2 }} spacing={4}>
                     <RateLearnerCourseAssessment
                       respondentId={profile.id}
                       raterRole="partner"

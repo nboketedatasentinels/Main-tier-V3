@@ -35,6 +35,9 @@ import {
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { MentorSessionsPanel } from '@/components/mentor/MentorSessionsPanel'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import {
+  PreCourseSurveyButton,
+} from '@/components/assessments/PreCourseSurveyButton'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { fetchAssignedMenteesForMentor } from '@/services/learnerAssignmentService'
@@ -425,6 +428,7 @@ export const MentorDashboard: React.FC = () => {
                 >
                   Open mentees
                 </Button>
+                <PreCourseSurveyButton onClick={() => scrollTo('pre-assessments')} />
                 <Button
                   variant="outline"
                   borderColor="gray.300"

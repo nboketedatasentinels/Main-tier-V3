@@ -8,6 +8,7 @@ import {
   Flex,
   Grid,
   GridItem,
+  Heading,
   HStack,
   Icon,
   Progress,
@@ -27,13 +28,20 @@ import {
   VStack,
   type BadgeProps,
 } from '@chakra-ui/react'
-import { Flame, Gift, Megaphone, Share2, Target, TrendingUp, Users } from 'lucide-react'
+import { ClipboardList, Flame, Gift, Megaphone, Share2, Target, TrendingUp, Users } from 'lucide-react'
 import { AmbassadorLayout } from '@/layouts/AmbassadorLayout'
 import { AmbassadorSessionsPanel } from '@/components/ambassador/AmbassadorSessionsPanel'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
+import {
+  PRE_COURSE_SURVEY_SECTION_ID,
+  PreCourseSurveyButton,
+} from '@/components/assessments/PreCourseSurveyButton'
 import { useAuth } from '@/hooks/useAuth'
+import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
+import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles'
 import { fetchAssignedCoachees } from '@/services/learnerAssignmentService'
 import { getDisplayName } from '@/utils/displayName'
+import type { UserProfile } from '@/types'
 
 type ReferralMetric = {
   label: string
@@ -75,7 +83,7 @@ const engagementHighlights = [
 export const AmbassadorDashboard: React.FC = () => {
   const { profile } = useAuth()
   const ambassadorName = profile?.fullName || profile?.firstName || 'Coach'
-  const [coachees, setCoachees] = useState<{ id: string; name: string }[]>([])
+  const [coachees, setCoachees] = useState<UserProfile[]>([])
 
   useEffect(() => {
     if (!profile?.id) {
@@ -85,13 +93,7 @@ export const AmbassadorDashboard: React.FC = () => {
     let cancelled = false
     void fetchAssignedCoachees(profile.id)
       .then((rows) => {
-        if (cancelled) return
-        setCoachees(
-          rows.map((learner) => ({
-            id: learner.id!,
-            name: getDisplayName(learner, 'Learner'),
-          })),
-        )
+        if (!cancelled) setCoachees(rows)
       })
       .catch((err) => {
         console.error('[AmbassadorDashboard] coachees load failed', err)
@@ -102,7 +104,28 @@ export const AmbassadorDashboard: React.FC = () => {
     }
   }, [profile?.id])
 
-  const rateLearners = useMemo(() => coachees, [coachees])
+  const rateLearners = useMemo(
+    () =>
+      coachees
+        .filter((learner) => Boolean(learner.id))
+        .map((learner) => ({
+          id: learner.id!,
+          name: getDisplayName(learner, 'Learner'),
+          currentWeek: learner.currentWeek,
+          journeyType: typeof learner.journeyType === 'string' ? learner.journeyType : undefined,
+          journeyStatus: typeof learner.journeyStatus === 'string' ? learner.journeyStatus : undefined,
+        })),
+    [coachees],
+  )
+
+  const coacheeOrgId =
+    coachees[0]?.organizationId ||
+    coachees[0]?.companyId ||
+    profile?.organizationId ||
+    profile?.companyId ||
+    null
+  const { program: orgProgram } = useOrganizationProgramCourses(coacheeOrgId)
+  const orgCourseTitles = useOrgProgrammeCourseTitles(orgProgram)
 
   return (
     <AmbassadorLayout
@@ -111,27 +134,20 @@ export const AmbassadorDashboard: React.FC = () => {
       avatarUrl={profile?.avatarUrl}
     >
       <Stack spacing={6}>
-        {profile?.id && rateLearners.length > 0 && (
-          <RateLearnerCourseAssessment
-            respondentId={profile.id}
-            raterRole="coach"
-            learners={rateLearners}
-            forcedKind="post"
-          />
-        )}
-        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={6} wrap="wrap">
-          <Stack spacing={2}>
+        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} flexWrap="wrap">
+          <Stack spacing={2} maxW="640px">
             <Text fontSize="2xl" fontWeight="bold" color="brand.text">
               Welcome back, {ambassadorName}
             </Text>
             <Text color="brand.subtleText">
               Track referrals, celebrate wins, and grow the ecosystem with dedicated coach tools.
             </Text>
-            <HStack spacing={3}>
+            <HStack spacing={3} flexWrap="wrap">
               <Badge colorScheme="purple">Referral program</Badge>
               <Badge colorScheme="green" variant="subtle">
                 Recognition enabled
               </Badge>
+              <PreCourseSurveyButton size="sm" />
             </HStack>
           </Stack>
           <Stack spacing={2} align="flex-end">
@@ -146,6 +162,54 @@ export const AmbassadorDashboard: React.FC = () => {
             </Text>
           </Stack>
         </Flex>
+
+        <Box
+          id={PRE_COURSE_SURVEY_SECTION_ID}
+          scrollMarginTop="96px"
+          borderRadius="xl"
+          border="1px solid"
+          borderColor="gray.200"
+          bg="white"
+          p={{ base: 4, md: 6 }}
+        >
+          <HStack spacing={3} mb={4} align="flex-start">
+            <Icon as={ClipboardList} boxSize={5} color="gray.700" mt={1} />
+            <Box>
+              <Heading size="sm" color="gray.900">
+                Course assessments
+              </Heading>
+              <Text fontSize="sm" color="gray.600" mt={1}>
+                {orgCourseTitles.length
+                  ? `Pre and Post ratings for coachees on their organisation programme (${orgCourseTitles.join(', ')}).`
+                  : 'Pre and Post ratings for coachees, scoped to courses the admin assigned to their organisation.'}
+              </Text>
+            </Box>
+          </HStack>
+
+          {profile?.id && rateLearners.length > 0 ? (
+            <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={4}>
+              <RateLearnerCourseAssessment
+                respondentId={profile.id}
+                raterRole="coach"
+                learners={rateLearners}
+                forcedKind="pre"
+                allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
+              />
+              <RateLearnerCourseAssessment
+                respondentId={profile.id}
+                raterRole="coach"
+                learners={rateLearners}
+                forcedKind="post"
+                allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
+              />
+            </SimpleGrid>
+          ) : (
+            <Text fontSize="sm" color="gray.500">
+              Assign coachees first. Pre assessments appear here for each learner on your roster,
+              scoped to their organisation&apos;s programme courses.
+            </Text>
+          )}
+        </Box>
 
         <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4}>
           {referralMetrics.map((metric) => (
