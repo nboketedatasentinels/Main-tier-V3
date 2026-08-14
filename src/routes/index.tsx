@@ -17,6 +17,7 @@ import { ThankYouPage } from '@/pages/assessment/ThankYouPage'
 import { PartnerLandingPage } from '@/pages/partner/PartnerLandingPage'
 import { PartnerSignupPage } from '@/pages/partner/PartnerSignupPage'
 import { MentorSignupPage } from '@/pages/mentor/MentorSignupPage'
+import { CoachSignupPage } from '@/pages/coach/CoachSignupPage'
 
 // Page imports
 import { LoginPage } from '@/pages/auth/LoginPage'
@@ -184,6 +185,8 @@ export const AppRoutes = () => {
         <Route path="/partner-signin" element={<PartnerSignupPage initialMode="signin" />} />
         <Route path="/mentor-signup" element={<MentorSignupPage initialMode="signup" />} />
         <Route path="/mentor-signin" element={<MentorSignupPage initialMode="signin" />} />
+        <Route path="/coach-signup" element={<CoachSignupPage initialMode="signup" />} />
+        <Route path="/coach-signin" element={<CoachSignupPage initialMode="signin" />} />
         <Route path="/upgrade" element={<UpgradePage />} />
         <Route path="/verify-impact" element={<VerifyImpactPage />} />
         <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />

@@ -385,6 +385,12 @@ export const LoginPage: React.FC = () => {
                 Sign Up
               </Link>
             </Text>
+            <Text color="text.secondary" fontSize="sm">
+              Invited as a coach?{' '}
+              <Link as={RouterLink} to="/coach-signup" color="brand.primary" fontWeight="semibold">
+                Coach sign up
+              </Link>
+            </Text>
             <Link
               href={PRIVACY_STATEMENT_URL}
               isExternal

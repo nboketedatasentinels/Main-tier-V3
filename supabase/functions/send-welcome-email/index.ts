@@ -21,13 +21,15 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // avoid the CORS-preflight 401; we verify the caller's JWT + role in-function.
 // Transport: SMTP (reuses the existing info@t4leader.com mailbox).
 // ---------------------------------------------------------------------------
-const FUNCTION_VERSION = "2026-08-06-transformation-leader";
+const FUNCTION_VERSION = "2026-08-14-coach-signup";
 const APP_NAME = "Transformation Leader";
 // Access code partners enter on the sign-up page (kept in sync with
 // src/pages/partner/PartnerSignupPage.tsx). Shown only in the partner email.
 const PARTNER_ACCESS_CODE = "t4l.ds.Admin.2025#";
 // Kept in sync with src/pages/mentor/MentorSignupPage.tsx
 const MENTOR_ACCESS_CODE = "t4l.ds.Mentor.2025#";
+// Kept in sync with src/pages/coach/CoachSignupPage.tsx
+const COACH_ACCESS_CODE = "t4l.ds.Coach.2025#";
 const PLUM = "#27062e"; // header band background behind the banner image
 // Monochrome palette for the email body (header banner stays full-colour).
 const INK = "#111827"; // near-black - headings, code, button
@@ -46,7 +48,7 @@ type WelcomeRole = "partner" | "mentor" | "ambassador" | "user";
 const CTA_LINK: Record<WelcomeRole, string> = {
   partner: "https://app.t4leader.com/partner-signup",
   mentor: "https://app.t4leader.com/mentor-signup",
-  ambassador: "https://app.t4leader.com/",
+  ambassador: "https://app.t4leader.com/coach-signup",
   user: "https://app.t4leader.com/signup",
 };
 
@@ -113,22 +115,22 @@ const ROLE_COPY: Record<WelcomeRole, RoleCopy> = {
     cta: "Create your mentor account",
   },
   ambassador: {
-    label: "Ambassador",
+    label: "Coach",
     subject: (org) =>
       org
-        ? `Welcome to ${APP_NAME} - you're an Ambassador for ${org}`
-        : `Welcome to ${APP_NAME} - you're now an Ambassador`,
-    heading: "You're now an Ambassador",
+        ? `Welcome to ${APP_NAME} - you're a Coach for ${org}`
+        : `Welcome to ${APP_NAME} - you're now a Coach`,
+    heading: "You're now a Coach",
     intro: (org) =>
-      `You've been assigned as an Ambassador${
+      `You've been assigned as a Coach${
         org ? ` for <strong>${org}</strong>` : ""
-      }. You champion the transformation journey and keep your community engaged.`,
+      }. You deliver one-to-one coaching that helps leaders apply their journey to real work.`,
     points: [
-      "Rally and inspire members across your organisation",
-      "Recognise progress and award points for engagement",
-      "Be the friendly face of the leadership programme",
+      "Publish coaching slots and confirm attendance",
+      "Issue Ambassador Session points when Journey clients attend",
+      "Hold the coaching contract: ask more than you tell",
     ],
-    cta: "Open Ambassador Dashboard",
+    cta: "Create your coach account",
   },
   user: {
     label: "Member",
@@ -194,6 +196,12 @@ function buildWelcomeHtml(data: WelcomePayload): string {
             "Your mentor access code",
             MENTOR_ACCESS_CODE,
             "Enter this code on the mentor sign-up page to activate your account.",
+          )
+      : data.role === "ambassador"
+        ? codeCard(
+            "Your coach access code",
+            COACH_ACCESS_CODE,
+            "Enter this code on the coach sign-up page to activate your account.",
           )
       : orgCode
         ? codeCard(
@@ -322,6 +330,12 @@ function buildWelcomeText(data: WelcomePayload): string {
             "",
             `Your mentor access code: ${MENTOR_ACCESS_CODE}`,
             "(Enter this code on the mentor sign-up page to activate your account.)",
+          ]
+      : data.role === "ambassador"
+        ? [
+            "",
+            `Your coach access code: ${COACH_ACCESS_CODE}`,
+            "(Enter this code on the coach sign-up page to activate your account.)",
           ]
       : orgCode
         ? [
