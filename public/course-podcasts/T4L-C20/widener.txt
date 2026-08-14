@@ -1,0 +1,98 @@
+Episode: Vishy Anand on Staying in the Game (Ep. 188)
+Show: Conversations with Tyler
+Guest: Viswanathan "Vishy" Anand, five-time World Chess Champion and India's first grandmaster
+Host: Tyler Cowen
+Region: India
+URL: https://conversationswithtyler.com/episodes/vishy-anand/
+Transcript source: publisher (full transcript published on the episode page)
+
+WHAT WILL BE ASSESSED
+This transcript is the closing stretch of the conversation, the part the host titles
+"On the Vishy Anand production function," where he asks what keeps Anand competing at
+53. Focus on three things. First, the change Anand made a couple of years ago (he
+semi-retired and now plays only a few events a year) and what he says the long breaks
+do to his enthusiasm and his training. Second, what he names as the single most
+important skill in chess, and the cognitive ability he says makes him special. Third,
+the qualities he looks for in young players like Pragga and Gukesh beyond how well they
+play right now, and why he rates those qualities. You can skip the aside about Kenneth
+Rogoff and the joke about his own sanity.
+
+RANGE USED. The full conversation runs roughly an hour. This file contains only its
+closing section, assigned to learners: approximately 53:00 to 65:00, about 12 minutes.
+
+The publisher transcript carries no timecodes, so those figures are estimated from
+position and speech rate and may be off by a few minutes. Use the spoken lines as the
+real markers.
+
+  Start: Tyler Cowen, "At age 53, you're still in the world top ten..."
+  End:   Vishy Anand, "...their fitness, their ability to hang in there, things like that."
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+**COWEN:** At age 53, you're still in the world top ten. There's no one else in the top ten close to your age, and you have been India's number one for what, 37 years, 38 years?
+
+**ANAND:** 37 years.
+
+**COWEN:** What keeps you going? What motivates you?
+
+**ANAND:** I like playing chess. A couple of years ago, I decided that maybe playing full time, playing the whole year round and trying to compete at the highest level wasn't worth it in terms of the amount of time and effort I would have to put in for the results I expected. I decided to semi-retire, a decision made easy in the pandemic because everyone was semi-retired in the pandemic. The key thing was not to come back after the pandemic was over. I played a little bit here and there whenever I could because I still like playing, and for me, chess tournaments are primarily social events where you meet everyone, and you hang out with everyone again.
+
+When I did all that, I enjoyed myself. Then I would say, "Okay, now for four months, I'm not going to play anything." Much longer break than before. Also, I'm living in India more or less the whole time when I'm not playing. That's changed a lot. Some of it is family. My son is growing up, so you also want to prioritize what you're doing with your time, and so on.
+
+I really enjoy the few tournaments that I play. When I play these rapid and blitzes and I have these one or two events in the year, four or five months before leading up to them, I start training again. Just to get back in this frame of mind where chess is not just some philosophical thing where you can do this and you can do that. It's concrete moves, like MVL said.
+
+The most important skill in chess is, if I was sitting at a board now with the clock ticking, what would I make in this position? Then suddenly, the infinite variety of choices you have becomes irrelevant. You have to make only one move. How do you switch to that frame of mind? I try to stick there, but I really love analyzing and working on chess. And maybe even, just like for Hikaru, having something else fill part of your life allows you to come back to chess with much more enthusiasm, these long breaks. Then, when I get back to chess, I'm much more enthusiastic about playing, and I look forward to it. That might be a huge fact as well.
+
+**COWEN:** Do you hate losing as much as Kasparov does?
+
+**ANAND:** To me, it seems he isn't even close to me, but I admit I can't see him from the inside, and he probably can't see me from the inside. When I lose, I can't imagine anyone in the world who loses as badly as I do inside.
+
+**COWEN:** You think you're the worst at losing?
+
+**ANAND:** At least that I know of. A couple of years ago, whenever people would say, "But how are you such a good loser?" I'd say, "I'm not a good loser. I'm a good actor." I know how to stay composed in public. I can even pretend for five minutes, but I can only do it for five minutes because I know that once the press conference is over, once I can finish talking to you, I can go back to my room and hit my head against the wall because that's what I'm longing to do now.
+
+In fact, it's gotten even worse because as you get on, you think, "I should have known that. I should have known that. I should have known not to do that. What is the point of doing this a thousand times and not learning anything?" You get angry with yourself much more. I hate losing much more, even than before.
+
+**COWEN:** There's an interview with Magnus on YouTube, and they ask him to rate your sanity on a scale of 1 to 10 — I don't know if you've seen this — and he gives you a 10. Is he wrong?
+
+**ANAND:** No, he's completely right. He's completely right. Sanity is being able to show the world that you are sane even when you're insane. Therefore I'm 11.
+
+**COWEN:** [laughs] Overall, how happy a lot do you think top chess players are? Say, top 20 players?
+
+**ANAND:** I think they're very happy. They understand that they're able to be chess players and that they can have a pretty good life doing so. Just like anybody who finds that they're doing what they wanted to do, what they would be doing anyway, even in worse circumstances, but they're able to do it in a pretty nice way and challenging way. Then we understand we're privileged. In fact, the funny thing is how many chess players are happy even not being top players, because chess is, again, one of these callings. You find yourself in it, and you really enjoy it.
+
+It's quite hard for a chess player to quit and switch to something else. They always have this time lag. I was quite surprised to see when Kenneth Rogoff —
+
+**COWEN:** Became an economist, as I did.
+
+**ANAND:** Yes, well, he became an economist, but recently, maybe seven, eight years ago, somebody asked him, "So what's it like thinking about chess again?" Because he had come to a chess tournament. He said, "I never stopped thinking about it." For me that was strange, because I would assume that after five years, it drops way below, but apparently, he kept at it all that time. He would think about chess every day. Maybe you think the same thing.
+
+**COWEN:** When I see him, he and I talk chess, not economics. He doesn't want to talk economics with me.
+
+**ANAND:** Sure.
+
+**COWEN:** If you had to boil down your cognitive ability or abilities into as small a number of dimensions as possible, what's the cognitive ability you have that makes you special?
+
+**ANAND:** The ability, well, is it cognitive? The ability to pull out details from a mass of information that I've seen. In chess, we may see a thousand games from this, and then at the board, I may be able to distill the right idea from all that. Being able to extract useful ideas from a lot of information. Also, good visual intelligence.
+
+Just in chess, the only skill which a top chess player has to have, really, is the sense that something is going wrong. That's a visual thing, because with very few details, you suddenly think, "Now I feel uncomfortable, there's something wrong here." That's one of the most important skills you can have in chess. Besides probably just the usual mix, bit of memory, good memory, at least for things that I'm interested in; ability to focus on one thing and then keep at it.
+
+**COWEN:** Is there some other area where you have also a remarkable ability?
+
+**ANAND:** Wow.
+
+**COWEN:** Magnus seems to be great at fantasy football. Some chess players are great at bridge.
+
+**ANAND:** I'm good in games. Lots of these games you play just for fun. Immediately, I find that I start at an acceptable level, so maybe there is some skill there, but I've not thought about it that much.
+
+**COWEN:** Last two questions. There are so many talented young chess players from Tamil Nadu. Obviously, you know them, you play with them. And if you're looking for who will really climb to the top, like Pragga and Gukesh, other than just how well they play at the moment, what else do you look for?
+
+**ANAND:** If they're very young, I want to see a certain amount of fanaticism. I think fanaticism is good when you're in your teens, but quite a few of them have that. I think maturity is maybe the most important thing because Pragga and Gukesh have taken some horrible blows.
+
+What I've realized is that they're quite strong in a way that I'm amazed, maybe because for me, losing hurts so much more. I can no longer understand people who are relaxed about losing. Maybe I was once more relaxed, I don't know. Pragga and Gukesh both have taken some of the tough times recently quite well and come out of it. Now they're both going gangbusters, and that's great, but they've had difficult times as well.
+
+There are things I look for on the chessboard, a sense that they understand a lot of stuff without having to . . . Just like I mentioned earlier, they know where the pieces go. If I look at their games, I can quickly get a sense of which area they're focused in. Some of them have no understanding of chess at all, but they have amazing sporting qualities, which is that they're tenacious, they're able to keep resisting. You can see that they don't have this dip of being annoyed with themselves about the position and therefore their performance goes down.
+
+If anything, they are still finding only moves. They're still hanging in there. Some things like this will alert me to some sporting qualities, but the chess qualities, I think, I look for first. If not, I wonder, "They don't have this. What could they possibly bring to the table that compensates for it?" Then I realize, ah, they have these other sporting qualities, maybe even their fitness, their ability to hang in there, things like that.

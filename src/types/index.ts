@@ -110,6 +110,20 @@ export interface UserProfile {
   hasSeenDashboardTour?: boolean
   /** ISO timestamp when mentor acknowledged Mentor Guidelines (first-login modal) */
   mentorGuidelinesAcknowledgedAt?: string
+  /**
+   * Written answers for native course-podcast assessments (keyed by
+   * `{packId}-{slot}`, e.g. T4L-C01-anchor). Used until AI grading ships.
+   */
+  coursePodcastAnswers?: Record<
+    string,
+    {
+      catalogueCourseId: string
+      packId: string
+      slot: string
+      answers: string[]
+      submittedAt: string
+    }
+  >
 
   // Role-Based Features
   transformationTier?: TransformationTier | string

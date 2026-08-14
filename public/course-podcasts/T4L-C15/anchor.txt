@@ -1,0 +1,136 @@
+Episode: Why Digital Transformation Matters (The Development Podcast)
+Show: The Development Podcast
+Guest: Americo Muchanga, Mozambique's Minister of Communications and Digital Transformation; with Idah Pswarayi-Riddihough, World Bank Global Director in the Digital Vice Presidency
+Host: Lindy Mtongana (with producer Sarah Treanor)
+Region: Mozambique
+URL: https://www.worldbank.org/en/news/podcast/2025/06/05/why-digital-transformation-matters-development-podcast
+Transcript source: publisher (full transcript published on the episode page)
+Range: full episode (about 26 minutes)
+
+WHAT WILL BE ASSESSED
+This episode has a few voices in it, but the three questions draw only from the two
+interviews in the second half. The first is Mozambique's Minister Americo Muchanga,
+from about the 09:33 mark to 15:42. Focus on the problem he says digital is meant to
+fix (people traveling very long distances, in one case 500 kilometers, and paying
+about 100 US dollars just to reach an office for a service), the building blocks he
+says a country must put down first (digital infrastructure and data centers, a public
+system for digitally signing documents, an interoperability framework so systems can
+exchange data, digital IDs, and a citizen portal), and the two concrete wins he names
+(registering a company now takes a few hours instead of a long paper process, and the
+single window system for importing and exporting goods). The second is the World Bank's
+Idah Pswarayi-Riddihough, from about 15:42 to the end. Focus on why Mozambique made
+digital a full ministry instead of an agency, and what she means by resilience in jobs
+and schools. You can skip the opening Grab story from Southeast Asia and the student
+segment, though they set up the theme.
+
+---
+
+[00:00] Lindy Mtongana: Hello and welcome to The Development Podcast. I'm Lindy Mtongana. In this episode, closing the Digital Divide, how it can boost economic growth, strengthen resilience in society, and help governments deliver vital services for their populations. We'll hear from Mozambique's Minister of Communications and Digital Transformation on bold plans for a digital future.
+
+Américo Muchanga: We know what digital transformation can do for any nation, for any company or organization.
+
+Lindy Mtongana: From the World Bank on the enormous benefits of widening digital use.
+
+Idah Pswarayi-Riddihough: The jobs that are actually facilitated by digital, I think this is where there's a lot of space and I really feel that this is where the excitement has to be and is going to be going forward.
+
+Lindy Mtongana: The CEO of one of Southeast Asia's most innovative companies tells us how digital services are revolutionizing how people earn a living.
+
+Anthony Tan: We have seen first-hand how access to income and business options doesn't just put food on the table, but it restores dignity, builds confidence and sparks hope.
+
+Lindy Mtongana: And we hear from one student on how digital learning is empowering her future.
+
+Youmina Machele: Technology and access to digital tools are essential for young people because they expand opportunities.
+
+Lindy Mtongana: All in The Development Podcast from the World Bank Group.
+
+[01:39] Lindy Mtongana: The sounds of a restaurant in Bangkok, Thailand, Emily's Chicken Noodles is a hive of activity. The owners, like so many others, had to close their previous business during the height of the COVID-19 pandemic, but now it's thriving. It's just one of thousands of restaurants across the region, from Singapore to Malaysia, the Philippines and beyond using Grab. An app which provides a plethora of services from ride-hailing to grocery shopping, financial services, and food delivery. The platform is used by millions of micro-entrepreneurs. And there's more to the story: Grab has partnered with the World Bank Group providing GPS data streams from its ride-sharing drivers to help city planners and traffic management agencies improve traffic flow and help to ease congested routes. Anthony Tan is group CEO and co-founder of Grab, and he spoke at the recent World Bank Group spring meetings.
+
+Anthony Tan: Hi everyone, I'm Anthony. In Southeast Asia where I'm from, people often say, "I'll Grab," that's shorthand for getting a ride or having a meal delivered. But for millions of people, Grab has also come to mean something more. It's a partnership to earn a living, to earn a real livelihood, to grow a business, to support a family. We started Grab 13 years ago to make taxi rides safer, especially for women and children. By tapping into mobile cloud and location-based technologies, we didn't just match drivers and passengers, but we also made ride details shareable for greater peace of mind. The latter was an industry first 13 years ago.
+
+We couldn't imagine how impactful and empowering our services would be. Passengers could pursue opportunities like attend class or take on jobs further away, and drivers could spend less time looking for passengers, becoming much more productive. That was our first up-close glimpse into the power of the digital economy and how access to the right digital tools can unlock new possibilities for everyday people. We saw this again during the pandemic. There was a growing gap between businesses that were online and those that were not. So we worked closely with governments to bring MSMEs, or micro, small and medium enterprises, online, giving them a way to reach customers and digital tools and data to run much more efficient and resilient businesses.
+
+Emily's Chicken Noodles is an example. I had a chance to meet them last week in Bangkok. The owners Pep and Pat started selling noodles on Grab when they had to shut down their teahouse during the pandemic. Data insights from our platform have helped them strategically operate and grow their business. Now, they have 170 employees operating five cloud kitchens in Bangkok, locations that we use our data to help them set up correctly.
+
+The world is entering an inflection point with AI and we'll focus on channeling these breakthroughs into applications to deliver positive impact. Across Southeast Asia, women's workforce participation generally lags behind men's. When we spoke to women about being driver partners, many liked the flexibility but our concern that driving would be unsafe for them. Lily from Kuala Lumpur is a mother and grandmother. She became a Grab driver partner for the flexible work hours. She often works late in the evening, sometimes until 1:00 AM, and naturally her children worry. We hear them. Even when 99.9% of all rides on Grab take place with no safety incidents, we know that even one incident is one too many, so we continue to double down on safety innovations. Today, large language models can analyze audio and sentiment in real time. We are leveraging this capability to improve how we detect signs of danger, whether it's a heated dispute, screeching tires, or cry of distress so that we can respond quicker. Here, by making jobs safer, we make them more accessible.
+
+Grab's mission is to drive Southeast Asia forward by creating economic empowerment for everyone. It's the right thing to do and it makes good business sense. We have seen firsthand how access to income and business opportunities doesn't just put food on the table, but it restores dignity, builds confidence and sparks hope. And when people and communities thrive, businesses strive too. While Grab is rooted in Southeast Asia, we hope our journey can help to contribute ideas on how technology and the digital economy can uplift lives and livelihoods all around the world.
+
+[06:57] Lindy Mtongana: Well, digital inclusion, as we've just heard, can help with flexible jobs, create new opportunities, and can enable wider participation in the workforce. The digital divide, by contrast, limits growth, widens inequality and is still a daunting challenge. While 93% of people living in high-income countries got online last year, only 27% used the internet in low-income countries. The affordability gap is also widening. Mobile internet costs in Africa were 12 times higher than those in Europe in 2023. For students, access to digital resources is a key piece of the puzzle when it comes to learning. Yumina Moshale is a student in Mozambique. She's enrolled in a distance learning program using tablets, all supported by World Bank financing. Our Producer, Sarah, found out more.
+
+Youmina Machele: Hello, my name is Yumina Machele. I have 16 years old and I live in Mozambique. I'm studying science with geography.
+
+Sarah Treanor: Yumina is a typically busy teenager who lives with her family in a bustling area, gets up early every day and then heads off to class. She's combining face-to-face lessons and distance learning.
+
+Youmina Machele: My typical day starts early, around 4:00 AM. In the morning, I usually study. Then I go to the Instituto Industrial de Maputo where I have face-to-face classes in the industrial mechanics course. In the afternoon, I dedicate some of this time to visiting the distance learning platform.
+
+Sarah Treanor: The distance learning gives her access to virtual libraries, to online classes and assessments, and gives students like her the opportunity to connect to others. She explains why it is a vital tool.
+
+Youmina Machele: Technology and access to digital tools are essential for young people because they expand opportunities for study, work and communication and to stay connected to the world.
+
+Sarah Treanor: And what does Yumina hope to do next?
+
+Youmina Machele: First of all, I want to complete my technical and professional secondary education, pursue higher education, open a company abroad or here in the country.
+
+[09:33] Lindy Mtongana: I wanted to hear more about the progress Mozambique is making on its digital services and infrastructure. So I caught up with Américo Muchanga, Minister of Communications and Digital Transformation.
+
+Américo Muchanga: We know what digital transformation can do for any nation, for any company or organization. What we want in Mozambique is to enable every citizen to be able to get services from where he is. For someone who lives in rural areas, he needs to travel very long distance to get a service. In some case, a person may need to travel 500 kilometers to get a service. It would cost him sometimes a $100 US just to travel to get to the place where he can get service. So our vision is that IT can enable citizens to get the services.
+
+Now, to be able to do that, one needs to establish the communication infrastructure, so I'll call it this digital infrastructure, to include communication or data centers, whatever hardware and physical systems are required to enable people to communicate. And second, you need to have systems, digital systems. So we need to put in place all the building blocks from system side, from digital systems to digital infrastructure to enable people to get the services from where they are. So there's a lot that we have to do, but the main focus should be enabling people to get the services from where they are.
+
+We want to do in the coming months and years, first to establish a public infrastructure, to enable a citizen to digitally sign the documents. Second, we want to establish an interoperability framework to enable the existing systems and the ones that we're going to build to exchange data. Third, we need digital IDs. So in that sense, we want to create a citizen portal.
+
+Lindy Mtongana: That is really interesting to hear, Minister. And as you mentioned, they are kind of like building blocks that need to be established along the way as you go on this journey to fulfill these objectives. Talk to us about some of the partnerships that Mozambique might be leaning on in terms of achieving these goals, for instance, the support from the World Bank Group, tell us about how that's helping you on this journey.
+
+Américo Muchanga: The World Bank, it has been in fact a very old partner in that area. If I go back to around 2009 and 2010, in Mozambique, we had a project that was founded by the bank called Mozambique e-Government Communication Infrastructure. In fact, it was through that project that we carried in Mozambique a reform in the legislation for telecommunications in particular that led for recently introduction of mobile operating in Mozambique. But also that was a project established, I mean, the first e-government infrastructure in Mozambique. So the e-government of Mozambique was established as part of that effort. But recently the bank has approved two important projects in Mozambique that in fact if we put them combined, we are able to implement all the building blocks that I was referring to. So there is one project that's called Edge, and that is actually the e-government project. And there is another one that's Mozambique Digital Acceleration Project that aims to do all the things that may be required to accelerate the process of digital transformation.
+
+Lindy Mtongana: And we know that the world of digital really has the potential to change people's lives. In the work that you do, have there been any particular examples that struck you as especially poignant or profound where access to digital tools or services really impacted the lives of individuals or businesses or communities?
+
+Américo Muchanga: One area, one of the things that I'm very passionate about when it comes to what digital can do, for instance in Mozambique to create a company, it used to take a lot of time with lots of documents that we had to provide. But with the systems that were provided as part, for instance, of an approach called IBAWU, today it's possible to apply and create a company in a very short time. And in some cases you can do that in few hours depending on the type of a company that you want to establish.
+
+But another area in which I can say that Mozambique was impacted a lot in terms of that, is in the system that enabled people to import goods to Mozambique. That process used to be extremely difficult in the past, but through a company who established in Mozambique that established a system that's called single window system, today anyone who wish to import or export goods, they can simply go to the platform, fill in the forms, make the payment, and then either receive the goods or send goods to outside.
+
+So there are a number of projects that are creating impact. In the area of education and research, when we had COVID in Mozambique, until that time, most of the education, it required you to go to the school or go to the university to be able to start. But institutions, I mean, they quickly adapted them to the situation, the fact that they couldn't go to the school, they couldn't gather in one classroom and started using the IT tools to be able to deliver education. And most of the schools and universities, they started teaching using those remote tools. So the fact that IT could quickly adapt them into the situation and be able to enable people to do things that otherwise they couldn't do, that has impacted. Those are some of the things that I'm passionate about that shows that with technology we can change the way in which we do the things.
+
+Lindy Mtongana: Thanks again to Minister Muchanga.
+
+[15:42] Lindy Mtongana: For the World Bank Group, digital transformation underpins key priorities from gender equality to global development targets. So let's hear how it's raising its game to approach the challenges and opportunities that our increasingly digital world brings. Idah Pswarayi-Riddihough is a Global Director in the Digital Vice Presidency. We sat down here in the studio in Washington DC.
+
+Idah Pswarayi-Riddihough: So first of all, thank you very much for giving me the opportunity to come and talk about digital. I'm seriously passionate about this topic. The first thing I want to say is that actually digital has been going on for quite a while. The difference is that today digital is moving at such a fast pace. Right? So it's much more noticeable and people are referring to things. I mean, you'll remember back where people had devices, but then the devices, if you compare them from even five years ago to today, they're very different, right? But the reality is that they've been there for a while. So my job in digital use is to really try to see how digital creates an environment that creates opportunities, particularly for people, for governments, for small and medium enterprises. That's what I'm really after.
+
+But let me also start by saying that actually digital by definition is a disruptor and we want it to be a disruptor. You see, status quo doesn't change anything. And what is it going to disrupt? It'll disrupt things like creating more transparency in the way government services are done. It creates faster and much more reliable systems that people and the citizenry can actually rely on. But most importantly, you know, it's really critical to think about digital in the developing world, but in different ways. Not all countries are at the same level of development. There are some who are still building the foundation in terms of just the basic government services they have to deliver. And there are others that are so far advanced in digitalizing the economies, but they still need other things that they actually must deal with. So my job is to make sure nobody's left behind.
+
+What is then our expectations going forward? We want better livelihoods for people. And by better livelihoods, it means that anybody should be able to find something that they can do and they can use in digital that makes their life easier, that makes their life happier, that even makes them richer. Whatever it is that they're aspiring, that they believe makes their life much better than it is today, that's what I'm after.
+
+Lindy Mtongana: And I'm curious about what that looks like specifically when it comes to digital. Is there an example that you can think of, an experience that you've had where you've seen a change in someone's life that could only have happened because of digital?
+
+Idah Pswarayi-Riddihough: Oh, so many, so many cases. I mean, there is this particular one that is called eSanjeevani in India. And actually I happened to listen to the young man when he came here to the World Bank through the Human Capital Project, I think about a year ago, invited by Mamta. And he was talking about this platform that they have created where people as far away, and as remote in many cases in India who would've never been able to see a doctor, could now actually have a consultation digitally. I mean, can you just imagine what an impact that is?
+
+Or another example, which is called FIDA in Ethiopia, where they're giving ID cards to people who've never held an ID card. And in many countries in Africa as an example, and I'm sure it's true all over the world, when you don't have an ID card, something that says who you are, you don't have full dignity as a person, right? And so this actually transforms a person from just being a person who's a number, to a person who has a name and address, who can go and get services for themselves, for their family.
+
+Lindy Mtongana: Access rights.
+
+Idah Pswarayi-Riddihough: That is transformational.
+
+Lindy Mtongana: One of the key things that's needed for digital transformations to be successful is a regulatory environment, a regulatory framework and the policies that are necessary for that. And we're seeing some countries take this really seriously, like Mozambique talking about establishing a Ministry of Digital Transformation. Let's hone in then on a critical function of government, which is to efficiently deliver services. How does digital transformation play into this?
+
+Idah Pswarayi-Riddihough: You touch on a country that I lived in for over four and a half years, right. But I think to understand the importance of digital in Mozambique, you have to get a few parameters of what the country actually looks like. This is a country that's quite poor. This is a country that's very long, many people don't realize how big Mozambique actually is, so delivering services is a challenge. This is a country where there's insurgency in the north, and so it's not always very easy to access. You can imagine in a scenario like this if you don't have digital, just how impossible it is.
+
+In the case of Mozambique, some of the reasons they wanted the ministry, is that we had tried actually doing digital, but with an agency. The problem with agencies is that they don't tend to have the convening power that a ministry has. And that's why in the end they realized the only way to do this is to make it a ministry. And what that does overnight is that you have a system that's a whole of government system. And let me tell you, it's really been quite interesting because in my tenure there, we actually managed to put in two projects, one which is on digital governance and economy project, which really focused mainly on the IDs. When people don't have an ID, they don't have an identity. But remember, this is also a country at war in the north, when people don't have ID it's also a security issue in the sense that you never know when people are displaced, how to get to them, how to give them services.
+
+Then we have another project which is called the Mozambique Digital Acceleration Project. And what's special about this project, actually it was among the first core energy and digital projects. And it was very deliberate that we wanted this because, again, the infrastructure in Mozambique is very poor. So we decided let's take advantage of the areas where we are putting energy to also put digital. And then you invest once.
+
+But this project, I tell you, you know, you go, you look forward now and you see some of the doors it's opening. Particularly we are trying to put it in community centers where people can go and just you know, get internet and be able to access services. That would've never been possible before. We are putting in opportunities for SME, small and medium enterprises, to actually plug in and be able to access services to sell things at a much cheaper price. I even saw one young guy coming from university who opened up a space to sell his vegetables, very simple but very impactful in a country where there's almost 80% informality. So to move 80% of your people from an informal job to a formal job is not going to happen overnight, right? So you need things like digital to actually allow you to be able to get into that space.
+
+Lindy Mtongana: So once you have the government systems, once you have the infrastructure, it's clear then that it opens up the door for the private sector?
+
+Idah Pswarayi-Riddihough: Absolutely.
+
+Lindy Mtongana: I want to turn to the pandemic. I mean, that thrust a lot of change across the world, didn't it? And we saw during that period that there was a massive switch to home learning. So can you tell me a little bit about how digital transformation in society, particularly in schools, can actually strengthen resilience?
+
+Idah Pswarayi-Riddihough: Yeah, and you know, it's interesting that you talk about resilience with digital. It's a word I don't hear often. I hear it often around disaster risk, right, that people talk about resilience. A lot of developing countries are informal sectors, right? When you don't have digital, basically these people have only maybe one or two choices. Resilience in digital cuts across many different ways, right? It cuts across the economy, it cuts across the way people trade, it cuts across schools.
+
+But I think to me what's really important is when we start talking about resilient jobs, right? Things happen, but you can still have a way to trade. Resilient schools, which are not just the building, but kids can still go to school and get the access that is required, and teachers can plug in and you can, you know, you can still communicate. To me, that's a core part of resilience, particularly in Africa, which by 2050 is actually going to have the youngest population in the world, the largest youngest population. There is no way anybody's going to build schools fast enough for those children to learn. We're going to have to go digital, we're going to have to go private sector, we're going to have to go entrepreneurship, right?
+
+And it's about the digital skills we are actually teaching these kids. And to me for jobs, I look at two types of jobs. Jobs in digital, which unfortunately I think for many people in the developing world who don't have the STEM subjects, it's something of the future. And then the jobs that are actually facilitated by digital, I think this is where there's a lot of space and I really feel that this is where the excitement has to be and is going to be going forward. So there is a real space in there to create this resilience that we would like to see.
+
+Lindy Mtongana: Thank you, Idah, and thanks to all of our guests on today's podcast. I'm sure this is a subject that we'll be returning to very soon. Well, thank you for listening and please do like and subscribe to The Development Podcast. We'll be back very soon.

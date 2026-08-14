@@ -954,6 +954,16 @@ export const ActivityList = ({
                         PROGRAMME_COMPONENT_ACTIVITY_IDS.has(activity.id) &&
                         typeof occurrence === 'number' &&
                         isProgrammePassFailMonth(occurrence)
+                      const rowMonth =
+                        useMonths && typeof occurrence === 'number'
+                          ? occurrence
+                          : useMonths
+                            ? weekToMonth(weekOverride)
+                            : null
+                      const rowCatalogueCourseId =
+                        rowMonth != null
+                          ? program?.monthlyAssignments?.[String(rowMonth)]?.trim() || null
+                          : null
                       return (
                         <ActivityRow
                           key={rowKey}
@@ -997,6 +1007,7 @@ export const ActivityList = ({
                           }
                           weekClaimComplete={kind === 'done'}
                           programmePillar={rowPillar}
+                          catalogueCourseId={rowCatalogueCourseId}
                           programmePassFail={rowPassFail}
                           isActionInFlight={Boolean(isActivityBusy?.(activity.id))}
                         />

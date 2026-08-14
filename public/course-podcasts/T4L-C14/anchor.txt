@@ -1,0 +1,150 @@
+Episode: E-commerce in Africa [Entire Talk] (Entrepreneurial Thought Leaders)
+Show: Entrepreneurial Thought Leaders (Stanford eCorner / STVP)
+Guest: Juliet Anammah, chairwoman of Jumia Nigeria and Chief Sustainability Officer of Jumia Group; former CEO of Jumia Nigeria for more than four years
+Host: Darius Teter, executive director of Stanford Seed
+Region: Nigeria
+URL: https://ecorner.stanford.edu/videos/e-commerce-in-africa-entire-talk/
+Transcript source: publisher (full transcript published on the Stanford eCorner talk page)
+
+WHAT WILL BE ASSESSED
+The three questions all draw from the section saved in this file, roughly 19:20 to
+46:30 of the talk. You do not need the earlier part on Jumia's model and payments, or
+the closing questions on hubs and geolocation. Focus on three things. First, the two
+hardest things Anammah names about serving the African market, near the end of this
+section: gaining consumer trust from the start, and convincing sellers to accept a
+marketplace model. Note the specific tactics she gives for trust, such as cash on
+delivery, the JForce agent network, and offline engagement to educate buyers, and the
+mindset shift she describes for sellers, from "you pay, I give it to you" retail to
+"list the products and I'll pay you as you sell." Second, how she makes a vague
+sustainability mandate concrete, naming countable measures such as how many sellers are
+SMEs, how many got working capital loans, how many are women, and how many used the
+training. Third, her rule that in Africa you own the technology and the data, not the
+physical assets, because copying trucks and warehouses creates no value. You can skip
+the parts on IPO location and social commerce.
+
+RANGE USED. The full talk runs about 54 minutes. This file contains only the section
+assigned to learners: approximately 19:20 to 46:30, about 27 minutes.
+
+The publisher transcript is caption based. It marks a change of speaker with a dash and
+carries inline timecodes; both are kept as they appear in the source. Darius Teter asks
+the questions and Juliet Anammah answers. Use the spoken lines as the real markers.
+
+  Start: Darius Teter, "Well, I wanna use that as a segue to learn a little bit more
+         about you. So you were CEO of Jumia Nigeria for four years..."
+  End:   Juliet Anammah, "...but over time we built that trust also on the seller side
+         and now we have a very vibrant marketplace, yeah."
+
+Everything below is the publisher text for that section, unedited. Paragraph breaks
+follow the source's speaker dashes; no words are changed.
+
+---
+
+- Well, I wanna use that as a segue 00:19:23,550 to learn a little bit more about you. So you were CEO of Jumia Nigeria for four years, coming from a decade as the director for Accenture in Nigeria, that's a big shift. What inspired you to make that move? What was the, what did you see on the horizon?
+
+- Several things. 00:19:45,210 I mean, I've been, like you said, I'd been in consumer goods, had been in Accenture. I was partner for consumer goods responsible for all our clients in west Africa region when I joined Jumia, I was a CEO for four years and some months. So as far as the market environment was concerned, I had enough experience in that area. I understood everything about, you know, distribution, route to market, supply chain, consumers, and so on and so forth. But here was the non-market environment and with great potential to impact the trajectory of any industry. I mean, one policy look at what happened with data protection and how it impacted a lot of big-tech companies and so on. So I realized how important it was that we developed a structured approach in which we could engage with policymakers so that they understood the value and the potential of e-commerce and the digital economy, and could work with us in shaping the policy environment for it, you know, to nurture it to grow. So that's why I decided this was a very important area for me to look. And the more I looked at it that I, of course, I also saw all the opportunities in sustainability and yeah.
+
+- I want to, 00:21:13,870 I definitely wanna drill down on the sustainability issues and your new role as chairwoman for Jumia and chief sustainability officer. But I wanna, since you brought up regulation again, I wanna just take one quick detour there.
+
+- Yeah.
+
+00:21:27,710 = And in speaking with a lot of, you know, tech enabled companies, FinTech, Medtech, Healthtech, the common complaints is that they're not so much complaint, but the observation is that we recognize that there is a role for regulation to protect consumers. The problem is when the regulatory authorities are not at the cutting edge of what's happening. So the regulations themselves, you know, even if they come from a place of good intention, they may actually be a hindrance or a barrier to growth.
+
+- Yeah.
+
+- And so what's needed is a dialogue. 00:21:59,280 And so my question to you is, is there a group of companies and people like yourself who are collaborating to work with regulators to say, "Let's get this right together?"
+
+- Yeah, definitely. 00:22:15,100 So just on the context, people say that, that, you know, regulators that they're not on the same plane, but it's our responsibility as private sector to educate, right. And a lot of my work in the past year and so has been that education, providing information to say, look, this is what we're doing. And to a large extent, we've actually spent more time just explaining, this is what we're doing, this is what a marketplace model looks like. These are the responsibilities of the platform versus the seller, you know, versus the consumer and all that. So I think it's our responsibility as private sector to do it. And that's what we've been doing. Okay. In other, in some of our markets also, we've formed coalitions with like-minded private sector companies in Nigeria. We have the e-commerce group within the Legals Chamber of Commerce, I am actually the first chair woman of that council, in Kenya we have a Private Sector Alliance and we have an e-commerce sector within the alliance. So all of those are opportunities to engage with with regulators. And it's always to the interest of private sector to engage early, that way you can provide the necessary information and education and dialogue. 'Cause they wanna do the right thing. They just wanna be, you know, well-informed in taking the right decision. Sometimes you provide parallels from other markets, you can show what's clean on U.S. or China and you know, how the African environment is different and you make your recommendations and they listen. Yeah.
+
+- Yeah. I think in some sense, 00:23:59,120 because you have first-movers advantage, I think in some, for some FinTech operators in some countries, their problem is that the banks are actually in front of them trying to advocate for restrictive policies because the banks are worried about being disrupted. So and they have a lot more leverage, right? And they've been around longer.
+
+- Yeah. 00:24:16,040
+
+- So, but I think that's probably less of a problem 00:24:17,079 in e-commerce. I wanna now pivot to sustainability, we've had a couple of questions in the Q and A about sustainability. You are responsible for sustainability for the group. What does that mean for Jumia? What are some of the key initiatives that you're focused on or your organization is focused on in the sustainability space?
+
+- The first thing for us is actually very clear validation 00:24:45,280 that our mission itself is sustainable. Okay. So we don't have to re invent some new projects to go after. I mean, it doesn't mean, of course we would have to operate in a sustainable manner, we'd use in, in terms of our shipments, we'd use in use of packaging materials and all that. So all of those are very important hygiene factors, which we build into our day-to-day operation, but just realizing that our mission, which is about in the end, when you look at it is about reducing inequality, is so critical and it's a big part of how we create value and how we create sustainable improvement in quality of lives on the continent and asking ourselves what more can we do with that mission? And second part of it is that we have a full ecosystem of many partners that working together can actually, you know, create more value for the communities that we live in than just Jumia itself. We have sellers, we have third-party logistics partners, we have brands who work with us. So that's a full ecosystem that if we deploy can actually do a lot more for sustainability. So that's our focus and that's our area of attention for this first year. I mean, this is the first year that we're actually, you know, putting together our practices, what we're doing, and we would have a report, our first report next year. Yeah.
+
+- That mean those are strong and admirable principles, 00:26:26,220 but for our audience, help me make it concrete. Is this about carbon footprint? Is it about, I mean, what are like, do you have KPIs in the sustainability space? I you're, you know, and you can push back 'cause you just said it's year one so, you know, I get it,
+
+- Yeah. 00:26:39,099
+
+- we're just getting started here, 00:26:43,730 but help me make it practical, help me make it real.
+
+- Yeah. 00:26:48,550 A very practical example is how many sellers on Jumia classified as SMEs? How many sellers on Jumia have been able to get access to working capital loans to grow their businesses? How many sellers on Jumia are women? How many of them have utilized the training facilities that we provide? How many of them have utilized the, you know, loans to be able to grow their businesses? Those are huge, huge areas of sustainability that we haven't even scratched all of it, right? And I mean, and for us that those, let's utilize what we have first. And then there are all the leavers of which we can also concentrate on. So those are some examples for you there. Yeah.
+
+- Thank you. 00:27:35,220 I had another question here about, you know, the complexity of working with so many third parties for logistics and payments. And the question is, you know, and at what point does Jumia decide we should build this in-house versus we should partner and is that conversation ongoing, or maybe that's a trade secret, but I'm just curious to know.
+
+- You have to be comfortable with complexity 00:27:59,790 if you're gonna work in Africa. Okay. We love complexity. And we enjoy taking complexity and making it simple. So like I said earlier, the problem is not assets, right? The problem is not people who have warehouses and hubs. All of that exists. We have people who have warehouses, we have people who have hubs, we have people who have 10 trucks, or some people who have five tricycles. We have all of those assets that exist. So replicating on the assets side is not like-
+
+- It makes no sense. 00:28:37,270
+
+- Yeah. It's not creating value. 00:28:42,270 The real asset that then drives e-commerce is the engine, which is really the technology, okay. So how do you know which day of the week you can make certain deliveries, what is the speed of delivery and how should you do your routing so that you're more fuel efficient, you also reduce distance traveled, all of those are relevant information. You cannot get through just owning the assets, you get that through owning the technology that puts it all together. And the value is the fact that all those players are utilizing your technology, okay. So you have the delivery agents who have your delivery app on their mobile phone, you've got the third party logistics players who are using your hub management system in their businesses. So that's how you create the real value. And that's why we're concentrating there. Yeah.
+
+- Yeah. 00:29:38,340 So your data is becoming increasingly valuable and important as well, of course for me is a great segue to another question about Jumia's next steps for scaling and growth. Is it about more regional expansion or broader scope of goods and services for the markets where you already are?
+
+- Yeah, it's more the second, because all said and done, 00:30:02,094 we are the largest e-commerce platform on the continent, but we're also in a continent where e-commerce, and I would say all of modern trade is probably still within the ranks of two to 5% of total retail, okay. So you shouldn't have-
+
+- A huge, huge upside. 00:30:15,370
+
+- Huge, huge upside, yes. 00:30:16,430 Huge, huge upside. So before it's up tinkering with all the kinds of categories and, you know, new verticals and so on, just even that alone is a significant area to focus on. Yeah. And that's what our focus is. And I think the other thing we are focusing on as well is really the shift that consumers have made from using e-commerce coming to Jumia to buy the electronics, they wanted to buy products of higher value because they could get it at a good price on Jumia and they could get, you know, the quality assurance and all of that to the everyday products. So people wanna buy food, people wanna buy, you know, essential items, home cleaning agents, beauty and perfumes.
+
+- Consumables. 00:31:09,870
+
+- Consumables basically, that's a huge shift, 00:31:13,790 and that's where we are also deepening our presence in. Yeah.
+
+- So I wanna go to the competitive landscape in a second, 00:31:20,120 but I wanna pause and talk about consumables because, you know, one of the things that makes consumables possible here in the United States is that you can get it tomorrow, right? You can get your vegetables, they're still fresh, there are may be even cold pack, right? You need a toilet roll, you need cleaning products, whatever it is. Is that a big deal? Is that important to your consumers that they get something really fast or not? Not yet.
+
+- Yeah. There's always a trade-off. 00:31:50,870 I think sometimes it's your, what's the right word? It's the consumers living environment that flows into their expectations, okay. So because in the states right next to the corner, there's either Kroger or there's a Target, or there's a Wegmans, or, you know, any other brand, you know, Harry, Harry, sorry, is it Harry Teeters? I'm trying to remember the name, that you can pop into and buy. So that flows into consumer expectations of, you know, when do I want it? I want it, like in 10 minutes, of course you can use Instacart as well and you get the product very quickly. In our environment it's slightly different. Consumers are making trade offs. And for them it, probably the pricing is more important because consumers want the best pricing, they're fairly happy with convenience, but we're also seeing some of those expectations of, I want it quick and fast flowing into consumers expectations of how they want it delivered. But to a large extent for consumers, it's the convenience of buying it online and the price point that's very important. And we also invest in what we call, we have a program we call Phoenix program and the Phoenix program basically tracks about almost 50,000 items that are essential that consumers want to buy. So basics essentials or best-sellers on Jumia, so that at any point in time, we want a consumer to buy those items on Jumia and save money. Relative to if they bought it elsewhere. So price is still a big part of the equation for our consumers.
+
+- So you think this consumable segment may be growing faster 00:33:41,160 than hard goods.
+
+- Oh, we see it already on our platform. 00:33:46,550 Last year, we saw the, that in terms of items sold in some of our markets, we began to see things like some countries, I can't remember which countries it is, but, you know, sugar, peas, became top-selling items for, in those countries relative to what it used to be before, where it might have been an electronic product, a mobile phone or something like that. Yeah. And of course in markets like Nigeria, where, you know, you have issues with power generation and access to power, the power bank to power your phone was a top-selling item in Nigeria last year. We covered all of that in our e-commerce report. E-commerce index report, which we published about two or three weeks ago.
+
+- So I got the perfect question here for you 00:34:36,870 that just follows on this. As part of your impact goals, do you have any special role in supporting or facilitating local manufacturing in the countries where you operate?
+
+- We work very closely with brands. 00:34:54,180 So we have several brands that are listed on Jumia. And we see an increasing interest from brands to be on Jumia. For many reasons, one being of course, that it gives an opportunity for them to go direct to the consumer, through Jumia as a platform. Two, it gives them very useful consumer insight and a lot of that consumer insight is in terms of packaging, in terms of product specifications, all of that is useful for a manufacturer in development and product development and production. So yes, I mean, the answer is yes, local manufacturers find being on Jumia extremely useful for their planning and demand-planning and production. Yeah.
+
+- Let's pivot a little bit to the competitive landscape. 00:35:47,920 Who are your competitors? Is it cong.com or Takealot, you know, other e-commerce companies that are in the continent or is Amazon a threat from afar?
+
+- I think when you look at it at the end of the day, 00:36:05,157 competition is more the informal market, right? Because all of that put together, you've just talked about whether it is Conga or Takealot or any other platform or modern brick and mortar, retail, and so on and so forth. All of that, like I said earlier, it's just two to 5% max.
+
+- Yeah. 00:36:26,820
+
+- So the real competition is the informal market 00:36:31,200 and we are everyday working to bring more and more sellers through the, to the platform and bring more brands to the platform, excite more consumers where, we currently have in our Black Friday campaign on, and it's usually is a very exciting period for consumers.
+
+- I'd had no idea that existed on your platform. 00:36:52,180
+
+- Oh, we were the first to launch it in Africa in 2014. 00:36:53,900 (Juliet laughs)
+
+- Around here, that's like, 00:36:56,910 that's when I try to go for a hike in the woods because it's too mad everywhere else. Let me ask a bit more about, you know, where does Jumia look for its, you know, its vision. Do you look more to the east? You know, Chinese e-commerce like Taobao or JD or Doyen or do you look more to Western models as you think through your growth strategy?
+
+- I will say honestly we look more at our consumers 00:37:28,073 than anything else. I mean, it doesn't mean that we don't have parallels with all the markets. Sure, when you look at it from the basic e-commerce model, I will say we are much closer to the Asian Alibaba model because we're more of a marketplace, okay. And, but then there are structural differences between Africa and China. Some of the infrastructural developments, even things like, you know, having a national postal system and driving down the cost of postal services. Some of those things, which Taobao for example, leapfrogged in developing in China, we don't have those in Africa. So we look more at our consumers, I would say in terms of what are their expectations, what are their needs, what's evolving for them in the market, was critical than anything else. But yes, like I said, in terms of parallels of the basic e-commerce model itself, yes. Pretty similar to the Alibaba kind of model, yeah.
+
+- So I mean the other thing, I mean, 00:38:39,250 Alibaba's doing this a bit now, but I'm also thinking about this rise of social commerce. So TikTok, Instagram, and Facebook have become major marketplaces and they connect brands, you know, directly to the consumers. They have so-called influencers as brand ambassadors.
+
+- Yeah. 00:38:55,410
+
+- Is this a threat to Jumia's business model? 00:38:57,700 Is this a direction that you're wanna go? How do you view social commerce?
+
+- We view social commerce as complimentary to some respects 00:39:06,200 in the sense that, I mean, there's a lot of social comments on WhatsApp and Instagram, like you mentioned, but it's also exposed some of the challenges of social commerce in terms of protection of consumers, sometimes 'cause you order something and it doesn't get delivered and you don't have a system whereby you can trust in the returns process, you can trust in quality assurance and so on. Every time we pool our consumers, they tell us that one of the things they really, really love on Jumia is they don't wanna deal with a seller. They don't care who the seller is. Okay. I mean, and that's, I'm speaking figuratively. The person they have a relationship with is Jumia. So if something goes wrong, they wanna know that it's Jumia they're dealing with. We always talk about the fact that when you're ordering online, that many things we provide, the items probably been QCed, it's been, you can see the seller score, so you can make decisions between multiple options, which seller to go with, payments and all of that. So there's a whole lot that's riding on just completing a purchase online, that consumers like the option of having someone, you know, the intermediary, the platform that is taking some of those responsibilities for them, yeah. And that,
+
+- Let's talk about, 00:40:27,678 sorry, go ahead.
+
+- That case is still there. 00:40:29,673 I mean, that case is still a valid value proposition for consumers.
+
+- So let's talk about trust. 00:40:36,693 You know, I'm a frequent user of Amazon and eBay and I've been ripped off many times and I, you know, there are recourse, there's recourse, but yeah, but they're, you know, slow and non satisfactory. How is this going on your platform? Is there a lot of problems.
+
+- We have, I mean, for any market place, 00:41:00,150 of course you would have issues sometimes with sellers and so on and so forth. But like you mentioned, we do have recourse mechanisms, we have penalties, we have, we score sellers by many things by speed of delivery, by the quality of the item, by the return rates of the items that they sell on the platform. So many things are built into it. And of course we have certain items which must be QCed, we have manufacturer warranties. We offer everything that you can think of from a recourse perspective. And for some of our consumers also, depending on the type of item and the specific consumer's behavior on our platform, sometimes the consumer wants to return something and we refund immediately even before the item is retrieved. Okay. So there are many things we've built into creating an environment that consumers can trust and feel comfortable to shop online, yeah.
+
+- There's a question here from an anonymous attendee. 00:42:04,480 Can you explain why as an Africa-focused Nigerian-led company, Jumia decided to set up its headquarters in Berlin, in IPO and the New York Stock Exchange? Why did you choose those locations instead of, for example, Nigeria?
+
+- Oh, well, that's an interesting question. 00:42:23,260 Don't forget that in terms of registration, we had always been historically registered in Berlin just because of course, our first founders and funders rather, was a German company and we retained that over time, okay. So we haven't changed that. Of course people ask, I remember people have asked this question, you know, why New York, because when you're going through an IPO process, when you're trying to establish funding for long-term growth of the company, you're also looking for an environment that will not only provide you with capital, but an environment where the investing public to a large extent, understand the business model, familiar with that business model. Because all the companies of the same business model have gone through that environment to seek capital, right? So that's very important. You would have been very new in an African environment, maybe sometime in the future, we could consider also listing in an African environment. But at that time it was very important that when you considered London, you considered New York and other capital environments that New York investing market had a very deep experience with e-commerce, yeah.
+
+- Right. 00:43:53,240 (mumbling) Yeah, exactly. 00:43:54,073
+
+- Thank you. 00:43:55,113 So another question here, this person is wondering does Jumia plan on creating any in-house products, considering their relative competitive advantage in labor costs in many African countries?
+
+- I can only say at the moment 00:44:16,417 it's not one of our key areas of focus. Our key areas of focus right now is actually, like I said, a deepening presence in the markets that we're currently in. And there's still quite a lot of, I would say potential in terms of assortment in food and basic consumables that consumers want. So, you know, we will be partnering more with sellers and brands, you know, to bring more of that assortment to consumers.
+
+I mean, 00:44:47,731 that makes sense to me because I think you also have, you know, 11 countries, you have 11 sets of consumer preferences and cultural preferences. It's not like Amazon making batteries, you know, cheap batteries, it doesn't quite look like that. Another question here, what is the hardest thing about serving the African market?
+
+- I would say the hardest thing was 00:45:13,670 gaining the trust of consumers from the beginning, okay. I still remember that. So that was a hardest thing. And we, as you recall, we offered and we still offer to some extent, cash on delivery as one of the ways to gain consumer trust, yes, we invested a lot in offline engagement, we have a JForce agent network, also to educate consumers and win their trust on the fact that look, if you order it online, it's gonna be safe. Your money isn't going anywhere. And, you know, Jumia has the systems and policies in place to handle any problem that you have. So that was number one. The second one was also convincing sellers of a marketplace model. I mean, they've been used for decades to retail, retail. So you come to me, you pay for it, I give it to you and that's it, we're done, right? But here's a marketplace model that I say, list the products and I'll pay you as you sell. That's a completely different mindset. So those were, I would say the tougher areas, but over time we built that trust also on the seller side and now we have a very vibrant marketplace, yeah.

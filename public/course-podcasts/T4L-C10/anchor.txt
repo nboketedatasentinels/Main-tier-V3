@@ -1,0 +1,148 @@
+Episode: How Leaders Can Use AI to Solve Real Business Problems (HBR IdeaCast, Episode 1086)
+Show: HBR IdeaCast
+Guest: Josh Tyrangiel, staff writer at The Atlantic and author of "AI for Good: How Real People Are Using Artificial Intelligence to Fix Things That Matter"; here he reports the Cleveland Clinic's AI adoption from the inside
+Host: Adi Ignatius (with Alison Beard)
+Region: United States
+URL: https://hbr.org/podcast/2026/07/how-leaders-can-use-ai-to-solve-real-business-problems
+Transcript source: publisher (full transcript published on the HBR episode page)
+Range: full episode
+
+WHAT WILL BE ASSESSED
+The three questions draw from the Cleveland Clinic examples in the middle of the
+episode, not the opening about hype or the closing advice for a generic company. Focus
+on two projects. First, the sepsis model from Bayesian Health: how much it cut
+mortality, why doctors ignored its first version, and the one in ten cases it could not
+catch. Second, why a clinician and not a tech vendor ran every AI pilot, and the 90
+minute drop in emergency room wait times from the scheduling tool built with Palantir.
+You can skip the parts about the AI labs, retraining policy, and the dishwasher-maker
+example at the end.
+
+---
+
+ADI IGNATIUS: I’m Adi Ignatius.
+
+ALISON BEARD: I’m Alison Beard, and this is the HBR IdeaCast.
+
+ADI IGNATIUS: So Alison, we talk about AI a lot. Everybody talks about AI a lot, but I am interested in your take on AI right now.
+
+ALISON BEARD: Well, I’m completely amazed by some of the work that it’s capable of doing. But I think that most organizations and leaders are still really figuring out how to use it effectively in ways that move their business forward.
+
+ADI IGNATIUS: Yeah, I think that’s right. I think too many companies are solving for AI. They’re pushing AI adoption wherever possible, instead of thinking about AI as a tool that can help them solve an actual problem. So today’s guest is Josh Tyrangiel, who writes about AI for The Atlantic. He’s been digging deep into AI, its applications, its potential, its pitfalls, and has advice for managers on how to make it work for them.
+
+He’s neither an AI evangelist nor an AI doomsayer, but rather someone who admires the technology but realizes its limitations and risks. Tyrangiel is the author of the new book, AI for Good: How Real People Are Using Artificial Intelligence to Fix Things That Matter. Here’s our conversation.
+
+So look, you’ve been immersed in the world of AI for a few years now writing the articles for The Washington Post, for The Atlantic, now with this new book. Talk about your sort of arc of understanding about AI, maybe what you thought about it and where you are now about AI and its potential.
+
+JOSH TYRANGIEL: Yeah. Listen, I started reporting about it and I wasn’t thinking about its potential. I was barely thinking about the technology, because in those first couple of months, the way it was presented was pretty split. So as I was beginning to write what was, I guess, the first AI column for the Washington Post, I went out to the valley and most of what anybody wanted to talk about was the kind of like, yes, this stuff is magic. Everyone can see that, but we’re very divided. And half of the people I spoke to were like, “We have to move because this stuff is amazing and it’s going to cure cancer and mitigate climate change.”
+
+And then on the other side, the doomers were very much like, “Come with me if you want to live.” What I realized a couple of months in was like, oh, I’m in a classic spin cycle and everybody out here is a little bit drunk. And it was only a couple of months into the coverage where I was able to take a deep breath and sort of focus on the tech. And I’ve sort of been in the same place since then, which is, yeah, this is pretty dazzling. You can say what you want about the technologists, about how they’re comporting themselves in the public space. Tech’s pretty incredible. It’s not perfect. It’s not going to roll itself out, but this is a significant step up from what we’ve been dealing with in software.
+
+ADI IGNATIUS: What’s your advice on how executives in particular can follow the script where there is this sense of, oh my God, I have to know everything, but oh my God, it’s back and forth. It’s optimistic, it’s pessimistic. How do you follow the script here?
+
+JOSH TYRANGIEL: I think it goes back to this kind of sense of drunkenness, which is that we’re getting slammed with marketing and advertising and reports about the need to shift to AI. As with all hype, there’s a wave of truth in there. I have been in a bunch of places that have done sometimes really good, sometimes flawed implementations. And the number one thing that comes back for the successful implementations is, “Hey, did you know what problem you were trying to solve to begin with. And did you have realistic expectations of how you were going to solve it?”
+
+And what I mean by that is I think that if you watch the ads on Sundays during football, so much of it is trying to convince someone with big purse strings at a company that the AI is magic, that you make your purchase, you get your license, the software rolls itself out into. The enterprise and all of a sudden you’re way more productive and much more efficient and maybe even able to cut cost. And that just isn’t right.
+
+The software is really, really good, but it requires a scalpel to understand the problem you’re trying to solve. And it also quite critically requires human beings, like really talented and a very specific phenotype of human who’s able to work with both your system, whatever that system may be, and with the software. The software engineers and makers are not concerned about your problem. You actually need to take a deep breath and kind of stick to fundamentals, which is not what you’re hearing in the hype cycle.
+
+ADI IGNATIUS: You are seeing companies who are applying AI as a tool, as you say, and I think that’s good advice. Figure out what problem you’re trying to solve, use it as a tool. I think there are some bottom line improvements that you’re getting. But there is this bigger thing, and I talked to a biotech CEO recently who had met with Sam Altman who urged him, “You do not want to miss the boat.” And the guy came out of it and said, “Okay, what vote?”
+
+Part of it is this question, do the technologists necessarily know more than the rest of us do about the potential application of AI? They get that it’s super powerful, but in terms of the practical application, do they necessarily have better insights than we do about its potential?
+
+JOSH TYRANGIEL: No. They have worse insights to be clear. If there’s one thing that the labs have been masterful about, it is projecting themselves as holders of wisdom. So first of all, they call themselves labs. Last I checked, these labs are all for-profit companies with massive bottom lines and massive room to grow. So using the language of science to describe yourself as a pretty nifty trick.
+
+On top of it, all of the labs are in debt. They have massive, massive infusions of investment coming in from people who have expectations of them. And those expectations are that they are one day, preferably soon, going to be incredibly profitable. And so what’s driving a lot of this behavior… And the example of your biotech CEO is a good one, is their sudden need to get people to believe that AI is indispensable to their enterprise. Indispensable, easy to roll out, going to do all these things.
+
+All the people running these labs and the people below them are very, very good at a hard thing, which is creating models, training and fine-tuning those models. But the kind of person who’s very good at that is often very bad at understanding human systems, understanding things like customers. All of those quote unquote, “soft skills” that the tech world has kind of devalued are actually quite critical to business success.
+
+And so when you ask, do they know something we don’t know? It’s like, well, yeah, they definitely know something we don’t know about labs and tuning and models. I don’t think that Sam Altman knows more about bioengineering than a bioengineering CEO. And so I think it’s the right question. It’s like, what boat? It’s their boat, don’t miss the boat. The boat that we took out major loans to buy. Can you get on that boat please because we need to pay them back?
+
+ADI IGNATIUS: The resistance to AI is also a little bit hard to parse. On the one level you have people who are genuinely worried about AI, concerned about the ethical implications, concerned about possibly losing their jobs or jobs being lost to their families. And I think CEOs sometimes dismiss that kind of negativity.
+
+But then if you think about the boos that people like Eric Schmidt were getting at commencement speeches when they talked about AI, I don’t think it’s just that people are afraid. I think these are AI native people who have used it and who know this produces slop, there’s a lot of junk. So the idea that we are tethering our future somehow to AI is not just alarming for all the reasons I ticked off, but it’s like, what are we doing here?
+
+I want to kind of break down the resistance to AI because that’s probably responsible, but also maybe missing the boat in some cases. I want to break down this question of to what extent the resistance is justified, to what extent is it just, “Its early days folks bear with the problems along the way?”
+
+JOSH TYRANGIEL: Look, I think that nothing arrives in a vacuum. And so a lot of what’s happening with people like Eric Schmidt being booed with the hostility towards data centers, I think is a product of the first 25 years of the century, which is first we got this wave of internet capability, which we all thought was pretty great. We got computers in our pockets 2007. We all thought that was pretty great. And for most of the existence of social media, don’t forget the incredible optimism that greeted things like Facebook. I am old enough to remember when people were desperate to get invited to Facebook, right?
+
+ADI IGNATIUS: I still love MySpace account, by the way.
+
+JOSH TYRANGIEL: You should keep it. It’s coming back around. Get as many accounts as you can. We were so optimistic and I think that we were gullible. And so over the last particularly six, seven years, as we have seen misinformation, the shortening of attention spans, addiction, all sorts of elements that we don’t want in our lives, we are incredibly angry at technology companies, angry.
+
+On top of that, a lot of the companies bringing us AI are the same companies who brought us social media, and a lot of the leaders are the same leaders. And so the notion that AI would arrive and people would just be blithely like, “Oh, fantastic. The next great idea from these guys.” I actually think that the anger and the fury is not only justified, but it’s becoming quite productive. I think that that cultural issue is significant in driving the resistance and the hostility toward AI.
+
+ADI IGNATIUS: Just yesterday got a letter from somebody who read our newsletter and just said, “You guys are just an AI hype machine and why aren’t you writing more about the ecological costs of data centers, et cetera?” Which is a really good point. I don’t want us to be rah-rah about technology. I am looking for interesting case studies. If companies are going to be AI companies, what does that mean? And let’s be neutral about the ethics for a moment and just figure out, is there a way to remake your company with AI that doesn’t necessarily cost jobs, or maybe it does, but that creates something that connects with consumers better, that creates better value in the marketplace. And let’s shift there. Are you seeing any of that yet? AI helps the bottom line, that can happen. But are you seeing really kind of step function value being created with AI?
+
+JOSH TYRANGIEL: I’ll give you an example, I spent a fair bit of time at the Cleveland Clinic and they are run by an excellent CEO who’s a doctor. His name’s Tomislav Mihaljevic. And when I sat with him to sort of start the reporting, he could tell that we were going to be talking a lot about AI. And he sort of just stopped the conversation at the beginning, he said, “I want to tell you a little bit about healthcare, technology and AI.
+
+Many of our colleagues in this industry are always looking for the magic beans and they’re going to make themselves the Microsoft of healthcare.” And he said, “We are not going to be the Microsoft of healthcare. We have tried all sorts of initiatives, partnerships, it doesn’t work for us. We have two priorities here. The first is to provide the best possible care to create the best possible outcomes for our patients. The second is to create efficiencies so that we can pour more money into creating the best possible care and the best possible outcomes for our patients.”
+
+And so every use of AI in the clinic is not done with massive partnerships and tech firms pitching stuff. There’s a product manager who runs every pilot of AI, and that product manager is a doctor or a clinician. So tech from the beginning at the Cleveland Clinic works for medicine and not vice versa. And I said, “Well, show me. Show me who the people are. Show me how it works.” And so I’ll just give you two examples, one about the sort of backend and one that’s about health. So medicine and hospitals in particular, the margins of the clinic are like 2.2%, which most of your listeners are like, if their margins are 2.2%, they’d throw themselves out a window before this sentence ends.
+
+In healthcare, that’s a heroic margin. The challenge is that when you think about it, hospitals are basically hotels. They have a lot of staff, they have guests, they have rooms, beds, linens, food, et cetera. The difference is that hospitals generally don’t know when these guests are coming or going. And so you’re running this kind of system based on chaos. And so at the clinic, there’s a hospitalist who is a wonderful woman, and she was a nurse first and then became a doctor and now she’s a hospitalist. And so she and the clinic decided, “You know what? Let’s see if we can actually model this out with our data.”
+
+And what they did is they called Palantir. They came in and they built basically a kind of rudimentary scheduling tool that would tell the hospital team when patients were getting ready to go. And so that sounds like an easy thing, but if you’ve got somebody who’s in for cardiac work and it’s significant, knowing from the doctor’s perspective that they’re 24 hours away from being dismissed or transferred is really important because all of a sudden you can kind of create a schedule.
+
+And so what they did is they wired into all the health data. They included doctor’s audio notes so that they could hear in the transcripts, patient improving, all sorts of things. And what they were able to do is create a kind of hospitalist system where you can play the hospital like a video game. You can move people in and out. The clinic gets a lot of its income and revenue from transfers from international. And all of a sudden they were able to see what was actually happening inside. Machine learning and algorithmic projection were a huge component of it. They increased the transfer rate tremendously. They cut down on emergency room wait times by 90 minutes, and they’re able to improve the bottom line.
+
+So they did that with not a huge amount of expense. They did it by creative thinking about a problem they had and then they got a tech partner in to work specifically around the problem as opposed to getting a bunch of vendors shopping different things that would have to then be adjusted. So that’s one example where improving that bottom line improves the care.
+
+The one that I saw just in healthcare itself, sepsis is basically the biggest killer in the United States. It kills about 350,000 people a year, more than prostate cancer, breast cancer, opioid addiction combined. And sepsis is this like innocent looking infection. It’s a body’s response to infection. And if you catch it early, you treat it with antibiotics, no big deal. If you don’t catch it till late, people die. And so the hospital in 2021 looked at its numbers for sepsis deaths and said, “This is outrageous. We’re one of the three best systems in America and we’re losing three, 4,000 people a year. This has to stop.” So the CTO who came in from outside of healthcare thought this is a perfect AI problem because we have all of this noise and we need to find the signal.
+
+Found a good vendor called Bayesian Health, which is predictive software that just flags the possibility of sepsis. They came in, they integrated with all of the data, they integrated with Epic, which is a very complicated healthcare system that basically is in every hospital in America.
+
+And what they did was they made a pretty decent first stab, pretty decent in that it would create three flags, a sort of no problem here, green, yellow, red basically. And doctors wouldn’t use it. Because the software was not actually integrated into the culture of what it’s like in an ICU. In an ICU, every machine is beeping all the time, and they’re constantly flagging things that the doctors and nurses are probably on top of.
+
+And more than anything, they would look at these three flags and there was no explanation. And so you’re not going to take action from a machine with no explanation when it’s life and death. And so gradually they built in explainability to these three flags and the results improved. Around the hospital over the course of a year, they reduced mortality by 41%. So that’s let’s call it 1000 people who are alive in part because of this model. What they could not do is get the last mile. So in about 10% of cases in the ICU, a nurse or doctor would be able to look at a patient and simply by smelling them or looking at the pallet of their skin, be able to say, “Oh, they’re septic and it wouldn’t flag.” The reason for that is because human beings, even though we are pattern making machines, we are also crazy.
+
+And so even in our illnesses, we are able to defy patterns in ways that machines are not and may not ever be good at. And so both of those examples to me are useful in a lot of other industries because they’re specific problems. There were clinicians, meaning domain expertise, superseded technical expertise, and they had to be tweaked constantly to get to a place where they were stable enough to produce results, but the results are meaningful. That is a lot of live saved. The ability to reduce wait times and get more people into your hospital is what allows the hospital to exist. So the challenge is not that the tech isn’t great. The tech can be really great. The challenge is believing that it’s going to take care of itself. You need absolute A+ talent who is committed to solving your problems to work with AI.
+
+ADI IGNATIUS: The AI conversations move from being about technology to being about management really.
+
+JOSH TYRANGIEL: Management, personnel, talent recognition, but also customer service. I have friends who run a software shop in New York. And they have been bemoaning the fact that Claude Code has turned every engineer into an empire. The engineers are like, “No, no, no, I just did it all. I designed the product. I took care of the product description. It’s fine.”
+
+And when they present to my friends these products that are supposed to be rolled out to customers, my friends are like, “That is the ugliest thing I’ve ever seen.” And also you ignored six things in the brief. The reason, of course, is that they’re so empowered to make 80% of their software happen in 10% of the time it used to take, that they think they’ve solved the problem. The problem is much more multifaceted than just writing the code.
+
+We’ve seen this, I’m sure you’ve heard this on this podcast, that big companies have rolled out bot-driven customer service and what is the number one thing typed into the message box? Get me a human.
+
+ADI IGNATIUS: Get me human, yeah.
+
+So you mentioned talent and so there are a couple of obvious approaches to talent. And one is to hire the best and brightest out there. The costs of the best and brightest are astronomical now. It’s hard for small and medium-sized business to compete with that. So the alternative and alternative is training. I’m interested in the years you spent diving deep on AI. Have you seen AI training that works? Does AI training work? And if so, what approach works?
+
+JOSH TYRANGIEL: Are we speaking just a broad retraining or training up? Because they’re two different things. In the example I just cited, the Cleveland Clinic, there was no training. They just had doctors who cared a lot about a problem and had some sort of basic technical expertise, but were basically just people who cared a lot and were willing to work harder in pursuit of the problem. That’s a different kind of talent recognition than job retraining where you’re basically taking someone and saying, “I want you to work a completely different way on a different set of problems.” Retraining in the United States is famously the most orphaned policy we have. For about 40 years, we had a job retraining program in the federal government. It was reasonably effective. It had about five million people who’d been retrained and largely in the Midwest around auto parts and auto manufacturing.
+
+That died in 2022. There’s been no effort to bring it back up. Retraining is really to some degree about, again, this merger of a person’s skills with the software, not, “Hey, here’s the software, here’s what it does, here’s what you need to do now.” And I think that the most effective version of it is going to be a collaboration, not this kind of implementation from above. But there’s a lot of labor out there, highly skilled dexterous labor that is not going to be done by robots for a very long time, if ever. And there are ways in which for an electrician, having multimodal AI to be able to take a photo of something, get a much faster diagnosis, much faster understanding of safety issues can be super helpful. And so I think that retraining is much more about integration than imposing.
+
+ADI IGNATIUS: So if you’re an executive listening to this, I think the examples of the Cleveland Clinic were great. And as you said, they’re sort of applicable broadly, but it’s also easy to say, “That’s a hospital. I don’t know how that relates to me. I’m a regular company.” So talk about the rules, how managers should be thinking about this technology right now in terms of experimenting now and possibly reconfiguring for the future.
+
+JOSH TYRANGIEL: I think first and foremost, it’s probably healthy within your organization to stop referring to artificial intelligence as one thing. It’s actually a hairball of lots of different scientific techniques. And so if you say to your workforce, “Okay, we’re all preparing for AI.” What they’re thinking is like, “Well, I use Claude at home. What do you mean?” And you need to actually get a little bit deeper into the weeds and be more specific with people because it will alleviate some of the concern and it will target them on the problem you’re trying to solve.
+
+Many of the CEOs I speak with don’t come from a technical background, and so they’re a little reluctant to do that. And so it starts with an investment and there are CEOs who spend a lot of time with their CTOs and there are others who see it on the calendar and are like-
+
+ADI IGNATIUS: Can I cancel that?
+
+JOSH TYRANGIEL: Yeah, maybe we move that one. No, you actually have to develop a deeper relationship where you are able to speak each other’s languages because you have to communicate to your workforce what you’re actually trying to do. I think it starts there. The second is I would bring everybody on board in the most transparent way possible. I know that there are people who hate the idea of saying, “Hey, we’re about to use AI because it’s initially…” You’re going to get the first questions going to be like, “Is this going to replace my job?”
+
+ADI IGNATIUS: And the answer, by the way, has to be maybe. We don’t know.
+
+JOSH TYRANGIEL: But our job is to solve problems for our customers in the best and most efficient way possible, and we need you as part of that effort. So I think it starts with communication and clarity. And then you got to go do it with a spirit of R&D as opposed to a spirit of certainty because you are going to learn some things along the way. I promise you, there has never been yet a single perfect AI deployment with no problems. There just hasn’t been. I don’t care what the labs say. And so you have to approach it with the spirit of R&D. We’re going to go find out over X amount of time what is going to happen. Do you want to participate? Do you want to be part of the pilot? Do you want to lead the pilot? You got to bring people on board to demystify what you’re actually doing.
+
+And also you will get better and more trustworthy information from them if you’re sitting in the corner office, if you empower them around this tech. I also think it’s completely reasonable to set budgets around what you’re going to do. The last year has kind of been like this wild-eyed craziness at casinos, particularly in places like consultancies where people have just been let loose like, “Go feed it into Claude, see what Claude says, see what Claude code does with it.” And all of a sudden the bills are nuts. You wouldn’t do that with anything else. Why are you doing it with AI?
+
+And so as I said, I think the world has gotten a little AI drunk. I would say primarily stay sober. It’s okay to get a little tipsy because some of the tech is really that good, but revert to the fundamentals, but you can’t hide from it. You just can’t, because I think the fear is that, well, our competitors are using it, they’re using it to move faster. Well, maybe true. At the same time, you cannot throw all your eggs into this basket and expect it’s going to be perfect. It’s dull, unglamorous advice. You have to lead, execute and communicate and really set parameters about what you wanted to do.
+
+ADI IGNATIUS: If you are running a traditional company, not a tech company, not a medical company, what is let’s say one AI opportunity leaders should think about that maybe they’re not yet thinking about?
+
+JOSH TYRANGIEL: So look at your company and ask yourself, where is code in our company? And I’m speaking both of software but other things too. So the law is a kind of code. It has all of these if then kind of things buried within it. Mathematics, also a kind of code. AI is inherently code and it’s inherently great at translating between code. And so if you have a business that is based on those kinds of structures, AI is likely to be quite good at it. Also, where’s our data? How good is our data? Because there are multiple steps to getting effective AI. If you have crappy data and sort of Roman road approach where it’s just bad data on top of bad data and dirty data pipelines, you’re not getting anywhere. All of that stuff needs to be cleaned. You have a massive infrastructure project ahead of you.
+
+So you need to know really where you are. But where it’s really good is like, okay, well, we have all of these policy manuals. Let’s say you’re a dishwasher manufacturer. Do we want people interacting with our product via ChatGPT or do we want them interacting here? Do we want to teach them what we do? All of that stuff is just code. So I think that’s the first step is identifying where like for like exists and where AI, particularly LLMs, can be useful to you.
+
+ADI IGNATIUS: Josh, that was amazing. Thank you for being part of the IdeaCast.
+
+JOSH TYRANGIEL: Thanks for having me, Adi.
+
+ADI IGNATIUS: That was Josh Tyrangiel, staff writer at The Atlantic and author of the book AI for Good: How Real People are Using Artificial Intelligence to Fix Things that Matter.
+
+If you found this episode helpful, share it and rate us in Apple Podcasts, Spotify, or wherever you listen. If you want to help leaders move the world forward, consider heading to hbr.org/subscribe to get access to the HBR mobile app, the weekly exclusive insider newsletter, and unlimited access to HBR online.
+
+Thanks to our team, senior producer, Mary Dooe and senior production editor, Kristin Murphy Romano. And thanks to you for listening to the HBR IdeaCast. We’ll be back with a new episode on Tuesday. I’m Adi Ignatius.

@@ -1,0 +1,59 @@
+Episode: How CEOs Stymie Their Own Digital Transformation
+Show: Knowledge at Wharton
+Guest: Ganesh Ayyar, CEO of Mphasis (India), in conversation with Michael Useem, Wharton professor and director of the Wharton Center for Leadership and Change Management
+Region: India
+URL: https://knowledge.wharton.upenn.edu/article/how-ceos-stymie-their-own-digital-transformation/
+Transcript source: publisher (edited transcript of the filmed interview, published on the episode page)
+
+WHAT WILL BE ASSESSED
+This is a short filmed interview. The whole thing is about the leader as the first
+variable, so all three questions come from it. Focus on three things. First, Ayyar's
+Facebook story: what he asked his teenage daughter, and what it made him admit about
+himself. Second, the harder question he then asked, whether he was even the right person
+to lead Mphasis into digital, and the mind map of three inhibitors he had to shed. Name
+all three. Third, reverse mentoring, the idea Useem describes, and the three digital-era
+moves Ayyar names at the very end: a culture of experimentation, the guts to cannibalize
+your own analog business, and co-opting or co-creating. You can skip Useem's run through
+the book checklists in the middle.
+
+---
+
+**Knowledge at Wharton**: I would like to welcome Ganesh Ayyar, the CEO of Mphasis, an IT services company, and also, Mike Useem, a Wharton management professor and director of the Wharton Center for Leadership and Change Management.
+
+We hear a lot about the need for companies to transform themselves digitally because they are not going to stay competitive if they do not. What we do not hear very much about is the idea that before a company can change, the leader has to have a personal transformation to understand what digital means to himself and to his company.
+
+But why is that transformation often difficult for the CEO? Some of the things that have come up include reluctance to look foolish in front of subordinates. There is denial, fear of failure — all of these things can hamper a CEO's performance when it comes to digital transformation.
+
+**Ganesh Ayyar**: I will tell you about my own personal journey. I wanted to get onto Facebook and so I approached my teenage daughter and she said, "I'll help you to set up the account." Then, I asked her a question — "what is the difference between email and Facebook?" At that stage, I realized how ignorant I was.
+
+In the last two to three years, the buzz word has been "digital." You are seeing 3-D printing, you are seeing robotics, artificial intelligence, and now people are talking about driverless cars, tools and automation. It is affecting every industry.
+
+I actually did an introspection and asked myself, "am I the right person to lead this great company called Mphasis to its success in the new digital world?" I had to be authentic and honest — if I'm not the right person, then I should allow somebody else to lead the company rather than pretending I am the right person. Thirty years of working in the industry became my baggage because [it slowed down my adoption to change].
+
+That realization, whether you need to change, was the first point that I had to confront. Once I came to that realization, I put up a mind map to figure out what would prevent me from learning. I'll come to that later. But I would say the starting point for CEOs is recognition that they have to change. It requires fundamentally a change in their learning and realization that new skills have to be acquired. After that, the journey begins. But there are lots of hurdles in that journey.
+
+**Mike Useem**: The underlying challenge that everybody, including Ganesh, faces is that the pace of change has — simply put — accelerated. So the technologies out there and what customers want are changing more rapidly now than, say, 15 or 20 years ago. Historically, companies did have the privilege of changing CEOs as the market changed and — at least, in the U.S. and to some degree India as well — chief executives have usually served somewhere between five and 10 years, and that was the pace of change. So a new era comes, new CEOs replace the old ones. The problem now, though, is that the pace of change is not five or 10 years. The waves are not that long. They're more like 18 months.
+
+Thus, Ganesh and people with comparable positions are having to reinvent themselves, otherwise, they are going to get reinvented by the market they are facing. And the digital transformation that we are all thinking about has an even shorter time cycle than just about anything else that we know out there. Thus, back to Ganesh's reference to Facebook and acquiring what you need to know to navigate that digital world — it is incumbent on all of us, including top executives and frontline managers, to get up to speed on the digital transformation that is literally turning a 5- or 10-year cycle in the way markets work into a 5- or 10-month cycle these days.
+
+**Knowledge at Wharton**: Ganesh, you made a reference to mind mapping earlier. What did you mean by that and how did you accomplish that for yourself?
+
+**Ayyar**: I started identifying what are the inhibitors for me to change — ego, ignorance, fear of failure. These are the three factors, which I felt would prevent me from changing. Because for me to admit that I don't know and asking a teenager or a [subordinate] in the company to please teach me … I had to shed those elements first — give up my ego and reach deep down within the organization and basically, let learning and innovation come from all across the company. That was the starting point in my mind map, which led me to various activities that I undertook over the last 18 months.
+
+To say that I have become a digital expert is definitely not true. But in the last 18 months, I have come to fully realize the power that digital wields and the opportunity it offers to a company like Mphasis. It is an opportunity for us to surge ahead. I needed to take the ownership of the transformation of this company and that journey started 18 months ago, as I mentioned.
+
+**Useem**: I like the underlying notion that this is something you just have to do. Getting it done is something else. But without that commitment to master this new digital terrain, none of us are going anywhere.
+
+G.E. has long had a practice of what they call "reverse mentoring." Normally, when we think of mentoring, we think of somebody 15, 20 years ahead of us sharing their wisdom and helping us as the new generation learns what they have already long known. Reverse mentoring means nothing more than taking people who are 20 years younger, who have been raised on the digital platform, and being willing, without the ego getting in the way, to listen. You have to be willing to listen and learn from people who are much younger, in much lower positions of authority, because they are just a great source of thinking about what the company needs. To be able to work with reverse mentoring is one of the most fruitful directions to go.
+
+I'll just add — from a lot of research that's out there on digital transformation and how we need to navigate our way through it — that we have to become an extremely good listener. Again, we're in a position of great authority, but the world is changing so fast that if we're not actively listening through social media, if we are not digesting, if we are not analyzing what is out there, we are going to be at a disadvantage, as well. To get back to the main point, taking charge of your own transformation is the first step. And then, the second step with that as a commitment is turning to your … reverse mentors and just getting your antenna out there to hear what is going on.
+
+**Knowledge at Wharton**: Mike, you wrote a seminal book on leadership called The Leader's Checklist that put forth 15 mission-critical principles for managing a company. Is there a digital checklist for leaders that you could draw on through your book that would help CEOs and other senior managers think about this transformation?
+
+**Useem**: The idea of a checklist is, you have a list of mission critical steps you just have to be savvy about, you have to take. The traditional leader's checklist would include — just to pick out three items to illustrate the point — the ability to think strategically, to communicate persuasively and to decide decisively. If you do not have all three of those, you are probably not going to lead very well, and probably I would add another dozen on to that.
+
+I am also going to briefly reference two [other] lists that are out there. Our school published a book this year called The Engaged Leader and it has a great subtitle — A Strategy for Your Digital Transformation. Charlene Li, the author, has three checklist items: Number one, you have to become an extremely adept listener through all the traditional means and now through digital media. Number two, you have to become extremely good at using those sources of information coming in to get information out. So listening in and then sharing out. Number three — and this is something that I would not have anticipated five or 10 years ago — there is so much competition for attention that you also have to become extremely good at engaging [the audience on] where you want to take the company.
+
+Five, 10 or maybe 20 years back, a memo comes out from the corner office, everybody reads that and they have their marching orders. It doesn't work that way anymore, to say the obvious. So listening, communicating out and learning how to engage people.
+
+**Ayyar**: [It is also important to promote] a culture of experimentation as well as having the guts to cannibalize your own business. [One more thing], which I heard from other people and was very well articulated, is co-opting or co-creating. You can do a lot more by co-opting other players to join hands with you so that you can succeed together. It could be your customer, it could be your partner. These are the three attributes which probably in the analog world, we did not need to confront or inject as much. Every employee within Mphasis is repurposed or is excited about experimentation, co-opting and co-creation. … and we, as leaders within the company, should not be afraid to cannibalize our analog business to make progress in digital.

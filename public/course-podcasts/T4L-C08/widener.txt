@@ -1,0 +1,182 @@
+Episode: Michele Gelfand on the dishwasher divide: How to decode tight and loose cultures
+Show: The Culture Kit with Jenny and Sameer (UC Berkeley Haas, Berkeley Center for Workplace Culture and Innovation)
+Guest: Michele Gelfand, cross-cultural psychologist and professor at Stanford Graduate School of Business
+Hosts: Jennifer Chatman and Sameer Srivastava
+Region: United States
+URL: https://haas.berkeley.edu/culture/culture-kit-podcast/posts/the-dishwasher-divide-how-to-decode-tight-and-loose-cultures/
+Transcript source: publisher (full transcript published on the episode page)
+Range: full episode
+
+WHAT WILL BE ASSESSED
+The episode is about 28 minutes and worth hearing in full, but the questions come from
+three parts. First, the definition of tight and loose cultures, and Gelfand's explanation
+of where tightness comes from, which is chronic threat and the need to coordinate, with
+her contrast between the United States and Japan. Second, how tight and loose show up
+inside organizations, the people, practices, and industries that run tight versus loose,
+and her idea of tight-loose ambidexterity and the tight-loose-tight model for balancing
+accountability and freedom. Third, the concrete signals she says leaders can read,
+including the words people use, such as should, prohibit, and force versus leeway, allow,
+and afford, and the household dishwasher example. You do not need the section on AI near
+the end.
+
+---
+
+[00:00:00] Sameer Srivastava: Welcome to The Culture Kit with Jenny and Sameer, where we give you the tools to build a healthy and effective workplace culture. I'm Sameer Srivastava.
+
+[00:00:14] Jennifer Chatman: And I'm Jenny Chatman. We're professors at UC Berkeley's Haas School of Business and co-founders of the Berkeley Center for Workplace Culture and Innovation.
+
+[00:00:25] Sameer Srivastava: On today's episode, we'll talk with Michele Gelfand, a professor at Stanford's Graduate School of Business and a leading expert on cultural psychology. Michele's influential book, Rule Makers, Rule Breakers, transformed our understanding of how cultural norms shape behavior from nations to neighborhoods to workplaces.
+
+[00:00:44] Michele Gelfand: Culture is invisible. It's omnipresent, but it affects us all the time. And so, really, our charge as great leaders is to try to make those forces visible.
+
+[00:00:52] Jennifer Chatman: Hello, Michele. It's so nice to see you. Welcome to The Culture Kit.
+
+[00:00:56] Michele Gelfand: Oh, it's so great to see you, Jenny and Sameer. I'm really excited to be here.
+
+[00:01:01] Sameer Srivastava: It's been a while since we last saw you, Michele, when you came to the Berkeley Culture Connect Conference. And we've been trying to schedule this podcast session with you for a while, but you're in really high demand.
+
+[00:01:13] Michele Gelfand: It's so great to be here. And I'm such a big fan of this podcast, guys. I just… it's a gift to the world, The Culture Kit.
+
+[00:01:19] Jennifer Chatman: Oh, thanks, Michele. And, of course, your work on what you call tight and loose cultures has been so incredibly influential in the study of organizations and management. And I think it's a particularly interesting framework for the unsettled period that we're living through right now.
+
+So, we always like to start out with definitions for our listeners. Could you explain the tight-loose framework and how you developed it?
+
+[00:01:43] Michele Gelfand: Sure! So, you know, just by way of broad introduction, I'm a cross-cultural psychologist, and I really just try to understand how cultures evolve and their consequences for human groups. And culture, as you guys know, I don't really need to convince you of this, is really an interesting puzzle because it's omnipresent. It's all around us 24/7, from the moment we wake up to when we go to sleep. But it's invisible and it's something we take for granted until we, sort of, go outside of our cultural bubble and realize that we've been profoundly socialized to adopt certain values and norms.
+
+And so, that's a really interesting, kind of, crazy puzzle. Like, how can something be influencing us all the time, but we're not really aware of it? So, this is really what we do as cross-cultural psychologists, is trying to make what's invisible more visible for people in all sorts of contexts, whether it's studying nations or neurons or politics or parenting, or how to design effective organizations. It's really just important, as we know, to really understand this invisible force that we call culture.
+
+And so, I've been studying social norms, these unwritten rules for human behavior that sometimes get more formalized in terms of codes and laws, for many years now. And, you know, all groups have norms. We don't know of any society or pre-industrial societies that have these, kind of, social norms. But what we know is that some groups have evolved to have very strict norms, what we call tight norms, tight cultures, that have very clear expectations and reliable punishments if you deviate from those rules.
+
+Tight cultures and context tend to restrict the range of behavior that's seen as permissible. And we can contrast that with groups that have weaker norms that we call loose cultures where there's clearly rules, but they're more negotiable and they afford a wide range of behavior that's permissible.
+
+And what's exciting to me about tight-loose is that it's really a fractal pattern, what I call a fractal pattern, a metaphor coming from physics, meaning that you can look at it across different levels of analysis, national level, within culture variation at the state level, province level, or we can zoom into organizations or even our own households, and then we could try to examine, like, what's universal about this pattern? What predicts it? What are its consequences? And how can we then negotiate it, actually, as needed? Because we invented cultural norms. We can certainly harness the power of them when we need to pivot. So, that's, kind of, the broad picture of what we've been doing in the Culture Lab.
+
+[00:04:07] Sameer Srivastava: Terrific. Thank you, Michele. So, I want to pick up on the idea of fractals and think a little bit about where these norms come from. So, if you can help us think about some historical examples and including threats that might have led to the formation of these norms.
+
+[00:04:20] Michele Gelfand: Yeah. So, I think you just nailed very important part of the quest to study culture, which is not just to understand the dimensions on which cultures vary, but why they've evolved in the first place, what might make them functional, or quasi adaptive, we might say, to some situations that groups face in their histories. And actually, when we were starting to measure tight-loose and trying to put it on the cultural map, so to speak, we had a theory about why it might evolve, which is that groups that face a lot of chronic threat, whether it's from mother nature, think, like, chronic famine or chronic natural disasters, or human nature, you can think about the number of times a nation's been potentially invaded over its history. Actually, my daughter, Hannah, asked me once when she was five, if I was worried about Canada and Mexico invading us. And I told her, "Sweetie, first of all, you need to relax. Like, why are you even asking me that question?"
+
+But it was really an intuitive question, because, you know, the U.S. has been a context that's been separated by two oceans and has had, compared to other countries, less chronic threat in its histories, as compared to, for example, Japan, that's had Mother Nature's fury, that's had a lot of conflict.
+
+And the idea is that, if you have a lot of threat, you need rules to help coordinate to survive. But there's some kind of functionality to that. And contexts that have less threat can afford to be more permissive.
+
+[00:05:40] Jennifer Chatman: That's so fascinating. Can you help us understand how the tight-loose paradigm translates into organizations? How does tight-loose develop in organizations? What does it look like?
+
+[00:05:51] Michele Gelfand: Yeah, this is a great question. And, like, national culture tends to be pretty invisible. Like, it's something we take for granted. But we can zoom into the people and the practices and the leadership of any organization or unit therein and start seeing, like, context where tightness might be evolving versus looseness.
+
+So, what I mean by that is, like, tight organizations or units tend to have people who are attracted to them that have more of a prevention focus. These organizations or units tend to have practices that are pretty standardized. They're pretty formal. They're efficient. There's a lot of strong socialization by which we mean a lot of heavy training to, kind of, get people to have the same shared reality about the organization.
+
+And loose organizations have very different people, practices, and leadership or units they're in. They tend to attract people that have more of a promotion focus that have more psychological openness and risk taking, maybe even a little bit impulsive. They tend to have practices and policies that are more flexible, more experimental, much more informal, and more idiosyncratic.
+
+And so, these, like, people, practices, and leadership, or it's a way that we could start diagnosing organizational tight-loose. Organizations that… or industries that face a lot of threat have a lot of coordination needs, like nuclear power plants or the military hospitals, airlines, they evolve to be more tight because they need those rules to help coordinate to deal with those kinds of safety issues.
+
+Other occupations, like lawyers or accountants, also veer tight because they have a lot of public accountability. And industries that face less threat, like design, high tech startups, they tend to evolve to be loose, at least at the beginning. And these contexts, there's benefits to changing careers quite quickly. They tend to be highly mobile contexts, where you're dealing with a lot of different types of people.
+
+[00:07:43] Sameer Srivastava: Makes a lot of sense. So, I wanted to push a little bit more on the question of change and whether an organization is capable of change on the dimension of tightness-looseness. Are there any examples of companies that come to mind? And if there's a leader listening to this podcast who feels like his or her organization is either too tight or too loose, what are some things they can do to begin to change that?
+
+[00:08:05] Michele Gelfand: Yeah, this is a great question. And I'm often asked, like, which is better, tight or loose? I mean, clearly, organizations have that same kind of order openness tradeoff that we might see with nations when it comes to tight-loose, with tight cultures fostering more stability and more efficiency, and loose organization fostering more creativity and adaptability. But what we know is that the more extreme any organization, a unit gets, either too tight or too loose, the more problematic the functioning is. And that happens, kind of, over time. Even in the best of cases, tight organizations might start out pretty tight, but then get very tight. And likewise with loose organizations.
+
+And what we want to try to do is negotiate this. We want to identify when organizations are getting too tight and then insert some flexibility into those systems. This is something I call flexible tightness.
+
+On the flip side, we can see organizations, WeWork comes to mind, for example. Uber in its early manifestations, that were getting uber loose, so to speak, where, you know, the norms are almost non-existent. They also need to shift and insert some structure into their systems, some accountability. Again, we want to remember that they're loose for a reason, but we want to try to tweak the balance of tight-loose in those contexts.
+
+And what I think is exciting is to think about this really broadly around, in any social system, we want to have empowerment that comes from looseness, but also we want to have accountability that comes from tightness. And what if we could try to maximize both empowerment and accountability? So, we want to try to, as leaders, detect it when we're getting too extreme. And I can tell you more about how we might, sort of, start being detective about that. And then start the exciting possibility of negotiating that and pivoting to insert some of the opposite code.
+
+[00:09:52] Jennifer Chatman: So interesting. I want to think a little bit with you about this kind of unsettled period of rapid change we're in, which is probably an understatement.
+
+So, you've shown that groups tend to tighten their cultures in response to external threats. And so, I wonder if you're already seeing evidence of that now in terms of responses to forces like political polarization, major political shifts and the uncertainty that come along with that, and even technological change, which, ultimately, can be highly advantageous.
+
+[00:10:27] Michele Gelfand: Yeah, this is such a great question. And I think, you know, more and more, I'm thinking about this through the lens of, like, what happens when a nation or organization, or even a household is mismatched with the kind of changes that are happening? There's sometimes when we really need to tighten based on the environment, like, when we have a real threat, like, objective threat, like COVID. It makes sense to tighten until we can deal with that threat and then loosen when, you know, it's safe. And, you know, that's one mismatch, is when people don't recognize that there's an objective threat that we actually have to coordinate on.
+
+And, of course, during COVID, we saw that with, you know, stark clarity that, in fact, we showed in some studies we published in the Lancet that loose cultures that have had less threat in their histories across 57-plus countries had far more cases and deaths during COVID, about five times the cases and about nine times the deaths. And that's controlling for lots of different factors. And that's what I would call a cultural evolutionary mismatch. There's a, kind of, a resistance to tightening among loose cultures.
+
+And you can think about another type of mismatch, though, which is, like, basically, when you have manipulated threat, when people are amping up threats that they're making to be more extreme than they are. We see this quite a bit in politics and other contexts where people are exaggerating threat. And that actually tightens groups prematurely. And actually, what it does is it leads to sacrificing openness and tolerance and creativity.
+
+So, I think these mismatches are, you know, that can happen in either direction. And I think part of our quest as great leaders in organizations and nations is to really identify objectively the levels of threat and to pivot accordingly.
+
+I will say, on your question on polarization, I think both on the right and the left, in my view, are tightening. They're tightening on their core values, and that's causing a lot of difficulty in negotiating across party lines.
+
+[00:12:27] Jennifer Chatman: Yeah, you raised the COVID issue. And you and I have had a wonderful time working on a paper together. You know, I think one thing that you could say about what we found in that paper, we basically looked at culture before COVID to see whether there were some cultures that inoculated companies from the exogenous threat of COVID. And I think we could say that being adaptive, even above and beyond, you know, your stance on some tightness and some looseness, is going to be helpful for organizations. What do you think about that?
+
+[00:13:02] Michele Gelfand: I think you're absolutely right. And I think it, more generally, kind of, leads to this question of, how do we be ambidextrous, right? I mean, this comes from Charles O'Reilly's term. We've been thinking a lot about tight-loose ambidexterity, which is, how can leaders best maximize that we have empowerment and we also have accountability?
+
+I think, during COVID, when it came to working from home, which we had to do by necessity, there were some contexts where people clearly felt a lot of empowerment, and that was great. But it also, at least in some of the data we collected, we found that some people felt completely lost. Like, they felt like they didn't know what they were supposed to be doing. Like, there was a sense of lack of clarity, role clarity, and almost, you know, in a sense that produced a lot of anxiety that people didn't know how to manage.
+
+And I think the trick here is, how do we, kind of, help people to feel like the expectations are really clear, they can accomplish those expectations as they see fit — that's, kind of, a looseness — but then we check up on it? Are they actually performing? We have more monitoring and more, kind of, accountability in the bookend.
+
+Some people call this a tight-loose-tight model. Actually, the military has something called commander intent that has a similar type of philosophy. Easier said than done, but I do think that being aware of the times we're going to need to do that is really critical, whether it's during a pandemic, it could be when we're growing, like startups. Some people I've interviewed have said, "Look, I love starting up a new company, but I had to leave once we got bought out and we had to scale up, because I just didn't like the tightness." There's a lot of conflict that can happen when people are trying to scale up and start coordinating more and needing a different mindset.
+
+And we should anticipate those issues, the same with mergers and acquisitions. I've actually studied cross-border acquisitions in terms of tight-loose. And, of course, many in the audience will remember the Daimler-Chrysler debacle that was an N of one, you know, kind of, merger that went South, even though it was a match made in heaven. And we started to quantify what's the price tag of tight-loose mergers. We showed that even one standard deviation difference in tight-loose in cross-border acquisitions across about 4,700 of them was associated with a really serious decline in performance three years later in terms of ROA.
+
+[00:15:12] Sameer Srivastava: Yeah. So, let me pick up on this idea of change that you just left us with, because the other thing that's happened since the pandemic is that we've seen, really, the pendulum swinging back and forth on remote and hybrid work, right? And there was a time when we thought remote and hybrid work might be the norm and commonplace. And now, we're seeing many, many firms moving back to stronger returned to office mandates. How do you think that pendulum swinging has affected the tightness and looseness of organizations?
+
+[00:15:38] Michele Gelfand: Yeah, I think it's been… to your point, it's been really back and forth and swift change back and forth. We're doing the best we can, right, to try to balance these things. But here, again, I think we want to really try to maximize ambidexterity. We want to have empowerment and, certainly, use the context of remote work, the flexibility that comes with that. And we want to really pair it with accountability.
+
+Clearly, things like being creative, some studies have shown, are better off done when we have those kinds of random interactions in the workplace. We know that feeling connected, we can do that over Zoom, but like having deep connection can also be fostered more by asking people to come back in.
+
+So, I think really being clear on the policy and the why we're going to do both to maximize empowerment and accountability and performance by extension helps to go a long way once we have a language and a framework to say, "Hey, these are the domains we're going to have to be tight in, and here are the domains we're going to be loose in, and here's why. And by the way, we can just try this out. We can, kind of, shift gears, depending on the context."
+
+Just to be a little bit personal about this, like, even in our own households, we can negotiate tight-loose. So, I veer moderately loose on my own tight-loose mindset quiz. My husband, he's a lawyer. He's super tight. And we suddenly realize, like, a lot of our conflicts stem from this distinction, including how I load the dishwasher. He gets deeply disturbed by the dishwasher. I mean, now, I'm not even allowed to load the dishwasher. We've been married 30 years, so it's been okay. But we have labeled some conflicts, including even my siblings on vacation, we have conflicts about structure versus spontaneity. And we now label it and we negotiate, like any good negotiation, what domains have to be tight in this household and what domains can be loose?
+
+And we train the kids on this. We get them involved in this. Yeah, they might need some therapy, who knows? But, you know, we can, sort of, say, "Hey, these are the domains that we think, as a family, we should be tight in. And these domains, we can be loose."
+
+[00:17:39] Jennifer Chatman: Yeah, so, I guess I just realized, based on my dishwasher loading, I'm loose, very loose, so much looser than my husband.
+
+[00:17:50] Sameer Srivastava: I am looser than my wife would like me to be, let's put it that way.
+
+[00:17:54] Michele Gelfand: I mean, one of the things I do, I'd love to have your audience take the quiz. I think culture starts with the self. And this is really around tight and loose mindsets. It's an individual level variable. It's not one personality dimension, but it's basically, like we know. I call it the Order versus Chaos Muppet quiz. We have the, kind of, Order Muppets among us, like Bert and Kermit the Frog, that like rules. They notice rules. You know, they like structure. They want to avoid making mistakes.
+
+And you can contrast that with the, kind of, Chaos Muppets among us, like, Cookie Monster, you know, and Ernie, that don't really notice rules. They're a little bit risk-taking, quasi-impulsive. They're tolerant of ambiguity. And neither is good or bad. It's helpful to take the quiz and really think about, where does your score come from?
+
+We can change it depending on the context. You could become more like an Order Muppet at a symphony or a job interview and you can become more like a Chaos Muppet at a party. But we all have our own default. And once we understand their own defaults, we can then actually now start thinking about people around us that are very different and why they might have a different default. What about their histories, their socialization, their industries might make it functional for them to have a tighter-loose mindset? And then, as I mentioned, we can start negotiating over this.
+
+[00:19:08] Jennifer Chatman: We'll be sure to include a link to your survey for our listeners. So, how exactly do you think AI and the role of AI will affect culture in organizations, particularly around cultural norms?
+
+[00:19:21] Michele Gelfand: Yeah, this is basically, like, the bazillion dollar question, right? And I'm just so excited that you guys are, of course, on top of this question in a lot of your episodes. And I think, you know, there's potential tightening and loosening through AI. Sameer, I breezed through an article that you're writing about this. And I think, you know, one of the reasons why it might potentially tighten us in organizations is because AI has this unbelievable ability to standardize things, you know, and do it in ways that people feel are more… even more fair.
+
+It also can be used to monitor employees, their behavior. And it can also be used to track, more precisely, how people are doing in terms of the performance metrics, and even, you know, possibly reduce the, kind of, range of acceptable variation that there is. And so, more generally, those are about tightness. Those are about standardization, control, you know, monitoring that can lead to more norm strength.
+
+You know, on the other hand, we could think about ways that AI can be used for creative purposes. You know, I think that we could see just the enormous potential of just talking to Claude or to GPT about some ideas that really helps you to, kind of, get really this role with some crazy ideas. Like, I have this fantasy of creating a Michelin star restaurant for dogs. I could start, you know, kind of, getting a brainstorm going with AI. So, it might also help us by helping us deal with routine types of tasks. It might give employees, not only the assistance to be more creative, but actually the license to focus on more creative pursuits. And so, that might actually be something where we see both tightening and loosening through AI.
+
+The way optimistically I think about it is that we need to partner with AI. We have to really think about it in terms of having a human involved with AI to help us improve our decision-making, but not rely on it completely. And I think that, to me, gives us, kind of, that hope.
+
+[00:21:18] Jennifer Chatman: So, you know me, Michele. And that measurement is a favorite topic of mine and measuring organizational cultures is particularly interesting to me. So, I'm wondering if you can share the tools that leaders could use to assess their organization's current level of cultural tightness and looseness.
+
+[00:21:37] Michele Gelfand: Yeah, this is a great question. And I think that, like a lot of research, like, we should approach this with multiple methods to see this kind of convergence. So, we can, kind of, broaden out and we can use scales that just ask people about the general level of tightness and looseness in their organization with some survey items to give a, sort of, pulse. But we can then zoom in and see what domains are tight and loose in an organization. For example, we've developed some measures to this effect, I'd be happy to send them to your listeners, that have to do with the work that we're doing. Like, what are the rules on schedules and deadlines and where we're working and how we're making decisions and the method by which you make those decisions? All of those things can be seen as strict or flexible.
+
+We can then zoom into, like, social interaction norms in organizations, another set of levers of, like, how formal or informal is the language, how we dress, kind of, the dress code, the language we use when we're talking to authorities, how we structure our meetings. Like, these are all things we can actually rate for how strict or permissive they are.
+
+And by the way, there's a lot of conflict on that. Like, some groups love structured meetings, like, to have the agenda very tight. Other groups like more freewheeling style. Like, there's a lot of ways we can start anticipating when we're merging. Do we have different rules on these very same domains?
+
+I always ask my executives and MBA students to think about, also, ways in which they think the organization is getting too tight or too loose. And I asked them, like, what are the manifestations of that? Like, most of the time, it's falling on the lines of too much order, too much constraint, versus too much openness and like things being really uncertain and really unclear.
+
+And we start diagnosing the context where there's too much tightness. For example, these tend to be very helicopter-like contexts, ultra standardized, very slow decision-making, very bureaucratic. People also fearing that, you know, they're walking on eggshells, you know, this, kind of, fear of failure and being judged. These are markers of extreme tightness.
+
+When I ask people, what about looseness? People don't know what's expected of them. There's a lack of oversight, a lack of monitoring, even in, like, with KPIs or with, you know, financial oversight, they tend to be chaotic and unpredictable. This tends to be siloed. Redundancy, and people missing deadlines. So, there's ways that we can actually also identify, ask anyone, let's think about this. In what ways is your organization too tight or too loose? What are the manifestations of that? And how might you, as a leader, insert some tightness into a loose system or vice versa? And that's, kind of, the work that we're doing.
+
+[00:24:12] Jennifer Chatman: That's so interesting that you're offering a set of unobtrusive ways of assessing culture beyond, sort of, paper and pencil tests. And just referring back to the paper that you and I are working on together, you know, we actually looked at Glassdoor data that's out there existing in the world and found ways to code tightness, looseness, as well as some of the cultural norms that I measure using the organizational culture profile. And it was a very useful and valid way to assess things and so much easier than asking people to respond to surveys multiple times. So, that it's, kind of, a brave new world in terms of being able to really assess what's out there.
+
+[00:24:55] Michele Gelfand: Yeah, and it's, like, I'll just mention, you know, I think language is a window into culture and these dictionaries that we've created on Glassdoor and elsewhere to try to assess tight and loose norms. They're indirect, of course, they're unobtrusive. But often now I'm listening for that language in meetings among, you know, leaders. Are they using words like "should?" "Should" is a biggie for tightness. Prohibit, you know, constrain, force. These are, kind of, things that are, like, reflective of a tight mindset.
+
+On the flip side, you know, you could think about words like leeway, allow, afford, like, those are more coming from a loose mindset. So, we can even just listen into, like, what language people are using, to try to understand tight and loose situations.
+
+So, I think that gives us more power, right, to then change as needed.
+
+[00:25:44] Sameer Srivastava: Terrific. Michele, we've covered such a wide range of territory. I wonder, though, if you could help us to summarize what you think are maybe two or three of the biggest takeaways from this discussion for an organizational leader.
+
+[00:25:56] Michele Gelfand: Oh, boy, wow. I'm not known to be concise, so I will try very hard. But, you know, I think, like I mentioned earlier, culture is invisible. It's omnipresent, but it affects us all the time. And so, really, our charge as great leaders is to try to make those forces visible. And we can turn to frameworks, like, mine is not the only one, but it's one that can help people put a label, put a language on dynamics that are happening. It's a universal dimension. So, once we start using the language, we can start diagnosing where we are on this continuum, why we might have evolved that way. And then we can start thinking about, how do we be more ambidextrous? How do we anticipate situations when we're going to need to pivot? How do we anticipate the kind of resistance that we might get from people?
+
+[00:26:41] Sameer Srivastava: Terrific. Thank you so much, Michele.
+
+[00:26:43] Jennifer Chatman: Thank you, Michele. It was great.
+
+[00:26:45] Michele Gelfand: It was delightful just to talk with you guys.
+
+[00:26:50] Jennifer Chatman: Thanks for listening to The Culture Kit with Jenny and Sameer. Do you have a question about work that you want us to answer? Go to haas.org/culture-kit to submit your fix-it ticket today.
+
+[00:27:03] Sameer Srivastava: The Culture Kit Podcast is a production of the Berkeley Center for Workplace Culture and Innovation at the Haas School of Business, and it's produced by University FM. If you enjoyed the show, be sure to hit that Subscribe button, leave us a review, and share this episode online, so others who have workplace culture questions can find us, too.
+
+[00:27:23] Jennifer Chatman: I'm Jenny.
+
+[00:27:24] Sameer Srivastava: And I'm Sameer.
+
+[00:27:25] Jennifer Chatman: We'll be back soon with more tools to help fix your work culture challenges.

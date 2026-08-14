@@ -1,0 +1,80 @@
+{
+  "course_id": "T4L-C20",
+  "course_name": "Career Acceleration for Transformation Practitioners",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "status": "UNFILLED",
+      "transcript_file": null,
+      "unfilled_reason": "No rules-compliant publisher transcript was retrievable for a suitable non-linear career-pivot story. The two best-fit Global South candidates could not be used: Manav Garg (Eka Software, India) on the Founder Thesis podcast is published only as a host-written summary with a few pulled quotes, not a verbatim transcript; and David Velez (Nubank, Colombia and Brazil) on Invest Like the Best / Colossus is registration-gated and timed out on fetch, while his In Good Company (Norges Bank Investment Management) episode page carries no on-page transcript. Other career-journey shows failed the source rules: The Seen and the Unseen only has transcripts on HappyScribe (a third-party ASR repost), Lenny's Podcast serves its transcript from a JavaScript tab, Ali Abdaal's Deep Dive hosts transcripts on Notion, and The Knowledge Project paywalls them. 80,000 Hours fetched cleanly but its Holden Karnofsky episode is career-advice framework that would restate the course module rather than a specific pivot story."
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Vishy Anand on Staying in the Game (Ep. 188)",
+      "show_name": "Conversations with Tyler",
+      "guest": "Viswanathan (Vishy) Anand",
+      "region": "India",
+      "duration_minutes": 65,
+      "url": "https://conversationswithtyler.com/episodes/vishy-anand/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately the last 12 minutes of a roughly hour-long episode, the closing section the host titles 'On the Vishy Anand production function' (about 53:00 to 65:00). The transcript file holds only this section, and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "This sits outside corporate career advice on purpose. Anand has been India's number one for 37 years and is still world top ten at 53. He explains that he kept going not by grinding harder but by semi-retiring, taking long breaks, and coming back to a handful of events with real hunger. He reads young players for maturity and the refusal to sink after a loss as much as for raw brilliance. It is a portrait of a long career sustained by stepping back rather than leaning in, and by re-learning the game as computers rewrote its rules.",
+      "what_will_be_assessed": "The three questions draw only from the closing section saved in this file, the part the host titles 'On the Vishy Anand production function.' Focus on three things. First, the change Anand made a couple of years ago, semi-retiring and playing only a few events, and what he says the long breaks now do to his enthusiasm and his training. Second, what he names as the single most important skill in chess, and the cognitive ability he says makes him special. Third, the qualities he looks for in young players like Pragga and Gukesh beyond how well they play right now. You can skip the aside about Kenneth Rogoff and the joke about his sanity.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "A couple of years ago Anand changed how much he plays. What did he decide, and what does he say the long breaks now do for him when he comes back to chess?"
+        },
+        {
+          "type": "application",
+          "question": "Anand refills his hunger by stepping away for months, then training hard for one or two events, instead of competing year-round. Name one part of your own work you could deliberately step back from to return to it sharper, and how you would protect that break."
+        },
+        {
+          "type": "challenge",
+          "question": "Anand rates maturity and the ability to shrug off a loss above raw brilliance when he backs a young player. Where would leaning on that same filter cause you to overlook someone on your team who is worth backing?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Episode 230 - Prof. Robert Frank: Success, Luck, and Luxury",
+      "show_name": "Rational Reminder",
+      "guest": "Robert H. Frank",
+      "region": "United States",
+      "duration_minutes": 75,
+      "url": "https://rationalreminder.ca/podcast/230",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 38:00 to 64:00 of a roughly 75 minute episode, about 26 minutes of listening. The transcript file holds only this section, and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "This course tells practitioners to set clear goals, showcase their value, and plan the promotion. Frank's research says that in any market where the best can now serve the whole world, outcomes are decided at the margin by luck, not merit alone. Being slightly better gets amplified into a huge reward or almost none, and which one you land is mostly chance. His advice flips the usual ambition script. Do not chase the highest-paid or highest-status slot. Find work absorbing enough that you will put in the years it takes to get truly good, and stay humble about the wins, because someone just behind you worked as hard and was less lucky.",
+      "what_will_be_assessed": "The three questions draw only from the middle section saved in this file, on luck and meritocracy. In the publisher transcript the hosts' questions are in bold and the plain paragraphs are Frank's answers. Focus on three things. First, his argument for why the most talented, hardest-working person usually does not win a big competitive market, and the runners study he cites, including his line 'but for luck, she wouldn't be there.' Second, the advice he has given MBA students for years about which job offer to take, and his reasoning about expertise, engagement, and flow. Third, what he says about who high-functioning teams actually admit, and why being a credit-claiming jerk backfires. You can skip the Porsche-versus-Ferrari thought experiment and the tax-policy passages.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Frank uses a study of runners to argue the most talented, hardest-working person usually does not win a big competitive market. Lay out his reasoning, and give the phrase he says the winner should keep in mind."
+        },
+        {
+          "type": "application",
+          "question": "Frank tells MBA students not to grab the highest-paying offer but to chase work they find utterly absorbing. Name a real choice you face where pay or status is pulling against engagement, and how his point about expertise would tip it."
+        },
+        {
+          "type": "challenge",
+          "question": "This course tells you to set clear goals, build your brand, and plan your promotion. If outcomes are as luck-soaked as Frank claims, what use is a deliberate promotion plan, and what would you still treat as inside your control?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Vishy Anand on Staying in the Game (Ep. 188)",
+      "show_name": "Conversations with Tyler",
+      "region": "India"
+    },
+    {
+      "episode_title": "Episode 230 - Prof. Robert Frank: Success, Luck, and Luxury",
+      "show_name": "Rational Reminder",
+      "region": "United States"
+    }
+  ]
+}

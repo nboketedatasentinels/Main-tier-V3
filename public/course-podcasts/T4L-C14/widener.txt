@@ -1,0 +1,102 @@
+Episode: Call Sign: Gold Flight (Houston We Have a Podcast, Episode 361)
+Show: Houston We Have a Podcast (NASA)
+Guest: Gerry Griffin, former NASA flight director (call sign Gold Flight); lead flight director on Apollo missions including the final lunar landing on Apollo 17; later Director of NASA's Johnson Space Center
+Host: Leah Cheshier
+Region: United States
+URL: https://www.nasa.gov/podcasts/houston-we-have-a-podcast/call-sign-gold-flight/
+Transcript source: publisher (full transcript published on the NASA episode page)
+
+WHAT WILL BE ASSESSED
+The full episode is a career retrospective. The three questions draw only from the
+Apollo 13 and flight director section saved in this file, from where the host turns to
+Apollo 13 to Griffin's closing point about decisions and corporations. Focus on three
+things. First, the Apollo 13 briefing to senior management on the PC+2 option, the one
+question the head of NASA, Tom Paine, asked the controllers, and the lesson Griffin
+draws from it about pushing decisions down to where the expertise sits. Second, how
+mission control handled Apollo 13 once the Moon landing was off: they did what they were
+trained to do, kept going as long as they had options, and never discussed not getting
+the crew back. Note his point that "failure is not an option" was not actually said at
+the time. Third, his advice to future flight directors, including why trans-lunar
+injection is "the commitment," and the trust that ran up and down the chain. You can
+skip the early career history and the movie stories.
+
+RANGE USED. The full episode runs about 48 minutes. This file contains only the Apollo
+13 and flight director section assigned to learners, about 22 minutes.
+
+The NASA transcript carries no timecodes, so use the spoken lines as the markers.
+
+  Start: Host, "So let's think Apollo 13, I mean, that was considered a successful
+         failure essentially. You were going to be the flight director on console when
+         we landed on the Moon. With Apollo 13."
+  End:   Gerry Griffin, "...you got people at the top trying to make decisions that
+         don't know much about except maybe the financial impact. But whether it's a
+         worthy way to go or whatever, they don't have that."
+
+Everything below is the publisher text for that section. Photo captions from the page
+are omitted; nothing spoken is changed.
+
+---
+
+Host: So let's think Apollo 13, I mean, that was considered a successful failure essentially. You were going to be the flight director on console when we landed on the Moon. With Apollo 13. And pretty quickly that went out the window.
+
+Gerry Griffin: It did. Yeah.
+
+Host: This becomes a six-day mission when you have to figure out how to bring these guys home safe. How did everybody balance the work in that time? The all of a sudden, this is entirely different than what we predicted.
+
+Gerry Griffin: Yeah. You know, the answer to every… I've been asked that before, and we did what we were trained to do. There was no panic, there was concern, of course. But we had always been trained to keep going as long as you have options. And we never ran out of them. We got kind of close, but we just kept playing away. We never discussed in the control center not getting them back. It never came up. Just that, okay, let's go to work, figure this out. And it could have gone south on us, I guess, if certain things hadn't worked as well as we thought they might. But the crew was great. The people on the ground were great. And this was a case where even if you look at the movie and most of the focus is on mission control, but the whole network of contractors and other centers and all of that jumped in to help us. So we had many, many people around the country working on Apollo 13 and down to the last decimal place. I mean, fine stuff. And so, they deserve a big chunk of that credit, too. We were the final decision makers. And after all that data was produced and all that, and then getting it up to the crew and what to do and how to do it. And so, it was what we were trained to do. If I had one, well, I'll wait to talk about the movie till we get there cause there's one thing that just irritated the heck out of me.
+
+[Laughs]
+
+Host: I can't wait to hear it.
+
+Gerry Griffin: Okay. But anyway, it was, Apollo 13 was, I think it was the term, "failure is not an option." It was never used. That was later. And we never really did much agonizing. It was more just hard work and making sure we didn't miss something.
+
+Host: Right. Well, what was the pressure like after Apollo 13? Like I said, successful failure, essentially. What was the pressure like to make sure Apollo 14 as a comeback mission is successful?
+
+Gerry Griffin: Well, that was a concern because, and just like after the fire, you have to give the leadership of the agency and the leadership of the country at the time that it wasn't killed. And just said, you know, this is too dangerous. You know once they got once and the guys replicated the problem on the ground with the tank, there was no question that let's fix it and fly 14. And the contractors set about to do that and we also added another oxygen tank on the other side of the service module. So in case the fixes didn't work, we at least we'd have enough oxygen to get home just in case. So, you know, you just add a little more. But it was precise. And everybody felt, by the time we launched Apollo 14, I felt really good about it. And I did do the land and same place. We were going to go on 13. I did do the landing. I was a flight director for the landing on that one, my team. And it worked. So we got them off and brought them home.
+
+Host: Mission accomplished.
+
+Gerry Griffin: Mission accomplished.
+
+Host: I was looking through, I have this book of beautiful restored photos from Apollo. And my dad and I were looking through it and he said, "Wow, I never realized the cadence of these missions and how quickly they were happening." So what was that like on your side, having to prepare week after week for, was it multiple missions at a time? I'm assuming, you know, you may be in one mission and already planning two ahead. What's that like?
+
+Gerry Griffin: It was, tell you a quick anecdote that I I remember and it goes back to Apollo 11, and we put two flight directors on the launch, and I was with Cliff Charlesworth, and we were go in the countdown at the Cape, and we got to hold, a built in hold where everybody kind of looks at their data and says, "Yeah, we're okay. We can go." And so it was quiet for a minute, and I had already been named as lead flight director for 12. And I had already met with (Charles "Pete") Conrad and (Alan L.) Bean and (Richard F.) Gordon. And we'd started flight plan stuff and all that. I am sitting there in the countdown for Apollo 11, our first landing mission. And I'm thinking to myself, okay, what have I got to do on 12 soon as we get launch here and get going? I've got to call so and so and so, and all of a sudden it dawned on me, hey, you dodo, get your head in this game. Not in the game that's going to take place later. But that's what the overlap was like, because we had to stay ahead of things.
+
+We had six flight directors. And so by the time we got to Apollo, we only had six. So we were all tied up and busy and going around in circles. But it was a wonderful time. It was so neat. And particularly with the "J" missions, which were the last three missions that had a lot more capability than the first block of lunar modules and command modules. It really did. We were looking, I was looking really forward to those cause I thought, and I alluded to this earlier, that we were early on, we had to be, our major focus was to get the crew out to the Moon, get them back safely, and do what science we could. And by the time we got to 15, I think was the break, that was the first so-called "J" mission, I could sense a change, why we were more focused on why we were going and what we were going to do once we got there. Never taking our eyeballs off the systems and all that. But we learned how to kind of assimilate both. And a lot of that came about because several of us, well, I was the first one, but Dave Scott on 15 asked me to come out and go through some training with them on Earth, on lunar surface training. So I really got to see how the lunar scientists, talked to them and how they really taught them lunar science is what they did. And so they were very comfortable. And I remember Dave telling me one time, we never worried about our backpacks cause we know you guys were watching that. They would check them every once in a while. But he said, you know, we were just out on the surface doing our exploration work. And, so you could sense that all of this had started to change. We had the rover, and they could go a lot farther away and all that.
+
+So I really think the shift came between 14 and 15 and that shift in thinking. And as more, I came back and I told Gene, I said, "We need to get some more guys out there in the field with the astronauts when they're training on the learner surface stuff." And he agreed. And he went, I think he had the same reaction. And met scientists from Caltech and all those places that were really neat people and USGA, the geological people. So it was, I really enjoyed those last three missions on the science side of it. And we had problems, we always had problems with those last three missions, but in fact, we almost didn't land 14. We almost didn't land on 16. There that were two of them that we really in 14, of course, was the Block I air spacecraft. So by the time we got through 15, 16, 17, hey, this works. You know, we know how to do it now. And I think there was that focus on the science that all of us were able to drag off some time and really focus on that.
+
+Host: You called them the "J" Missions. What's that stand for?
+
+Gerry Griffin: That was just a, that was, it started, if you go back, it goes clear back to A's, B's and, and it was the type of missions. The "J" missions were a new block when they manufacture something like a lunar module, there were Block I and then they improved it. But they couldn't just phase it in. They had to get it ready to go the Block II spacecraft. And at the end of 14, we went to Block II for the rest of those three missions. They were more capable. They could stay on the lunar module, for instance, could stay on the Moon longer. The command and service module had what we called a SIM, a Scientific Instrumentation Module that was continually mapping, well, the mothership stayed in orbit. It was continually mapping the Moon.
+
+Host: Oh, that's so interesting.
+
+Gerry Griffin: So they got much better resolution from that than now it's even better now with some robots. But that was kind of, and we had to bring the film back. And so it meant they had to do an EVA in very deep space, essentially on the way home, and went outside and got that film, brought it back in, and brought it back, and they developed it.
+
+The one thing about Apollo that was really interesting in 13 was the greatest example is we didn't have any way to upload information. We could upload computer updates and things like that a little bit. Not a whole lot, but we didn't have any way to, for instance, the Apollo 13 checklist to repower the command service module after we had shut it down after the explosion had to be worked out on the ground, then we had to read it to him. And you know what Swigert told us later, Jack Swigert, who was writing it all down, I said, we need to put some tablets or something. He was looking for things to write on. He was using checklist back sheets and all that he was doing. And so we didn't have any way to send up a lot of data at one time. And then when shuttle, we had the, I think it was called the teleprinter, which is essentially you could send them a document and just say, here's the new checklist. But it was grassroots in the old days. And even with the final three missions, the Block II spacecraft, and that "J" is just the name of a mission. It doesn't mean any, the "J" itself doesn't stand for anything. And so it was really funny. Those last three missions were a hoot because we were into that lunar science a little more.
+
+Host: Well, it's funny you mentioned tablets, because that means something entirely different today. And we do have them on our flights.
+
+Gerry Griffin: Yeah. Well, you know, and after the fire, I'm not sure which company it may have been somebody like 3M built a self-extinguishing paper that wouldn't burn. Before the fire, we had a lot of paper inside and we couldn't, and I've been told that that paper is now used in operating environments in hospitals where there's a high oxygen content that where you have a little more, in the atmosphere of the room, have more oxygen available, then they use that kind of paper, it won't ignite. It just goes out and—
+
+Host: See, I wish more people knew that all the things that were developed for NASA that now have practical use.
+
+Gerry Griffin: I hope that, like I say, I've heard that. And I've never had somebody say that we use it. They may not even know they're using it. It's paper.
+
+Host: Right. That's fascinating. I wouldn't be surprised if that's accurate.
+
+Gerry Griffin: Could be.
+
+Host: So 50 years later, about the same Moon. So what's your advice for the future lunar flight directors?
+
+Gerry Griffin: You know, I talk to some of them occasionally, and I talk to the head, Emily Nelson, now. And the main advice I give them is that it's hard to get into space. And it's hard to get to low Earth orbit, but there's nothing like when you do trans-lunar injection, which is what we call the burn that sends you to the Moon, the maneuver has velocity enough to escape Earth. That's a bit of a gulp moment. It's the commitment cause now we've done it. We've committed them and we've got to get them back some way, by either through an abort or through a normal mission or whatever. But the crews' lives are now on the line in a different fashion. At the Moon, you know, it'll take you three-and-a-half, four days to get home. If you have a problem, unlike low Earth orbit, where I think from the ISS, it's a matter of hours. They could abandon it and if they really had to fire or something. So I really think the bottom line to Artemis is that we're ready to do it. It's been done. We've got a great team of people. I think we've just got to turn them loose if we can. And that's what we had in Apollo. They turned us loose and they trusted us, and we trusted them. And they had our back, and we had the air back and up and down, up and down the chain. That's hard to maintain. Very long.
+
+Host: It sounds so electric though. To work here in that time.
+
+Gerry Griffin: Yeah. Oh, it was, yeah. A quick story on Apollo 13, that is the best indicator I can remember. Glynn Lunney and I, Gene Kranz was off trying to figure out what had happened in their shutdown and how to get the command module and get it and be able to later get it back on cause that never had been done in space. And so his team was up to here. So Glynn and my, Glynn Lunney was the black team, and I was the gold team. And both our teams had worked on what to do next. I was more focused on consumables, and Glynn was more on trajectory. And finally, at one point, and I listened to this transcript not too long ago, I called, well, Kraft had been in the control center quite a bit. So I just talked directly to him. I think we know what we want to do now. And I can't remember either he said, or I said, we ought to get to senior management that's here and at least brief them so they know what's coming up. And so we went downstairs to the viewing room on the second floor, and the control center was shut down and there was hardly any lights on in the place, but it was a private place. And there were people there like Kraft and Gilruth and Rocco Petrone, Deke Slayton, and the administrator of NASA, a fellow named Tom Paine. Thomas Paine. And at there were some other people from other centers and I can't remember. And we had some of our engineer, Max Faget was there, and there were some engineering people in room, probably maybe 15, 20 people max. So I briefed him on consumables and what it looked like, Glynn got up and explained several options on trajectory, and he finally got to the end of his discussion and he said, and the option we like is what we call PC+2, that's pericynthion and that's closest point of approach to the Moon plus two hours to do this maneuver with the decent stage on the lunar module and speed us up. It gets us back where we can get a carrier underneath it. And it, oh, Jim McDivitt was there. He was a program manager. We can get a carrier under them, so we'll have a carrier, we can get them back faster about, I think it was 18 hours, we could get them back quicker. But we've got to burn that decent engine, you know, a long time to add that velocity. But that's the one we like. And so then he just left it there and there was this long silence, not long, but it was awkward silence for a minute. Tom Paine, the head of the agency, said, "What can we do to help you men?" That's all he said. There were no questions about did you think about or did you do this right, or did you do that? That's where the leadership had trust in us. And so, that whole sequence kind of, and I didn't recognize it at the time, but later on when I said, golly, how neat that was, big one of those guys raised a question right about, well, you want to burn the engine that long or already been decided it was okay.
+
+Host: You're the closest to it. They trusted that you knew the mission.
+
+Gerry Griffin: And that's the point that I think was the strength of NASA is because decisions, not just at JSC and during missions, but all over those decisions were pushed down to the level where the expertise was. And one of my points I make when I talk to corporations, cause it happens to corporations the same way. As they age, more decisions start going to the top, which slows things down. It costs money. And then you got, in often cases, you got people at the top trying to make decisions that don't know much about except maybe the financial impact. But whether it's a worthy way to go or whatever, they don't have that.

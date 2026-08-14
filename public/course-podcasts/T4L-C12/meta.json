@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C12",
+  "course_name": "Digital Bias: The Risk Your Transformation Isn't Measuring",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Helping Doctors Make Better Decisions With Data: UC Berkeley's Ziad Obermeyer",
+      "show_name": "Me, Myself, and AI",
+      "guest": "Ziad Obermeyer",
+      "region": "United States",
+      "duration_minutes": 33,
+      "url": "https://sloanreview.mit.edu/audio/helping-doctors-make-better-decisions-with-data-uc-berkeleys-ziad-obermeyer/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 13:00 to 29:00 of a 33 minute episode, about 16 minutes of listening. The transcript file holds only this section, and the spoken start and end lines are noted at the top of it. The source has no timecodes, so the figures are estimated from speech rate.",
+      "the_idea": "Obermeyer is an emergency doctor who moved into data science and kept finding bias sitting inside the tools everyone trusted, not inside one person's head. His team studied knee X-rays and found radiologists were missing arthritis that was really hurting Black patients. The reason was that the scoring system doctors still use was built on coal miners in Lancashire, England in the 1940s and 1950s, so it did not fit the patients in front of them. Instead of training the algorithm to copy the radiologist, they trained it to predict what the patient said about the knee, and that exposed the bias baked into the medical knowledge itself. He also studied a commercial algorithm used for about 70 million people a year to decide who gets extra help with their health, and found it doing enormous harm. This is the course concept with the comfort taken out. The bias was not a prejudice you coach away. It was in the labels, the scores, and the ground truth nobody thought to question.",
+      "what_will_be_assessed": "The three questions all draw from the section saved in this file, roughly 13:00 to 29:00 of the episode. You can skip the opening on Nightingale, ImageNet, and his career, and the closing questions on surfing and genetics. Focus on two things. First, the knee X-ray study led by Emma Pierson: that radiologists were missing knee problems that disproportionately caused pain in Black patients, that the scoring systems doctors still use were developed on coal miners in Lancashire, England in the 1940s and 1950s, and the move the team made, which was to train the algorithm to predict what the patient said about the knee rather than what the radiologist said, so it could show the bias inside medical knowledge. Second, his answer to what worries him about AI, about a commercial algorithm used for about 70 million people a year to decide who gets extra help, which he says is doing enormous harm and is probably still deployed.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Obermeyer's team found radiologists were missing knee problems that hurt Black patients. Where and when were the arthritis scoring systems doctors still use first developed, and what did the team train their algorithm to predict instead of the radiologist's reading?"
+        },
+        {
+          "type": "application",
+          "question": "Obermeyer exposed the bias by measuring a different target, the patient's pain rather than the expert's label. Name one place in your programme where you treat an expert judgment or an existing label as ground truth, and what independent outcome you could measure to check it."
+        },
+        {
+          "type": "challenge",
+          "question": "Obermeyer says algorithms can be forces for justice as easily as they scale up bias. Name a decision in your work where building a better measured algorithm would not fix the bias, because the problem sits upstream of the data."
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "The Devil's Advocate",
+      "show_name": "Choiceology",
+      "guest": "Dan Heath, with Dean Gillispie, Mark Godsey and Tali Sharot",
+      "region": "United States",
+      "duration_minutes": 27,
+      "url": "https://www.schwab.com/learn/story/devils-advocate",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This is a confirmation bias story from outside the tech and diversity frame. Dean Gillispie spent about 20 years in prison for crimes he did not commit, even though he matched almost nothing in the victims' description of the attacker. A rookie detective, keen to crack a cold case and make his name, decided Gillispie was guilty and then bent the process to fit, including a lineup where Gillispie's photo stood out on a yellow background while the others were blue. The episode pairs this with the Catholic Church's old devil's advocate role, a person whose job was to argue against every candidate for sainthood. It was a deliberate structural check on confirmation bias, and when the role was retired in the 1980s the number of new saints jumped. Neuroscientist Tali Sharot adds that confirmation bias is not irrational, since evidence that clashes with a strong belief usually is wrong. The reframe for the course is that bias is often a normal, useful habit that turns dangerous the moment you become certain, and that the fix is structural, someone assigned to argue the other side, not just a request to be more self-aware.",
+      "what_will_be_assessed": "This is a short episode. The questions draw from the Dean Gillispie story and the confirmation bias frame around it. Focus on the specific ways Gillispie did not match the attacker's description, what the rookie detective did to make Gillispie's lineup photo stand out and the motive Mark Godsey gives for why he pushed so hard, and how many years Gillispie spent in prison. Then pay attention to the origin and purpose of the devil's advocate role in the Church and what happened to the number of saints after the role was retired in the 1980s, and to Tali Sharot's argument that confirmation bias is actually rational. You can skip the Schwab financial tie-ins and the mechanics of the astrology demonstration.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In the Gillispie case, name one thing the rookie detective did to make Gillispie's photo stand out in the lineup, and say roughly how many years Gillispie spent in prison."
+        },
+        {
+          "type": "application",
+          "question": "The Church used a devil's advocate, a person whose job was to argue against every candidate for sainthood. Name one recurring decision in your programme where you could assign someone to make the case against it, and who that person should be."
+        },
+        {
+          "type": "challenge",
+          "question": "Tali Sharot argues confirmation bias is rational, since evidence that clashes with a strong belief usually turns out to be wrong. Name a moment in your transformation work where trusting your prior belief over new disconfirming data would be the right call, not a trap."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Digital Democracy, Analogue Politics: How the Internet Era is Transforming Politics in Kenya - Nanjala Nyabola",
+      "show_name": "Between the Lines",
+      "guest": "Nanjala Nyabola",
+      "region": "Kenya",
+      "duration_minutes": 27,
+      "url": "https://www.ids.ac.uk/events/podcast-episode-09-digital-democracy-analogue-politics-nanjala-nyabola/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course tells a transformation leader that digital bias is something you measure and correct, in yourself and in your tools. Nyabola cuts under that. Her book is about a collision between digital Kenya and analogue Kenya, and her point is that giving a society more technology does not fix it, because the analogue power structure resists and adapts. She shows that tools treated as neutral in the West were tested on the Global South first: Cambridge Analytica ran in Kenya, Nigeria and South Africa before Brexit and the US election, with the winning Kenyan campaign reportedly paying 6 million dollars for ten days of work, and in Nigeria the micro-targeting stoked anti-Muslim sentiment in a place where people can die. She links social media micro-targeting to the local-language radio that fed the 2007 post-election violence, and contrasts Germany, which forced Facebook to moderate content locally, with Ethiopia, which had one Amharic moderator who was not even in the country. The challenge to the course is that the real bias is structural and political, not a personal blind spot, and that the line 'this is just how the platform works' is, as she puts it, only another orthodoxy.",
+      "what_will_be_assessed": "The three questions draw from four stretches. First, the collision thesis, that giving a society more technology does not fix anything because the analogue side resists. Second, her claim that Cambridge Analytica's tactics were tested in Kenya, Nigeria and South Africa before Brexit and the US election, the 6 million dollars for ten days of work figure, and the Nigeria anti-Buhari example. Third, the local-language radio parallel to the 2007 violence and the micro-targeting of The Real Raila Campaign. Fourth, the content moderation contrast between Germany and Ethiopia, and her line that the way a platform runs is just another orthodoxy. You can skip the feminist organising and We Are 52% section and the closing optimism question.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Nyabola says the tactics later used in Brexit and the US election were tested elsewhere first. Which countries does she name, and how much does she say the winning Kenyan campaign paid Cambridge Analytica, for how many days of work?"
+        },
+        {
+          "type": "application",
+          "question": "Nyabola's analogue politics idea is that technology lands inside an existing power structure that bends it. Take one digital system your programme is rolling out, and name the offline habit or interest most likely to bend it away from its stated purpose."
+        },
+        {
+          "type": "challenge",
+          "question": "Nyabola contrasts Germany, which made Facebook moderate locally, with Ethiopia's single overseas moderator, to argue platforms will bend to political pressure. Name a case in your context where demanding that kind of local control would backfire or be impossible, and why."
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Helping Doctors Make Better Decisions With Data: UC Berkeley's Ziad Obermeyer",
+      "show_name": "Me, Myself, and AI",
+      "region": "United States"
+    },
+    {
+      "episode_title": "The Devil's Advocate",
+      "show_name": "Choiceology",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Digital Democracy, Analogue Politics: How the Internet Era is Transforming Politics in Kenya - Nanjala Nyabola",
+      "show_name": "Between the Lines",
+      "region": "Kenya"
+    }
+  ]
+}

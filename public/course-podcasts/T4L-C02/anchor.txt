@@ -1,0 +1,67 @@
+Episode: Solving Problems in Africa by Taking the Worm's Eye View (The Flip, S1E1)
+Show: The Flip
+Guest: Ricky Rapa Thomson, co-founder of SafeBoda. The episode also features David Gluckman (Lumkani) and Onyeka Akumah (Farmcrowdy); only the SafeBoda segment is used here.
+Host: Justin Norman
+Region: Uganda
+URL: https://theflip.africa/podcast/s1e1/
+Transcript source: publisher (full transcript published on the episode page)
+Range: RANGE USED -- see note below
+
+WHAT WILL BE ASSESSED
+The three questions draw only from the SafeBoda section, roughly 03:39 to 10:40, about
+seven minutes. Focus on three things. First, what happened to Ricky's friend in early
+2014 and how that started his road safety work. Second, the specific things he did to
+get riders to wear helmets when they refused, and how he built the driver side of
+SafeBoda by recruiting from inside the boda industry and giving drivers an identity.
+Third, his line that a boda guy needs to hear it from a boda guy, and the driver
+retention number he gives against Uber's. You do not need the Lumkani or Farmcrowdy
+segments or the closing discussion between Justin and Sayo.
+
+RANGE USED. The full episode runs about 30 minutes and features three founders plus a
+closing discussion. This file contains only the SafeBoda section assigned to learners:
+approximately 03:39 to 10:40, about 7 minutes. The publisher transcript carries a
+timecode on each speaker turn. Use those as the markers.
+
+  Start: Ricky, "When you come to Uganda, they will call it Boda Boda."
+  End:   Justin, "So while a boda driver started SafeBoda, what about startups whose
+         founders come from a different background than their customers?"
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+**Ricky [03:39]**: When you come to Uganda, they will call it Boda Boda. When you go to Kenya, they will also call it Boda Boda. When you go to Rwanda, Kigali, they will call it Motos. When you go to Nigeria, many people will refer to it as Okada.
+
+***Justin [03:54]****: That's Ricky Rapa Thompson, co-founder of the Ugandan ride-hailing app SafeBoda.*
+
+**Ricky [03:59]**: A boda boda for anyone who's never been to Uganda is a motorcycle taxi that people use to transport people within and around town in most of the urban cities across Africa.
+
+**Justin [04:09]**: I wanted to talk to Ricky about SafeBoda's origin story, as it's a great example of the entrepreneur taking the worm's eye view and creating innovation from the bottom up. Ricky himself was a Boda driver before going on to become a tech co-founder.
+
+**Ricky [04:23]**: I joined the boda boda industry in 2011. In 2012 I founded a city tour company. Early 2014 I lost one of my very good friends that I was working with almost every day. He got a minor accident, he got a crack in his head. He had brain damage, and he died. But after that, I realized, there are so many accidents that are going to happen, and something needed to be done. So I started as an advocate of road safety.
+
+***Justin [04:50]****: The boda boda industry at that time was suffering major reputational issues, perpetuated by inconsistent pricing, a lack of adherence to the rules of the road and major problems of safety.*
+
+**Ricky [05:01]**: One of my selling points was offering a helmet. I used to carry with me a second helmet. I was the only one. So it was alongside that I started advocating for helmet wearing, I used to give my customers helmets, but it used to be a very tough discussion to convince one customer to wear a helmet. Once they refused to wear a helmet, I actually give it to them to carry for me, and I would make it personal, I would tell them about my friend who died in a boda related accident. So they would agree and the next day they would call me and ask for the helmet and helmet and helmet. Most times, we would agree when we were already in motion because every time I would try to wear one from the beginning they would say no, so I would make you sit, I talk to you, before we complete the journey you would make me stop and wear the helmet and the next day you wear and wear and wear.
+
+***Justin [05:51]****: So as Ricky set out on the difficult path of changing customer's behavior and increasing safety in the boda industry, it was a serendipitous connection on one of his boda tours that ultimately led him to tech entrepreneurship.*
+
+**Ricky [06:03]**: I had one of my clients called Louise, from the UK, who came on a boda tour and I told her about my story and what I wanted to do. She said "I'll spare some time and come back to Uganda to help you". So she came back to Uganda 3 months later to help me. You know, I didn't know that much, all I wanted to do was possibly do up a small call center and then train drivers, provide them with equipment and then customers would call to the call center and then they get connected to drivers. And then what happened, when we were crafting the idea, Louise happened to be staying in one of the shared houses with Max, who is now one of the co-founders of SafeBoda. So Max got interested in the story - he had lived in Rwanda, Kigali - where 100% of customers and drivers wear helmets so he felt very uncomfortable using bodas every time he would come to Uganda. So he said I want to meet that young man, he called me, we met and we agreed that we were going to work on a project called SafeBoda.
+
+***Justin [07:04]****: Now, with any market place or product such as a ride-hailing app, it's necessary to build up both sides of the marketplace. Though SafeBoda provided a better innovation for customers, it was the improvement to safety and to the reputation of Boda drivers, that was vital to build up the supply side of SafeBoda and to provide a superior experience for their customers. Ultimately, what made SafeBoda uniquely positioned for success, was Ricky's intimate understanding of the needs and wants of the Boda industry, because the boda industry was his industry.*
+
+**Ricky [07:36]**: A boda guy needs to speak to a boda guy to make that person understand. For us as boda drivers, we are smart. We need other boda drivers to speak to us. That's why from the point go, I've been really focusing on the boda boda world, the boda boda drivers. When I started this journey, I made sure I recruited people who have been in the boda industry to work with me. And that was an eye-opener, because once I got these people to believe in me, they would share the message with other people, so the words and the good things about SafeBoda just kept on growing, because of the kind of people we were relating with. So, what we have done is we have worked together as boda drivers, as people who have been in the boda boda industry, as people who appreciate our work and no what we want from the boda boda industry, and worked together as a team. Even as of to date as we speak, most of the operations team is dominated by ex-boda drivers.
+
+***Justin [08:38]****: For Ricky and boda drivers, it wasn't merely about an opportunity to make more money or use technology to provide an improved experience for end-users. It was equally about dignity and respect. SafeBoda gave its drivers a unique ID number, a uniform, and their names on their uniform. They gave their drivers an identity, which proved vital to getting buy-in and creating behavior change amongst the boda drivers.*
+
+**Ricky [09:01]**: They were like, this first group of people really needed change and most of the time that's the reason why they joined us. Because they wanted an identity, they wanted a sense of belonging and they wanted some kind of human face into the business they were doing. At the time when I started sharing my idea, and what we wanted to do with the boda drivers, they were like yeah IF I'm going to look different, if people are going to appreciate me, if I'm going to make more money, if I'm going to be respected then I am going to be part of SafeBoda.
+
+***Justin [09:34]****: And if you're wondering how Ricky and his team have done from a driver recruitment and retention perspective...*
+
+**Ricky [09:39]**: When you look at other ride-hailing companies across the world, we are one unique company that has a retention of over 80% of our drivers.
+
+***Justin [09:46]****: Meanwhile, take a guess at Uber's global retention rate - it's only four percent! So, after 5 years of building and innovation, how does Ricky describe SafeBoda today?*
+
+**Ricky [09:57]**: If you ask me and you're in Kampala, what is SafeBoda? You know, we are a tech company, but people do not know us for being a tech company. People know us because of the people that we have worked with from the point go. So, today I would describe SafeBoda as a community of Kampala's best boda drivers that we have selected among the rest, and trained them, empowered them to be able to support the community and the ecosystem, as well. One thing we are proud of is the community of boda drivers that we have created, and they advocate for what is best for themselves and I think that is what has kept us going.
+
+***Justin [10:40]****: So while a boda driver started SafeBoda, what about startups whose founders come from a different background than their customers?*

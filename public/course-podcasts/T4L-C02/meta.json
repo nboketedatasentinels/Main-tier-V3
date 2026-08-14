@@ -1,0 +1,106 @@
+{
+  "course_id": "T4L-C02",
+  "course_name": "Leading Under Pressure: The Transformation Leader's Operating System",
+  "pillar": "Leading Self in the Age of AI",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Solving Problems in Africa by Taking the Worm's Eye View (The Flip, S1E1)",
+      "show_name": "The Flip",
+      "guest": "Ricky Rapa Thomson, co-founder of SafeBoda. The episode features three founders; only the SafeBoda segment is used.",
+      "region": "Uganda",
+      "duration_minutes": 30,
+      "url": "https://theflip.africa/podcast/s1e1/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 03:39 to 10:40 of a roughly 30 minute episode, about 7 minutes of listening. The transcript file holds only this SafeBoda section and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "Ricky was a boda boda (motorcycle taxi) driver in Kampala. In early 2014 a close friend he worked with almost every day crashed, cracked his head, and died. That loss pushed Ricky to lead a safety change in an industry with a bad reputation. He carried a second helmet and pushed riders to wear it, and they pushed back. He did not drop it. He made it personal, told riders about the friend who died, handed them the helmet to carry, and won them over one trip at a time. Then he built the driver side of SafeBoda by recruiting fellow boda drivers, because a boda guy has to hear it from a boda guy. For a transformation leader the point is plain. He led a change against real resistance without shrinking, and he built buy-in that lasted by being one of the people he was trying to change, not standing above them. Their driver retention is over 80 percent while Uber's global rate is about 4 percent.",
+      "what_will_be_assessed": "The three questions draw only from the SafeBoda section of this episode, roughly 03:39 to 10:40, about seven minutes. You do not need the Lumkani or Farmcrowdy segments or the closing discussion between Justin and Sayo. Focus on three things. First, what happened to Ricky's friend in early 2014 and how that started his road safety work. Second, the specific things Ricky did to get riders to wear helmets when they refused, and how he built the driver side of SafeBoda by recruiting from inside the boda industry and giving drivers an identity. Third, his line that a boda guy needs to hear it from a boda guy, and the driver retention number he gives against Uber's. You can skip the rest of the episode.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In early 2014 something happened that set Ricky on the path to SafeBoda. What was it, and name one specific thing he did to get a resistant rider to wear a helmet."
+        },
+        {
+          "type": "application",
+          "question": "Ricky built the driver side by recruiting people from inside the boda industry, because drivers trust one of their own. Name one group in your own work whose buy-in you need, and who from inside that group would have to carry your change for it to land."
+        },
+        {
+          "type": "challenge",
+          "question": "Ricky says a boda guy needs to hear it from a boda guy. Where would 'only an insider can lead this change' give you the wrong answer in your own work?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "701: How to Handle High-Pressure Situations, with Dan Dworkis",
+      "show_name": "Coaching for Leaders",
+      "guest": "Dan Dworkis, emergency physician and Chief Medical Officer at the Mission Critical Team Institute, author of The Emergency Mind",
+      "region": "United States",
+      "duration_minutes": 38,
+      "url": "https://coachingforleaders.com/podcast/handle-high-pressure-situations-dan-dworkis/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "Dworkis is an emergency physician. He works the moment when a lot goes wrong at once and the only way out is through. His reframe for leaders is that an emergency is not just a worse bad day. It is a different state, with pressure, uncertainty, impact, complexity, and what he calls liminality, and the tools that work on a normal day can hurt you in it. He gives concrete, trainable tactics. Apply graduated pressure, the wedge, crawl-walk-run, so that when you fail you know why. Name the situation out loud, 'well, this is suboptimal,' to admit the mess and still get the team moving. Label the problem so the whole room works the same one, because the room is smarter than any one person in it. And treat staying cool, sang-froid, as a skill you build, not a trait you were born with. The catch, which he says himself near the end, is that he started internal and individual and has moved toward the teams and systems around the person.",
+      "what_will_be_assessed": "The three questions draw from the tactics part of the conversation, not the opening or the close. Focus on graduated pressure and the wedge, including the central line teaching example and using the end of a hard workout to practice, on the 'suboptimal' labeling move and why the exact words matter less than having a shared signal, and on his claim that sang-froid is trainable rather than fixed, plus the thought experiment he offers about whether you could make a situation worse. You can skip the opening definitions of the five features of an emergency and the closing book plug and episode recommendations.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Dworkis uses one medical procedure to explain 'graduated pressure' or the wedge. What procedure is it, and what everyday activity does he suggest using to practice performing when your heart rate is already up?"
+        },
+        {
+          "type": "application",
+          "question": "Dworkis says the room is smarter than any one person in it, but only if you label the problem so everyone works the same one. Name a recent high-pressure moment in your work where half the room was solving a different problem, and the one sentence that would have set the label."
+        },
+        {
+          "type": "challenge",
+          "question": "Dworkis argues that staying calm under pressure is a trainable skill, not a fixed trait. Where in your work would treating it as purely trainable let the real problem, the situation itself, off the hook?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Why Burnout Happens \u2014 and How Bosses Can Help",
+      "show_name": "HBR IdeaCast",
+      "guest": "Christina Maslach, professor of psychology at UC Berkeley, author of The Truth About Burnout",
+      "region": "United States",
+      "duration_minutes": 25,
+      "url": "https://hbr.org/podcast/2020/12/why-burnout-happens-and-how-bosses-can-help",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course tells leaders to manage their mindset and build resilience under pressure. Maslach has studied burnout for decades and says that framing puts the load in the wrong place. Her data say burnout is more about the job than the person. It comes from six mismatches between people and the workplace: workload, control, reward, community, fairness, and values. The usual fixes, unplug, take a vacation, meditate, help you cope with the stressors but do not fix them. Her line is that telling a burned out person to get away from work begs the question, what is wrong with the workplace that the best advice is to leave it. If you cannot take the heat, ask what is wrong with the kitchen. And her fix is collective. Make it a 'we' issue, organize with colleagues, change small things in the job so there is a better fit. That is a direct argument against a resilience-first operating system.",
+      "what_will_be_assessed": "Focus on three stretches. First, Maslach's definition of burnout as three things, exhaustion, cynicism, and ineffectiveness, and her claim that it is the job more than it is the person. Second, the six areas of mismatch between people and work, and her argument that individual fixes like vacations and meditation only help you cope rather than fix the cause, including the line about what is wrong with the kitchen. Third, what she tells a worker whose boss is not helping, to organize and make it a 'we' issue not a 'me' issue, and the medical team 'cuddle huddle' example of a small change that built trust. You can skip the opening pandemic small talk.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Maslach names six areas of mismatch between people and their workplace that drive burnout. List three of them, and give the kitchen line she uses about individual coping advice."
+        },
+        {
+          "type": "application",
+          "question": "Maslach says fixes like vacations and meditation help people cope but do not touch the cause. Pick one pressure your team is carrying now, say which of her six areas it really comes from, and one small change to the job that would improve the fit."
+        },
+        {
+          "type": "challenge",
+          "question": "Maslach puts the cause of burnout on the workplace, not the individual. Where does that leave the leader who genuinely cannot change the workload, the pay, or the org's fairness, and still has to get people through a hard stretch?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Solving Problems in Africa by Taking the Worm's Eye View (The Flip, S1E1)",
+      "show_name": "The Flip",
+      "region": "Uganda"
+    },
+    {
+      "episode_title": "701: How to Handle High-Pressure Situations, with Dan Dworkis",
+      "show_name": "Coaching for Leaders",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Why Burnout Happens \u2014 and How Bosses Can Help",
+      "show_name": "HBR IdeaCast",
+      "region": "United States"
+    }
+  ]
+}

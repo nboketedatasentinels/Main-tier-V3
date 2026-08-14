@@ -1,0 +1,157 @@
+Episode: Why Fridays May Be Dangerous for Your Health (Freakonomics, M.D., No. 9)
+Show: Freakonomics, M.D.
+Guest: Luis Diestre and Benjamin Barber, professors at IE Business School (Madrid); Joseph Ross, professor of medicine and public health at Yale University
+Host: Dr. Bapu Jena
+Region: United States
+URL: https://freakonomics.com/podcast/why-fridays-may-be-dangerous-for-your-health/
+Transcript source: publisher (full transcript published on the episode page). Speaker labels normalized for readability; the words are unchanged.
+Range: full episode (about 22 minutes)
+
+WHAT WILL BE ASSESSED
+The whole episode is short, about 22 minutes, so the three questions cover the main
+study. Focus on the Friday Effect. First, what Luis Diestre and Ben Barber found when
+they checked which day drug safety alerts come out: Fridays are overrepresented, Friday
+alerts get about 34 percent less sharing on social media and 12 to 51 percent less news
+coverage, and alerts put out on other weekdays cut drug-related deaths by 22 to 36
+percent compared with Friday ones. Second, the fix they push and why it is unusually
+simple. Third, Joseph Ross's point that knowing and acting are not the same thing, so
+someone has to aggregate the information and carry it to prescribers and patients. You
+can skip the West Wing "take out the trash day" clip and the closing credits.
+
+---
+
+[DING]
+[BUZZ]
+
+Bapu JENA: All day long, for reasons big and small, we hear and feel and see alerts, things that need our attention. It could be work-related.
+
+[SLACK NOTIFICATION]
+[YOU'VE GOT MAIL]
+
+Bapu JENA: Or personal, like a happy birthday text from a college roommate.
+
+[CELL PHONE MESSAGE DING + CELL PHONE ALERT SOUND]
+
+Bapu JENA: A breaking news alert.
+
+[NEWS ALERT]
+
+Bapu JENA: Or maybe an alert that's more urgent like a tornado or hurricane warning.
+
+[WEATHER ALERT]
+
+Bapu JENA: These alerts probably feel like the unrelenting soundtrack to our lives right now. And I don't know about you, but by the end of a long week I'm ready to just unplug. And that's one reason why we all love Fridays. I, for one, try to spend a little less time in front of the computer. I tend to check out a little bit early. I get on the soccer field if I can. Of course, it's also movie night with the kids. And it turns out I'm not alone. There is something actually called the Friday Effect.
+
+Ben BARBER: I'm Ben Barber. Honestly, this is not a joke. Now, every time something happens on Fridays, I'm always like, oh, it's the Friday Effect.
+
+Bapu JENA: Fridays are the end of the work week for a lot of us. By the end of a long week, it's hard for all of us to pay attention to things that aren't necessarily the most exciting, like work emails or news alerts. We're looking forward to the weekend, to Netflix, time with loved ones, anything but work.
+
+Ben BARBER: I always think, oh, I shouldn't send an email on Fridays because the odds are, they're not going to get it or they're going to wait. Friday, I don't try to bother anybody if I really want something done. Unless Luis, right? Luis is going to be all on it.
+
+Luis DIESTRE: My name is Luis Diestre. So, in my case on Fridays, these are the days where I work the most, especially after publishing this piece.
+
+Bapu JENA: You might be wondering, why is Luis so attentive on Fridays? Well, he, Benjamin Barber and Juan Santaló are researchers and professors at I.E. Business School in Madrid, Spain. And today we're digging into the study they did about how dangerous it is to announce drug safety alerts on, you guessed it, Fridays.
+
+From the Freakonomics Radio Network, this is Freakonomics, M.D.
+
+I'm Bapu Jena. I'm a medical doctor and an economist. And this is a show where I dissect fascinating questions at the sweet spot between health and economics. Today, we are going to explore how the timing of drug safety alerts can have ripple effects on public health.
+
+* * *
+
+Bapu JENA: Ben Barber says he and his colleagues were inspired to take a closer look at public health alerts that are released on Friday afternoons because of an episode of the old N.B.C. show set inside a fictional White House: The West Wing.
+
+Ben BARBER: I don't know if you're familiar with The West Wing, but they have this show, "Take Out the Trash Day".
+
+Donna MOSS: What's "Take Out the Trash Day"?
+
+JOSH: Friday.
+
+DONNA: I mean what is it?
+
+JOSH: Any stories we have to give the press that we're not wild about we give all in a lump on Friday.
+
+DONNA: Why do you do it on Friday?
+
+JOSH: Because no one reads the paper on Saturday.
+
+DONNA: You guys are real populists, aren't you?
+
+Bapu JENA: This "Take Out the Trash" idea on West Wing is ripped from the real world. Folks listening who work in finance or media might already know this well. It's when companies and even governments take advantage of our inattention and release reports and news on Fridays that they'd rather we didn't pay much attention to. The goal is to avoid unflattering media coverage. For example, any story that might impact a company's stock price.
+
+But could something as important as drug safety alerts be a victim of the Friday Effect? Researcher Luis Diestre started crunching the numbers.
+
+Luis DIESTRE: I was trying to check the days of the week in which these alerts were released, and I came across a very suspicious pattern. We saw that Fridays were overrepresented, right? So alerts were more likely to happen on Friday than any other day of the week.
+
+Bapu JENA: Before we get deeper into this research, you might be wondering: What exactly are drug safety alerts? Well, in the U.S., drug safety alerts to the public come from the Food and Drug Administration, or F.D.A. One of the F.D.A.'s jobs is to continually collect data about the side effects of drugs that the F.D.A. has approved. The F.D.A. also has a drug oversight board that evaluates that information. And if they believe there's enough evidence that suggests a certain adverse effect, maybe of the drug itself, maybe of an interaction to watch out for between other drugs, then they release a safety alert to the public.
+
+In those alerts, they explain the issue and provide recommendations. The recommendations vary. It could be a change in dosage, or a person could be directed to stop taking the medication altogether.
+
+There are a few ways these safety alerts get communicated to the medical community and the public. For example, drug companies and sales representatives can share safety information with medical professionals. Electronic Prescribing Systems that healthcare providers use often get updated with safety alert information too. So when a healthcare provider punches a prescription into the system, they'll see any alerts relating to the drugs.
+
+The F.D.A. also provides information on all new drug safety alerts directly to the public on their MedWatch website, Twitter account and email subscriptions. News organizations sometimes pick up this information too. So, information on drug safety alerts is available. But it's in noisy, crowded places. And Luis says it's hard for the people who need the alerts to wade through all the information.
+
+Luis DIESTRE: We know that not every doctor follows the F.D.A. Not every doctor is subscribed to the email subscription service or follows the MedWatch Twitter account.
+
+Bapu JENA: Luis and Ben looked for ways to measure how much attention a drug safety alert gets. Here's a recent example: On September 17, 2021, the U.S. F.D.A. MedWatch account tweeted that Pfizer had expanded a voluntary recall of Chantix tablets. Chantix is a medicine to help people stop smoking. That tweet got just three retweets. And sure, not everyone is on Twitter, so Ben and his colleagues looked at more traditional media coverage of safety alerts too.
+
+Ben BARBER: We can look at news articles that sort of pick up these safety alerts. And then we try to look at what the effects would be, given that it was on a Friday versus other days. Lo and behold, what we find is that Fridays — these news organizations and people on Twitter pick these things up less.
+
+Bapu JENA: Luis and his research partners found that alerts were more likely to be communicated on a Friday than any other day of the week. They also found that alerts released on a Friday were shared 34 percent less on social media, and they were 12-51 percent less likely to receive news coverage. And that led to another question, where the stakes were pretty high:
+
+Luis DIESTRE: If people are paying less attention to these events, maybe these could have implications on public health.
+
+Bapu JENA: And that's what they found. If the safety alert was published on any other weekday, it reduced drug-related deaths by 22-36 percent, compared to if the safety alert was published on a Friday. Luis was stunned by the findings.
+
+Luis DIESTRE: I remember pushing ourselves to try to break the results. There was no way to break them. One of the strongest results I've ever seen in my career as a researcher. So we were strongly surprised about the magnitude of this effect, because what you find is that Friday alerts are almost ineffective in the first six months. So it's a very dramatic and very strong effect.
+
+Bapu JENA: I want to emphasize what Luis just said: If a drug safety alert comes out on a Friday, it isn't just that the alert doesn't get much attention over the weekend but everyone catches up and knows about the safety alert just a few days later. It turns out that the information actually gets ignored on a Friday, and the net effect is that it takes months longer for the information to disseminate to healthcare professionals and the public. Ben was so surprised that they took extra care to double check the data.
+
+Ben BARBER: As a researcher who does a lot of empirics, you know, you can always find results, but they could be spurious. You want to make sure that it's both substantively significant and also statistically significant. I wasn't necessarily shocked it was statistically significant, but I was shocked at how large the magnitude of the effect was, even after controlling for things like the same drug. So even if you look at the same drug, released at different times, you would have this or the same alert. I was not expecting how dramatic it would be in terms of public health. I did not think that it would lead to more deaths, lead to more serious injuries, or lead to more side effects in general.
+
+Bapu JENA: Coming up, we hear from a public health professor and practicing physician about how the Friday Effect plays out on the front lines of medicine. And more with Luis and Ben about who could fix this problem and how.
+
+* * *
+
+Bapu JENA: After seeing the strength of the Friday Effect, Luis and Ben wondered: Who gets to decide when an alert comes out? It's the F.D.A. But who might be influencing those decisions? Ben can explain what they were able to measure.
+
+Ben BARBER: We had thought ahead of time maybe it's the firms who are lobbying the F.D.A. who are able to have these. In the paper we have this histogram, which shows that, for non-lobbying firms, you essentially have this flat line of almost any day of the week is equally likely to get an alert. Whereas for lobbying firms, it's essentially a third of them, I think, are on Fridays. One possibility of that is that, well, it's just the firms that are lobbying that are able to get this. Fridays is an interesting thing, because it seems like it's a very cheap thing for regulators to give a firm who's lobbying. It's just moving it to a Friday. Who cares, right? We're still giving these safety alerts out. And then eventually we started thinking about, well, what are the consequences of this, as Luis was pointing out. And we had a real aha moment when we realized, oh, wow, maybe this is actually having this public health issue where people aren't getting the information they need. And then it became a public service announcement of some sorts to try to say: Hey, don't release things on Fridays because people are going to get hurt.
+
+Bapu JENA: In medicine and healthcare policy the problems are often complex. And this typically means we require complex solutions. There are usually never any quick fixes. But what drew me to Ben and Luis' study is that the problem that they identified — people being less aware about drug safety alerts that are issued on Fridays — had a fix that was pretty simple. Just don't send any drug safety alerts on Friday. Even waiting a few days, until the following Monday, could mean the alert is seen by a lot more people.
+
+They've been shouting the findings from their study from the rooftops because it seems like such a simple fix. They're not doing the shouting on Fridays, of course. But so far, they haven't gotten much feedback from either drug companies or the F.D.A.
+
+I reached out to the F.D.A., and they provided us with a statement saying, and I quote: they aim to issue drug safety alerts as soon as possible. They also said they have a number of mechanisms in place to amplify information beyond the initial alerts. They did however decline to respond to the specific findings of Luis and Ben's study.
+
+So, maybe this study could convince drug companies or the F.D.A. to change when they release drug safety alerts. That would be a great experiment. But it would only be the first step. Because knowing and acting aren't the same thing.
+
+Joseph ROSS: What we know from other studies that look at utilization is that these safety alerts, or even more serious ones like black box warnings that are the changes to the drug label that are the most serious safety concerns, that they rarely lead to changes in prescribing. And they actually rarely lead to changes in insurance formulary coverage, which are both much more important measures of what actually happens in the world.
+
+Bapu JENA: That's Joseph Ross. He's a professor of medicine and public health at Yale University.
+
+Joseph ROSS: We need to do a better job of communicating information to patients and to prescribers when there are safety concerns identified. The F.D.A.'s distributed system of using social media and dear doctor letters and emails, and the companies that do the same — as a practicing general internist, I can tell you. Those emails get deleted pretty quickly because it's just a lot of noise. You don't know how serious it is. Like, what is the likelihood of the risk? Practicing clinicians in particular rely on their peers along with guidances from professional organizations that are deliberately attempting to aggregate this information. And that can be communicated back to an individual physician or prescriber because there is too much noise out there. Someone has to do that job of aggregating. Ideally, it should be the F.D.A.
+
+Bapu JENA: That might help medical professionals make sense of the barrage of information. But what about patients? Again, Ben Barber.
+
+Ben BARBER: The safety alerts themselves are fairly complicated. So I don't necessarily think that patients are going to be able to look at them. I'm not a doctor. I don't know what all of these say and what they all mean either. What I've learned in this process is I should trust doctors more about these things and hope that they are up to date on this stuff.
+
+Bapu JENA: Luis Diestre hopes the study makes it clear that the Friday Effect isn't just about short-term stock performance or avoiding headlines. And that realization could change the incentives for how regulators and drug makers behave.
+
+Luis DIESTRE: My feeling is that firms are not aware of the implications of getting alerts on Fridays. Maybe they think that this is beneficial for them because they somehow minimize the noise or the punishment in the stock market. But my feeling is that they're not aware of the public health implications. So maybe if, if they have that information, their incentive system will change because, of course, firms don't want these public health consequences either. Right? So, even for purely economic reasons.
+
+Bapu JENA: Joseph Ross says we need even bigger changes, like taking a step back and rethinking how the F.D.A. collects data on safety information and how that information trickles out to patients.
+
+Joseph ROSS: This adverse event reporting system is just the very tip of the iceberg. We know it's basically voluntary for patients and clinicians. It's a burdensome system in which to submit. While it's required for industry, there's been other reports that show that they get delayed. They don't always get reported. And, you know, even when you look at them, they're very difficult to disentangle and to get at a relative risk as opposed to a number of events. In that, I mean, there's no denominator in the adverse event database. You don't know if that one adverse event that's reported for that use of a drug was in one person who used the drug or in one million people who used the drug. And so you just have no sense of, well, is this an important risk or is this just a random occurrence that took place? So there's much that we can do to advance F.D.A.'s regulated surveillance efforts. It's not like if a safety warning comes out that the patients are automatically alerted. We don't have systems in place to do that. The pharmacists actually do get the very same information and are much more attuned to new safety changes to drug labels and the dear doctor letters. Often we are relying on the pharmacists in the community to alert the patients, who then come and talk to the doctors about it.
+
+Bapu JENA: Like Joseph Ross is saying, regulators, drug companies, prescribers, pharmacists and patients all have a role to play in making sure good information gets out and gets listened to. This study from Luis and Ben also reminds me of some research I did a while ago that looks at studies that, by chance, happened to be published around big, unexpected events like hurricanes, other natural disasters, mass shootings, etc. Those studies could, in theory, get less attention and therefore make less long-term scientific impact because when those studies are released, people's attention is on other things that are much more important. But we actually didn't see that citations to those studies are any less in the future. So it's not that relative inattention to an issue, in this case a new scientific study, always has long-term effects, but it can.
+
+In the case of drug safety alerts, delaying a response by just over the weekend is really unlikely to have any negative public health impact. In most cases, these are drugs people have been taking for a long time. And the real issue is identifying side effects that come from long-term use or new interactions with other drugs, as opposed to acute side effects that just happen overnight. In that case, any hypothetical, trivial benefit we might get from getting patients to stop taking the drug over the first weekend the information is released is swamped by the benefit that we get from having people know more information about the safety alert over the months ahead.
+
+Again, in medicine, so many problems seem so intractable and complex. It sure seems worth trying the tactic of just moving the drug safety alerts around on the calendar by a few days to help make sure more people see them. The drug companies and the F.D.A. could give it a shot, right? I'd actually be very curious to see the data if a change like this was made. And I know Ben and Luis would be too. We'll just have to keep a close eye out for it. Chances are though, the announcement would get made on a Friday afternoon.
+
+That's it for this week's episode of Freakonomics, M.D. Thanks for listening, and I hope you follow the show. You can find links to all the studies we mentioned at Freakonomics.com.
+
+Just a heads-up folks, we'll be back with new episodes in just a couple of weeks. Until then, if you're enjoying the show, it helps us out a lot if you rate it and write a review wherever you're listening. And if you have thoughts on this episode or ideas for the show, I'd love to hear from you. You can email me at drbapupod.
+
+* * *
+
+Bapu JENA: Freakonomics, M.D. is part of the Freakonomics Radio Network, which also includes Freakonomics Radio, No Stupid Questions, and People I (Mostly) Admire. This show is produced by Stitcher and Renbud Radio. You can find us on Twitter and Instagram at @drbapupod. Original music composed by Andrew Edwards. This episode was produced by Colleen Pellissier and mixed by Eleanor Osborne. Our staff also includes Alison Craiglow, Greg Rippin, Joel Meyer, Tricia Bobeda, Emma Tyrrell, Jasmin Klinger, Lyric Bowditch, Jacob Clemente and Stephen Dubner. If you like this show or any other show in the Freakonomics Radio Network, please recommend it to your family and friends. That's the best way to support the podcasts you love. As always, thanks for listening.

@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C15",
+  "course_name": "Leading Through Change and Continuous Improvement",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Why Digital Transformation Matters",
+      "show_name": "The Development Podcast",
+      "guest": "Am\u00e9rico Muchanga (Mozambique's Minister of Communications and Digital Transformation), with Idah Pswarayi-Riddihough (World Bank Global Director in the Digital Vice Presidency)",
+      "region": "Mozambique",
+      "duration_minutes": 26,
+      "url": "https://www.worldbank.org/en/news/podcast/2025/06/05/why-digital-transformation-matters-development-podcast",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "the_idea": "Muchanga runs digital change for a poor, very long country with an insurgency in the north, where a citizen might travel 500 kilometers and spend about 100 dollars just to reach an office for one service. His answer is not a big launch. It is a set of building blocks laid in order: infrastructure and data centers, a way to sign documents digitally, an interoperability layer so systems can talk to each other, digital IDs, then a citizen portal. The wins he points to are small and checkable. Registering a company went from a pile of paperwork to a few hours. A single window system now handles imports and exports on one platform. Idah Pswarayi-Riddihough, who ran the World Bank projects there for over four years, adds the leadership point: they made digital a full ministry, not an agency, because an agency does not have the convening power to make it a whole of government job. It is a story about sequencing and authority, not slogans.",
+      "what_will_be_assessed": "This episode has several voices, but the three questions draw only from the two interviews in the second half. From Mozambique's Minister Am\u00e9rico Muchanga (about 09:33 to 15:42): the problem he is solving (people traveling very long distances, in one case 500 kilometers, and paying about 100 US dollars to reach a service), the building blocks he says must come first (digital infrastructure and data centers, digital signing of documents, an interoperability framework, digital IDs, a citizen portal), and the two concrete wins (registering a company now takes a few hours; the single window system for imports and exports). From the World Bank's Idah Pswarayi-Riddihough (about 15:42 to the end): why Mozambique made digital a full ministry instead of an agency, and what she means by resilience in jobs and schools. You can skip the opening Grab story from Southeast Asia and the student segment.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Muchanga names two services that became much faster in Mozambique. Name both, and say roughly how long registering a company now takes."
+        },
+        {
+          "type": "application",
+          "question": "Muchanga insists the building blocks have to be laid in order before citizens can get services from where they are. Name two of his building blocks, and say which one your own change effort is missing."
+        },
+        {
+          "type": "challenge",
+          "question": "Idah says they made digital a full ministry, not an agency, to get convening power over the whole government. Where would giving a change team that much authority backfire in your setting, and why?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Why Fridays May Be Dangerous for Your Health",
+      "show_name": "Freakonomics, M.D.",
+      "guest": "Luis Diestre and Benjamin Barber (IE Business School), and Joseph Ross (Yale University); hosted by Dr. Bapu Jena",
+      "region": "United States",
+      "duration_minutes": 22,
+      "url": "https://freakonomics.com/podcast/why-fridays-may-be-dangerous-for-your-health/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "A simple timing quirk turns into a lesson about change. Researchers at IE Business School found that drug safety alerts come out on Fridays more than any other day, and that Friday alerts get about 34 percent less sharing on social media and 12 to 51 percent less news coverage. The part that matters: alerts released on other weekdays cut drug-related deaths by 22 to 36 percent compared with Friday ones, because Friday information gets ignored and takes months longer to spread. The fix is almost silly in how small it is, just do not release on a Friday. But the deeper point comes from Yale's Joseph Ross. Even serious warnings rarely change what doctors prescribe, because knowing and acting are not the same thing, and someone has to aggregate the signal and carry it through the noise. For anyone rolling out a change, the announcement is the start, not the finish.",
+      "what_will_be_assessed": "The whole episode is short, about 22 minutes, so the three questions cover the main study. Focus on the Friday Effect: what Diestre and Barber found about which day alerts come out (Fridays overrepresented; Friday alerts about 34 percent less sharing and 12 to 51 percent less news coverage; other-weekday alerts cut drug-related deaths by 22 to 36 percent versus Friday ones), the simple fix they propose, and Joseph Ross's point that knowing and acting are not the same thing, so someone must aggregate the information and carry it to prescribers and patients. You can skip the West Wing clip and the closing credits.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "The researchers found Friday drug safety alerts did worse on several measures. Give two of the specific numbers they report, and name the simple fix they suggest."
+        },
+        {
+          "type": "application",
+          "question": "The episode shows the day and the noise around an announcement change whether people act on it. Name one change you rolled out that got lost in the noise, and what you would time or do differently."
+        },
+        {
+          "type": "challenge",
+          "question": "Joseph Ross says safety alerts rarely change what doctors actually prescribe, because knowing is not acting. Where in your own change work have you treated announcing as done, and what would move people to act?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "How Big Things (Should) Get Done",
+      "show_name": "Cleaning Up",
+      "guest": "Bent Flyvbjerg (Emeritus Professor, University of Oxford; Professor, IT University of Copenhagen)",
+      "region": "Denmark",
+      "duration_minutes": 65,
+      "url": "https://www.cleaningup.live/ep128-prof-bent-flyvbjerg-how-big-things-should-get-done/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately the first 20 minutes of the interview, after the introductions, of an episode that runs a little over an hour (about 65 minutes). The publisher transcript has no timecodes, so this is estimated from position. The transcript file holds only this section, and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "This course tells you to lead change and keep improving. Flyvbjerg, the most cited scholar in the world on big projects, brings the base rates. Across more than 16,000 projects, only about 9 percent land on budget and on schedule, and only about half of one percent also deliver the promised benefits, with fat tails where the failures are enormous. He gives two root causes. One is psychology, mostly our optimism, so budgets come in low and overruns follow like gravity. The other is power, where people knowingly lowball cost and time and inflate benefits to win funding, what he calls the beauty contest. His fixes cut against the move fast reflex. De-bias your own numbers with a method he calls reference class forecasting, because your biggest risk is you. And follow the rhythm he calls think slow, act fast: deliberate hard up front, then keep the delivery window short so fewer black swans can fly through it. It is a case for planning and humility in a field that sells urgency.",
+      "what_will_be_assessed": "This file holds only the assigned stretch near the start, from Michael Liebreich asking Flyvbjerg to put numbers on the problem, to Flyvbjerg finishing his answer on Think Slow, Act Fast. There are no timecodes, so use the spoken lines as the markers. Focus on four things: the Iron Law (about 9 percent of projects on budget and on schedule, about half of one percent on budget, schedule and benefits, from a database of more than 16,000 projects, plus fat tails and black swans); the two root causes, psychology (optimism and other biases) and power (deliberate lowballing to win the beauty contest); his fix for the psychology side, de-biasing and reference class forecasting, and the line that your biggest risk is you; and what Think Slow, Act Fast means and why acting fast shrinks the window for bad things. The nuclear versus solar comparison in the middle is only an example, so you can pass over the energy details.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Flyvbjerg gives two headline success rates for projects. Give both numbers, and say roughly how many projects are in his database."
+        },
+        {
+          "type": "application",
+          "question": "He names two root causes of failure: our optimism, and the pressure to make a project look good on paper to win funding. Name one project in your organization where the numbers were shaded to get approval, and what a de-biasing step would have caught."
+        },
+        {
+          "type": "challenge",
+          "question": "Flyvbjerg argues for thinking slow and then acting fast, against the reflex to start moving right away. Where has just start and iterate served your change work better than long planning, and how would you tell the two situations apart?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Why Digital Transformation Matters",
+      "show_name": "The Development Podcast",
+      "region": "Mozambique"
+    },
+    {
+      "episode_title": "Why Fridays May Be Dangerous for Your Health",
+      "show_name": "Freakonomics, M.D.",
+      "region": "United States"
+    },
+    {
+      "episode_title": "How Big Things (Should) Get Done",
+      "show_name": "Cleaning Up",
+      "region": "Denmark"
+    }
+  ]
+}

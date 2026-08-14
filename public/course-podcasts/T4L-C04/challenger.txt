@@ -1,0 +1,427 @@
+Episode: The Myers-Briggs Personality Test
+Show: Maintenance Phase
+Hosts: Aubrey Gordon and Michael Hobbes
+Region: United States
+URL: https://maintenancephase.buzzsprout.com/1411126/episodes/15739264-the-myers-briggs-personality-test
+Transcript source: publisher (full transcript published on the show's own Buzzsprout episode page)
+
+WHAT WILL BE ASSESSED
+The three questions come from this first stretch, where the hosts argue about whether the
+Myers-Briggs measures anything real. Focus on three things. First, the Forer effect (also called
+the Barnum effect): the 1949 experiment by psychologist Bertram Forer, in which he gave every
+student the SAME personality profile -- one he had lifted from an astrology magazine -- and they
+rated it 4.3 out of 5 for accuracy; plus the finding that people rate a test as more valid when
+its description is favorable. Second, the reliability problem: the Myers-Briggs claims your type
+is innate and never changes, yet somewhere between 39 and 76 percent of people get a different
+result when they retake it just five weeks later, and only the introversion-extraversion scale
+tracks with other personality instruments. Third, the contrast with the Big Five, which was
+developed and independently validated by many teams over decades, versus the Myers-Briggs, which
+is a self-report popularization of one of Jung's theories. Note also the honest opening: both
+hosts say the framework can still be a constructive way to talk about differences. You do not
+need the second half of the episode, the history of Katharine and Isabel Briggs.
+
+RANGE USED. The full episode runs about 55 minutes. This file holds only the first stretch,
+the part where the hosts weigh whether the Myers-Briggs measures anything real -- roughly the
+first 22 minutes, ending where they turn to the history of who invented it. The page has no
+timecodes, so use the spoken lines as the markers.
+
+  Start: Michael, "All I can think of is Corny Myers-Briggs humor..."
+  End:   Michael, "You've been very transparent about the fact that you're just like, 'We're not going to talk about the science all that much.'"
+
+---
+
+**Michael:** All I can think of is Corny Myers-Briggs humor. We took a personality test, and this podcast is a S-U-C-K-S.
+
+**Aubrey:** Okay, okay. [laughs]
+
+**Michael:** Terrible, terrible.
+
+**Aubrey:** That's one letter too many.
+
+[laughter]
+
+**Michael:** I know the literal first thing, and I've already fucked it up-- [Aubrey laughs] Okay. Welcome to Maintenance Phase, the podcast that is one of only 16 kinds of podcasts.
+
+**Aubrey:** [laughs] Oh, I like it.
+
+**Michael:** There's a finite number of types of things.
+
+**Aubrey:** Definitively, and the type of podcast never changes for your whole life.
+
+**Michael:** We're coming for you people with MBTI in their dating profile.
+
+**Aubrey:** I'm Aubrey Gordon.
+
+**Michael:** I'm Michael Hobbs.
+
+**Aubrey:** If you would like to support the show, you can do that at *patreon.com/maintenancephase.* And Michael, today--
+
+**Michael:** Wait, hang on, Aubrey. I like to say Aubrey after you say Michael.
+
+**Aubrey:** I know. I didn't expect it to be pause for Aubrey. Today we're talking about the most popular personality test in the world, the Myers-Briggs Type Indicator. This was a Michael Hobbes special request.
+
+**Michael:** Well, a sort of a --this was a "I want Aubrey to do this so I don't have to do this request. Because it was inevitable that we would do it, and I have a pre-existing feeling, which we will get to.
+
+**Aubrey:** Right. So that's my question for you, is just to kick us off, how do you come to the MBTI? What's your background with the Myers-Briggs?
+
+**Michael:** So, my mom was really into the MBTI when I was growing up and was involved with the organization in a tangential way.
+
+**Aubrey:** Oh, no. I wish I had done all of this differently Mrs. Mike's mom.
+
+**Michael:** Basically, there was a movement to bring the Myers-Briggs Type Indicators into churches, and my mom was involved in that movement.
+
+**Aubrey:** What?
+
+**Michael:** So, she was a licensed MBTI giver and she was using it for couples counseling. She was using it with various congregational things that she was doing in her church. So, as a child, my mom talked about Myers-Briggs a lot, and I remember taking it a couple of times.
+
+**Aubrey:** Oh, do you know what your type is?
+
+**Michael:** I think I'm an INFP, but it changed. This is kind of my beef with the Myers-Briggs, is that it changed over time. And I was talking to my mom about this recently, and she said, "Everything changed except for the introvert extrovert thing, that I was the most introverted little child imaginable."
+
+**Aubrey:** Listen, Michael, I've been in deep enough on this to say, you are not an INFP.
+
+[laughter]
+
+**Aubrey:** No INFP of mine acts the way that you act. No, I don't know, INFP is one that a lot of people get.
+
+**Michael:** Okay.
+
+**Aubrey:** It's sort of the like sensitive, idealistic, too tender for this world kind of person.
+
+**Michael:** How is that not me?
+
+**Aubrey:** Too tender for this world? The guy who only starts fights on the internet. [laughs]
+
+**Michael:** "Aubrey, how dare you?" [Aubrey laughs] I am such a sensitive little baby. I am so nice. Just not to other people or just not in my interactions with others.
+
+**Aubrey:** Well, listen, my background with the Myers-Briggs is different. I encountered it for the first time at a nonprofit leadership retreat that I went to in my 20s.
+
+**Michael:** Okay?
+
+**Aubrey:** So, we took the quiz. We broke out into small groups based on our type, and I loved everything about it. I loved how it gave me this sort of sense of connectedness to other people that I wouldn't have expected to feel connected to. I loved that it positioned each of us as problem solvers whose job it was to figure out how to navigate different personality types and work styles rather than just grousing and writing somebody off, right.
+
+**Michael:** Yeah.
+
+**Aubrey:** I loved that it said that every type has something to contribute and something to offer.
+
+**Michael:** I actually had this conversation with my mom recently because we were talking about sort of circling back because she's not really as into it now as she used to be. And the way that she put it was that it's a constructive way to talk about differences between people.
+
+**Aubrey:** Yeah.
+
+**Michael:** It's not like, you suck and I'm cool. It's like, "Oh, well, this is what you need from an interaction. Or this is what you're bringing to it." And I think of it very similarly to the love languages, where the specific five love languages are kind of made up and arbitrary and not really based on anything. But on the other hand, it's very constructive to have a conversation with somebody of like, "How do you receive compliments? How do you receive gifts? How do you like to be loved and show love?"
+
+**Aubrey:** Yeah.
+
+**Michael:** And I don't know where we're going with this episode, but I think people feel this kind of declenchement when they see us talking about something that maybe they like, and they're like, "Oh, no. Mike and Aubrey are going to say that I'm problematic for enjoying this thing." And, like, I don't think that's the project of this episode at all. I really like taking personality tests, and I think it's really important to have frameworks for talking about conflict and relationships between people that don't make either person feel like shit.
+
+**Aubrey:** Yeah.
+
+**Michael:** And I think 99% of cases, that's like what the Myers-Briggs Type Indicator is doing on an interpersonal level, I mostly think it's a force for good.
+
+**Aubrey:** Absolutely.
+
+**Michael:** I need all the people who thought we were going to cancel Pilates [Aubrey chuckles] to help their MBTI friends through it.
+
+**Aubrey:** So, I'll say the flipside of the Myers-Briggs and part of what started to sour me on it was I would start to administer it in advance of our staff retreats, and then we'd have a whole staff retreat session about like, "How do we work better together?" And that kind of thing. We kept that up for a few years, but over time it started to kind of devolve into this weird cliquishness-
+
+**Michael:** Oh.
+
+**Aubrey:** -and pre-judgment about other types. So, we'd be going through a hiring process with a hiring committee, and somebody would be like, "We are not hiring another persuader."
+
+**Michael:** Oh, interesting. Okay.
+
+**Aubrey:** People would be like, "Our team is out of balance or I've decided I don't like this type."
+
+**Michael:** Right, right.
+
+**Aubrey:** So, it was sort of this shortcut to get people to connect more, and then over time, it started becoming another reason that people would disregard each other. It felt like it sort of backfired over time.
+
+**Michael:** You can't sit with us. This is the INFP table.
+
+**Aubrey:** 100% [chuckles] [crosstalk] Also Mike, once again, you are not at the INFP table.
+
+**Michael:** Dude, I just looked at my text from my mom, and that's what she says.
+
+**Aubrey:** Look up INFP right now.
+
+**Michael:** Wait. Okay, this is what my mom wrote. [chuckles] [Aubrey laughs] I'm reading texts from my mom on my podcast. It says, introvert, which of course she doesn't need to define because it's so obvious that I'm an introvert. Intuition, which means big picture thinking rather than details. Feeling, which means values rather than linear logic, as a way to make decisions. Perceiving, which means you meet the outer world with a stance of taking in info rather than making decisions about it.
+
+**Aubrey:** Listen, here's the opening segment on *16personalities.com,* which is a very widely used sort of Myers-Briggs adjacent website. The first clause of the first sentence is, "Although they may seem quiet or unassuming,--"
+
+**Michael:** Well, okay, all right.
+
+[laughter]
+
+**Michael:** Fair point, fair point. We are doing a bonus episode where Aubrey and I take the MBTI and diagnose each other or classify each other, whatever it's called. So, we will answer this question.
+
+**Aubrey:** The name of the INFP type is the mediator. Mediators are poetic, kind, and altruistic people, always eager to help a good cause.
+
+**Michael:** Aubrey.
+
+**Aubrey:** Parts of that are true of you.
+
+**Michael:** Aubrey, this podcast is completely dedicated to the good cause of yelling at transphobes on social media. [Aubrey laughs] One of the great joys of my life and one of the most essential functions in our society.
+
+**Aubrey:** So, if the headline here was instigator, I'd be like, "Yes."
+
+[laughter]
+
+**Michael:** The thing is, instead of doing the bonus episode where we take the test, we should have a debate between you and my mom. [Aubrey laughs] Just a long Chatham House Rules or whatever. Like okay, opening statement, two minutes. [laughs]
+
+**Aubrey:** Oh, my God. Well, thank you for that because that also gets us the overview of the four different letters.
+
+**Michael:** Oh, yeah.
+
+**Aubrey:** Thanks for doing that.
+
+**Michael:** I didn't mean to. Okay.
+
+**Aubrey:** The number one source for this episode is a book called *The Personality Brokers*, written by Merve Emre. This is a great read.
+
+**Michael:** Oh, fabulous.
+
+**Aubrey:** So, if people want to know more about this story, there are infinity times more layers to it. There's a ton more texture to it. You should absolutely read this book. It whips.
+
+**Michael:** I forgot that there are good books in the world.
+
+**Aubrey:** Me too. Honestly.
+
+**Michael:** This is something that has escaped me in the last two years of my life.
+
+**Aubrey:** So, Michael, should we talk a little Myers-Briggs 101?
+
+**Michael:** Wait, do you want me to do it? Because I'm such an expert due to my mother, due to osmosis in my home.
+
+**Aubrey:** Yes, tell me. Give me your 101. On the Myers-Briggs.
+
+**Michael:** There's four different categories, and each of the category is a binary. So, introvert, extrovert. Okay, I'm done.
+
+[laughter]
+
+**Michael:** I don't know what the other three are. We've reached the limits of the osmosis.
+
+**Aubrey:** So just to back it up one step, the Myers Briggs Type Indicator is a personality test. As a test taker, you answer a self-report questionnaire. Then you get results that slot you into 1 of 16 personality types that are a combination of four letters. Those four letters are, as you noted, binaries, right.  The current website for the Myers-Briggs calls them preference pairs. Those are extraversion and introversion, which the website describes as opposite ways to direct and receive energy. "Do you prefer to focus on the outer world or your own inner world?"
+
+**Michael:** That's a bad description of introvert/extrovert honestly.
+
+**Aubrey:** All of these are wild descriptions. Sensing and intuition, which the website says are opposite ways to take in information. "Do you prefer to focus on the facts or the big picture?" Thinking and feeling opposite ways to decide and come to conclusion. "Do you prefer to take an objective or an empathetic approach for deciding?" The last so-called preference pair is judging and perceiving opposite ways to approach the outside world. "Do you prefer to seek closure or stay open to outside information?"
+
+**Michael:** I think anyone who's into the Myers-Briggs would admit that, of course, all of these are on a spectrum.
+
+**Aubrey:** Yep.
+
+**Michael:** People can be situational. It can change over time. No one is, like, 100% one or the other. So, each of these sounds really simplistic and terrible when you read them off. "Do you like thinking or do you like feeling?" It's like, "We obviously all do both." [laughs]
+
+**Aubrey:** One of the consistent critiques has been, "Well, you've got these raw numbers of what percentages people sort of responded with. What percentage introverted versus what percentage extroverted? Why wouldn't you just say you're 57% extraverted? Versus going, no, you are an extrovert and you are that thing for the rest of your life, right."
+
+**Michael:** Yeah, yeah.
+
+**Aubrey:** Which is also a core pillar of the Myers-Briggs, is that your type is innate, you were born with it, and it does not change for your whole life.
+
+**Michael:** Wait, they actually say this the test people.
+
+**Aubrey:** 100%.
+
+**Michael:** Oh, that's dumb. That's bad.
+
+**Aubrey:** Yeah.
+
+**Michael:** I feel like the only way to approach these things is to not take them so seriously that you think that the map is the territory. Obviously, people do not fit into really any binary.
+
+**Aubrey:** Yes. Coming off of our trans episodes. Yes.
+
+**Michael:** Yeah, yeah.
+
+**Aubrey:** So, the Myers Briggs is frequently described as being the most popular personality test in the world. According to the New Yorker, more than 2 million people take it each year, and that is presumably just through the Myers-Briggs company. Part of the appeal of the Myers-Briggs is attributed to something called the Forer effect. Okay, so the horror effect is defined as the tendency of people to hear general, sort of broadly applicable descriptions of their life or personality and to identify with those as deep and specific to them.
+
+**Michael:** Oh, this is like when I used to write horoscope.
+
+**Aubrey:** 100%
+
+**Michael:** Totally. Yeah, it's actually really easy to come up with stuff that sounds specific, but is actually very general to everyone. Yeah.
+
+**Aubrey:** Forer also described an inverse inability to recognize those descriptions as being applicable to others. That people would be like, "No, no. It's just me."
+
+**Michael:** Oh, interesting. Okay.
+
+**Aubrey:** It's named for Bertram Forer, who's a psychologist who documented the effect in 1949. [laughs] He did an experiment that is so mean and so funny.
+
+**Michael:** That's every psychological experiment before 1985. [laughs]
+
+**Aubrey:** Totally, this is 1949, so you can imagine.
+
+**Michael:** He's just like, we're going to push them down the stairs [chuckles] and see what happens.
+
+**Aubrey:** Forer administered a personality test to his students, and then a week. So, he had them fill out a questionnaire and then a week later he presented them with their personality profiles.
+
+**Michael:** Okay.
+
+**Aubrey:** He has everyone rate the accuracy of the test on a scale of 0 to 5, the average accuracy rating was 4.3.
+
+**Michael:** And he gave all of them the same one.
+
+**Aubrey:** He gave them all the same one. And he had lifted it from an astrology magazine that he picked up at a newsstand.
+
+**Michael:** Love it.
+
+**Aubrey:** Can I tell you what the actual profile was that Forer handed out to his students?
+
+**Michael:** Yeah, gimme, gimme, gimme. I was going to ask. This is yeah,--
+
+**Aubrey:** It's a 13-point numbered list.
+
+**Michael:** Okay.
+
+**Aubrey:** One, you have a great need for other people to like and admire you.
+
+**Michael:** True.
+
+**Aubrey:** Two, you have a tendency to be critical of yourself.
+
+**Michael:** Eh, only when I'm bad.
+
+**Aubrey:** [laughs] Three, you have a great deal of unused capacity which you have not turned to your advantage.
+
+**Michael:** I definitely think that about myself, but it's probably not true.
+
+[laughter]
+
+**Michael:** I'm using 100% of my brain.
+
+**Aubrey:** Four, while you have some personality weaknesses, you are generally able to compensate for them.
+
+**Michael:** Or start a podcast highlighting them or [crosstalk] a podcast highlighting them.
+
+**Aubrey:** Six, disciplined and self-controlled outside, you tend to be worrisome and insecure inside.
+
+**Michael:** Never heard that from everyone I know.
+
+**Aubrey:** Eight, you prefer a certain amount of change and variety and become dissatisfied when hemmed in by restrictions and limitations.
+
+**Michael:** I like how all of these are like, "You like change but also constancy."
+
+**Aubrey:** Yeah. Sometimes you're extroverted, but sometimes you want to be alone.
+
+**Michael:** [laughs] This is like those dating profiles that are like, "I can laugh 1 minute and be serious the next." [Aubrey laughs] And you're like, "Oh, so you're a person, aha okay."
+
+**Aubrey:** A human being with changeable emotions, imagine. [Michael laughs] Nine, you pride yourself as an independent thinker and do not accept other statements without satisfactory proof.
+
+**Michael:** Oh, yeah, everyone wants to think that they're like, I don't just follow the crowd, yeah.
+
+**Aubrey:** 13, security is one of your major goals in life.
+
+**Michael:** Oh, well, that's like a Maslow's hierarchy thing. You just want to eat food.
+
+**Aubrey:** Sex makes you nervous sometimes, and you don't always feel super confident about it.
+
+**Michael:** It's wild the kids didn't clock this. It's like just a totally generic description of everyone you've ever met.
+
+**Aubrey:** I like that you're like, "I'm team professor. These kids are not smart."
+
+**Michael:** [laughs] I'm actually a super independent thinker, Aubrey, who doesn't follow the crowd. I need proofs.
+
+**Aubrey:** So, the reason that matters is that when people identify with the descriptions, they're given in a personality test, research shows that they are more likely to see the test itself as more valid because, of course they are.
+
+**Michael:** Right.
+
+**Aubrey:** And research also finds that people identify with those descriptions more when they are favorable, because again, of course they do.
+
+**Michael:** INFP, smoking hot, thoughtful, [Aubrey laughs] like," Wow, this test is good." I rescind my previous comments.
+
+**Aubrey:** So here is the issue. The Myers-Briggs is just not very good at reliably assessing people's personalities.
+
+**Michael:** Okay?
+
+**Aubrey:** When we talk about personality, we're talking about a mixture of observable behaviors and subjective judgments. In the case of the Myers-Briggs, what they're measuring is our own subjective view of ourselves. That you're filling out a self-report. The only data that's going in is coming from you, and the only result is coming back to you, right?
+
+**Michael:** Right.
+
+**Aubrey:** It is self-report. But that's also pretty much every personality test. So, if it's so subjective, how can we know it's wrong? There are a few ways. One, they haven't proven that these are static, unchanging core features of a person's personality. The Myers-Briggs has just sort of never really done that. There are other personality tests, all still kind of questionable, but they at least have gone through a scientific process, right.
+
+**Michael:** Right.
+
+**Aubrey:** The Myers-Briggs biggest competitor is called the Big Five, the Five-Factor Model.
+
+**Michael:** Oh, yeah.
+
+**Aubrey:** And the reason that one is such a staunch sort of competitor for them is that it was developed and independently validated by multiple teams of researchers over the course of decades.
+
+**Michael:** Right.
+
+**Aubrey:** Right. So that's like people winnowing down this massive list of human attributes, down to what they believe are sort of the core, the five core aspects that drive the rest of it. The Myers-Briggs didn't do that. The Myers-Briggs is designed to be an expression and a popularization of one of Jung's theories.
+
+**Michael:** Oh, no. Oh, it's archetypes.
+
+**Aubrey:** Ah-aha.
+
+**Michael:** Oh, no. [Aubrey laughs] We're Jordan Peterson adjacent now.
+
+**Aubrey:** Kind of but also, Jordan Peterson does not like the Myers-Briggs surprise.
+
+**Michael:** Oh, really?
+
+**Aubrey:** Yeah. He came up in some of my little YouTube searches, and he was like, "People just like it because it makes them feel good." And I was like, "Huh."
+
+**Michael:** Stop, stop clock. Stop clock.
+
+[laughter]
+
+**Aubrey:** Totally, we end here. So there have been some meta-analyses of different personality tests including the Myers-Briggs, and they've essentially found that only the introversion extraversion scale findings track with any other personality tests or other research into personality, right.
+
+**Michael:** Oh, right.
+
+**Aubrey:** The rest of the letters don't tend to scan with other instruments that folks have developed, which isn't like a death knell to it or whatever, but it's not great. A bigger issue is test-retest reliability. So, if something is measuring something stable in our innate core personalities, if you took the test multiple times, you would get the same result, right?
+
+**Michael:** Right.
+
+**Aubrey:** Depending on the study that you look at, between 39% and 76% of people get different results the second time they take-
+
+**Michael:** Oh, wow.
+
+**Aubrey:** -the Myers-Briggs, and that's just after five weeks.
+
+**Michael:** This is like me taking it when I was a kid, yeah. Yeah.
+
+**Aubrey:** Totally maybe kid, you did test as an INFP. [chuckles]
+
+**Michael:** Maybe I was beautiful once. Maybe I was decent-
+
+**Aubrey:** [laughs] Okay.
+
+**Michael:** -before the podcast.
+
+**Aubrey:** Part of the appeal, also of the Myers-Briggs, is that it doesn't give you feedback about sort of culturally undesirable traits. Traits that are coded as being undesirable. The Big Five, for example, measures neuroticism.
+
+**Michael:** Yeah, we're absolutely not taking that test on the show.
+
+**Aubrey:** Oh, no.
+
+**Michael:** [laughs] There's no fucking way.
+
+**Aubrey:** Oh, we're not.
+
+**Michael:** There's no fucking way.
+
+**Aubrey:** We're only taking the one that's designed not to hurt your feelings.
+
+**Michael:** I just want the one that tells me that I'm--
+
+**Aubrey:** I'm poetic and gentle, [laughs]
+
+**Michael:** Strong and handsome and important, and that I care about animals and nature and I recycle and all the good stuff.
+
+**Aubrey:** So scientific American ran a test of personality tests, and when they removed neuroticism as a measure from the Big Five, its predictive accuracy of sort of life outcomes fell by about 22%.
+
+**Michael:** You're like, "Wait, this just says POS. I thought there were four categories." {Aubrey laughs] Sorry, what?
+
+**Aubrey:** So the last thing I would say about the sort of validity thing is, because the Myers-Briggs is not a clinical tool, the research on it is thin. The Myers-Briggs was initially developed sort of for self-knowledge. The idea was to get people to know themselves better so that they could slot into the right jobs and sort of show up in the right way in the world. It was not designed for clinicians. It wasn't even really validated by clinicians for a really, really long time. The research that has happened at this point is mostly older, and it's mostly in, like, HR and management journals,-
+
+**Michael:** Yeah.
+
+**Aubrey:** -not in psych journals or in research journals or whatever, right? So given all of that, given all the concerns about its validity, again the jury's sort of out on personality tests writ large, where did the Myers-Briggs come from, and how did it get not only so popular, but ubiquitous?
+
+**Michael:** I like that we're getting the science stuff out of the way so you can do what you really want to do and just tell the story. [laughs]
+
+**Aubrey:** Just shut up, during the science report I'm going some--
+
+**Michael:** You've been very transparent about [chuckles] the fact that you're just like, "We're not going to talk about the science all that much." [laughs]

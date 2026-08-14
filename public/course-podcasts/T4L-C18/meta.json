@@ -1,0 +1,106 @@
+{
+  "course_id": "T4L-C18",
+  "course_name": "Transformational Leadership",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "How CEOs Stymie Their Own Digital Transformation",
+      "show_name": "Knowledge at Wharton",
+      "guest": "Ganesh Ayyar",
+      "region": "India",
+      "duration_minutes": 13,
+      "url": "https://knowledge.wharton.upenn.edu/article/how-ceos-stymie-their-own-digital-transformation/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course says the leader is the first variable. Ayyar lives it in the smallest way. The CEO of a large Indian IT company wanted to join Facebook, asked his teenage daughter to set it up, then asked her what the difference was between email and Facebook, and heard how little he knew. He did not hide it. He asked a harder question about himself: am I even the right person to lead Mphasis into digital, or should I step aside? He decided the block was himself. He drew a mind map of what stopped him from learning and named three things: ego, ignorance, fear of failure. He shed them, took reverse mentoring from people much younger and more junior, and over about eighteen months made himself change before he asked the company to. It is Leading Self, told plainly.",
+      "what_will_be_assessed": "This is a short filmed interview with Ganesh Ayyar, CEO of Mphasis, and Wharton's Michael Useem. The whole thing is on the leader as the first variable, so all three questions come from it. Focus on three things. First, Ayyar's Facebook story: what he asked his daughter, and what it made him admit. Second, the question he asked himself about whether he was the right person to lead, and the three inhibitors he mapped and had to shed. Name all three. Third, reverse mentoring, the idea Useem describes, and the three digital-era moves Ayyar names at the end: experimentation, cannibalizing your own analog business, and co-opting or co-creating. You do not need Useem's book checklists in the middle.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Ayyar mapped three inhibitors that were stopping him from learning. Name all three, and say what small task involving his daughter first exposed the problem."
+        },
+        {
+          "type": "application",
+          "question": "Ayyar decided the first thing that had to change was himself, not the company. Name one change you have been asking your team to make while you have not made it yourself."
+        },
+        {
+          "type": "challenge",
+          "question": "Ayyar says he would step aside if he were not the right person to lead the shift. When is 'the leader must change first' the wrong read, and the real block sits somewhere other than the person in charge?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Understanding an orchestra conductor's gestures, with Ming Luke",
+      "show_name": "People Who Read People",
+      "guest": "Ming Luke",
+      "region": "United States",
+      "duration_minutes": 40,
+      "url": "https://behavior-podcast.com/understanding-an-orchestra-conductors-gestures-with-ming-luke/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "The full episode runs about 40 minutes. Listen from the first question to the story about changing the shape of his hand, roughly the first 36 minutes, and skip only the closing segment on recommending classical music. The transcript carries almost no timecodes, so the transcript file holds this section with the spoken start and end lines noted at the top. This is the one longer listen in the course.",
+      "the_idea": "Conducting is leadership you can watch. Luke says the job used to be done by a tyrant and is now collaborative, because decision by committee is messy but nullifying the players is worse. His sharper point is the leader as the variable. An orchestra can play a piece about 85 percent well with no one on the podium. A bad conductor drags that down. A good one takes what the players would do anyway and lifts it. He also reads the room. Warned that the orchestra was exhausted, he knew that arriving gung ho would wreck the session. And trust can go in a second. This is the course premise, shown by someone who leads seventy people without a word, and it quietly caps how much the leader alone can claim.",
+      "what_will_be_assessed": "This is a working conductor on how he leads seventy players. The questions draw only from how he leads, not from baton technique or which pieces to listen to. Focus on four things. First, how the role moved from the old tyrant style to a collaborative one, and why he still says decision by committee is messy. Second, his claim that an orchestra can already play a piece about 85 percent well on its own, and what a bad conductor and a good conductor each do to that. Third, the concert where he was warned the players were tired, and why coming in gung ho would have been the worst thing to do. Fourth, how trust is built and lost, including the flutist who asked 'were you not listening to me' and the small change of hand shape that changed how the orchestra played.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Luke says an orchestra can play a piece about 85 percent as well with no conductor at all. What does he say a bad conductor does to that, and what does a good conductor add?"
+        },
+        {
+          "type": "application",
+          "question": "Luke was warned his players were tired, so he dropped his gung ho plan. Name a time your team was already stretched, and say what showing up differently would have changed."
+        },
+        {
+          "type": "challenge",
+          "question": "Luke says conducting moved from a tyrant model to a collaborative one. Name a situation in your work where a more directive, less collaborative style would still get the better result, and say why."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Super Chickens & the Productivity Pecking Order",
+      "show_name": "Data Radicals",
+      "guest": "Margaret Heffernan",
+      "region": "United Kingdom",
+      "duration_minutes": 37,
+      "url": "https://www.alation.com/podcast/episodes/super-chickens-dr-margaret-heffernan/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "The full episode runs about 37 minutes and ranges over whistleblowers and willful blindness. Listen only to the super-chickens section, roughly 29:46 to 35:40, about six minutes. The episode has timecodes, and the transcript file holds only this section with the spoken start and end lines noted at the top.",
+      "the_idea": "The course says success starts with the person leading, the standout who is the first variable. Heffernan's super chickens push back. An evolutionary biologist at Purdue bred a flock of the individually most productive hens, the super chickens, and after six generations all but three were dead. Their output had been bought by suppressing everyone else. She reads that straight onto firms that worship the top ten percent, like GE's forced ranking or Microsoft under Ballmer, where the top turns fractious and the middle learns to play it safe. Her BBC trainee is the human version, a dazzling individual the team quietly stopped helping. The point that bites this course: pour your faith into the star and you can wreck the group that does the work.",
+      "what_will_be_assessed": "This course says success starts with the person leading. Heffernan says the opposite about star individuals. The episode has timecodes, so go straight to the saved section, roughly 29:46 to 35:40. Focus on three things. First, the Purdue experiment: the normal flock, the flock of individually most productive super chickens, what happened to the super flock after six generations, and the cause the scientist named. Second, how she maps that onto real firms, using GE's worship of the top ten percent and Microsoft's forced ranking under Steve Ballmer, and what it did to the top and to the middle. Third, her BBC trainee story and what it says about the standout who cannot work with people. You do not need the earlier part of the episode on whistleblowers.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In the Purdue experiment, what happened to the flock of individually most productive 'super chickens' after six generations, and what did the scientist say caused it?"
+        },
+        {
+          "type": "application",
+          "question": "Heffernan says rewarding the stars made the top fractious and the middle play safe. Name one place your programme rewards a standout in a way that quietly costs you the group's work."
+        },
+        {
+          "type": "challenge",
+          "question": "This course says success starts with the person leading. Heffernan says the group matters more than any standout. Name one situation in your work where one person really is the deciding variable, and say how you would know."
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "How CEOs Stymie Their Own Digital Transformation",
+      "show_name": "Knowledge at Wharton",
+      "region": "India"
+    },
+    {
+      "episode_title": "Understanding an orchestra conductor's gestures, with Ming Luke",
+      "show_name": "People Who Read People",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Super Chickens & the Productivity Pecking Order",
+      "show_name": "Data Radicals",
+      "region": "United Kingdom"
+    }
+  ]
+}

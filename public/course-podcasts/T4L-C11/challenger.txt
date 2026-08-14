@@ -1,0 +1,135 @@
+Episode: Uncharted: How to Map the Future Together (Mind Tools Book Insights)
+Show: Mind Tools (Book Insights podcast, from Emerald Works)
+Guest: Reviews the book "Uncharted: How to Map the Future Together" by Margaret Heffernan; narrated by Cathy Faulkner
+Region: United Kingdom
+URL: https://www.mindtools.com/avvk1k1/uncharted/
+Transcript source: publisher (full transcript published on the episode page)
+Range: full episode (about 15 minutes)
+
+WHAT WILL BE ASSESSED
+This course tells people to run on data and dashboards. This episode is the counter-
+argument. The whole thing is short, but the three questions draw only from the
+argument against prediction, not the personal material at the end. Focus on three
+things. First, the distinction Heffernan draws between "complication" and
+"complexity," the supermarket supply-chain example she uses for it, and what
+happened to that supply chain during COVID-19. Second, what she means by the
+"prediction industry" and the "well-ordered sheep" warning, plus the line that
+algorithms are "just a way of encoding bias." Third, scenario planning as her
+alternative, in particular the rule that data underpins the scenarios but "is not
+allowed to dictate the outcome," and the reviewer's own pushback that the book may
+be too skeptical of prediction and big data. You can skip Part Three on illness,
+aging, and a good death.
+
+---
+
+Hello, I'm Cathy Faulkner.
+
+In today's podcast, lasting around 15 minutes, we're looking at "Uncharted: How to Map the Future Together," by Margaret Heffernan.
+
+What does the future hold? It's a question you've asked yourself, likely many, many times, and in a whole bunch of contexts. We all have. You could be worrying about your financial prospects, your health, or your loved ones. Or you could be planning a big project. A start-up, even.
+
+At the time of recording, many are wondering what the world will look like after COVID-19. But even before the pandemic, the post-millennial world often felt uncertain. It's been a turbulent couple of decades for lots of us. Change seems to be everywhere, whether in politics, economics, technology, or the climate.
+
+This is especially hard for businesses looking to build success. After all, the whole cycle of business planning and strategy rests on projecting results. That's why companies carry out research on a whole range of variables. They collect and analyze enormous quantities of data, believing they can use it to predict future outcomes accurately.
+
+But what if they're wrong? What if prediction doesn't actually give you the power over the future that you imagine it does? How do you set out to plan, when the future is fraught with uncertainty?
+
+Those are the questions that "Uncharted" sets out to answer. It's a book for anyone with an urge to experiment, whether in their professional or personal life. It's also a roadmap for those who think people are more than the sum of their data points.
+
+Margaret Heffernan is an entrepreneur and academic, with a background in television production. She has a proven track record of developing successful businesses, and is currently Professor of Practice at the University of Bath School of Management, in the U.K.. Her particular area of expertise is in finding ways to help organizations unleash the hidden, undervalued talents of their people.
+
+She's also the author of several previous books, including "Wilful Blindness," a critically acclaimed challenge to organizational groupthink – and you can hear an Expert Interview podcast with her about that book on the Mind Tools site. It's no surprise that in this latest book, she shows a strong commitment to working collaboratively, stimulating creativity, and asking awkward questions.
+
+So keep listening to hear more about the limits of our powers of prediction, the difference between complication and complexity, and how we can learn to control the course our own lives will take.
+
+"Uncharted" is divided into three parts. Part One covers the history, development and likely future of prediction. It takes aim at what Heffernan calls the "prediction industry" – that's anyone who has an economic or financial interest in prediction. This includes people who directly sell predictions, such as stock-market tipsters; those who sell products based on prediction, like fund managers; and those who predict – and often seek to modify – consumer behavior.
+
+She looks at the way forecasters routinely fail to live up to their claims that they can map out the future, and how systems based on precise prediction can turn out to be less than robust in practice.
+
+Part Two explores how to give less weight to prediction, and how to use other strategies to shape the future. These include experimentation and scenario planning, which owe less to pinpointing future certainties, and more to being curious about possibilities.
+
+Part Three deals with how to come to terms with the inevitable crises that affect all our lives: illness, loss, aging and death. It describes how collaboration can help us cope, and help us manage even life's toughest crises.
+
+So let's dive into the detail.
+
+In her introduction Heffernan draws a key distinction between complication and complexity. Take a supermarket supply chain as an example. That's complicated. It has many links, all of which need to function in the right order to get goods onto the shelves. Despite these many moving parts, the supply chain is linear, and efficient. It predicts demand by collecting and analyzing huge amounts of data, and delivers just the right quantity of goods to meet demand, at exactly the right time.
+
+But increasingly the world is not merely complicated, but complex. Events occur in a nonlinear, fluid manner. Markets are disrupted by unexpected new products. Technological developments turn certainties on their heads. Events are often volatile, and literally unpredictable.
+
+Look what happened to supermarket supply chains when COVID-19 caused spikes in demand for certain items, like hand sanitizer and toilet paper. The just-in-time model of ordering collapsed, and the result was shortages.
+
+A predictable system had become decidedly less so. Heffernan argues that although there's a lot we can be certain about in general, many things remain ambiguous and uncertain. And predictive, efficient systems are highly vulnerable to that ambiguity and uncertainty.
+
+The performance of financial markets is an area in which prediction comes up against its limits. Heffernan examines the records of stock-picking experts and finds that they rarely, if ever, beat the market for any length of time.
+
+That's because markets are complex systems. Though they may be generally predictable, they suffer from enough inherent instability to make detailed prediction unreliable.
+
+This doesn't stop many forecasters from making grand claims about their picks. They have a vested interest in doing so, after all. The prediction industry is built on a craving for certainty. By appearing to satisfy that craving, forecasters can manipulate the behavior of their clients for their own profit, Heffernan claims.
+
+She's equally skeptical of those who apply reductive thinking to political models. When the Arab Spring erupted in 2010, many pundits were keen to tell the world that this was history repeating itself, two decades on from the fall of the Berlin Wall. They fostered a belief that a new era of democracy and liberalization would open up in the Middle East.
+
+This view ignored the entirely different cultural, social and economic circumstances of the two events. The situation played out completely differently, causing hasty re-evaluation from the forecasters.
+
+Heffernan argues that accepting the claims of the prediction industry leads us to become, in her words, well-ordered sheep. If we follow the predictors blindly, we run the risk of losing the key skills of creativity and Critical Thinking, which have brought about humanity's greatest achievements.
+
+Along the way, she casts a cold eye on software that claims to be able to predict and improve life outcomes for children. Her conclusion is that we'd be better off interacting with our kids to find out about them, rather than inputting data and following an algorithm. Algorithms are, according to some, just a way of encoding bias.
+
+Rather than reaching for predictions, we should experiment, Heffernan says. And the value of experimentation is central to Part Two of "Uncharted," which is subtitled "What Would You Do If You Were Free?"
+
+It's a provocative question. Too often, we're the prisoners of our desire for certainty. What's wrong with trying something new or different?
+
+Individuals can pursue experimentation, so long as they've got the time and resources to do so. Organizations find it harder. From necessity, businesses and governments tend to base their plans on a particular idea of the future.
+
+Heffernan concedes this sometimes works, to an extent. Many trends are generally predictable. But the more you focus on details, the more ambiguity and uncertainty you discover. And even very small uncertainties can radically affect an organization's success in implementing a new policy.
+
+Her solution is to embrace scenario planning. This involves choosing a series of possible futures for a given situation, and then subjecting them to analysis and debate by a group of people with an interest in the final outcome.
+
+The scenarios chosen are always underpinned by relatively reliable data, but the data itself is not allowed to dictate the outcome. Effective scenario planning brings in people from a wide range of backgrounds. Their unique insights can help to produce radically different sets of policies than what might be expected from simple number crunching.
+
+Above all, scenario planning views the future as a series of possibilities, not certainties. It allows interested parties to shape that future by considering and reaching consensus on all its aspects.
+
+Scenario planning can take place on a very large scale. The book discusses an initiative in Mexico aimed at completely transforming society. Another exercise allowed agreement to be reached on the legalization of abortion in Ireland. That involved changing the country's constitution.
+
+Heffernan seems very comfortable discussing large-scale collaborative projects. Her examples include the international collaboration taking place at CERN, where vast engineering efforts are dedicated to finding the very smallest particles. There's also the Sagrada Familia, the sprawling cathedral in Barcelona that's taken over 130 years to build.
+
+Heffernan sees a metaphor in that example, and calls all long-term efforts "Cathedral Projects." Her point is that these huge undertakings draw their legitimacy from being truly collaborative. And legitimacy is important, particularly where scenarios involve questions of ethics.
+
+Consider the enormously complex and emotive area of human fertility. Heffernan examines the effectiveness of the Warnock Commission, set up in 1982 by the British government in response to the birth of the world's first in-vitro baby. The commission drew on a wide range of expert opinion. It consulted doctors, lawyers, social workers, and others. The chair, Dame Mary Warnock, was a philosopher specializing in questions of morality.
+
+The outcome was a report that laid the foundations for today's British government policy on fertility treatment and embryo research. It's often cited as the gold standard for government policy on the ethics of science.
+
+The third and final part of the book is subtitled "Life Happens." It deals with events none of us can avoid, either in our own lives or in those of family and friends.
+
+There's a noticeable shift in tone here. This is no longer a book just about organizational effectiveness. The anecdotes are more personal, and the questions Heffernan addresses are often emotive. Individual crises, whether in health or faith, take center stage.
+
+But the main question remains the same: how do we plan our futures when we can't always know what's around the corner?
+
+The answer, again, involves people coming together to collaborate, experiment, and create the future.
+
+Heffernan writes movingly of a relative who's also a Catholic priest. He's fallen in love, and has to confront a life-changing decision. In passing, and almost shockingly, she mentions the early death of her first husband. This is personal stuff.
+
+But she broadens the narrative out to include wider issues in society. This book was published before the coronavirus pandemic, but it deals with the impact of illness on individuals and communities. This will resonate now with many people. She describes the Coalition for Epidemic Preparedness Innovation as a global insurance policy to defend against future epidemics, for example. This makes the book feel important and relevant.
+
+Heffernan focuses on the development of the AIDS pandemic since the 1980s. Specifically, she describes how people with the disease came together to explore ways to fight back against it, and against institutional indifference. In doing so, they were able to take control of their own destiny as a community, and drive the search for new, effective treatments.
+
+But there's no getting away from the fact that death happens. And in the book's most striking chapter, Heffernan discusses the ways in which we can all ensure that we have a good death.
+
+It's occasionally uncomfortable reading. But it's driven by a strong sense that we should seek to take control of all parts of our own lives, including the way they end. Heffernan highlights the work of the hospice movement in allowing dying people to make key decisions about their own deaths.
+
+She also takes aim at the so-called "transhumanist movement," which seeks to preserve life artificially in the search for immortality. Who should decide what parts of a life are valuable, and why? And why should everlasting life be a good thing?
+
+So what do we think of "Uncharted"? It's a combative book. The prediction industry is a particular target. So is any movement that tries to influence an individual's decisions about their own future. But this is not simply an aggressive polemic. A deep commitment to collaborative values runs throughout the book.
+
+The issues it raises are complex and important. They touch on autonomy, political freedom, and people's right to steer their own courses through life. But the way the book is written means nothing is hard to grasp. This clarity is one of its great strengths, and the careful use of examples is powerful and compelling.
+
+It's also a surprisingly moving book, particularly in Part Three. The accounts of AIDS campaigners provoke anger, sadness and compassion in equal measure. And Heffernan's shift in tone when discussing hospices, and the possibility of a good death, is deftly handled and emotionally engaging.
+
+If the book has a fault, it's that it's perhaps too skeptical of the power of prediction in our lives, and the role that big data plays in that. Most people are happy enough to give their data to the prediction industry, if they get offers and discounts in return.
+
+And the book is pitched at an autonomous, affluent audience. It's fine to suggest that people experiment to find their way in life. But if those people are working two jobs in the gig economy to make ends meet, they'll unlikely get the chance.
+
+But these are minor quibbles. "Uncharted" sets out to deliver a blast against all those forces that stop us from thinking for ourselves, and shaping our own lives. It does it powerfully, and with humanity.
+
+"Uncharted: How to Map the Future Together," by Margaret Heffernan, is published by Simon and Schuster.
+
+That's the end of this episode of Mind Tools Book Insights from Emerald Works. Thanks for listening.

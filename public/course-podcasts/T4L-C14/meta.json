@@ -1,0 +1,106 @@
+{
+  "course_id": "T4L-C14",
+  "course_name": "From Strategy to Execution in Transformation Programmes",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "E-commerce in Africa [Entire Talk]",
+      "show_name": "Entrepreneurial Thought Leaders",
+      "guest": "Juliet Anammah",
+      "region": "Nigeria",
+      "duration_minutes": 54,
+      "url": "https://ecorner.stanford.edu/videos/e-commerce-in-africa-entire-talk/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 19:20 to 46:30 of a roughly 54 minute talk, about 27 minutes of listening. The transcript file holds only this section and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "Anammah ran Jumia Nigeria. She took a vague mission, improve lives with the power of the internet, and had to make it work in markets that did not behave like the textbook. That is this course with the polish taken off. The two hardest things were not the technology. They were trust and mindset. She had to get consumers to believe an online order would actually arrive, which she did with cash on delivery, a JForce agent network, and offline education. And she had to get sellers to accept a marketplace, where they list first and get paid as they sell. She also refuses the vague version of a goal. Asked about sustainability, she answers with countable things, such as how many sellers got loans, how many are women, and how many used the training. And she holds a hard line on what to build: own the technology and the data, not the trucks and warehouses.",
+      "what_will_be_assessed": "The three questions draw from the section saved in this file, roughly 19:20 to 46:30 of the talk. You do not need the earlier business model and payments part, or the closing questions on hubs and geolocation. Focus on three things. First, the two hardest things Anammah names about serving the African market: gaining consumer trust from the start, with tactics such as cash on delivery, the JForce agent network, and offline engagement, and convincing sellers to accept a marketplace model where they list first and are paid as they sell. Second, how she turns a vague sustainability mandate into countable measures, such as how many sellers are SMEs, how many got working capital loans, how many are women, and how many used the training. Third, her rule that you own the technology and the data, not the physical assets, because copying trucks and warehouses creates no value. You can skip the parts on IPO location and social commerce.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Anammah names the hardest thing about serving the African market. What is it, and name two specific things Jumia did to overcome it."
+        },
+        {
+          "type": "application",
+          "question": "Anammah turned a vague sustainability goal into countable measures, like how many sellers got working capital loans or how many are women. Take one vague goal in your programme and name the countable measure you would hold it to."
+        },
+        {
+          "type": "challenge",
+          "question": "Anammah insists on owning the technology and the data, not the trucks and warehouses. Where in your transformation would refusing to own a hard capability yourself leave you unable to deliver the goal?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Call Sign: Gold Flight",
+      "show_name": "Houston We Have a Podcast",
+      "guest": "Gerry Griffin",
+      "region": "United States",
+      "duration_minutes": 48,
+      "url": "https://www.nasa.gov/podcasts/houston-we-have-a-podcast/call-sign-gold-flight/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "The Apollo 13 and flight director section of a roughly 48 minute episode, about 22 minutes of listening. The NASA transcript carries no timecodes, so the file holds only this section and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "Griffin was an Apollo flight director. The reframe for a transformation programme is what a flight director's mandate looks like under stress. When Apollo 13's Moon landing was lost, mission control did not re-plan from scratch. They did what they were trained to do, kept going as long as they had options, and never once discussed not getting the crew back. The sharpest moment is a decision briefing. The team lays out the plan they like, and the head of NASA, Tom Paine, asks only one thing, what can we do to help you men. Griffin's lesson, which he says applies to companies too, is that the strength was pushing decisions down to where the expertise sat. He warns that organisations drift the other way as they age, and slow down.",
+      "what_will_be_assessed": "The full episode is a career retrospective. The three questions draw only from the Apollo 13 and flight director section in this file, from where the host turns to Apollo 13 to Griffin's closing point about decisions and corporations. Focus on three things. First, the Apollo 13 briefing to senior management on the PC+2 option, the one question the head of NASA, Tom Paine, asked, and the lesson Griffin draws about pushing decisions down to where the expertise sits. Second, how mission control handled Apollo 13 once the landing was off: they did what they were trained to do, kept going as long as they had options, and never discussed not getting the crew back. Note his point that failure is not an option was not actually said at the time. Third, his advice to future flight directors, including why trans-lunar injection is the commitment, and the trust that ran up and down the chain. Skip the early career history and the movie stories.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In the Apollo 13 briefing to senior management, what single question did NASA administrator Tom Paine ask the controllers, and what larger point does Griffin draw from it about where decisions were made?"
+        },
+        {
+          "type": "application",
+          "question": "Griffin says decisions were pushed down to where the expertise sat, and that organisations centralise as they age. Name one decision in your programme now made too far above the expertise, and what pushing it down would look like."
+        },
+        {
+          "type": "challenge",
+          "question": "Mission control never discussed not getting the crew back and kept going as long as they had options. Where in your transformation would refusing to consider that the goal might not be reached become a liability rather than a strength?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Author Talks: A new way to think about management",
+      "show_name": "Author Talks",
+      "guest": "Roger Martin",
+      "region": "Canada",
+      "duration_minutes": 23,
+      "url": "https://www.mckinsey.com/featured-insights/mckinsey-on-books/author-talks-a-new-way-to-think-about-management",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course moves from strategy to execution and asks leaders to hold the goal. Martin says the premise is shakier than it looks. You cannot design a strategy that is sure to work, because nobody knows the future, so strategy can only improve or shorten your odds. Worse, if you build the plan on analysis of the past, you will treat it as right and hold it too long, and crash worse. His antidote is to stop pretending analysis settles the future. Imagine possibilities and pick the one with the most compelling argument. And above all, write down what you expected from a model, say a 50 percent sales increase, then pull it out later to compare with the real 25 percent, rather than rationalising after the fact.",
+      "what_will_be_assessed": "This is the full edited interview. The three questions draw from three ideas in it. First, Martin's claim that no one can design a strategy that is sure to work, that all strategy can do is improve or shorten your odds, and his warning that basing strategy on analysis of the past makes you hold a failing strategy longer and crash worse. Second, what surprised him most, that models come to own their users, and his fix: write down what you expect from a model, for example a 50 percent sales increase, put it in a drawer, and pull it out later to compare with the real 25 percent, rather than rationalising after the fact. Third, the Aristotle point that where things can be other than they are, you should imagine possibilities and choose the one with the most compelling argument, not the one backed by the most data. You do not need the closing section on talent and the Great Resignation.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Martin says strategy cannot guarantee the future. What does he say strategy can actually do, and what does he say happens when you base a strategy on analysis of the past?"
+        },
+        {
+          "type": "application",
+          "question": "Martin urges writing down a model's expected result, his 50 percent against the real 25 percent, and revisiting it. Take one target in your transformation's business case and state the number you would write down now to check honestly later."
+        },
+        {
+          "type": "challenge",
+          "question": "This course asks you to hold the goal when the organisation pushes back. Where does Martin's warning, that you keep a losing strategy longer because it is right, most threaten that instruction in your programme?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "E-commerce in Africa [Entire Talk]",
+      "show_name": "Entrepreneurial Thought Leaders",
+      "region": "Nigeria"
+    },
+    {
+      "episode_title": "Call Sign: Gold Flight",
+      "show_name": "Houston We Have a Podcast",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Author Talks: A new way to think about management",
+      "show_name": "Author Talks",
+      "region": "Canada"
+    }
+  ]
+}

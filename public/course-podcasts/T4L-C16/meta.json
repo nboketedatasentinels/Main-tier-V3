@@ -1,0 +1,106 @@
+{
+  "course_id": "T4L-C16",
+  "course_name": "Delivering Transformation: Project Leadership That Sticks",
+  "pillar": "Transforming Business with AI",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Building Infosys to Rolling out Aadhaar",
+      "show_name": "Insights by Accel",
+      "guest": "Nandan Nilekani, co-founder of Infosys and founding chairman of UIDAI, the authority that built India's Aadhaar identity system",
+      "region": "India",
+      "duration_minutes": 42,
+      "url": "https://www.seedtoscale.com/podcast/building-infosys-to-rolling-out-aadhaar",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately the middle-to-late stretch of a 42 minute episode, about 20 to 25 minutes of listening, covering how Infosys planned for scale through the building of Aadhaar. The transcript file holds only this section, and the spoken start and end lines are noted at the top of it. The publisher transcript carries no timecodes, so the timing is estimated from speech rate.",
+      "the_idea": "Nilekani ran two very different builds, Infosys and then Aadhaar, and treated both as a scaling problem you plan for on purpose. At Infosys that meant three planning horizons at once: a five-year blue sky view, a three-year strategic plan, and a one-year operating plan, with today's decisions made against where the company had to be in five years. At UIDAI he was employee number one and built the team like a startup, blending risk-averse government administrators with world-class technologists, keeping the political and business side in Delhi and the tech in Bangalore, and reviewing the tech every two weeks. The honest note is his own failure: he stood for election, lost, and took from it that you should play to your fundamental strengths rather than assume you can adapt to anything.",
+      "what_will_be_assessed": "This is the one longer episode, and only part of it is assigned. The 42-minute conversation covers Nilekani's early life, all of Infosys, and his move to public service. Listen only to the marked range in the transcript file, roughly the middle-to-late stretch, about 20 to 25 minutes. Three things carry the questions. First, how Infosys planned for scale: the five-year blue sky plan, the three-year strategic plan, and the one-year operating plan, and what each was for. Second, how he built the Aadhaar team as employee number one at UIDAI: who he recruited, why he split the admin team in Delhi from the tech team in Bangalore, and the two-week review cadence. Third, his own failure when he stood for election, and what he says it taught him about playing to your strengths. You can skip his childhood and the closing startup-ecosystem talk.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "As employee number one at UIDAI, how did Nilekani split the Aadhaar team across two cities, and how often did they review the tech side? Name one person he brought in and what that person added."
+        },
+        {
+          "type": "application",
+          "question": "Infosys ran three planning horizons at once: a five-year blue sky plan, a three-year strategic plan, and a one-year operating plan. Take one goal in your own work, say what its five-year and one-year versions look like, and name one decision you would make differently today because of the five-year view."
+        },
+        {
+          "type": "challenge",
+          "question": "Nilekani lost when he stood for election and concluded you should play to your fundamental strengths, not your weaknesses. Where does that clash with a leader needing to take on unfamiliar work to grow, and how would you decide when to stop trying to adapt?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Moving Millions: How Hajj is Organized",
+      "show_name": "In the Newsroom",
+      "guest": "Soud Hyder, who manages digital strategy, audience and technology at TRT International and has himself performed the Hajj",
+      "region": "Saudi Arabia",
+      "duration_minutes": 23,
+      "url": "https://www.trtworld.com/audio/214740c469ca",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "Every year Saudi Arabia moves more than two million people through the same few sacred sites, in the same order, inside a five-day window. Soud Hyder walks through how that gets delivered: country quotas so the crowd stays a size you can handle, pilgrims grouped by nationality so instructions actually land, capacity booked a year out, and a timetable that shuttles people in steps rather than all at once. The reframe for a project leader is that the plan is the easy part. What decides whether people get through safely is how the organizers react in real time when a crowd moves in a way the schedule did not predict, and the crush deaths in 1990 and 2015 are the reminder that better infrastructure does not remove that risk.",
+      "what_will_be_assessed": "The episode is short, around 23 minutes, so listen to the whole thing. The questions draw from the delivery mechanics, not the spiritual meaning. Focus on three stretches. First, how the crowd is sized and sorted before anyone arrives: the country quota rule of roughly one pilgrim per thousand Muslims, the national committees and the long backlogs, and why pilgrims are camped in Mina by nationality. Second, the commercial and planning side: the agents, and Soud's point that hotels and services are booked a full year ahead because last-minute capacity is scarce and expensive. Third, what happens when the plan meets the crowd: moving people in timed steps, the danger at the Stoning of the Devil when a group backtracks, the need to react in real time when crowds move off-plan, and the crush and fire disasters that forced changes such as fireproof tents. You can note the technology (the Nusuk app, cameras, wristbands) as support, but the questions are about the human logistics.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Soud describes how the crowd is sized and sorted before Hajj even begins. What is the rough rule for how many pilgrims each country is allotted, and give one reason he says pilgrims are camped in Mina with others from their own country or region?"
+        },
+        {
+          "type": "application",
+          "question": "Soud says hotels and services for the next Hajj are booked a full year ahead, right after the last one ends, because last-minute capacity is scarce and costly. Name one resource in your own delivery you should be committing to far earlier, and what waiting to the last minute would cost you."
+        },
+        {
+          "type": "challenge",
+          "question": "Soud says the plan is not the hard part; the hard part is reacting when the crowd moves in a direction the schedule did not expect, and the worst crushes happened despite better infrastructure and technology. Where in your project are you trusting the plan or a tool to hold, and what would you put in place for the moment people do not behave as planned?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Seven Shipping Principles",
+      "show_name": "The REWORK Podcast",
+      "guest": "Jason Fried and David Heinemeier Hansson, co-founders of 37signals",
+      "region": "United States",
+      "duration_minutes": 23,
+      "url": "https://37signals.com/podcast/seven-shipping-principles/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course pushes people to plan, lead, and above all deliver. Fried and Heinemeier Hansson agree that delivery is the point, but they set the bar at good, not done, and argue that hitting every single deadline is a warning sign, not a badge. Their shipping principles say the rigor you apply should match the criticality of the work rather than a fixed rule, that you own the mess after you ship so reality can correct you, and that pushing past your appetite is gold plating, not craft. It is a useful counterweight to a delivery course: shipping on time only counts if what ships is good, and if the person who shipped it stays close enough to feel the consequences.",
+      "what_will_be_assessed": "The episode is short, about 23 minutes, so listen to the whole thing. The three questions draw from four specific claims. First, Jason's problem with MVPs, around 03:36, and why he says minimally viable is too low a bar. Second, David's criticality ladder and his rejection of fixed rules like a set test-coverage ratio, roughly 05:08 to 09:10, including the line about shooting sparrows with cannons. Third, \"we own the issues after we ship,\" about 10:08 to 13:00, and why throwing work over the wall cuts you off from reality. Fourth, \"we ship to our appetite\" and the warning about gold plating, near 20:00 to 22:25. You can skip the HEY keyboard example unless it helps you follow the appetite point.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "David rejects fixed rules like a set test-coverage ratio in favor of what he calls the criticality ladder. Explain how he decides how much rigor a piece of work needs, and give the example he uses of work that earns a higher burden of proof."
+        },
+        {
+          "type": "application",
+          "question": "Fried argues that minimally viable is too low a bar because you only get minimally viable feedback. Take something you are about to ship as an MVP and describe the smaller but complete and genuinely good version you would ship instead."
+        },
+        {
+          "type": "challenge",
+          "question": "The principle we own the issues after we ship leans on their two-week cool down, which gives people slack to clean up their own mess. If your team has no cool down and moves straight to the next project, does the principle still hold, and what would you change to keep its benefit?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Building Infosys to Rolling out Aadhaar",
+      "show_name": "Insights by Accel",
+      "region": "India"
+    },
+    {
+      "episode_title": "Moving Millions: How Hajj is Organized",
+      "show_name": "In the Newsroom",
+      "region": "Saudi Arabia"
+    },
+    {
+      "episode_title": "Seven Shipping Principles",
+      "show_name": "The REWORK Podcast",
+      "region": "United States"
+    }
+  ]
+}

@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C03",
+  "course_name": "Authority and Presence in High-Stakes Transformation",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Think like an outsider",
+      "show_name": "Masters of Scale",
+      "guest": "Tope Awotona, founder and CEO of Calendly (this course uses his segment; the live session also features Sallie Krawcheck and Shellye Archambeau, hosted by Bob Safian)",
+      "region": "Nigeria",
+      "duration_minutes": 34,
+      "url": "https://mastersofscale.com/think-like-an-outsider-shellye-archambeau-sallie-krawcheck-tope-awotona/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher (transcript published on Masters of Scale's own episode page; the publisher notes the transcript is auto-generated from the audio and lightly uncorrected)",
+      "listening_range": "Approximately 10:30 to 17:30 of an approximately 34 minute episode, about 7 minutes of listening. The session features three speakers. This course uses only Tope Awotona's segment, and the transcript file holds only that section. The spoken start and end lines are noted at the top of it. The publisher transcript carries no timecodes, so the figures are estimated from speech order and may be off by a few minutes.",
+      "the_idea": "Awotona built Calendly as an outsider on every axis. He grew up in Nigeria, skipped grades so he was always the youngest, and by the time he started Calendly in Atlanta in 2013 he had already started and shut down four businesses. No track record, no Silicon Valley address, a sales background, no rich relative to write the first check. So he emptied his 401(k), took loans, and built a freemium product that grew by word of mouth instead of by raising big rounds. The course tells people to build confidence from real ability and values rather than outside validation. This is that idea lived out. His confidence came from knowing his customers and his numbers, not from fitting the profile investors fund. He also names the catch himself. Institutional capital still carries a validation that customers and smart observers look for, even when the results are already there.",
+      "what_will_be_assessed": "The three questions draw only from Tope Awotona's segment of this live session, roughly 10:30 to 17:30 of the episode. You do not need Sallie Krawcheck's or Shellye Archambeau's stories. Focus on three things. First, the specific ways Awotona says he was an outsider when he started Calendly, and what he did to fund and grow the company without traditional investors. Second, his claim that disadvantages can become advantages, with the freemium model and staying close to customers as his examples. Third, the moment in the capital question where he admits institutional money still carries a validation that customers and observers look for. The transcript saved in this file holds only his segment.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Awotona lists the specific ways he was an outsider when he started Calendly. Name at least two of them, and say what he did to fund the company without raising a large round."
+        },
+        {
+          "type": "application",
+          "question": "Awotona says a lack of capital forced useful habits, like a freemium model and knowing his customers better than anyone. Name one disadvantage in your own situation and how it could be worked into an advantage."
+        },
+        {
+          "type": "challenge",
+          "question": "In the same talk Awotona admits institutional capital still carries a validation that smart people and customers look for. Where does building confidence only on your own results, without outside validation, stop working in your context?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Oops, I messed up! 7 common public speaking issues -- and how to fix them",
+      "show_name": "Life Kit",
+      "guest": "Lauren Dominguez Chan (speechwriter) and Rachel Oman; hosted by Marielle Segarra, reported by Kyle Norris",
+      "region": "United States",
+      "duration_minutes": 23,
+      "url": "https://www.npr.org/transcripts/1196978022",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher (NPR transcript published on npr.org)",
+      "the_idea": "This is a public speaking episode, which puts it outside leadership on purpose. A reporter follows Rachel Oman, who has feared speaking in front of people her whole life, into a Toastmasters club. Alongside her, speechwriter Lauren Dominguez Chan reframes what presence under scrutiny actually asks of you. Her sharpest idea is the internal gatekeeper, the voice that says you need a better credential or a deeper voice before you are allowed to speak, and that will never sign off no matter how much you change. Her answer is not to fix your voice but to sound like yourself, to expect small flaws because the human voice wavers, and to prepare around one core message. It reframes confidence as something you build by connecting, not by matching a standard someone else set.",
+      "what_will_be_assessed": "The whole episode is short and worth hearing, but the three questions draw from two threads. First, Lauren Dominguez Chan's idea of the internal gatekeeper, and her claim that a good speaker sounds like themself rather than like a coded correct voice. Second, the practical reframes: expect flaws because the human voice breaks, find your one core message, and practice with other people. Rachel Oman's own techniques, like focusing on filler words and joining Toastmasters, are fair game. You can skip the detailed speech-writing mechanics near the end, like cutting up your draft with scissors, unless you want them.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Lauren Dominguez Chan describes an internal gatekeeper. What does she say it does, and what does she say you should do about it? Name one thing Rachel Oman did to get less nervous."
+        },
+        {
+          "type": "application",
+          "question": "Dominguez Chan says a good speaker sounds like themself rather than matching a coded correct voice. Where have you changed how you show up to fit an external standard, and what would sounding like yourself look like there?"
+        },
+        {
+          "type": "challenge",
+          "question": "The episode treats nerves as normal and says most listeners will not even notice them. Where is that reassurance not enough, and where does presence under scrutiny need more than be yourself and practice?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Kristin Neff on the Power of Self-Compassion",
+      "show_name": "The Greater Good Podcast",
+      "guest": "Kristin Neff, associate professor at the University of Texas at Austin; host Jason Marsh",
+      "region": "United States",
+      "duration_minutes": 24,
+      "url": "https://greatergood.berkeley.edu/podcasts/item/kristin_neff_on_the_power_of_self_compassion",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher (full transcript published on the episode page)",
+      "the_idea": "This course spends real time on building confidence and strengthening self-esteem. Neff's research says self-esteem is the wrong target. Self-esteem is a positive self-judgment that shows up when you succeed and needs you to feel special and above average, so it drives social comparison, links to narcissism, and collapses when you fail. Self-compassion is not a judgment at all. It is how you treat yourself when things go badly, and it gives a steadier sense of worth that does not ride on outcomes. She also takes on the common fear that self-compassion makes people lazy and complacent, and points to research that says the opposite. Her challenge to the course is direct. Stop trying to prop up self-esteem, and build self-compassion instead.",
+      "what_will_be_assessed": "This is a 24 minute interview and the three questions draw from two stretches. First, Neff's distinction between self-esteem and self-compassion, including the drawbacks she pins on self-esteem: narcissism, social comparison, and a sense of worth that swings with success and failure. Second, her answer to the worry that self-compassion breeds complacency, where she argues self-compassionate people hold the same high standards but recover and re-engage better. You can pass over the long personal section about her son and the Buddhism backstory, though it is worth hearing.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Neff draws a sharp line between self-esteem and self-compassion. Name two ways she says they differ, and one drawback of self-esteem she points to."
+        },
+        {
+          "type": "application",
+          "question": "Neff says self-criticism is a poor motivator and self-compassion helps people own a mistake and change. Think of a recent setback. How would a self-compassionate response differ from your usual self-talk, and what might it free you to do?"
+        },
+        {
+          "type": "challenge",
+          "question": "This course puts effort into building self-esteem and confidence. Neff argues the pursuit of self-esteem is part of the problem. Where do you think she goes too far, and where would chasing self-esteem actually hurt the leaders you work with?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Think like an outsider",
+      "show_name": "Masters of Scale",
+      "region": "Nigeria"
+    },
+    {
+      "episode_title": "Oops, I messed up! 7 common public speaking issues -- and how to fix them",
+      "show_name": "Life Kit",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Kristin Neff on the Power of Self-Compassion",
+      "show_name": "The Greater Good Podcast",
+      "region": "United States"
+    }
+  ]
+}

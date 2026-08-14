@@ -1,0 +1,87 @@
+Episode: Building Infosys to Rolling out Aadhaar (INSIGHTS Podcast #35)
+Show: Insights by Accel
+Guest: Nandan Nilekani, co-founder of Infosys and founding chairman of UIDAI, the authority that built India's Aadhaar identity system
+Interviewer: Anand Daniel, Partner at Accel
+Region: India
+URL: https://www.seedtoscale.com/podcast/building-infosys-to-rolling-out-aadhaar
+SoundCloud: https://soundcloud.com/insights-podcast-accel/insights-35-nandan-nilekani-on-building-infosys-and-uidai
+Transcript source: publisher (edited transcript published on the episode page)
+
+WHAT WILL BE ASSESSED
+This is the one longer episode, and only part of it is assigned. The 42-minute
+conversation covers Nilekani's early life, all of Infosys, and his move to public
+service. Listen only to the marked range below, roughly the middle-to-late stretch,
+about 20 to 25 minutes. Three things carry the questions. First, how Infosys planned for
+scale: the five-year blue sky plan, the three-year strategic plan, and the one-year
+operating plan, and what each was for. Second, how he built the Aadhaar team as employee
+number one at UIDAI: who he recruited, why he split the admin team in Delhi from the tech
+team in Bangalore, and the two-week review cadence. Third, his own failure when he stood
+for election, and what he says it taught him about playing to your strengths. You can
+skip his childhood and the closing startup-ecosystem talk.
+
+RANGE USED. The full episode runs about 42 minutes. This file contains only the section
+assigned to learners: approximately the Infosys-scaling-through-Aadhaar stretch, about 20
+to 25 minutes.
+
+The publisher transcript is an edited transcript and carries no timecodes, so any timing
+is estimated from speech rate and may be off by a few minutes. Use the spoken lines as
+the real markers.
+
+  Start: Anand, "10 years before going public is a long time. 12 years. Talk us through
+         the days of bootstrapping?"
+  End:   Nandan, "...but this thing that I did today will lead me to that goal." (his
+         answer about the common mistakes founders make)
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+**Anand**: 10 years before going public is a long time. 12 years. Talk us through the days of bootstrapping?
+
+**Nandan**: In that era, doing business in India was difficult. A phone connection would take 2 years. It was not a market friendly environment, it was pre liberalization, infrastructure was very poor. It was a currency starved environment, so we had to go to the Central Bank for money for every trip we made abroad. There was no concept of winner takes all and J curve and all that. And there was no capital ecosystem, there was no angel investors, no VCs, no PE guys, the banks won't lend. So, you really had to be very radical. We all had faith in ourselves and faith in the business. The vision was to build a globally competitive technology company out of India and serve the world.
+
+**Anand**: In the first 10 years, what did you go through as a founder?
+
+**Nandan**: A lot of that time, I spent in the US. I was doing Sales, a lot of the market facing role plus I was also doing projects. Self taught.
+
+**Anand**: And then Jack Welch came?
+
+**Nandan**: No, he came looking at India for his products and later on he was so impressed with the capability that he also started sourcing from here.
+
+**Anand**: Technology leadership is one thing, you have talked in other places about setting audacious goals
+
+**Nandan**: The big shift happened in the early nineties. We were facing existential crisis because suddenly, big companies were coming to India. And our talent pool would not stay with us because they would have the choice of working for some large global brand. And we realized, unless we were also an aspirational brand, we couldn't attract people. So, we had to think big, we had to think brand, we had to think infrastructure, we had to think scale and that required us to change the way we operated. So, we had to professionalize ourselves. So, we went from a company being run by a bunch of founders to a company that hired great talent like Mohandas Pai for finance, Hema Ravichander for HR, built in systems, strategy, budgeting, performance management and training. So, that shift from an entrepreneurial organization to a company designed for scale and realizing that our roles had to change, that was actually a huge thing. Part of that was future planning, say what do we want to be 3 years from now? What do we want to be 5 years from now? Setting audacious goals and using audacious goals to unlock the way we did things. When we were 3 to 5 million dollar company, we talked about being a 100 M dollar company. When we were approaching 100M dollar in revenue, we said what does it mean to be a billion dollars in revenue. It took us 3 to 5 years to go from 5 M to 100M
+
+**Anand**: When you say planning to scale
+
+**Nandan**: Our plan for scaling is not an afterthought. You had to think scale & I apply that into many of the things that I do. Think large scale and that's a mind game. You have to think and plan. How many customers will I have? How many consumers in case of B2C? How will I reach them? What is the unit economics to reach them? What is the infrastructure required to reach them? What kind of marketing, sales and distribution do you need? Think of your business from every point of view. If I got to reach that scale in 5 years, what do I do now? Get back to today's decisions with a view of the future. Make some hard calls, maybe it's reshuffling priorities, maybe its changing business plans, You are doing that from a mind game. We had 3 horizons, we had one year plans which were focussed on budgets, revenue, margins, and at the other end, we had a sort of 5 year, blue sky thinking, where will we be in 5 years? Where will the economy be? Where will technology be and therefore what do we do to get there? And then 3 year much more detailed plan. 5 year blue sky plan, 3 year strategic plan and 1 year operating plan. A colleague of mine Sanjay Purohit was the head of Corporate Strategy and Planning at that time. He actually did the detailing.
+
+**Anand**: So, that was the 10 to 100 phase. Any major changes that happened after you went public?
+
+**Nandan**: Going public was important because we built infrastructure. Building India's first software campus. It was a signal to our customers that we are here to stay. People came and visited us, they were amazed at the infrastructure we had. Murthy believed a lot in education. So, first the Bangalore campus and then the Mysore campus. Also the belief that the right people can be trained to do anything.
+
+**Anand**: How was the competitive landscape?
+
+**Nandan**: The market was huge, so the challenge was how do we get customers and how do we retain employees? That's why we put a lot of effort in being the best companies to work for putting in a lot of training or infrastructure. The fact that we built our own brand for the market. We are a B2B business, so building that brand and showcasing that to the large businesses of the world that we are a strong partner was very important.
+
+**Anand**: It's also happening now with the product companies?
+
+**Nandan**: There are product companies and services companies. Today, they are merging into platform or service companies. And the cloud is changing everything. So, for Infosys today, it's about taking everything and reimagining them as cloud services. Cloud is changing the way we think about service delivery.
+
+**Anand**: When did you decide it was time to move on from Infosys?
+
+**Nandan**: I was CEO from 2002 to 2007. Then, I became the Co-Chairman. I was always interested in public service. An opportunity came when the Govt. asked me to join them. After the 2009 election which was the second term of the UPA. When they approached me, it was for the job of HRD Minister. They wanted some out of the box thinking. But afterwards, they thought how can someone without political experience do this? It almost came down to the wire, the day of the Cabinet announcement. They wanted something to do with the Planning Commision. Finally, we converged on the ID project. In my book, Imagining India, I had talked about the need for a Digital ID. So, I had a sense that this was a very powerful idea. So, why not take this? It's a technology enabled, so why not play to my strengths? It's time bound, I can measure success. It's not vague. It's something strategic. I was 54 years old when I retired. Infosys was very generous as I was doing something for the country. It was a challenge, I was going from Pvt. Sector to Public. From Bangalore to Delhi, From running a company of 100K people to running a startup. I was employee №1 of the UIDAI. It was like doing a startup at 54 and in the Govt.
+
+**Anand**: How did you go about doing it?
+
+**Nandan**: Just like any other startup, thought how do we create a great team? I had to create a team that was an amalgamation of Govt. talent and tech talent. I approached a friend of mine, KP Krishnan who is now the Secretary of Skill Development and is like an encyclopedia of the Govt. He knows who joined where and what are their strengths. He gave me a lot of references. So, Ram Sewak Sharma who was employee No 2. Was an IAS officer from the Jharkhand cadre. IIT Kanpur, MS in Computer Science from the Univ of California, did programming as a hobby on the weekends. Absolutely brilliant, today he is the Chairman of TRAI. Very unusual guy because he could take risks, Bureaucrats often are risk averse. He was my ally and frankly the credit of getting it done goes to him. I managed the environment, he's the guy who got it done. I had a lady Ganga who retired as the Deputy CAG. She was our CFO. I got a guy called Srikar who is currently Head of Commercial Tax in Karnataka as my PS. I deliberately made sure that I had a great team from the Govt. because I did not know anything about the Govt. I did not know how to move a file. On the Pvt. side, Srikant Nadhamuni, I had worked with him at e-gov — he came as the head of Technology. Pramod Varma who had worked with me at Infosys and had gone to an Infosys spin off. Great architect, he came on board and became architect. Sanjay Jain came from Google & Vivek Raghavan, an IIT Delhi Phd guy and serial entrepreneur. Brilliant guy, he landed up. So, I had this team of amazing bureaucrats, rock solid, high integrity, performance driven. And I had this team of great technology guys who had built world class systems, And then I had to blend these two groups together to create one unified group to get the mission, to get ID done. That was the hard part because they were two different cultures, both have their strengths, both have their weaknesses and set such an audacious goal that people didn't have too many differences. We deliberately kept the administrative political team in Delhi and the tech team in Bangalore. In Delhi, we ran the whole business side of it, the Govt' side of it. We used to do reviews every 2 weeks in Bangalore for the tech side. Bringing these two groups together and blending it to what;s possible was a huge part of the success of Aadhar. It's all about getting the startup team, getting the right talent,
+
+**Anand**: Can you talk to us about the thinker-doer approach?
+
+**Nandan**: I like to think I am in a unique spot and I am grateful that life gave me that opportunity. Think of it as a 4 by 4 matrix. Public and Private sector on one axis & Thinking and Doing on another. A thinker in the public sector say is an economist. A thinker in the private sector is a management prof. A Doer in Pvt sector is a CEO. A Doer in the Public sector is a Minister. Normally, people are in one of these four compartments. I have had the unique opportunity to be in all 4 quadrants. Doer in Private sector in Infosys, Doer in Public sector as leading UAIDI, leading something that impacts a billion people. There is also the thinker part, my conversations with Tom Friedman led to the "World is Flat", that was actually a defining idea in 2005. The presentation I did in 2015 over the whatsapp movement. Which basically changed people's thinking of how financial technology was getting disrupted. These are all thinker elements of the private sector. And in the public sector, I have done two books on trade, Imagining India & Rebooting India. That's more how society development changes. Because I have played in all 4 quadrants, I think I have a more holistic understanding of things and how to get things done in a company and in Govt. That's a been a good opportunity. When I look at a new thing, I can look at it from all these angles. UID was a project which already existed in the system. So, I didn't start that, its was already there.
+
+So, I do I do it? Generally, I have a very less fear of failure. When you have that and when you are welcoming of change, then its easier to do more things. Then, I am not stuck in my status quo. I can move from my comfort zone and do something else. I had a corner office, a golf course next to it. But the desire to do something new of impact and willing to live with uncertainty and ambiguity of a complete change in my environment The fact that I am curious and willing to learn new things is good, but where this has failed is when I stood for elections. I lost. I thought that I was capable of adapting to various things, but I was not able to adapt to politics. Because the skills that are required in politics were not my skills. And while I wanted to try new things, you should look at your basic fundamental strengths and play to it. Don't play to your weaknesses.
+
+**Anand**: What are the common mistakes you see founders make?
+
+**Nandan**: Of course, if you are founder, you have to be a doer. I am a big fan of execution at scale and speed and meticulousness and all that. But execution without a strategic plan is also not a good thing. The thinking comes in the strategic framework of where to go and how you want to go there and converting that to the steps to executing that. That's how the thinker-doer helps. Being able to visualise and endgame or some audacious goal and being able to execute that into a sequence of activities and also being able to prioritize them saying this should be done now comes instinctively. That ability is important. I spend a lot of time thinking, visualize the future, You shou;d absolutely be execution focused, but not just execution focused. Step back, think and also look at what is the end game look like, where do I want to be? Whether I want to be a billion dollar company or whether I want to have half a billion people on aadhar in 5 years, whatever my goal is — don't deviate from that and have laser like focus. So, how is every activity that I am going to do help me achieve that goal. I might do a lot of tactical things today, but this thing that I did today will lead me to that goal.

@@ -1,0 +1,101 @@
+Episode: Helping Doctors Make Better Decisions With Data: UC Berkeley's Ziad Obermeyer (Me, Myself, and AI)
+Show: Me, Myself, and AI (MIT Sloan Management Review and BCG)
+Guest: Ziad Obermeyer, physician and associate professor at UC Berkeley, cofounder of Nightingale Open Science and Dandelion Health
+Hosts: Sam Ransbotham and Shervin Khodabandeh
+Region: United States
+URL: https://sloanreview.mit.edu/audio/helping-doctors-make-better-decisions-with-data-uc-berkeleys-ziad-obermeyer/
+Transcript source: publisher (full transcript published on the episode page at sloanreview.mit.edu)
+
+WHAT WILL BE ASSESSED
+The three questions all draw from the section saved in this file, roughly 13:00 to
+29:00 of the episode. You do not need the opening on Nightingale, ImageNet, and his
+career path, or the closing questions on surfing and genetics. Focus on two things.
+First, the knee X-ray study led by Emma Pierson: that radiologists systematically
+miss things on knee X-rays that disproportionately cause pain in Black patients, that
+the scoring systems doctors still use were built on coal miners in Lancashire, England
+in the 1940s and 1950s, and the move the team made, which was to train the algorithm
+to predict what the patient said about the knee rather than what the radiologist said,
+so it could expose the bias baked into medical knowledge itself. Second, his answer to
+"what worries you about AI," about a commercial algorithm used for about 70 million
+people a year to decide who gets extra help with their health, which he says is doing
+enormous harm and is probably still deployed.
+
+RANGE USED. The full episode runs about 33 minutes. This file contains only the
+section assigned to learners: approximately 13:00 to 29:00, about 16 minutes.
+
+The publisher transcript carries no timecodes, so those figures are estimated from
+speech rate and may be off by two or three minutes either way. Use the spoken lines
+as the real markers.
+
+  Start: Shervin Khodabandeh, "I think another thing that possibly exists in medicine
+         versus other fields..."
+  End:   Ziad Obermeyer, "...shutting down a range of things that that could ultimately
+         be very positive."
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+Shervin Khodabandeh: I think another thing that possibly exists in medicine versus other fields where humans and machines work together to make machines better and make humans better is probably the fact that the expert's opinion that's correcting the machine [has] probably gone through a lot more diligence, because there are playbooks and guidelines and, by virtue of you becoming a physician and licensed and having board certification, it's unlikely that the level of disagreement or variance between experts in medicine would be more so than, let's say, in the field of marketing or, you know, credit underwriting, or … I would assume that that makes the training part of the algorithm a bit more standardized or less subject to one expert's opinion.
+
+Ziad Obermeyer: It's a really, really interesting set of questions. I knew a lot about medicine. I knew some basic things about how to do research. But I started working with a health economist at Harvard, David Cutler, and then with one of his colleagues, Sendhil Mullainathan, and that's where I started investing a lot of time in learning some of the technical skills that, in combination with those clinical skills and clinical knowledge, was the basis for the research that I'm doing today.
+
+Sometimes we try to solve this problem by saying, "Well, we're not just going to have one radiologist. We're going to have five radiologists. And then we're going to take the majority vote." But are we really practicing medicine by majority vote? So it's one of these interesting places where doing machine learning in medicine is very, very different from other areas, because we fundamentally have a more complicated relationship with the ground truth. And human opinion, as trained as these experts are and as much practice as they've gotten over years of residency and training — we can't consider that the truth.
+
+Ziad Obermeyer: I'll tell you about one paper that we wrote a few years ago. This was led by my colleague Emma Pierson, who's a computer scientist at Cornell. And what we showed is that radiologists systematically miss things on X-rays — in this case, knee X-rays — that disproportionately caused pain in Black patients. So when you go back to the history of what we know about arthritis in medicine, a lot of the original studies that generated the scoring systems that doctors still use today were developed on coal miners in Lancashire, England, in the 1940s and '50s. So it's not at all surprising that knowledge built up in that very specific time and place would not necessarily map onto the populations that doctors see in their offices today in England or in the U.S.
+
+And the way we showed that was actually by training an algorithm not to do the thing that most people would have trained an algorithm on, which is to go from the X-ray to what the radiologist would have said about the X-ray. If we train an algorithm that just encodes the radiologist's knowledge in an algorithm, we're going to encode all of the errors and biases that that radiologist has. So, what we did instead is we trained an algorithm to predict not what the radiologist said about the knee but what the patient said about the knee.
+
+So we trained the algorithm to basically predict, is this knee a painful knee or not? And that's how we designed an algorithm that could expose that bias in — not the radiologist so much as in medical knowledge. And it really provided a path forward … that algorithms, even though a lot of my work has shown that they can reinforce and even scale up racial biases and other kinds of biases in medicine, there's also this pathway by which they can do things that humans can't. They can find signal in these complex images and waveforms that humans miss, and they can also be forces for justice and equity, just as easily as they can be forces that reinforce all of the ugly things about our health care system and society.
+
+Shervin Khodabandeh: The problem of training is actually much harder because you don't have ground truth. And you're not only exposing … or you're not only trying to correct the models' biases or inaccuracies but also the physicians' as part of the training.
+
+Ziad Obermeyer: Yeah, perfectly put. The challenge isn't just building the algorithm. It's not just the same challenge we have in any other field. The fundamental challenge in health is creating the data set that speaks to that ground truth. The good news is that thanks to the enormous success of electronic health records, the ability to link data sets from hospitals to state Social Security data and other interesting sources of truth from elsewhere, there is a wealth of information that lets us stitch together and triangulate that ground truth. But it's a very difficult clinical problem, not just a machine learning problem. I think that's one of the big reasons, besides the lack of data.
+
+The other reason that we haven't seen machine learning transform the practice of medicine in the same way that it's transformed other industries is because these problems require a certain bilingual skill set. You need to understand how to do useful things with data. But you also need to really understand the clinical medicine side of these problems to be effective because you can't just swap in the radiologist's judgment for the judgment of whether there's a cat or not in this image. It's a much, much harder problem.
+
+Sam Ransbotham: That bilingual thing seems really tough, though. And it makes me think about your background. You're obviously in a position where you've ended up with both of these languages. I'm also curious, do we have to have that?
+
+Ziad Obermeyer: Without minimizing the difficulty of this problem, let me point to an example where something like this has worked really well, which is a little bit more in your world, Sam, than mine, but behavioral economics, I think, is a really, really great example of a fundamentally new field that requires exactly the same kind of bilingualism. And so, what you needed for behavioral economics as a field was, you needed, first of all, economics to start taking human behavior seriously, beyond just a simple function of incentives. But you also needed psychologists to make pretty big investments in learning the technical basis for demonstrating what is a bias and what's an error, what's not an error, things like that. And so I think there's a really nice analogy to this world, where the doctors are playing the role of the psychologists and the computer scientists, but also the economists are playing the role of the economists in the other world.
+
+I think that one of the reasons that these things are hard — to echo some reasons for pessimism — is that we're not very good inside of academia, despite everyone saying how interesting and wonderful multidisciplinary work is. None of the incentives are really set up to promote that kind of work. And so if you're a computer scientist and you need to get your paper into some conference proceedings, whether you do a great, A+ job in getting to a ground truth label or whether you do a really bad job doesn't really matter for your probability of getting that paper into your favorite conference proceedings. And I think if you're a doctor, whether you're making big investments in machine learning or not is not really going to affect your likelihood of getting that NIH grant that you're applying for.
+
+And so, to go back to one of the reasons Sendhil and I started Nightingale, I think we need these kinds of institutions that help build that community of people who are taking these kinds of things seriously. So if you're a Ph.D. student, you need data to work in the field. I have a lot of Ph.D. students at Berkeley who come to me and say, "Oh, I'd really love to apply the thing that I'm good at in machine learning to health." And I say, "Great, we'll add you onto the Data Use Agreement, and then you'll have to do all of the training, and then we'll amend the IRB [institutional review board proposal]. …" And by the time that's done, they've already got a job at Facebook or wherever, and it's all over. And so I think that building up these public goods in this area is a really good place to start to build the community of people who can do the work and be a set of collaborators and peer reviewers and things like that. But it's a process.
+
+Shervin Khodabandeh: The other thing that your comments lit up in my head is the possibility that the experiment design that we would do today, to do a diagnosis of whatever it is, given that data is so much more abundant now than it was maybe 50, 30, 20 years ago, where data was really scarce, I wonder if that actually changes even the guidelines for how we think about a positive diagnosis, because some of these correlations that you're talking about may not have even been possible, so maybe nobody even thought about, "You for sure have this disease if these two things happen." Well, maybe there's a third thing that would happen two months later that you don't even know would happen, because nobody collected data on it or nobody could correlate the data.
+
+Ziad Obermeyer: Yeah, great point, and I think it really highlights one of the huge advantages of doing this work today, when we have longitudinal data from electronic health records that's linkable to a lot of other data from a lot of other different places. The value of the data, as it expands in scale and scope and linkages, just increases exponentially. And exactly as you said, it opens up a ton of new possibilities to learn that were not afforded to us previously.
+
+Sam Ransbotham: You set us up with a Hobson's choice here, like, "OK, we can either wait three days for the culture test, or someone has to make a call right now." And this is pointing out just how much better we can measure all sorts of things and maybe measure things that we weren't even thinking about measuring now … that might tell us what was going to happen in three days, and we don't … like you say, I think we're still very early in that process.
+
+You mentioned some of the things, like negative news, that may poison the well. And when I think about that … by analogy, I just taught this week in class, the [module on] handwriting recognition. And in class, I'm able to take a group of students, and we're able to perform with algorithms what would have won contests 15 years ago. And we can do that in class on laptops.
+
+Well, by analogy, with these data sets you're putting together right now, what are those sorts of wins that we can expect? I mean, the way to offset the poisoned well is the miracle cure. I don't want to get too snake-oily here, but what kinds of things can we hope for? What kind of successes are you seeing so far with making these data sets available?
+
+Ziad Obermeyer: I can tell you a little bit … when I think about the output for an organization like Nightingale Open Science, I think the output there is knowledge and papers and computational methods that are developed on these data, but I think there's also another way to think about what the output is.
+
+I can tell you a little bit about another platform that I've been working on, which is called Dandelion Health. Dandelion is a for-profit company, and what that company does is, we first have agreements with a handful of very large health systems across the U.S., and through those agreements, we get access to all of their data. And when I say all of their data, I really mean all of their data. So not just the structured electronic health records, but also the electrocardiogram waveforms, the in-patient monitoring data when someone's in the hospital, the digital pathology, the sleep monitoring. Everything.
+
+This company is designed to help solve that bottleneck and help people get these products into the clinic faster. And the way … you know, I grappled with this a lot, and I think the way I think about it is that there are clearly downsides to using health data for product development, and I think that there are real risks to privacy and a lot of things that people care about. And I think those risks are real, and they're very salient to us. There's another set of risks that are just as real but a lot less salient around not using data.
+
+I think there are also a number of applications to what people think of as life sciences and to clinical trials. There's a whole set of conditions today, something like Alzheimer's, and we [recently] saw some sad news from yet another promising Alzheimer's drug. It's been pretty sad news for decades in this area. And one of the reasons is this weird fact that I hadn't thought of until I started seeing some of these applications, which is that if you want to run a trial for a drug for Alzheimer's, you have to enroll people who have Alzheimer's. But that means the only drugs that you can develop are the ones that … they basically have to reverse the course of a disease that's already set in.
+
+So now imagine you had an Alzheimer's predictor, that with some lead time could find people who are at high risk of developing Alzheimer's but don't yet have it. Now you can take those people and enroll them in a clinical trial. And now you can test a whole new kind of drug, a drug that could prevent that disease, instead of having to reverse it or slow it down. So, that's, I think, really, really exciting too.
+
+Sam Ransbotham: We're probably getting close on time. Shervin, are you the five-question person or am I today?
+
+Shervin Khodabandeh: I can do it.
+
+Sam Ransbotham: We'll explain this, Ziad. It's not as onerous as it sounds. We have a standard way of closing out the episodes.
+
+Shervin Khodabandeh: So, Ziad, we have a segment where we will ask you a series of rapid-fire questions, and you just tell us whatever comes to your mind.
+
+Ziad Obermeyer: OK.
+
+Shervin Khodabandeh: What's your proudest AI or machine learning moment?
+
+Ziad Obermeyer: I'm working on a paper right now that is in collaboration with a cardiologist in Sweden, where we're linking all of the electrocardiogram waveforms that were ever done in that region with death certificates. And we've developed an algorithm that can actually forecast with a surprising degree of accuracy who is going to drop dead from sudden cardiac death in the year after that ECG. And I think, in addition to being super interesting scientifically, this opens up this huge, huge social value of being able to find people before they drop dead so that you can investigate them and even put in a defibrillator that could prevent this catastrophic thing that happens hundreds of thousands of times every year and that doctors don't understand and can't predict.
+
+Shervin Khodabandeh: That's the kind of thing to be proud of. Wow. What worries you about AI?
+
+Ziad Obermeyer: I think the work that I've done on algorithmic bias has made me update negatively on how much harm these algorithms can do. We studied one algorithm that is unfortunately probably still deployed in many of the biggest health systems in the country. By the company that makes its estimates, it's being used for 70 million people every year to screen them and give them access or not to extra help with their health. And I think that those kinds of products, these are not theoretical risks. These are real products that are actually deployed in the health care system, affecting decision-making every day. They're doing an enormous amount of harm. In the long term, I worry that those kinds of things are going to cause reactions that would be entirely justified in shutting down a range of things that that could ultimately be very positive.

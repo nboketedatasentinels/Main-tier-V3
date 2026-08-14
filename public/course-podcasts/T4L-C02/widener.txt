@@ -1,0 +1,251 @@
+Episode: 701: How to Handle High-Pressure Situations, with Dan Dworkis
+Show: Coaching for Leaders
+Guest: Dan Dworkis, emergency physician and Chief Medical Officer at the Mission Critical Team Institute, author of The Emergency Mind: Wiring Your Brain for Performance Under Pressure
+Host: Dave Stachowiak
+Region: United States
+URL: https://coachingforleaders.com/podcast/handle-high-pressure-situations-dan-dworkis/
+Transcript source: publisher (full transcript published on the episode page)
+Range: full episode (this is the one episode in this course that runs over 30 minutes)
+
+WHAT WILL BE ASSESSED
+The three questions draw from the tactics part of the conversation, not the opening or
+the close. Focus on graduated pressure and the wedge, including the central line
+teaching example and using the end of a hard workout to practice, on the "suboptimal"
+labeling move and why the exact words matter less than having a shared signal, and on
+his claim that sang-froid is trainable rather than fixed, plus the thought experiment he
+offers about whether you could make a situation worse. You can skip the opening
+definitions of the five features of an emergency (through about 06:30) and the closing
+book plug and episode recommendations (from about 34:20 to the end).
+
+---
+
+Dave Stachowiak [00:00:00]:
+Every leader at least occasionally faces emergencies. In an emergency, the only way out is through. In this episode, the mindset and tactics that will help us handle the most difficult situations. This is Coaching for Leaders episode 701.Production Credit: Produced by Innovate Learning. Maximizing human potential.
+
+Dave Stachowiak [00:00:29]:
+Greetings to you from Orange County, California. This is Coaching for Leaders, and I'm your host, Dave Stachowiak. Leaders aren't born, they're made. And this weekly show helps you discover leadership wisdom through insightful conversations. Part of leadership for all of us is working under pressure, applying our knowledge under pressure. Oftentimes, we know what we need to do. We know the steps.
+
+Dave Stachowiak [00:00:56]:
+But when we're in a heated situation, when the stakes are high, it's a lot harder for us to be able to do the things that we want to do that are gonna help out the others around us and support our organizations. Today, so glad to have an expert with us who has helped so many to do this better to really perform well in tough situations. I'm so pleased to welcome Dan Dworkis. He is chief medical officer at the Mission Critical Team Institute. He's an emergency physician who helps individuals and teams apply knowledge under extreme pressure and perform at their best when it matters most. He is the author of The Emergency Mind,:Wiring Your Brain for Performance Under Pressure. Dan, a pleasure to have you on.
+
+Dan Dworkis [00:01:40]:
+Dave, thank you so much for having me. Honored to be here.
+
+Dave Stachowiak [00:01:42]:
+This is a fascinating book. Oh my goodness. And and and you, of course, are coming to this from the perspective of a physician, but there is so much here that's helpful to leaders in all kinds of situations and working under pressure. And you start the book by talking about emergencies and what emergencies are, and you've shared with me that emergencies are not just worse bad days. Tell me a bit about that. What's different about an emergency?
+
+Dan Dworkis [00:02:13]:
+Yeah. Absolutely. I think that's a great place to start. And whether you're in medicine or not, like, you're probably gonna hit emergencies in what you do, and it's worth being aware of them and and getting into them ahead of time. And I don't know. I guess I can agree with myself that, yes, emergencies are not just worse bad days. It's really not linear. Right? You can have a bad day.
+
+Dan Dworkis [00:02:32]:
+You can have some dropout of some of your protocols or something can not work for you. And most of the time, the systems that you have in place, whether you're a startup or a doctor or whatever, are probably gonna continue to work to some degree. But then you get into this space that's different. That's just completely different. It's nonlinear. You've crossed some boundaries, and you're in this environment where everything is just going wrong, essentially an emergency. Right? And when you're in that space, the stuff that works for you in normal times, not only will it not work, but it might actually hurt you and vice versa. So one of the things we talk about is that when you're able to recognize when you're in an emergency, you use emergency things.
+
+Dan Dworkis [00:03:11]:
+And when you're not in an emergency, you use non emergency things. Now that seems kind of obvious and ridiculous, but it's actually pretty hard to figure out sometimes. And it's an important thing to keep in mind. Just as a really concrete, like, perhaps overly visceral example of this, if you come into the emergency department and you have, like, a sucking chest wound. Right? Like, you have some terrible injury to your chest and there's air rushing in, that air is gonna maybe shut down the way that your heart's working. I'm skipping over a lot of medicine here. And what you need to do in that case is put another hole in the person's chest. You need to cut their chest open.
+
+Dan Dworkis [00:03:45]:
+Right? That is the most humane, kind, compassionate, wonderful thing you can do for that human being is to stab them in the chest with a knife. Now that is typically not the right answer outside of that circumstance. Right? You can't go around, and you shouldn't go around stabbing people in the chest with a knife. That's usually not the right answer of what to do. But in an emergency situation right? Yes. But in an emergency situation, you sometimes need to do things that are antithetical or very different to what your normal tools might be.
+
+Dan Dworkis [00:04:15]:
+So there's this sense of am I an emergency or not? And in the book, I talk about these 3 sort of pillars of understanding what an emergency is. And actually, my thinking has evolved quite a bit since I wrote this piece of it. So there's actually 5 now. I think it's probably worth exploring through them real quick.
+
+Dave Stachowiak [00:04:30]:
+Sure, please.
+
+Dan Dworkis [00:04:31]:
+So the 3 that are in the book are pressure, uncertainty, and impact. Right? So emergencies have, pressure. There is a difference between the supply and demand of resources that we have for one thing or another. Right? There's not enough time to make a decision, or there's not enough capital runway to decide whether to really investigate something. We have uncertainty. We don't know what the situation is or what our response should be. And we have impact, which in my world is usually life or limb, but could be, you know, the risk of shutting down of an organization or losing a key component or failing a mission, depending on sort of what domain you're in. And the 2 that I've really added since then are this idea of complexity and liminality.
+
+Dan Dworkis [00:05:15]:
+So complexity is the idea that there's multiple interactions between the pieces of a system that react non linearly. So an engine is a complicated system. You can take it apart, look at the pieces, study them and put them back together. But a human is a complex system. There's interactions between the different parts of us, our heart, our lungs, our kidneys. You can't just take one thing and assume it'll work by itself. And then finally, I actually think this one's maybe the most important thing that defines an emergency, is the idea of liminality. Liminality is the sense of you can't go out, you have to go through.
+
+Dan Dworkis [00:05:49]:
+Right? In other words, you have jumped out of a plane, and you cannot reverse time and jump back into the plane. The only way out is through. Right? So when you find yourself in these circumstances, there's sometimes a tendency to wanna just run away and and shut the whole thing down. But when you're really in the grips, the jaws of a crisis like this, the only way out is through. And I'm gonna get off my soapbox about this because I've been rambling about that for a second. But I think if you recognize situations in your space of influence that have those characteristics, pressure, uncertainty, impact, complexity, and liminality, then whether or not you're in an emergency room, you you have found yourself in an emergency.
+
+Dave Stachowiak [00:06:28]:
+And one of the truths you highlight about emergencies is that they also require us to make decisions, don't they?
+
+Dan Dworkis [00:06:35]:
+Absolutely. Absolutely. Right? I mean, it's up to you as a leader of yourself or your team or whatever it is to identify that space and then to start acting on it, to start controlling the controllables and and moving your team forward towards whatever sort of a solution to that problem set that you can get.
+
+Dave Stachowiak [00:06:53]:
+You write about so many of your experiences in the book, and you talk about the first cardiac arrest case that you handled as a team leader. And you write junior level responses to emergencies like a cardiac arrest are often chaotic, disorganized, and centered around trying to simply move faster in every direction all at once. Experienced emergency providers run a cardiac arrest case entirely differently. What's different about the junior level person and the person with experience on just how they approach a really big emergency like that?
+
+Dan Dworkis [00:07:29]:
+Hopefully, there are a lot of differences. Right? And as you get better at what you're doing, you're able to see more and more of the space. So what do I mean by that? Right? So when you first start confronting problem sets, you're often hyper focused on what's directly in front of you. You're trying to solve the small facet of the problem that you see. And that's possibly because you can't see the rest of the things or you don't have enough experience to understand what connects to what. Right? So more senior people will think through the higher order effects of their actions and choices. They'll try to visualize and imagine, okay, if my team does this, what's going to happen next? A sort of shorthand way of thinking about that is to say you're thinking around the corner. Right? You're trying to decide what's coming after this thing and to set yourself up for success, not just in this second, but for the next thing that's going to come down the line.
+
+Dan Dworkis [00:08:21]:
+Another important split is that more junior folks tend to focus more internally on themselves. Right? How am I doing here? How am I being perceived? What is my next move? Where the more senior people understand that this is a lot more of a team sport. So when you are doing emergency medicine, when you're running a cardiac arrest, you really need the entire team working on the same problem set. So rather than thinking about how you are performing, one of your big goals is to think about holistically as a team, how is my team performing? And you really want to optimize for that. Now that might mean changing the way that you speak, the way that you stand. That might mean taking suggestions from different members of your team because you want the ideas to keep flowing. Or it could mean just thinking out loud saying, folks, here's what I think is happening. Here's what I intend to do about it next.
+
+Dan Dworkis [00:09:11]:
+There's a really brilliant physician, Doctor. Robert Knebone, working out of London, really unique guy. He was a trauma surgeon and a general practitioner, which is a very strange career path. And he wrote this book Expert, where he talks to jugglers and carpenters and magicians and all these people that have to master a craft. And one of the big things he talks about on the path to mastery is the changing of point of view from internally focused, how am I doing, to externally focused, how am I seen from the consumer of my services, from the point of view of them? And that sort of shift happens also when you're thinking about running cardiac arrests, right? It's not just about you. It's about your team and what's going on for the person and their family. And so the more, experienced you are, the better able you are to make that jump in perspective.
+
+Dave Stachowiak [00:10:01]:
+And the good news is we can get better at this. And one of the real gifts of the book is that there's a whole bunch of tactics and, mental models that we can utilize to help us actually to do a better job at being able to apply our knowledge under pressure. And one of the ones that you feature in the invitation you make is to apply graduated pressure.
+
+Dan Dworkis [00:10:26]:
+Mhmm.
+
+Dave Stachowiak [00:10:27]:
+Tell me about what that means and what's helpful about that.
+
+Dan Dworkis [00:10:30]:
+Right. So I think this is one of the most concrete examples of how anybody listening to this can get better at performing under pressure. And the concept here, the intuition here is a wedge, just like a wedge you'd put under a door or something like that. So if there's some really hard task now in medicine, for example, we might say, hey, I need you to put a central line in, which is a really large bore IV that goes into the neck or the leg to deliver really powerful medicines. And it's a pretty complicated procedure to put in. There's some risk and and technical difficulty to it and stuff like that. So it's got some steps and some complication. So if I ask you to go do that and you've never done anything like that before, chances are pretty high that you're gonna fail.
+
+Dan Dworkis [00:11:14]:
+And you're gonna fail without necessarily knowing why. Right? Did you fail because you missed a key step? Did you fail because you didn't even know where the equipment was? Did you fail because you haven't done the background homework to understand why we're doing the thing? Where does the failure come from and how do we address it? It's really hard to figure that out. If, however, I guide you through the steps ahead of time. So I take you on dry land, so to speak, away from the chaos. And I'm like, alright. Here's the kit. Open it up. Look at the pieces.
+
+Dan Dworkis [00:11:41]:
+Let's talk through how it works. Let's assemble it slowly and carefully. Now let's have you practice on a task trainer mannequin. Now let's have you practice on a task trainer mannequin while people are yelling and you sort of gradually increase the amount of stress and energy in the room. Then when you get to the point of impact, when you have to actually perform the skill to solve a problem set, you're much more likely to succeed. Or if you fail, we're much more likely to know why you fail because you've graduated all the different components that get you there. Right? So applying graduated pressure is this concept of crawl, walk, run. Right? Now I'm certainly not the first person to talk about that, but it's something we see all the time in emergency medicine.
+
+Dan Dworkis [00:12:18]:
+And, again, the intuition here is this wedge. So if full speed is high wedge, then the question is, what can you find that's a low wedge example of the same thing? How do you build low wedge practice into your day, your week, and your system?
+
+Dave Stachowiak [00:12:33]:
+I think there's some really interesting things you advise on this in the book on just how you can utilize just some everyday things as far as applying graduated pressure. Like, one of the examples you give is after you do a hard workout, when you're, like, your blood is pumping and you're, like, fatigued, you can actually borrow from other events. Like, you when your body is in that state, that may be the time to then try something that is more challenging or pushing yourself at the edge a bit and actually looking for those opportunities and training yourself to do that.
+
+Dan Dworkis [00:13:09]:
+Yeah. Absolutely. One of the, technical skills we work on is the first couple things that you say when you enter a room where a cardiac arrest is going on. So imagine there's a patient in a hospital, they suffer a cardiac arrest, their heart stops, Somebody sees this and hits the code blue button. They start doing CPR, and then sort of this swarm team descends on the room to try to solve it. One of the things that has to happen in that first moment is somebody has to take command, and you have to have this sort of self organization property of the team that's working the problem. So when I'm training the types of doctors who go to these rooms to start running these cardiac arrests, one of the things we train on is the technical skill of what do you say when you first arrive, which is a little bit harder than it looks at first blush. Right? Because you have to size up the situation, determine leadership, take over if you need to, and sort of organize the team.
+
+Dan Dworkis [00:14:05]:
+Anyway, we train them on how to say this stuff. And one of the recommendations we always have is practice saying it at the end of a workout. When your heart rate's up, when you're tired, when you're gasping for breath, and just know that it's gonna sound like that when you are hitting the room. You're not going to sound maybe how you want to. You might not have quite enough breath to get the whole sentence out. So figure out a way that you can do it where you're not shocked by that and you're not knocked off course, right? Where you're expecting the sort of performance that you're going to get in real life and then you're more likely to keep moving forward after that, I should say.
+
+Dave Stachowiak [00:14:36]:
+Which I think is a great lead into one of the other models and tactics, which is to practice the discipline of suboptimal. What do you mean by suboptimal?
+
+Dan Dworkis [00:14:47]:
+Oh, man. I love this one. I'm debating getting a suboptimal tattoo, actually. So the reality is that there is failure and that we don't control everything and that there are times when things are just really, really hard. Right? There are times when things are just just completely off the rails. Our teams are working problem sets that we don't want to be working. They're challenging or dangerous or both.
+
+Dan Dworkis [00:15:16]:
+And it's just a lot of suck to put it honestly. So as leaders, we have to figure out a way to help our teams move forward towards these problem sets and hopefully go through them. And we're faced with this choice. Right? So on one side, you have the people who respond to this real chaos by pretending it's not happening. Everything's great, folks. Let's just keep going. Here's a pizza. Let's rock forward.
+
+Dan Dworkis [00:15:39]:
+And then on the other side, you have the types of leaders who get so swept up in the moment that they get crushed by it themselves. Right? They're like, this is terrible. Everything sucks. Why are we even doing this? And I'm sure that you've seen enough teams to know that people live in each of these camps for one reason or another, and it's hard. Right? Neither of those camps is particularly motivating for the team, and it's pretty challenging to recover from those circumstances. What we try to do in the emergency department is find some sort of a middle ground that both identifies and connects with the really hard reality that you're facing and is also optimistic and forward thinking enough to help you move forward towards the problem. So for me, the way that I've found to do that is to just to say out loud, well, this is suboptimal, right? Because it's, you know, usually you're talking about this when there's somebody is just shot by a bow and arrow and then run over by a car or something, and they're, like, maybe on fire, and it's real bad. Like, it's real bad.
+
+Dan Dworkis [00:16:35]:
+Right? There's blood everywhere and the power has failed in the hospital and you're out of some crucial component and the deck is just like really stacked against you. And in that moment, if you can summon whatever it is to say, well, this is suboptimal and sort of a deadpan voice, you're definitely acknowledging the craziness of the situation and you're also diffusing it a little bit, right, by having this little bit of humor. And that sort of mild humor response to a really difficult situation is just a great leadership tool for acknowledging the suck and then also getting the team moving forward again. I don't know that there's anything magical about the words, well, this is suboptimal. Right? Like, I have a teammate who has decided his version of this is to say, uh-oh, SpaghettiOs. I think that's an interesting tactic. To to me, that doesn't work as much. That doesn't feel as as honest with who I am, but it really does for him.
+
+Dan Dworkis [00:17:29]:
+I always give folks the advice after telling that part of the story that, like, if you're gonna say, SpaghettiOs, you should probably tell your team ahead of time what that means to you.
+
+Dave Stachowiak [00:17:37]:
+Right. Exactly.
+
+Dan Dworkis [00:17:38]:
+Right? Otherwise, you're just the guy saying, oh, SpaghettiOs when everything's on fire. But if you can say that, if you can say, hey, look, there's gonna be times that we're gonna face that are super hard. We're not going to want to be there. Things are going to be rough. You might hear me say something that sounds like this. When you hear that, here's what that means. It means I understand that we're in a bad place, and I believe we're going to get through Right? And I'm gonna do this just to help you get that motion going forward a little bit. We know from physics that the coefficient of static friction is always higher than the coefficient of moving friction.
+
+Dan Dworkis [00:18:11]:
+In other words, it's always harder to start moving than it is to keep moving. So if you can get your team moving forward even when it's dark and things are shut down and it looks pretty grim, that is a huge, huge thing as a leader. So it's hence, maybe the suboptimal tattoo. I haven't really decided on that.
+
+Dave Stachowiak [00:18:31]:
+Yeah. What I appreciate the 2 different examples, and and you really Mhmm. Go to pains in the book to say, like, it's not so much the word itself. It's the find the language that's gonna work for your team, whether it's suboptimal or spaghettios or whatever. That that is part of the labeling this. Right? Like, I'm labeling a situation. We know this is tough. We are gonna get through it.
+
+Dave Stachowiak [00:18:55]:
+And then part of this too is also then the processing, like, processing for the team and taking the next step. And that's also part of the discipline of this. Right?
+
+Dan Dworkis [00:19:03]:
+Absolutely.
+
+Dave Stachowiak [00:19:04]:
+And you mentioned labeling in the book around this on, like, practicing this discipline. Is the labeling the saying that to yourself or someone else, saying the suboptimal or whatever the word is out loud, is that labeling or is it something else?
+
+Dan Dworkis [00:19:18]:
+I think you're on the right track with it there. I think, a lot of the times- and this is a step back from emergencies just into sort of the realm of mental models and how leaders use mental models in general. Right? You can think of mental models in some sense as a playbook. Right? You all have come together and said, all right, here's the different plays that we know how to do. If this is a firefighting situation, maybe we know how to use hand tools to cut a fire line or engines to drop water or air attack to drop retardant. If this is a startup, maybe we know how to run an AB test, how to create a sales funnel, and how to have client meetings. Like, we know these different plays. Right? Medicine, they might be we understand the first three moves to do pretty well when somebody's having a seizure or when somebody's having an acute heart failure exacerbation.
+
+Dan Dworkis [00:20:09]:
+So if you have these plays and you've rehearsed them and you understand how to use them, then one of the points of labeling is really getting everybody in the room to solve the same problem. Right? There's this big concept in emergency medicine. The room is always smarter than any one person in it. I think that holds true well outside of emergency medicine as well. Right? But the room is always smarter than any one person in it. And there's a corollary in there, right, which is that the room is smarter than you. And that sometimes that's the harder thing to remember. Right? It's easy to be the room is smarter than everybody in it, you know, not including me.
+
+Dan Dworkis [00:20:44]:
+Right? But you sort of have to include yourself in that and realize that, actually, if you can get everybody in the room working the same problem, the outcome will be better than if you do it yourself. Okay. So how do you get them working the same problem? Well, this is a little obvious, but you have to tell them what problem they're working. Right? They have to understand which problem they're facing. Otherwise, maybe the left half of the room thinks it's working on a asthma attack and the right half of the room thinks it's working on an allergic reaction. 2 things that can, in some circumstances, look similar depending on how they present. Those two plays are run very differently. What's normal, what's expected, what's to watch out for.
+
+Dan Dworkis [00:21:20]:
+Even if you have exceedingly highly skilled doctors and nurses, you tell half of them they're running asthma, half of them they're running allergic reaction, that team's gonna have a really hard time coming together and solving a problem. So labeling is one way that we can get around that. We can get around that just by saying out loud as the leader, this is what we're doing. Right now, it's even a little better than that when we're able to express some hesitancy or to express some uncertainty in that sentence. Right? So often I will say that as, hey, team. I think this is a heart failure exacerbation. Let's run that play. Right? Now that says, alright, let's start activating our heart failure sort of mindset and our playbook.
+
+Dan Dworkis [00:22:00]:
+But also, Dan, the leader, said he's not a 100% sure. So if I see something that I don't really think makes sense, maybe it's a little psychologically safer for me to speak up about it because we don't have a 100000 percent answer. We have a this is what we think is happening answer. The same thing works, on sort of an internal scale when you're thinking about the different thought patterns you might have, like labeling like, oh, this is anxiety or, oh, this is fear or, oh, this is the normal response that happens to me the moments before a patient comes in. I know what this feels like and I know what to do about it. It's sort of a micro scale, macro scale kind of approach to it.
+
+Dave Stachowiak [00:22:39]:
+You invite us also, especially in high pressure situations, to become a student of sang-froid. Am I saying that right? Mhmm. sang-froid?
+
+Dan Dworkis [00:22:48]:
+I've always said it's sang-froid as the as the French thing.
+
+Dave Stachowiak [00:22:50]:
+Oh, that I'm sure that's right because that's because it is French. Right? And it and it translates cold blooded. And you make the point in the book that, you know, this is not a fixed personality trait. I mean, we all know someone who's really cool under pressure, and I think a lot of times we think about people like that of, like, oh, they're just, like, naturally like that. And, of course, some people are more naturally have that skill, but it's not fixed, is it?
+
+Dan Dworkis [00:23:20]:
+I don't think so. No. I think it's trainable. I really do. I have been fortunate enough to attend to the delivery of a of a, you know, a number of babies, and I have never seen one be born a fully functional ER doctor. And I don't know anybody else that has either. Right? So if nobody's born like this, we all grow into it, and we somehow keep making ER doctors, then it sort of has to be a trainable skill. I think it's more a matter of how do you train it.
+
+Dan Dworkis [00:23:48]:
+And just to you know, sang-froid translates as cold blooded. Right? But what it really means is the ability to maintain a presence of focus and mind in the midst of chaos. So can you, I think it's the Kipling poem, If, Right? Can you keep your head about you when all others are losing theirs? That sense of are you able to perform at a high level despite the chaos swirling around you and to maintain a bit of ice in your in your veins as you're doing it? I think it's really helpful to know that it's trainable. Right? I mean, I look back at me as a junior practitioner, and I have certainly grown in leaps and bounds since that time, thankfully. Thankfully.
+
+Dave Stachowiak [00:24:31]:
+Yeah. And you point out that experience makes it easier, but it doesn't develop on its own. It's not just like you get more experience and you automatically get it. You really have to specifically practice it. And when you're helping people to practice this and to keep cool under pressure, what is it that works to actually go through the practice of it?
+
+Dan Dworkis [00:24:54]:
+So there's a couple of systems in there. Right? So I think it's helpful to start, and if maybe you haven't really thought through any of this, like, concretely, is to start by just pulling up from your memory a bunch of experiences where you felt like you really were capable of handling the pressure and some experiences where you felt like the pressure got the better of you and you weren't able to perform at your maximum level. One of the models we use for this is the Yerkes Dodson curve, which is a sort of experimentally derived curve that looks at performance under pressure. But you don't really have to understand that. You just have to get the sense that that people are like the strings of instruments. Right? If you're if you tune them too tightly, the string breaks. There's too much pressure. And if you tune it too loose, the string is floppy and it doesn't make a sound.
+
+Dan Dworkis [00:25:47]:
+Right? So you have to have the right amount of pressure to really perform your best. And that by itself is a bit of a radical thing to say and think about. So, you know, if you're just hitting that for the first time, like, go think about that for a minute. But if you've already thought that through, then your job is really to come up with this list of like, okay, well, what does it feel like when I'm really at my best? I'm handling the pressure and I'm mastering it. And then what does it feel like when it's overwhelming? And how can I start to recognize the times when I am being compromised by pressure? And the better you get at recognizing those features, that provides the scaffolding on which you can layer habits and countermeasures and all sorts of things like that. Right? If you if you read any of, like, Charles Duhigg stuff on the power of habit, Right? Your idea is to find the triggers that push you in one direction or another and then change the link and the outcome of it. So that's a lot of what it's about when you're actually getting the nuts and bolts of how to train sang-froid. Developing your skill and your expertise so you have more external stimuli that you're doing well.
+
+Dan Dworkis [00:26:47]:
+Building communities around you that support you in your quest to get better under pressure. Building systems that learn and grow from you as you grow with it. And then internally doing the work of rebuilding sort of your habit stack around what pressure feels like for you.
+
+Dave Stachowiak [00:27:01]:
+And one starting point maybe then if I'm trying to get better at this, if I haven't done something like this before, I start recording maybe or just writing down or journaling at the end of the day. Alright. Where did I run into a pressure situation today or in the recent past? And where did that work? And where did it not work? And I think part of what I'm hearing you say is, like, once you have a sense of that, either you go back and you're thinking about things in the past or you're noticing things in real time as they come up. You start to notice those, and then you can consider what's going to what are the ways I effectively am gonna handle this situation? And then you experiment with that a bit and and try that out. And then that gets you a little bit further down the line of starting to handle this better in the moment.
+
+Dan Dworkis [00:27:45]:
+Yeah. And if you're listening to this and you're like, I think that's nonsense. I don't think there's any way I can change my reaction to pressure. I would invite you to do this thought experiment, which is could you make it worse? Right? When you're facing the pressure and stress, what could you do that could make it worse? And just start there because my chances are you're gonna find something. You know, it could be I could have not slept the night before, or I could have gotten in an argument with my significant other the morning before showing up to my shift, or I could have forgotten to wear pants that day, or whatever it was. Right? Like, there are always ways that you can make it worse. And if you can find ways to make it worse, then it's changeable. And if it's changeable, then you can find ways to make it better.
+
+Dan Dworkis [00:28:25]:
+And I actually think that's maybe the easiest way to start is just imagine what you could do that would make it worse.
+
+Dave Stachowiak [00:28:31]:
+And to your earlier point too that you can use everyday life as a training zone for this. You don't necessarily have to develop this muscle- in fact, you probably shouldn't try developing this muscle in the most high stress situations. You start off by, like, someone cuts you off in traffic or you're dealing with an upset customer. Like, you notice your response to that in the moment, and you practice and you experiment a bit there first before you're trying to make shifts in bigger situations.
+
+Dan Dworkis [00:29:01]:
+Right. And in a way, that's getting back to that idea of wedge and applying graduated pressure. Right? You don't you know, this is a skill. Staying calm under pressure is a skill, which is like putting a central line in is a skill. You wouldn't expect it to work the first time in the middle of a crisis for either of those. You wanna train it and practice it ahead of time. Now, one wrinkle to that is that when we get our new interns, right, these are folks that have just graduated from medical school, it's their 1st day, their 1st week of being a doctor, and they're entering their emergency medicine training, the programs that I work with, they get me to come in and talk to the interns or the new fellows or whatever about this concept of building sang-froid. And we do it at the beginning, not because we expect them to get it right from the very beginning, but because we set the tone and say, we are an organization that grows and learns and we value our individuals growing and learning.
+
+Dan Dworkis [00:29:52]:
+We know this will be hard and is hard for you. We're gonna encourage you and we're gonna give you the framework from the very beginning that helps you understand how to grow yourself in this direction. Right? That's that idea of, you know, pushing forward and inspiring growth person in the middle of a community that supports them, supported by systems that wrap around them like that. So you don't have to get it right at the beginning. You should introduce them to the beginning and then turn them loose on these experiments like you're saying.
+
+Dave Stachowiak [00:30:17]:
+This is such a helpful framework for anyone who's in tough situations and pressure situations. And as we've talked about, it's way beyond medicine. It's, so many different complex situations we all deal with in leadership. And, Dan, I hope people will reach out, grab the book, but also maybe reach out to you if they've heard something that would be helpful to explore, you know, medicines learning so much from business, the vice vice versa, nonprofits. I mean, there's so many aspects of this that are, important for us to, like, get better at and applicable across so many industries. And, I Iam curious as you've put this all together as your thinking is involved. I appreciate you mentioning early on that, you know, you're adding to just your definitions as you go on this. I'm I'm curious.
+
+Dave Stachowiak [00:31:03]:
+What, if anything, have you changed your mind on as the book's gotten out in the world and you've been talking with people about how to get better at handling things under pressure?
+
+Dan Dworkis [00:31:11]:
+Yeah. I I mean, so much. Right? Like, the the whole idea of becoming a student of sang-froid is that you are a student of this. Right? You don't know all the answers. You're actively trying and experimenting and learning from the folks around you and I think that's really, you know, an apt description of the journey that I've been on with this as I've started going and I'm super fortunate to get a chance to study this in my day to day life. The sort of 2 big things that have changed my mind about this, when I wrote this book, I wasn't early in my journey from this, but I was more focused internally on what I could do to get better under pressure. So a lot of the book is internally focused and is focused on how individuals can get better. Now, certainly, there are aspects of teams and leadership that are implied in that, right, because you're practicing within this teamwork environment, but a lot of it's internally focused.
+
+Dan Dworkis [00:32:06]:
+These days, I spend a lot more time focused on the teams and the systems that are around those teams, specifically the systems that exist after a particular like before and after a particular team makes their mark. So how do you set teams up for success? How do you learn from teamwork? And how do you build organizations that are continually striving to get better every day? I think the other big aspect is that when we first approach performance under pressure, we tend to focus on the moment of performance. Right? We tend to say, okay. I'm gonna have to perform in this meeting. I'm gonna have to perform in this negotiation. I'm gonna have to perform in this trauma resuscitation, and we're hyper focused on that moment. What we tend to lose sight of is the moment before and the moment after. Alright? So if we look at the moment before, and that could be the day before, the week before, or really just the minute before, what can I do in that moment of preparation to set myself up for success in the moment of performance? What choices do I need to make? What systems do I need to install? What things do I need to have in place in order to maximize my ability to perform when I need it the most? And then when we go to the moment after, this is really a conversation about recovery and evolution.
+
+Dan Dworkis [00:33:18]:
+Right? Are we able to come back home successfully? Whether that's physically returning from fighting a fire or from a hospital or just mentally coming back to our center after a really complicated set of tasks or negotiation. And then evolution, have I learned something from this? Am I doing enough to learn from what I'm going through in that moment of performance to set myself up for a better chance of success tomorrow? And you can see pretty easily how that ends up forming a loop. Right? Prepare, perform, recover, evolve as a loop and as a growing spiral. I certainly had some of that put together when I started this process, but the more time I spend in it, the more I realize how absolutely important the non performance pieces of that cycle are for the ability to perform under pressure.
+
+Dave Stachowiak [00:34:07]:
+Dan Dworkis is the author of The Emergency Mind: Wiring Your Brain for Performance Under Pressure. Dan, thank you so much for sharing your work with us.
+
+Dan Dworkis [00:34:16]:
+Thank you. Thank you for having me, and thanks for what you're doing.
+
+Dave Stachowiak [00:34:25]:
+If this conversation was helpful to you, 3 related episodes I'd also recommend. One of them is episode 376, how to become the person you want to be. James Clear was my guest on that episode. We talked about his blockbuster bestseller, Atomic Habits. I know many of you have gotten into the book over the years. James and I talked about some of the principles of how do we shift our behavior. And one of the things he mentions in the book is the Goldilocks principle of we want things to be challenging for us, but we don't want them to be too hard. We wanna find that just right middle zone.
+
+Dave Stachowiak [00:35:01]:
+And it's a great compliment to some of the things that Dan talked about in this conversation of thinking about our own mindsets and challenging ourselves. We don't wanna make it too hard, but we also don't wanna make it too easy. Starting point for that episode 376. I'd also recommend episode 404. How to build psychological safety. Amy Edmonson was my guest. We talked about the importance of team and creating a safe environment. And you heard echoes of that in this conversation with Dan of, yes, all of this works well.
+
+Dave Stachowiak [00:35:31]:
+If we are thinking about this individually in our mindset and our practice, it works so much better if we are in it with a team and with team support, and we've created that culture inside of the team and organization. The starting points for where to begin, Amy Edmonson episode 404. And then finally, I'd also recommend episode 660, how to prevent a team from repeating mistakes. Cujo Teshner was my guest on that episode. And you heard Dan talk about in this conversation that, yes, there's the what to do in the midst of the emergency, but just as important is what we do before and after. And if getting better at the after, the debrief is something you and your team need to move on. Cujo Teshner's work is the work that you should know about and follow. We talked about it in episode 660.
+
+Dave Stachowiak [00:36:22]:
+How do you debrief better? Kujot leveraging his experience with the US Air Force overseeing all of their debriefing for many years and taught us some of the key principles in episode 660. A great starting point for you if you're not yet utilizing that practice in your organization. All of those episodes, of course, you can find on the coachingforleaders.com website. And I'd invite you today to set up your free membership at coachingforleaders.com. There are a ton of benefits inside the free membership, and one of them is access to my interview and book notes. As I was reading through Dan's book, I was highlighting the key passages. I was taking notes. I'm using that to prep for the conversation as I do for most every conversation here on the podcast.
+
+Dave Stachowiak [00:37:04]:
+And I make those notes available to you, all of our free members. And so if you go to the episode notes on every episode, you'll see a download link for that. And, I've highlighted some of the key quotes, I think, from Dan's book that we didn't get to in the conversation, but that you should know. That's available for almost every interview in the past several years. It is one of many benefits inside of the free membership. So to get access to all of that, just go over to coachingforleaders.com, set up your free membership, and you'll have full access to that. And I'd also invite you while you're on the website to check out Coaching for Leaders Plus. One thing I'm doing every single week is writing up a brief journal entry from me reflecting on one of the principles.
+
+Dave Stachowiak [00:37:47]:
+Either I've heard from a past guest, something that's come up in conversations with our academy members, or something in my own experience that I think is gonna be helpful to you. And a recent journal entry, I talked about the importance of inclusive language. What's inclusive language? Well, it's when a leader gets in front of a group and rather than saying, you need to do this, is saying, let's all do this. We should be in this together. And most of the time, most of us should be using inclusive language in our communications when we talk about the future and vision and team culture. And yet, there are a couple times that we shouldn't use inclusive language and when it actually is helpful to be a lot more direct. I talked about 2 of those situations in a recent journal entry and where that distinction is so key and how sometimes we on the wrong side. It's all part of Coaching for Leaders Plus.
+
+Dave Stachowiak [00:38:39]:
+If you'd like to find out more, just go over to coachingforleaders.plus for access to that entry and so many more each week. Coaching for leaders is edited by Andrew Kroeger. Production support is provided by Sierra Priest. Next Monday, I'm glad to welcome Jonathan Raymond back to the show. He is the creator of the accountability dial. Join me for a conversation with Jonathan. Always fun to talk with him. And I'll see you back next Monday.

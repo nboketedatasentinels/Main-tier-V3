@@ -1,0 +1,85 @@
+Episode: Rory Sutherland on Alchemy
+Show: EconTalk
+Guest: Rory Sutherland, advertising executive (Vice Chairman of Ogilvy UK) and author of "Alchemy: The Dark Art and Curious Science of Creating Magic in Brands, Business, and Life"
+Host: Russ Roberts
+Region: United Kingdom
+URL: https://www.econtalk.org/rory-sutherland-on-alchemy/
+Transcript source: publisher (full time-coded transcript published on the episode page at econtalk.org)
+
+WHAT WILL BE ASSESSED
+This publisher transcript has timecodes, so you can go straight to the assessed part. The
+three questions come from one stretch, about 8:35 to 18:40, saved in this file. Focus on
+three things. First, the Uber example: why watching the car approach makes waiting less
+painful, and Sutherland's British Airways point that any estimate of time, even a
+pessimistic one, beats the single word "Delayed." Second, the idea from Luca Dellanna's
+"Control Heuristic," that people hate uncertainty and will pay to reduce it. Third, the
+airline that lost about 15 million pounds a year because it asked customers to pick a
+travel class before they saw the price, so people defaulted to "Economy" and never pushed
+back. You do not need the rest of the episode, which wanders through markets, trains,
+cocktails, and advertising.
+
+RANGE USED. The full episode runs about 75 minutes. This file contains only the assigned
+section, roughly 8:35 to 18:40, about 10 minutes. The two spoken timecodes below (8:35 and
+12:55) are from the publisher transcript.
+
+---
+
+[8:35]
+Russ Roberts: Yeah. It's a fantastic example, and you talk about it in the book. With respect to Uber, when I would describe Uber, say, to my parents who hadn't tried it, I would tell them how great it was--you don't have to call anybody, you don't have to pay--and you talk about how the non-exchange of money directly is an important part of the experience also. But after I'd summarize all those things, I'd often say with utter delight and way more exuberance than the other things, 'And while you're waiting, you can see the car getting closer!' And I realize from your book that that is not just like, 'Oh, that's pleasant.' It's an enormous part of what makes the product attractive, even to the point where, as you mentioned in a number of examples, it may not even be accurate, may not be true. It could just be a little thing--
+
+Rory Sutherland: [?, crosstalk 00:09:24] up but it still works.
+
+Russ Roberts: It could be screenshots, photo-shopped or whatever, but it's really comforting to see that. And it's two things, of course. One is: Okay, you can see it getting closer. The other part, of course, and this is, I think, the deeper part, is that the variance is visible. When you're waiting for a cab, you think it's going to be 10 minutes. But there is this haunting fear in the back of your mind, or my mind, and I thought I was abnormal, turns out there's two of us, me and you, a haunting fear in the back of your mind that, 'What if it's 25?' And the Uber--eight minutes for your driver--
+
+Rory Sutherland: Even worse, 'What if they canceled me?'
+
+Russ Roberts: Exactly, and I don't know.
+
+Rory Sutherland: I said something very similar to British Airways, which is, when you have a departure board, if you can give any kind of estimate of time of departure, even if it's slightly pessimistic, it is inordinately better than the single word 'Delayed,' in terms of our psychological wellbeing. 'Delayed' effectively makes me think, 'It's probably canceled but they're trying to break it to me gently.'
+
+Russ Roberts: Yeah. Well, when I'm on a plane and we're sitting and there's some uncertainty--sometimes it's a repair, sometimes it's a traffic issue in the control tower--but a lot of times they'll just say, 'We're on hold right now. We'll keep you posted.' I'm thinking, 'That's not good. Just give me a range, even. Give me an idea. Give me some idea of what's going to happen.' And reading your book reminds me and forces me to understand that most of that is about my absurdly human need for control, which I sometimes think I'm the worst one in that area, but turns out, as I said, there's two of us. You also have this issue. There might be three.
+
+Rory Sutherland: And there's an interesting point by Luca Dellanna, which I think is called something like The Control Heuristic, which suggests that a very deep part of human motivation is attempting to maintain a sense of certainty. We have an incredible human urge, we really, really hate being in a position of uncertainty. Which may explain weird behavior economic findings, which is that, you know, people prefer known bets to unknown bets. What was it--this great fallacy, isn't it, named after the chap who published the Pentagon Papers?
+
+Russ Roberts: Daniel Ellsberg.
+
+Rory Sutherland: The Ellsberg paradox, isn't it?
+
+Russ Roberts: Yeah.
+
+Rory Sutherland: Now, interestingly--I don't know if you've come across this guy at the London Mathematical Laboratory, but a guy called Ole Peters and a bunch of collaborators are arguing that in a non-ergodic environment where utility is to some extent multiplicative, not additive, variance reduction, of course, is perfectly rational.
+
+Russ Roberts: And it's true. I know his name. I've been told to interview him.
+
+Rory Sutherland: You must interview him, yeah. He crops up in the book, because I'd always have this vague hunch that things like sunk cost bias and, indeed, loss aversion, under certain circumstances couldn't really be described as a bias--because, first of all, evolution would have corrected them surely if they'd been that consistently bad. And so there's something there, which is, if you think about it--if you think of fortune as being intertwined and path dependent, then the avoidance of significant misfortune is a perfectly rational fear.
+
+[12:55]
+Russ Roberts: No'nd--I think this is--I think many of us have trouble with who are analytical. And it's certainly a problem that economists have. You don't call it this in the book, but the way I would call it is an obsession with expected utility and expected[unexpected?] with the average outcome--which you do talk about--and a mis-appreciation of the costs of the downside.
+
+And, one example in the book, which I just love and I think it's extremely--it's trivial on the surface and very deep actually--which is: If you ask 10 people to hire one person for your company, you get an extremely different result than if you ask one person to hire 10 people. In both cases you're going to get 10 new employees, but they're going to be a very different mix. Explain that.
+
+Rory Sutherland: Yeah. So it seems to me that when we make a single hiring, our instinct for variance reduction is very, very high, or blame avoidance, you might say, in a corporate setting. And so we're going to make a very conservative hire. If you have 10 people, you're going to go much wider and you're going to look for complementarity rather than conformity. At a very simple consumer level--I make no apology, by the way, for looking at trivial consumer behavior: my argument being, you know, nobody criticized Darwin for looking at finches' beaks.
+
+Russ Roberts: Fair enough.
+
+Rory Sutherland: The very, very small trivial things can be highly revealing of far more significant things.
+
+And a very simple example is, if I forced you with your available resources to buy one house, you'd probably buy a pretty conventional suburban house, not too close to work, not too far away. If I gave you the option of buying two houses, what you certainly wouldn't buy is two suburban houses that were very similar. You'd possibly have a crashpad right next to your place of work and a place on the beach.
+
+And similarly with cars. One of the problems, I think, for car manufacturers is that when two- and three-car households became the norm, the saloon car[?sedan?], which was the kind of default catch-all vehicle, suddenly became vastly less popular. People wanted more extreme cars.
+
+And the same thing happens to mid-market retail. When people shop more frequently, they go up market and down market more and the mid-market retailers get squeezed.
+
+And so understanding that dynamic seems to be important, particularly with hiring, if you want to actually create diversity without quotas, if you simply change the choice architecture within which people appoint employees. And interestingly, talking to a large consulting firm, they said that their graduate intake, which they hire in groups, is spectacularly diverse, and their partnerships, which they appoint one at a time, is fairly conformist. I think it looks a bit like front row of the Nuremberg Rally in terms of ethnic diversity.
+
+That might be partly explained by simply the mode in which we're choosing. And it'd be perfectly natural, on anything, for humans to have that as an inbuilt instinct. In diet, for example, you know: the more choice you have available, the more you're going to eat widely; and all sorts of things, like foraging behavior, I think you'd probably find the same thing manifesting itself.
+
+And it struck me as a really interesting point, which is just that we tend to be blind to the affect that choice architecture has over the choices we make. We seem to have evolved, in fact, a kind of 'make the best shot we can.' Daniel Kahneman, I think called it, 'What You See Is All There Is,' or WYSIATI.
+
+And I mentioned this because one of the things I discovered in this is it takes quite a lot of mental effort to spot when the design of a choice path on something like a website is actually stupid. And the example I cited, I think in the book is, most airlines sites will ask you, 'Where do you want to go? When do you want to go? And what class of travel do you want?' Now, if you're a business traveler, you can answer those three questions. Asking consumers what class of travel they want before they know the price difference is, when you think about it, utterly insane. I mean, if it's £5 more going in business class, I'm sitting at the front, right? If it's four times as much, I'm going to be in 23D or whatever. But, as a consumer, to ask that question--and consumers don't go, 'That is a stupid question. I do not have enough information to make a decision.' They simply go, 'I better put "Economy" down.' Because this was actually costing one airline we worked with, about 15 million pounds a year--was the fact that people put 'Economy' down. Because, you can't really, as a consumer, pay for business class or premium economy until you know the ratio of that price to the economy price.
+
+Again, an economist would say that the amount you're prepared to pay to travel in premium economy should be a fixed amount proportionate to length of flight. I don't think it is. I think it's actually a proportion of the economy price we're happy to pay, but we'll have that argument separately.
+
+But the interesting thing to me was that, you asked that question. They were simply presented with the economy prices; they booked an economy ticket, and in many cases, they weren't thinking, 'Well, this is absolutely stupid. I need to go back now and check the business class price.' People don't do that. What was actually happening is airlines were throwing away premium revenue by asking a question before people have enough information to answer it.
+
+And the strange thing is consumers react to that by going, 'Well, I'm just going to make the best fit to this. I'll put Economy down for now.' And it's very interesting that we don't actually say, we very rarely say, when asked the question, 'I need more information to answer it.' I think that's what Kahneman spotted when it came to making recommendations about who to hire and so forth.

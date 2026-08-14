@@ -1,0 +1,107 @@
+{
+  "course_id": "T4L-C07",
+  "course_name": "Stakeholder Influence for Transformation Leaders",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "It's Not Just a Man's World",
+      "show_name": "Grit & Growth",
+      "guest": "Georgette Barnes Sakyi-Addo",
+      "region": "Ghana",
+      "duration_minutes": 36,
+      "url": "https://www.gsb.stanford.edu/insights/its-not-just-mans-world",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Full episode, about 36 minutes. This is the one episode in this course that runs over 30 minutes. The transcript has no timecodes, so what_will_be_assessed points at spoken markers, and the questions are answerable from Georgette's story plus one negotiation finding, not the whole episode.",
+      "the_idea": "Georgette Barnes built a mining-supply business across West Africa, an industry that did not expect a young Ghanaian woman. The course tells you to move resistant stakeholders and hold a calm, grounded presence. Her story shows both sides of that in one sitting. She won a room that dismissed her, they told her she had no experience and asked who she even was, by speaking up anyway, and she got the job. But in a later deal she wanted all of West Africa, and the moment the other side pushed back she folded to 'just Ghana,' then spent the rest of the talk regretting it. The professors add the uncomfortable part. Women who push hard for themselves get read as greedy, so 'just be more assertive' is not clean advice. It is the course's people-first message with the price tag left on.",
+      "what_will_be_assessed": "This is the one episode in this course that runs a little over 30 minutes, about 36. The transcript has no timecodes, so the questions point at spoken markers instead. The three questions draw from Georgette Barnes's own story and one idea from the professors. Focus on three things. First, her first mining interview, where the room dismissed her ('Who are you?', 'you don't have any experience') and what she said back that got her the job, plus who was in the room. Second, the distributor negotiation where she wanted all of West Africa, caved to 'just Ghana' when they pushed, and was unhappy afterward, and her line 'I really don't want to be likable.' Third, Margaret Neale's finding that women who negotiate hard for themselves get punished as greedy, but negotiating for others they outperform men. You can skip the closing stretch on sexual harassment and safe meeting places, and the dog joke at the end.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In her first mining-industry interview, the room told Georgette she had no experience and asked who she even was. What did she say back that turned it around, and describe who else was in that room."
+        },
+        {
+          "type": "application",
+          "question": "Georgette wanted to distribute for all of West Africa but agreed to 'just Ghana' the moment they pushed, and regretted it right after. Name a time you dropped your real ask under pressure, and say what it cost you later."
+        },
+        {
+          "type": "challenge",
+          "question": "Neale's research says a woman who negotiates hard for herself gets punished as greedy, while the same woman wins when she negotiates for others. Where would 'just be more confident and assertive' be the wrong advice for someone your stakeholders are primed to punish, and what would you do instead?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Rory Sutherland on Alchemy",
+      "show_name": "EconTalk",
+      "guest": "Rory Sutherland",
+      "region": "United Kingdom",
+      "duration_minutes": 75,
+      "url": "https://www.econtalk.org/rory-sutherland-on-alchemy/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 8:35 to 18:40 of a roughly 75 minute episode, about 10 minutes of listening. The transcript file holds only this section, and the two publisher timecodes 8:35 and 12:55 are marked in it.",
+      "the_idea": "Sutherland sells advertising for a living, so he studies how people actually decide, not how they should. His point cuts against the course's faith in the clear, rational case. People are not moved by the facts. They are moved by perception and by their hatred of uncertainty. Uber did not make the car arrive faster. It let you watch the car approach, which kills the dread of not knowing. A 'Delayed' sign is worse than a pessimistic time, because at least a time answers the question in your head. And he shows how a badly framed choice pushes people into the safe, wrong default without a word of complaint. For a course about presenting change and reducing fear, it moves the real work from the argument to the experience of the person on the other side.",
+      "what_will_be_assessed": "This publisher transcript has timecodes, so you can go straight to the assessed part. The three questions come from one stretch, about 8:35 to 18:40, saved in this file. Focus on three things. First, the Uber example: why watching the car approach makes waiting less painful, and Sutherland's British Airways point that any estimate of time, even a pessimistic one, beats the single word 'Delayed.' Second, the idea from Luca Dellanna's 'Control Heuristic,' that people hate uncertainty and will pay to reduce it. Third, the airline that lost about 15 million pounds a year because it asked customers to pick a travel class before they saw the price, so people defaulted to 'Economy' and never pushed back. You do not need the rest of the episode, which wanders through markets, trains, cocktails, and advertising.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Sutherland calls Uber a psychological innovation. What does he say actually makes waiting for it less painful, and what is his point about the word 'Delayed' compared with giving a time estimate, even a pessimistic one?"
+        },
+        {
+          "type": "application",
+          "question": "An airline lost about 15 million pounds a year because it asked customers to choose a travel class before showing the price, so they defaulted to 'Economy' and did not push back. Name one place in your change effort where you ask people to decide before they have what they need to answer."
+        },
+        {
+          "type": "challenge",
+          "question": "Sutherland's whole move is to fix how people feel by changing their perception, cheaply, without changing the underlying thing. Name a moment in your transformation where changing perception would be dishonest or a band-aid, and the honest fix is to change the actual thing."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "How Goes the Behavior-Change Revolution?",
+      "show_name": "Freakonomics Radio",
+      "guest": "Katy Milkman and Angela Duckworth",
+      "region": "United States",
+      "duration_minutes": 41,
+      "url": "https://freakonomics.com/podcast/how-goes-the-behavior-change-revolution/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "The opening segment with Katy Milkman and Angela Duckworth, roughly the first 12 minutes of a 41 minute episode. The transcript file holds only this segment. It has no timecodes, so the spoken start and end lines are noted in what_will_be_assessed and in the file.",
+      "the_idea": "This course rests on a confident bet. With the right message, feedback, and presence, you can move people. Katy Milkman and Angela Duckworth ran about the cleanest test of that bet anyone has run. They took 63,000 gym members, a team of top behavioral scientists, cash, reminders, and plans, and built 53 different programs. During the 28 days, most programs did get people to the gym more. After the 28 days, nothing held. All 53 versions, nothing stuck. Their own scientists had guessed about a 40 percent chance their idea worked. The real number was near zero. The lesson is not 'try harder.' It is that lasting change in people is far harder than the confident version of this course admits, and that the parts that did work were the boring ones already known to work.",
+      "what_will_be_assessed": "This file holds only the opening segment of the episode, the part with Katy Milkman and Angela Duckworth about their Behavior Change for Good megastudy. The three questions all come from this segment. Focus on the 24-Hour Fitness experiment: how many people signed up, how many programs they tested, what happened during the 28 days versus after, and the gap between what the scientists predicted and what the data showed. The transcript has no timecodes, so use the spoken lines as markers. You do not need the four other researchers or the closing conversation with Richard Thaler.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In the Behavior Change for Good gym study, how many people took part and how many programs were tested, what happened during the 28 days compared with after they ended, and what had the scientists predicted versus what the data actually showed?"
+        },
+        {
+          "type": "application",
+          "question": "Milkman says they could boost behavior for 28 days but nothing stuck once the program ended. Name a change in your own program that produces a burst of new behavior that fades once the pressure comes off, and say what making it last would actually require."
+        },
+        {
+          "type": "challenge",
+          "question": "This team had money, reminders, plans, and the best science, and still could not make the change hold. If moving people is that hard, where is your confidence that you can bring resistant stakeholders along misplaced, and how should that change what you promise your sponsors?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "It's Not Just a Man's World",
+      "show_name": "Grit & Growth",
+      "region": "Ghana"
+    },
+    {
+      "episode_title": "Rory Sutherland on Alchemy",
+      "show_name": "EconTalk",
+      "region": "United Kingdom"
+    },
+    {
+      "episode_title": "How Goes the Behavior-Change Revolution?",
+      "show_name": "Freakonomics Radio",
+      "region": "United States"
+    }
+  ]
+}

@@ -1,0 +1,65 @@
+Episode: Think like an outsider (recorded live at the Masters of Scale Summit)
+Show: Masters of Scale
+Guest: Tope Awotona, founder and CEO of Calendly. Grew up in Nigeria, built Calendly in Atlanta. This course uses only his segment.
+Other speakers in the session: Sallie Krawcheck (Ellevest) and Shellye Archambeau (former CEO, MetricStream)
+Host: Bob Safian
+Region: Nigeria
+URL: https://mastersofscale.com/think-like-an-outsider-shellye-archambeau-sallie-krawcheck-tope-awotona/
+Transcript source: publisher (Masters of Scale's own episode page). The publisher notes: "Transcripts are automatically generated from episode audio, and are not fully corrected for spelling, grammar, and formatting."
+
+WHAT WILL BE ASSESSED
+The three questions draw only from Tope Awotona's segment of this live session,
+roughly 10:30 to 17:30 of the episode. You do not need Sallie Krawcheck's or Shellye
+Archambeau's stories. Focus on three things. First, the specific ways Awotona says he
+was an outsider when he started Calendly, and what he did to fund and grow the company
+without traditional investors. Second, his claim that disadvantages can become
+advantages, with the freemium model and staying close to customers as his examples.
+Third, the moment in the capital question where he admits institutional money still
+carries a validation that customers and observers look for.
+
+RANGE USED. The full episode runs about 34 minutes and features three speakers. This
+file contains only the section assigned to learners: Tope Awotona's segment, about
+10:30 to 17:30, roughly 7 minutes.
+
+The publisher transcript carries no timecodes, so those figures are estimated from
+speech order and may be off by a few minutes. Use the spoken lines as the real markers.
+In the labels below, SAFIAN is host Bob Safian, AWOTONA is Tope Awotona, and ARCHAMBEAU
+is Shellye Archambeau.
+
+  Start: SAFIAN, "So, Tope, do you have an outsider story for us?"
+  End:   AWOTONA, "Yes." (his answer after the exchange about conduits to the insider
+         community)
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+**SAFIAN:** So, Tope, do you have an outsider story for us?
+
+**AWOTONA:** Oh, man! Do I. I think all my life I’ve sort of been, I know, the odd man out from … You know, I grew up in Nigeria and I was you know …
+
+I love you guys too…
+
+Yeah, I grew up in Nigeria and, in middle school, I ended up skipping a few grades, which meant that, in high school, I was two years younger than my classmates, which is at that age, that’s a big age difference. So, just always sort of stood out in one way or the other.
+
+But when I started Calendly, in Atlanta in 2013, nine years ago, I was an outsider for many, many different reasons. One, I didn’t have a successful track record as an entrepreneur. As a matter of fact, I started and shut down four different businesses. In addition to that, I was based in Atlanta, not in the traditional tech hubs of San Francisco, Seattle, Boston, et cetera. And my background before that, I was in enterprise software sales, which is not really the background most people think of when you think of tech CEOs and tech founders.
+
+So, for all these different reasons, I was an outsider. And so, recognizing that I was an outsider, I just knew that traditional growth playbooks wouldn’t work for me. I could probably not count on raising larger amounts of institutional capital. That’s probably not going to be a viable option for me. And so, I knew that I just had to do something different.
+
+One, I knew that I had to be the first check-in. There was no rich grandparent or rich parent that was going to fund this business. And so, I raided my 401(k), emptied it, even took out some loans to start the business. In addition to that, I knew that I needed a business model and a growth strategy that wouldn’t be incredibly capital intensive. And so, ended up doing things like, built a freemium business model, so allowed a lot of people to use the product for free. That ended up driving virality and word of mouth.
+
+And till today, still the biggest growth engine for the business, but at a very, very low cost. Because I wasn’t spending a lot of time raising money, it also meant that I had more time to spend with customers and I knew their problems better than anybody else did, which allowed us to build a great product. And also when you don’t have all the capital, forces you to maniacally prioritize. So, through a combination of all those different things, and I did raise a small seed round in the early days of the business, we were able to grow the business to almost a hundred million dollars in revenue without any outside capital.
+
+Thank you. Until today, the company continues to be profitable, which is a rarity for companies of our size and scale and our growth rate. And so, the moral of the story is, there are many, many different ways to approach being an outsider. You can assess all your advantages and all your disadvantages, and you can get hung up on all those disadvantages. But I actually think if you look very closely, those disadvantages can actually be advantages, as happened in the case of Calendly. So I think that’s the thing I would encourage people to think about.
+
+**SAFIAN:** Turn those limitations into opportunities when you can. When you can. Do either of you have a question or a reaction to Tope?
+
+**ARCHAMBEAU:** Tope. When you were building and scaling and you actually didn’t have the dollars, now as you’re getting bigger, everybody wants to put money in. So, what did you use as your framework? A lot of the people here, over time, will raise money and all money is not the same. Any perspectives you might share about that part of it?
+
+**AWOTONA:** We have very, very ambitious goals. It turns out that even in spite of the growth that we had and success that we had, there’s still this validation that sort of comes with institutional capital. There are still a lot of very smart people, which the primary way in which they judge the quality of the business or the prospect of the business is whether it’s been validated by an institutional capital.
+
+And oh, by the way, your customers, too, especially for us, we were looking to move upmarket and acquire more enterprise customers, there’s this validation that comes with institutional capital. So, what guided us in picking investors we wanted to partner with is, do they have a track record of taking or working with businesses like ours to accelerate their growth and achieve better outcomes? Do they have a network? If you want to build a great business, it takes a village. You need all the allies you can in this very tough journey.
+
+**SAFIAN:** Hmm. I love that. So, even as an outsider, sometimes you have to be looking for things that can be your conduits to that insider community when you need it.
+
+**AWOTONA:** Yes.

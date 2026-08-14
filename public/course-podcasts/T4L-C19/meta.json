@@ -1,0 +1,107 @@
+{
+  "course_id": "T4L-C19",
+  "course_name": "Your Digital Presence as a Transformation Leader",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "When influencers meet the influential: YouTubers go to Davos",
+      "show_name": "Radio Davos",
+      "guest": "Dr Adanna Steinacker, medical doctor turned digital creator (host of \"What Women Want to Know\"); the episode also features Jacob Beautemps and Gohar Khan",
+      "region": "Nigeria",
+      "duration_minutes": 32,
+      "url": "https://www.weforum.org/podcasts/radio-davos/episodes/youtubers-davos-breakinglab-houseofadanna-goharsguide/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Dr Adanna Steinacker's segment, about nine minutes within a roughly 32-minute three-creator episode. The transcript file holds only this segment and the spoken start and end lines are noted at the top of it. The publisher transcript has no timecodes, so the length is estimated from speech rate.",
+      "the_idea": "Adanna Steinacker was a practising medical doctor who built a following on the side, then read the back-end data on her own audience and saw that over 98 percent were women asking her personal health questions. She left clinical medicine to make that her full-time work, a show called What Women Want to Know. Her presence is not built on polish. Her stated secret sauce is relatability: she films herself getting ready, names the lipstick, says out loud how nervous she is five minutes before a panel. That honest, narrow presence got her into rooms like Davos, where she pushes women's health onto the agenda and even converts the powerful women she meets into followers. The lesson for a leader is that a genuine, specific presence can move an agenda, and the currency is relatability, not authority.",
+      "what_will_be_assessed": "The three questions all draw from Dr Adanna Steinacker's segment of this episode, about nine minutes with the host. Focus on three things. First, how her show came to be: that she was a practising medical doctor, that she read the back-end data on her own followers, and what that data told her to build. Second, what she says her presence actually got her, using the Davos example and the Global Women's Health Alliance, plus her line about converting the powerful women she meets into followers. Third, her answer about the secret sauce, the specific things she does to seem relatable rather than impressive. You do not need the German science YouTuber or the college-advice creator in the other parts of the episode.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Adanna says she looked at one specific thing before she chose her topic, and it decided the topic for her. What was it, and what did it tell her?"
+        },
+        {
+          "type": "application",
+          "question": "Her secret sauce is showing the unglamorous parts, like saying how nervous she is before a panel. Name one unpolished thing you could show in your own professional presence, and what it would signal to people."
+        },
+        {
+          "type": "challenge",
+          "question": "Adanna narrowed her presence to one issue, women's health, and it got her into global rooms. Where would narrowing your professional presence to a single issue cost you, and how would you know you had gone too narrow?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "#157: Phill Agnew - The psychology MrBeast uses to hook you",
+      "show_name": "Creator Science",
+      "guest": "Phill Agnew, host of the Nudge podcast (the behavioral science of marketing)",
+      "region": "United Kingdom",
+      "duration_minutes": 31,
+      "url": "https://podcast.creatorscience.com/phill-agnew/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 00:44 to 15:52 of a roughly 31-minute episode, about 15 minutes of listening. The transcript file holds only this section and the podcast's own speaker timecodes are kept in it.",
+      "the_idea": "This course is about being seen as credible online. Phill Agnew, a behavioral-science podcaster, explains two old ideas that decide whether people value what you put out: input bias and costly signaling. Input bias says people value a thing more when they can see the effort that went into it. Costly signaling says people trust a message more when it clearly cost the sender something, in money, effort, or foregone revenue. His examples sit outside the LinkedIn world on purpose: MrBeast visibly spending millions, a slow-motion ad that reads as expensive, a charity that raised more just by printing its letter on nicer card, Patagonia refusing to sell to firms that harm the environment. The reframe for a leader is that reputation is not built by claiming quality, it is built by paying a visible cost that a faker would not pay.",
+      "what_will_be_assessed": "The assigned section runs from about 00:44 to 15:52, where Agnew explains input bias and then costly signaling. Skip the later parts on the contrast effect and the curiosity gap. Focus on three things. First, the definition of costly signaling and the reason a costly signal is believed, in his words, plus at least one of his examples that is not about MrBeast: the billboard test, the slow-motion ad, the Ogilvy charity letter, or Patagonia. Second, the difference he draws between input bias, which is about visible effort, and costly signaling, which is about money or foregone revenue. Third, his claim, using Jay Clouse's capped-membership example, that turning down revenue can itself be a costly signal.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Agnew says a costly signal works for a specific reason, not just because it is expensive. What is that reason, and give one of his examples that has nothing to do with MrBeast?"
+        },
+        {
+          "type": "application",
+          "question": "Costly signaling says people trust what visibly cost you something. Name one honest costly signal you could send in your own field, and say what a cheap imitation of it would look like."
+        },
+        {
+          "type": "challenge",
+          "question": "If reputation comes from visibly paying a cost, what keeps costly signaling from being pure waste or theater, and where would spending to look credible actually backfire for you?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Why you don't need a personal brand (w/ Debbie Millman)",
+      "show_name": "How to Be a Better Human",
+      "guest": "Debbie Millman, designer, author, host of Design Matters, and chair of the Masters in Branding Program at the School of Visual Arts",
+      "region": "United States",
+      "duration_minutes": 37,
+      "url": "https://www.ted.com/pages/why-you-dont-need-a-personal-brand-transcript",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "The personal-branding exchange, from the host's question about finding your thing to Millman's line \"So what are you waiting for?\", roughly 12 minutes within a 37-minute episode. The transcript file holds only this section and the spoken start and end lines are noted at the top of it. The publisher transcript has no timecodes, so the length is estimated from speech rate.",
+      "the_idea": "This course helps leaders build a personal brand. Debbie Millman, who chairs a masters program in branding, says that is the wrong goal and calls it somewhat reprehensible. Her argument is that brands are manufactured meaning, directed by humans, with no soul. The moment you treat yourself as a brand you are positioning yourself, and you become a commodity. What she tells people to build instead is three things: character, reputation, and a body of work. Those are built slowly, by telling the truth, showing up, being consistent whether or not it is popular, and making a lot of work over years. She warns young people against arriving all fully formed, because a brand you lock in early removes your room to change. It is a direct challenge to the whole premise of self-positioning.",
+      "what_will_be_assessed": "This section is only the part where Millman argues against personal branding, from the host's question about finding your thing to her line So what are you waiting for. Focus on three things. First, her reason that treating yourself as a brand turns a person into a commodity, and the distinction she draws between a human and a brand. Second, the three things she says to build instead, and how she defines building character and building reputation. Third, her warning about young people coming out all fully formed, and what she says a brand you lock in early costs you over time. You do not need the later parts of the episode on gardening or fine art.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Millman says people should build three things instead of a personal brand. Name all three, and give her one-line reason that a brand makes a person a commodity."
+        },
+        {
+          "type": "application",
+          "question": "Millman defines reputation as consistency, doing things your way whether or not it is popular. Name one place you have shifted with the wind for approval, and what consistency would have looked like there."
+        },
+        {
+          "type": "challenge",
+          "question": "Millman calls treating yourself as a brand reprehensible, yet she admits brand equity is real and useful. Where do you draw the line between building a reputation and marketing yourself, and can you actually hold that line in your job?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "When influencers meet the influential: YouTubers go to Davos",
+      "show_name": "Radio Davos",
+      "region": "Nigeria"
+    },
+    {
+      "episode_title": "#157: Phill Agnew - The psychology MrBeast uses to hook you",
+      "show_name": "Creator Science",
+      "region": "United Kingdom"
+    },
+    {
+      "episode_title": "Why you don't need a personal brand (w/ Debbie Millman)",
+      "show_name": "How to Be a Better Human",
+      "region": "United States"
+    }
+  ]
+}

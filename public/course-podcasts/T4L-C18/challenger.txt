@@ -1,0 +1,46 @@
+Episode: Super Chickens & the Productivity Pecking Order
+Show: Data Radicals
+Guest: Dr. Margaret Heffernan, author and five-time CEO, former BBC producer
+Host: Satyen Sangani, co-founder and CEO of Alation
+Region: United Kingdom
+URL: https://www.alation.com/podcast/episodes/super-chickens-dr-margaret-heffernan/
+Transcript source: publisher (full transcript published on the episode page)
+
+WHAT WILL BE ASSESSED
+This course says success starts with the person leading, the transformational leader
+who is the first variable. Heffernan says the opposite about star individuals. The
+episode has timestamps, so go straight to the section saved here, roughly 29:46 to
+35:40. Focus on three things. First, the Purdue experiment: the normal flock, the flock
+of individually most productive "super chickens," what happened to the super flock after
+six generations, and the cause the scientist named. Second, how she reads that onto real
+firms, using GE's worship of the top ten percent and Microsoft's forced ranking under
+Steve Ballmer, and what it did to the top and to the middle. Third, her BBC trainee story
+and what it tells you about the standout who cannot work with people. You can skip the
+earlier parts of the episode on whistleblowers and willful blindness.
+
+RANGE USED. The full episode runs about 37 minutes. This file contains only the
+super-chickens section, roughly 29:46 to 35:40, about six minutes.
+
+  Start: Satyen Sangani, "Who your organization hires is also incredibly important."
+  End:   Margaret Heffernan, "...you are much better off investing your management
+         effort in getting the whole thing to work."
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+**Satyen Sangani (29:46):** Who your organization hires is also incredibly important. If you want to build a culture where your employees feel more connected to your organization, then make sure you're not hiring super chickens. Not following? I'll let Margaret explain.
+
+**Dr. Margaret Heffernan (30:00):** This is really about an experiment that was done by a scientist at Purdue University, who was really interested in productivity. But unlike the rest of us, or most of us, he wasn't thinking about productivity in people. He was thinking of productivity in chickens. He was an evolutionary biologist and he wanted to understand what made chicken particularly productive. So he conducted this very beautiful experiment. Chickens are very social animals. So he went through his lab/farmyard and he identified the most productive flocks. And he simply put those to one side really to watch what they did and how they behaved. He did that for six generations, but then he added a sort of different model of productivity and he identified the individually most productive chickens, so you might call these super chickens. And he put them together into a super flock.
+
+**(30:58):** So six generations passed. He comes back to see, how are these two different flocks doing? The first flock was doing brilliantly. It's more productive than ever. All the chickens are really healthy and they're producing more eggs than they ever did before. Fantastic. The super flock is a completely different story because all but three are dead. And he concluded that in that flock, the productivity of the few had been achieved by suppressing the productivity of the rest. Now, the reason I love this story is I think we've run an awful lot of organizations on the super chicken model. If you think of GE's magic medicine — and you glorify and worship the top 10 percent. And what did you find it did?
+
+**(32:01):** It did two things. It made people at the top super fractious and uncollaborative because obviously, "If I help you, Satyen, and you do better, then I fall down in the rankings. Why would I do that? No way." So it made the top bit really fractious. But you don't have to be a mathematical genius to figure it out. In this bell curve, the safest place to be is the big fat middle. So be average. Really work at being average because then you're not going to be threatened and you're not going to be glorified. You're just going to have an easy life. And many people have used that as the explanation for the kind of incredible doldrums that Microsoft went through in the late '90s, early '00s, where they ran a pretty vicious form of forced ranking, led by Steve Ballmer, a hyper-competitive individual. And what happened is huge amounts of infighting at the top. And lots of people in the middle, just sitting there and kind of waiting for the dust to settle to figure out who won, who lost, and what are we doing today?
+
+**Satyen Sangani (33:15):** Yeah. And that work that you did was so impactful on me for building the culture that we built at Alation, because countless numbers of sales executives as you can imagine in Silicon Valley, who have, as we've built the company over 10 years, have come in and said, "Look, I just need to pay my best performers the best. And I need all of my money to go to those individuals. And by the way, we need to make sure that those top people are celebrated and we've got to make sure that they're taken care of."
+
+**Satyen Sangani (33:47):** And my answer is always like, "But what are you doing with the other 80 percent? How does the work get done? And interestingly, what I found is that people who prioritize particularly through compensation, culture, and company and performance, and really view as a team sport often will produce a much better outcome, irrespective. They can be very talented, but the ones that need sort of the best pay, they need to be at the very top and need to optimize every single career decision end up being the ones that you want to work with the least.
+
+**Dr. Margaret Heffernan (34:22):** It's incredibly disruptive. And I remember when I was working in the BBC, I had a young trainee — I didn't know about super chickens at the time and boy, he was one. And I oversaw his first filmmaking, which was a catastrophe because he was so determined he was going to do everything and he knew best. That although he is surrounded by super talented people, eventually they just stopped helping him. Which, given he'd never made a film before, was quite a statement. And I remember sitting down with him afterward, when we'd had to reshoot the film and recut the film and explaining where I thought he'd gone adrift. And he turned to me and he said, "Well, Margaret, maybe one day when I'm as old as you are I'll be as nice as you are." At which point I thought, "Well, f**k off.".
+
+**(35:14):** But anyway, flash forward 20 years and I'm on the board of a TV company, and we're having this conversation about this project which is in dire straits, and it's really expensive, and it's very political. And I say, who's running this project? And it's this guy. And clearly his whole career was spent bouncing from company to company, where he clearly dazzled people, never learned to work with people and got shunted off. And so I think, personally, I'm not persuaded super chickens can change. There must be some who can. But I think you are much better off investing your management effort in getting the whole thing to work.

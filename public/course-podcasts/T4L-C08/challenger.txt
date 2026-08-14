@@ -1,0 +1,231 @@
+Episode: Do "Generations" Mean Anything? (No Stupid Questions, Episode 165)
+Show: No Stupid Questions (Freakonomics Radio Network)
+Hosts: Angela Duckworth and Mike Maughan
+Region: United States
+URL: https://freakonomics.com/podcast/do-generations-mean-anything/
+Transcript source: publisher (full transcript published on the episode page)
+Range: Full episode, about 38 minutes. This is the one episode in this course that runs
+over 30 minutes. The transcript has no timecodes, so the WHAT WILL BE ASSESSED block below
+points at spoken markers instead, and the questions are answerable from two stretches
+rather than the whole episode.
+
+WHAT WILL BE ASSESSED
+This episode runs about 38 minutes and is the one long pick in this course. It has no
+timecodes, so use the spoken markers. The questions draw from two stretches. The first is
+the opening debate, from the listener Jackie's question through the David Costanza
+generationalism quote and Mike Maughan's summary of the Pew Research Center's five problems
+with generational classification. The second is later, the David Solomon passage, where
+Angela Duckworth lands the line about more variation within a generation than between
+generations and names the danger of generationalism. You can skip the middle detour on grit
+and age, the gaming and social media discussion, and the closing bit about making friends
+of different ages, and you do not need the fact-check at the end.
+
+---
+
+MAUGHAN: Hey No Stupid Questions listeners. I want to share some big news with you. We have launched a membership program for our most loyal fans. It's called Freakonomics Radio Plus. As a member, you'll get exclusive, member-only episodes of Freakonomics Radio every Friday. In addition, you'll get ad-free versions of every show on the Freakonomics Radio Network, including No Stupid Questions. If you don't sign up, you will still get every regular Freakonomics Radio episode each week, just as you always have. But we really hope you'll consider becoming a member to help support the work you love. To sign up for Freakonomics Radio Plus, visit the No Stupid Questions show page on Apple Podcasts or go to freakonomics.com/plus. Thanks for listening.
+
+* * *
+
+DUCKWORTH: Well, we're pretty sure that Aristotle did not have to deal with gaming addiction, right?
+
+* * *
+
+DUCKWORTH: I'm Angela Duckworth.
+
+MAUGHAN: I'm Mike Maughan.
+
+DUCKWORTH + MAUGHAN: And you're listening to No Stupid Questions.
+
+Today on the show: Is "generation" a meaningful category?
+
+DUCKWORTH: Whoa! The older people who work in this company have wildly different views than the younger people who work in this company,
+
+* * *
+
+MAUGHAN: Angela, I'm so excited to talk to you today. We have an amazing question from Jackie who is from Panama. Have you ever been to Panama?
+
+DUCKWORTH: I have not been to Panama.
+
+MAUGHAN: I've never been either, but it seems to me like a place where people wear awesome clothing. Great Panama hats. This is an interesting question. Jackie is a 39-year-old millennial. She says, "Everybody talks about different generations like they're totally different people. Are there real scientific studies about how culture changes us as humans, and are we really that different?" Then she again acknowledges, "I'm a 39-year-old millennial, but I think the silent generation was the best generation." But notes: "Without the racism and other prejudices." So, are generations really that different?
+
+DUCKWORTH: So, let me weigh in and let me say at the start, I think there are different sides of this debate that actually have legitimate points. So, I don't think it's a black and white answer. Let me start with Jean Twenge — the leading academic on the side of: absolutely there are real generational differences. And, by the way, these are categories she writes about in her recent book. The title of that book is: Generations: The Real Differences Between Gen Z, Millennials, Gen X, Boomers, and Silents and What They Mean for America's Future.
+
+MAUGHAN We should note that the generations are roughly defined by year, but there's some debate even on that. But for example, boomers, roughly 1943 to '64; Gen X, '65 to '79; millennials, 1980 to 2000; Gen Z, 2001 to 2013; and then no one's named the 2014 on generation yet. Let me acknowledge I'm what's called an "elder millennial," which I hate, but —.
+
+DUCKWORTH: Yeah, there's, like, subdivisions within these.
+
+MAUGHAN: Yeah, it's so funny.
+
+DUCKWORTH: I am in the Gen X generation, right, because I was born in 1970. And you're right, Mike, there are debates about what the cutoff points are. So, Jean Twenge, whom I mentioned, she's a professor and an academic who's made her entire career really on trying to understand these differences. She has slightly different cutoffs. But let me just clarify that the greatest generation is not a chapter in Jean Twenge's book. These are Americans who were born between 1901 and , who experienced the Great Depression and World War II. I'll say that they're called the greatest generation because they're characterized as being very beyond the self in their motivation, you know, motivated by collective sacrifice. They are supposed to be very gritty, but especially civic. And then, the generation that comes after them is the silent generation. They're said to be born, you know, mid-twenties to early forties, and they are the generation that experienced the early Cold War, the Korean War. And the reason why Jean Twenge leaves the greatest generation out, I think, is just because they're, for the most part, not around right now, right? There are a few people celebrating their hundredth birthday, but in general, this country, the United States, is home to, she would say, six generations, right, beginning with the silent generation. But there is on the other side of the debate a very prominent academic, who's also studied this quite a bit. And his name is David Costanza, and he is at George Washington University. And I just want to read you from one of his very recent articles. The form of his article is "10 myths" — debunking myths — about these generations and generational differences. And myth number 10, which I think is his take-home, is called "talking about generations is largely benign." And so, let me just read you just a bit of what David writes. "Talking about generations is far from benign. It promotes the spread of generationalism, which can be considered modern ageism, just as modern racism is characterized by more subtle and implicit yet no less discriminatory or troubling racist beliefs about black, indigenous, and people of color, generationalism is defined by sanctioned ambivalence and socially acceptable prejudice toward people of particular ages. These beliefs are normalized and pervasive, reiterated across various forms of popular media and culture to the point that they seem innocuous. However, generationalism leads to decisions at a variety of levels: individual, organizational, institutional, that are harmful, divisive, and potentially illegal." It's not hard to guess where David Costanza stands on this debate.
+
+MAUGHAN: Here's the thing, I actually agree with all of that, but I think that's true of any classification. Any classification lumps all these people into a certain thing, and you say all "blank" people are "blank," right? So, everyone of this age cohort — "Millennials are," and then you can just Google: "entitled," "they don't want to wait," "they don't want to" — whatever, right? I mean, you know, the old like, "okay, boomer" trend that went wild — and I think relatively disrespectful — like, just, "Okay, boomer, get out of my way. I know what I'm —," right? So, I think that's absolutely true. The other problem — and it's interesting, Pew Research Center put out this study on the problems with generational classification, and they went through five different things. One, it's not scientifically defined. Two, basically what we've been talking about here, it's an oversimplification. It focuses on differences instead of similarities. There's tons of similarities. The thing that I thought was most interesting is it talks about how conventional views of generations carry an upper-class bias. And the example that it used was in the Vietnam War — history recalls that boomers in the 60s and 70s were deeply opposed to that, but really that was mostly boomers who were college-educated and who were responding to those surveys, but Pew notes that a lot of very high-quality surveys at the time showed that younger Americans, most of whom were not going to college, they were much more supportive of the war than older generations who'd been through previous conflicts. And so, it's easy for us to oversimplify, but when it carries this upper-class bias, it's not reflective of all. The fifth is that people change over time, of course. Let me ask this, though, because as much as we want to say there are problems with generational classifications, events that happen during your lifetime genuinely bind a whole group of people. World War II, right, you have an entire generation — again, oversimplification — but shipped off to war —.
+
+DUCKWORTH: You mean the greatest generation.
+
+MAUGHAN: Right, and I actually think there's something really powerful to the fact that, like, it was horrifying what they went through and World War II was a horrific time for the world. So, that shaped a whole generation. Then we can go to maybe what we have right now, which is where many talk about this extended adolescence of maybe Gen Z where there's a lot more living at home, a lot less focus on jobs, career, family, et cetera. And again, I'm not bashing Gen Z at all. I'm just saying there are very clear statistical differences on when people are getting married, how much they're working, how much they focus on work, versus life, versus where they're living, et cetera. But clearly that would designate that there is something to this idea of either generation or "shared experience," we could call it.
+
+DUCKWORTH: So, there is research showing that huge events like the global Covid-19 pandemic, for example, but also there's some research on the Great Depression, etc. — that they do have influence on how we think, how we feel, and how we act. And, you know, I'm somebody who studies kids a lot. Oh my gosh, the pervasive effects of Covid-19 on mental health, and academic performance, and even just going to school — which apparently kids are not doing so much right now.
+
+MAUGHAN: Wait, they're still not going to school?
+
+DUCKWORTH: Oh my gosh, I think "chronic absenteeism" from school is at just all-time record highs. And that can only sensibly be understood as some kind of after-effect of the global pandemic. Was it because of remote schooling? Was it because kids just lost the habit of going to school? Is it because they're now more anxious and depressed? Which, by the way, it's unequivocal that rates of depression and anxiety have increased because of the pandemic.
+
+MAUGHAN: And it's staggering to think what that's going to mean five, 10, 15, 20 years from now, as well. I mean, you look at the workplace, even, and church attendance, for example, as two other stats. People actually going to their workplace has gone down. Like, every company — and I've seen many who say this is more a U.S. problem than a global problem, but —.
+
+DUCKWORTH: Is it a problem or a policy?
+
+MAUGHAN: Well, I guess where I would say the problem is: I think a lot of companies are making it a policy to come back into the office and employees are kind of straight up ignoring it and saying like, "Thank you so much for your recommendation, I'm not going to do that." So, employers are wondering, if we enforce this, do we lose some of our best people? So, they're just going back and forth on what to do. Church attendance, we've seen the same thing overall across all denominations in the U.S. It hasn't quite picked up to where it was pre-pandemic. The implications that that will have generationally on social interaction, on ideation, on the things that just happen from spontaneous conversation — like, the impacts of that will be felt for a very long time. The interesting thing about that, though, is that that wasn't just a specific generation. Now, kids who are in school, of course, can all be classified by age, but the impact of Covid-19 wasn't like, oh, just, you know —
+
+DUCKWORTH: It wasn't just teenagers, right? Like, yeah. So — so that's where there's what are called "period effects" and what are called "cohort effects." And in a period effect, it really does affect everyone. Like, everybody has some after effect of having gone through the global Covid-19 pandemic. Not saying that we all exactly reacted the same way, but it kind of swept through human history and, you know, all the boats on this wave were feeling it. And a cohort effect is supposed to affect, like, a very specific group of people who were born in a certain time. So, it's like, oh, this affected the young women and men who were in their 20s when, you know, this war happened. And that's a distinction that can be made. I think that's a bit of a nuance, I think the, the bigger question is: when I see somebody who is in my company, or in my neighborhood, or in my class, or fill in the blank, and they just seem so different from me, and they're older than me, or they're younger than me, and I look at this difference, and I ascribe it to when they were born — not necessarily the category, but just, you know, how they grew up and the cultural influences — like, is it that or is it maturation? And that, by the way, is the other major theme — or the other major cause — of why somebody could be different from you is because they are older and because they've had more or less age and experience. Like, you just, you're running a company, and you send out a survey, and you ask people, "What is a good number of work hours per week?" and you get different answers from the people in your company who are age, you know, 50 to 60 than you do from the people who are age 25 to 35. If you take cross-sectional data like that and you're, like, "Whoa! The older people who work in this company have wildly different views than the younger people who work in this company," you know, that could be for a number of reasons.
+
+MAUGHAN: And of course, young people are different than older people. Now, whether that was because you happen to grow up at the same time, or just because you're all a similar age, that's — I mean, that's just like an obvious thing that it's going to be different. What's interesting about age, and experience, and maturation is — going back to this idea of the greatest generation and having to serve in World War II is there are certain things that can massively accelerate maturation, you might say. Their view of the world, their being forced to grow up because of what they experienced, is really different. And so yes on maturation, and there are things that happen in your generation that can accelerate or maybe decelerate, we might say. And so, one of the things that I think is really interesting about young people today — mostly young people — is this video-game addiction that certainly never happened in any previous generation. So, the World Health Organization calls it a gaming disorder in their International Classification of Diseases. Over 3 billion people play video games worldwide. And three to four percent of gamers, they say, are addicted to video games, which means over 90 million people suffer from this disorder. I mean, this is anecdotal, but I have a friend who just got fired from a job because so addicted to video games. Very capable human, but can't stop playing. And that's something that, again, no other generation even had the challenge to face.
+
+DUCKWORTH: Because games didn't exist, right? Like, there you could just make an argument — you're like, "Well, we're pretty sure that Aristotle did not have to deal with gaming addiction, right?" Like, I think that's actually an absolutely legitimate argument. Let me actually go back to Jean Twenge, right? You know, the reigning queen of generational differences research, at least the leading proponent of it. So, her major thesis actually has to do with technology. I'm going to read you from her book. "So, what is the root cause of these cultural changes and thus the root cause of generational differences? It should be something that keeps progressing year after year and something with a big impact on day to day life. The strongest candidate is technology. Technology and its after effects on culture, behavior, and attitudes have broken the old cycles of generations to form something novel. This model, let's call it the 'technology model of generations,' is a new theory of generations for the modern world." But I want to read you something else that Jean Twenge wrote that kind of goes against the gaming hypothesis, and it implicates another technological change. Can you guess what she hates much more than games?
+
+MAUGHAN I would assume social media.
+
+DUCKWORTH: Bingo!
+
+MAUGHAN It's such an easy thing to hate. And understandable, by the way. I get it.
+
+DUCKWORTH: Yeah, and there's debate about this too, right? But let me just read you Jean Twenge's, um, little essay called "Lock Screens," which she published at the beginning of this year. So, she begins, "Are some types of screen time worse than others? A few years ago, my colleagues and I tried to answer that question. After analyzing data from 11,000 teens, we found that general internet use and social media were more strongly linked to depression than playing games or watching videos was. In other words, not all screen time is created equal. That makes the job of parents a little easier. You don't have to cut your child off from technology completely. Instead, focus on postponing or limiting social media with all of its pressures, comparisons, and addictive algorithms."
+
+MAUGHAN My favorite story of this: my cousin had posted something to Instagram, and her daughter commented on it, and then my cousin commented back, "How in the world do you have your phone? It's supposed to be locked up in the kitchen right now?" Right? And it was, like, just this hilarious back and forth, because they were trying to be good parents. Look, overall, going back to Jackie's question, I think that there are a lot of things we've talked about. And I think, Angela, you and I would both love to hear from our listeners, about whether they think there's any validity to this concept of generations, and how maybe that's impacted their lives, either at work or at home. So, record a voice memo in a quiet place, with your mouth close to the phone and email it to us at nsq@freakonomics.com and maybe you'll hear your voice on a future episode of the show.
+
+Still to come on No Stupid Questions: Mike and Angela debate whether older people are grittier than younger people.
+
+DUCKWORTH: You're like, "Come on by the time you're 53, you're just, like, taking cruises and drinking Metamucil."
+
+* * *
+
+Now, back to Mike and Angela's conversation about generational differences.
+
+DUCKWORTH: So, let me weigh in, and let me go to grit. So, I have this graph of grit scores and age. And grit is on the vertical axis, and age is on the horizontal axis. And there's a diagonal line from the bottom left, you know, where people are the youngest in my sample, so these are young adults, and they are the least gritty, to the top right, where the oldest people in my sample, like 60s and older, you know, they're the grittiest, on average.
+
+MAUGHAN: Wait, so this is saying that grit has a linear relationship with age? The older I get, the grittier I'll be? That doesn't make any sense to me.
+
+DUCKWORTH: Why doesn't it make sense to you?
+
+MAUGHAN: Because I would have assumed —.
+
+DUCKWORTH: Oh, you, you would have assumed people get less gritty as they move through their, like, 20s, 30s, 40, 50s, 60s?
+
+MAUGHAN: No, I would just assume like — well, by the time I'm, like, in my 60s, 70s, it's, like, I'm kind of done fighting for things. Like, my parents, who are amazing and they are in their, yeah, mid-70s, they are travelling the world like nobody's business at an exhausting rate. You know, my dad plays pickleball four times a week, and tennis twice a week, and golf, and whatever.
+
+DUCKWORTH: So, he's energetic, but you wouldn't say he's, like, gritty, like, single-minded focus on a challenging goal?
+
+MAUGHAN: Yeah, I mean, I guess that's where I would say like — "passion and perseverance for a long-term goal," as my friend Angela Duckworth has, I think, defined grit. Like, I don't know that there's that same, like, he's trying to become the best golfer or the best pickleball player. He's just enjoying the life he's built at this point.
+
+DUCKWORTH: So, you would look at that graph and you'd be like, "Really?"
+
+MAUGHAN: Yes. Because I feel like earlier in one's career is when you are — I guess, here's what maybe I should think through. So, I'm sure there are 8 million different varieties of this, but Clayton Christensen, the Harvard Business School professor who I, uh, love — he always talked about "emergent" versus "deliberate" strategies. Early in one's career, we go through kind of these emergent strategies, which he I think — maybe this is just my way of interpreting — compared to dating. Like you date a bunch of things, you try a bunch of different jobs, internships, experiences, trying to figure out what you want to do. And then, at some point you have to engage in a deliberate strategy. So, for him, he had a — you know, almost several different careers before he decided, later in life, I think he was late 30s, when he decided to go into academia and make that his thing. And he said, "At that point, I made that my deliberate strategy." So, continuing our dating analogy, that's when you get married and say, "Okay, I'm going to go all in on one person. I'm not going to keep searching the field." Then I maybe would guess that you can engage with more grit because it's less experimental, less finding out what you want to do.
+
+DUCKWORTH: But aren't you arguing in favor of this graph?
+
+MAUGHAN: Yeah, no, that's what I'm saying. I'm trying to understand the graph.
+
+DUCKWORTH: But what I'm trying to understand — before you understand this graph — is like why you were surprised. You thought that people in their 50s and 60s would be less gritty than people in their 20s?
+
+MAUGHAN: Because I feel like at that point you've probably become the master of your domain and therefore —.
+
+DUCKWORTH: You would be less gritty?
+
+MAUGHAN: I don't know, or riding out your success at that point?
+
+DUCKWORTH: I think what this reveals to me is that you think I'm ancient at age 53. You're like, "Come on by the time you're 53, you're just like taking cruises and drinking Metamucil."
+
+MAUGHAN: No, yes, maybe, I don't know. I'm saying, on average — most people are not Angela Duckworth. I think, on average, a lot of professors maybe have tenure. And they're not, like, trying to prove anything anymore.
+
+DUCKWORTH: Okay, well, the data are, as I said, bottom left, the youngest, the least gritty, top right, the oldest adults in my sample, it's just going up, right? So, that's what the data look like. It's a diagonal line. There are lots of people whose data would not fit on the diagonal line, but that is the trend, right? Age and grit go hand in hand. And let me say that I think what Clay Christensen said about emergent strategies at the beginning of your career and deliberate strategies as you progress and you're more of an expert in your domain, I think that's exactly right and I think it also explains this trend. So, one of the reasons why I think that younger people score lower on the grit scale — this questionnaire that I use to measure grit in my research — is that they are exploring. They're figuring out whether they want to be a D.J., which apparently is a thing now. I didn't even know that was a thing. People are seriously considering like, should I go to McKinsey or should I be a D.J.? Anyway —.
+
+MAUGHAN: You can make a lot of money as a D.J. You can also fail miserably as a D.J.
+
+DUCKWORTH: I had to get a student to even explain to me what it meant. I was like, "Putting together a playlist? Like, Spotify?" And they were like, "Not quite." So anyway, there's all kinds of career paths, and there is this phase of your life that you are no way certain of where to go, and sometimes that's also called the exploration period. It's also called sampling. So, you're trying things out. I mean, just take the example of high school, right? So many of us tried out for a team. We didn't like it, or we got cut then we did something else, you know. And there's good reason to believe just logically that all animals earlier in their life sample more, because you just don't know, right? Like, how else are you going to figure out from the great buffet of life what you want to have seconds on. You got to taste different things. And then, as you move forward in time, and with life experience, you're like, "Oh yeah, I tried out for track. I did it for a season and I know I don't want to do it again. Great." And when Clayton Christensen talks about moving into deliberate strategies, it's equipped with the knowledge that you have gained from the school of life. And then you can, you know, using his analogy, get married. And by the way, I use the same exact analogy in my classes with students. So, all this to say that that is one reason why the graph might look like that. Now, that, to me, is not a generational effect, right?
+
+MAUGHAN: Just age. Just growing up. Maturity.
+
+DUCKWORTH: Yeah. Maturity is what — scientists who study this systematically, they call it the maturity principle. Apparently, according to research that's longitudinal, not cross-sectional — so you follow the same people, and you're like, "How are they going to change?" And people get more conscientious as they get older. People get more, basically, nice, but the term is "agreeable." And they get much more emotionally stable, so less, kind of, like, super highs, super lows.
+
+MAUGHAN: Well, that makes sense. Okay, can I blow your mind?
+
+DUCKWORTH: Yes, please.
+
+MAUGHAN: Speaking of D.J.s, there is a very prominent C.E.O. who moonlights as a D.J.
+
+DUCKWORTH: Oh gosh, this is like, can I guess, right?
+
+MAUGHAN: Sure, go for it.
+
+DUCKWORTH: A prominent C.E.O. — male or female?
+
+MAUGHAN: He's a male C.E.O.
+
+DUCKWORTH: Well, gosh, since I just discovered that D.J.ing was a thing and not making a playlist on your phone, um — I can't even name a C.E.O. who I think might plaus— I have no idea. Who is it?
+
+MAUGHAN: David Solomon is the C.E.O. of Goldman Sachs. And he moonlights as a D.J. Yes. It's not like he just does these, like, small little parties for friends and family. David Solomon has performed at, like, huge events like Lollapalooza with 400,000 people. And he's, like, a D.J. there. And he's C.E.O. of one of the largest financial firms in the world.
+
+DUCKWORTH: Yeah, Goldman Sachs is like, I don't know, it's, like, where all these kids I teach at Wharton want to go — want to go work.
+
+MAUGHAN: Well, and now they're gonna go to work there and be a D.J.
+
+DUCKWORTH: Now they really want to go, because they're like, "What? David Solomon is that cool?" So, let's use David Solomon to illustrate something that's super important. I think, that in a generation, right, however you want to define the beginning and the end of the millennial generation, or the Gen Zs, or whatever — within that generation, there's more variation than there is across generations. And by the way, I don't think Jean Twenge would disagree with any of this. I guess, what generation do you think David Solomon would be? Let's Google him.
+
+MAUGHAN: He's 61 years old, born in 1962.
+
+DUCKWORTH: Okay, so he would be a baby boomer, yes? Ish. I mean, the tail end of the baby boomers, right before Gen X.
+
+MAUGHAN: Yeah. He's a very young baby boomer.
+
+DUCKWORTH: Okay, so here is the danger of generationalism. You're like, David Solomon is a baby boomer. Immediately, you have all these maybe inaccurate stereotypes of what David Solomon is going to be like. It's probably not going to occur to you that David Solomon could be a D.J. playing at Lollapalooza. So, I think the, the other cold, hard scientific fact to reckon with is that even though there are differences across history that have to be attributed to culture because your genes — in the human population sense — like, haven't changed across that relatively short span, you also don't want to fall into the trap of generationalism where you're like, "Oh, you know, baby boomers," because there is more variation within a generation than there is between generations.
+
+MAUGHAN: Angela, I want to talk briefly here in closing about a piece of advice that I heard from Arthur Brooks, who wrote a book called From Strength to Strength, where he was just talking about how we have to change as we grow older and move from what was our strength — think of, like, an athlete. They're really good at playing until they're a certain age and then they need to move to a different strength. But if you try to keep being a professional athlete in your 70s, in professional basketball that will never work, right? So, moving from strength to strength. He said that while he was prepping for writing this book, one thing that came to him was this idea that he wanted to develop friendships with people that were different than he was and how he has actively tried to curate friendships with people who are both 20 years older than he is and 20 years younger than he is. And I took that to heart, because I thought it was a really fascinating idea, because so often our friends are the people who are around us in similar life situations. They're either your kids' friends' parents that you see at all these different sporting events, or dance performances, et cetera, or they're people that you work with who are in a similar situation. And so, I purposely tried to say, who can I curate as friendships? Not just like, oh, mentors or whatever, but friends. And so, I sit on the board of this charitable organization with this woman, Addie Fuhrman, who is turning 90 next year. And Addie and I will go out to dinner, or go grab lunch. And I love hearing Addie's perspective and just learning from someone —now, to be clear, she is not 20 years older than I am. She is, you know, 50 years older than I am.
+
+DUCKWORTH: Even better.
+
+MAUGHAN: Yes, and I've developed that friendship. At the same time, I've spoken previously, you know, of, of my life coach Vinny. He is 15 years younger than I am.
+
+DUCKWORTH: Vinny's 15 years younger than you? I didn't know that.
+
+MAUGHAN: Yes, but he brings such a unique perspective.
+
+DUCKWORTH: And a wise perspective.
+
+MAUGHAN: And you know I teach a class at a university, nothing like you do, but the thing that has been most surprising to me — we have 350 students every semester — is how much life it brought into me to see all these young people, not tainted by cynicism, excited to go into the world, eager about their prospects, trying to figure out life. I had not had exposure to that group of people or that age group for a long time until we started teaching. And it brought so much more vitality in life to me in the same way that Addie has brought more vitality in life by being friends with someone who's about to turn 90. And so, I don't know about all the debate on are generations important.
+
+DUCKWORTH: Frankly, you don't care.
+
+MAUGHAN: Well, I mean, I think it's important to talk through, but like, overall, I think the most beautiful thing that's happened to me in the last, you know, a few years since hearing Arthur Brooks talk about his experience was I said, "I want to do that too." Now, if you're 30, maybe don't go 20 years younger. That feels a little weird, so don't do that. But based on your age, the idea of, like, friends that are, you know, of a different age than you are, I think has added a lot of richness to my life that I had not anticipated and something I'm super grateful for.
+
+DUCKWORTH: Okay, first I want to wish Addie happy 90th birthday in advance. And just last Sunday I was sitting next to a sparkling wit named Olga, and she was celebrating her 97th birthday. So, not to make you feel like I'm comparing Addie, but Olga's also, you know, a wise and wonderful woman. I think this is such a good idea — you know, Arthur Brooks, who's, I should say, a friend, I think he's just such a good engineer for this stuff. Like, he takes the research, and he metabolizes it, and he's like, "Oh, I know what to do," right? Not just what to think, but what to do. So, this idea that you could take this research and say, "Yep. There's definitely evidence that there's some cultural change over the last 10 years, last 50 years, last 100 years. Like, cultures change. And that's real." You could also say, like, "Yep, there's also this maturity principle. Like, we are a product of our life experience." And then you say, "I know what to do with it. I'm going to sit next to someone in church, or at work, or at pickleball, that is from a different generation." And whether they are different because of what they experience individually in their lives, or whether it's a kind of cultural thing, I'm sure you're going to learn a lot. And I think that's probably the best prescription to take from all of this, that maybe we should mix it up and hang out with people who are younger, but not too young to be weird, and absolutely people who are older.
+
+MAUGHAN: Yes, and maybe, if you're lucky, you can go to a D.J.'d concert from your boss.
+
+DUCKWORTH: Yeah. David Solomon has personally invited you. All of us.
+
+This episode was produced by me, Rebecca Lee Douglas. And now here's a fact-check of today's conversation:
+
+Today's question was from listener Jackie in Panama. Mike jokes that Panama seems like a place where people wear "awesome clothing — like Panama hats." But the wide-brimmed hat is actually an Ecuadorian creation. Many of the workers who built the Panama Canal used these Ecuadorian hats — also known as toquilla straw hats or jipijapa hats — to protect themselves from the sun. The name "Panama hat" spread in 1906 when President Teddy Roosevelt was photographed wearing the style while overseeing construction of the canal.
+
+Later, Mike lists intervals of time that roughly define generations. He says that millennials were born between 1980 and 2000 and members of Gen Z were born between 2001 and 2013. He was referencing a timeline published in 2014 by National Public Radio. As Mike and Angela discussed — there are debates regarding the timeline for each generation, and those intervals may change in the coming years, but today, the Pew Research Center identifies the cutoff for millennials as 1996 and Gen Z as 2012. He also says that the generation born after Gen Z has yet to be named. However, marketers and cultural commentators have already adopted the name "Generation Alpha" — after the first letter in the Greek alphabet — to refer to Gen Z's successor.
+
+Then, Angela references a paper by The George Washington University professor David Costanza entitled "Generations and Generational Differences: Debunking Myths in Organizational Science and Practice and Paving New Paths Forward." While Costanza contributed to this paper, the lead author is Cort Rudolph, a professor of psychology at Wayne State University.
+
+Finally, Mike says that 3 to 4 percent of gamers — or over 90 million people — suffer from video-game addiction. But according to a 2020 systematic review and meta-analysis of studies on gaming addiction, the real number is estimated to be even higher. The paper concluded that about 1.96 percent of the global population suffers from the disorder. That equates to over 154 million people. That's it for the fact-check.
+
+Before we wrap today's show, let's hear some thoughts about last week's episode on imposter syndrome.
+
+Anonymous: Hi, Mike and Angela. So, I often have imposter syndrome, and it was especially intense during undergrad. Basically, I went to a college that a lot of people think is a good school, and for a lot of my classmates and myself, many of whom were also people of color, or women, we would have the imposter syndrome that we were the admissions mistake and didn't deserve to be there. But right now I work in College Admissions, and I read the life stories and accomplishments of the students who apply. And now, with this new perspective, I look back on my own college process and realize that I earned my way there, and that I deserved to be there, and so did all my other classmates, and that we were not mistakes. Imposter syndrome is still something I'm dealing with every day, but it's also something I know I can get over too. Thanks guys!
+
+That was a listener who would like to remain anonymous. Thanks to them and to everyone who shared their experiences with us. And remember, we'd love to hear about whether generations are meaningful categories! Send a voice memo to nsq@freakonomics.com, and you might hear your voice on the show!
+
+Coming up next week on No Stupid Questions: How do you recover from burnout?
+
+DUCKWORTH: You are working yourself to the bone. You can't give any more than you're giving, and yet there's no return on investment.
+
+That's next week on No Stupid Questions.
+
+* * *
+
+No Stupid Questions is part of the Freakonomics Radio Network, which also includes Freakonomics Radio, People I (Mostly) Admire, and The Economics of Everyday Things. All our shows are produced by Stitcher and Renbud Radio. Lyric Bowditch is our production associate. This episode was mixed by Jasmin Klinger. We had research assistance from Daniel Moritz-Rabson. Our theme song was composed by Luis Guerra. You can follow us on Twitter @NSQ_Show and on Facebook @NSQShow. If you have a question for a future episode, please email it to nsq@freakonomics.com. To learn more, or to read episode transcripts, visit Freakonomics.com/NSQ. Thanks for listening!
+
+MAUGHAN: I'm the idiot who, when I was 18, was like, "Duh, mom and dad, I'm 18 years old, I know what I'm doing." You know what I mean?

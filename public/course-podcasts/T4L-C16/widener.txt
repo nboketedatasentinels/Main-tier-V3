@@ -1,0 +1,148 @@
+Episode: Moving Millions: How Hajj is Organized (In the Newsroom, TRT World)
+Show: In the Newsroom
+Guest: Soud Hyder, who manages digital strategy, audience and technology at TRT International, and who has himself performed the Hajj
+Host: Ezgi Toper
+Region: Saudi Arabia
+URL: https://www.trtworld.com/audio/214740c469ca
+Transcript source: publisher (full transcript published on the episode page, TRT World / TRT Global Podcasts)
+Range: full episode, approximately 23 minutes
+
+WHAT WILL BE ASSESSED
+The episode is short, around 23 minutes, so listen to the whole thing. The questions
+draw from the delivery mechanics, not the spiritual meaning. Focus on three stretches.
+First, how the crowd is sized and sorted before anyone arrives: the country quota rule
+of roughly one pilgrim per thousand Muslims, the national committees and the long
+backlogs, and why pilgrims are camped in Mina by nationality. Second, the commercial and
+planning side: the agents, and Soud's point that hotels and services are booked a full
+year ahead because last-minute capacity is scarce and expensive. Third, what happens when
+the plan meets the crowd: moving people in timed steps, the danger at the Stoning of the
+Devil when a group backtracks, the need to react in real time when crowds move off-plan,
+and the crush and fire disasters that forced changes such as fireproof tents. You can note
+the technology (the Nusuk app, cameras, wristbands) as support, but the questions are
+about the human logistics.
+
+The publisher transcript carries no timecodes, and the runtime above is estimated from the
+length of the transcript, so it may be off by a couple of minutes. The episode was
+published for Hajj 2025.
+
+---
+
+**SOUD:** Everyone does the same thing. The rich person, the poor person, the person who has status in society, the person who doesn't have status, the big communities, the small communities, the older Muslims or people who are born Muslims, the new Muslims, doesn't matter. Everyone kind of is on the same playing field, doing the same thing. And that's the beauty of the Hajj.
+
+**EZGI:** My name is Ezgi Toper, and this is "In the Newsroom", a TRT Global Podcasts production, where I take you around our newsroom as I chat with my colleagues and go beyond the headlines.
+
+Every year, millions of Muslims converge in and around Saudi Arabia's Mecca for the Hajj pilgrimage: one of the five pillars of Islam. For five intense days, a vast sea of people move in unison through a series of sacred rituals across holy sites – all within a tightly scheduled window.
+
+This year Hajj begins on the evening of June 4th and continues until June 9th, 2025 But how does such a monumental event run smoothly, year after year? How do you manage over 2 million people who speak different languages… doing the same thing at the same time in the same place?
+
+In this episode, I'm speaking with my colleague Soud Hyder, who manages digital strategy, audience and technology at TRT International. He himself has performed Hajj and helps me understand how a spiritual journey becomes a logistical triumph, and how the pilgrimage has evolved into a billion-dollar industry for Saudi Arabia.
+
+**EZGI:** Can you give us a sense of the sheer scale and complexity involved in organizing Hajj every single year?
+
+**SOUD:** It is I think the biggest event for the Muslim world in terms of concentration of people. It's religious obligation for Muslims and Muslims are spread out across the world, from China to different parts of Asia, the entire West, Africa and the Middle East. People know Islam originating from the Middle East, but it's much bigger than the Middle East.
+
+It's an event that culminates in more than a million people meeting in a very compact space, and people coming from different parts of the world. I think the complexity actually isn't necessarily the number of people, but it's different cultures, different nationalities, people who are used to different systems, people who speak different languages. And making sure that they're all able to march in one direction, because the rituals are very systematic is a complex effort and this has been done from prophetic times till now.
+
+**EZGI:** The rituals of Hajj go back to 2000 BCE and historically, the journey was arduous, often taking months or even years. But during the Ottoman Empire period, the Ottomans invested heavily in roads, security, and services for pilgrims.
+
+For example the famous Hijaz Railway was built to transport pilgrims from Damascus to Medina. The invention of the steamship was also central in the 19th century – the total number of pilgrims per year rose from an estimated 112,000 participants in 1831 to some 300,000 in 1910.
+
+Then, when the kingdom of Saudi Arabia was established, the Saudi government took control of the Hajj and made large-scale improvements to infrastructure and coordination.
+
+**SOUD:** So the Saudi authorities or the Saudi government has a ministry specifically for Hajj. And their responsibilities is to coordinate the Hajj affairs end to end. Now, this is in line with whatever domestic issues or priorities the government would have at any given point in time.
+
+There's a lot of infrastructure works that have been going, mostly in Mecca, expansion of the mosque. But even in the plains of Arafa, where the Hajj culminates and in Mina, where the camps of the pilgrims are, there have been improvements. There have been improvements in infrastructure. Now there's a rail service. There never used to be a rail service. This is relatively new.
+
+**EZGI:** So take me through the process like before you even get there. There's something called international quotas. What exactly are they and how do they, alongside visa systems and the application process in general work as part of this crowd management before you even get to Hajj?
+
+**SOUD:** Different countries have different quotas, and it's all dependent on what the demographic of Muslims looks like in that country. So countries that don't have many Muslims, obviously the quotas are very low. But if you look at countries like Türkiye or Indonesia or Malaysia, that are predominantly Muslim, they have higher quotas, but the quotas are not enough because these are countries that have more than 50 percent of the population who are Muslim. So they have huge backlogs of pilgrims who would want to go for Hajj, you know. Some people wait 10 years, others 15 or 20.
+
+The National Hajj committees or representatives will figure out how to coordinate internally. The Saudis just give quotas and the national coordination committees are the point of contact in processing pilgrims. So you know if you come to Türkiye, you'd have to go through Diyanet.
+
+I think part of the rationale in reducing the numbers is having manageable numbers that can go through these restrictive, restrictive spaces. So that the crowds can be managed effectively just in case anything goes wrong.
+
+**EZGI:** As Soud explains, Saudi Arabia assigns Hajj pilgrimage slots on a country-by-country basis. Generally speaking, the rule is around one pilgrim per 1,000 Muslims in a country's population. So, the highest numbers of Hajj pilgrims are from Indonesia, with Pakistan and India coming in second and third.
+
+But other factors can also affect how many slots a country may receive. For instance, a high number of Muslims live in Iran. However, the political relationship between Iran and Saudi Arabia remains tense, resulting in a lower designated quota than might otherwise be expected.
+
+**EZGI:** And you brought up agents, agencies. Can you explain how that factors into the process as well?
+
+**SOUD:** In the Arabic world they call them "Mutawwif", you know, people who help the pilgrims and like the local hosts and do the logistics and coordination and whatnot. This has been going on for thousands of years, over a 1000 years. And it's been passed on from generation to generation. So these are local people, mostly from the Meccan families who would assist people, the travellers coming in from abroad. Remember, in the olden days, people used to go by through caravans, so camels, horseback, or just walking. So it was a little bit of a treacherous journey.
+
+What has happened is the agents have been institutionalised. It's not a free service. People have to make money, as much as some things might be subsidised, but there's a cost to it. Inflation is affecting the Saudi economy like any other economies. It's primarily a market driven economy and whatnot. So there is a cost to it, and as if you look at even the cost of Hajj, it is being affected by inflation over time, and it's just the nature of globalisation and the global world.
+
+**EZGI:** So these agents, who were once family-based guides helping pilgrims across deserts, are now formalised into an industry. It's estimated that the cost of performing Hajj for a pilgrim is about $3,000 to 20,000 per person depending on where they are coming from.
+
+When we consider different currencies and economies, many of these pilgrims often save for a lifetime to make this sacred journey.
+
+For Saudi Arabia, the benefits are huge. It's estimated they earn an average of $10 to 15 billion a year from the Hajj and another $4 to 5 billion from the eight million visitors making the Umrah. In fact, pilgrimage is the second largest share of government revenue after hydrocarbon sales.
+
+**SOUD:** The scale at which the Hajj is operating is some of this work has to be outsourced to entities or people who are willing to provide those services and the market decides who is the better agent. So the agents and the national coordination committees or councils definitely will lobby for the scale of services and whatnot. But it all boils down to management, management of cash or capital. Investing it and getting the right — and access to capital — to get the right services.
+
+Remember, people are planning this, A year in advance. And the hotel bookings open up immediately after one Hajj is done, you're opening up for the next Hajj. So if you have access to capital to start booking out these rooms, accommodations or services and whatnot, you're better off than people who are coming in at the last minute when prices are inflated. So there's a whole commercial aspect to it and I think it's in this day and age, it's almost impossible to to run away from.
+
+**EZGI:** One place where you really see the impact of all that planning and cost is in the tents in Mina, which are a central part of the Hajj experience.
+
+They are designed to house millions of pilgrims for several days, during one of the most important stages of the pilgrimage. But as Soud explains, not every tent is equipped with the same infrastructure.
+
+**SOUD:** Now, these tented camps, they're different classes. Obviously, money is a factor, and these are services that are being provided. You can get A class services, you can get services in the middle, and you can get very basic services. So depending on which grade you've been processed with, that will dictate, which type of camp, and it's usually how many people are on the tent, the type of bedding, you know, it's not, I don't think you can, you can call it a glamping experience.
+
+It's a spiritual obligation, and you go there for spiritual purposes. So even the A grade services will be relatively simple. And the whole point actually, it's communal. And what they try to do is they try to house people from the same countries or regions together. The main point, and I would think the main rationale for that is you put people who have similar cultures together, so that it's easier to control them, it's easier to give instructions, because remember, not everyone speaks Arabic, not everyone speaks English. The other people who are speaking very different dialects or very unique languages. So you want to put them with people who are like them, so that it's much easier to pass information, much easier to coordinate.
+
+**EZGI:** When you're moving over a million people through tight spaces on a strict timeline, clear communication becomes critical. If instructions aren't understood or followed, it can become dangerous very quickly. The most devastating events over the years have been crowd crushes, especially during the Stoning of the Devil ritual in Mina.
+
+In 1990, a stampede killed over 1,400 pilgrims. But 2015 was the deadliest in Hajj history, when a stampede claimed more than 2,400 lives.
+
+Fires have also posed a threat. In 1997, a tent fire resulted in over 340 deaths, prompting authorities to introduce fireproof tents.
+
+All of these tragedies highlight the immense logistical and safety challenges involved in organising the Hajj.
+
+**SOUD:** Look, you're moving more than a million people. You can't just move them at once. And these areas are very close to each other. And yes, there has been increased improvements in infrastructure. There is a train service, but people have to be moved in in steps. So what the authorities will do is they'll come up with some sort of a timetable, they'll monitor, and sometimes they have to react in real time because crowds are moving in a specific, in a different direction and whatnot.
+
+So the ones that are able to walk, can walk, the ones that need to be shuttled, there'll be shuttle services either through the the train or the the buses and it's mostly buses.
+
+The most dangerous part and the most difficult part of Hajj is the stoning rituals, which happens now on the day of 10th, which is the day of Eid, going forward, and there are three pillars that need to be stoned, and what happens is. You know, the pillars are actually symbolic. So it's like they're symbolic of stoning the the devil. But people get super emotional that they're getting cleansed and fighting the devil and whatnot. So first it's just managing people's emotions, but it's a very tight area.
+
+But people are moving in one direction. So imagine having a huge 12 lane highway and it's just like a sea of people. Now, what usually causes issues is a group of people who have not followed instructions or there's a little bit of commotion, or what happens, and they try to track back, because you have thousands and thousands of people who are just kind of at the back. So imagine having like a huge traffic jam of human traffic going, and once there's a deadlock and the crowds are not controlled, this commotion causes fear, it causes panic, and it causes behaviours that are very difficult to model.
+
+**EZGI:** But there's only so much you can manage with instructions and physical barriers. Which brings us to the role of technology. There's crowd control tech like cameras, drones, and smart tracking to prevent stampedes. Navigation tools like mobile apps and digital maps to guide pilgrims. Health monitoring like wearable devices and disease tracking to keep pilgrims safe. And infrastructure tech to beat the heat.
+
+When you're there, what is the tech infrastructure you're also seeing? We're we're we're hearing about AI systems and surveillance cameras, smart wristbands.
+
+**SOUD:** It starts from the quarter, allocating the quotas, you know, that's an algorithm that is running, and then checking which countries' quotas have been fulfilled and whatnot, and then planning for them. The surveillance has to be there for crowd control.
+
+Recently, they've been using an app called Nsuk, which is twofold, like, it's a guide of the rituals, it's an informational app, but you also use it to book appointments to visit the holy mosque and whatnot and your appointments are linked to your visa number. That allows them to actually predict traffic a day or a few hours in advance or ration traffic in critical areas.
+
+The smart wristbands, I think is experimental. It's not open to all pilgrims. You're getting another data point. All of this is about data, even the cameras, you're just estimating how many people do you have, and is there a way to influence these people to move in a certain direction. And the most critical thing is how do you react if things don't go to plan.
+
+During the summer months, it's extremely hot. So they have to deal with public health issues, they have to deal with people getting fatigued. Heat stroke, making sure that you have enough health facilities to provide for these people.
+
+So there's a lot of other things that need to be factored in, especially on public health. So that they usually require people to take certain sets of vaccinations and whatnot. And I think these are unavoidable because you're getting people from different places.
+
+**EZGI:** Soud reminds us that beyond the data points and logistics, you're still dealing with human beings. People from vastly different cultures, with different habits and expectations. And that's where another kind of preparation kicks in: emotional and spiritual readiness.
+
+**SOUD:** When you go for Hajj, I usually tell people you need to go with loads of patients, bags of patience, right? There's certain times where you would lose personal space and agency to personal space where, you know, people are getting super crowded, people are Pushing because in their culture, maybe it's OK to push or people are spitting on the ground, in their culture it's OK to spit on the ground.
+
+**EZGI:** So you have that open-mindedness when in this environment as well?
+
+**SOUD:** Yes because it's like it's sort of homogenous society. It's like it's a there's a lot of heterogeneity and it's like at scale like some random person from some random village and they've got like a different way of doing things.
+
+But the beautiful thing is everyone does the same thing. The rich person, the poor person, the person who status in society, the person who doesn't have status, the big communities, the small communities, the older Muslims or people who are born Muslims, the new Muslims, doesn't matter. Everyone kind of is on the same playing field, doing the same thing. And that's the beauty of the Hajj.
+
+As much as Hajj has become easier over the years, part of the point is to teach people patience and acceptance of diversity and this universal notion of being Muslim, but then again, accepting that people can be very different.
+
+You know there's a verse in the Quran that says, you know, "wa jaʿalnākum shuʿūban wa qabā'ila litaʿārafū" we created you in tribes — tribes and different communities — such that you may be able to know each other. So diversity is ingrained in the Quran. It's part of the identity of a Muslim.
+
+And it's that one event, and one of the few events in the world that neutralises everyone — resets actually — puts everyone back to the starting point. And so that you have a slightly — I wouldn't say slightly — a different outlook to humanity.
+
+And if we're able to take these applications to our politics, to our organisation, to our management, to how we deal with a lot of other things, maybe the world would be a better place.
+
+**EZGI:** I love that. Thank you so much Soud for joining us.
+
+**SOUD:** Welcome, thanks for having me.
+
+**EZGI:** The logistical machine behind Hajj, involving governments, private agencies, health services, transportation systems, and real-time data, is truly exemplary. It's a living network that adapts to new challenges, be it heat, congestion, delays or millions of individual needs. And, it works. Not perfectly, but predictably enough to move over two million people together, in motion, with purpose.
+
+And it offers valuable insights for managing other large-scale events around the world such as major sports tournaments or music festivals. By applying similar technologies and coordination strategies, organisers can improve safety, efficiency, and the overall experience for millions of participants everywhere.
+
+But, as my colleague Soud reminds us, that while systems may keep the crowds moving, it's patience and compassion for one another that hold it all together. Thanks for tuning in. Until next time, I'm Ezgi Toper, and this was "In the Newsroom".

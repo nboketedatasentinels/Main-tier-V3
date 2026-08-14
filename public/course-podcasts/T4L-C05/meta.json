@@ -1,0 +1,107 @@
+{
+  "course_id": "T4L-C05",
+  "course_name": "Resilience Under Sustained Transformation Pressure",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Arianna Huffington, Media Maven",
+      "show_name": "The Tim Ferriss Show",
+      "guest": "Arianna Huffington, founder of The Huffington Post and founder and CEO of Thrive Global",
+      "region": "United States",
+      "duration_minutes": 80,
+      "url": "https://tim.blog/2018/02/02/the-tim-ferriss-show-transcripts-arianna-huffington/",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately the final third of an episode of about 80 minutes, roughly eighteen to twenty-one minutes of listening. The transcript file holds only this section, the darker-period story and the recovery. The spoken start and end lines are noted at the top of it, and since the publisher transcript carries no timecodes the timing is estimated.",
+      "the_idea": "Huffington built The Huffington Post at a pace that could not hold. Two years in, working around the clock and raising two daughters on her own, she collapsed at her desk, broke her cheekbone, and woke up to a diagnosis of burnout. Her line is that she would have told you she was fine that morning, because she had forgotten what fine felt like. The rebuild was not a productivity trick. She went back to old philosophy, to Marcus Aurelius, and to a plain idea: the point is not to never lose your balance, it is to notice fast and get it back. That is the course concept lived out by someone who ignored every warning sign until her body sent the last one.",
+      "what_will_be_assessed": "This is the leader's own account of hitting a wall and rebuilding. Huffington was two years into building The Huffington Post, working around the clock and raising two teenage daughters on her own, when she collapsed from exhaustion at her desk, broke her cheekbone, and needed four stitches. The assigned listening is the stretch where the host asks her about a darker period, she tells that story, and then she describes how she climbed out of it. Focus on three things. First, the collapse itself: what she was doing in the weeks before, what happened that morning, and the diagnosis the doctors gave her after two weeks of tests. Second, her point about the wakeup call: that if you had asked her that morning she would have said she was fine, because she had forgotten what fine felt like, and her claim that people can make small changes before they hit the wall. Third, how she rebuilt: the turn back to philosophy and to Marcus Aurelius, the idea of a retreat inside your own mind, and the reframe that the goal is not to never lose your balance but to regain it quickly. You do not need the earlier parts of the episode.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "What was Huffington doing in the weeks right before she collapsed, and what was the diagnosis the doctors reached after two weeks of tests?"
+        },
+        {
+          "type": "application",
+          "question": "She says that morning she would have called herself fine, because she had forgotten what fine felt like. Name one thing in your own week you have started treating as normal, and what it might be telling you."
+        },
+        {
+          "type": "challenge",
+          "question": "Her lesson is that you cannot stay perfectly centered, you can only regain your balance quickly. Where would 'just recover faster' be the wrong answer for a team under constant pressure, and what would have to change instead?"
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "For Baseball's Rick Ankiel, Losing His Pitching Ability Led To An Unusual Comeback",
+      "show_name": "Fresh Air",
+      "guest": "Rick Ankiel, former Major League Baseball pitcher who rebuilt his career as a power-hitting outfielder, author of the memoir The Phenomenon",
+      "region": "United States",
+      "duration_minutes": 37,
+      "url": "https://www.npr.org/2017/04/24/525369133/for-baseballs-rick-ankiel-losing-his-pitching-ability-led-to-an-unusual-comeback",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately the final 15 minutes of a 37 minute episode, the closing section after the second break. The transcript file holds only this section, the recovery and the comeback. The spoken start and end lines are noted at the top of it, and since the publisher transcript carries no timecodes the timing is estimated.",
+      "the_idea": "Ankiel was a gifted young pitcher who lost the ability to throw a strike at the worst moment, on national television in a playoff game. The yips followed him for years. He tried a sports psychologist, then tried pitching drunk to quiet the anxiety, and it worked once and then failed. The turn came when he quit pitching, felt relief instead of loss on the drive home, and rebuilt himself as a power hitter, an almost unheard of switch at the major league level. The point is that the comeback started only after he stopped trying to force the old self back.",
+      "what_will_be_assessed": "The yips are what happen when a skilled performer suddenly cannot do the basic thing their body has always known how to do. Ankiel lost the ability to throw a strike at the worst possible moment, on national television in a playoff game, and it followed him for years. The assigned listening is the last stretch of the episode, from the host's recap after the second break to the end. It is about the recovery, not the cause. Focus on three things. First, what the sports psychologist Harvey Dorfman told him about adversity and about whose fault the yips were. Second, the vodka he drank before games: why it worked the first time, why it failed the second, and what Dorfman meant by 'it's not real.' Third, the day he told his manager he was done pitching, what he felt on the drive home, and how he rebuilt himself as a hitter. You do not need the earlier parts of the episode.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "What did the sports psychologist Harvey Dorfman tell Ankiel about whose fault the yips were, and what did he mean when he said the vodka was 'not real'?"
+        },
+        {
+          "type": "application",
+          "question": "Ankiel only recovered once he stopped forcing his old self back and let himself become something new. Name one role or habit you are holding past its point, and what a switch as big as pitcher-to-hitter would look like for you."
+        },
+        {
+          "type": "challenge",
+          "question": "His turning point was quitting the thing he was famous for and feeling relief, not failure, on the drive home. When is walking away from an identity the healthy move, and when is it just dodging the hard work of fixing it?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Healing 2.0: What We Gain from Pain",
+      "show_name": "Hidden Brain",
+      "guest": "Eranda Jayawickreme, psychologist at Wake Forest University who grew up in Sri Lanka during its civil war",
+      "region": "Sri Lanka",
+      "duration_minutes": 49,
+      "url": "https://www.hiddenbrain.org/podcast/what-we-gain-from-pain/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately the first 16 minutes of a 49 minute episode, the opening section up to where the host says they will turn to Sri Lanka after the break. The transcript file holds only this section. The spoken start and end lines are noted at the top of it, and since the publisher transcript carries no timecodes the timing is estimated.",
+      "the_idea": "This course hands people tools to grow through hard setbacks. Jayawickreme pushes back on the growth part. He grew up in Sri Lanka during its civil war, then noticed how sure Americans were that suffering makes you stronger and better. He calls it the superhero trope. He cites two studies where the people who reported growing after trauma were often doing worse, not better, because reporting growth and actually growing are not the same thing. His warning is that pushing growth on someone who is still hurting can make the hurt heavier. It is the built in check on a course about bouncing back.",
+      "what_will_be_assessed": "This course hands you tools to grow through hard setbacks. Jayawickreme pushes back on the growth part. The assigned listening is only the first section of the episode, up to the point where the host says they will turn to Sri Lanka after the break. It runs roughly the first sixteen minutes. Focus on three things. First, what he calls the superhero trope, the belief that hard times reliably make people stronger and better, and where he says it comes from. Second, the two studies he cites: the Fraser study of students, and the study of Dutch soldiers sent to Iraq, and what each one found about people who reported that they had grown. Third, his split between perceived change and real change, and why reporting growth can go together with worse mental health, not better. You do not need the rest of the episode.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Jayawickreme cites two studies, one of students and one of Dutch soldiers sent to Iraq. What did each one find about the people who reported that they had grown from the hard experience?"
+        },
+        {
+          "type": "application",
+          "question": "He separates perceived change from real change. Think of a setback on your team that everyone now calls a growth moment. How would you tell whether people actually grew or are just telling the expected story?"
+        },
+        {
+          "type": "challenge",
+          "question": "If pushing the growth story on someone who is still hurting can make things worse, how should a resilience course like this one talk about growth at all? Name one thing you would change about how you coach someone through a setback."
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Arianna Huffington, Media Maven",
+      "show_name": "The Tim Ferriss Show",
+      "region": "United States"
+    },
+    {
+      "episode_title": "For Baseball's Rick Ankiel, Losing His Pitching Ability Led To An Unusual Comeback",
+      "show_name": "Fresh Air",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Healing 2.0: What We Gain from Pain",
+      "show_name": "Hidden Brain",
+      "region": "Sri Lanka"
+    }
+  ]
+}

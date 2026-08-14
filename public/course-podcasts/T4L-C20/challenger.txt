@@ -1,0 +1,157 @@
+Episode: Episode 230 - Prof. Robert Frank: Success, Luck, and Luxury
+Show: Rational Reminder
+Guest: Robert H. Frank, economist at Cornell University, author of "Success and Luck: Good Fortune and the Myth of Meritocracy"
+Hosts: Benjamin Felix and Cameron Passmore
+Region: United States
+URL: https://rationalreminder.ca/podcast/230
+Transcript source: publisher (full transcript published on the episode page)
+
+WHAT WILL BE ASSESSED
+This transcript is the middle stretch of the interview, on luck and meritocracy. In the
+publisher's transcript the hosts' questions are in bold and the plain paragraphs are
+Professor Frank's answers. Focus on three things. First, his argument for why the most
+talented, hardest-working person usually does NOT end up the winner in a big
+competitive market, and the runners study he cites (his line "but for luck, she
+wouldn't be there"). Second, the advice he has given MBA students for years about which
+job offer to take, and the reason he gives about expertise, engagement, and flow.
+Third, what he says about who high-functioning teams actually admit, and why being a
+credit-claiming "jerk" backfires. You can skip the Porsche-versus-Ferrari thought
+experiment and the tax-policy passages in the middle.
+
+RANGE USED. The full episode runs about 75 minutes. This file contains only the middle
+section assigned to learners: approximately 38:00 to 64:00, about 26 minutes.
+
+The publisher transcript carries no inline timecodes. These figures are estimated from
+the timestamps in the episode's own show notes and may be off by a few minutes. Use the
+spoken lines as the real markers.
+
+  Start: Host, "Fascinating. How likely is the most talented, or skilled person to get the best outcome..."
+  End:   Robert Frank, "...I'd caution kids to be careful about their idolatry."
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+**Fascinating. How likely is the most talented, or skilled person to get the best outcome in what we find here, a highly competitive market?**
+
+If you do get to be the best at what you do, and it's something that lots of people value all around the world, that's an enormous prize. If you're the best novelist, if you're the best sprinter, if you're the best home-run hitter, if you're the best goal scorer, that's a huge prize. Naturally, there are strong incentives for people to compete for it. If you have any of these big tournaments, where the winners are selected, there are literally hundreds of thousands of contestants.
+
+If you ask how many young kids in the United States want to be shortstop for the New York Yankees, I would be astonished to learn that the number was less than a million. It's a win-win process. They get cut at every stage, but still a very large number by the time you get up to the final rounds. There are natural limits on how good someone can be. There's only so many hours in the day you can work. There's only so many IQ points we've ever observed in human being. There's only so much talent can be housed in an individual.
+
+If you look at an arena where it's mostly meritocratic. Everybody agrees, it's the fastest runner who wins. Even in arenas like that, a group of European physicists and I published a paper last year talking about the role of luck in the 100-meter competition. The role of luck is very small in that competition, but it's on the order of a couple of percent. Suppose the role of luck amounts to nothing. That is to say very, very little, then you've got scores, hundreds, thousands of people clustered near these upper limits on talent and effort. They're all working as hard as they can. They're all as talented as they can possibly be. Find that most talented, hardest working person in that group. Let's call him am Mr. X. Is he lucky or not? Let's say, luck doesn't matter much. It counts for 2% or 1% for total performance. Is he lucky or not?
+
+Well, we chose him because he was the most talented and hard-working. He might be lucky, he might be unlucky. On average, he'll have average luck. There's going to be not one, not two, but a whole bunch of people breathing down his neck in terms of their talent, plus effort values. Some of them will be unlucky. Some of them will have average luck, but there'll be at least some in that group that were really lucky. Let luck count for only 1%. That's all it takes for luck to have pushed that person ahead of the guy who was most talented and hardworking. Does talent and hard work matter? Yes. I think, people have misunderstood me to be saying that those things don't matter. Of course, they matter. These are very competitive markets.
+
+Luck matters, too. In fact, luck is essential. I think, for the winner to realize that, but for luck, she wouldn't be there is a very healthy realization for the winner to have. This fiction that it's all my doing. I'm entitled to every nickel that came my way, is one of the most damaging points of view that people who are in the winner's circle can take to the public arena.
+
+**How did you measure luck in that paper with the runners?**
+
+Yeah, that was complicated. It was a question of looking at some win scores, and looking at natural variation in their own scores. They have good days and bad days. Yeah, these were much smarter people than I am, who were my co-authors on that paper. You have to have them on, if you really want to know how they did it, but it looked right to me what they did.
+
+**You've co-authored papers with some fascinating people, like Tom Gilovich, Ben Bernanke with the textbook and the physicist that you just mentioned, that's fascinating.**
+
+Yeah. That's good luck, to have been able to collaborate with people who can do things so much better than you can.
+
+**Yeah, super interesting. From the example you just gave from that paper, it's like, even if luck makes a small contribution to outcomes, it can explain a large portion of the difference in outcomes between the highest performers. Is that –**
+
+Yeah. For luck, that winner wouldn't have won. Somebody else would have won, who would have been, essentially, just a whisker less good. I don't mean to be harsh for the people who say, "I did it all myself." If you succeed in one of these competitive arenas, it's true, you did work hard. You came in early all those days. You stayed late. You had to vanquish people who were really good. You solved a lot of really difficult problems. To look back on your path and say, "I did it." That's a totally cogent interpretation of the data. But you shouldn't overlook the fact that there are all these others, people who did it too, why didn't they win? They weren't as lucky as I was.
+
+**Yeah. I think in your book, in the appendix of your book, I think it even – you do simulations and find that it's actually fairly unlikely for the most talented, or deserving whatever person to get the best outcome.**
+
+Yeah. Those are just hypothetical simulations, but they capture the point we're talking about. Performance depends on talent. It depends on effort in equal measure in the examples we use, and on luck. On luck, only very slightly. In those simulations, whoever has the highest score wins, and in almost a vanishingly small proportion of cases, was it the person with the highest talent and effort score who actually won. Almost always, that individual was edged out by somebody who had almost as high talent and effort scores and was luckier.
+
+**Yeah, that's the key is that they were still talented and they still exerted effort.**
+
+No, I'm not saying that these people who won, "Oh, they just lucked out." No, that's not the point. They worked hard. They were good, but they were also lucky.
+
+**Yeah, okay. How does this, what we're talking about now, that that role of luck, or the perception of meritocracy maybe, how does that interact with the other things we've talked about, like the consumption trends and inequality?**
+
+I think, what's been true in the United States, less in Canada, but it's been true in most of the developed world. You wouldn't want to feel that you're not vulnerable to this influence. What's been true is that as incomes have concentrated at the top, the recipients of those high incomes have adopted it as their cause to lobby the political system to reduce their tax rates. They've been very successful at doing that over the decades, the tax rates.
+
+When I was graduating from college from Georgia Tech in 1966, the tax rate was 70% on the highest earners. It was 92% in World War II, so it had already fallen significantly. It fell as low as 28%. It's now in the mid-30s here, and the Republican Party is trying to reduce it further. The tax rate is where we get the revenue to spend on the things we don't have enough of. We don't have enough investments in the electric grid to make it renewable. We don't have enough bike lanes to wean ourselves off of cars. We don't have enough, in general, in the public sphere, I don't think it's a good idea just to print money and buy those things. We ought to pay for them.
+
+The people who could pay for them, the people who are the winners in the high stakes markets, those are the people with the real resources, they could pay for them, and still have the same relative purchasing power as before. Still buying the same penthouse apartments with the good views as before. Really, no skin off their nose to cooperate here. They're the people who are standing in the way of these policies. It's through their influence on the political system to have lower taxes on them, rather than the taxes we would need in order to pay for the public goods that would benefit not just you and me, but them, them too. They're driving their Ferraris on the same pothole ridden roads we do.
+
+**Can you talk about that example from that you have in the book of the, would you rather have the Porsche on the nice road, or the Ferrari in the –**
+
+It's just a thought experiment. I think, thought experiments are actually useful. I went to a philosopher's talk when I was just starting out as a professor at Cornell. He used a couple of thought experiments to launch his talk. It really put me in the mood for the points he was trying to make in his talk. I later read about it and said, the brain absorbs information more efficiently if blood is already flowing to the part of the brain that's good at processing. When you think about a thought experiment in the domain of the subject that the speaker wants to call attention to, you can actually understand the argument better. Yeah, the thought experiments. What is the issue that you'd like Illuminated? I've gotten a lot of thought experiments. What's the specific thing you're curious about?
+
+**I think that the example that you give in the book is useful. Just in thinking about the tradeoff that you're talking about, where if the roads are terrible, wealthy people might not be so happy in their very expensive cars.**
+
+Okay, so I'll use that one. Imagine that there are two worlds, a high-tax world and a low-tax world. In the high-tax world, wealthy drivers have less money to spend on cars. Of course. No need to argue about that. Let's imagine that in the low-tax world, which I imagine being the US, the wealthy drivers with low tax rates buy the Ferrari Berlinetta. It's cost a third of a million dollars. It's a fabulous car by anyone's reckoning.
+
+The people in the high-tax world don't have that much money. They are forced to make do with the lowly, Porsche 911 Turbo. It's retailing for roughly $150,000. Now, in fact, there's not much difference in the absolute quality levels of those two cars, if only because by the time you get up to the Porsche 911 Turbo, that's a car that has virtually every design feature that has any measurable impact on handling and performance already incorporated into it.
+
+Just for the argument's sake, I suppose the Ferrari is better. The point is, if it is better, it's not much better, it's only slightly better. Then the question is, we've got the two worlds. High tax, low tax. Ferrari drivers in the low-tax world. Porsche drivers in the high tax. Who's happier? The Ferrari drivers, or the Porsche drivers? Everything else is the same in the two worlds, suppose initially. That is a question that we can't answer according to any real data that has been studied.
+
+What we know is that the most defensible answer is that they'll be equally happy. Why? Because there's really not much difference in measurable performance that we can detect between the two cars. In each case, the main thing that we know matters, the drivers of their cars will have good reason to believe they're driving the best cars available. The Porsche in one case and the Ferrari in the other case. Okay, so they're equally happy. That immediately ought to be a clue that something's inefficient because the Ferrari drives are spending three times as much, but more than two times as much. The two worlds won't be the same in all of the respects. Here, I'll invite people to adapt the most critical view of government waste they can. The government exists primarily for the purpose of crowning welfare queens and building bridges to nowhere. They've wasted money with such gusto that it's hard to find anything useful that they do.
+
+Okay. Well, then you look at government budgets. You say that most of the expenditures are on medical care, retirement payments, defence, and other things that most voters seem to want to keep in the budget, so it's not all waste. A lot of what they spend is on infrastructure. Then the thought experiment becomes, which would be a happier set of wealthy drivers. The Porsche drivers in the high-tax world driving their Porsches on mirror-smooth highways that are well-maintained with the higher tax revenues, or the Ferrari drivers in the US who are driving their Ferraris on these roads riddled with foot-deep potholes every 10 feet. That's not an interesting question. Does that prove anything? Well, no. Not really. I think if you couldn't remember the gist of the argument that will help summon the logic of it for review later when you'd want to think about it.
+
+**Are winner-take-all markets a good thing for society?**
+
+Yes, and no. Let's suppose, you have a 10-year-old with a life-threatening illness, and you live in a small northern Ontario town. Would you want to consult with the best local practitioner on what to do about your child's illness? Or, would you rather have the clinic in your town wire the X-rays and the scans and the data to the world's leading expert on this rare disease, who happens to be a practitioner in London? That's not a hard call for me and probably not for you either.
+
+The idea that we can buy from the best producers in every sector more now than in the past, is in general, a good thing. Maybe it's not a huge advantage, as it might be in the case of a life-threatening illness, but it's better to buy from a good producer than one that that does good. That part's good. The downside is that it's made an enormous contribution to growing income and wealth inequality. That has had enormously destructive effects on society, as we've seen.
+
+The sad thing is that we don't have to really choose. We would still have vigorous competition to be in the winner's circle, in those winner-take-all markets. We would still get high-quality producers serving broader markets, even if they had to pay much higher levies on their outsized earnings. We could pay for the public goods that would actually make a difference in people's lives. It's just a shame. How should I feel about this? I tend to get feeling low about the fact that this is a very simple argument. I've done my level best to reduce it to its clearest possible terms, and I've tried to put it in front of as many people as possible. Yet, year in and year out, we don't do anything about it.
+
+When I think about the world that way, I feel like an abject failure. Why couldn't I persuade people to do this simple step that would benefit everybody? I was complaining about that to a friend, old friend who visited this summer. He said, "Well, think about it this way." I don't know if you have anything like this in Canada, but we have the carried interest loophole here in the United States. Your listeners probably are very familiar with it. There's absolutely no defence of it taxing that income differently from the way we tax other incomes. Everybody agrees that that's true, and yet we can't eliminate it. So he says, "If you want to feel bad, then adopt your tax." Think about that.
+
+**How do you think individual people, to bring it back to that level again, should behave differently to find individual success in a winner-take-all environment?**
+
+Yeah, that's a great question. I'm not going to say that material success doesn't matter. Obviously, it does matter. If you don't have a certain amount of money, you can't keep your kids out of the bad schools, of which there are many, unfortunately. There is pressure to achieve material success. For many years, I've taught MBA students and it's been a challenge to me to persuade them not to assume that the highest paying job offer they receive is the one they ought to accept.
+
+There's an old issue in economics, ever since Adam Smith's day really, that the less pleasant the job is, the more they have to pay you to get you to take it. If the factory is really smelly, in one case, and it's in a pleasant environment in another and everything else is the same, wages will be higher in the smelly factory than in the sweet smelling one, just because nobody wants to work in the smelly – this is not a controversial point.
+
+I say, think about your job offers that way. The amount of money they pay you depends on many things, not just on how good you are, but on how unpleasant most people find the things they want you to do. I personally would find a job in some of the industry positions they take just complete suicide. I would not be able to get out of the bed in the morning if I had a job like that. Many of them temperamentally seem better suited to jobs like that. What we know is true is that everybody cares about the conditions on the job and the jobs that tend to pay better are the ones where they ask you to do something a little bit questionable.
+
+Nobody wants to go home at the end of the day saying, "I really screwed people today." I shouldn't say nobody, but very few people take any pleasure in that. What I tell students is to try to think of a time when you were really engrossed in a task, where you found the task so rewarding that you didn't want to quit doing it. Then suddenly, the day had expired. You weren't even aware it was the end of the day coming up. Can you think of a time like that? That students will think about it and make as – yeah, it was when I did X or Y.
+
+I said, if you can possibly find a job that has you involved in a task like that, grab it. Never mind what they pay you. Here's the logic that I base that recommendation on. There's a big literature on expertise. The debate is does it take 2,000 hours to become a real expert at something? Or is it 10,000, or maybe even 20,000 hours? We don't know. Maybe it's different in different areas. It's really hard to become an expert. You got to focus for a very long period of time to master the skills that will let you say credibly, "I'm really one of the best people who does this thing."
+
+If it's a job you don't like, what are the odds you're going to be able to do that? You're never going to be the best at what you do if you're working at a job you don't like. I wouldn't say never, but it's very unlikely that you will. The way markets are trending, it doesn't matter if half the world wants to buy what you're good at, or a third of the world, or even a 10th, or a 1000th of the world. If a small slice of the world cares about this thing you're good at, it's now so easy to hook up those people with the people who are best at what they're producing that one thing, that you can be a winner in that kind of a market.
+
+If you are wondering, you can make a lot of money, which would be nice, most people think. If you don't end up a big winner, what's the downside? You will have spent your career doing a task that you found utterly absorbing. That's the advice I give.
+
+**That's awesome advice. Awesome. We talked to a Canadian astronaut, Chris Hadfield for an episode of this podcast, and he gave the exact same advice. For people who have big dreams, like wanting to be an astronaut or something like that, he basically said exactly what you just said.**
+
+Well, clever guy, this astronaut.
+
+**Given the pursuit and the 10,000 hours you talk about and given the importance of luck, how should people stay motivated to work hard?**
+
+Well, if you're doing a task that you find really engaging, I will make a fool of myself trying to pronounce his name, Mihaly…
+
+**Csikszentmihalyi.**
+
+Csikszentmihalyi. Okay. He was the person whose work is associated with this concept, the psychologists call flow, where you're so absorbed in what you're doing, you're completely unaware of the passage of time. If you're engaged in a task like that, there's not an issue of keeping motivated. I find working on a book like that. It's very hard to get started on a book. Once I've gotten started, the very first thing I want to do when I get up in the morning is read what I wrote yesterday, then I find things I don't like about it and I start tinkering with it. Then I'm off editing and adding to the chapter I was working on. Then suddenly, it's time for a glass of wine in the evening. I've had that happen. Had the day go by.
+
+If you're engaged in a task like that, it's not an issue of being motivated, you just want to do it. There are a lot of jobs that don't offer much scope for engagement like that. I'm intensely cognizant of the fact that I've been lucky to be able to work in a field that offers opportunities for engagement like that. There are degrees of that available. I mean, you can take pride in all sorts of tasks that you're engaged in, and doesn't have to be something fancy, or technical, or highfalutin.
+
+**What do you think about that people, it's become less popular, I think, in the last few years. But for a while, this idea of financial independence, retire early. Work a job that you hate for the least amount of time possible, so that you can be financially independent after that. How does that relate to what you're talking about?**
+
+I've known a lot of students who have gone that route. There's an expression many of them use. They call it golden handcuffs. They earn these high salaries, and then they buy a 15,000 square foot house in Greenwich, Connecticut. They've got the Ferrari and the Lamborghini in the garage, and the kids are all going to private schools with tuition of $40,000 a year. I can't afford to retire early and go do what – I've become a prisoner of this lifestyle that I bought my way into. I think that's a risk to be on the lookout for. I don't say, there aren't people who haven't done it. If you feel confident you can do it, who knows? Maybe that's a good step.
+
+**What would you say to people who are currently and again, I think that the advice that you gave earlier is phenomenal. Likewise, with what we were just talking about before the financial independence question. What would you say to people who are currently working in a job that they don't find states of flow and that they don't enjoy?**
+
+We've seen what has been called the great resignation in the US labour market during the last year and a half, or so. A lot of people are quitting. I think, the kinds of jobs they've been quitting have been jobs that you might describe as ones that offer minimal opportunities for engagement like that. In most cases, they've moved to jobs that didn't quit, not knowing what they were going to do next. They usually quit because they had something better lined up. I think, keep looking. Keep experimenting.
+
+Being willing to move is part of that, if it's not possible to raise your kids in the manner that you think best for them in the current environment, because of external pressures, there are other environments that may offer a different set of constraints.
+
+**How would you approach the subject of luck and meritocracy with young kids?**
+
+Somebody asked me after my Success and Luck book appeared. Well, if luck is so important, why don't parents tell their kids how important it is? I think that question answers itself. If you imagine the temptations that confront kids growing up, not just kids, human beings, there's a big literature on the temptation of the early reward, hyperbolic discounting, there's a lot of different names for it. Even pigeons, it was studied first in pigeons. A pigeon could peck the red button and get a small reward right away, or wait 15 seconds and peck the green button and get a much, much bigger reward. The pigeons couldn't wait. They pecked the early reward. And so, ha, ha, dumb pigeons. Then they started doing experiments like that with MIT students. The MIT students chose and exactly –
+
+The human nervous system seems to be constituted in such a way that we're very attentive to the immediate costs and benefits we confront, and only vaguely attentive to things that are in the more distant future. Maybe in the environments we evolved in, perhaps conditions were so extremely threatening, that if you didn't focus exclusively on the immediate threats you faced, you were going to get eaten, or killed anyway. That was a pretty good algorithm for allocating your attention. In more secure environments we live in now, that's a recipe for failure. Passing up the small early reward in order to claim the much larger later reward is plain as day the right strategy in so many different decisions that we confront. With this stone age nervous system that we've inherited, it's very hard to execute that.
+
+I would say, if you told kids that you should work as hard as you can, and develop your skills, but remember, you're not going to win unless you're lucky, many would hear that message differently. They would say, "Oh, I'm not going to win anyway, unless I'm lucky. Maybe I'll just sit back and wait for lightning to strike and I'll win that way." I would tell kids, "It's all up to you, kid. If you don't make it, you got nobody to blame but yourself, blah, blah, blah." At the same time, try to make them feel grateful for the advantages that kids in our family have going out into the world that so many kids all over the world simply lack. If you're born in a country that's rich, you're so incredibly lucky, compared to 99% of the world's citizens.
+
+**What do you think about the way that successful – often financially successful people are idolized, or emulated by people who hope to achieve similar financial success?**
+
+There is a literature on who we emulate. The consistent finding is we look up, not down. There are people all around us. Some of them are doing well. Others are floundering. Who should I imitate? Well, that sounds like an easy question. People who are doing better than me, may be doing better than me because they're lucky, or they had rich parents. On average, they're going to be better people to imitate than people who are doing worse than me. Yeah, I think that's a natural tendency to look up to people who have succeeded. I wouldn't necessarily want to discourage that, but I would –
+
+You want your kids to know that even though there are these spectacular examples of individual success, the most vivid forms of success on a large scale across big populations, come from being a member of a high-functioning team. If you're not a member of a team like that, or if you're a sole practitioner, or if you're even worse, if you're on a bad team, you're not going to succeed.
+
+Now, the high-functioning teams since everybody wants to be on one, they can afford to be extremely selective in their choice of whom they admit to their inner circle. What kind of people are they looking for? They're not looking for people who claim credit for things they didn't really deserve, or people who will lie about what they did on the job just to look good. Ever since the beginning of time, we've had pretty good instincts about who the truth tellers are and who the liars are, even when you can't really have concrete evidence. Just something we can spot about people, and that's another subject I worked on earlier in my career. We're pretty good lay judges of character.
+
+Being a jerk, wanting to succeed only for the sake of succeeding means probably nobody's going to want you on their team if they already have a good team. I'd caution kids to be careful about their idolatry.

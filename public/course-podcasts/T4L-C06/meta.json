@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C06",
+  "course_name": "The Leader Your Transformation Team Actually Needs",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "How to turn your dissatisfaction into action",
+      "show_name": "TED",
+      "guest": "Yvonne Aki-Sawyerr",
+      "region": "Sierra Leone",
+      "duration_minutes": 13,
+      "url": "https://www.ted.com/talks/yvonne_aki_sawyerr_how_to_turn_your_dissatisfaction_into_action",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "happyscribe (machine transcript of the TED Talks Daily episode)",
+      "the_idea": "Aki-Sawyerr led community behaviour change at the worst point of the 2014 Ebola outbreak in Freetown. The line that matters for this course is not 'turn anger into action.' It is what a Ugandan WHO doctor told her: you will not succeed until you are talking to people under the mango tree. Her Western Area Surge Plan turned that into a rule, talk with people, not at people, and work through trusted community influencers instead of loudspeakers. That is empathy and relationship management under the worst pressure there is, from a leader who also had to hold her own fear, right down to washing her feet in chlorine after stepping in a collapsed man's fluids. It is the course's people-first message with the comfort taken off.",
+      "what_will_be_assessed": "The three questions come from the 2014 Ebola stretch, roughly 04:19 to 07:35 in the file, plus her framing about dissatisfaction at the start and finish. Focus on what the Ugandan WHO doctor said the response needed, the plan she wrote over one weekend and its rule for reaching communities (talk with people not at people, community influencers not loudspeakers), and the moment on the road when she stepped in the collapsed man's fluids and washed her feet in chlorine. You do not need the Freetown waste statistics or the tree-planting and mayoral-campaign section near the end. Note the file is a machine transcript, so a few names are garbled, but the lines these questions rest on are clear.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "What did the Ugandan WHO doctor tell Aki-Sawyerr the Ebola response needed, and what rule about communicating did she then write into her Western Area Surge Plan?"
+        },
+        {
+          "type": "application",
+          "question": "Her plan dropped loudspeakers for trusted community influencers so people would actually believe the message. Name one channel your transformation pushes messages through now, and who your 'under the mango tree' equivalent would be."
+        },
+        {
+          "type": "challenge",
+          "question": "She says her own anger and dissatisfaction were the engine that made her act. Name a moment when leading your team straight from your anger would make things worse, and say what she does that keeps hers from being pure reactivity."
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "A hostage negotiator on how to resolve conflict",
+      "show_name": "TEDxValparaisoUniversity",
+      "guest": "Karleen Savage",
+      "region": "United States",
+      "duration_minutes": 10,
+      "url": "https://www.ted.com/talks/karleen_savage_a_hostage_negotiator_on_how_to_resolve_conflict",
+      "transcript_file": "widener.txt",
+      "transcript_source": "singjupost (verbatim transcript of the TEDx talk)",
+      "the_idea": "A hostage negotiator says the highest-stakes conflicts are not on rooftops, they are at your own kitchen table, where there is no backup SWAT team. Her move is the opposite of what most leaders do under pressure. Instead of digging in and proving you are right, get more curious about the other side's story. She names five skills negotiators use, says curiosity is the one that ties them together, and gives a blunt drill: ask someone questions for fifteen minutes and add no prompts, no approving noises, no faces, because the moment you signal your opinion people change their story. For a course about difficult conversations, it reframes empathy as disciplined curiosity, learned in a job where getting it wrong gets someone killed.",
+      "what_will_be_assessed": "The talk runs about ten minutes. The questions come from three things: the five skills she names and the one skill she says holds the other four together, the three questions she tells you to ask yourself about your last bad fight, and the fifteen-minute 'just questions' drill with its caveat about giving no prompts. Her origin story, her husband's brain injury, is fair game as context. You can skip the Die Hard opening jokes.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Savage names five skills and says one of them holds the other four together. Name that skill, and give the three questions she says reveal how curious you really were in your last fight."
+        },
+        {
+          "type": "application",
+          "question": "Her fifteen-minute drill only works if you add no prompts, no 'I understand,' no approving noises, no face. In your last hard conversation with a team member, which prompt do you reach for by habit, and what does it do to their story?"
+        },
+        {
+          "type": "challenge",
+          "question": "Savage says the fix in conflict is to stop insisting you are right and get curious about the other side's story, even letting it into the solution. Name a transformation situation where 'let their story become part of the solution' is the wrong call, and why."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Merve Emre on Emotional Intelligence as Corporate Control",
+      "show_name": "Re:Thinking with Adam Grant",
+      "guest": "Merve Emre",
+      "region": "United Kingdom",
+      "duration_minutes": 54,
+      "url": "https://www.ted.com/pages/merve-emre-on-emotional-intelligence-as-corporate-control-transcript",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher (TED transcript on ted.com)",
+      "listening_range": "Full episode, about 54 minutes. This is the one episode in this course that runs over 30 minutes. The transcript has no timecodes, so the what_will_be_assessed field points at spoken markers instead, and the questions are answerable from two stretches rather than the whole hour.",
+      "the_idea": "This course says emotional intelligence is the thing that separates transformation leaders who make it from those who don't, and treats it as a skill you can build. Merve Emre argues the concept itself is suspect. She traces it back to the sociology of emotional labour and says recoding labour as an individual aptitude hides the real thing, the relationship between an employer and an employee who is required to show certain feelings. Her sharper charge is corporate control: during the pandemic, companies handed out mindfulness and stress training instead of childcare, job security, or the firing of abusive bosses, a band aid that is also a finger in the wound. Adam Grant fights her on it and defends EQ as a real, learnable skill, which is exactly the argument this course needs put to it.",
+      "what_will_be_assessed": "No timecodes here, so use the spoken markers. Two stretches carry the questions. Early on, the origin-and-definition critique: emotional intelligence recoded from emotional labour (the sociologist is Arlie Hochschild), and how that hides the employer-employee relationship. In the middle, the corporate-control argument and the pandemic example, mindfulness and stress training in place of childcare, course releases, job security, or firing abusive bosses, the 'band aid... finger to poke in the wound' line, and Grant's 'ban psychological solutions to organizational problems.' Her closing swap of 'intelligence' for 'labour' and 'relationships,' and Grant's defence of it as a skill, matter too. Skip the marshmallow study, the charisma tangent, and the structure-versus-individuals debate.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Emre says emotional intelligence was recoded from an older idea studied by a specific sociologist. Name the idea and the sociologist, and give the pandemic-era example she and Grant use of EQ working as 'corporate control.'"
+        },
+        {
+          "type": "application",
+          "question": "Emre calls EQ training a band aid that gets workers to swallow resentment about their actual conditions. Name one place your transformation is asking people to 'manage their emotions' where the honest fix is structural, not psychological."
+        },
+        {
+          "type": "challenge",
+          "question": "Emre wants to drop 'emotional intelligence' for 'emotional labour' and 'relationships,' saying the skill framing turns a social problem into an individual one. Grant answers that it is a real skill people value and can build. Name where treating EQ as structure only, with no individual skill to work on, would leave a transformation leader with nothing to actually do on Monday morning."
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "How to turn your dissatisfaction into action",
+      "show_name": "TED",
+      "region": "Sierra Leone"
+    },
+    {
+      "episode_title": "A hostage negotiator on how to resolve conflict",
+      "show_name": "TEDxValparaisoUniversity",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Merve Emre on Emotional Intelligence as Corporate Control",
+      "show_name": "Re:Thinking with Adam Grant",
+      "region": "United Kingdom"
+    }
+  ]
+}

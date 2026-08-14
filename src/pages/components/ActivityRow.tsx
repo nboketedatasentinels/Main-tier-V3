@@ -25,6 +25,7 @@ import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
 import { PodcastSeriesPanel } from '@/components/courses/PodcastSeriesPanel'
+import { CoursePodcastSeriesPanel } from '@/components/courses/CoursePodcastSeriesPanel'
 import { ProgrammeComponentPartsPanel } from '@/components/courses/ProgrammeComponentParts'
 import type { ProgrammeComponentType } from '@/config/pillarProgrammeComponents'
 import type { Pillar } from '@/types/pillar'
@@ -143,6 +144,11 @@ interface ActivityRowProps {
    */
   programmePillar?: Pillar | null
   /**
+   * Month journeys: catalogue course slug for that month — drives native
+   * course podcast packs (watch / transcript / test).
+   */
+  catalogueCourseId?: string | null
+  /**
    * Month 3 / 6 / 9: Capstone / Case Study / Practical are graded Pass/Fail
    * (no checklist points).
    */
@@ -170,6 +176,7 @@ export const ActivityRow = ({
   pendingCount = 0,
   weekClaimComplete = false,
   programmePillar = null,
+  catalogueCourseId = null,
   programmePassFail = false,
   isActionInFlight,
 }: ActivityRowProps) => {
@@ -617,13 +624,21 @@ export const ActivityRow = ({
               </HStack>
             )}
 
-            {activity.id === 'podcast_workbook' && (
-              <PodcastSeriesPanel
-                activity={activity}
-                currentWeek={currentWeek}
-                onPointsAwarded={onRefreshLedger}
-              />
-            )}
+            {activity.id === 'podcast_workbook' &&
+              (catalogueCourseId ? (
+                <CoursePodcastSeriesPanel
+                  activity={activity}
+                  currentWeek={currentWeek}
+                  catalogueCourseId={catalogueCourseId}
+                  onPointsAwarded={onRefreshLedger}
+                />
+              ) : (
+                <PodcastSeriesPanel
+                  activity={activity}
+                  currentWeek={currentWeek}
+                  onPointsAwarded={onRefreshLedger}
+                />
+              ))}
 
             {isProgrammeComponent && programmeComponentType && (
               <ProgrammeComponentPartsPanel

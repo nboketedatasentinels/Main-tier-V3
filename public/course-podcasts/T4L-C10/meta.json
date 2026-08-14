@@ -1,0 +1,104 @@
+{
+  "course_id": "T4L-C10",
+  "course_name": "AI for Transformation Leaders: Judgment Over Features",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "How Leaders Can Use AI to Solve Real Business Problems",
+      "show_name": "HBR IdeaCast",
+      "guest": "Josh Tyrangiel",
+      "region": "United States",
+      "duration_minutes": 27,
+      "url": "https://hbr.org/podcast/2026/07/how-leaders-can-use-ai-to-solve-real-business-problems",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "the_idea": "Tyrangiel spent a few years reporting on AI for The Atlantic and a book. His finding is plain. The teams that win do not start by picking a model. They start by naming the problem. He tells the Cleveland Clinic story, where a doctor, not a vendor, runs every AI pilot, so the tech works for medicine and not the other way around. Their sepsis model cut deaths, but only after they added an explanation to each alert, because doctors would not act on a red flag with no reason attached. And it still missed the last one in ten cases that a nurse could catch by smell or the color of a patient's skin. This is the course idea, watched from inside a hospital.",
+      "what_will_be_assessed": "The three questions draw from the Cleveland Clinic examples in the middle of the episode, not the opening about hype or the closing advice for a generic company. Focus on two projects. First, the sepsis model from Bayesian Health: how much it cut mortality over a year, why doctors ignored its first version, and the one in ten cases it could not catch. Second, why a clinician and not a tech vendor ran every AI pilot, and the 90 minute drop in emergency room wait times from the scheduling tool built with Palantir. You can skip the parts about the AI labs, retraining policy, and the dishwasher-maker example at the end.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "In the sepsis example, how much did the Bayesian Health model cut mortality over a year, and what did its first version lack that made ICU doctors ignore its flags?"
+        },
+        {
+          "type": "application",
+          "question": "At the Cleveland Clinic a doctor, not a tech vendor, owned every AI pilot. In your own work, who owns AI decisions now, and what would change if a domain expert led the next one?"
+        },
+        {
+          "type": "challenge",
+          "question": "Tyrangiel's wins all come from a top hospital with A+ talent and clean data. Name one place in your organization where that does not hold, and say what his advice to get great people and define the problem first misses there."
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Nothing to fear with kitchen gear: 'America's Test Kitchen' guide to tools, gadgets",
+      "show_name": "NPR Morning Edition",
+      "guest": "Lisa McManus and Hannah Crowley",
+      "region": "United States",
+      "duration_minutes": 7,
+      "url": "https://www.npr.org/transcripts/1221083944",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "America's Test Kitchen reviewers Lisa McManus and Hannah Crowley have tested piles of kitchen tools. Their advice is boring on purpose. Buy a few things that work and skip the rest. Their $40 knife matched a $300 one under a microscope at MIT. A glass cutting board looks nice and ruins your knife. Before you buy any gadget, ask two questions: do I already have this, and will I actually use it. It is the same fight as picking AI tools, moved into a kitchen, where nobody is selling you a strategy.",
+      "what_will_be_assessed": "The whole segment is short, about seven minutes, so the questions come from the tool picks and the two buying questions, not the play-by-play of cutting an onion or the cast iron cleaning story. Focus on what the reviewers found when they compared their $40 Victorinox chef's knife to a $300 knife under a microscope at MIT, the surface they say will instantly dull a knife, and the two questions Crowley asks before buying any gadget: do I already have this, and will I use it. Keep her air fryer and convection oven example in mind.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "What did the reviewers find when they compared their $40 chef's knife to a $300 one under a microscope at MIT, and what surface do they say will instantly dull a knife?"
+        },
+        {
+          "type": "application",
+          "question": "Crowley asks two questions before buying any gadget: do I already have this, and will I use it. Pick one AI tool you want to add to your work, and answer both honestly."
+        },
+        {
+          "type": "challenge",
+          "question": "McManus warns against gadgets with a billion parts that look good on Instagram but do little. Name an AI tool in your work where that warning is wrong, and the extra moving parts actually earn their place."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Changing Computing Cultures with Abeba Birhane",
+      "show_name": "The Good Robot",
+      "guest": "Abeba Birhane",
+      "region": "Ethiopia",
+      "duration_minutes": 31,
+      "url": "https://www.thegoodrobot.co.uk/post/abeba-birhane-on-changing-computing-cultures",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course says adopt AI with judgment and it pays off. Birhane pushes on the word adopt. She calls human behavior a complex adaptive system that is non-compressible, so a model can only ever catch a snapshot of a moving target. She names the belief that more data will eventually give you accuracy a huge fallacy. And she warns that shiny models let us revive junk we already threw out, like reading emotion or gender off a face. Her challenge is not do it carefully. It is that sometimes the honest call is that the tool cannot do the thing at all.",
+      "what_will_be_assessed": "Birhane covers a lot, so the three questions draw only from her points on the limits of modeling, not the middle stretch about who gets hired in computing. Focus on three claims. First, that human behavior is a complex adaptive system she calls non-compressible, so a model can at best catch a snapshot of a moving target. Second, that the belief huge amounts of data will eventually give you accuracy is what she calls a huge fallacy, and how shiny models revive already debunked ideas like reading emotion or gender off a face. Third, her argument that some things, like friction, should never be turned into a problem to be solved. You can skip the parts on academic hiring and the closing credits.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Birhane calls one common machine learning belief a huge fallacy. What is that belief, and what single word does she use for why human behavior cannot be fully modeled?"
+        },
+        {
+          "type": "application",
+          "question": "Birhane says some things, like friction, should never be framed as a problem to solve. Name one part of your own work that people keep trying to automate away, and say whether it is really a problem or part of how the work happens."
+        },
+        {
+          "type": "challenge",
+          "question": "Birhane argues emotion and gender cannot be read off a face, so those tools should not exist. Name a case in your work where her you cannot model a moving target line would wrongly block an AI tool that does help."
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "How Leaders Can Use AI to Solve Real Business Problems",
+      "show_name": "HBR IdeaCast",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Nothing to fear with kitchen gear: 'America's Test Kitchen' guide to tools, gadgets",
+      "show_name": "NPR Morning Edition",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Changing Computing Cultures with Abeba Birhane",
+      "show_name": "The Good Robot",
+      "region": "Ethiopia"
+    }
+  ]
+}

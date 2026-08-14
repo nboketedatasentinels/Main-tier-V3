@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C11",
+  "course_name": "Data-Driven Decisions in Digital Transformation",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "A McKinsey Africa podcast with Paga CEO Tayo Oviosu",
+      "show_name": "McKinsey Africa",
+      "guest": "Tayo Oviosu",
+      "region": "Nigeria",
+      "duration_minutes": 28,
+      "url": "https://www.mckinsey.com/za/our-insights/mckinsey-africa-podcast-with-paga-ceo-tayo-oviosu",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "the_idea": "Tayo Oviosu built Paga, a Nigerian mobile-payments company, over more than a decade. What makes him fit a data course is which numbers he chooses to watch. He tracks how fast the platform processes value -- 99 months for the first 2 trillion Naira, then only 22 months for the next 2 trillion -- and reads that shrinking gap as proof the business is compounding. And he refuses to chase the metric everyone else brags about, the 'unicorn' valuation, saying it is about delivering value and that the growth follows from there. His big early call, building a physical agent network instead of a purely digital app, came from reading the market honestly: most people are unbanked and few have smartphones. It is the course concept with the dashboard jargon stripped out.",
+      "what_will_be_assessed": "The three questions draw from a few specific moments, not the whole episode. Focus first on the growth numbers Oviosu cites, especially how long it took to process the first 2 trillion Naira versus the next 2 trillion, and what he says that pace shows. Second, the metric he refuses to care about, the 'unicorn' label, and what he says matters instead. Third, the market facts behind his decision to build a physical agent network rather than a purely digital product: the share of people who are unbanked and low smartphone penetration. You can skip the venture-funding and round-label discussion, the African Continental Free Trade Area, and the talent and remote-work section at the end.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "How long did it take Paga to process its first 2 trillion Naira versus the next 2 trillion, and what does Oviosu say that shrinking gap shows about the platform?"
+        },
+        {
+          "type": "application",
+          "question": "Oviosu refuses to treat being a 'unicorn' as the goal and names what he watches instead. Name one vanity metric in your own reporting and the value metric that should sit in front of it."
+        },
+        {
+          "type": "challenge",
+          "question": "Oviosu reads Paga's speeding-up transaction volume as proof the business is working. Name a case in your work where a fast-rising number would look like success but hide a problem underneath."
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "We're Not Getting Sicker \u2014 We're Overdiagnosed",
+      "show_name": "People I (Mostly) Admire",
+      "guest": "Suzanne O'Sullivan",
+      "region": "Ireland",
+      "duration_minutes": 50,
+      "url": "https://freakonomics.com/podcast/were-not-getting-sicker-were-overdiagnosed/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "listening_range": "The full episode runs roughly 50 minutes. The transcript file holds only the overdiagnosis section, about the last third of the interview, an estimated 18 to 22 minutes of listening. The episode page carries no timecodes, so that figure is estimated from speech rate; the spoken start and end lines are noted at the top of the file.",
+      "the_idea": "A neurologist argues that we are not sicker, we are over-tested and over-labeled, and her examples are really a lesson in reading data. Lyme disease looks like a yes-or-no fact, but the test measures an indirect immune reaction full of false positives, so the C.D.C. counts about 63,000 cases while nearly half a million people get treated. Cancer screening posts wonderful survival figures because it finds harmless early cancers and treats them, yet all-cause mortality does not move -- the flattering metric and the honest metric disagree. Lower thresholds, more tests, and earlier detection produce more diagnoses without more health. It is the data-pitfalls module told from a hospital instead of a dashboard.",
+      "what_will_be_assessed": "The three questions draw from the overdiagnosis half of the conversation, saved in this file, not the psychosomatic patient stories that open the episode. Focus on three things. First, what O'Sullivan means by overdiagnosis, and how shifting the threshold for a disease such as blood pressure, diabetes, or depression inflates the count, including the Lyme disease example where the C.D.C. recognized about 63,000 cases but nearly half a million people were being treated. Second, her cancer-screening point: how a screening program can show wonderful cancer-survival figures while all-cause mortality does not improve, and why. Third, what she says about doing more tests, incidental findings, and an A.I. tool reading a scan without the clinical consultation that gives it meaning. Skip the opening stories about Matthew, Sharon, and resignation syndrome, and the closing listener question about a math documentary.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "O'Sullivan uses Lyme disease to show how soft a 'fact' can be. What two figures does she give for C.D.C.-recognized cases versus people actually being treated, and why is the gap so wide?"
+        },
+        {
+          "type": "application",
+          "question": "She says a cancer screening program can show great survival figures while all-cause mortality stays flat. Name one number your team celebrates that could look great while the outcome that actually matters does not move."
+        },
+        {
+          "type": "challenge",
+          "question": "O'Sullivan argues that more testing and earlier detection often just treats people who were never going to be harmed. Name a case in your work where collecting more data or catching problems earlier clearly does pay off, so her caution would steer you wrong."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Uncharted: How to Map the Future Together",
+      "show_name": "Mind Tools",
+      "guest": "Reviews 'Uncharted' by Margaret Heffernan; narrated by Cathy Faulkner",
+      "region": "United Kingdom",
+      "duration_minutes": 15,
+      "url": "https://www.mindtools.com/avvk1k1/uncharted/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course tells people to run decisions on data and dashboards. This episode is the counter-case. It reviews Margaret Heffernan's book 'Uncharted,' which argues that the 'prediction industry' oversells what forecasting can do. Systems built on precise prediction, like just-in-time supply chains, look efficient but shatter when something unexpected hits, as they did when COVID-19 caused hoarding and shortages. Heffernan splits 'complication' (many parts, still predictable) from 'complexity' (nonlinear, genuinely unpredictable) and says complex problems call for experiment and scenario planning, where data informs the options but is 'not allowed to dictate the outcome.' The reviewer even pushes back that she may be too skeptical of big data. That tension is the point.",
+      "what_will_be_assessed": "The episode is short, but the three questions draw only from the argument against prediction, not the personal material at the end. Focus on three things. First, the difference Heffernan draws between 'complication' and 'complexity,' the supermarket supply-chain example she uses, and what happened to that supply chain during COVID-19. Second, what she means by the 'prediction industry' and the 'well-ordered sheep' warning, plus the line that algorithms are 'just a way of encoding bias.' Third, scenario planning as her alternative, in particular the rule that data underpins the scenarios but is not allowed to dictate the outcome, and the reviewer's own pushback that the book may be too skeptical of prediction and big data. You can skip Part Three on illness, aging, and a good death.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "The episode contrasts 'complication' and 'complexity' with one everyday example. What is the example, and what happened to it during COVID-19 that proved the point?"
+        },
+        {
+          "type": "application",
+          "question": "Heffernan says good scenario planning lets data inform the options but never lets it 'dictate the outcome.' Name one decision in your work currently handed to a dashboard, and who you would put in the room to weigh it instead."
+        },
+        {
+          "type": "challenge",
+          "question": "The reviewer pushes back that 'Uncharted' may be too skeptical of prediction and big data. Where in your work is a forecast reliable enough to act on, so Heffernan's warning would steer you wrong?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "A McKinsey Africa podcast with Paga CEO Tayo Oviosu",
+      "show_name": "McKinsey Africa",
+      "region": "Nigeria"
+    },
+    {
+      "episode_title": "We're Not Getting Sicker \u2014 We're Overdiagnosed",
+      "show_name": "People I (Mostly) Admire",
+      "region": "Ireland"
+    },
+    {
+      "episode_title": "Uncharted: How to Map the Future Together",
+      "show_name": "Mind Tools",
+      "region": "United Kingdom"
+    }
+  ]
+}

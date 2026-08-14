@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C08",
+  "course_name": "Leading Transformation Across Cultures and Borders",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "Short Takes: Pioneering a Holistic Approach to Speech Therapy in Kenya",
+      "show_name": "Grit & Growth",
+      "guest": "Grace Macharia",
+      "region": "Kenya",
+      "duration_minutes": 17,
+      "url": "https://www.gsb.stanford.edu/insights/short-takes-pioneering-holistic-approach-speech-therapy-kenya",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "the_idea": "Grace Macharia is a Kenyan speech and language therapist who learned that being good at the work was not enough to change anything. When she came home after training in the UK, there were about five speech therapists for a population of 21 million, and the profession was barely recognized. Hospitals would not back her and banks would not fund her. So she built a company, SLT Support, partly to get a service she controlled and a voice she did not otherwise have, and then went to the Ministry of Health to get speech therapy recognized as a profession and started an association of therapists to lobby together. Along the way she stopped being what she calls a lone ranger. She used to do things her own way and consult only herself; now she leads through a team and only then started calling herself a leader. The course concept lives in the gap between her skill and an authority structure that ignored it, and in what she actually did to move that structure.",
+      "what_will_be_assessed": "This is a short episode, well under twenty minutes, and you should listen to the whole thing. Focus on three things. First, the state of the profession when she came back from the UK: how many speech therapists there were and for what population, and why hospitals and banks would not support her. Second, why she started a company at all, which was not mainly about money, and what she did beyond her own business to change how the profession was seen, including the Ministry of Health and the association she built. Third, the shift in how she leads, from doing things her own way and consulting only herself to leading through a team, and the moment she started calling herself a leader. You can skip the details of the multidisciplinary clinical model and the India partnership near the end.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "When Macharia came back from training, how many speech therapists were practicing in Kenya and for how large a population, and name one group that would not support her."
+        },
+        {
+          "type": "application",
+          "question": "Macharia started a company partly to get a voice with policymakers, not mainly to make money. Name one part of your own change effort where the real goal is standing or a seat at the table rather than revenue, and what recognition you would be lobbying for."
+        },
+        {
+          "type": "challenge",
+          "question": "Her fix was to formalize: register a company, build structures, hire finance and HR, and lobby to make the profession official. Name a situation in your context where adding formal structure and official recognition would slow the work down or kill what made it useful."
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Michele Gelfand on the dishwasher divide: How to decode tight and loose cultures",
+      "show_name": "The Culture Kit with Jenny and Sameer",
+      "guest": "Michele Gelfand",
+      "region": "United States",
+      "duration_minutes": 28,
+      "url": "https://haas.berkeley.edu/culture/culture-kit-podcast/posts/the-dishwasher-divide-how-to-decode-tight-and-loose-cultures/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course treats power distance and hierarchy as things to read and adapt to across cultures. Gelfand offers a different lens from cross-cultural psychology: tight versus loose. Tight groups have strong, clear norms and reliable punishment for breaking them. Loose groups have weaker, more negotiable norms and tolerate a wider range of behavior. Her claim is that this is not random and not a matter of taste. Groups that faced a lot of chronic threat, from nature or from invasion, evolved tighter norms because rules help people coordinate under threat, and groups with less threat could afford to be loose. It is a fractal pattern: it runs at the level of nations, states, organizations, teams, and even a household arguing about how to load a dishwasher. For a leader the point is that strict and relaxed are not good or bad, they are responses to threat, and you can diagnose where you sit and adjust it on purpose.",
+      "what_will_be_assessed": "The episode is about 28 minutes and worth hearing in full, but the questions come from three parts. First, the definition of tight and loose cultures, and Gelfand's explanation of where tightness comes from, which is chronic threat and the need to coordinate, with her contrast between the United States and Japan. Second, how tight and loose show up inside organizations, the people, practices, and industries that run tight versus loose, and her idea of tight-loose ambidexterity and the tight-loose-tight model for balancing accountability and freedom. Third, the concrete signals she says leaders can read, including the words people use, such as should, prohibit, and force versus leeway, allow, and afford, and the household dishwasher example. You do not need the section on AI near the end.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Gelfand says tight cultures develop for a reason, not by accident. What does she say drives a group toward tight norms, and which two countries does she contrast to make the point?"
+        },
+        {
+          "type": "application",
+          "question": "Gelfand tells leaders to pick which domains should be tight and which should be loose, rather than run the whole place one way. Name one domain in your team that should stay tight and one that should be loose, and say why."
+        },
+        {
+          "type": "challenge",
+          "question": "Gelfand frames tight and loose as neutral adaptations to threat, neither good nor bad. Name a case in your work where calling a group 'tight for good reasons' would let a genuinely harmful rule off the hook."
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "Do \"Generations\" Mean Anything?",
+      "show_name": "No Stupid Questions",
+      "guest": "Angela Duckworth and Mike Maughan",
+      "region": "United States",
+      "duration_minutes": 38,
+      "url": "https://freakonomics.com/podcast/do-generations-mean-anything/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Full episode, about 38 minutes. This is the one episode in this course that runs over 30 minutes. The transcript has no timecodes, so the what_will_be_assessed field points at spoken markers instead, and the questions are answerable from two stretches rather than the whole episode.",
+      "the_idea": "This course leans on cultural categories: power distance, culture maps, the idea that where someone is from tells you how to lead them. Duckworth and Maughan take apart a neighboring category, generations, and the case doubles as a warning about all such labels. They cite David Costanza calling generationalism a socially acceptable prejudice, a kind of modern ageism, and they run through the Pew Research Center's list of what is wrong with generational thinking: it is not scientifically defined, it oversimplifies, it fixates on differences over similarities, it carries an upper-class bias, and people change over time. The line that matters most for this course is Duckworth's: there is more variation within a generation than between generations. Swap the word generation for the word culture and you have the challenge to the whole course. They do not say the categories are useless. They grant that shared events like the Covid-19 pandemic leave real marks. They say a label turns dangerous the moment it stops you from seeing the actual person in front of you.",
+      "what_will_be_assessed": "This episode runs about 38 minutes and is the one long pick in this course. It has no timecodes, so use the spoken markers. The questions draw from two stretches. The first is the opening debate, from the listener Jackie's question through the David Costanza generationalism quote and Mike Maughan's summary of the Pew Research Center's five problems with generational classification. The second is later, the David Solomon passage, where Angela Duckworth lands the line about more variation within a generation than between generations and names the danger of generationalism. You can skip the middle detour on grit and age, the gaming and social media discussion, and the closing bit about making friends of different ages, and you do not need the fact-check at the end.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "The hosts cite a researcher who calls talking about generations a kind of prejudice, and they list the Pew Center's problems with generational categories. Name that 'generationalism' charge and two of the Pew problems."
+        },
+        {
+          "type": "application",
+          "question": "Duckworth says there is more variation within a generation than between generations. Take one cultural label you use to plan how you lead across a border or a team, and name a specific person that label would cause you to misread."
+        },
+        {
+          "type": "challenge",
+          "question": "The hosts still grant that big shared events, like Covid-19, leave real generational marks, so the categories are not pure noise. Using their own distinction, name one place in your cross-cultural work where a group-level pattern is real enough to plan around, and how you would keep it from hardening into a stereotype."
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "Short Takes: Pioneering a Holistic Approach to Speech Therapy in Kenya",
+      "show_name": "Grit & Growth",
+      "region": "Kenya"
+    },
+    {
+      "episode_title": "Michele Gelfand on the dishwasher divide: How to decode tight and loose cultures",
+      "show_name": "The Culture Kit with Jenny and Sameer",
+      "region": "United States"
+    },
+    {
+      "episode_title": "Do \"Generations\" Mean Anything?",
+      "show_name": "No Stupid Questions",
+      "region": "United States"
+    }
+  ]
+}

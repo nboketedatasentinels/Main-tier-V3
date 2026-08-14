@@ -1,0 +1,281 @@
+Episode: The Devil's Advocate (Choiceology with Dan Heath, Season 1, Episode 4)
+Show: Choiceology (an original podcast from Charles Schwab)
+Guest: Host Dan Heath, with Dean Gillispie, Mark Godsey (Ohio Innocence Project), neuroscientist Tali Sharot (University College London), and Kenneth Woodward
+Region: United States
+URL: https://www.schwab.com/learn/story/devils-advocate
+Transcript source: publisher (full transcript published by Charles Schwab; retrieved from the Schwab Singapore mirror at https://www.schwab.com.sg/story/devils-advocate)
+Range: full episode
+
+WHAT WILL BE ASSESSED
+This is a short episode. The three questions draw from the Dean Gillispie wrongful-
+conviction story and the confirmation-bias frame around it. Focus on: the specific ways
+Gillispie did not match the attacker's description; what the rookie detective did to
+make Gillispie's lineup photo stand out, and the motive Mark Godsey gives for why he
+pushed so hard; how many years Gillispie spent in prison; the origin and purpose of the
+"devil's advocate" role in the Catholic Church and what happened to the number of saints
+after the role was retired in the 1980s; and Tali Sharot's argument that confirmation
+bias is actually rational, not irrational. You can skip the Schwab financial tie-ins
+and the mechanics of the astrology demonstration.
+
+---
+
+Dan Heath: I'm Dan Heath, and this is Choiceology.
+
+It's the late 16th century, Pope Clement VII brought together several priests to start the secret process of canonization for the late Lawrence Justinian, a bishop from Venice. Basically, they're planning to make him a saint.
+
+The priests, they fully support sainthood for Justinian. He was a beloved figure, a man who was born into nobility but gave up a life of wealth and privilege to serve the church, but there's an obstacle to sainthood. Pope Clement's predecessor, Leo X, didn't want this process to be hasty, he didn't want it to be automatic, becoming a saint should be a big deal after all.
+
+He assigned a priest to argue against every candidate for sainthood. That priest would dig into their background and try to poke holes in their candidacy. That role came to be known as the devil's advocate. No joke, that's the origin of the term. Before Lawrence Justinian can become a full-blown saint, he first has to get past the devil's advocate.
+
+Why would the church do this? Well, they were afraid of something, a bias. One that affects all of us and our decisions. In this episode, you'll see why a devil's advocate is helpful in keeping this bias in check, because the stakes are high. Whether you're choosing a saint or convicting a sinner.
+
+This is Choiceology, an original podcast from Charles Schwab. It's a show that reveals hidden psychological traps that affect the way you view everything from the saints on the chapel ceiling to the ups and downs of the stock market to the horoscopes in your Sunday paper. We don't just reveal these traps; we try to give you practical tips to minimize their impact so you can avoid expensive mistakes. We'll check back in with Lawrence Justinian, our saint in waiting, in just a bit. But right now, a crime, an investigation, and a series of decisions that will change one man's life forever.
+
+Dayton, Ohio, 1988. A number of kidnappings and sexual assaults has the community on edge. The perpetrator is still at large. Here's how the victims described their attacker: He had reddish brown hair. He wore a medallion around his neck. He had no chest hair. There were acne scars along his jawline. He had a tan. He was a smoker.
+
+Now I want to introduce you to Dean.
+
+Dean Gillispie: My name is Dean Gillispie from Fairborn, Ohio.
+
+Dan Heath: Dean was picked up for the crime. And how does he match up with that description? Let's see, does he have reddish brown hair? No. At the time of the crime, Dean was 23, but he was going prematurely gray. How 'bout the medallion and the bare chest? Dean had a hairy chest and was medallion free. Was he tan? Nope, he was so fair-skinned that he didn't tan, he burned. Acne scars along the jaw line, none at all. As for being a smoker, no. He hated smoking—in fact he had a "No Smoking" sign in his truck. How in the world could Dean Gillispie be fingered for this crime when he bore absolutely no resemblance to the description of the perpetrator? Let's dig into the story, and the way it unfolds is like a slow motion horror movie.
+
+Twin sisters had been abducted from the parking lot of the Dayton mall and brutally assaulted, but when that crime happened, Dean Gillispie was out of town, out of the whole state actually on a camping trip.
+
+Dean worked in security at a nearby General Motors plant. A year after the crime, the chief of security, who was Dean's boss at the plant, provided an employee ID card of Dean to the detectives working on the case. He claimed that the photo resembled the composite sketch of the attacker that had been hanging in the plant lunch room.
+
+Why would the security chief do that? Dean said they never did get along.
+
+Dean Gillispie: Never did get along from day one, you know we found out later that my dad got me the job at General Motors, he knew all the right people, and we didn't know at the time this guy had another buddy he wanted to get the job.
+
+He's automatically, he's mad at me from day one.
+
+Dan Heath: The detectives look at Dean's ID card and don't see a resemblance at all. Dean wasn't considered a suspect. That should have been the end of the story, but then things started to go sideways. The chief of security wasn't done. Another year later he called the police again. This time, he reached out to a rookie officer, a guy who happened to be the son of his friend, the police chief, and by this point, the senior detective on the case had retired.
+
+Suddenly, Dean Gillispie became the prime suspect. This was two and a half years after the crime. The police called Dean.
+
+Dean Gillispie: They just kept calling and wanting me to come in. They wouldn't say what they wanted, and I just assumed that it was like a parking ticket or something that hadn't been paid, and I went down there and talked to the guy. He was asking me about where I was and what I was doing two and a half years before that, and I'm like, "I don't know what I was doing two weeks ago, much less two and a half years ago." It just became a hostile environment and all that, and I just left and that was it, and the next thing I know, they came to arrest me.
+
+That's when five police cars were out in front of my house with guns laid across the hood. I'm sitting on my front porch, I was working on a piece of antique furniture, and I had a little three-inch pocket knife in my hands scraping off some shellac, and they kept hollering, "Drop the weapon!" and I'm like, "I don't have a weapon," and they're screaming and hollering, and I'm like "What in the heck is going on here?"
+
+Yeah, then I'm handcuffed and stuff and took through the house and are tearing my house apart.
+
+Dan Heath: Dean had walked into a nightmare. The nightmare would not end. Dean Gillispie was indicted and convicted on all charges in 1991. A second trial was ordered months later when new physical evidence came to light. This time it was a hung jury, at least at first.
+
+The jury came out eight to four for acquittal. The jury deliberated again and again it was hung but after a third deliberation, they found Gillispie guilty.
+
+Dean Gillispie: They come back out and he just, you know, they say guilty. You're like, what in the heck, in 45 minutes what just happened? You came out twice, hung, and then 45 minutes after that you come out with a total conviction. They were just done, they wanted to go home.
+
+Then after that, the next numbers I got out of them was 22 to 56. And I spent 20 of them in prison.
+
+This miscarriage of justice was caused by a sequence of terrible decisions. Decisions influenced by motivated reasoning. When the authorities thought they had their guy, they started putting their finger on the scale to prove it. Here's an example.
+
+The most damning evidence against Gillispie was the testimony of two eyewitnesses who said he was the guy. They started by picking him out of a line up, but the rookie detective had made sure that Gillispie's photo stood out.
+
+Dean Gillispie: My background is yellow in a six-picture line up. The rest of them are blue. Who do you pick? The other guys are from the chest or the waist up, and mine is nothing but my whole face. Who do you pick?
+
+Dan Heath: Eyewitness testimony is almost impossible to overcome, even when it's unreliable.
+
+Dean Gillispie: They've convinced the victims that I was the person who did this even though— now this is the key—even though there's 27 things different about me and the person who did this, and my lawyer went through each one of them. How much more to the point can you get?
+
+Dan Heath: If you're like me, this just doesn't make sense. How could the same eyewitnesses, who described a totally different guy, suddenly identify Dean Gillispie as the attacker?
+
+Mark Godsey: OK. Mark Godsey, I'm a professor of law at the University of Cincinnati. I'm the author of Blind Injustice.
+
+Dan Heath: Mark Godsey was one of the lawyers involved in the attempt to exonerate Dean Gillispie. He's part of something called the Ohio Innocence Project. They started work after Dean had already been incarcerated for over a decade, and when they begin digging into the eyewitness testimony, they were horrified.
+
+Remember the situation here. The eyewitnesses had come in two and a half years after the crime and then that young officer put together a lineup where Gillispie's photo popped out. Why would the officer push so hard in the situation?
+
+Mark Godsey: This was a young detective, and this was his first case, and it was a cold case that had not been solved for several years. And some really respected and experienced detectives had been on the case previously and been unable to solve it.
+
+If you're sitting there, you're 26 years old as a new detective and you can crack this cold case that no one else has been able to solve, then you're a hero. Finally, a tip comes in, a suspect comes to the forefront, and I think—sub-consciously, maybe not even consciously—he thought, "If I could make this fit, then I can solve this case and convict this guy, then this is a great way to start my career as a detective."
+
+Dan Heath: The officer really, really wants Gillispie to be guilty. That resolve, that certainty on the part of the detective colored every part of the investigation.
+
+Mark Godsey and his team at the Ohio Innocence Project are convinced that Gillispie has been wrongly convicted. They reached all the way back to the original investigators on the case, the ones who had seen Gillispie's ID card and said, "Nope, that's not our guy."
+
+Dean Gillispie: They found them, they started talking to them, and they couldn't believe that I was convicted of. They didn't know, they're like, "Are you kidding me? We could see something was wrong with that from day one." We got the facts from the two detectives, all the stuff that should have been in the file.
+
+Dan Heath: Then in 2011.
+
+Dean Gillispie: December 22, 2011, I was released by the federal court, and it was about 7:30 at night.
+
+Dan Heath: He was released on bond. It was Dean's first taste of freedom in two decades.
+
+Dean Gillispie: It was surreal. All my friends and everybody's there and you're just like, I just walked out of prison and it's like you're floating. Dan Heath: You think this story is over but remember, I said Gillispie was released on bond. That's because the prosecutors appealed the ruling.
+
+Mark Godsey: Then the prosecutors fought our wins for many years. It took all the way until 2017 for him to be fully exonerated, for all those avenues of appeal for them to be exhausted.
+
+Dan Heath: Six more years to be exonerated, but Mark Godsey and his team eventually prevailed. Here's Dean.
+
+Dean Gillispie: To me, the day that it actually was real freedom was when I went into the national registry of exonerees, the 2,076th person to be exonerated in the United States. That's when you know it's done, it's over, you are free and can do whatever you want to do.
+
+Dan Heath: What does freedom taste like?
+
+Dean Gillispie: It tastes like the best pie you ever had times a thousand million.
+
+Dan Heath: Dean Gillispie is now enjoying his life as a free man. He's an avid fisherman, likes to spend time with his family, and he regularly speaks at events in conjunction with the Ohio Innocence Project.
+
+Mark Godsey is a professor of law at the University of Cincinnati and director of the Ohio Innocence Project. He's also the author of Blind Injustice: A Former Prosecutor Exposes the Psychology and Politics of
+
+Wrongful Convictions. I've put a link to the book in the show notes. You can find those on your device anytime.
+
+What does Dean Gillispie's harrowing tale have to do with popes and priests and sainthood, the stuff we were talking about at the top of the show? The link is the villain of our show. It's called confirmation bias, and it means that we tend to seek out information that supports or confirms what we already believe, and we tend to ignore or downplay information that might contradict us.
+
+Sound familiar? This is not a rare bias or an obscure one. It might be more accurate just to say, this is the way our brains work pretty much every day. Confirmation bias can take a variety of forms. When you ask your partner, "Hey, how do I look in these jeans?" You're clearly fishing for positive information, not a strictly unbiased assessment of your appearance. That's confirmation bias. You're looking for information to support what you want to believe, i.e., that you look good.
+
+Confirmation bias can lead to terrible error, as we saw in Dean Gillispie's case. The young detective and the prosecutors were so sure he was the bad guy, that they ignored all evidence to the contrary. It was a bias that left an innocent man in jail for two decades.
+
+I'm Dan Heath, and this is Choiceology, an original podcast by Charles Schwab. It's all about the invisible forces that influence the way we make decisions. By the way, Schwab has written an article called "How to Avoid the Financial Pitfalls of Confirmation Bias." It explains several steps you can take to mitigate confirmation bias in your financial decisions. You can find a link in the show notes.
+
+Back to the Catholic Church, Pope Leo X, he realizes that confirmation bias will play a big role in the decisions made about saints. He comes up with a solution, the devil's advocate. Kenneth Woodward is an expert on saints and how they're made.
+In the early days of the church …
+
+Kenneth Woodward: Saints were made by popular acclamation. The people thought they were a saint and had a reputation for sainthood, they would probably be listed, say in Sicily or something.
+
+Dan Heath: There were thousands of these local saints listed because of the stories of the miracles they did and the extraordinary virtues that they had.
+
+As the Catholic Church became more centralized …
+
+Kenneth Woodward: They eventually wanted to protect the church from saints who don't deserve to be saints, that they really weren't saintly.
+
+Dan Heath: The church started a process where they would inquire into the lives of the candidates. Of course, most of the locals would likely be in favor of sainthood for the candidate, so the church introduced a key figure into the process—that's the devil's advocate, also known as the promoter of the faith. That's an important point. The promoter of the faith because this person wasn't supposed to be just an all-purpose critic slinging mud at anyone for the sake of sport.
+
+Rather, the devil's advocate was supposed to be a defender of the faith, the Catholic Church, to protect the church from people who didn't merit the status of sainthood.
+
+Kenneth Woodward: The devil's advocate would try to poke holes in what was being presented. Question some of the testimony given. They love that back and forth.
+
+Dan Heath: That back and forth led to many fewer saints. The position of devil's advocate was eventually discontinued, retired in the 1980s by Pope John Paul II. What happened as a result, well listen to this.
+
+From 1000 AD to 1978 AD, fewer than 450 men and women were canonized. Under the reign of just one pope, Pope John Paul II, over 480 saints were proclaimed.
+
+Kenneth Woodward: I still, myself, find it difficult to justify getting rid of altogether the devil's advocate because now it looks as if everyone who is involved in the process is bent on a positive outcome. You have to be very self-disciplined to sort of internalize the devil's advocate and say, "I'm gonna look at this, this way, that way and the next way. I'm going to turn every facet of this gem around, and let's see if the virtues are there and so forth."
+
+Dan Heath: By the way, it all worked out for Lawrence Justinian, our candidate from the top of the show who gave up his life of privilege to serve the poor. He was beatified by Pope Clement VII back in 1524 and canonized as a saint by Pope Alexander VIII in 1690, more than 200 years after Justinian's death. He's now known as St. Lawrence, and his feast day is September the 5th.
+
+Just to tie a bow on this discussion: We're talking about confirmation bias, and the devil's advocate was a great corrective for that bias. It's exactly the same reason we have defense lawyers in the justice system, to make sure the system considers not just the confirming evidence that the defendant is guilty but also disconfirming evidence that he's innocent.
+
+Obviously it's not a foolproof system, Dean Gillispie's original defense lawyers utterly failed, but the lawyers from the innocence project succeeded. If confirmation bias is such a wicked trap and it can be, why does it exist? Why would our brains have evolved in a way to permit it?
+
+Well that's where things get interesting.
+
+Tali Sharot: I'm Tali Sharot. I'm an associate professor of cognitive neuroscience at University College London and author of The Influential Mind.
+
+In fact, the confirmation bias is a rational thing, it's not irrational, and the reason it's rational is that it makes sense that when you have a strong belief and you encounter evidence that doesn't really fit that belief, in most cases, that evidence is in fact wrong.
+
+Let me give you an example. If I were to tell you that I saw a pink elephant flying in the sky, then you would immediately assume that I was lying or delusional, as you really should, right, because if you have a strong belief and someone comes and says something that really disconfirms it, then in 80 percent or whatever percent of the cases, they're wrong.
+
+However, what it also means is that some of our beliefs could be false, or they're very, very subjective, and it's a problem because those beliefs are not gonna be ... it's very hard to change them when you find evidence that doesn't quite fit with them.
+
+Dan Heath: Think about what she's saying here. That confirmation bias can be useful. Someone makes an argument that your spouse is a totally worthless human being—it makes sense that you would have some mental armor against that argument, because you strongly believe the opposite, that's why you married them.
+
+You'll tend to discount negative information about them and favor positive information. That's a good thing. You wouldn't want your core beliefs in life to be subject to change on a whim. Of course, that's the problem too, because the detectives and the prosecutors who put away Dean Gillispie had that same mental armor, but they were dead wrong about the belief they were protecting.
+
+Now I want to show you how pervasive this bias is, and how easy it is to demonstrate in real time.
+
+Alice: I'm scared.
+
+Heather: You're scared, don't be scared.
+
+Alice: Hi, I'm Alice.
+
+Heather: Hi, Alice, Heather, nice to meet you.
+
+Alice: Nice to meet you.
+
+Heather: How are you?
+
+Alice: Good, how are you?
+
+Dan Heath: We've assembled a group of people for a little experiment, with a nod to James Randy, also known as the Amazing Randy. He's a famous magician, and he did the original experiment back in the 1990s.
+
+First, we had an astrologer interview these people individually.
+
+Heather: Have you ever had an astrology reading before? Do you follow horoscopes?
+
+Alice: I have not had an astrology reading, and I occasionally read horoscopes.
+
+Heather: Occasionally read horoscopes.
+
+Dan Heath: From those interviews, she has prepared some customized readings.
+
+Heather: Now I'm gonna ask you a series of questions, and they're just agree or disagree questions, so you can go agree or disagree.
+
+Participants: OK.
+
+Heather: OK. You often get so lost in thoughts that you ignore or forget your surroundings.
+
+Participants: Agree.
+
+Dan Heath: Next, we gathered all the people that she interviewed into the same room. Then our astrologer handed out those customized readings.
+
+Heather: OK, Alice, David, Tara …
+
+Dan Heath: Just to give you a feel for this, one of the participants was named Alice, and she had about 12 different comments on her reading. The first one was, "You have a great need for other people to like and admire you." Another comment was, "At times, you have serious doubts as to whether you have made the right decision or done the right thing."
+
+Alice and everyone else have a chance to review their personal readings, and then …
+
+Heather: OK, so on a scale of one to five, one being the lowest, five being the highest, how do you feel that your personalized reading represents you? Is anyone a one?
+
+Participants: No.
+
+Heather: Two?
+
+Participants: No.
+
+Agree with her.
+
+Heather: Three? And Four?
+
+Participants: I'm a four.
+
+Four, four and a half.
+
+Yeah.
+
+Heather: Four, four and a half.
+
+Participants: Four point eight.
+
+Heather: Four point eight.
+
+Five?
+
+Participants: I think I'm five alive.
+
+Heather: You're five alive?
+
+Participants: I might actually be a five. I just didn't want to admit that this is a five.
+
+I think I'm a four.
+
+Dan Heath: Almost everyone in the group agreed that the reading captured their personality. Score a victory for astrology. Here's where things get interesting.
+
+Heather: What I want you to do now is just to, and we'll pass it this way. Pass your reading over to the person that is to the left of you and then read that person's horoscope/reading.
+
+Participants: Wait, what?
+
+This was, I didn't know this was part of the …
+
+This is the exact same as mine.
+
+It's the same.
+
+Almost.
+
+That's really interesting.
+
+Dan Heath: You see, here's the trick. Every single horoscope was exactly the same. People were reading into it things that made it feel specific to them even though it was absolutely generic. Remember that line for Alice? "At times, you have serious doubts as to whether you have made the right decision or done the right thing." Has there ever been a person who that would not apply to?
+
+The participants wanted to believe and they found reasons to believe. Here's the thing: If you think as I do that astrology is bunk, you would have been looking for reasons to doubt. Or imagine if instead of a horoscope, this was actually a performance review from a boss who you despise. In that case, we'd be motivated to cherry-pick all the things that don't sound quite right. The point is, thanks to the confirmation bias, we see what we want to see.
+
+How do you reduce the influence of confirmation bias? In an ideal world, before you made a major decision, you'd prepare a case for it, and you'd ask your best friend to prepare a case against it, and then you let someone you trust adjudicate the matter—your mom, maybe.
+
+Our best bet to combat the confirmation bias in our personal lives might be to say, "What evidence would change your mind down the road?" Maybe you got a new love interest that nobody in your family seems to like, but you're convinced that he or she is the one. There's no changing your mind right now, but what would change your mind, what could change your mind? It's probably easier to answer that question, since you don't think any of those disconfirming factors will actually happen. Maybe, just maybe, having identified those factors, when you encounter one in the future, it might just change your mind. No guarantees, this is a nasty bias we're dealing with, but at least we'll have a fighting chance.
+
+You've been listening to Choiceology, an original podcast from Charles Schwab. We'd love it if you could leave us a review on Apple Podcasts, and you can subscribe there, too, or anywhere else you listen. It's free, and subscribing means you won't miss an episode.
+
+Next time on Choiceology, more hidden psychological forces that may be affecting the way you make decisions about risk and reward and specifically how you relate to sharks. I'm Dan Heath, talk to you next time.
+
+Speaker 9: All expressions of opinion or subject to change without notice in reaction to shifting market conditions.
+
+Data contains herein from third-party providers is obtained from what are considered reliable sources. However, its accuracy, completeness or reliability cannot be guaranteed.

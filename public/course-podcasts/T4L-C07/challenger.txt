@@ -1,0 +1,95 @@
+Episode: How Goes the Behavior-Change Revolution? (Freakonomics Radio, Episode 382)
+Show: Freakonomics Radio
+Guest: Katy Milkman and Angela Duckworth (University of Pennsylvania), founders of the Behavior Change for Good project, recorded live in Philadelphia
+Host: Stephen J. Dubner
+Region: United States
+URL: https://freakonomics.com/podcast/how-goes-the-behavior-change-revolution/
+Transcript source: publisher (full transcript published on the episode page at freakonomics.com)
+
+WHAT WILL BE ASSESSED
+This file holds only the opening segment of the episode, the part with Katy Milkman and
+Angela Duckworth about their Behavior Change for Good megastudy. The three questions all
+come from this segment. Focus on the 24-Hour Fitness experiment: how many people signed
+up, how many programs they tested, what happened during the 28 days versus after, and the
+gap between what the scientists predicted and what the data showed. The transcript has no
+timecodes, so use the spoken lines as markers.
+
+  Start: the announcer welcoming Stephen Dubner.
+  End:   Dubner, "...thank you so much to Angela Duckworth and Katy Milkman."
+
+RANGE USED. The full episode runs about 41 minutes and also includes four other
+researchers (Mike Norton, Laurie Santos, Justin Sydnor, Tom Gilovich) and a closing
+conversation with Richard Thaler. Learners do not need those parts. This file contains
+only the Duckworth and Milkman opening, roughly the first 12 minutes.
+
+---
+
+ANNOUNCER: Ladies and gentlemen. Please welcome the host of Freakonomics Radio, Stephen Dubner.
+
+Stephen J. DUBNER: Thank you so much. This is a very special episode of Freakonomics Radio. It's about one of my favorite topics. And based on the feedback we've gotten, it's one of your favorites too. It's about behavior change. So a couple years ago, we first interviewed two researchers from the University of Pennsylvania, Angela Duckworth and Katy Milkman. They had launched an audacious new project called Behavior Change for Good, gathering together a dream team of behavioral scientists from all over the world. It's their attempt to advance the science of behavior change and help more people make good decisions about personal finance, health, and education.
+
+Tonight we are recording live at the Merriam Theater in Philadelphia, just down the street from the University of Pennsylvania. We'll be hearing brief presentations from four behavioral-science researchers about their latest work. Later on we'll hear from a Nobel laureate who helped create this field. But let's start at the beginning by getting caught up on the Behavior Change for Good project with its founders. Would you please join me in welcoming Angela Duckworth and Katy Milkman. Angela, Katy, so nice to have you here.
+
+Angela DUCKWORTH: Hi.
+
+Katy MILKMAN: Hi.
+
+DUBNER: So it's been a few years now since you started this project. At the time, Katy, here's what you told us: "We both thought the biggest problem in the world that needed solving was figuring out how to make behavior change stick." So my first question is: have you solved that problem yet?
+
+MILKMAN: Well, we learned a ton in the last three years but we have not solved this problem. Today we had a really fabulous gathering, where we shared the results of some of our first ambitious studies to try to make a major dent in this. And I would say the hashtag from the day was "Science is hard." We ran a massive randomized controlled trial, so big old experiment. Sixty-three thousand members of 24-Hour Fitness gyms, which is one of the biggest gym chains in the U.S., signed up to be part of a really cool behavior-change program that we offered them for free. And it was designed by a team of brilliant scientists who we had brought together.
+
+DUBNER: Now just to be clear: you're recruiting people who've already gone to the trouble, and the commitment, of joining a gym, yes?
+
+MILKMAN: Exactly. So you're a member of 24-Hour Fitness and you hear all these cool scientists built a program and that I can sign up for free, it'll help me exercise more.
+
+DUBNER: And what exactly are you trying to get them to do?
+
+MILKMAN: We tell them it's a 28-day program, and the goal is to get you to build a lasting exercise habit, ideally forever. That was our goal. Let's make all these habits stick.
+
+DUBNER: So the idea is you get people to sign up, you give them encouragement and incentives? Or there's some cash rewards or—?
+
+MILKMAN: Yes. There was cash promised and delivered. So we were paying, order of magnitude, like a quarter for every gym visit. Better than nothing, but not a lot.
+
+DUBNER: Not really, but ok.
+
+MILKMAN: And we also said we'll give you different kinds of messaging and reinforcement.
+
+DUBNER: Okay. So how amazingly, beautifully, perfectly well did it work?
+
+MILKMAN: So you want the good news or the bad news first?
+
+DUBNER: Let's start with an overview. Would you call it a failure or an abysmal failure?
+
+MILKMAN: I'm going failure rather than abysmal failure. We learned a lot. The good news is 52 out of the 53 things that we tested we thought would improve gym attendance. One of our 53 experimental programs was supposed to be nothing. People signed up, we're like, "Thanks for signing up. Good luck with your life." That was sort of our comparison set. The other 52, everybody in those 52 conditions went to the gym more.
+
+DUBNER: That sounds nothing like a failure to me.
+
+MILKMAN: Okay. Here comes the failure. So we were actually trying to test new scientific insights, and all of the programs that we built on top of a baseline thing that we thought would work. Which was reminding people to go to the gym, paying them a little bit to go to the gym, and having them make a plan for the dates and times when they wanted to go. Then the reminders come at those times.
+
+We were hoping to improve upon the performance of that. And nothing did. So basically what we found is that a set of ingredients we were already quite confident would work, they did. And then when we layered new stuff on, that we thought, "This is a sexy, new idea, it's going to beat the best practice," we got nowhere.
+
+DUBNER: Okay, I seem to recall that part of this project was asking all your fellow researchers when they design experiments to make a prediction of how well their experiment would work. And these are some of the best and brightest minds in behavioral sciences, so presumably their predictions are not terrible. Were they terrible?
+
+DUCKWORTH: So what we learn was that our scientists are quite optimistic about behavior change, and on average they thought "Oh, about 40 percent likelihood that my experiment worked." Whereas when the data come in, it's — it's close to zero.
+
+DUBNER: It strikes me, knowing nothing about anything, that what you were trying to do as your first big project — getting people to go to the gym more on a lasting basis — is the opposite of low-hanging fruit.
+
+MILKMAN: Oh, that's interesting. Okay. I do think it's worth mentioning again, we actually didn't fail at getting people to go to the gym. During the 28-day program, most of the different versions of the program did create behavior change — so, 50 to 75 percent created significant boosts in exercise for 28 days. It's just that we didn't do very well creating lasting change.
+
+So after our 28-day program, pretty much we saw nothing in terms of behavior change. All 53 versions of the program, pretty much nothing sticks. And that was the ultimate goal. So that was a major failure.
+
+DUBNER: So I know both of you fairly well by now and I know that neither of you are short on enthusiasm. So I don't see you packing up and quitting, and disbanding the Behavior Change for Good project. What are your next steps?
+
+MILKMAN: Okay, a couple of things. First of all, we're doing more with this gym data. We're going to swing a bat at it instead of the feather approach next time. We're also going to do medication-adherence work. We think we can make a dent there given some of the science that's preceded us. We're going to do some work on childhood obesity in the U.K., which we're really excited about.
+
+DUBNER: Here's something that you, Angela, said when this project was starting. "The one problem that really confronts humanity in the 21st century is humanity itself." Being that we do a lot of things that are not so good for us; nutrition, smoking, not saving enough for retirement, etc.
+
+After that episode, one listener wrote in to say this, "This was the most depressing episode ever. People are a mess. That's what makes humanity beautiful. Taking away our spontaneity, our whimsy, our impulses, and replacing them with only logical thinking is truly a dastardly idea. Some of the greatest things mankind has ever done weren't for our overall well-being. They were done just because they were fun. You are killing the fun."
+
+I don't have a question. I just wanted to read that into the record. No, I do have a question. So for the sake of argument, what makes you think that behavioral scientists like yourselves should be nudging or even shoving people to change their behavior when they might like their behavior just fine?
+
+DUCKWORTH: If you think of the most self-controlled person you know, you might think, "Wow they have no fun. They never go out to, say, Freakonomics Radio Live. They only drink water. They work all day and they have no play. And that's no way to live. But in fact there is research on the extremes of self-control, and there is no data that show that really self-controlled people are any less happy.
+
+Self-control is the ability to align your behavior with what you want. If what you want is a life of spontaneity and ice cream cones, then that's the behavior that you have to align to. That's the goal. But the kinds of problems that Behavior Change for Good is working on — exercise; for teenagers, studying; for those people who have had a heart attack, taking your medications. These are things that most people actually value as goals and they simply interfere with other things that we could do — not taking our medication, hanging out on Snapchat all day, not going to the gym and binge-watching Game of Thrones instead at home on the couch. These are all temptations that are just more pleasing in the moment, but we later regret. So you can write back to this cranky listener, they're misunderstanding what it really means to actually have a lot of self-control.
+
+DUBNER: Well, I will say this: despite your struggles so far, I know that you two are super-gritty people and that you're going to keep at it. And I really look forward to hearing the results down the road. So can we say thank you so much to Angela Duckworth and Katy Milkman.

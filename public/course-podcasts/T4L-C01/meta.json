@@ -1,0 +1,105 @@
+{
+  "course_id": "T4L-C01",
+  "course_name": "Think Like an Owner",
+  "episodes": [
+    {
+      "slot": "anchor",
+      "episode_title": "The Untold Story of M-Pesa: How Was It Really Built?",
+      "show_name": "F-Squared Podcast",
+      "guest": "Catherine Karimi Gichunge",
+      "region": "Kenya",
+      "duration_minutes": 137,
+      "url": "https://frontierfintech.substack.com/p/f-squared-podcast-12-the-untold-story",
+      "transcript_file": "anchor.txt",
+      "transcript_source": "publisher",
+      "listening_range": "Approximately 52:00 to 100:00 of a 137 minute episode, about 48 minutes of listening. The transcript file holds only this section and the spoken start and end lines are noted at the top of it.",
+      "the_idea": "Gichunge was on the M-Pesa pilot team before anyone knew what mobile money was. The product was built to disburse microfinance loans. It became the thing it is now because she and the team watched what a small group of women actually did with it, which was store value and send it to each other, and followed that instead of the plan. Then she went out and built the agent network on foot. Her line is that people call the growth organic and it was not, somebody walked it. That is the course concept with the polish taken off.",
+      "what_will_be_assessed": "The three questions all draw from the section saved in this file, roughly 52:00 to 100:00 of the episode. You do not need the rest of the two hour recording. Focus on three things. First, the pilot with the group of women, and how the team noticed they were storing value on their SIMs and sending it to each other, which was not what the microfinance product was built to do. Second, how the agent network was built at launch: how many agents there were, what state they were in, and what Gichunge did on foot to sign them up. Third, her claim that the informal sector is the right group to pilot with, and the reason she gives. You can skip her opening life story and the later parts on aggregators and super agents.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "How many agents did M-Pesa have at launch, and what does Gichunge say about their state? Name one thing she personally did to sign up agents."
+        },
+        {
+          "type": "application",
+          "question": "The team found the real product by watching what users did rather than what the plan said. Name one behaviour in your own programme that people have worked around, and what it is telling you."
+        },
+        {
+          "type": "challenge",
+          "question": "Gichunge says the informal sector is the best group to pilot with. Name the reason she gives, and say where piloting with your least formal users would give you the wrong answer."
+        }
+      ]
+    },
+    {
+      "slot": "widener",
+      "episode_title": "Guerrilla Public Service Redux",
+      "show_name": "99% Invisible",
+      "guest": "Richard Ankrom",
+      "region": "United States",
+      "duration_minutes": 21,
+      "url": "https://99percentinvisible.org/episode/guerrilla-public-service/",
+      "transcript_file": "widener.txt",
+      "transcript_source": "publisher",
+      "the_idea": "An artist noticed a badly signed freeway exit, built a regulation Interstate 5 shield to the state's own published specification, dressed as a highway worker, and installed it himself. It passed inspection and stayed up for years. The reframe is that acting without a mandate only survives contact with the institution if you match the institution's standard better than it does. The episode also closes on the case where the same move failed, which keeps it from being a story about nerve.",
+      "what_will_be_assessed": "The whole episode is short, but the three questions draw only from the Richard Ankrom story and the short case at the end. Focus on the specific steps Ankrom took to make his freeway sign look official, including that he built it to the state's own published specification and posed as a highway worker, and on how long the sign stayed up before it came down. Then pay attention to the closing case where a similar unsanctioned act was treated as vandalism, and what made the difference. You can skip the host's opening about design problems in general.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Name two specific things Ankrom did to make the sign pass as official, and say how long it stayed up before it came down."
+        },
+        {
+          "type": "application",
+          "question": "Ankrom built to the published spec rather than to his own taste. What is the equivalent published standard in your organisation that would make an unsanctioned fix survive review?"
+        },
+        {
+          "type": "challenge",
+          "question": "The episode ends with a case where the same approach was treated as vandalism. What made the difference, and where does that put the limit on acting without permission at your work?"
+        }
+      ]
+    },
+    {
+      "slot": "challenger",
+      "episode_title": "258. When Power Talks, People Walk: Why Leaders Don't Hear What Matters Most",
+      "show_name": "Think Fast Talk Smart",
+      "guest": "Megan Reitz",
+      "region": "United Kingdom",
+      "duration_minutes": 24,
+      "url": "https://www.fastersmarter.io/258-when-power-talks-people-walk-why-leaders-dont-hear-what-matters-most/",
+      "transcript_file": "challenger.txt",
+      "transcript_source": "publisher",
+      "the_idea": "This course tells practitioners to speak up and pitch without waiting for a mandate. Reitz's research says whether that works is mostly decided by the person being spoken to, not by the person speaking. Her point about advantage blindness is that people who are heard easily assume everyone else is too, so they read silence as agreement. That puts the burden back on the senior listener and makes 'just show more initiative' an incomplete instruction.",
+      "what_will_be_assessed": "This transcript has timestamps, so you can go straight to what is assessed. The three questions draw from two stretches. Advantage blindness is explained from about 06:29 to 07:51: why people who are heard easily assume everyone is, and read silence as agreement. The three traps for people in power run from about 08:26 to 12:00, including Reitz's own example about her thinking face at 10:30 to 12:00. That is the whole assessment. You do not need the personality questions at the end or the book talk.",
+      "questions": [
+        {
+          "type": "recall",
+          "question": "Reitz names three traps for people in positions of power. List them, and give the example she uses about her own face."
+        },
+        {
+          "type": "application",
+          "question": "Using her advantage blindness idea, name one person in your programme whose silence you have been reading as agreement, and what you would change to test that."
+        },
+        {
+          "type": "challenge",
+          "question": "Reitz puts the burden on the listener with power. Where does that leave someone with no positional power who still needs to get an idea heard?"
+        }
+      ]
+    }
+  ],
+  "ledger_append": [
+    {
+      "episode_title": "The Untold Story of M-Pesa: How Was It Really Built?",
+      "show_name": "F-Squared Podcast",
+      "region": "Kenya"
+    },
+    {
+      "episode_title": "Guerrilla Public Service Redux",
+      "show_name": "99% Invisible",
+      "region": "United States"
+    },
+    {
+      "episode_title": "258. When Power Talks, People Walk: Why Leaders Don't Hear What Matters Most",
+      "show_name": "Think Fast Talk Smart",
+      "region": "United Kingdom"
+    }
+  ]
+}

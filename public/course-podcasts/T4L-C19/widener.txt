@@ -1,0 +1,94 @@
+Episode: #157: Phill Agnew - The psychology MrBeast uses to hook you
+Show: Creator Science
+Guest: Phill Agnew, host of the Nudge podcast (the behavioral science of marketing)
+Host: Jay Clouse
+Region: United Kingdom
+URL: https://podcast.creatorscience.com/phill-agnew/
+Apple Podcasts: https://podcasts.apple.com/us/podcast/phill-agnew-the-psychology-mrbeast-uses-to-hook-you/id1498801064?i=1000622238538
+Transcript source: publisher (full transcript published on the Creator Science episode page)
+
+WHAT WILL BE ASSESSED
+The assigned section runs from about 00:44 to 15:52, where Agnew explains two ideas that
+decide whether people value what you put out: input bias and costly signaling. Skip the
+later parts on the contrast effect and the curiosity gap. Focus on three things. First,
+the definition of costly signaling and the reason a costly signal is believed, in his
+words, plus at least one of his examples that is not about MrBeast (the billboard test,
+the slow-motion ad, the Ogilvy charity letter, or Patagonia). Second, the difference he
+draws between input bias, which is about visible effort, and costly signaling, which is
+about money or foregone revenue. Third, his claim, using Jay Clouse's capped-membership
+example, that turning down revenue can itself be a costly signal.
+
+RANGE USED. The full episode runs about 31 minutes. This file contains only the section
+assigned to learners: approximately 00:44 to 15:52, about 15 minutes. The podcast's own
+speaker timecodes are kept below so you can navigate.
+
+  Start: Jay Clouse [00:00:44], "So in this episode, you'll learn the three psychological biases..."
+  End:   Phill Agnew [00:14:27], "...you're not trying to milk it for as much revenue as it can get."
+
+Everything below is the publisher text for that section, unedited.
+
+---
+
+Jay Clouse [00:00:44]:
+
+So in this episode, you'll learn the three psychological biases mr. Beast uses most frequently, why they work, and how you can apply them to your own videos. How did MrBeast initially get some notoriety? He's pretty well known for being a kid in his house with basically no viewers, nothing going on initially. So what happened? What was the inflection point that he started getting some attention?
+
+Phill Agnew [00:01:09]:
+
+There's this sort of feeling all of us have to just say, oh, he just found out along the way what worked and started to do that, or he just stumbled upon greatness. That's the sort of natural thing we think towards these because Mr. Beast now is huge. 26 billion views, massive business that he's created alongside that as well. An absolute giant creator, probably the biggest you could think of. Even if you go way back to his initial videos and watch some of them, you'll actually see that the videos that started to gain him notoriety and popularity were leveraging a really interesting bias, a really interesting psychological phenomenon which made us and made viewers value his videos more. Now, I think there are three biases in total that he uses most commonly, but the first one he uses is this bias called input bias. This is the idea that the more input we put into something and that can be time or energy or cost, the more we pay for something, the more we'll value it. So if you spend $50 on a bottle of wine, you'll value that more than if you spent $20 on the same bottle of wine. If you spend 50 hours painting a portrait, you'll value your own portrait more than if you spent 50 minutes doing it. For example, there's a really interesting study on this, and it's on the most boring subject imaginable. But basically two researchers back in 2003, they asked people to watch a presentation on electronic ink and then another presentation on optical switches. Now, I'm not going to repeat the presentation for you here today because I don't want to talk about electronic ink and optical switch presentation was pretty dull. However, in the presentation, they changed one thing each time. So they either said the Ink presentation took 8 hours and 34 minutes to prepare, or they said the Ink presentation took 37 minutes to prepare. What they essentially found was that when the presentation took longer to prepare, when people were told it took longer to prepare, they valued it far, far higher. So we value things more when we understand the effort that's gone into it. Which is why when I started my episode on Mr. Beast, I told my listeners I've studied Mr. Beast for 50 hours because that would make people value the research I had done more. So that's this input bias, this is this world of input bias. Now, how did Mr. Beast apply it? Well, one of his very first viral videos was him cutting a table. So one of these tables that you would take to a car boot if you're here in the UK or to the beach if you're in the States or to a park, he's cutting one of these sort of thick plastic tables with a knife and it takes him days. It quite clearly takes him days. You can see in the video it is cut down to three minutes. You can see he's wearing different clothes. It takes him loads of time. He needs to pull his brother in. This is a very dull video, him cutting a table with a knife. And yet it got a bit of engagement. It's now got 3.5 million views, but it got him views initially as well. It's because he's showing effort. There's effort and time that's been sunk into that. It's not much value like those optical switches presentations, but there's effort there. He then went on to read the world's longest word in the English language. Now, that took him 2 hours to do. And that's a full length two hour video that has 30 million views. He said Logan Paul 100,000 times. That took him 17 hours and it's got 21 million views. So these challenges, which clearly take him a lot of time, they end up being valued a little bit more highly. And I'll share one more example to showcase how this works, because it's a test I've run, so I unashamedly want people to listen to my show. And so I often create reddit ads to try and get people to listen. And I created two reddit ads with two different lines of copy. The first line said this was my end of year show. I was my rating said, learn six memorable marketing lessons with Nudge, the podcast that simplifies the science behind great marketing. And then I had an input bias or a Mr. Beast version which said I've spent 480 minutes listening to marketing experts over the past year. Here are the six best lessons I've heard. And that second ad where I highlighted the effort I'd put into something had a 45% higher click through rate and drove thousands more listeners to that episode that I was promoting. And it's leveraging that exact same bias that Mr. Beast uses. He showcases the effort he puts into something, and people value his videos more. So good.
+
+Jay Clouse [00:05:24]:
+
+I see this on Twitter all the time too, where it's like, I studied the top 2500 accounts on Twitter and here's what they all have in common. And the cynical part of me, a lot of times I see that. I'm like, no, you didn't. Or there's some cheap way where you feel like you can ethically claim that you did, but really, it's like taking some other existing aggregated data, but no less. Those things do well. That's why they propagate, that's why we see them. I wonder why that is. I wonder if that's like we almost feel FOMO if we pass up this opportunity to get 50 hours of research in the form of a 30 minutes podcast, or I guess it is just value, we assume that all that time in means that you've really crystallized distilled the most important bits.
+
+Phill Agnew [00:06:13]:
+
+Yeah, unfortunately, the actual end product doesn't seem to matter. It doesn't matter if somebody's actually spent 50 hours on that tweet you're talking about. There's another example with Kayak So, the online search engine for flights, when they show a loading wheel, just a plain loading wheel, and people see the results, people rank how they see the results, and they give them a rank and then average rank. But sometimes they don't Show A loading wheel, and they'll Actually show the system searching through every single airline delta, United, Qantas and show it actually looking for every airline. You're nodding your head because you've probably seen this, because that test won. And people were far more likely to value the results more highly when it saw the effort it was putting in. And there's one important point there, which is if you see the effort that's going into it, rather than just being told it takes 50 hours, you do value it more. And I think that's where Mr. Beast really hit on something. He didn't just say, I've cut a table in half. He showed people doing it. He didn't just say, I've read every number up until 100,000. He actually recorded himself doing it. And I think that built a level of trust which made people value his videos more.
+
+Jay Clouse [00:07:10]:
+
+So that's how Mr. Beast got his initial notoriety. A lot of people know Mr. Beast now as giving away huge sums of money, and that was new and took off. It's been copied a lot now, but why did that do so?
+
+Phill Agnew [00:07:25]:
+
+Well, this is the premise of basically in behavioral science, it's known as costly signaling. And it essentially means the more money, it can be effort as well, but mainly the more money you spend to communicate something, the more someone will pay attention to that communication. So it's why a TV ad is typically more persuasive than a Twitter ad, even if they both show a 32nd video. It's why a proposal to your partner will be more likely to get a yes answer if you say a Michelin star restaurant than if you ask your partner at a Burger King.
+
+Jay Clouse [00:08:00]:
+
+Please don't propose to your partner at.
+
+Phill Agnew [00:08:01]:
+
+A Burger King unless you want to test this out and then let me and Jay know how it goes. I would love for the content. Please.
+
+Jay Clouse [00:08:09]:
+
+Please just do that for the contest.
+
+Phill Agnew [00:08:12]:
+
+So I've tested this out myself for Nudge. I ran a test where I basically showed an image of a Nudge ad, and the image Iva showed the Nudge ad, which was just a simple sort of four x 16 card, talked about why you should listen to Nudge. And then I showed another group of people that same image but superimposed on a billboard. And when I asked these people on Google surveys, would you be willing to listen to this podcast? People were two times more likely to listen if it had been pitched on the billboard. Again, it's the same content, but the fact that it looks like I've spent more money to promote it made people two times more likely to basically listen. Mr. Beast is using a lot of this bias in his own way. So he's constantly basically spending or showcasing spending an awful lot on his videos. So he gives away lamborghinis. He spent millions recreating Charlie and the Chocolate Factory and gave the winner, I think, hundreds of thousands, and he spent 4 million. Famously talked a lot about how he spent 4 million to recreate the Squid games. That was a huge part of his more recent success. And this seems irrational. Mr. Beast last year made $54 million. He spent $48 million on creating his videos. And he's very public about how he spends that. That seems irrational. If I had made that much money, I would definitely feel this temptation to bank a little bit more than the 6 million that he banked. You're making a lot of money. You don't need to invest this much. You don't need to give away half a million to the winner of your Squid games. You could give away fifty K and it would still be good. But he understands that the more he gives away, the more money he spends to create his videos, the more money that people can see he's investing, the more they will value them and the more they're likely to share them and the more they'll the more likely they are to hit the trending tab on YouTube. And I think by understanding that principle of costly signaling, MrBeast is now in this cycle where he's very difficult to catch up with because he is spending more than anyone else. He is able to invest more than anyone else. And he's sort of ridden this wave for so long now that he really is the standout creator on YouTube getting a huge volume of views, almost unmatched, and it's mainly down to this principle of costly signaling.
+
+Jay Clouse [00:10:15]:
+
+After a quick break, Phil and I dig deeper into costly signaling and how you can leverage it in your own creative work. So stick around. We'll be right back. And now back to my conversation with the host of Nudge, Phil Agnew. How can we use costly signaling in our day to day? I'm trying to think of ways that I can do this. You gave the example of the billboard in your case. I think in some ways, the experiments I run, it's a little bit of both because like you said, costly signaling could be an effort as well. But if we save the effort for the input bias idea, is there a way to show costly signaling without being independently wealthy? Is that something that we can leverage without having just a ton of money to command?
+
+Phill Agnew [00:11:01]:
+
+So I would say you do it really well, Jay. For those watching video, if you are watching on video, you'll see two very different video setups. One rubbish, one fantastic. Mine's the rubbish one, Jay's, is fantastic. And there's value in doing that. By creating such a nice setup, you are showcasing that you've invested a lot to create this show, that you're clearly putting a lot of your time and effort and money into it, and that makes people value it more. When people see a slow mo ad this is a study from last year by a researcher called Sinjin. When people see a slow mo ad, they are 11% more likely to want to buy the product in the ad. And I think that is down to the fact that they know filming in slow mo is a lot more expensive. And if you watch a slow mo ad, you realize, oh, okay, this must be a good product because the people behind it have spent a lot of money to film it. And I think you're doing the same with your film setup. But you could also say that you're doing the same with your website. Really clean, crisply designed website, beautiful imagery, the same with your social posts as well. There's a really interesting study from Ogilvy who talk about it in their I think it's their annual report from two years ago. They worked with a charity, and they love nudges. At Ogilvy, they tried eight different nudges to try and get people to give more to the charity. The thing that encouraged people to give the most was not social proof, was not the input bias, was not any of these other principles. I'm going to talk to you today. It was just printing the letter on a nicer piece of card, a nicer letter, so a nicer bit of paper. And just by doing that, they're showcasing, oh, that we're a serious charity investing in us, and the money will go far. And I think that's ways that we can apply this ourselves as Creators. Just showcasing the effort you're putting into your work, showcasing the money that you've spent on creating your channel or your content will make people value it more.
+
+Jay Clouse [00:12:43]:
+
+I love that. I think that's an opportunity for every creator to show a little bit more of the behind the scenes of what it took to make the thing both in effort and in cost. Those are very low coercive means to compel people to care. You're not like, hey care about this because I'm doing this. But by just showing, hey, this is something I'm really interested in, something I'm putting a lot of effort into. Check out how I did this or check out what else we're doing. I mean, my wife's doing it right now for a birthday party she's planning. We're doing, like, a 90s themed birthday party, and she's buying tamagotchi. She's buying all this 90s candy. I went and got, like, a vintage sweater. We're talking about with our friends. And people are getting more and more excited as we're talking about all the things, all the stops. We're pulling out to make this 90s birthday party really interesting. And I think that's something that most creators don't do. They just show up once a week. And, like, here's this finished thing I made. And it doesn't get the viewer, the consumer, as invested in it. They don't know how much to weigh, how seriously to take it.
+
+Phill Agnew [00:13:47]:
+
+And you can see how these two biases link as well. Of course, you can see input bias is about effort. Costly signaling is about sort of money and investment. If you are spending a lot of time creating something, it's just really valuable to highlight that.
+
+Jay Clouse [00:14:02]:
+
+Here's another example, actually I think that costly signaling could apply to opportunity cost in some ways, too. Like my membership, the lab. A lot of people talk about it for the reason that I have a cap on it. I have a waitlist of 50 plus people who want to join the lab, but I capped it at 200 people. So people see that and they say, you're crazy. Like that's. A whole lot of revenue you're saying no to. That's another way to do costly signaling. Right.
+
+Phill Agnew [00:14:27]:
+
+I think that's one of the most perfect applications of this bias. And it's for lots of different reasons as well, because you've got costly signaling. You've got a bit of scarcity in there, too, which makes people value it more. But it reminds me of Patagonia. Patagonia famously refused to sell their sweaters to employees of firms that do damage to the environment. So this included oil companies, including some finance companies, some mining companies. And this seems irrational, just like, you know, limiting the amount of people who can buy your product. Not only will that just cut your revenue, but it'll also make people surely less likely to want to buy the product. Right? Why would I want to buy Patagonia's Tops if they might not even sell it to me or bother trying? Why would I want to join Jay's course if I'm not even sure if there's any entrances left? But when you understand costly signaling, when you realize that actually the cost incurred will make people value it more, I am more likely to want a Patagonia sweater if I know other companies can't do bulk purchases and buy a load for there because it's something that's harder to get. And clearly it must be high quality because Patagonia are willing to forego revenue just to stand up for their own values. For them. That's values know companies that do cruelties to the world. For you, it's values around making a really good, really good community. And I can trust that your community is high quality because you set that cap, because you're not trying to milk it for as much revenue as it can get.
