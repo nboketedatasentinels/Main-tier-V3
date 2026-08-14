@@ -3,12 +3,6 @@ import {
   Badge,
   Box,
   Button,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerHeader,
-  DrawerOverlay,
   Flex,
   HStack,
   Icon,
@@ -17,7 +11,6 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import {
-  BookOpen,
   CheckCircle2,
   ClipboardCheck,
   ExternalLink,
@@ -40,7 +33,6 @@ import { awardChecklistPoints } from '@/services/pointsService'
 import {
   listPlayableEpisodes,
   loadCoursePodcastPackForCatalogueCourse,
-  loadCoursePodcastTranscript,
 } from '@/services/coursePodcastAssetService'
 import type { CoursePodcastEpisodeFilled, CoursePodcastPackMeta } from '@/types/coursePodcast'
 import type { CoursePodcastPackRef } from '@/config/coursePodcastCatalogue'
@@ -86,10 +78,6 @@ export function CoursePodcastSeriesPanel({
   const [submittingId, setSubmittingId] = useState<string | null>(null)
   const [watchingId, setWatchingId] = useState<string | null>(null)
   const [lastSaveOk, setLastSaveOk] = useState(false)
-
-  const [transcriptSlot, setTranscriptSlot] = useState<CoursePodcastEpisodeFilled | null>(null)
-  const [transcriptText, setTranscriptText] = useState<string>('')
-  const [transcriptLoading, setTranscriptLoading] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -157,29 +145,6 @@ export function CoursePodcastSeriesPanel({
       })
     } finally {
       setWatchingId(null)
-    }
-  }
-
-  const handleOpenTranscript = async (episode: CoursePodcastEpisodeFilled) => {
-    if (!ref || !episode.transcript_file) return
-    setTranscriptSlot(episode)
-    setTranscriptText('')
-    setTranscriptLoading(true)
-    try {
-      const text = await loadCoursePodcastTranscript({
-        packId: ref.packId,
-        slot: episode.slot,
-      })
-      setTranscriptText(text)
-    } catch (err) {
-      toast({
-        status: 'error',
-        title: 'Could not load transcript',
-        description: err instanceof Error ? err.message : 'Try again.',
-      })
-      setTranscriptSlot(null)
-    } finally {
-      setTranscriptLoading(false)
     }
   }
 
@@ -429,19 +394,6 @@ export function CoursePodcastSeriesPanel({
                     {!hasUrl ? 'Unavailable' : isPassed ? 'Replay' : 'Watch'}
                   </Button>
 
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    borderColor="gray.300"
-                    color={PLUM}
-                    _hover={{ bg: 'gray.50' }}
-                    leftIcon={<Icon as={BookOpen} boxSize={3.5} />}
-                    isLoading={transcriptLoading && transcriptSlot?.slot === episode.slot}
-                    onClick={() => void handleOpenTranscript(episode)}
-                  >
-                    Transcript
-                  </Button>
-
                   {!isPassed && (
                     <Button
                       size="sm"
@@ -497,44 +449,6 @@ export function CoursePodcastSeriesPanel({
         }}
         onSubmit={handleQuizSubmit}
       />
-
-      <Drawer
-        isOpen={Boolean(transcriptSlot)}
-        placement="right"
-        size="lg"
-        onClose={() => setTranscriptSlot(null)}
-      >
-        <DrawerOverlay />
-        <DrawerContent>
-          <DrawerCloseButton />
-          <DrawerHeader borderBottomWidth="1px">
-            <Text fontSize="sm" color="gray.500" textTransform="capitalize">
-              {transcriptSlot?.slot} transcript
-            </Text>
-            <Text fontSize="md" color={PLUM} noOfLines={2}>
-              {transcriptSlot?.episode_title}
-            </Text>
-          </DrawerHeader>
-          <DrawerBody>
-            {transcriptLoading ? (
-              <Text fontSize="sm" color="gray.500">
-                Loading transcript…
-              </Text>
-            ) : (
-              <Text
-                as="pre"
-                whiteSpace="pre-wrap"
-                fontFamily="inherit"
-                fontSize="sm"
-                color="gray.700"
-                lineHeight="1.7"
-              >
-                {transcriptText}
-              </Text>
-            )}
-          </DrawerBody>
-        </DrawerContent>
-      </Drawer>
     </Stack>
   )
 }

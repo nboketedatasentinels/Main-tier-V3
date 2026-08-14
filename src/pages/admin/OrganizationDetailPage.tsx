@@ -403,14 +403,32 @@ export const OrganizationDetailPage: React.FC = () => {
   return (
     <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
       <Stack spacing={6}>
-        <Breadcrumb fontSize="sm" color="brand.subtleText">
-          <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate(breadcrumbBase.path)}>{breadcrumbBase.label}</BreadcrumbLink>
+        <Breadcrumb
+          fontSize="sm"
+          color="brand.subtleText"
+          separator="/"
+          spacing={2}
+          listProps={{
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            m: 0,
+            p: 0,
+            listStyleType: 'none',
+          }}
+        >
+          <BreadcrumbItem display="inline-flex" alignItems="center" m={0}>
+            <BreadcrumbLink onClick={() => navigate(breadcrumbBase.path)}>
+              {breadcrumbBase.label}
+            </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbItem>
-            <BreadcrumbLink onClick={() => navigate(organizationListPath)}>Organizations</BreadcrumbLink>
+          <BreadcrumbItem display="inline-flex" alignItems="center" m={0}>
+            <BreadcrumbLink onClick={() => navigate(organizationListPath)}>
+              Organizations
+            </BreadcrumbLink>
           </BreadcrumbItem>
-          <BreadcrumbItem isCurrentPage>
+          <BreadcrumbItem isCurrentPage display="inline-flex" alignItems="center" m={0}>
             <BreadcrumbLink>{organization?.name || 'Organization'}</BreadcrumbLink>
           </BreadcrumbItem>
         </Breadcrumb>
