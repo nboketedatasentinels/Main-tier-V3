@@ -238,7 +238,7 @@ export const submitCourseAssessmentResponse = async (params: {
 
   const row = data as CourseAssessmentResponseRow
 
-  // Learner Pre → request course unlock (Wix stub until API is live)
+  // Learner Pre → unlock course access (Supabase + optional webhook)
   if (params.raterRole === 'learner' && params.definition.kind === 'pre') {
     try {
       await requestCourseAccessUnlock({
@@ -247,7 +247,7 @@ export const submitCourseAssessmentResponse = async (params: {
         courseTitle: params.courseTitle,
       })
     } catch (err) {
-      console.warn('[submitCourseAssessmentResponse] unlock stub failed', err)
+      console.warn('[submitCourseAssessmentResponse] unlock failed', err)
     }
   }
 

@@ -2,7 +2,6 @@ export type MentorDashboardSection =
   | 'overview'
   | 'mentees'
   | 'schedule'
-  | 'pre-assessments'
   | 'assessments'
 
 export type MentorNavDestination =
@@ -13,7 +12,6 @@ const DASHBOARD_SECTIONS = new Set<MentorDashboardSection>([
   'overview',
   'mentees',
   'schedule',
-  'pre-assessments',
   'assessments',
 ])
 
@@ -23,6 +21,10 @@ export const resolveMentorNavDestination = (key: string): MentorNavDestination =
   }
   if (key === 'notifications') {
     return { kind: 'route', path: '/mentor/notifications' }
+  }
+  // Legacy Pre nav → Post assessments section
+  if (key === 'pre-assessments') {
+    return { kind: 'section', section: 'assessments' }
   }
   if (DASHBOARD_SECTIONS.has(key as MentorDashboardSection)) {
     return { kind: 'section', section: key as MentorDashboardSection }

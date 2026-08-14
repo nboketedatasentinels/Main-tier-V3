@@ -2,7 +2,6 @@ export type CoachDashboardSection =
   | 'overview'
   | 'coachees'
   | 'schedule'
-  | 'pre-assessments'
   | 'assessments'
   | 'guidelines'
 
@@ -14,7 +13,6 @@ const DASHBOARD_SECTIONS = new Set<CoachDashboardSection>([
   'overview',
   'coachees',
   'schedule',
-  'pre-assessments',
   'assessments',
 ])
 
@@ -24,6 +22,10 @@ export const resolveCoachNavDestination = (key: string): CoachNavDestination => 
   }
   if (key === 'notifications') {
     return { kind: 'route', path: '/coach/notifications' }
+  }
+  // Legacy Pre nav → Post assessments section
+  if (key === 'pre-assessments') {
+    return { kind: 'section', section: 'assessments' }
   }
   if (DASHBOARD_SECTIONS.has(key as CoachDashboardSection)) {
     return { kind: 'section', section: key as CoachDashboardSection }

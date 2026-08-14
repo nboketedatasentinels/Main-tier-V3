@@ -101,23 +101,11 @@ export const fetchSurveyMonkeyQuestions = async (
 
 /**
  * Replace catalog snapshot questions with a live SurveyMonkey pull.
- * Falls back to the catalog definition if the live pull fails.
+ * @deprecated SurveyMonkey runtime hydrate is retired — always returns catalog.
+ * Kept so call sites compile until fully removed.
  */
 export const hydrateCourseAssessmentFromSurveyMonkey = async (
   definition: CourseAssessmentDefinition,
 ): Promise<{ definition: CourseAssessmentDefinition; source: 'surveymonkey' | 'catalog' }> => {
-  try {
-    const live = await fetchSurveyMonkeyQuestions(definition.surveyMonkeyId)
-    return {
-      source: 'surveymonkey',
-      definition: {
-        ...definition,
-        title: live.title || definition.title,
-        questions: live.questions,
-      },
-    }
-  } catch (err) {
-    console.warn('[hydrateCourseAssessmentFromSurveyMonkey] live pull failed; using catalog', err)
-    return { definition, source: 'catalog' }
-  }
+  return { definition, source: 'catalog' }
 }

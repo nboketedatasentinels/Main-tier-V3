@@ -1,11 +1,12 @@
 /**
  * Native course Pre/Post assessment catalog.
  *
- * Catalog rows map course titles → SurveyMonkey survey ids.
- * At runtime the app live-pulls questions from SurveyMonkey (exact wording).
- * This JSON is the offline fallback + matcher index.
+ * Catalog rows map course titles → survey instruments + question snapshots.
+ * Runtime uses the catalog only (SurveyMonkey live hydrate retired).
+ * Pre and Post for the same courseKey + audience share one instrument:
+ * Post reuses Pre question wording so growth math is like-for-like.
  *
- * Regenerate fallback snapshot: node scripts/import-native-course-assessments.mjs
+ * Regenerate snapshot: node scripts/import-native-course-assessments.mjs
  */
 import catalogJson from './nativeCourseAssessments.catalog.json'
 
@@ -36,6 +37,36 @@ const normalize = (value: string): string =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
 
+const questionFingerprint = (questions: CourseAssessmentQuestion[]): string =>
+  questions
+    .filter((q) => q.type !== 'info')
+    .map((q) => `${q.type}:${q.text}`)
+    .join('|')
+
+/**
+ * Product rule: Pre and Post are the same instrument (self / rater language).
+ * When Post differs from Pre for the same courseKey+audience, reuse Pre questions.
+ */
+export const alignPostInstrumentToPre = (
+  definition: CourseAssessmentDefinition,
+): CourseAssessmentDefinition => {
+  if (definition.kind !== 'post') return definition
+  const pre = NATIVE_COURSE_ASSESSMENTS.find(
+    (row) =>
+      row.kind === 'pre' &&
+      row.audience === definition.audience &&
+      row.courseKey === definition.courseKey,
+  )
+  if (!pre?.questions?.length) return definition
+  if (questionFingerprint(pre.questions) === questionFingerprint(definition.questions)) {
+    return definition
+  }
+  return {
+    ...definition,
+    questions: pre.questions.map((q) => ({ ...q })),
+  }
+}
+
 export const findNativeCourseAssessment = (
   courseTitle: string | null | undefined,
   kind: CourseAssessmentKind,
@@ -56,8 +87,6 @@ export const findNativeCourseAssessment = (
       if (!(haystack.includes(needle) || needle.includes(haystack))) continue
 
       const ratingCount = row.questions.filter((q) => q.type === 'rating').length
-      // Prefer standard 1–10 course scales (~5–15 items). Huge imports (e.g. 96)
-      // are instrument dumps and must not win matching.
       const sizePenalty =
         ratingCount === 0 ? 1000 : ratingCount > 20 ? ratingCount * 10 : ratingCount < 3 ? 50 : 0
       const score = needle.length * 100 - sizePenalty
@@ -67,7 +96,7 @@ export const findNativeCourseAssessment = (
       }
     }
   }
-  return best
+  return best ? alignPostInstrumentToPre(best) : null
 }
 
 export const listNativeCourseAssessments = (
@@ -78,4 +107,4 @@ export const listNativeCourseAssessments = (
     if (kind && row.kind !== kind) return false
     if (audience && row.audience !== audience) return false
     return true
-  })
+  }).map(alignPostInstrumentToPre)

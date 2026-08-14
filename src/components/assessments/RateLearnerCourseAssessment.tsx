@@ -29,7 +29,6 @@ import {
   type CourseAssessmentKind,
 } from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment, getCourseAssessmentResponse } from '@/services/courseAssessmentService'
-import { hydrateCourseAssessmentFromSurveyMonkey } from '@/services/surveyMonkeyService'
 
 export interface RateLearnerOption {
   id: string
@@ -157,20 +156,11 @@ export function RateLearnerCourseAssessment({
           duration: 3500,
         })
       }
-      const hydrated = await hydrateCourseAssessmentFromSurveyMonkey(definition)
-      setLiveDefinition(hydrated.definition)
-      if (hydrated.source === 'catalog') {
-        toast({
-          status: 'warning',
-          title: 'Using saved survey copy',
-          description: 'Could not reach SurveyMonkey live. Showing the last imported questions.',
-          duration: 4000,
-        })
-      }
+      setLiveDefinition(definition)
       setModalOpen(true)
     } catch (err) {
       console.error('[RateLearnerCourseAssessment]', err)
-      toast({ status: 'error', title: 'Could not load SurveyMonkey questions' })
+      toast({ status: 'error', title: 'Could not load assessment questions' })
     } finally {
       setChecking(false)
     }

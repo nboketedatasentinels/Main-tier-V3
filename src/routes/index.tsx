@@ -51,6 +51,7 @@ const AmbassadorDashboard = lazy(() =>
 const CoachGuidelinesPage = lazy(() =>
   import('@/pages/coach/CoachGuidelinesPage').then(m => ({ default: m.CoachGuidelinesPage }))
 )
+const CourseAssessmentPage = lazy(() => import('@/pages/assessments/CourseAssessmentPage'))
 const PartnerDashboard = lazy(() =>
   import('@/pages/dashboards/PartnerDashboard').then(m => ({ default: m.PartnerDashboard }))
 )
@@ -317,6 +318,20 @@ export const AppRoutes = () => {
           <Route path="leaderboard" element={<Navigate to="/app/leadership-board" replace />} />
           <Route path="leadership-board" element={<LeadershipBoardPage />} />
           <Route path="weekly-checklist" element={<WeeklyUpdatesPage />} />
+          <Route
+            path="assessments/course"
+            element={
+              <Suspense
+                fallback={
+                  <Center minH="40vh">
+                    <Spinner size="lg" color="brand.primary" thickness="3px" />
+                  </Center>
+                }
+              >
+                <CourseAssessmentPage />
+              </Suspense>
+            }
+          />
           <Route path="courses" element={<Navigate to="/app/weekly-glance" replace />} />
           <Route
             path="peer-connect"

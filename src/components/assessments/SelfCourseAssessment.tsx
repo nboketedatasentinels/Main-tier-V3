@@ -14,15 +14,14 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { ClipboardList } from 'lucide-react'
-import { NativeCourseAssessmentModal } from '@/components/modals/NativeCourseAssessmentModal'
+import { useNavigate } from 'react-router-dom'
 import {
   findNativeCourseAssessment,
   listNativeCourseAssessments,
-  type CourseAssessmentDefinition,
   type CourseAssessmentKind,
 } from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment } from '@/services/courseAssessmentService'
-import { hydrateCourseAssessmentFromSurveyMonkey } from '@/services/surveyMonkeyService'
+import { buildCourseAssessmentPath } from '@/utils/courseAssessmentPaths'
 
 interface SelfCourseAssessmentProps {
   userId: string
@@ -34,24 +33,22 @@ interface SelfCourseAssessmentProps {
 }
 
 /**
- * Learner entry point to submit self Pre/Post for programme courses.
+ * Learner entry point: pick course, then open the full-page assessment.
  */
 export function SelfCourseAssessment({
   userId,
   allowedCourseTitles,
   forcedKind,
-  onSubmitted,
 }: SelfCourseAssessmentProps) {
   const toast = useToast()
+  const navigate = useNavigate()
   const allowedKinds = (['pre', 'post'] as CourseAssessmentKind[]).filter(
     (k) => !forcedKind || forcedKind === k,
   )
 
   const [kind, setKind] = useState<CourseAssessmentKind>(allowedKinds[0] ?? 'pre')
   const [selectedCourseKey, setSelectedCourseKey] = useState('')
-  const [modalOpen, setModalOpen] = useState(false)
   const [checking, setChecking] = useState(false)
-  const [liveDefinition, setLiveDefinition] = useState<CourseAssessmentDefinition | null>(null)
 
   const courseOptions = useMemo(() => {
     const titles = (allowedCourseTitles ?? []).map((t) => t.trim()).filter(Boolean)
@@ -107,20 +104,16 @@ export function SelfCourseAssessment({
           duration: 3500,
         })
       }
-      const hydrated = await hydrateCourseAssessmentFromSurveyMonkey(definition)
-      setLiveDefinition(hydrated.definition)
-      if (hydrated.source === 'catalog') {
-        toast({
-          status: 'warning',
-          title: 'Using saved survey copy',
-          description: 'Could not reach SurveyMonkey live. Showing the last imported questions.',
-          duration: 4000,
-        })
-      }
-      setModalOpen(true)
+      navigate(
+        buildCourseAssessmentPath({
+          kind,
+          course: definition.title || definition.courseKey,
+          returnTo: `${window.location.pathname}${window.location.search}`,
+        }),
+      )
     } catch (err) {
       console.error('[SelfCourseAssessment]', err)
-      toast({ status: 'error', title: 'Could not load SurveyMonkey questions' })
+      toast({ status: 'error', title: 'Could not open assessment' })
     } finally {
       setChecking(false)
     }
@@ -206,28 +199,9 @@ export function SelfCourseAssessment({
           onClick={() => void start()}
           isDisabled={!definition}
         >
-          Start {kind === 'pre' ? 'Pre-course survey' : 'Post-course survey'}
+          Open {kind === 'pre' ? 'pre-course' : 'post-course'} survey
         </Button>
       </Stack>
-
-      <NativeCourseAssessmentModal
-        isOpen={modalOpen}
-        definition={liveDefinition}
-        courseTitle={liveDefinition?.courseKey ?? definition?.courseKey}
-        respondentId={userId}
-        subjectUserId={userId}
-        raterRole="learner"
-        onClose={() => {
-          setModalOpen(false)
-          setLiveDefinition(null)
-        }}
-        onCompleted={() => {
-          setModalOpen(false)
-          setLiveDefinition(null)
-          toast({ status: 'success', title: 'Assessment saved', duration: 2500 })
-          onSubmitted?.()
-        }}
-      />
     </Box>
   )
 }

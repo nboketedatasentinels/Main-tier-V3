@@ -21,7 +21,6 @@ import {
   ArrowRight,
   CalendarClock,
   ClipboardCheck,
-  ClipboardList,
   RefreshCw,
   Search,
   Users,
@@ -39,9 +38,6 @@ import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles
 import { fetchAssignedCoachees } from '@/services/learnerAssignmentService'
 import { getOrganizationProgram } from '@/services/supabaseOrgService'
 import { getDisplayName } from '@/utils/displayName'
-import { JOURNEY_META } from '@/config/pointsConfig'
-import { isJourneyType } from '@/utils/journeyType'
-import { resolveCourseSurveyKind } from '@/utils/courseSurveyWindow'
 import { resolvePurchasedCoachSessions } from '@/utils/purchasedCoachSessions'
 import { buildAmbassadorNavItems } from '@/utils/navigationItems'
 import {
@@ -183,26 +179,6 @@ export const AmbassadorDashboard: React.FC = () => {
     orgPurchased: orgPurchasedSessions,
   })
 
-  const courseSurveyKind = useMemo(() => {
-    const subject = selected
-    const journeyType =
-      typeof subject?.journeyType === 'string' && isJourneyType(subject.journeyType)
-        ? subject.journeyType
-        : null
-    const weeks =
-      subject?.programDurationWeeks ||
-      (journeyType ? JOURNEY_META[journeyType].weeks : null) ||
-      orgProgram?.programDurationWeeks ||
-      null
-    return resolveCourseSurveyKind({
-      journeyStartDate: subject?.journeyStartDate,
-      programDurationWeeks: weeks,
-      currentWeek: subject?.currentWeek,
-    })
-  }, [selected, orgProgram?.programDurationWeeks])
-
-  const activeAssessmentSection = courseSurveyKind === 'post' ? 'assessments' : 'pre-assessments'
-
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
     const el = document.getElementById(`coach-${key}`)
@@ -290,8 +266,9 @@ export const AmbassadorDashboard: React.FC = () => {
                   Open coachees
                 </Button>
                 <PreCourseSurveyButton
-                  kind={courseSurveyKind}
-                  onClick={() => scrollTo(activeAssessmentSection)}
+                  kind="post"
+                  label="Post-course assessments"
+                  onClick={() => scrollTo('assessments')}
                 />
                 <Button
                   variant="outline"
@@ -348,22 +325,17 @@ export const AmbassadorDashboard: React.FC = () => {
                 borderRadius="lg"
                 px={4}
                 py={3}
-                onClick={() => scrollTo(activeAssessmentSection)}
+                onClick={() => scrollTo('assessments')}
                 _hover={{ bg: 'gray.100' }}
               >
                 <HStack spacing={3}>
-                  <Icon
-                    as={courseSurveyKind === 'pre' ? ClipboardList : ClipboardCheck}
-                    color="gray.600"
-                  />
+                  <Icon as={ClipboardCheck} color="gray.600" />
                   <Box>
                     <Text fontSize="xs" color="gray.500">
-                      {courseSurveyKind === 'pre' ? 'Pre assessments' : 'Post assessments'}
+                      Post assessments
                     </Text>
                     <Text fontWeight="700" fontSize="lg" color="gray.900">
-                      {orgCourseTitles.length
-                        ? `${orgCourseTitles.length} course${orgCourseTitles.length === 1 ? '' : 's'}`
-                        : 'Org courses'}
+                      End of course
                     </Text>
                   </Box>
                 </HStack>
@@ -500,7 +472,7 @@ export const AmbassadorDashboard: React.FC = () => {
             id="coach-schedule"
             eyebrow="Sessions"
             title="Coaching slots"
-            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Ambassador Session points — only when they showed up (within 48 hours for Journey clients)."
+            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Coach Session points — only when they showed up (within 48 hours for Journey clients)."
           >
             {profile?.id ? (
               <AmbassadorSessionsPanel
@@ -518,61 +490,34 @@ export const AmbassadorDashboard: React.FC = () => {
             )}
           </SectionShell>
 
-          {courseSurveyKind === 'pre' ? (
-            <SectionShell
-              id="coach-pre-assessments"
-              eyebrow="Start of course"
-              title="Coachee pre-assessments"
-              subtitle={
-                orgCourseTitles.length
-                  ? `Rate each coachee on their organisation programme (${orgCourseTitles.join(', ')}).`
-                  : 'Rate each coachee on the courses assigned to their organisation.'
-              }
-            >
-              {profile?.id && assessmentLearners.length > 0 ? (
-                <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
-                  <RateLearnerCourseAssessment
-                    respondentId={profile.id}
-                    raterRole="coach"
-                    learners={assessmentLearners}
-                    forcedKind="pre"
-                    allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
-                  />
-                </Box>
-              ) : (
-                <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                  <Text fontSize="sm" color="gray.600">
-                    Assign coachees first. Pre assessments appear here for each learner on your roster.
-                  </Text>
-                </Box>
-              )}
-            </SectionShell>
-          ) : (
-            <SectionShell
-              id="coach-assessments"
-              eyebrow="End of course"
-              title="Coachee post-assessments"
-              subtitle="Final 3 weeks: complete the coach Post rating about them."
-            >
-              {profile?.id && assessmentLearners.length > 0 ? (
-                <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
-                  <RateLearnerCourseAssessment
-                    respondentId={profile.id}
-                    raterRole="coach"
-                    learners={assessmentLearners}
-                    forcedKind="post"
-                    allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
-                  />
-                </Box>
-              ) : (
-                <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                  <Text fontSize="sm" color="gray.600">
-                    Assign coachees first. Post assessments appear here for each learner on your roster.
-                  </Text>
-                </Box>
-              )}
-            </SectionShell>
-          )}
+          <SectionShell
+            id="coach-assessments"
+            eyebrow="End of course"
+            title="Coachee post-assessments"
+            subtitle={
+              orgCourseTitles.length
+                ? `Coaches complete Post only. Courses follow their organisation programme (${orgCourseTitles.join(', ')}).`
+                : 'Coaches complete Post ratings only — after the learner finishes the course.'
+            }
+          >
+            {profile?.id && assessmentLearners.length > 0 ? (
+              <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
+                <RateLearnerCourseAssessment
+                  respondentId={profile.id}
+                  raterRole="coach"
+                  learners={assessmentLearners}
+                  forcedKind="post"
+                  allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
+                />
+              </Box>
+            ) : (
+              <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                <Text fontSize="sm" color="gray.600">
+                  Assign coachees first. Post assessments appear here for each learner on your roster.
+                </Text>
+              </Box>
+            )}
+          </SectionShell>
         </Stack>
       </Box>
     </AmbassadorLayout>

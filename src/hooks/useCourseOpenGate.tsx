@@ -1,15 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
-import { NativeCourseAssessmentModal } from '@/components/modals/NativeCourseAssessmentModal'
-import {
-  findNativeCourseAssessment,
-  type CourseAssessmentDefinition,
-} from '@/config/nativeCourseAssessments'
+import { findNativeCourseAssessment } from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment } from '@/services/courseAssessmentService'
-import { hydrateCourseAssessmentFromSurveyMonkey } from '@/services/surveyMonkeyService'
-import { resolvePreCourseSurveyUrl } from '@/config/courseSurveys'
-import { PreCourseSurveyModal } from '@/components/modals/PreCourseSurveyModal'
-import { markPreCourseSurveyCompleted } from '@/services/preCourseSurveyService'
+import { buildCourseAssessmentPath } from '@/utils/courseAssessmentPaths'
 
 interface UseCourseOpenGateResult {
   /**
@@ -20,64 +14,22 @@ interface UseCourseOpenGateResult {
   requestOpenCourse: (url: string, courseTitle?: string) => void
   /**
    * Open learner Post assessment after course complete.
-   * No URL required — modal only.
    */
   requestPostAssessment: (courseTitle: string) => void
-  /** Render this once at the top of your page. */
+  /** Legacy SurveyMonkey modal removed — always null. */
   surveyModal: React.ReactNode
   /** Reserved for callers that still read this flag. */
   surveyCompleted: boolean
 }
 
-type PendingMode = 'pre' | 'post' | null
-
 export function useCourseOpenGate(): UseCourseOpenGateResult {
   const { profile } = useAuth()
+  const navigate = useNavigate()
   const uid = profile?.id ?? null
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null)
-  const [pendingCourseTitle, setPendingCourseTitle] = useState<string | null>(null)
-  const [pendingMode, setPendingMode] = useState<PendingMode>(null)
-  const [checking, setChecking] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
-  const [legacyOpen, setLegacyOpen] = useState(false)
-  const [liveDefinition, setLiveDefinition] = useState<CourseAssessmentDefinition | null>(null)
-  const [hydrateReady, setHydrateReady] = useState(false)
 
   const openInNewTab = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
-
-  const clearPending = () => {
-    setPendingUrl(null)
-    setPendingCourseTitle(null)
-    setPendingMode(null)
-    setLegacyOpen(false)
-    setLiveDefinition(null)
-    setHydrateReady(false)
-  }
-
-  const catalogDefinition =
-    pendingMode && pendingCourseTitle
-      ? findNativeCourseAssessment(pendingCourseTitle, pendingMode, 'self')
-      : null
-
-  useEffect(() => {
-    if (!catalogDefinition || legacyOpen) {
-      setLiveDefinition(null)
-      setHydrateReady(false)
-      return
-    }
-    let cancelled = false
-    setHydrateReady(false)
-    void hydrateCourseAssessmentFromSurveyMonkey(catalogDefinition).then((hydrated) => {
-      if (cancelled) return
-      setLiveDefinition(hydrated.definition)
-      setHydrateReady(true)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [catalogDefinition?.surveyMonkeyId, legacyOpen, pendingMode, pendingCourseTitle])
 
   const requestOpenCourse = useCallback(
     async (url: string, courseTitle?: string) => {
@@ -90,40 +42,44 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
         return
       }
 
-      if (definition) {
-        setChecking(true)
-        try {
-          const done = await hasCompletedSelfCourseAssessment({
-            userId: uid,
-            courseKey: definition.courseKey,
-            kind: 'pre',
-          })
-          if (done) {
-            openInNewTab(url)
-            return
-          }
-          setPendingCourseTitle(title)
-          setPendingUrl(url)
-          setPendingMode('pre')
-          setLegacyOpen(false)
-        } catch (err) {
-          console.error('[useCourseOpenGate] native pre check failed', err)
-          setPendingCourseTitle(title)
-          setPendingUrl(url)
-          setPendingMode('pre')
-          setLegacyOpen(false)
-        } finally {
-          setChecking(false)
-        }
+      if (!definition) {
+        // No native Pre instrument for this title — do not fall back to SurveyMonkey.
+        console.warn('[useCourseOpenGate] no native Pre assessment; opening course', title)
+        openInNewTab(url)
         return
       }
 
-      setPendingCourseTitle(title)
-      setPendingUrl(url)
-      setPendingMode('pre')
-      setLegacyOpen(true)
+      try {
+        const done = await hasCompletedSelfCourseAssessment({
+          userId: uid,
+          courseKey: definition.courseKey,
+          kind: 'pre',
+        })
+        if (done) {
+          openInNewTab(url)
+          return
+        }
+        navigate(
+          buildCourseAssessmentPath({
+            kind: 'pre',
+            course: title || definition.title || definition.courseKey,
+            unlockUrl: url,
+            returnTo: `${window.location.pathname}${window.location.search}`,
+          }),
+        )
+      } catch (err) {
+        console.error('[useCourseOpenGate] native pre check failed', err)
+        navigate(
+          buildCourseAssessmentPath({
+            kind: 'pre',
+            course: title || definition.title || definition.courseKey,
+            unlockUrl: url,
+            returnTo: `${window.location.pathname}${window.location.search}`,
+          }),
+        )
+      }
     },
-    [uid],
+    [uid, navigate],
   )
 
   const requestPostAssessment = useCallback(
@@ -132,7 +88,6 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
       const definition = findNativeCourseAssessment(courseTitle, 'post', 'self')
       if (!definition) return
 
-      setChecking(true)
       try {
         const done = await hasCompletedSelfCourseAssessment({
           userId: uid,
@@ -140,66 +95,26 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
           kind: 'post',
         })
         if (done) return
-        setPendingCourseTitle(courseTitle.trim())
-        setPendingUrl(null)
-        setPendingMode('post')
-        setLegacyOpen(false)
+        navigate(
+          buildCourseAssessmentPath({
+            kind: 'post',
+            course: courseTitle.trim(),
+            returnTo: `${window.location.pathname}${window.location.search}`,
+          }),
+        )
       } catch (err) {
         console.error('[useCourseOpenGate] native post check failed', err)
-        setPendingCourseTitle(courseTitle.trim())
-        setPendingUrl(null)
-        setPendingMode('post')
-        setLegacyOpen(false)
-      } finally {
-        setChecking(false)
+        navigate(
+          buildCourseAssessmentPath({
+            kind: 'post',
+            course: courseTitle.trim(),
+            returnTo: `${window.location.pathname}${window.location.search}`,
+          }),
+        )
       }
     },
-    [uid],
+    [uid, navigate],
   )
-
-  const handleNativeCompleted = useCallback(async () => {
-    const target = pendingUrl
-    clearPending()
-    if (target) openInNewTab(target)
-  }, [pendingUrl])
-
-  const handleLegacyCompleted = useCallback(async () => {
-    if (!uid) return
-    setSubmitting(true)
-    try {
-      await markPreCourseSurveyCompleted(uid)
-      const target = pendingUrl
-      clearPending()
-      if (target) openInNewTab(target)
-    } finally {
-      setSubmitting(false)
-    }
-  }, [uid, pendingUrl])
-
-  const activeDefinition = liveDefinition
-
-  const surveyModal =
-    pendingMode && hydrateReady && activeDefinition && !legacyOpen && uid ? (
-      <NativeCourseAssessmentModal
-        isOpen
-        definition={activeDefinition}
-        courseTitle={pendingCourseTitle}
-        respondentId={uid}
-        subjectUserId={uid}
-        raterRole="learner"
-        isSubmitting={submitting || checking}
-        onClose={clearPending}
-        onCompleted={handleNativeCompleted}
-      />
-    ) : (
-      <PreCourseSurveyModal
-        isOpen={pendingMode === 'pre' && pendingUrl !== null && legacyOpen}
-        isSubmitting={submitting}
-        surveyUrl={resolvePreCourseSurveyUrl(pendingCourseTitle)}
-        onClose={clearPending}
-        onCompleted={handleLegacyCompleted}
-      />
-    )
 
   return {
     requestOpenCourse: (url, courseTitle) => {
@@ -208,7 +123,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
     requestPostAssessment: (courseTitle) => {
       void requestPostAssessment(courseTitle)
     },
-    surveyModal,
+    surveyModal: null,
     surveyCompleted: false,
   }
 }

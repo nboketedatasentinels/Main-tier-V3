@@ -411,8 +411,8 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "ambassador_session",
     baseId: "ambassador_session",
-    title: "Ambassador Session",
-    description: "Attend a session led by a coach (ambassador).",
+    title: "Coach Session",
+    description: "Attend a scheduled session with your coach.",
     points: 2000,
     behaviorType: "window_limited",
     approvalType: "ambassador_issued",
@@ -598,7 +598,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     {
       activityId: "ambassador_session",
       totalFrequency: 3,
-      titleOverride: "Ambassador Session",
+      titleOverride: "Coach Session",
     },
     // Month-local programme components (0 pts - keep 113k max). Content pillar
     // follows that month's assigned course (see resolvePillarForMonth).
@@ -643,7 +643,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     {
       activityId: "ambassador_session",
       totalFrequency: 6,
-      titleOverride: "Ambassador Session",
+      titleOverride: "Coach Session",
     },
     {
       activityId: "capstone",
@@ -686,7 +686,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     {
       activityId: "ambassador_session",
       totalFrequency: 9,
-      titleOverride: "Ambassador Session",
+      titleOverride: "Coach Session",
     },
     {
       activityId: "capstone",

@@ -49,7 +49,7 @@ export const COACH_GUIDELINES_SECTIONS: MentorGuidelinesSection[] = [
               'Anyone, enrolled or not. Often bought by their organization.',
             ],
             ['Basis', 'Included in the Journey', 'Purchased. Standard is one session or five.'],
-            ['Points', '2,000 per Ambassador Session, coach-issued', 'None'],
+            ['Points', '2,000 per Coach Session, coach-issued', 'None'],
             [
               'Focus',
               'Applying the Journey material to their real work',
@@ -395,7 +395,7 @@ export const COACH_GUIDELINES_SECTIONS: MentorGuidelinesSection[] = [
       {
         type: 'bullets',
         items: [
-          'Issue Ambassador Session points within 48 hours for Journey clients. Late points create false Warning flags on a practitioner’s window status.',
+          'Issue Coach Session points within 48 hours for Journey clients. Late points create false Warning flags on a practitioner’s window status.',
           'Log date, duration, and one-line theme. Never content.',
           'Keep availability current in the app.',
           'Cancellations and no-shows follow your coaching agreement. Apply the terms consistently, including when you would rather not.',

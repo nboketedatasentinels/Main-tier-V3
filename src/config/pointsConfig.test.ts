@@ -222,7 +222,7 @@ describe('pointsConfig module activities', () => {
       approvalType: 'mentor_issued',
     })
     expect(byId.get('ambassador_session')).toMatchObject({
-      title: 'Ambassador Session',
+      title: 'Coach Session',
       frequency: 3,
       pointsEach: 2000,
       maxPoints: 6000,
@@ -265,7 +265,7 @@ describe('pointsConfig module activities', () => {
       approvalType: 'mentor_issued',
     })
     expect(byId.get('ambassador_session')).toMatchObject({
-      title: 'Ambassador Session',
+      title: 'Coach Session',
       frequency: 6,
       pointsEach: 2000,
       maxPoints: 12000,
@@ -307,7 +307,7 @@ describe('pointsConfig module activities', () => {
       approvalType: 'mentor_issued',
     })
     expect(byId.get('ambassador_session')).toMatchObject({
-      title: 'Ambassador Session',
+      title: 'Coach Session',
       frequency: 9,
       pointsEach: 2000,
       maxPoints: 18000,

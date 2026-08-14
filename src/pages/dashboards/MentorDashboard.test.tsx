@@ -37,6 +37,10 @@ vi.mock('@/components/assessments/RateLearnerCourseAssessment', () => ({
   RateLearnerCourseAssessment: () => <div data-testid="rate-panel">rate</div>,
 }))
 
+vi.mock('@/components/mentor/MentorLearnerPanel', () => ({
+  MentorLearnerPanel: () => <div data-testid="mentor-learner-panel">learner panel</div>,
+}))
+
 vi.mock('@/components/session-prep/LearnerSessionPrep', () => ({
   LearnerSessionPrep: () => <div data-testid="session-prep">session prep</div>,
 }))
@@ -103,9 +107,10 @@ describe('MentorDashboard', () => {
     })
     expect(screen.getByTestId('session-prep')).toBeInTheDocument()
     expect(screen.getByTestId('sessions-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('mentor-learner-panel')).toBeInTheDocument()
     expect(screen.getAllByTestId('rate-panel').length).toBe(1)
-    expect(screen.getByText(/Mentee pre-assessments/i)).toBeInTheDocument()
-    expect(screen.getAllByText(/Pre assessments/i).length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: /Pre-course survey/i })).toBeInTheDocument()
+    expect(screen.getByText(/Mentee post-assessments/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Post assessments/i).length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /Post-course assessments/i })).toBeInTheDocument()
   })
 })
