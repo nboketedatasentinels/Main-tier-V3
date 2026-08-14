@@ -8,6 +8,7 @@ import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { useAuth } from '@/hooks/useAuth'
 import { resolveMentorNavDestination } from '@/utils/mentorNavigation'
+import { resolveCoachNavDestination } from '@/utils/coachNavigation'
 import { NotificationsPage } from './NotificationsPage'
 
 /**
@@ -116,7 +117,14 @@ export const AmbassadorNotificationsPage = () => {
     <AmbassadorLayout
       activeItem="notifications"
       ambassadorName={`${profile?.firstName || 'Coach'} ${profile?.lastName || ''}`.trim()}
-      onNavigate={() => navigate('/ambassador/dashboard')}
+      onNavigate={(key) => {
+        const dest = resolveCoachNavDestination(key)
+        if (dest.kind === 'route') {
+          navigate(dest.path)
+          return
+        }
+        navigate('/coach/dashboard', { state: { coachSection: dest.section } })
+      }}
     >
       <NotificationsPage subtitle="Messages and updates sent to you." />
     </AmbassadorLayout>

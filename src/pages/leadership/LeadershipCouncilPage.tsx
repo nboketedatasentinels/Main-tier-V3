@@ -70,6 +70,7 @@ import {
   type MentorshipSession,
 } from '@/services/mentorshipService'
 import { LearnerAmbassadorBookings } from '@/components/learner/LearnerAmbassadorBookings'
+import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
 import { getDisplayName } from '@/utils/displayName'
 import { getJourneyLabel, isLeadershipCouncilJourney, isPartnerVisibleJourney } from '@/utils/journeyType'
 import type { UserProfileExtended } from '@/services/userProfileService'
@@ -224,7 +225,9 @@ export const LeadershipCouncilPage: React.FC = () => {
     error: goalsError,
     save: saveGoals,
   } = useMentorshipGoals(
-    isLeadershipEligible && mentorProfile?.id ? profile?.id ?? null : null,
+    isLeadershipEligible && (mentorProfile?.id || ambassadorProfile?.id)
+      ? profile?.id ?? null
+      : null,
     mentorProfile?.id ?? null,
   )
 
@@ -253,7 +256,9 @@ export const LeadershipCouncilPage: React.FC = () => {
       await saveGoals(goalsDraft)
       toast({
         title: 'Goals saved',
-        description: 'Your mentor can now see what you want to achieve.',
+        description: ambassadorProfile
+          ? 'Your coach and mentor can see what you want to achieve.'
+          : 'Your mentor can now see what you want to achieve.',
         status: 'success',
       })
     } catch (err) {
@@ -928,6 +933,23 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Text>
                     )}
 
+                    {ambassadorProfile && !mentorProfile && profile?.id && (
+                      <Box
+                        p={4}
+                        border="1px solid"
+                        borderColor="gray.200"
+                        rounded="lg"
+                        bg="gray.50"
+                        mt={4}
+                      >
+                        <MentorshipGoalsCard
+                          learnerId={profile.id}
+                          mentorId={null}
+                          audience="coach"
+                        />
+                      </Box>
+                    )}
+
                     {profile?.id && ambassadorProfile && (
                       <>
                         <Divider my={5} />
@@ -1053,7 +1075,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                             <HStack spacing={2}>
                               <Icon as={Target} color="#350e6f" boxSize={4} />
                               <Text fontWeight="bold" color="#27062e">
-                                Your goals
+                                I&apos;m trying to achieve…
                               </Text>
                             </HStack>
                             {goalsUpdatedAt && (
@@ -1088,7 +1110,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                               )}
                               <FormControl isInvalid={goalsTooLong}>
                                 <Textarea
-                                  placeholder="What outcomes do you want from this mentorship? What skills, behaviours, or leadership moves are you growing into?"
+                                  placeholder="I'm trying to achieve… (an observable outcome your coach or mentor can work with)"
                                   value={goalsDraft}
                                   onChange={(event) => setGoalsDraft(event.target.value)}
                                   rows={5}

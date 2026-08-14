@@ -319,14 +319,17 @@ export async function cancelMentorshipSession(params: {
 
 export async function completeMentorshipSession(params: {
   sessionId: string
-}): Promise<{ pointsAwarded: boolean }> {
+}): Promise<{ pointsAwarded: boolean; pointsAmount?: number; message?: string }> {
   const { sessionId } = params
   const sessionRef = doc(db, MENTORSHIP_SESSIONS, sessionId)
 
   let learnerId: string | null = null
   let mentorName: string | null = null
-  let shouldAwardPoints = false
+  let shouldAttemptAward = false
   let alreadyCompleted = false
+  let pointsAwarded = false
+  let pointsAmount = 0
+  let awardMessage: string | undefined
 
   await runTransaction(db, async (tx) => {
     const sessionDoc = await tx.get(sessionRef)
@@ -339,6 +342,7 @@ export async function completeMentorshipSession(params: {
       alreadyCompleted = true
       learnerId = pickString(data.learner_id)
       mentorName = pickString(data.mentor_name)
+      pointsAwarded = Boolean(data.points_awarded)
       return
     }
 
@@ -348,32 +352,40 @@ export async function completeMentorshipSession(params: {
 
     learnerId = pickString(data.learner_id)
     mentorName = pickString(data.mentor_name)
-    shouldAwardPoints = !data.points_awarded
+    // Points only after attendance is confirmed — never on request/accept alone.
+    shouldAttemptAward = !data.points_awarded
 
     tx.update(sessionRef, {
       status: 'completed' as MentorshipSessionStatus,
       completed_at: serverTimestamp(),
-      points_awarded: true,
-      points_awarded_at: serverTimestamp(),
+      // Optimistically false until the ledger write succeeds.
+      points_awarded: false,
+      points_awarded_at: null,
       updated_at: serverTimestamp(),
     })
   })
 
   if (alreadyCompleted) {
-    return { pointsAwarded: false }
+    return { pointsAwarded, pointsAmount: pointsAwarded ? 2000 : 0 }
   }
 
-  if (shouldAwardPoints && learnerId) {
+  if (shouldAttemptAward && learnerId) {
     try {
       const context = await getJourneyContext(learnerId)
-      // Points only when the learner actually has a mentor assigned (org/person gate).
-      if (context?.mentorId) {
+      if (!context?.journeyType) {
+        awardMessage = 'Session marked attended, but no active journey was found for points.'
+      } else {
         const activity = getActivityDefinitionById({
           activityId: 'mentor_meetup',
           journeyType: context.journeyType,
         })
-        if (activity) {
-          await awardChecklistPoints({
+        if (!activity) {
+          console.warn(
+            `[MentorshipService] mentor_meetup activity not available for ${context.journeyType}; points skipped.`,
+          )
+          awardMessage = 'Mentor meetup points are not part of this journey.'
+        } else {
+          const result = await awardChecklistPoints({
             uid: learnerId,
             journeyType: context.journeyType,
             weekNumber: context.weekNumber,
@@ -381,28 +393,24 @@ export async function completeMentorshipSession(params: {
             source: 'mentor_confirmed_session',
             claimRef: `mentor_session:${sessionId}`,
           })
-        } else {
-          console.warn(
-            `[MentorshipService] mentor_meetup activity not available for ${context.journeyType}; points skipped.`,
-          )
-          shouldAwardPoints = false
+          if (result.awarded || result.reason === 'already_awarded') {
+            pointsAwarded = true
+            pointsAmount = activity.points
+            await updateDoc(sessionRef, {
+              points_awarded: true,
+              points_awarded_at: serverTimestamp(),
+              updated_at: serverTimestamp(),
+            }).catch(() => undefined)
+          } else {
+            awardMessage = result.message ?? 'Could not issue mentor meetup points.'
+          }
         }
-      } else {
-        console.warn(
-          '[MentorshipService] No mentor assigned on learner profile; attendance confirmed without points.',
-        )
-        shouldAwardPoints = false
-        await updateDoc(sessionRef, {
-          points_awarded: false,
-          points_awarded_at: null,
-          updated_at: serverTimestamp(),
-        }).catch(() => undefined)
       }
     } catch (err) {
       console.error('[MentorshipService] Failed to award points on completion:', err)
-      // Intentional: session stays marked complete so the mentor UI reflects reality.
-      // Admins can reconcile points via pointsService.reconcileUserPointsFromLedger.
-      shouldAwardPoints = false
+      // Session stays completed so attendance reflects reality; points can be retried.
+      awardMessage =
+        err instanceof Error ? err.message : 'Could not issue mentor meetup points.'
     }
   }
 
@@ -410,16 +418,16 @@ export async function completeMentorshipSession(params: {
     await createInAppNotification({
       userId: learnerId,
       type: 'approval',
-      title: 'Mentor session confirmed',
-      message: shouldAwardPoints
-        ? `${mentorName ?? 'Your mentor'} confirmed your session. Points added to your journey.`
-        : `${mentorName ?? 'Your mentor'} confirmed your session.`,
+      title: 'Mentor session attended',
+      message: pointsAwarded
+        ? `${mentorName ?? 'Your mentor'} confirmed your attendance. +${pointsAmount.toLocaleString()} mentor meetup points added.`
+        : `${mentorName ?? 'Your mentor'} confirmed your attendance.`,
       relatedId: sessionId,
-      metadata: { sessionId, kind: 'mentorship_completed' },
+      metadata: { sessionId, kind: 'mentorship_completed', pointsAwarded, pointsAmount },
     }).catch((err) => console.warn('[MentorshipService] notify complete failed:', err))
   }
 
-  return { pointsAwarded: shouldAwardPoints }
+  return { pointsAwarded, pointsAmount, message: awardMessage }
 }
 
 const subscribeToSessionsByField = (

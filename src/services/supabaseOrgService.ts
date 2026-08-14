@@ -445,6 +445,7 @@ export interface OrgProgramRaw {
   courseAssignments: string[] | null
   courseAssignmentStructure: 'monthly' | 'array' | null
   pillar: string | null
+  purchasedCoachSessions?: number | null
 }
 
 export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramRaw | null> => {
@@ -476,6 +477,12 @@ export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramR
     courseAssignmentStructure:
       structure === 'monthly' || structure === 'array' ? structure : null,
     pillar: (settings.pillar as string) ?? null,
+    purchasedCoachSessions:
+      typeof settings.purchasedCoachSessions === 'number'
+        ? settings.purchasedCoachSessions
+        : typeof settings.purchasedCoachSessions === 'string'
+          ? Number(settings.purchasedCoachSessions)
+          : null,
   }
 }
 

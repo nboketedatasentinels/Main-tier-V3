@@ -1,148 +1,190 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Badge,
+  Alert,
+  AlertIcon,
+  Avatar,
   Box,
   Button,
-  Card,
-  CardBody,
-  Divider,
   Flex,
   Grid,
-  GridItem,
-  Heading,
   HStack,
   Icon,
-  Progress,
+  Input,
+  InputGroup,
+  InputLeftElement,
   SimpleGrid,
+  Skeleton,
   Stack,
-  Stat,
-  StatHelpText,
-  StatLabel,
-  StatNumber,
-  Table,
-  Tbody,
-  Td,
   Text,
-  Th,
-  Thead,
-  Tr,
-  VStack,
-  type BadgeProps,
 } from '@chakra-ui/react'
-import { ClipboardList, Flame, Gift, Megaphone, Share2, Target, TrendingUp, Users } from 'lucide-react'
+import {
+  ArrowRight,
+  CalendarClock,
+  ClipboardCheck,
+  ClipboardList,
+  RefreshCw,
+  Search,
+  Users,
+} from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AmbassadorLayout } from '@/layouts/AmbassadorLayout'
 import { AmbassadorSessionsPanel } from '@/components/ambassador/AmbassadorSessionsPanel'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
-import {
-  PRE_COURSE_SURVEY_SECTION_ID,
-  PreCourseSurveyButton,
-} from '@/components/assessments/PreCourseSurveyButton'
+import { PreCourseSurveyButton } from '@/components/assessments/PreCourseSurveyButton'
+import { CoachLearnerPanel } from '@/components/coach/CoachLearnerPanel'
+import { LearnerSessionPrep } from '@/components/session-prep/LearnerSessionPrep'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles'
 import { fetchAssignedCoachees } from '@/services/learnerAssignmentService'
+import { getOrganizationProgram } from '@/services/supabaseOrgService'
 import { getDisplayName } from '@/utils/displayName'
 import { JOURNEY_META } from '@/config/pointsConfig'
 import { isJourneyType } from '@/utils/journeyType'
-import { resolveCourseSurveyKind, courseSurveySectionTitle } from '@/utils/courseSurveyWindow'
-import { LearnerSessionPrep } from '@/components/session-prep/LearnerSessionPrep'
+import { resolveCourseSurveyKind } from '@/utils/courseSurveyWindow'
+import { resolvePurchasedCoachSessions } from '@/utils/purchasedCoachSessions'
+import { buildAmbassadorNavItems } from '@/utils/navigationItems'
+import {
+  resolveCoachNavDestination,
+  type CoachDashboardSection,
+} from '@/utils/coachNavigation'
+import { PERSONALITY_TYPES } from '@/config/personality-data'
 import type { UserProfile } from '@/types'
 
-type ReferralMetric = {
-  label: string
-  value: number | string
-  change: string
-  icon: typeof Share2
-  color: NonNullable<BadgeProps['colorScheme']>
+type SectionKey = CoachDashboardSection
+
+const personalityLabel = (type?: string | null): string | null => {
+  if (!type) return null
+  const hit = PERSONALITY_TYPES.find((p) => p.type === type)
+  return hit ? `${hit.type} · ${hit.name}` : type
 }
 
-type ReferralStage = { stage: string; value: number; color: NonNullable<BadgeProps['colorScheme']> }
-
-const referralMetrics: ReferralMetric[] = [
-  { label: 'Active referrals', value: 42, change: '+8 this week', icon: Share2, color: 'purple' },
-  { label: 'Successful enrollments', value: 19, change: '+4 this week', icon: Users, color: 'green' },
-  { label: 'Rewards earned', value: '$860', change: 'Ready to redeem', icon: Gift, color: 'orange' },
-  { label: 'Ecosystem events', value: 7, change: 'Next event in 2 days', icon: Megaphone, color: 'blue' },
-]
-
-const referralPipeline: ReferralStage[] = [
-  { stage: 'Invited', value: 65, color: 'purple' },
-  { stage: 'Joined', value: 44, color: 'green' },
-  { stage: 'Active', value: 31, color: 'orange' },
-  { stage: 'Converted', value: 19, color: 'teal' },
-]
-
-const recentReferrals = [
-  { name: 'Alex Morgan', status: 'Converted', reward: '$45', activity: 'Completed onboarding' },
-  { name: 'Priya Patel', status: 'Active', reward: '$20', activity: 'Submitted weekly update' },
-  { name: 'Daniel Lee', status: 'Joined', reward: '$10', activity: 'Booked mentor session' },
-  { name: 'Sara Kim', status: 'Invited', reward: '$0', activity: 'Invitation sent' },
-]
-
-const engagementHighlights = [
-  { title: 'Ecosystem check-ins', metric: '12 touchpoints', detail: '4 follow-ups needed' },
-  { title: 'Resource shares', metric: '23 shares', detail: 'Top: Leadership toolkit' },
-  { title: 'Event sign-ups', metric: '18 RSVPs', detail: 'Mentor AMA on Friday' },
-]
+const SectionShell: React.FC<{
+  id: string
+  eyebrow: string
+  title: string
+  subtitle?: string
+  children: React.ReactNode
+  action?: React.ReactNode
+}> = ({ id, eyebrow, title, subtitle, children, action }) => (
+  <Box id={id} as="section" scrollMarginTop="96px">
+    <Flex justify="space-between" align={{ base: 'flex-start', md: 'end' }} gap={4} mb={5} flexWrap="wrap">
+      <Box>
+        <Text
+          fontSize="xs"
+          fontWeight="semibold"
+          letterSpacing="0.12em"
+          textTransform="uppercase"
+          color="gray.500"
+        >
+          {eyebrow}
+        </Text>
+        <Text mt={1} fontSize={{ base: 'xl', md: '2xl' }} fontWeight="700" color="gray.900" letterSpacing="-0.02em">
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text mt={1} color="gray.600" maxW="640px" fontSize="sm" lineHeight="1.6">
+            {subtitle}
+          </Text>
+        ) : null}
+      </Box>
+      {action}
+    </Flex>
+    {children}
+  </Box>
+)
 
 export const AmbassadorDashboard: React.FC = () => {
   const { profile } = useAuth()
-  const ambassadorName = profile?.fullName || profile?.firstName || 'Coach'
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [activeSection, setActiveSection] = useState<SectionKey>('overview')
   const [coachees, setCoachees] = useState<UserProfile[]>([])
-  const [selectedCoacheeId, setSelectedCoacheeId] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [orgPurchasedSessions, setOrgPurchasedSessions] = useState<number | null>(null)
+
+  const loadCoachees = async () => {
+    if (!profile?.id) return
+    setLoading(true)
+    setError(null)
+    try {
+      const rows = await fetchAssignedCoachees(profile.id)
+      setCoachees(rows)
+      setSelectedId((prev) => {
+        if (prev && rows.some((r) => r.id === prev)) return prev
+        return rows[0]?.id ?? null
+      })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load coachees')
+      setCoachees([])
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    if (!profile?.id) {
-      setCoachees([])
-      return
-    }
-    let cancelled = false
-    void fetchAssignedCoachees(profile.id)
-      .then((rows) => {
-        if (cancelled) return
-        setCoachees(rows)
-        setSelectedCoacheeId((prev) => {
-          if (prev && rows.some((r) => r.id === prev)) return prev
-          return rows[0]?.id ?? null
-        })
-      })
-      .catch((err) => {
-        console.error('[AmbassadorDashboard] coachees load failed', err)
-        if (!cancelled) setCoachees([])
-      })
-    return () => {
-      cancelled = true
-    }
+    void loadCoachees()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id])
 
-  const selectedCoachee =
-    coachees.find((c) => c.id === selectedCoacheeId) ?? coachees[0] ?? null
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return coachees
+    return coachees.filter((c) => {
+      const name = getDisplayName(c).toLowerCase()
+      const email = (c.email || '').toLowerCase()
+      return name.includes(q) || email.includes(q)
+    })
+  }, [coachees, search])
 
-  const rateLearners = useMemo(
-    () =>
-      coachees
-        .filter((learner) => Boolean(learner.id))
-        .map((learner) => ({
-          id: learner.id!,
-          name: getDisplayName(learner, 'Learner'),
-          currentWeek: learner.currentWeek,
-          journeyType: typeof learner.journeyType === 'string' ? learner.journeyType : undefined,
-          journeyStatus: typeof learner.journeyStatus === 'string' ? learner.journeyStatus : undefined,
-        })),
-    [coachees],
-  )
+  const selected = filtered.find((c) => c.id === selectedId) ?? filtered[0] ?? null
+  const navSections = useMemo(() => buildAmbassadorNavItems(), [])
 
   const coacheeOrgId =
+    selected?.organizationId ||
+    selected?.companyId ||
     coachees[0]?.organizationId ||
     coachees[0]?.companyId ||
     profile?.organizationId ||
     profile?.companyId ||
     null
+
   const { program: orgProgram } = useOrganizationProgramCourses(coacheeOrgId)
   const orgCourseTitles = useOrgProgrammeCourseTitles(orgProgram)
 
+  useEffect(() => {
+    if (!coacheeOrgId) {
+      setOrgPurchasedSessions(null)
+      return
+    }
+    let cancelled = false
+    void getOrganizationProgram(coacheeOrgId)
+      .then((data) => {
+        if (cancelled) return
+        setOrgPurchasedSessions(
+          data?.purchasedCoachSessions != null && Number.isFinite(Number(data.purchasedCoachSessions))
+            ? Number(data.purchasedCoachSessions)
+            : null,
+        )
+      })
+      .catch(() => {
+        if (!cancelled) setOrgPurchasedSessions(null)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [coacheeOrgId])
+
+  const purchasedForSelected = resolvePurchasedCoachSessions({
+    learnerPurchased: selected?.purchasedCoachSessions,
+    orgPurchased: orgPurchasedSessions,
+  })
+
   const courseSurveyKind = useMemo(() => {
-    const subject = coachees[0]
+    const subject = selected
     const journeyType =
       typeof subject?.journeyType === 'string' && isJourneyType(subject.journeyType)
         ? subject.journeyType
@@ -157,272 +199,384 @@ export const AmbassadorDashboard: React.FC = () => {
       programDurationWeeks: weeks,
       currentWeek: subject?.currentWeek,
     })
-  }, [coachees, orgProgram?.programDurationWeeks])
+  }, [selected, orgProgram?.programDurationWeeks])
+
+  const activeAssessmentSection = courseSurveyKind === 'post' ? 'assessments' : 'pre-assessments'
+
+  const scrollTo = (key: SectionKey) => {
+    setActiveSection(key)
+    const el = document.getElementById(`coach-${key}`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  useEffect(() => {
+    const section = (location.state as { coachSection?: SectionKey } | null)?.coachSection
+    if (!section) return
+    const timer = window.setTimeout(() => scrollTo(section), 80)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state])
+
+  const handleNavigate = (key: string) => {
+    const dest = resolveCoachNavDestination(key)
+    if (dest.kind === 'route') {
+      navigate(dest.path)
+      return
+    }
+    scrollTo(dest.section)
+  }
+
+  const assessmentLearners = useMemo(
+    () =>
+      coachees.map((c) => ({
+        id: c.id!,
+        name: getDisplayName(c),
+        currentWeek: c.currentWeek,
+        journeyType: typeof c.journeyType === 'string' ? c.journeyType : undefined,
+        journeyStatus: typeof c.journeyStatus === 'string' ? c.journeyStatus : undefined,
+      })),
+    [coachees],
+  )
 
   return (
     <AmbassadorLayout
-      activeItem="overview"
-      ambassadorName={ambassadorName}
+      activeItem={activeSection}
+      onNavigate={handleNavigate}
+      ambassadorName={profile ? getDisplayName(profile) : 'Coach'}
       avatarUrl={profile?.avatarUrl}
+      navSections={navSections}
+      subtitle="Coach workspace"
     >
-      <Stack spacing={6}>
-        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} flexWrap="wrap">
-          <Stack spacing={2} maxW="640px">
-            <Text fontSize="2xl" fontWeight="bold" color="brand.text">
-              Welcome back, {ambassadorName}
-            </Text>
-            <Text color="brand.subtleText">
-              Track referrals, celebrate wins, and grow the ecosystem with dedicated coach tools.
-            </Text>
-            <HStack spacing={3} flexWrap="wrap">
-              <Badge colorScheme="purple">Referral program</Badge>
-              <Badge colorScheme="green" variant="subtle">
-                Recognition enabled
-              </Badge>
-              <PreCourseSurveyButton size="sm" kind={courseSurveyKind} />
-            </HStack>
-          </Stack>
-          <Stack spacing={2} align="flex-end">
-            <HStack spacing={3}>
-              <Icon as={TrendingUp} />
-              <Text fontWeight="semibold" color="brand.text">
-                Momentum week
-              </Text>
-            </HStack>
-            <Text fontSize="sm" color="brand.subtleText">
-              Conversion trend up 12% vs last week
-            </Text>
-          </Stack>
-        </Flex>
-
+      <Box minH="100%" bg="white" mx={{ base: -4, md: -6 }} px={{ base: 4, md: 6 }} py={6}>
         <Box
-          id={PRE_COURSE_SURVEY_SECTION_ID}
-          scrollMarginTop="96px"
+          id="coach-overview"
+          mb={8}
           borderRadius="xl"
           border="1px solid"
           borderColor="gray.200"
           bg="white"
-          p={{ base: 4, md: 6 }}
+          px={{ base: 5, md: 8 }}
+          py={{ base: 6, md: 8 }}
         >
-          <HStack spacing={3} mb={4} align="flex-start">
-            <Icon as={ClipboardList} boxSize={5} color="gray.700" mt={1} />
-            <Box>
-              <Heading size="sm" color="gray.900">
-                {courseSurveySectionTitle(courseSurveyKind)}
-              </Heading>
-              <Text fontSize="sm" color="gray.600" mt={1}>
-                {courseSurveyKind === 'post'
-                  ? orgCourseTitles.length
-                    ? `Final 3 weeks: Post ratings for coachees (${orgCourseTitles.join(', ')}).`
-                    : 'Final 3 weeks: complete Post ratings for coachees.'
-                  : orgCourseTitles.length
-                    ? `Pre ratings for coachees on their organisation programme (${orgCourseTitles.join(', ')}). Post unlocks in the last 3 weeks.`
-                    : 'Pre ratings for coachees, scoped to admin-assigned organisation courses. Post unlocks in the last 3 weeks.'}
+          <Flex justify="space-between" align="flex-start" gap={6} flexWrap="wrap">
+            <Box maxW="640px">
+              <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" color="gray.500">
+                COACH WORKSPACE
               </Text>
+              <Text
+                mt={2}
+                fontSize={{ base: '2xl', md: '3xl' }}
+                fontWeight="700"
+                letterSpacing="-0.03em"
+                lineHeight="1.15"
+                color="gray.900"
+              >
+                Coach with discipline, not advice by default.
+              </Text>
+              <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
+                Same profile depth as mentors — values, personality, age band, and AI notes — plus the
+                coaching goal, your learning plan, and session count from what the company purchased.
+                Only learners assigned to you (or your organisation) appear here.
+              </Text>
+              <HStack mt={6} spacing={3} flexWrap="wrap">
+                <Button
+                  rightIcon={<ArrowRight size={16} />}
+                  bg="#350e6f"
+                  color="white"
+                  _hover={{ bg: '#27062e' }}
+                  borderRadius="md"
+                  onClick={() => scrollTo('coachees')}
+                >
+                  Open coachees
+                </Button>
+                <PreCourseSurveyButton
+                  kind={courseSurveyKind}
+                  onClick={() => scrollTo(activeAssessmentSection)}
+                />
+                <Button
+                  variant="outline"
+                  borderColor="gray.300"
+                  color="gray.800"
+                  bg="white"
+                  _hover={{ bg: 'gray.50' }}
+                  borderRadius="md"
+                  leftIcon={<CalendarClock size={16} />}
+                  onClick={() => scrollTo('schedule')}
+                >
+                  Session slots
+                </Button>
+                <Button
+                  variant="outline"
+                  borderColor="gray.300"
+                  onClick={() => navigate('/coach/guidelines')}
+                >
+                  Coach guidelines
+                </Button>
+              </HStack>
             </Box>
-          </HStack>
-
-          {profile?.id && rateLearners.length > 0 ? (
-            <RateLearnerCourseAssessment
-              respondentId={profile.id}
-              raterRole="coach"
-              learners={rateLearners}
-              forcedKind={courseSurveyKind}
-              allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
-            />
-          ) : (
-            <Text fontSize="sm" color="gray.500">
-              Assign coachees first. Assessments appear here for each learner on your roster,
-              scoped to their organisation&apos;s programme courses.
-            </Text>
-          )}
+            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '220px' }}>
+              <Box
+                as="button"
+                textAlign="left"
+                bg="gray.50"
+                border="1px solid"
+                borderColor="gray.200"
+                borderRadius="lg"
+                px={4}
+                py={3}
+                onClick={() => scrollTo('coachees')}
+                _hover={{ bg: 'gray.100' }}
+              >
+                <HStack spacing={3}>
+                  <Icon as={Users} color="gray.600" />
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">
+                      Coachees
+                    </Text>
+                    <Text fontWeight="700" fontSize="lg" color="gray.900">
+                      {coachees.length}
+                    </Text>
+                  </Box>
+                </HStack>
+              </Box>
+              <Box
+                as="button"
+                textAlign="left"
+                bg="gray.50"
+                border="1px solid"
+                borderColor="gray.200"
+                borderRadius="lg"
+                px={4}
+                py={3}
+                onClick={() => scrollTo(activeAssessmentSection)}
+                _hover={{ bg: 'gray.100' }}
+              >
+                <HStack spacing={3}>
+                  <Icon
+                    as={courseSurveyKind === 'pre' ? ClipboardList : ClipboardCheck}
+                    color="gray.600"
+                  />
+                  <Box>
+                    <Text fontSize="xs" color="gray.500">
+                      {courseSurveyKind === 'pre' ? 'Pre assessments' : 'Post assessments'}
+                    </Text>
+                    <Text fontWeight="700" fontSize="lg" color="gray.900">
+                      {orgCourseTitles.length
+                        ? `${orgCourseTitles.length} course${orgCourseTitles.length === 1 ? '' : 's'}`
+                        : 'Org courses'}
+                    </Text>
+                  </Box>
+                </HStack>
+              </Box>
+            </SimpleGrid>
+          </Flex>
         </Box>
 
-        {coachees.length > 0 ? (
-          <Stack spacing={4}>
-            <HStack spacing={2} flexWrap="wrap">
-              {coachees.map((c) => (
-                <Button
-                  key={c.id}
-                  size="sm"
-                  variant={selectedCoachee?.id === c.id ? 'solid' : 'outline'}
-                  colorScheme="purple"
-                  onClick={() => setSelectedCoacheeId(c.id ?? null)}
-                >
-                  {getDisplayName(c)}
-                </Button>
-              ))}
-            </HStack>
-            {selectedCoachee ? (
-              <LearnerSessionPrep audience="coach" learner={selectedCoachee} windowStatus="warning" />
+        <Stack spacing={10}>
+          <SectionShell
+            id="coach-coachees"
+            eyebrow="Directory"
+            title="Who you coach"
+            subtitle="Learners appear when your organisation has an Ambassador Coach assigned and you are linked to them. Open a profile for goals, learning plan, and Session Prep."
+            action={
+              <Button
+                leftIcon={<RefreshCw size={14} />}
+                size="sm"
+                variant="outline"
+                borderColor="gray.300"
+                onClick={() => void loadCoachees()}
+                isLoading={loading}
+              >
+                Refresh
+              </Button>
+            }
+          >
+            {error ? (
+              <Alert status="error" borderRadius="lg" mb={4}>
+                <AlertIcon />
+                {error}
+              </Alert>
             ) : null}
-          </Stack>
-        ) : null}
 
-        <SimpleGrid columns={{ base: 1, sm: 2, xl: 4 }} spacing={4}>
-          {referralMetrics.map((metric) => (
-            <Card key={metric.label} border="1px solid" borderColor="brand.border" bg="white">
-              <CardBody>
-                <HStack justify="space-between" align="center">
-                  <Box p={3} borderRadius="lg" bg={`${metric.color}.50`} color={`${metric.color}.600`}>
-                    <Icon as={metric.icon} />
-                  </Box>
-                  <Badge colorScheme={metric.color}>{metric.change}</Badge>
-                </HStack>
-                <Stack spacing={1} mt={4}>
-                  <Stat>
-                    <StatLabel color="brand.subtleText">{metric.label}</StatLabel>
-                    <StatNumber color="brand.text">{metric.value}</StatNumber>
-                    <StatHelpText color="brand.subtleText">{metric.change}</StatHelpText>
-                  </Stat>
+            <InputGroup maxW="420px" mb={5}>
+              <InputLeftElement pointerEvents="none">
+                <Search size={16} color="#9CA3AF" />
+              </InputLeftElement>
+              <Input
+                placeholder="Search coachees…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                bg="white"
+                borderColor="gray.200"
+                borderRadius="md"
+              />
+            </InputGroup>
+
+            {loading ? (
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                <Skeleton height="220px" borderRadius="xl" />
+                <Skeleton height="220px" borderRadius="xl" />
+              </SimpleGrid>
+            ) : filtered.length === 0 ? (
+              <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                <Text color="gray.600" fontSize="sm" lineHeight="1.7">
+                  No coachees yet. Coaching only shows when an organisation has an Ambassador /
+                  Coach assigned and learners are linked to you. Ask the Transformation Partner to
+                  confirm org coach assignment.
+                </Text>
+              </Box>
+            ) : (
+              <Grid templateColumns={{ base: '1fr', lg: '280px 1fr' }} gap={5}>
+                <Stack spacing={2}>
+                  {filtered.map((c) => {
+                    const active = selected?.id === c.id
+                    return (
+                      <Button
+                        key={c.id}
+                        onClick={() => {
+                          setSelectedId(c.id)
+                          setActiveSection('coachees')
+                        }}
+                        justifyContent="flex-start"
+                        h="auto"
+                        py={3}
+                        px={3}
+                        borderRadius="lg"
+                        bg={active ? 'gray.50' : 'white'}
+                        color="gray.800"
+                        border="1px solid"
+                        borderColor={active ? '#350e6f' : 'gray.200'}
+                        boxShadow={active ? 'inset 3px 0 0 #350e6f' : 'none'}
+                        _hover={{ bg: 'gray.50', borderColor: active ? '#350e6f' : 'gray.300' }}
+                        textAlign="left"
+                      >
+                        <HStack spacing={3} align="center" w="full">
+                          <Avatar name={getDisplayName(c)} size="sm" bg="gray.100" color="gray.700" />
+                          <Box minW={0}>
+                            <Text fontWeight="600" fontSize="sm" noOfLines={1} color="gray.900">
+                              {getDisplayName(c)}
+                            </Text>
+                            <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                              {personalityLabel(c.personalityType) || 'Personality pending'}
+                            </Text>
+                          </Box>
+                        </HStack>
+                      </Button>
+                    )
+                  })}
                 </Stack>
-              </CardBody>
-            </Card>
-          ))}
-        </SimpleGrid>
 
-        {profile?.id && (
-          <AmbassadorSessionsPanel
-            ambassadorId={profile.id}
-            ambassadorName={getDisplayName(profile, ambassadorName)}
-            companyId={profile.companyId ?? null}
-            companyCode={profile.companyCode ?? null}
-          />
-        )}
-
-        <Grid templateColumns={{ base: '1fr', xl: '2fr 1fr' }} gap={6}>
-          <GridItem>
-            <Card border="1px solid" borderColor="brand.border" bg="white">
-              <CardBody>
-                <Stack spacing={4}>
-                  <HStack justify="space-between">
-                    <Text fontWeight="bold" color="brand.text">
-                      Referral pipeline
-                    </Text>
-                    <Badge colorScheme="purple">Live</Badge>
-                  </HStack>
-
-                  <Stack spacing={3}>
-                    {referralPipeline.map((stage) => (
-                      <Box key={stage.stage}>
-                        <HStack justify="space-between" mb={1}>
-                          <Text color="brand.subtleText">{stage.stage}</Text>
-                          <Text fontWeight="semibold" color="brand.text">{stage.value}</Text>
-                        </HStack>
-                        <Progress value={stage.value} colorScheme={stage.color} borderRadius="full" />
-                      </Box>
-                    ))}
-                  </Stack>
-
-                  <Divider />
-
-                  <Stack spacing={3}>
-                    <HStack justify="space-between" align="center">
-                      <Text fontWeight="bold" color="brand.text">
-                        Recent referrals
+                {selected ? (
+                  <Stack spacing={6}>
+                    <CoachLearnerPanel
+                      learner={selected}
+                      orgPurchasedCoachSessions={orgPurchasedSessions}
+                    />
+                    <Box>
+                      <Text
+                        fontSize="xs"
+                        fontWeight="semibold"
+                        letterSpacing="0.12em"
+                        textTransform="uppercase"
+                        color="gray.500"
+                        mb={3}
+                      >
+                        Session Prep
                       </Text>
-                      <Badge colorScheme="green">Updated</Badge>
-                    </HStack>
-
-                    <Table size="sm" variant="simple">
-                      <Thead>
-                        <Tr>
-                          <Th>Name</Th>
-                          <Th>Status</Th>
-                          <Th>Reward</Th>
-                          <Th>Activity</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {recentReferrals.map((referral) => (
-                          <Tr key={referral.name}>
-                            <Td fontWeight="semibold">{referral.name}</Td>
-                            <Td>
-                              <Badge colorScheme={referral.status === 'Converted' ? 'green' : referral.status === 'Active' ? 'purple' : 'gray'}>
-                                {referral.status}
-                              </Badge>
-                            </Td>
-                            <Td>{referral.reward}</Td>
-                            <Td>{referral.activity}</Td>
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
+                      <LearnerSessionPrep
+                        audience="coach"
+                        learner={selected}
+                        purchasedCoachSessions={purchasedForSelected}
+                        windowStatus="warning"
+                      />
+                    </Box>
                   </Stack>
-                </Stack>
-              </CardBody>
-            </Card>
-          </GridItem>
+                ) : null}
+              </Grid>
+            )}
+          </SectionShell>
 
-          <GridItem>
-            <Stack spacing={4}>
-              <Card border="1px solid" borderColor="brand.border" bg="white">
-                <CardBody>
-                  <Stack spacing={3}>
-                    <HStack justify="space-between">
-                      <Text fontWeight="bold" color="brand.text">
-                        Engagement focus
-                      </Text>
-                      <Badge colorScheme="orange">Action items</Badge>
-                    </HStack>
+          <SectionShell
+            id="coach-schedule"
+            eyebrow="Sessions"
+            title="Coaching slots"
+            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Ambassador Session points — only when they showed up (within 48 hours for Journey clients)."
+          >
+            {profile?.id ? (
+              <AmbassadorSessionsPanel
+                ambassadorId={profile.id}
+                ambassadorName={getDisplayName(profile)}
+                companyId={
+                  (profile.organizationId || profile.companyId || coacheeOrgId || null) as
+                    | string
+                    | null
+                }
+                companyCode={profile.companyCode || null}
+              />
+            ) : (
+              <Skeleton height="200px" borderRadius="xl" />
+            )}
+          </SectionShell>
 
-                    <Stack spacing={3}>
-                      {engagementHighlights.map((item) => (
-                        <Box key={item.title} p={3} borderRadius="md" border="1px solid" borderColor="brand.border" bg="brand.accent">
-                          <Text fontWeight="semibold" color="brand.text">
-                            {item.title}
-                          </Text>
-                          <Text color="brand.text">{item.metric}</Text>
-                          <Text fontSize="sm" color="brand.subtleText">
-                            {item.detail}
-                          </Text>
-                        </Box>
-                      ))}
-                    </Stack>
-                  </Stack>
-                </CardBody>
-              </Card>
-
-              <Card border="1px solid" borderColor="brand.border" bg="white">
-                <CardBody>
-                  <Stack spacing={3}>
-                    <HStack justify="space-between">
-                      <Text fontWeight="bold" color="brand.text">
-                        Recognition milestones
-                      </Text>
-                      <Badge colorScheme="purple">Rewards</Badge>
-                    </HStack>
-
-                    <VStack align="stretch" spacing={3}>
-                      <HStack justify="space-between">
-                        <HStack>
-                          <Icon as={Flame} color="orange.500" />
-                          <Text color="brand.text">Streak achiever</Text>
-                        </HStack>
-                        <Badge colorScheme="orange">7 days</Badge>
-                      </HStack>
-                      <HStack justify="space-between">
-                        <HStack>
-                          <Icon as={Gift} color="purple.500" />
-                          <Text color="brand.text">Reward threshold</Text>
-                        </HStack>
-                        <Badge colorScheme="purple">$1000 goal</Badge>
-                      </HStack>
-                      <HStack justify="space-between">
-                        <HStack>
-                          <Icon as={Target} color="teal.500" />
-                          <Text color="brand.text">Engagement target</Text>
-                        </HStack>
-                        <Badge colorScheme="teal">80% completion</Badge>
-                      </HStack>
-                    </VStack>
-                  </Stack>
-                </CardBody>
-              </Card>
-            </Stack>
-          </GridItem>
-        </Grid>
-      </Stack>
+          {courseSurveyKind === 'pre' ? (
+            <SectionShell
+              id="coach-pre-assessments"
+              eyebrow="Start of course"
+              title="Coachee pre-assessments"
+              subtitle={
+                orgCourseTitles.length
+                  ? `Rate each coachee on their organisation programme (${orgCourseTitles.join(', ')}).`
+                  : 'Rate each coachee on the courses assigned to their organisation.'
+              }
+            >
+              {profile?.id && assessmentLearners.length > 0 ? (
+                <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
+                  <RateLearnerCourseAssessment
+                    respondentId={profile.id}
+                    raterRole="coach"
+                    learners={assessmentLearners}
+                    forcedKind="pre"
+                    allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
+                  />
+                </Box>
+              ) : (
+                <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                  <Text fontSize="sm" color="gray.600">
+                    Assign coachees first. Pre assessments appear here for each learner on your roster.
+                  </Text>
+                </Box>
+              )}
+            </SectionShell>
+          ) : (
+            <SectionShell
+              id="coach-assessments"
+              eyebrow="End of course"
+              title="Coachee post-assessments"
+              subtitle="Final 3 weeks: complete the coach Post rating about them."
+            >
+              {profile?.id && assessmentLearners.length > 0 ? (
+                <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
+                  <RateLearnerCourseAssessment
+                    respondentId={profile.id}
+                    raterRole="coach"
+                    learners={assessmentLearners}
+                    forcedKind="post"
+                    allowedCourseTitles={coacheeOrgId ? orgCourseTitles : null}
+                  />
+                </Box>
+              ) : (
+                <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                  <Text fontSize="sm" color="gray.600">
+                    Assign coachees first. Post assessments appear here for each learner on your roster.
+                  </Text>
+                </Box>
+              )}
+            </SectionShell>
+          )}
+        </Stack>
+      </Box>
     </AmbassadorLayout>
   )
 }
+
+export default AmbassadorDashboard

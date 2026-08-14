@@ -47,6 +47,9 @@ const MentorGuidelinesPage = lazy(() =>
 const AmbassadorDashboard = lazy(() =>
   import('@/pages/dashboards/AmbassadorDashboard').then(m => ({ default: m.AmbassadorDashboard }))
 )
+const CoachGuidelinesPage = lazy(() =>
+  import('@/pages/coach/CoachGuidelinesPage').then(m => ({ default: m.CoachGuidelinesPage }))
+)
 const PartnerDashboard = lazy(() =>
   import('@/pages/dashboards/PartnerDashboard').then(m => ({ default: m.PartnerDashboard }))
 )
@@ -230,8 +233,9 @@ export const AppRoutes = () => {
           }
         >
           <Route path="dashboard" element={<AmbassadorDashboard />} />
+          <Route path="guidelines" element={<CoachGuidelinesPage />} />
           <Route path="notifications" element={<AmbassadorNotificationsPage />} />
-          <Route index element={<Navigate to="/ambassador/dashboard" replace />} />
+          <Route index element={<Navigate to="/coach/dashboard" replace />} />
         </Route>
 
         {/* Partner routes */}

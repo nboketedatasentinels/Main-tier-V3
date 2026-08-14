@@ -35,6 +35,7 @@ import {
   PreCourseSurveyButton,
 } from '@/components/assessments/PreCourseSurveyButton'
 import { LearnerSessionPrep } from '@/components/session-prep/LearnerSessionPrep'
+import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { fetchAssignedMenteesForMentor } from '@/services/learnerAssignmentService'
@@ -443,7 +444,16 @@ export const MentorDashboard: React.FC = () => {
                     )
                   })}
                 </Stack>
-                {selected ? (<LearnerSessionPrep audience="mentor" learner={selected} windowStatus="warning" />) : null}
+                {selected ? (
+                  <Stack spacing={5}>
+                    <MentorshipGoalsCard
+                      learnerId={selected.id}
+                      mentorId={profile?.id}
+                      audience="mentor"
+                    />
+                    <LearnerSessionPrep audience="mentor" learner={selected} windowStatus="warning" />
+                  </Stack>
+                ) : null}
               </Grid>
             )}
           </SectionShell>
@@ -452,7 +462,7 @@ export const MentorDashboard: React.FC = () => {
             id="mentor-schedule"
             eyebrow="Meetings"
             title="Meeting schedule"
-            subtitle="Learner requests appear here. Accept to confirm, then mark attendance complete to issue mentor meetup points when the learner has a mentor assigned."
+            subtitle="Learner requests appear here. Accept to confirm, then mark attendance complete to issue +2,000 mentor meetup points — only if they attended."
           >
             {profile?.id ? (
               <MentorSessionsPanel mentorId={profile.id} pointsIssuanceEnabled />

@@ -213,16 +213,26 @@ export type MentorGuidelinesContentProps = {
   compact?: boolean
   showHeader?: boolean
   maxSections?: number
+  meta?: {
+    title: string
+    subtitle: string
+    version: string
+    note?: string
+  }
+  sections?: MentorGuidelinesSection[]
+  eyebrow?: string
 }
 
 export const MentorGuidelinesContent: React.FC<MentorGuidelinesContentProps> = ({
   compact = false,
   showHeader = true,
   maxSections,
+  meta = MENTOR_GUIDELINES_META,
+  sections: sectionsProp,
+  eyebrow = 'Mentorship handbook',
 }) => {
-  const sections = maxSections
-    ? MENTOR_GUIDELINES_SECTIONS.slice(0, maxSections)
-    : MENTOR_GUIDELINES_SECTIONS
+  const allSections = sectionsProp ?? MENTOR_GUIDELINES_SECTIONS
+  const sections = maxSections ? allSections.slice(0, maxSections) : allSections
 
   return (
     <VStack align="stretch" spacing={6}>
@@ -235,7 +245,7 @@ export const MentorGuidelinesContent: React.FC<MentorGuidelinesContentProps> = (
             textTransform="uppercase"
             color="brand.primary"
           >
-            Mentorship handbook
+            {eyebrow}
           </Text>
           <Text
             mt={2}
@@ -245,14 +255,19 @@ export const MentorGuidelinesContent: React.FC<MentorGuidelinesContentProps> = (
             letterSpacing="-0.03em"
             lineHeight="1.15"
           >
-            {MENTOR_GUIDELINES_META.title}
+            {meta.title}
           </Text>
           <Text mt={2} color="gray.600" fontSize={compact ? 'sm' : 'md'}>
-            {MENTOR_GUIDELINES_META.subtitle}
+            {meta.subtitle}
           </Text>
           <Text mt={1} color="gray.500" fontSize="sm">
-            {MENTOR_GUIDELINES_META.version}
+            {meta.version}
           </Text>
+          {'note' in meta && meta.note ? (
+            <Text mt={3} color="gray.600" fontSize="sm" fontStyle="italic" lineHeight="1.6">
+              {meta.note}
+            </Text>
+          ) : null}
           <Divider mt={5} borderColor="gray.200" />
         </Box>
       ) : null}

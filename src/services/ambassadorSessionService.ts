@@ -150,6 +150,27 @@ async function getJourneyContext(
   uid: string,
 ): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
   try {
+    const { supabase } = await import('@/services/supabase')
+    const { data } = await supabase
+      .from('profiles')
+      .select('journey_type, current_week, data')
+      .eq('id', uid)
+      .maybeSingle()
+    if (data) {
+      const nested = (data.data as Record<string, unknown> | null) || {}
+      const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
+      if (journeyType) {
+        return {
+          journeyType,
+          weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[CoachSessionService] Supabase journey context failed, trying Firestore:', err)
+  }
+
+  try {
     const profileSnap = await getDoc(doc(db, 'profiles', uid))
     if (!profileSnap.exists()) return null
     const profile = profileSnap.data() as { journeyType?: JourneyType; currentWeek?: number }
@@ -457,13 +478,17 @@ export async function markAttendance(params: {
   bookingId: string
   status: 'attended' | 'no_show'
   markedBy: string
-}): Promise<{ pointsAwarded: boolean }> {
+}): Promise<{ pointsAwarded: boolean; pointsAmount?: number; message?: string }> {
   const { bookingId, status, markedBy } = params
   const bookingRef = doc(db, BOOKINGS, bookingId)
 
   let learnerId: string | null = null
   let slotTitle: string | null = null
-  let shouldAwardPoints = false
+  let shouldAttemptAward = false
+  let alreadySameStatus = false
+  let pointsAwarded = false
+  let pointsAmount = 0
+  let awardMessage: string | undefined
 
   await runTransaction(db, async (tx) => {
     const bookingDoc = await tx.get(bookingRef)
@@ -473,8 +498,10 @@ export async function markAttendance(params: {
     const currentStatus = data.status as CoachBookingStatus | undefined
 
     if (currentStatus === status) {
+      alreadySameStatus = true
       learnerId = pickString(data.learner_id)
       slotTitle = pickString(data.slot_title)
+      pointsAwarded = Boolean(data.points_awarded)
       return
     }
 
@@ -484,26 +511,46 @@ export async function markAttendance(params: {
 
     learnerId = pickString(data.learner_id)
     slotTitle = pickString(data.slot_title)
-    shouldAwardPoints = status === 'attended' && !data.points_awarded
+    // Points if and only if attended — never for no-show / booking alone.
+    shouldAttemptAward = status === 'attended' && !data.points_awarded
 
     tx.update(bookingRef, {
       status,
       attended_at: status === 'attended' ? serverTimestamp() : null,
       marked_by: markedBy,
-      ...(shouldAwardPoints ? { points_awarded: true, points_awarded_at: serverTimestamp() } : {}),
+      ...(status === 'no_show'
+        ? { points_awarded: false, points_awarded_at: null }
+        : shouldAttemptAward
+          ? { points_awarded: false, points_awarded_at: null }
+          : {}),
     })
   })
 
-  if (shouldAwardPoints && learnerId) {
+  if (alreadySameStatus) {
+    return {
+      pointsAwarded,
+      pointsAmount: pointsAwarded ? 2000 : 0,
+      message: pointsAwarded ? undefined : 'Already marked attended',
+    }
+  }
+
+  if (shouldAttemptAward && learnerId) {
     try {
       const context = await getJourneyContext(learnerId)
-      if (context) {
+      if (!context) {
+        awardMessage = 'Attendance saved, but no active journey was found for points.'
+      } else {
         const activity = getActivityDefinitionById({
           activityId: 'ambassador_session',
           journeyType: context.journeyType,
         })
-        if (activity) {
-          await awardChecklistPoints({
+        if (!activity) {
+          console.warn(
+            `[CoachSessionService] ambassador_session activity unavailable for ${context.journeyType}`,
+          )
+          awardMessage = 'Coach session points are not part of this journey.'
+        } else {
+          const result = await awardChecklistPoints({
             uid: learnerId,
             journeyType: context.journeyType,
             weekNumber: context.weekNumber,
@@ -511,14 +558,22 @@ export async function markAttendance(params: {
             source: 'ambassador_attendance',
             claimRef: `ambassador_session:${bookingId}`,
           })
-        } else {
-          console.warn(
-            `[CoachSessionService] ambassador_session activity unavailable for ${context.journeyType}`,
-          )
+          if (result.awarded || result.reason === 'already_awarded') {
+            pointsAwarded = true
+            pointsAmount = activity.points
+            await updateDoc(bookingRef, {
+              points_awarded: true,
+              points_awarded_at: serverTimestamp(),
+            }).catch(() => undefined)
+          } else {
+            awardMessage = result.message ?? 'Could not issue coach session points.'
+          }
         }
       }
     } catch (err) {
       console.error('[CoachSessionService] Failed to award attendance points:', err)
+      awardMessage =
+        err instanceof Error ? err.message : 'Could not issue coach session points.'
     }
   }
 
@@ -529,18 +584,18 @@ export async function markAttendance(params: {
       title: status === 'attended' ? 'Attendance confirmed' : 'Marked as no-show',
       message:
         status === 'attended'
-          ? shouldAwardPoints
-            ? `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}". Points added.`
+          ? pointsAwarded
+            ? `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}". +${pointsAmount.toLocaleString()} points added.`
             : `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}".`
           : `Your coach recorded a no-show for "${slotTitle ?? 'the session'}".`,
       relatedId: bookingId,
-      metadata: { bookingId, kind: 'ambassador_attendance' },
+      metadata: { bookingId, kind: 'ambassador_attendance', pointsAwarded, pointsAmount },
     }).catch((err) =>
       console.warn('[CoachSessionService] notify attendance failed:', err),
     )
   }
 
-  return { pointsAwarded: shouldAwardPoints }
+  return { pointsAwarded, pointsAmount, message: awardMessage }
 }
 
 export async function markSlotCompleted(slotId: string): Promise<void> {

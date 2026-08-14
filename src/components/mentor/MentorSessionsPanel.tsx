@@ -244,13 +244,17 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
       } else if (mode === 'complete') {
         const result = await completeMentorshipSession({ sessionId: session.id })
         const awarded = pointsIssuanceEnabled && result.pointsAwarded
+        const amount = result.pointsAmount ?? 2000
         toast({
           title: awarded
-            ? 'Attendance confirmed · mentor meetup points issued'
-            : result.pointsAwarded
+            ? `Attendance confirmed · +${amount.toLocaleString()} points issued`
+            : result.message
               ? 'Attendance confirmed'
-              : 'Session marked complete (points not issued; learner needs an assigned mentor)',
-          status: awarded || result.pointsAwarded ? 'success' : 'info',
+              : 'Session marked complete',
+          description: awarded
+            ? 'Learner earned mentor meetup points for attending.'
+            : result.message,
+          status: awarded ? 'success' : 'info',
         })
       } else if (mode === 'cancel') {
         await cancelMentorshipSession({
@@ -296,8 +300,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
           <Box>
             <Heading size="sm">Mentorship sessions</Heading>
             <Text fontSize="sm" color="text.secondary">
-              Learner requests → you accept. Confirm attendance to issue mentor meetup points when
-              the learner has a mentor assigned.
+              Learner requests → you accept. Mark attendance complete to issue +2,000 mentor meetup
+              points — only when they attended.
             </Text>
           </Box>
           <HStack spacing={3}>
@@ -530,10 +534,10 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   <Alert status="info" rounded="lg">
                     <AlertIcon />
                     <Box>
-                      <AlertTitle>Points will be awarded</AlertTitle>
+                      <AlertTitle>+2,000 points if they attended</AlertTitle>
                       <AlertDescription>
-                        Marking complete awards the learner points for their mentor meetup. This can&apos;t be
-                        undone from this view.
+                        Marking complete confirms attendance and issues mentor meetup points to the
+                        learner. This can&apos;t be undone from this view.
                       </AlertDescription>
                     </Box>
                   </Alert>

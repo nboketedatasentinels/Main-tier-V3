@@ -250,6 +250,104 @@ export const buildMentoringSessionPlan = (
   }
 }
 
+/** Five-session Transformation Coaching arc (Coach Guidelines §6). */
+const coachingArcBlueprints = [
+  {
+    title: 'Contract & real goal',
+    focus: 'Contracting and the outcome they can observe',
+    topics: [
+      'What “done” looks like to someone else',
+      'Off-limits and challenge preference',
+      'How many sessions you have and how you will use them',
+    ],
+    tip: 'Expect the stated goal to change by session two. Write the outcome, not the topic.',
+  },
+  {
+    title: 'The constraint',
+    focus: 'What is actually in the way, named honestly',
+    topics: [
+      'What has already stopped them',
+      'What they would have to give up',
+      'Who benefits from the status quo',
+    ],
+    tip: 'Stay with the silence when the real constraint surfaces. Do not rescue it.',
+  },
+  {
+    title: 'First live attempt',
+    focus: 'Action between sessions — something happens in the world',
+    topics: [
+      'The first move they can make tomorrow',
+      'What will get in the way',
+      'Who needs to know',
+    ],
+    tip: 'Between sessions the client works, not you. No decks as a habit.',
+  },
+  {
+    title: 'What happened',
+    focus: 'Reality has interfered with the plan',
+    topics: [
+      'What they tried and what broke',
+      'What the attempt revealed about the constraint',
+      'The next sharper commitment',
+    ],
+    tip: 'Usually the most valuable session. Treat failure as data, not drama.',
+  },
+  {
+    title: 'Consolidation & handover',
+    focus: 'What they take forward without you',
+    topics: [
+      'The pattern they will recognize next time',
+      'Support they will use without this coach',
+      'One practice they will keep',
+    ],
+    tip: 'End cleanly. A reassignment in session two is normal; in session five it is late.',
+  },
+]
+
+/**
+ * Coach-built learning plan sized to purchased sessions (1–5).
+ * One-session engagements get a compressed single-session plan.
+ */
+export const buildCoachingSessionPlan = (
+  input: MentorMenteeInsightInput & { purchasedSessions?: number | null },
+): MentoringSessionPlan => {
+  const purchased = Math.min(5, Math.max(1, Math.round(input.purchasedSessions ?? 5) || 5))
+  const journeyLabel =
+    purchased === 1 ? 'Single-session coaching' : `${purchased}-session coaching arc`
+
+  if (purchased === 1) {
+    return {
+      recommendedSessionCount: 1,
+      journeyLabel,
+      sessions: [
+        {
+          index: 1,
+          title: 'One real decision',
+          focus: 'Contract fast, sharpen the goal, find one constraint, commit',
+          suggestedTopics: [
+            'Observable outcome for this hour',
+            'The one thing in the way',
+            'A commitment they can keep without a second session',
+          ],
+          tip: 'Do not open something you cannot close. One sharp decision is success.',
+        },
+      ],
+    }
+  }
+
+  return {
+    recommendedSessionCount: purchased,
+    journeyLabel,
+    sessions: coachingArcBlueprints.slice(0, purchased).map((bp, i) => ({
+      index: i + 1,
+      title: bp.title,
+      focus: bp.focus,
+      suggestedTopics: bp.topics,
+      tip: bp.tip,
+    })),
+  }
+}
+
 export const mentoringTipsLibrary = [
   'Open with their energy: what went well since last time before diving into gaps.',
   'Ask for a concrete story (“tell me about Tuesday”) instead of abstract self-ratings.',

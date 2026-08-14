@@ -83,14 +83,17 @@ const SlotBookingsRow: React.FC<{
     setBusyId(bookingId)
     try {
       const result = await markAttendance({ bookingId, status, markedBy: ambassadorId })
+      const amount = result.pointsAmount ?? 2000
       toast({
         title:
           status === 'attended'
             ? result.pointsAwarded
-              ? 'Marked attended · points awarded'
-              : 'Already marked attended'
+              ? `Marked attended · +${amount.toLocaleString()} points awarded`
+              : result.message || 'Marked attended'
             : 'Marked as no-show',
-        status: 'success',
+        description:
+          status === 'attended' && !result.pointsAwarded ? result.message : undefined,
+        status: status === 'attended' && result.pointsAwarded ? 'success' : 'info',
       })
     } catch (err) {
       const description = err instanceof Error ? err.message : 'Try again in a moment.'

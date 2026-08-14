@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Avatar,
   Badge,
@@ -26,6 +26,7 @@ import {
 } from '@chakra-ui/react'
 import { Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -115,13 +116,32 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   navSections,
   subtitle = 'Grow the ecosystem and track your impact',
 }) => {
-  const { signOut, signingOut } = useAuth()
+  const { signOut, signingOut, profile, profileLoading, profileStatus } = useAuth()
   const toast = useToast()
   const sections = useMemo(() => navSections || buildAmbassadorNavItems(), [navSections])
   const primaryNavItems = useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
   const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
+  const [showGuidelinesModal, setShowGuidelinesModal] = useState(false)
+
+  useEffect(() => {
+    if (profileLoading || profileStatus !== 'ready' || !profile?.id) return
+    if (profile.coachGuidelinesAcknowledgedAt) {
+      setShowGuidelinesModal(false)
+      return
+    }
+    try {
+      const cached = localStorage.getItem('t4l.coach_guidelines_acknowledged')
+      if (cached) {
+        setShowGuidelinesModal(false)
+        return
+      }
+    } catch {
+      // ignore
+    }
+    setShowGuidelinesModal(true)
+  }, [profile?.id, profile?.coachGuidelinesAcknowledgedAt, profileLoading, profileStatus])
 
   const handleLogout = async () => {
     const result = await signOut()
@@ -360,6 +380,11 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           </HStack>
         </Box>
       )}
+
+      <CoachGuidelinesModal
+        isOpen={showGuidelinesModal}
+        onAcknowledged={() => setShowGuidelinesModal(false)}
+      />
     </Flex>
   )
 }

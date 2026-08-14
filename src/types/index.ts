@@ -110,6 +110,19 @@ export interface UserProfile {
   hasSeenDashboardTour?: boolean
   /** ISO timestamp when mentor acknowledged Mentor Guidelines (first-login modal) */
   mentorGuidelinesAcknowledgedAt?: string
+  /** ISO timestamp when coach acknowledged Coach Guidelines (first-login modal) */
+  coachGuidelinesAcknowledgedAt?: string
+  /** Purchased Transformation Coaching sessions for this learner (1–5). */
+  purchasedCoachSessions?: number
+  /** Coach-authored learning plans keyed by learner id (stored on coach profile). */
+  coachingPlans?: Record<
+    string,
+    {
+      purchasedSessions: number
+      sessions: Array<{ index: number; title: string; focus: string; notes: string }>
+      updatedAt: string
+    }
+  >
   /**
    * Written answers for native course-podcast assessments (keyed by
    * `{packId}-{slot}`, e.g. T4L-C01-anchor). Used until AI grading ships.
