@@ -30,6 +30,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { MentorDashboardLayout } from '@/layouts/MentorDashboardLayout'
 import { MentorSessionsPanel } from '@/components/mentor/MentorSessionsPanel'
 import { MentorLearnerPanel } from '@/components/mentor/MentorLearnerPanel'
+import { LearnerPointsRanking } from '@/components/coach/LearnerPointsRanking'
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import {
   PreCourseSurveyButton,
@@ -187,6 +188,7 @@ export const MentorDashboard: React.FC = () => {
       mentees.map((m) => ({
         id: m.id,
         name: getDisplayName(m),
+        email: m.email ?? null,
         currentWeek: m.currentWeek,
         journeyType: typeof m.journeyType === 'string' ? m.journeyType : undefined,
         journeyStatus: typeof m.journeyStatus === 'string' ? m.journeyStatus : undefined,
@@ -378,7 +380,11 @@ export const MentorDashboard: React.FC = () => {
                 </Text>
               </Box>
             ) : (
-              <Grid templateColumns={{ base: '1fr', lg: '280px 1fr' }} gap={5}>
+              <Grid
+                templateColumns={{ base: '1fr', lg: '260px minmax(0, 1fr) 240px' }}
+                gap={5}
+                alignItems="start"
+              >
                 <Stack spacing={2}>
                   {filtered.map((m) => {
                     const active = selected?.id === m.id
@@ -418,11 +424,26 @@ export const MentorDashboard: React.FC = () => {
                   })}
                 </Stack>
                 {selected ? (
-                  <Stack spacing={5}>
+                  <Stack spacing={5} minW={0}>
                     <MentorLearnerPanel learner={selected} mentorId={profile?.id} />
                     <LearnerSessionPrep audience="mentor" learner={selected} windowStatus="warning" />
                   </Stack>
-                ) : null}
+                ) : (
+                  <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                    <Text fontSize="sm" color="gray.600">
+                      Select a mentee to open their profile.
+                    </Text>
+                  </Box>
+                )}
+                <LearnerPointsRanking
+                  learners={mentees}
+                  selectedId={selected?.id}
+                  onSelect={(id) => {
+                    setSelectedId(id)
+                    setActiveSection('mentees')
+                  }}
+                  title="Points ranking"
+                />
               </Grid>
             )}
           </SectionShell>
@@ -431,7 +452,7 @@ export const MentorDashboard: React.FC = () => {
             id="mentor-schedule"
             eyebrow="Meetings"
             title="Meeting schedule"
-            subtitle="Learner requests appear here. Accept to confirm, then mark attendance complete to issue +2,000 mentor meetup points — only if they attended."
+            subtitle="Learner requests appear here. Accept to confirm, then mark attendance complete to issue +2,000 mentor meetup points - only if they attended."
           >
             {profile?.id ? (
               <MentorSessionsPanel mentorId={profile.id} pointsIssuanceEnabled />
@@ -447,7 +468,7 @@ export const MentorDashboard: React.FC = () => {
             subtitle={
               orgCourseTitles.length
                 ? `Mentors complete Post only. Courses follow their organisation programme (${orgCourseTitles.join(', ')}).`
-                : 'Mentors complete Post ratings only — after the learner finishes the course.'
+                : 'Mentors complete Post ratings only - after the learner finishes the course.'
             }
           >
             {profile?.id && assessmentLearners.length > 0 ? (

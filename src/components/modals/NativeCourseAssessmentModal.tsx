@@ -25,6 +25,10 @@ interface NativeCourseAssessmentModalProps {
   subjectUserId: string
   /** Defaults to learner (self). External raters pass mentor/coach/partner/line_manager. */
   raterRole?: CourseAssessmentRaterRole
+  respondentName?: string | null
+  respondentEmail?: string | null
+  subjectName?: string | null
+  subjectEmail?: string | null
   isSubmitting?: boolean
   onClose: () => void
   onCompleted: () => Promise<void> | void
@@ -38,6 +42,10 @@ export function NativeCourseAssessmentModal({
   respondentId,
   subjectUserId,
   raterRole = 'learner',
+  respondentName,
+  respondentEmail,
+  subjectName,
+  subjectEmail,
   isSubmitting = false,
   onClose,
   onCompleted,
@@ -89,6 +97,10 @@ export function NativeCourseAssessmentModal({
               respondentId={respondentId}
               subjectUserId={subjectUserId}
               raterRole={raterRole}
+              respondentName={respondentName}
+              respondentEmail={respondentEmail}
+              subjectName={subjectName}
+              subjectEmail={subjectEmail}
               isSubmitting={isSubmitting}
               onCompleted={onCompleted}
             />

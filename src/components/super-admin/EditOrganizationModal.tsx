@@ -117,6 +117,7 @@ const emptyOrganization: OrganizationRecord = {
   programDuration: undefined,
   monthlyCourseAssignments: {},
   courseAssignmentStructure: 'monthly',
+  purchasedCoachSessions: 5,
 }
 
 type InviteRole = 'user' | 'partner' | 'mentor' | 'ambassador'
@@ -721,6 +722,10 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         courseAssignments: orderedCourseAssignments,
         courseAssignmentStructure: 'monthly',
         description: form.description ?? null,
+        purchasedCoachSessions:
+          typeof form.purchasedCoachSessions === 'number' && form.purchasedCoachSessions > 0
+            ? Math.round(form.purchasedCoachSessions)
+            : 5,
       })
 
       const failedAdds: string[] = []
@@ -947,6 +952,28 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                         ? `Assign ${courseLimit} course${courseLimit > 1 ? 's' : ''} across ${courseLimit} ${assignmentUnit}${courseLimit > 1 ? 's' : ''}`
                         : 'Select a duration to enable course assignments'}
                     </FormErrorMessage>
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Purchased coaching sessions</FormLabel>
+                    <Select
+                      value={String(form.purchasedCoachSessions ?? 5)}
+                      onChange={(e) =>
+                        updateField('purchasedCoachSessions', Number(e.target.value) || 5)
+                      }
+                    >
+                      {[1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20].map((n) => (
+                        <option key={n} value={n}>
+                          {n} session{n === 1 ? '' : 's'}
+                          {n === 1 || n === 5 ? ' (standard)' : ''}
+                        </option>
+                      ))}
+                    </Select>
+                    <FormHelperText>
+                      Org default for Transformation Coaching. Usually 1 or 5; raise when the company
+                      buys more. Per-learner overrides can still apply.
+                    </FormHelperText>
                   </FormControl>
                 </GridItem>
                 {isClusterBoundary ? (

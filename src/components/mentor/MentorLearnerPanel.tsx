@@ -34,7 +34,7 @@ type MentorLearnerPanelProps = {
 }
 
 /**
- * Mentor mentee profile surface — parity with coach: values, age, personality,
+ * Mentor mentee profile surface - parity with coach: values, age, personality,
  * AI-labeled notes, strengths/weaknesses, optional goal, suggested session topics.
  */
 export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({

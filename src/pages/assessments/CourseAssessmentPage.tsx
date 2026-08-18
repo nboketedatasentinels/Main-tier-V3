@@ -234,7 +234,7 @@ export default function CourseAssessmentPage() {
               <Text mt={2} fontSize="sm" color="whiteAlpha.800" maxW="540px" lineHeight="1.6">
                 {kind === 'pre'
                   ? 'A short baseline on how you currently show up. Honest answers help you and your support team.'
-                  : 'Reflect on how you show up now — the same questions as Pre, so growth is visible.'}
+                  : 'Reflect on how you show up now - the same questions as Pre, so growth is visible.'}
               </Text>
             </Box>
           </HStack>

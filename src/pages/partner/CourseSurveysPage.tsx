@@ -340,6 +340,7 @@ const CourseSurveysPage: React.FC = () => {
                 {
                   id: rateTarget.id,
                   name: rateTarget.name,
+                  email: rateTarget.email,
                   currentWeek: rateTarget.currentWeek,
                   journeyType: rateTarget.journeyType,
                   journeyStatus: rateTarget.journeyStatus,
@@ -376,6 +377,7 @@ const CourseSurveysPage: React.FC = () => {
                       learners={learnerInputs.map((l) => ({
                         id: l.id,
                         name: l.name,
+                        email: l.email,
                         currentWeek: l.currentWeek,
                         journeyType: l.journeyType,
                         journeyStatus: l.journeyStatus,

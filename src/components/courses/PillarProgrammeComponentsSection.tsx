@@ -93,7 +93,7 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({
               Pass / Fail mark
             </Badge>
             <Text fontSize="xs" color="gray.500">
-              No checklist points — your partner grades Pass or Fail.
+              No checklist points - your partner grades Pass or Fail.
             </Text>
           </HStack>
         )}

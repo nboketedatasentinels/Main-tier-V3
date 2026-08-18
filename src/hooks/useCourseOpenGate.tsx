@@ -16,7 +16,7 @@ interface UseCourseOpenGateResult {
    * Open learner Post assessment after course complete.
    */
   requestPostAssessment: (courseTitle: string) => void
-  /** Legacy SurveyMonkey modal removed — always null. */
+  /** Legacy SurveyMonkey modal removed - always null. */
   surveyModal: React.ReactNode
   /** Reserved for callers that still read this flag. */
   surveyCompleted: boolean
@@ -43,7 +43,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
       }
 
       if (!definition) {
-        // No native Pre instrument for this title — do not fall back to SurveyMonkey.
+        // No native Pre instrument for this title - do not fall back to SurveyMonkey.
         console.warn('[useCourseOpenGate] no native Pre assessment; opening course', title)
         openInNewTab(url)
         return

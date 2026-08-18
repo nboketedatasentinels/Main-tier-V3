@@ -133,7 +133,7 @@ const formatWeekRange = (startDate: Date, endDate: Date) => {
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const endDisplay = new Date(endDate)
   endDisplay.setDate(endDisplay.getDate() - 1)
-  return `${formatter.format(startDate)} – ${formatter.format(endDisplay)}`
+  return `${formatter.format(startDate)} - ${formatter.format(endDisplay)}`
 }
 
 const getWeekAvailabilityStatus = (params: {
@@ -633,7 +633,9 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
   const { statusForTitle, refresh: refreshAssessmentStatus } = useLearnerCourseAssessmentStatus(
     userId ?? null,
   )
-  const [managedLearners, setManagedLearners] = useState<{ id: string; name: string }[]>([])
+  const [managedLearners, setManagedLearners] = useState<
+    { id: string; name: string; email?: string | null }[]
+  >([])
   const [ownReportCard, setOwnReportCard] = useState<LearnerAssessmentReportCard | null>(null)
 
   const orgCourseTitles = useMemo(() => {
@@ -663,7 +665,11 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
         setManagedLearners(
           rows
             .filter((l) => Boolean(l.id))
-            .map((l) => ({ id: l.id!, name: getDisplayName(l, 'Learner') })),
+            .map((l) => ({
+              id: l.id!,
+              name: getDisplayName(l, 'Learner'),
+              email: l.email ?? null,
+            })),
         )
       })
       .catch(() => {
@@ -893,7 +899,7 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
       const displayLabel = is6W
         ? blockWeeks === 1
           ? `Week ${startWeekIndex + 1}`
-          : `Weeks ${startWeekIndex + 1}–${lastWeekInBlock}`
+          : `Weeks ${startWeekIndex + 1}-${lastWeekInBlock}`
         : undefined
 
       return {

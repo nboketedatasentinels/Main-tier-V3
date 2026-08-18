@@ -276,6 +276,8 @@ export interface OrgWriteExtras {
   courseAssignmentStructure?: 'monthly' | 'array' | null
   /** Free-text organization description. */
   description?: string | null
+  /** Default purchased coaching sessions for learners in this org (1–20). */
+  purchasedCoachSessions?: number | null
 }
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
@@ -291,6 +293,14 @@ const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,
   courseAssignments: e.courseAssignments ?? null,
   courseAssignmentStructure: e.courseAssignmentStructure ?? null,
+  ...(e.purchasedCoachSessions !== undefined
+    ? {
+        purchasedCoachSessions:
+          typeof e.purchasedCoachSessions === 'number' && Number.isFinite(e.purchasedCoachSessions)
+            ? Math.round(e.purchasedCoachSessions)
+            : null,
+      }
+    : {}),
 })
 
 /** Add a SECURITY DEFINER claim used by partner signup (see claim_partner_access RPC). */
@@ -558,6 +568,14 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
       patch.courseAssignmentStructure !== undefined
         ? patch.courseAssignmentStructure
         : ((existingSettings.courseAssignmentStructure as 'monthly' | 'array' | null) ?? null),
+    purchasedCoachSessions:
+      patch.purchasedCoachSessions !== undefined
+        ? patch.purchasedCoachSessions
+        : typeof existingSettings.purchasedCoachSessions === 'number'
+          ? existingSettings.purchasedCoachSessions
+          : typeof existingSettings.purchasedCoachSessions === 'string'
+            ? Number(existingSettings.purchasedCoachSessions)
+            : null,
   }
   updates.settings = { ...existingSettings, ...buildSettings(nextExtras) }
 

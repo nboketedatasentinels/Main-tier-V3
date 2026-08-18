@@ -39,6 +39,31 @@ export const raterRoleToAudience = (
 export const raterRelationshipLabel = (role: CourseAssessmentRaterRole): string =>
   COURSE_ASSESSMENT_ROLE_MATRIX[role].label
 
+/**
+ * SurveyMonkey imports asked for name / email / relationship.
+ * In-app raters already selected a learner and are signed in — skip those prompts.
+ */
+export const isInAppIdentityQuestion = (text: string): boolean => {
+  const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim()
+  return (
+    /^(participant'?s?\s+)?(full\s+)?name\b/.test(normalized) ||
+    /^(your\s+)?name\b/.test(normalized) ||
+    /^(participant'?s?\s+)?email\b/.test(normalized) ||
+    /^(your\s+)?email\b/.test(normalized) ||
+    /relationship\s+to\s+(the\s+)?participant/.test(normalized) ||
+    /your\s+relationship/.test(normalized)
+  )
+}
+
+/** Map app rater role onto the imported SurveyMonkey relationship wording when useful. */
+export const raterRelationshipChoiceLabel = (role: CourseAssessmentRaterRole): string => {
+  if (role === 'line_manager') return 'Manager'
+  if (role === 'partner') return 'Partner'
+  if (role === 'mentor') return 'Mentor'
+  if (role === 'coach') return 'Coach'
+  return raterRelationshipLabel(role)
+}
+
 /** Soft window: partner Post is encouraged near journey end (not a hard block). */
 export const isPartnerPostWindowSuggested = (params: {
   journeyStatus?: string | null

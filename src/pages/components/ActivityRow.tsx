@@ -131,7 +131,7 @@ interface ActivityRowProps {
   occurrenceTotal?: number
   /**
    * When set (month journeys), Done column uses this numerator instead of
-   * journey-wide completedCount — e.g. Month 1 podcast shows 0/3 not 0/9.
+   * journey-wide completedCount - e.g. Month 1 podcast shows 0/3 not 0/9.
    */
   occurrenceDone?: number
   /** How many claims are awaiting partner review (count toward DONE progress). */
@@ -144,7 +144,7 @@ interface ActivityRowProps {
    */
   programmePillar?: Pillar | null
   /**
-   * Month journeys: catalogue course slug for that month — drives native
+   * Month journeys: catalogue course slug for that month - drives native
    * course podcast packs (watch / transcript / test).
    */
   catalogueCourseId?: string | null
@@ -219,7 +219,7 @@ export const ActivityRow = ({
     isActionInFlight
 
   const visualState = getVisualState(activity)
-  // Journey frequency from the points sheet (1, 2, 3, …) — or month-local
+  // Journey frequency from the points sheet (1, 2, 3, …) - or month-local
   // quota when occurrenceDone/occurrenceTotal are provided for 3M/6M/9M.
   const totalFrequency = Math.max(
     1,
@@ -540,7 +540,7 @@ export const ActivityRow = ({
             </Badge>
           </Box>
 
-          {/* Points (desktop) — Pass/Fail for month 3/6/9 programme components */}
+          {/* Points (desktop) - Pass/Fail for month 3/6/9 programme components */}
           <Text
             fontSize="xs"
             fontWeight="semibold"

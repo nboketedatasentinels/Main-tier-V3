@@ -512,6 +512,7 @@ export const PartnerDashboard: React.FC = () => {
         .map((user) => ({
           id: user.id!,
           name: getDisplayName(user),
+          email: user.email ?? null,
           currentWeek: user.currentWeek,
           journeyType: typeof user.journeyType === 'string' ? user.journeyType : undefined,
         })),

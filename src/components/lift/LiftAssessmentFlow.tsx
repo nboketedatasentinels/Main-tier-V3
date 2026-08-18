@@ -722,7 +722,7 @@ const ContactDetails: React.FC<{
           </Box>
         </Flex>
 
-        {/* The form — preserve CONTACT_FIELDS order; pair consecutive half-width fields. */}
+        {/* The form - preserve CONTACT_FIELDS order; pair consecutive half-width fields. */}
         <VStack align="stretch" spacing={4}>
           {renderContactFieldRows(CONTACT_FIELDS, renderField)}
 
@@ -781,7 +781,7 @@ const ContactDetails: React.FC<{
             )}
           </Box>
 
-          {/* Terms — sourced from the first info after the countdown */}
+          {/* Terms - sourced from the first info after the countdown */}
           <Box
             borderWidth="1px"
             borderColor={errors.acceptTerms ? 'red.300' : 'gray.200'}

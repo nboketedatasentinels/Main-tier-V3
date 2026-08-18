@@ -29,10 +29,13 @@ import {
   type CourseAssessmentKind,
 } from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment, getCourseAssessmentResponse } from '@/services/courseAssessmentService'
+import { useAuth } from '@/hooks/useAuth'
+import { getDisplayName } from '@/utils/displayName'
 
 export interface RateLearnerOption {
   id: string
   name: string
+  email?: string | null
   /** Used for partner soft Post window hint */
   currentWeek?: number | null
   journeyType?: string | null
@@ -69,6 +72,9 @@ export function RateLearnerCourseAssessment({
   onSubmitted,
 }: RateLearnerCourseAssessmentProps) {
   const toast = useToast()
+  const { profile } = useAuth()
+  const respondentName = profile ? getDisplayName(profile) : null
+  const respondentEmail = profile?.email ?? null
   const matrix = COURSE_ASSESSMENT_ROLE_MATRIX[raterRole]
   const allowedKinds = (['pre', 'post'] as CourseAssessmentKind[]).filter(
     (k) => canRoleSubmitKind(raterRole, k) && (!forcedKind || forcedKind === k),
@@ -152,7 +158,7 @@ export function RateLearnerCourseAssessment({
         toast({
           status: 'info',
           title: 'Already submitted',
-          description: 'You can update by submitting again — your previous answers will be replaced.',
+          description: 'You can update by submitting again - your previous answers will be replaced.',
           duration: 3500,
         })
       }
@@ -269,7 +275,7 @@ export function RateLearnerCourseAssessment({
 
         {partnerHint && kind === 'post' && (
           <Badge colorScheme="orange" borderRadius="md" px={2} py={1} textTransform="none" w="fit-content">
-            Suggested near end of journey — you can still submit now
+            Suggested near end of journey - you can still submit now
           </Badge>
         )}
 
@@ -293,6 +299,10 @@ export function RateLearnerCourseAssessment({
         respondentId={respondentId}
         subjectUserId={subjectId}
         raterRole={raterRole}
+        respondentName={respondentName}
+        respondentEmail={respondentEmail}
+        subjectName={selectedLearner?.name ?? null}
+        subjectEmail={selectedLearner?.email ?? null}
         onClose={() => {
           setModalOpen(false)
           setLiveDefinition(null)

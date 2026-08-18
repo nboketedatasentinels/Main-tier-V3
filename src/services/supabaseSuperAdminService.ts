@@ -790,6 +790,12 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
     monthlyCourseAssignments: (settings.monthlyCourseAssignments as Record<string, string>) ?? undefined,
     courseAssignmentStructure:
       (settings.courseAssignmentStructure as OrganizationRecord['courseAssignmentStructure']) ?? undefined,
+    purchasedCoachSessions:
+      typeof settings.purchasedCoachSessions === 'number'
+        ? settings.purchasedCoachSessions
+        : typeof settings.purchasedCoachSessions === 'string'
+          ? Number(settings.purchasedCoachSessions) || null
+          : null,
   }
 }
 

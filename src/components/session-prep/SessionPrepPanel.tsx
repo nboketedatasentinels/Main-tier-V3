@@ -43,7 +43,7 @@ const MonoLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({
 )
 
 /**
- * Session Prep screen — mentor / coach / leader readings of one profile.
+ * Session Prep screen - mentor / coach / leader readings of one profile.
  * Visual language follows the T4L Session Prep mockup (cream / charcoal / gold).
  */
 export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
@@ -466,7 +466,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                   {model.mentorCannotSee.map((item) => (
                     <Text key={item} fontSize="12.5px" lineHeight="1.7" color="#6B6579">
                       <Text as="span" color="#B33A3A" fontFamily="mono">
-                        –{' '}
+                        -{' '}
                       </Text>
                       {item}
                     </Text>

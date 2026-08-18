@@ -17,7 +17,11 @@ import type {
   CourseAssessmentDefinition,
   CourseAssessmentQuestion,
 } from '@/config/nativeCourseAssessments'
-import type { CourseAssessmentRaterRole } from '@/config/courseAssessmentRoles'
+import {
+  isInAppIdentityQuestion,
+  raterRelationshipChoiceLabel,
+  type CourseAssessmentRaterRole,
+} from '@/config/courseAssessmentRoles'
 import {
   submitCourseAssessmentResponse,
   type CourseAssessmentAnswers,
@@ -29,6 +33,14 @@ export interface CourseAssessmentFormProps {
   respondentId: string
   subjectUserId: string
   raterRole?: CourseAssessmentRaterRole
+  /** Signed-in rater display name (auto-fills "Your Name"). */
+  respondentName?: string | null
+  /** Signed-in rater email (auto-fills "Your Email" when present). */
+  respondentEmail?: string | null
+  /** Selected learner display name (auto-fills participant name). */
+  subjectName?: string | null
+  /** Selected learner email (auto-fills participant email). */
+  subjectEmail?: string | null
   isSubmitting?: boolean
   submitLabel?: string
   onCompleted: () => Promise<void> | void
@@ -41,12 +53,45 @@ const isAnswered = (question: CourseAssessmentQuestion, value: number | string |
   return false
 }
 
+const identityAnswerFor = (
+  text: string,
+  params: {
+    raterRole: CourseAssessmentRaterRole
+    respondentName?: string | null
+    respondentEmail?: string | null
+    subjectName?: string | null
+    subjectEmail?: string | null
+  },
+): string | null => {
+  const normalized = text.toLowerCase()
+  if (/participant/.test(normalized) && /name/.test(normalized)) {
+    return params.subjectName?.trim() || null
+  }
+  if (/participant/.test(normalized) && /email/.test(normalized)) {
+    return params.subjectEmail?.trim() || null
+  }
+  if (/your\s+name|^(full\s+)?name\b/.test(normalized) && !/participant/.test(normalized)) {
+    return params.respondentName?.trim() || null
+  }
+  if (/your\s+email|^(email)\b/.test(normalized) && !/participant/.test(normalized)) {
+    return params.respondentEmail?.trim() || null
+  }
+  if (/relationship/.test(normalized)) {
+    return raterRelationshipChoiceLabel(params.raterRole)
+  }
+  return null
+}
+
 export function CourseAssessmentForm({
   definition,
   courseTitle,
   respondentId,
   subjectUserId,
   raterRole = 'learner',
+  respondentName,
+  respondentEmail,
+  subjectName,
+  subjectEmail,
   isSubmitting = false,
   submitLabel,
   onCompleted,
@@ -56,12 +101,23 @@ export function CourseAssessmentForm({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
-  const answerable = useMemo(
+  const hideIdentityPrompts = raterRole !== 'learner' && definition.audience === 'external_rater'
+
+  const visibleQuestions = useMemo(
     () =>
       (definition.questions ?? [])
         .map((q, index) => ({ q, index }))
-        .filter(({ q }) => q.type !== 'info'),
-    [definition],
+        .filter(({ q }) => {
+          if (q.type === 'info') return true
+          if (hideIdentityPrompts && isInAppIdentityQuestion(q.text)) return false
+          return true
+        }),
+    [definition.questions, hideIdentityPrompts],
+  )
+
+  const answerable = useMemo(
+    () => visibleQuestions.filter(({ q }) => q.type !== 'info'),
+    [visibleQuestions],
   )
 
   const answeredCount = answerable.filter(({ q, index }) =>
@@ -103,6 +159,21 @@ export function CourseAssessmentForm({
       return
     }
 
+    const mergedAnswers: CourseAssessmentAnswers = { ...answers }
+    if (hideIdentityPrompts) {
+      ;(definition.questions ?? []).forEach((q, index) => {
+        if (q.type === 'info' || !isInAppIdentityQuestion(q.text)) return
+        const filled = identityAnswerFor(q.text, {
+          raterRole,
+          respondentName,
+          respondentEmail,
+          subjectName,
+          subjectEmail,
+        })
+        if (filled) mergedAnswers[String(index)] = filled
+      })
+    }
+
     setSaving(true)
     try {
       await submitCourseAssessmentResponse({
@@ -111,7 +182,7 @@ export function CourseAssessmentForm({
         definition,
         raterRole,
         courseTitle,
-        answers,
+        answers: mergedAnswers,
       })
       await onCompleted()
     } catch (err) {
@@ -171,18 +242,27 @@ export function CourseAssessmentForm({
       >
         <Text fontSize="sm" color="gray.700" lineHeight="1.65">
           {definition.audience === 'external_rater'
-            ? 'Rate this learner on a scale of 1–10 based on how they currently behave.'
-            : 'Rate yourself on a scale of 1–10 based on how you currently behave.'}{' '}
+            ? 'Rate this learner on a scale of 1-10 based on how they currently behave.'
+            : 'Rate yourself on a scale of 1-10 based on how you currently behave.'}{' '}
           <Text as="span" color="gray.500">
-            1 = Rarely or never · 5–6 = Sometimes · 9–10 = Almost always.
+            1 = Rarely or never · 5-6 = Sometimes · 9-10 = Almost always.
           </Text>
         </Text>
       </Box>
 
       <Stack spacing={5}>
-        {definition.questions.map((question, index) => {
+        {visibleQuestions.map(({ q: question, index }) => {
           if (question.type === 'info') {
             if (/end message|thank you/i.test(question.text)) return null
+            // In-app raters already picked the learner - skip SurveyMonkey intro copy.
+            if (
+              hideIdentityPrompts &&
+              /you'?ve been asked|provide feedback|participant you are rating|rate this participant on a scale/i.test(
+                question.text,
+              )
+            ) {
+              return null
+            }
             return (
               <Box
                 key={`info-${index}`}

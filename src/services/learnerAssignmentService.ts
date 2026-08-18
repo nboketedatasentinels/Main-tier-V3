@@ -93,11 +93,16 @@ const extractName = (data: Record<string, unknown>, fallback = 'Unknown member')
 /** Map list_org_peers camelCase records into UserProfile for mentor/coach dashboards. */
 const mapPeerRecordToLearner = (peer: Record<string, unknown>): UserProfile => {
   const role = normalizeRole(peer.role)
+  const totalPoints =
+    (typeof peer.totalPoints === 'number' ? peer.totalPoints : null) ??
+    (typeof peer.total_points === 'number' ? peer.total_points : null) ??
+    0
   return {
     ...peer,
     id: peer.id,
     email: (peer.email as string) || '',
     role,
+    totalPoints,
   } as unknown as UserProfile
 }
 

@@ -124,6 +124,8 @@ export interface OrganizationRecord {
   assignedPartnerEmail?: string | null
   hasMentor?: boolean
   hasAmbassador?: boolean
+  /** Default purchased Transformation Coaching sessions for this org (1–20). */
+  purchasedCoachSessions?: number | null
   capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 

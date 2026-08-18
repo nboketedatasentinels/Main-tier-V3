@@ -73,7 +73,7 @@ export function PreCourseSurveyButton({
   )
 }
 
-/** @deprecated Use COURSE_SURVEY_SECTION_ID — kept for existing section anchors. */
+/** @deprecated Use COURSE_SURVEY_SECTION_ID - kept for existing section anchors. */
 export const PRE_COURSE_SURVEY_SECTION_ID = COURSE_SURVEY_SECTION_ID
 export { COURSE_SURVEY_SECTION_ID }
 export const scrollToPreCourseSurvey = scrollToCourseSurvey

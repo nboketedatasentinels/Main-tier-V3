@@ -1,28 +1,12 @@
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  increment,
-  onSnapshot,
-  orderBy,
-  query,
-  runTransaction,
-  serverTimestamp,
-  setDoc,
-  updateDoc,
-  where,
-  type Unsubscribe,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
+/**
+ * Coach (ambassador) session slots + bookings — Supabase-backed.
+ * Replaces Firestore ambassador_slots / ambassador_slot_bookings which fail
+ * under Supabase-only auth ("Missing or insufficient permissions").
+ */
+import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
 import { createInAppNotification } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
-
-const SLOTS = 'ambassador_slots'
-const BOOKINGS = 'ambassador_slot_bookings'
 
 export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
 export type CoachBookingStatus = 'booked' | 'attended' | 'no_show' | 'cancelled'
@@ -62,126 +46,140 @@ export interface CoachBooking {
   cancelReason: string | null
   pointsAwarded: boolean
   pointsAwardedAt: Date | null
-  // Denormalized slot fields for UI convenience
   slotTitle: string | null
   slotScheduledAt: Date | null
   slotStatus: CoachSlotStatus | null
 }
 
+type Unsubscribe = () => void
+
 const parseTs = (value: unknown): Date | null => {
   if (!value) return null
-  if (value instanceof Timestamp) return value.toDate()
   if (value instanceof Date) return value
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
   return null
 }
 
 const pickString = (value: unknown): string | null =>
   typeof value === 'string' && value.trim().length > 0 ? value : null
 
-const mapSlot = (id: string, data: Record<string, unknown>): CoachSlot => ({
-  id,
-  ambassadorId: pickString(data.ambassador_id) ?? '',
-  ambassadorName: pickString(data.ambassador_name),
-  companyId: pickString(data.company_id) ?? '',
-  companyCode: pickString(data.company_code),
-  title: pickString(data.title) ?? 'Coach coaching session',
-  description: pickString(data.description),
-  scheduledAt: parseTs(data.scheduled_at) ?? new Date(),
-  durationMinutes: Number(data.duration_minutes ?? 60) || 60,
-  capacity: Math.max(1, Number(data.capacity ?? 1)),
-  meetingLink: pickString(data.meeting_link),
-  location: pickString(data.location),
-  status: (data.status as CoachSlotStatus) || 'open',
-  bookingCount: Math.max(0, Number(data.booking_count ?? 0)),
-  cancellationReason: pickString(data.cancellation_reason),
-  createdAt: parseTs(data.created_at) ?? new Date(),
-  updatedAt: parseTs(data.updated_at),
+const mapSlot = (row: Record<string, unknown>): CoachSlot => ({
+  id: String(row.id ?? ''),
+  ambassadorId: pickString(row.ambassador_id) ?? '',
+  ambassadorName: pickString(row.ambassador_name),
+  companyId: pickString(row.company_id) ?? '',
+  companyCode: pickString(row.company_code),
+  title: pickString(row.title) ?? 'Coach coaching session',
+  description: pickString(row.description),
+  scheduledAt: parseTs(row.scheduled_at) ?? new Date(),
+  durationMinutes: Number(row.duration_minutes ?? 60) || 60,
+  capacity: Math.max(1, Number(row.capacity ?? 1)),
+  meetingLink: pickString(row.meeting_link),
+  location: pickString(row.location),
+  status: (row.status as CoachSlotStatus) || 'open',
+  bookingCount: Math.max(0, Number(row.booking_count ?? 0)),
+  cancellationReason: pickString(row.cancellation_reason),
+  createdAt: parseTs(row.created_at) ?? new Date(),
+  updatedAt: parseTs(row.updated_at),
 })
 
-const mapBooking = (id: string, data: Record<string, unknown>): CoachBooking => ({
-  id,
-  slotId: pickString(data.slot_id) ?? '',
-  learnerId: pickString(data.learner_id) ?? '',
-  learnerName: pickString(data.learner_name),
-  ambassadorId: pickString(data.ambassador_id) ?? '',
-  companyId: pickString(data.company_id),
-  status: (data.status as CoachBookingStatus) || 'booked',
-  bookedAt: parseTs(data.booked_at) ?? new Date(),
-  attendedAt: parseTs(data.attended_at),
-  cancelledAt: parseTs(data.cancelled_at),
-  cancelledBy: pickString(data.cancelled_by),
-  cancelReason: pickString(data.cancel_reason),
-  pointsAwarded: Boolean(data.points_awarded),
-  pointsAwardedAt: parseTs(data.points_awarded_at),
-  slotTitle: pickString(data.slot_title),
-  slotScheduledAt: parseTs(data.slot_scheduled_at),
-  slotStatus: (pickString(data.slot_status) as CoachSlotStatus | null) ?? null,
+const mapBooking = (row: Record<string, unknown>): CoachBooking => ({
+  id: String(row.id ?? ''),
+  slotId: pickString(row.slot_id) ?? '',
+  learnerId: pickString(row.learner_id) ?? '',
+  learnerName: pickString(row.learner_name),
+  ambassadorId: pickString(row.ambassador_id) ?? '',
+  companyId: pickString(row.company_id),
+  status: (row.status as CoachBookingStatus) || 'booked',
+  bookedAt: parseTs(row.booked_at) ?? new Date(),
+  attendedAt: parseTs(row.attended_at),
+  cancelledAt: parseTs(row.cancelled_at),
+  cancelledBy: pickString(row.cancelled_by),
+  cancelReason: pickString(row.cancel_reason),
+  pointsAwarded: Boolean(row.points_awarded),
+  pointsAwardedAt: parseTs(row.points_awarded_at),
+  slotTitle: pickString(row.slot_title),
+  slotScheduledAt: parseTs(row.slot_scheduled_at),
+  slotStatus: (pickString(row.slot_status) as CoachSlotStatus | null) ?? null,
 })
 
 const bookingIdFor = (slotId: string, learnerId: string) => `${slotId}__${learnerId}`
-
-/** Firestore denies these under Supabase-only auth - treat as empty, not a UI error. */
-const isFirestorePermissionError = (err: unknown): boolean => {
-  const code =
-    typeof err === 'object' && err && 'code' in err
-      ? String((err as { code?: unknown }).code ?? '')
-      : ''
-  const message = err instanceof Error ? err.message : String(err ?? '')
-  return (
-    code === 'permission-denied' ||
-    /insufficient permissions|permission-denied|Missing or insufficient/i.test(message)
-  )
-}
-
-const softPermissionOrError = (
-  err: unknown,
-  onEmpty: () => void,
-  onError?: (error: Error) => void,
-) => {
-  if (isFirestorePermissionError(err)) {
-    console.warn('[CoachSessionService] Firestore unavailable under Supabase auth; returning empty.', err)
-    onEmpty()
-    return
-  }
-  onError?.(err instanceof Error ? err : new Error(String(err)))
-}
 
 async function getJourneyContext(
   uid: string,
 ): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
   try {
-    const { supabase } = await import('@/services/supabase')
     const { data } = await supabase
       .from('profiles')
       .select('journey_type, current_week, data')
       .eq('id', uid)
       .maybeSingle()
-    if (data) {
-      const nested = (data.data as Record<string, unknown> | null) || {}
-      const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
-      if (journeyType) {
-        return {
-          journeyType,
-          weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[CoachSessionService] Supabase journey context failed, trying Firestore:', err)
-  }
-
-  try {
-    const profileSnap = await getDoc(doc(db, 'profiles', uid))
-    if (!profileSnap.exists()) return null
-    const profile = profileSnap.data() as { journeyType?: JourneyType; currentWeek?: number }
-    if (!profile.journeyType) return null
+    if (!data) return null
+    const nested = (data.data as Record<string, unknown> | null) || {}
+    const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
+    if (!journeyType) return null
     return {
-      journeyType: profile.journeyType,
-      weekNumber: Math.max(1, Number(profile.currentWeek ?? 1)),
+      journeyType,
+      weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
     }
   } catch (err) {
     console.error('[CoachSessionService] Journey context failed:', err)
     return null
+  }
+}
+
+const subscribeQuery = <T>(
+  load: () => Promise<T>,
+  onUpdate: (value: T) => void,
+  onError?: (error: Error) => void,
+  channelName?: string,
+  table?: string,
+  filter?: string,
+): Unsubscribe => {
+  let cancelled = false
+
+  const run = async () => {
+    try {
+      const value = await load()
+      if (!cancelled) onUpdate(value)
+    } catch (err) {
+      if (cancelled) return
+      onError?.(err instanceof Error ? err : new Error(String(err)))
+    }
+  }
+
+  void run()
+
+  const channel =
+    channelName && table
+      ? supabase
+          .channel(channelName)
+          .on(
+            'postgres_changes',
+            {
+              event: '*',
+              schema: 'public',
+              table,
+              ...(filter ? { filter } : {}),
+            },
+            () => {
+              void run()
+            },
+          )
+          .subscribe()
+      : null
+
+  const poll = window.setInterval(() => {
+    void run()
+  }, 20_000)
+
+  return () => {
+    cancelled = true
+    window.clearInterval(poll)
+    if (channel) void supabase.removeChannel(channel)
   }
 }
 
@@ -220,26 +218,29 @@ export async function createCoachSlot(params: {
     throw new Error('Scheduled time must be in the future.')
   }
 
-  const docRef = await addDoc(collection(db, SLOTS), {
-    ambassador_id: ambassadorId,
-    ambassador_name: ambassadorName ?? null,
-    company_id: companyId,
-    company_code: companyCode ?? null,
-    title: title.trim(),
-    description: description?.trim() || null,
-    scheduled_at: Timestamp.fromDate(scheduledAt),
-    duration_minutes: Math.max(15, Math.round(durationMinutes)),
-    capacity: Math.round(capacity),
-    meeting_link: meetingLink?.trim() || null,
-    location: location?.trim() || null,
-    status: 'open' as CoachSlotStatus,
-    booking_count: 0,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
-    created_by: ambassadorId,
-  })
+  const { data, error } = await supabase
+    .from('ambassador_slots')
+    .insert({
+      ambassador_id: ambassadorId,
+      ambassador_name: ambassadorName ?? null,
+      company_id: companyId,
+      company_code: companyCode ?? null,
+      title: title.trim(),
+      description: description?.trim() || null,
+      scheduled_at: scheduledAt.toISOString(),
+      duration_minutes: Math.max(15, Math.round(durationMinutes)),
+      capacity: Math.round(capacity),
+      meeting_link: meetingLink?.trim() || null,
+      location: location?.trim() || null,
+      status: 'open',
+      booking_count: 0,
+      created_by: ambassadorId,
+    })
+    .select('id')
+    .single()
 
-  return docRef.id
+  if (error) throw new Error(error.message)
+  return String(data.id)
 }
 
 export async function updateCoachSlot(params: {
@@ -255,38 +256,40 @@ export async function updateCoachSlot(params: {
   }>
 }): Promise<void> {
   const { slotId, updates } = params
-  const slotRef = doc(db, SLOTS, slotId)
-  const slotSnap = await getDoc(slotRef)
-  if (!slotSnap.exists()) throw new Error('Slot not found.')
+  const { data: existing, error: readError } = await supabase
+    .from('ambassador_slots')
+    .select('booking_count, status')
+    .eq('id', slotId)
+    .maybeSingle()
 
-  const data = slotSnap.data() as { booking_count?: number; status?: CoachSlotStatus }
-  if (data.status === 'cancelled' || data.status === 'completed') {
+  if (readError) throw new Error(readError.message)
+  if (!existing) throw new Error('Slot not found.')
+  if (existing.status === 'cancelled' || existing.status === 'completed') {
     throw new Error('Slot is closed and cannot be edited.')
   }
 
-  const payload: Record<string, unknown> = { updated_at: serverTimestamp() }
+  const payload: Record<string, unknown> = { updated_at: new Date().toISOString() }
   if (updates.title !== undefined) payload.title = updates.title.trim()
   if (updates.description !== undefined) payload.description = updates.description
-  if (updates.scheduledAt) payload.scheduled_at = Timestamp.fromDate(updates.scheduledAt)
-  if (updates.durationMinutes !== undefined)
+  if (updates.scheduledAt) payload.scheduled_at = updates.scheduledAt.toISOString()
+  if (updates.durationMinutes !== undefined) {
     payload.duration_minutes = Math.max(15, Math.round(updates.durationMinutes))
+  }
   if (updates.capacity !== undefined) {
-    const currentBookings = data.booking_count ?? 0
+    const currentBookings = Number(existing.booking_count ?? 0)
     if (updates.capacity < currentBookings) {
-      throw new Error(
-        `Capacity cannot be below current booking count (${currentBookings}).`,
-      )
+      throw new Error(`Capacity cannot be below current booking count (${currentBookings}).`)
     }
     payload.capacity = Math.round(updates.capacity)
-    // Re-open a full slot if capacity increased
-    if (data.status === 'full' && updates.capacity > currentBookings) {
-      payload.status = 'open' as CoachSlotStatus
+    if (existing.status === 'full' && updates.capacity > currentBookings) {
+      payload.status = 'open'
     }
   }
   if (updates.meetingLink !== undefined) payload.meeting_link = updates.meetingLink
   if (updates.location !== undefined) payload.location = updates.location
 
-  await updateDoc(slotRef, payload)
+  const { error } = await supabase.from('ambassador_slots').update(payload).eq('id', slotId)
+  if (error) throw new Error(error.message)
 }
 
 export async function cancelCoachSlot(params: {
@@ -295,48 +298,60 @@ export async function cancelCoachSlot(params: {
   reason?: string
 }): Promise<void> {
   const { slotId, actorId, reason } = params
-  const slotRef = doc(db, SLOTS, slotId)
+  const { data: slot, error: readError } = await supabase
+    .from('ambassador_slots')
+    .select('status, title')
+    .eq('id', slotId)
+    .maybeSingle()
 
-  const slotSnap = await getDoc(slotRef)
-  if (!slotSnap.exists()) throw new Error('Slot not found.')
-  const data = slotSnap.data() as { status?: CoachSlotStatus; title?: string }
-  if (data.status === 'cancelled' || data.status === 'completed') {
+  if (readError) throw new Error(readError.message)
+  if (!slot) throw new Error('Slot not found.')
+  if (slot.status === 'cancelled' || slot.status === 'completed') {
     throw new Error('Slot is already closed.')
   }
 
-  await updateDoc(slotRef, {
-    status: 'cancelled' as CoachSlotStatus,
-    cancellation_reason: reason?.trim() || null,
-    cancelled_by: actorId,
-    updated_at: serverTimestamp(),
-  })
-
-  // Fan-out: cancel all active bookings for this slot + notify learners
-  const bookingsQuery = query(
-    collection(db, BOOKINGS),
-    where('slot_id', '==', slotId),
-    where('status', '==', 'booked'),
-  )
-  const snapshot = await getDocs(bookingsQuery)
-  const notifyPromises: Promise<unknown>[] = []
-  for (const docSnap of snapshot.docs) {
-    const bookingData = docSnap.data() as { learner_id?: string }
-    await updateDoc(docSnap.ref, {
-      status: 'cancelled' as CoachBookingStatus,
-      cancelled_at: serverTimestamp(),
+  const { error: slotError } = await supabase
+    .from('ambassador_slots')
+    .update({
+      status: 'cancelled',
+      cancellation_reason: reason?.trim() || null,
       cancelled_by: actorId,
-      cancel_reason: reason?.trim() || 'Coach cancelled the session',
-      slot_status: 'cancelled' as CoachSlotStatus,
+      updated_at: new Date().toISOString(),
     })
-    if (bookingData.learner_id) {
+    .eq('id', slotId)
+  if (slotError) throw new Error(slotError.message)
+
+  const { data: bookings, error: bookingsError } = await supabase
+    .from('ambassador_slot_bookings')
+    .select('id, learner_id')
+    .eq('slot_id', slotId)
+    .eq('status', 'booked')
+  if (bookingsError) throw new Error(bookingsError.message)
+
+  const notifyPromises: Promise<unknown>[] = []
+  for (const booking of bookings ?? []) {
+    const { error } = await supabase
+      .from('ambassador_slot_bookings')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: actorId,
+        cancel_reason: reason?.trim() || 'Coach cancelled the session',
+        slot_status: 'cancelled',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', booking.id)
+    if (error) throw new Error(error.message)
+
+    if (booking.learner_id) {
       notifyPromises.push(
         createInAppNotification({
-          userId: bookingData.learner_id,
+          userId: booking.learner_id,
           type: 'important_update',
           title: 'Coach session cancelled',
           message: reason?.trim()
-            ? `${data.title ?? 'A coaching session'} was cancelled. Reason: ${reason.trim()}`
-            : `${data.title ?? 'A coaching session'} was cancelled by the coach.`,
+            ? `${slot.title ?? 'A coaching session'} was cancelled. Reason: ${reason.trim()}`
+            : `${slot.title ?? 'A coaching session'} was cancelled by the coach.`,
           relatedId: slotId,
           metadata: { slotId, kind: 'ambassador_slot_cancelled' },
         }).catch((err) =>
@@ -355,75 +370,30 @@ export async function bookCoachSlot(params: {
   companyId?: string
 }): Promise<string> {
   const { slotId, learnerId, learnerName, companyId } = params
-
   if (!slotId || !learnerId) throw new Error('Slot and learner ids are required.')
 
-  const slotRef = doc(db, SLOTS, slotId)
-  const bookingId = bookingIdFor(slotId, learnerId)
-  const bookingRef = doc(db, BOOKINGS, bookingId)
-
-  let ambassadorId: string | null = null
-  let slotTitle: string | null = null
-
-  await runTransaction(db, async (tx) => {
-    const [slotDoc, bookingDoc] = await Promise.all([tx.get(slotRef), tx.get(bookingRef)])
-    if (!slotDoc.exists()) throw new Error('This session no longer exists.')
-
-    const slotData = slotDoc.data()
-    if (slotData.status === 'cancelled' || slotData.status === 'completed') {
-      throw new Error('This session is no longer accepting bookings.')
-    }
-
-    const capacity = Number(slotData.capacity ?? 0)
-    const currentCount = Number(slotData.booking_count ?? 0)
-    if (currentCount >= capacity) {
-      throw new Error('This session is already full.')
-    }
-
-    if (bookingDoc.exists()) {
-      const existing = bookingDoc.data() as { status?: CoachBookingStatus }
-      if (existing.status === 'booked' || existing.status === 'attended') {
-        throw new Error('You are already booked for this session.')
-      }
-    }
-
-    ambassadorId = pickString(slotData.ambassador_id)
-    slotTitle = pickString(slotData.title)
-
-    const scheduledAt = slotData.scheduled_at
-    tx.set(bookingRef, {
-      slot_id: slotId,
-      learner_id: learnerId,
-      learner_name: learnerName ?? null,
-      ambassador_id: ambassadorId,
-      company_id: companyId ?? slotData.company_id ?? null,
-      status: 'booked' as CoachBookingStatus,
-      booked_at: serverTimestamp(),
-      attended_at: null,
-      cancelled_at: null,
-      cancelled_by: null,
-      cancel_reason: null,
-      points_awarded: false,
-      points_awarded_at: null,
-      slot_title: slotTitle,
-      slot_scheduled_at: scheduledAt ?? null,
-      slot_status: slotData.status as CoachSlotStatus,
-    })
-
-    const nextCount = currentCount + 1
-    tx.update(slotRef, {
-      booking_count: increment(1),
-      status: nextCount >= capacity ? ('full' as CoachSlotStatus) : (slotData.status as CoachSlotStatus),
-      updated_at: serverTimestamp(),
-    })
+  const { data, error } = await supabase.rpc('book_ambassador_slot', {
+    p_slot_id: slotId,
+    p_learner_id: learnerId,
+    p_learner_name: learnerName ?? null,
+    p_company_id: companyId ?? null,
   })
 
-  if (ambassadorId) {
+  if (error) throw new Error(error.message)
+  const bookingId = String(data)
+
+  const { data: slot } = await supabase
+    .from('ambassador_slots')
+    .select('ambassador_id, title')
+    .eq('id', slotId)
+    .maybeSingle()
+
+  if (slot?.ambassador_id) {
     await createInAppNotification({
-      userId: ambassadorId,
+      userId: slot.ambassador_id,
       type: 'session_request',
       title: 'New booking on your coaching session',
-      message: `${learnerName ?? 'A learner'} booked "${slotTitle ?? 'your session'}".`,
+      message: `${learnerName ?? 'A learner'} booked "${slot.title ?? 'your session'}".`,
       relatedId: slotId,
       metadata: { slotId, bookingId, learnerId, kind: 'ambassador_slot_booked' },
     }).catch((err) => console.warn('[CoachSessionService] notify booking failed:', err))
@@ -438,40 +408,49 @@ export async function cancelBooking(params: {
   reason?: string
 }): Promise<void> {
   const { bookingId, actorId, reason } = params
-  const bookingRef = doc(db, BOOKINGS, bookingId)
+  const { data: booking, error: readError } = await supabase
+    .from('ambassador_slot_bookings')
+    .select('status, slot_id')
+    .eq('id', bookingId)
+    .maybeSingle()
 
-  await runTransaction(db, async (tx) => {
-    const bookingDoc = await tx.get(bookingRef)
-    if (!bookingDoc.exists()) throw new Error('Booking not found.')
+  if (readError) throw new Error(readError.message)
+  if (!booking) throw new Error('Booking not found.')
+  if (booking.status !== 'booked') {
+    throw new Error('Booking cannot be cancelled in its current state.')
+  }
 
-    const bookingData = bookingDoc.data()
-    const currentStatus = bookingData.status as CoachBookingStatus | undefined
-    if (currentStatus !== 'booked') {
-      throw new Error('Booking cannot be cancelled in its current state.')
-    }
+  const slotId = booking.slot_id as string
+  const { data: slot } = await supabase
+    .from('ambassador_slots')
+    .select('status, booking_count')
+    .eq('id', slotId)
+    .maybeSingle()
 
-    const slotId = pickString(bookingData.slot_id)
-    if (!slotId) throw new Error('Booking is missing a slot reference.')
-
-    const slotRef = doc(db, SLOTS, slotId)
-    const slotDoc = await tx.get(slotRef)
-    const slotStatus = slotDoc.exists() ? (slotDoc.data().status as CoachSlotStatus) : 'open'
-
-    tx.update(bookingRef, {
-      status: 'cancelled' as CoachBookingStatus,
-      cancelled_at: serverTimestamp(),
+  const { error: bookingError } = await supabase
+    .from('ambassador_slot_bookings')
+    .update({
+      status: 'cancelled',
+      cancelled_at: new Date().toISOString(),
       cancelled_by: actorId,
       cancel_reason: reason?.trim() || null,
+      updated_at: new Date().toISOString(),
     })
+    .eq('id', bookingId)
+  if (bookingError) throw new Error(bookingError.message)
 
-    if (slotDoc.exists()) {
-      tx.update(slotRef, {
-        booking_count: increment(-1),
-        status: slotStatus === 'full' ? 'open' : slotStatus,
-        updated_at: serverTimestamp(),
+  if (slot) {
+    const nextCount = Math.max(0, Number(slot.booking_count ?? 0) - 1)
+    const { error: slotError } = await supabase
+      .from('ambassador_slots')
+      .update({
+        booking_count: nextCount,
+        status: slot.status === 'full' ? 'open' : slot.status,
+        updated_at: new Date().toISOString(),
       })
-    }
-  })
+      .eq('id', slotId)
+    if (slotError) throw new Error(slotError.message)
+  }
 }
 
 export async function markAttendance(params: {
@@ -480,59 +459,49 @@ export async function markAttendance(params: {
   markedBy: string
 }): Promise<{ pointsAwarded: boolean; pointsAmount?: number; message?: string }> {
   const { bookingId, status, markedBy } = params
-  const bookingRef = doc(db, BOOKINGS, bookingId)
 
-  let learnerId: string | null = null
-  let slotTitle: string | null = null
-  let shouldAttemptAward = false
-  let alreadySameStatus = false
+  const { data: booking, error: readError } = await supabase
+    .from('ambassador_slot_bookings')
+    .select('*')
+    .eq('id', bookingId)
+    .maybeSingle()
+
+  if (readError) throw new Error(readError.message)
+  if (!booking) throw new Error('Booking not found.')
+
+  const currentStatus = booking.status as CoachBookingStatus | undefined
+  if (currentStatus === status) {
+    return {
+      pointsAwarded: Boolean(booking.points_awarded),
+      pointsAmount: booking.points_awarded ? 2000 : 0,
+      message: booking.points_awarded ? undefined : 'Already marked attended',
+    }
+  }
+
+  if (currentStatus !== 'booked' && currentStatus !== 'attended' && currentStatus !== 'no_show') {
+    throw new Error('Attendance can only be marked on active bookings.')
+  }
+
+  const learnerId = pickString(booking.learner_id)
+  const slotTitle = pickString(booking.slot_title)
+  const shouldAttemptAward = status === 'attended' && !booking.points_awarded
+
+  const { error: updateError } = await supabase
+    .from('ambassador_slot_bookings')
+    .update({
+      status,
+      attended_at: status === 'attended' ? new Date().toISOString() : null,
+      marked_by: markedBy,
+      points_awarded: status === 'no_show' ? false : Boolean(booking.points_awarded),
+      points_awarded_at: status === 'no_show' ? null : booking.points_awarded_at,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', bookingId)
+  if (updateError) throw new Error(updateError.message)
+
   let pointsAwarded = false
   let pointsAmount = 0
   let awardMessage: string | undefined
-
-  await runTransaction(db, async (tx) => {
-    const bookingDoc = await tx.get(bookingRef)
-    if (!bookingDoc.exists()) throw new Error('Booking not found.')
-
-    const data = bookingDoc.data()
-    const currentStatus = data.status as CoachBookingStatus | undefined
-
-    if (currentStatus === status) {
-      alreadySameStatus = true
-      learnerId = pickString(data.learner_id)
-      slotTitle = pickString(data.slot_title)
-      pointsAwarded = Boolean(data.points_awarded)
-      return
-    }
-
-    if (currentStatus !== 'booked' && currentStatus !== 'attended' && currentStatus !== 'no_show') {
-      throw new Error('Attendance can only be marked on active bookings.')
-    }
-
-    learnerId = pickString(data.learner_id)
-    slotTitle = pickString(data.slot_title)
-    // Points if and only if attended — never for no-show / booking alone.
-    shouldAttemptAward = status === 'attended' && !data.points_awarded
-
-    tx.update(bookingRef, {
-      status,
-      attended_at: status === 'attended' ? serverTimestamp() : null,
-      marked_by: markedBy,
-      ...(status === 'no_show'
-        ? { points_awarded: false, points_awarded_at: null }
-        : shouldAttemptAward
-          ? { points_awarded: false, points_awarded_at: null }
-          : {}),
-    })
-  })
-
-  if (alreadySameStatus) {
-    return {
-      pointsAwarded,
-      pointsAmount: pointsAwarded ? 2000 : 0,
-      message: pointsAwarded ? undefined : 'Already marked attended',
-    }
-  }
 
   if (shouldAttemptAward && learnerId) {
     try {
@@ -545,9 +514,6 @@ export async function markAttendance(params: {
           journeyType: context.journeyType,
         })
         if (!activity) {
-          console.warn(
-            `[CoachSessionService] ambassador_session activity unavailable for ${context.journeyType}`,
-          )
           awardMessage = 'Coach session points are not part of this journey.'
         } else {
           const result = await awardChecklistPoints({
@@ -561,10 +527,13 @@ export async function markAttendance(params: {
           if (result.awarded || result.reason === 'already_awarded') {
             pointsAwarded = true
             pointsAmount = activity.points
-            await updateDoc(bookingRef, {
-              points_awarded: true,
-              points_awarded_at: serverTimestamp(),
-            }).catch(() => undefined)
+            await supabase
+              .from('ambassador_slot_bookings')
+              .update({
+                points_awarded: true,
+                points_awarded_at: new Date().toISOString(),
+              })
+              .eq('id', bookingId)
           } else {
             awardMessage = result.message ?? 'Could not issue coach session points.'
           }
@@ -599,83 +568,107 @@ export async function markAttendance(params: {
 }
 
 export async function markSlotCompleted(slotId: string): Promise<void> {
-  const slotRef = doc(db, SLOTS, slotId)
-  await setDoc(
-    slotRef,
-    { status: 'completed' as CoachSlotStatus, updated_at: serverTimestamp() },
-    { merge: true },
-  )
-}
-
-const subscribeToSlotsBy = (
-  field: 'ambassador_id' | 'company_id',
-  value: string,
-  onUpdate: (slots: CoachSlot[]) => void,
-  onError?: (error: Error) => void,
-  extraOpenOnly = false,
-): Unsubscribe => {
-  const constraints = extraOpenOnly
-    ? [where(field, '==', value), where('status', 'in', ['open', 'full'])]
-    : [where(field, '==', value)]
-  const q = query(collection(db, SLOTS), ...constraints, orderBy('scheduled_at', 'asc'))
-  return onSnapshot(
-    q,
-    (snapshot) => onUpdate(snapshot.docs.map((d) => mapSlot(d.id, d.data()))),
-    (err) => softPermissionOrError(err, () => onUpdate([]), onError),
-  )
+  const { error } = await supabase
+    .from('ambassador_slots')
+    .update({ status: 'completed', updated_at: new Date().toISOString() })
+    .eq('id', slotId)
+  if (error) throw new Error(error.message)
 }
 
 export const subscribeToCoachSlots = (
   ambassadorId: string,
   onUpdate: (slots: CoachSlot[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe => subscribeToSlotsBy('ambassador_id', ambassadorId, onUpdate, onError)
+): Unsubscribe =>
+  subscribeQuery(
+    async () => {
+      const { data, error } = await supabase
+        .from('ambassador_slots')
+        .select('*')
+        .eq('ambassador_id', ambassadorId)
+        .order('scheduled_at', { ascending: true })
+      if (error) throw new Error(error.message)
+      return (data ?? []).map((row) => mapSlot(row as Record<string, unknown>))
+    },
+    onUpdate,
+    onError,
+    `coach-slots-${ambassadorId}`,
+    'ambassador_slots',
+    `ambassador_id=eq.${ambassadorId}`,
+  )
 
 export const subscribeToOpenSlotsForOrg = (
   companyId: string,
   onUpdate: (slots: CoachSlot[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe => subscribeToSlotsBy('company_id', companyId, onUpdate, onError, true)
+): Unsubscribe =>
+  subscribeQuery(
+    async () => {
+      const { data, error } = await supabase
+        .from('ambassador_slots')
+        .select('*')
+        .eq('company_id', companyId)
+        .in('status', ['open', 'full'])
+        .order('scheduled_at', { ascending: true })
+      if (error) throw new Error(error.message)
+      return (data ?? []).map((row) => mapSlot(row as Record<string, unknown>))
+    },
+    onUpdate,
+    onError,
+    `coach-org-slots-${companyId}`,
+    'ambassador_slots',
+    `company_id=eq.${companyId}`,
+  )
 
 export const subscribeToSlotBookings = (
   slotId: string,
   onUpdate: (bookings: CoachBooking[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe => {
-  const q = query(collection(db, BOOKINGS), where('slot_id', '==', slotId))
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const bookings = snapshot.docs.map((d) => mapBooking(d.id, d.data()))
-      bookings.sort(
-        (a, b) => (a.bookedAt?.getTime() ?? 0) - (b.bookedAt?.getTime() ?? 0),
-      )
-      onUpdate(bookings)
+): Unsubscribe =>
+  subscribeQuery(
+    async () => {
+      const { data, error } = await supabase
+        .from('ambassador_slot_bookings')
+        .select('*')
+        .eq('slot_id', slotId)
+      if (error) throw new Error(error.message)
+      const bookings = (data ?? []).map((row) => mapBooking(row as Record<string, unknown>))
+      bookings.sort((a, b) => (a.bookedAt?.getTime() ?? 0) - (b.bookedAt?.getTime() ?? 0))
+      return bookings
     },
-    (err) => softPermissionOrError(err, () => onUpdate([]), onError),
+    onUpdate,
+    onError,
+    `coach-slot-bookings-${slotId}`,
+    'ambassador_slot_bookings',
+    `slot_id=eq.${slotId}`,
   )
-}
 
 export const subscribeToLearnerBookings = (
   learnerId: string,
   onUpdate: (bookings: CoachBooking[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe => {
-  const q = query(collection(db, BOOKINGS), where('learner_id', '==', learnerId))
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const bookings = snapshot.docs.map((d) => mapBooking(d.id, d.data()))
+): Unsubscribe =>
+  subscribeQuery(
+    async () => {
+      const { data, error } = await supabase
+        .from('ambassador_slot_bookings')
+        .select('*')
+        .eq('learner_id', learnerId)
+      if (error) throw new Error(error.message)
+      const bookings = (data ?? []).map((row) => mapBooking(row as Record<string, unknown>))
       bookings.sort(
         (a, b) =>
           (b.slotScheduledAt?.getTime() ?? b.bookedAt?.getTime() ?? 0) -
           (a.slotScheduledAt?.getTime() ?? a.bookedAt?.getTime() ?? 0),
       )
-      onUpdate(bookings)
+      return bookings
     },
-    (err) => softPermissionOrError(err, () => onUpdate([]), onError),
+    onUpdate,
+    onError,
+    `coach-learner-bookings-${learnerId}`,
+    'ambassador_slot_bookings',
+    `learner_id=eq.${learnerId}`,
   )
-}
 
 export const groupBookingsByStatus = (
   bookings: CoachBooking[],
@@ -685,3 +678,6 @@ export const groupBookingsByStatus = (
   no_show: bookings.filter((b) => b.status === 'no_show'),
   cancelled: bookings.filter((b) => b.status === 'cancelled'),
 })
+
+// Keep export for callers that still import the helper name.
+export const bookingIdForSlot = bookingIdFor

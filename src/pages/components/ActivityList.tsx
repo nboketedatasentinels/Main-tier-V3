@@ -496,7 +496,7 @@ export const ActivityList = ({
       if (remaining === 0) return
 
       // Keep offering the next occurrence on the week/month the learner is
-      // viewing until maxTotal is reached — do not wait for a later week.
+      // viewing until maxTotal is reached - do not wait for a later week.
       const claimWeek = Math.max(startWeek, selectedWeek)
       const occurrenceNumber = totalCap > 1 ? usedTotal + 1 : undefined
       pushWeekRow(claimWeek, {

@@ -79,7 +79,7 @@ export const LiftResultView: React.FC<LiftResultViewProps> = ({
   )
   const showBarBadges = SINGLE_PILLAR_ARCHETYPES.includes(archetype)
 
-  // Sections 2–5: the detailed breakdown. Shown in full to signed-in members;
+  // Sections 2-5: the detailed breakdown. Shown in full to signed-in members;
   // blurred behind the booking gate for the anonymous public funnel.
   const breakdown = (
     <>

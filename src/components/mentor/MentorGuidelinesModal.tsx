@@ -76,21 +76,33 @@ export const MentorGuidelinesModal: React.FC<MentorGuidelinesModalProps> = ({
         border="1px solid"
         borderColor="gray.200"
       >
-        <Box bg="brand.dark" px={{ base: 5, md: 8 }} py={{ base: 5, md: 6 }} color="white">
+        <Box
+          bg="white"
+          px={{ base: 5, md: 8 }}
+          py={{ base: 5, md: 6 }}
+          borderBottom="1px solid"
+          borderColor="gray.200"
+        >
           <Text
             fontSize="xs"
             fontWeight="semibold"
             letterSpacing="0.16em"
             textTransform="uppercase"
-            color="accent.highlight"
+            color="brand.primary"
           >
             Welcome, mentor
           </Text>
-          <Text mt={2} fontSize={{ base: 'xl', md: '2xl' }} fontWeight="800" letterSpacing="-0.02em">
+          <Text
+            mt={2}
+            fontSize={{ base: 'xl', md: '2xl' }}
+            fontWeight="800"
+            letterSpacing="-0.02em"
+            color="brand.dark"
+          >
             Please read the Mentor Guidelines
           </Text>
-          <Text mt={2} color="whiteAlpha.800" fontSize="sm" maxW="640px" lineHeight="1.6">
-            This is the standard for how mentoring works on T4L. Acknowledge once — you can reopen
+          <Text mt={2} color="gray.600" fontSize="sm" maxW="640px" lineHeight="1.6">
+            This is the standard for how mentoring works on T4L. Acknowledge once - you can reopen
             the full handbook anytime from the sidebar.
           </Text>
         </Box>

@@ -6,6 +6,7 @@ import {
   HStack,
   Icon,
   Input,
+  Select,
   SimpleGrid,
   Stack,
   Text,
@@ -25,7 +26,11 @@ import {
 } from '@/services/mentorCoachingInsights'
 import { useAuth } from '@/hooks/useAuth'
 import { getDisplayName } from '@/utils/displayName'
-import { resolvePurchasedCoachSessions } from '@/utils/purchasedCoachSessions'
+import {
+  MAX_PURCHASED_COACH_SESSIONS,
+  MIN_PURCHASED_COACH_SESSIONS,
+  resolvePurchasedCoachSessions,
+} from '@/utils/purchasedCoachSessions'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
 import type { UserProfile } from '@/types'
 
@@ -50,20 +55,31 @@ type CoachLearnerPanelProps = {
   orgPurchasedCoachSessions?: number | null
   /** Show mentor-style goal prompt (optional). Default true for coach. */
   allowGoalEdit?: boolean
+  /** Programme course titles for AI suggestions. */
+  courseTitles?: string[] | null
+  /** Attended coach sessions for this learner (quota progress). */
+  attendedSessionCount?: number
 }
 
 export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
   learner,
   orgPurchasedCoachSessions,
   allowGoalEdit = true,
+  courseTitles,
+  attendedSessionCount = 0,
 }) => {
   const { profile, updateProfile } = useAuth()
   const toast = useToast()
   const coachId = profile?.id ?? null
   const learnerId = learner.id ?? null
 
+  const storedPlans = profile?.coachingPlans ?? {}
+  const stored = learnerId ? storedPlans[learnerId] : undefined
+
   const purchasedSessions = resolvePurchasedCoachSessions({
-    learnerPurchased: (learner as { purchasedCoachSessions?: unknown }).purchasedCoachSessions,
+    learnerPurchased:
+      stored?.purchasedSessions ??
+      (learner as { purchasedCoachSessions?: unknown }).purchasedCoachSessions,
     orgPurchased: orgPurchasedCoachSessions,
   })
 
@@ -74,7 +90,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
     save: saveGoals,
   } = useMentorshipGoals(
     learnerId,
-    typeof learner.mentorId === 'string' ? learner.mentorId : null,
+    typeof learner.mentorId === 'string' ? learner.mentorId : coachId,
   )
 
   const [goalsDraft, setGoalsDraft] = useState('')
@@ -99,9 +115,10 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
       ageRange: (learner as { ageRange?: string | null }).ageRange ?? null,
       journeyType: typeof learner.journeyType === 'string' ? learner.journeyType : null,
       currentWeek: learner.currentWeek ?? null,
+      courseTitles: (courseTitles ?? []).filter(Boolean),
       purchasedSessions,
     }),
-    [learner, purchasedSessions],
+    [learner, purchasedSessions, courseTitles],
   )
 
   const aiNotes = useMemo(() => buildAiInference(insightInput), [insightInput])
@@ -111,14 +128,16 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
     [insightInput],
   )
 
-  const storedPlans = profile?.coachingPlans ?? {}
-  const stored = learnerId ? storedPlans[learnerId] : undefined
-
   const [planSessions, setPlanSessions] = useState<CoachLearningPlanSession[]>([])
   const [planSaving, setPlanSaving] = useState(false)
+  const [quotaDraft, setQuotaDraft] = useState(purchasedSessions)
 
   useEffect(() => {
-    if (stored?.sessions?.length) {
+    setQuotaDraft(purchasedSessions)
+  }, [purchasedSessions, learnerId])
+
+  useEffect(() => {
+    if (stored?.sessions?.length && stored.purchasedSessions === purchasedSessions) {
       setPlanSessions(stored.sessions)
       return
     }
@@ -131,6 +150,54 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
       })),
     )
   }, [learnerId, purchasedSessions, stored, defaultPlan])
+
+  const applyQuota = async (next: number) => {
+    if (!coachId || !learnerId) return
+    setQuotaDraft(next)
+    setPlanSaving(true)
+    try {
+      const nextPlan = buildCoachingSessionPlan({
+        ...insightInput,
+        purchasedSessions: next,
+      })
+      const sessions = nextPlan.sessions.map((s) => {
+        const existing = planSessions.find((p) => p.index === s.index)
+        return {
+          index: s.index,
+          title: existing?.title || s.title,
+          focus: existing?.focus || s.focus,
+          notes: existing?.notes || '',
+        }
+      })
+      const { error } = await updateProfile({
+        coachingPlans: {
+          ...storedPlans,
+          [learnerId]: {
+            purchasedSessions: next,
+            sessions,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      })
+      if (error) throw error
+      setPlanSessions(sessions)
+      toast({
+        title: 'Session quota updated',
+        description: `${next} purchased session${next === 1 ? '' : 's'} for this leader.`,
+        status: 'success',
+        duration: 2500,
+      })
+    } catch (err) {
+      setQuotaDraft(purchasedSessions)
+      toast({
+        title: 'Could not update quota',
+        description: err instanceof Error ? err.message : 'Try again.',
+        status: 'error',
+      })
+    } finally {
+      setPlanSaving(false)
+    }
+  }
 
   const goalsDirty = goalsReady && goalsDraft.trim() !== goals.trim()
   const goalsTooLong = goalsDraft.length > MENTORSHIP_GOALS_MAX_LENGTH
@@ -255,10 +322,31 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
           </Box>
           <Box px={5} py={4} borderLeft={{ md: '1px solid' }} borderColor="gray.100">
             <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.08em">
-              PURCHASED SESSIONS
+              SESSIONS
             </Text>
             <Text mt={1} fontSize="sm" fontWeight="700" color={PLUM}>
-              {purchasedSessions} of up to 5
+              {Math.min(attendedSessionCount, purchasedSessions)} of {purchasedSessions} used
+            </Text>
+            <Select
+              mt={2}
+              size="sm"
+              bg="white"
+              borderColor="gray.300"
+              value={quotaDraft}
+              isDisabled={planSaving}
+              onChange={(e) => void applyQuota(Number(e.target.value) || purchasedSessions)}
+            >
+              {Array.from(
+                { length: MAX_PURCHASED_COACH_SESSIONS - MIN_PURCHASED_COACH_SESSIONS + 1 },
+                (_, i) => i + MIN_PURCHASED_COACH_SESSIONS,
+              ).map((n) => (
+                <option key={n} value={n}>
+                  {n} purchased
+                </option>
+              ))}
+            </Select>
+            <Text mt={1} fontSize="xs" color="gray.500">
+              Org default or override for this leader
             </Text>
           </Box>
         </SimpleGrid>

@@ -9,7 +9,7 @@ interface LiftCapabilityRadarProps {
   showScores?: boolean
 }
 
-/** Map score 0–100 onto radar radius from center. */
+/** Map score 0-100 onto radar radius from center. */
 const pointFor = (key: PillarKey, score: number, cx: number, cy: number, maxR: number) => {
   const t = Math.max(0, Math.min(100, score)) / 100
   const r = 18 + t * maxR

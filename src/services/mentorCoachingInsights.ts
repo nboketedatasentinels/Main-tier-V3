@@ -274,7 +274,7 @@ const coachingArcBlueprints = [
   },
   {
     title: 'First live attempt',
-    focus: 'Action between sessions — something happens in the world',
+    focus: 'Action between sessions - something happens in the world',
     topics: [
       'The first move they can make tomorrow',
       'What will get in the way',
@@ -305,13 +305,16 @@ const coachingArcBlueprints = [
 ]
 
 /**
- * Coach-built learning plan sized to purchased sessions (1–5).
- * One-session engagements get a compressed single-session plan.
+ * Coach-built learning plan sized to purchased sessions (1-20).
+ * Standard arcs are 1 or 5; longer purchases extend with practice/review loops.
  */
 export const buildCoachingSessionPlan = (
   input: MentorMenteeInsightInput & { purchasedSessions?: number | null },
 ): MentoringSessionPlan => {
-  const purchased = Math.min(5, Math.max(1, Math.round(input.purchasedSessions ?? 5) || 5))
+  const purchased = Math.min(
+    20,
+    Math.max(1, Math.round(input.purchasedSessions ?? 5) || 5),
+  )
   const journeyLabel =
     purchased === 1 ? 'Single-session coaching' : `${purchased}-session coaching arc`
 
@@ -335,16 +338,32 @@ export const buildCoachingSessionPlan = (
     }
   }
 
+  const sessions = Array.from({ length: purchased }, (_, i) => {
+    const bp = coachingArcBlueprints[Math.min(i, coachingArcBlueprints.length - 1)]
+    const isExtension = i >= coachingArcBlueprints.length
+    return {
+      index: i + 1,
+      title: isExtension ? `Practice loop ${i - coachingArcBlueprints.length + 2}` : bp.title,
+      focus: isExtension
+        ? 'Re-contract the live constraint and the next observable move'
+        : bp.focus,
+      suggestedTopics: isExtension
+        ? [
+            'What changed since last session',
+            'What still has not moved',
+            'The next commitment someone else can see',
+          ]
+        : bp.topics,
+      tip: isExtension
+        ? 'Keep extending only while the company has purchased the contact.'
+        : bp.tip,
+    }
+  })
+
   return {
     recommendedSessionCount: purchased,
     journeyLabel,
-    sessions: coachingArcBlueprints.slice(0, purchased).map((bp, i) => ({
-      index: i + 1,
-      title: bp.title,
-      focus: bp.focus,
-      suggestedTopics: bp.topics,
-      tip: bp.tip,
-    })),
+    sessions,
   }
 }
 

@@ -21,10 +21,10 @@ interface Props {
 }
 
 const fmt = (n: number | null | undefined) =>
-  typeof n === 'number' && Number.isFinite(n) ? n.toFixed(2) : '—'
+  typeof n === 'number' && Number.isFinite(n) ? n.toFixed(2) : '-'
 
 const fmtDelta = (n: number | null | undefined) => {
-  if (typeof n !== 'number' || !Number.isFinite(n)) return '—'
+  if (typeof n !== 'number' || !Number.isFinite(n)) return '-'
   return `${n > 0 ? '+' : ''}${n.toFixed(2)}`
 }
 

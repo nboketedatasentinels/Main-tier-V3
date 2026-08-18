@@ -31,6 +31,7 @@ import { AmbassadorSessionsPanel } from '@/components/ambassador/AmbassadorSessi
 import { RateLearnerCourseAssessment } from '@/components/assessments/RateLearnerCourseAssessment'
 import { PreCourseSurveyButton } from '@/components/assessments/PreCourseSurveyButton'
 import { CoachLearnerPanel } from '@/components/coach/CoachLearnerPanel'
+import { LearnerPointsRanking } from '@/components/coach/LearnerPointsRanking'
 import { LearnerSessionPrep } from '@/components/session-prep/LearnerSessionPrep'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
@@ -38,12 +39,16 @@ import { useOrgProgrammeCourseTitles } from '@/hooks/useOrgProgrammeCourseTitles
 import { fetchAssignedCoachees } from '@/services/learnerAssignmentService'
 import { getOrganizationProgram } from '@/services/supabaseOrgService'
 import { getDisplayName } from '@/utils/displayName'
-import { resolvePurchasedCoachSessions } from '@/utils/purchasedCoachSessions'
+import { resolvePurchasedCoachSessions, nextCoachSessionNumber } from '@/utils/purchasedCoachSessions'
 import { buildAmbassadorNavItems } from '@/utils/navigationItems'
 import {
   resolveCoachNavDestination,
   type CoachDashboardSection,
 } from '@/utils/coachNavigation'
+import {
+  groupBookingsByStatus,
+  subscribeToLearnerBookings,
+} from '@/services/ambassadorSessionService'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
 import type { UserProfile } from '@/types'
 
@@ -179,6 +184,28 @@ export const AmbassadorDashboard: React.FC = () => {
     orgPurchased: orgPurchasedSessions,
   })
 
+  const [attendedCount, setAttendedCount] = useState(0)
+
+  useEffect(() => {
+    const learnerId = selected?.id
+    if (!learnerId) {
+      setAttendedCount(0)
+      return
+    }
+    return subscribeToLearnerBookings(
+      learnerId,
+      (bookings) => {
+        setAttendedCount(groupBookingsByStatus(bookings).attended.length)
+      },
+      () => setAttendedCount(0),
+    )
+  }, [selected?.id])
+
+  const sessionNumberForSelected = nextCoachSessionNumber({
+    attendedCount,
+    purchased: purchasedForSelected,
+  })
+
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
     const el = document.getElementById(`coach-${key}`)
@@ -207,6 +234,7 @@ export const AmbassadorDashboard: React.FC = () => {
       coachees.map((c) => ({
         id: c.id!,
         name: getDisplayName(c),
+        email: c.email ?? null,
         currentWeek: c.currentWeek,
         journeyType: typeof c.journeyType === 'string' ? c.journeyType : undefined,
         journeyStatus: typeof c.journeyStatus === 'string' ? c.journeyStatus : undefined,
@@ -250,7 +278,7 @@ export const AmbassadorDashboard: React.FC = () => {
                 Coach with discipline, not advice by default.
               </Text>
               <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
-                Same profile depth as mentors — values, personality, age band, and AI notes — plus the
+                Same profile depth as mentors - values, personality, age band, and AI notes - plus the
                 coaching goal, your learning plan, and session count from what the company purchased.
                 Only learners assigned to you (or your organisation) appear here.
               </Text>
@@ -398,7 +426,11 @@ export const AmbassadorDashboard: React.FC = () => {
                 </Text>
               </Box>
             ) : (
-              <Grid templateColumns={{ base: '1fr', lg: '280px 1fr' }} gap={5}>
+              <Grid
+                templateColumns={{ base: '1fr', lg: '260px minmax(0, 1fr) 240px' }}
+                gap={5}
+                alignItems="start"
+              >
                 <Stack spacing={2}>
                   {filtered.map((c) => {
                     const active = selected?.id === c.id
@@ -439,10 +471,12 @@ export const AmbassadorDashboard: React.FC = () => {
                 </Stack>
 
                 {selected ? (
-                  <Stack spacing={6}>
+                  <Stack spacing={6} minW={0}>
                     <CoachLearnerPanel
                       learner={selected}
                       orgPurchasedCoachSessions={orgPurchasedSessions}
+                      courseTitles={orgCourseTitles}
+                      attendedSessionCount={attendedCount}
                     />
                     <Box>
                       <Text
@@ -459,11 +493,29 @@ export const AmbassadorDashboard: React.FC = () => {
                         audience="coach"
                         learner={selected}
                         purchasedCoachSessions={purchasedForSelected}
-                        windowStatus="warning"
+                        sessionNumber={sessionNumberForSelected}
+                        windowStatus={null}
+                        courseTitles={orgCourseTitles}
                       />
                     </Box>
                   </Stack>
-                ) : null}
+                ) : (
+                  <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                    <Text fontSize="sm" color="gray.600">
+                      Select a coachee to open their profile.
+                    </Text>
+                  </Box>
+                )}
+
+                <LearnerPointsRanking
+                  learners={coachees}
+                  selectedId={selected?.id}
+                  onSelect={(id) => {
+                    setSelectedId(id)
+                    setActiveSection('coachees')
+                  }}
+                  title="Points ranking"
+                />
               </Grid>
             )}
           </SectionShell>
@@ -472,7 +524,7 @@ export const AmbassadorDashboard: React.FC = () => {
             id="coach-schedule"
             eyebrow="Sessions"
             title="Coaching slots"
-            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Coach Session points — only when they showed up (within 48 hours for Journey clients)."
+            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Coach Session points - only when they showed up (within 48 hours for Journey clients)."
           >
             {profile?.id ? (
               <AmbassadorSessionsPanel
@@ -497,7 +549,7 @@ export const AmbassadorDashboard: React.FC = () => {
             subtitle={
               orgCourseTitles.length
                 ? `Coaches complete Post only. Courses follow their organisation programme (${orgCourseTitles.join(', ')}).`
-                : 'Coaches complete Post ratings only — after the learner finishes the course.'
+                : 'Coaches complete Post ratings only - after the learner finishes the course.'
             }
           >
             {profile?.id && assessmentLearners.length > 0 ? (

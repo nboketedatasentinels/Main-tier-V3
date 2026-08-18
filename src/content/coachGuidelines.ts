@@ -1,6 +1,5 @@
 /**
- * T4L Coach Guidelines — Version 1 · August 2026
- * Source: Nono / T4L_Coach_Guidelines.md
+ * T4L Coach Guidelines - Version 1 · August 2026
  */
 
 import type { MentorGuidelinesSection } from '@/content/mentorGuidelines'
@@ -21,7 +20,7 @@ export const COACH_GUIDELINES_SECTIONS: MentorGuidelinesSection[] = [
     blocks: [
       {
         type: 'paragraph',
-        text: 'T4L coaching is delivered by practitioners. Not by professional coaches who have read about transformation, and not solely by Nono. You are here because you have run the work, and because you can hold a session without turning it into a consulting pitch.',
+        text: 'T4L coaching is delivered by practitioners. Not by professional coaches who have only read about transformation. You are here because you have run the work, and because you can hold a session without turning it into a consulting pitch.',
       },
       {
         type: 'paragraph',

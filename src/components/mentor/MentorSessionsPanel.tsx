@@ -301,7 +301,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             <Heading size="sm">Mentorship sessions</Heading>
             <Text fontSize="sm" color="text.secondary">
               Learner requests → you accept. Mark attendance complete to issue +2,000 mentor meetup
-              points — only when they attended.
+              points - only when they attended.
             </Text>
           </Box>
           <HStack spacing={3}>

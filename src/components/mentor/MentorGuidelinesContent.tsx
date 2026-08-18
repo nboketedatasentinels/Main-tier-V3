@@ -178,7 +178,7 @@ const SectionCard: React.FC<{
       spacing={3}
       px={{ base: 4, md: 5 }}
       py={3.5}
-      bg="gray.50"
+      bg="white"
       borderBottom="1px solid"
       borderColor="gray.200"
     >

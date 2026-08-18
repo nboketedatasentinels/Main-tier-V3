@@ -1,5 +1,5 @@
 /**
- * T4L Mentor Guidelines — Version 1 · August 2026
+ * T4L Mentor Guidelines - Version 1 · August 2026
  * Source of truth for the first-login modal and /mentor/guidelines page.
  */
 

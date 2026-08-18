@@ -70,7 +70,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       </Text>
       <Text mt={1} fontSize="sm" color="gray.600" mb={3}>
         Capture the outcome in their words
-        {audience === 'mentor' ? ' (optional for mentors — same prompt as coaching).' : '.'}
+        {audience === 'mentor' ? ' (optional for mentors - same prompt as coaching).' : '.'}
       </Text>
       <Textarea
         value={draft}

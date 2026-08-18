@@ -1,6 +1,6 @@
 /**
  * Session Prep content builder (mentor / coach / leader).
- * Deterministic, context-aware copy — not a live LLM call.
+ * Deterministic, context-aware copy - not a live LLM call.
  * Matches the product brief: same profile, three readings.
  */
 import { PILLARS, type PillarKey } from '@/config/liftAssessment'
@@ -47,6 +47,8 @@ export interface SessionPrepInput {
   scheduledLabel?: string | null
   originLine?: string | null
   purchasedCoachSessions?: number | null
+  /** Programme course titles - used for AI conversation suggestions. */
+  courseTitles?: string[] | null
 }
 
 export interface SessionPrepModel {
@@ -236,6 +238,29 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
         : 'What have you stopped doing since this started?',
       sayLabel,
     })
+  }
+
+  const courses = (input.courseTitles || []).map((t) => t.trim()).filter(Boolean)
+  if (isCoach && courses.length) {
+    const primary = courses[0]
+    topics.unshift({
+      pillarLabel: 'Programme',
+      signalSource: 'assigned courses',
+      title: `Getting ${primary} moving again`,
+      why: `${name} is on ${courses.slice(0, 3).join(', ')}. Suggest conversation points from the live programme - they do not have to use them.`,
+      sayAloud: `Where has ${primary} stalled under scrutiny, and what would restart it?`,
+      sayLabel,
+    })
+    if (courses.some((c) => /ai|data|digital/i.test(c))) {
+      topics.splice(1, 0, {
+        pillarLabel: 'Innovation',
+        signalSource: 'course context',
+        title: 'The parts of AI-ready teams they are avoiding',
+        why: `Their programme includes digital / AI / data work. Test whether the block is skill, politics, or authority.`,
+        sayAloud: 'What part of becoming AI-ready is your team pretending is already done?',
+        sayLabel,
+      })
+    }
   }
 
   return topics.slice(0, 4)

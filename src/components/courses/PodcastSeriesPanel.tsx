@@ -220,7 +220,7 @@ export function PodcastSeriesPanel({
         >
           <Stack spacing={0.5} minW={0}>
             <Text fontSize="xs" fontWeight="semibold" letterSpacing="wide" color="gray.500">
-              Weeks {module.weekRange[0]}–{module.weekRange[1]}
+              Weeks {module.weekRange[0]}-{module.weekRange[1]}
             </Text>
             <Text fontSize="sm" fontWeight="bold" color={PLUM} noOfLines={1}>
               {module.label}

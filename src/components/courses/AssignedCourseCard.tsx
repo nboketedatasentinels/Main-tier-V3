@@ -153,7 +153,7 @@ export interface AssignedCourseCardProps {
   showAction?: boolean
   /** Required whenever showAction is left on. Pass course title for Pre survey matching. */
   onOpenCourse?: (link: string, courseTitle?: string) => void
-  /** After partner-verified completion — open learner Post assessment. */
+  /** After partner-verified completion - open learner Post assessment. */
   onPostAssessment?: (courseTitle: string) => void
   /**
    * Turns the whole card into a button - hover lift, pointer, focus ring and

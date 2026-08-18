@@ -15,6 +15,8 @@ interface LearnerSessionPrepProps {
   sessionNumber?: number
   purchasedCoachSessions?: number
   windowStatus?: 'on_track' | 'warning' | 'alert' | 'recovery' | null
+  /** Org programme courses - feed AI conversation suggestions. */
+  courseTitles?: string[] | null
   onPrimary?: () => void
   onSecondary?: () => void
   primaryLoading?: boolean
@@ -26,7 +28,8 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   learner,
   sessionNumber = 1,
   purchasedCoachSessions,
-  windowStatus = 'warning',
+  windowStatus = null,
+  courseTitles,
   onPrimary,
   onSecondary,
   primaryLoading,
@@ -74,6 +77,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
             )
           : purchasedCoachSessions ?? 5,
       purchasedCoachSessions: purchasedCoachSessions ?? 5,
+      courseTitles: courseTitles ?? null,
       scheduledLabel: 'Next session · 60 minutes',
       originLine:
         audience === 'mentor'
@@ -89,6 +93,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       windowStatus,
       sessionNumber,
       purchasedCoachSessions,
+      courseTitles,
     ],
   )
 
