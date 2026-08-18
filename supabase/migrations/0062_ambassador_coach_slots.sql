@@ -2,13 +2,39 @@
 -- T4L  ·  Coach (ambassador) session slots + bookings
 -- 0062: Move ambassador_slots / ambassador_slot_bookings off Firestore so
 --        Supabase-authenticated coaches can schedule sessions.
+--
+-- NOTE: Some environments already have a legacy empty schema with
+-- `ambassador_uid` + jsonb `data` (no `ambassador_id`). CREATE TABLE IF NOT
+-- EXISTS left that schema in place and later steps failed with
+-- "column ambassador_id does not exist". Drop + recreate when legacy.
+-- organizations.id is text in this project; company_id must match.
 -- ============================================================================
+
+do $$
+begin
+  if exists (
+    select 1
+    from information_schema.tables
+    where table_schema = 'public'
+      and table_name = 'ambassador_slots'
+  )
+  and not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'ambassador_slots'
+      and column_name = 'ambassador_id'
+  ) then
+    drop table if exists public.ambassador_slot_bookings cascade;
+    drop table if exists public.ambassador_slots cascade;
+  end if;
+end $$;
 
 create table if not exists public.ambassador_slots (
   id uuid primary key default gen_random_uuid(),
   ambassador_id uuid not null references public.profiles (id) on delete cascade,
   ambassador_name text,
-  company_id uuid not null references public.organizations (id) on delete cascade,
+  company_id text not null references public.organizations (id) on delete cascade,
   company_code text,
   title text not null,
   description text,
@@ -42,7 +68,7 @@ create table if not exists public.ambassador_slot_bookings (
   learner_id uuid not null references public.profiles (id) on delete cascade,
   learner_name text,
   ambassador_id uuid not null references public.profiles (id) on delete cascade,
-  company_id uuid references public.organizations (id) on delete set null,
+  company_id text references public.organizations (id) on delete set null,
   status text not null default 'booked'
     check (status in ('booked', 'attended', 'no_show', 'cancelled')),
   booked_at timestamptz not null default now(),
@@ -70,8 +96,8 @@ create index if not exists ambassador_slot_bookings_learner_id_idx
 create index if not exists ambassador_slot_bookings_ambassador_id_idx
   on public.ambassador_slot_bookings (ambassador_id);
 
--- Caller shares an organization with the given company id.
-create or replace function public.shares_org_with(p_company_id uuid)
+-- Caller shares an organization with the given company id (text org id).
+create or replace function public.shares_org_with(p_company_id text)
 returns boolean
 language sql
 stable
@@ -90,8 +116,11 @@ as $$
   );
 $$;
 
-revoke all on function public.shares_org_with(uuid) from public;
-grant execute on function public.shares_org_with(uuid) to authenticated;
+revoke all on function public.shares_org_with(text) from public;
+grant execute on function public.shares_org_with(text) to authenticated;
+
+-- Drop older uuid overload if a previous attempt created it.
+drop function if exists public.shares_org_with(uuid);
 
 create or replace function public.is_coach_or_admin()
 returns boolean
@@ -200,11 +229,13 @@ grant select, insert, update on public.ambassador_slots to authenticated;
 grant select, insert, update on public.ambassador_slot_bookings to authenticated;
 
 -- Atomic book helper (capacity + unique booking).
+drop function if exists public.book_ambassador_slot(uuid, uuid, text, uuid);
+
 create or replace function public.book_ambassador_slot(
   p_slot_id uuid,
   p_learner_id uuid,
   p_learner_name text default null,
-  p_company_id uuid default null
+  p_company_id text default null
 )
 returns text
 language plpgsql
@@ -281,5 +312,5 @@ begin
 end;
 $$;
 
-revoke all on function public.book_ambassador_slot(uuid, uuid, text, uuid) from public;
-grant execute on function public.book_ambassador_slot(uuid, uuid, text, uuid) to authenticated;
+revoke all on function public.book_ambassador_slot(uuid, uuid, text, text) from public;
+grant execute on function public.book_ambassador_slot(uuid, uuid, text, text) to authenticated;
