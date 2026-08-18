@@ -5,7 +5,7 @@
  */
 import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
-import { createInAppNotification } from '@/services/notificationService'
+import { notifyAsLeadership, notifyCoachSlotPublished } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 
 export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
@@ -240,7 +240,15 @@ export async function createCoachSlot(params: {
     .single()
 
   if (error) throw new Error(error.message)
-  return String(data.id)
+  const slotId = String(data.id)
+
+  try {
+    await notifyCoachSlotPublished(slotId)
+  } catch (err) {
+    console.warn('[CoachSessionService] notify coachees of new slot failed:', err)
+  }
+
+  return slotId
 }
 
 export async function updateCoachSlot(params: {
@@ -345,7 +353,7 @@ export async function cancelCoachSlot(params: {
 
     if (booking.learner_id) {
       notifyPromises.push(
-        createInAppNotification({
+        notifyAsLeadership({
           userId: booking.learner_id,
           type: 'important_update',
           title: 'Coach session cancelled',
@@ -353,7 +361,8 @@ export async function cancelCoachSlot(params: {
             ? `${slot.title ?? 'A coaching session'} was cancelled. Reason: ${reason.trim()}`
             : `${slot.title ?? 'A coaching session'} was cancelled by the coach.`,
           relatedId: slotId,
-          metadata: { slotId, kind: 'ambassador_slot_cancelled' },
+          category: 'important_updates',
+          data: { priority: 'push', slotId, kind: 'ambassador_slot_cancelled' },
         }).catch((err) =>
           console.warn('[CoachSessionService] notify cancel fan-out failed:', err),
         ),
@@ -389,13 +398,14 @@ export async function bookCoachSlot(params: {
     .maybeSingle()
 
   if (slot?.ambassador_id) {
-    await createInAppNotification({
+    await notifyAsLeadership({
       userId: slot.ambassador_id,
       type: 'session_request',
       title: 'New booking on your coaching session',
       message: `${learnerName ?? 'A learner'} booked "${slot.title ?? 'your session'}".`,
       relatedId: slotId,
-      metadata: { slotId, bookingId, learnerId, kind: 'ambassador_slot_booked' },
+      category: 'action_required',
+      data: { priority: 'push', slotId, bookingId, learnerId, kind: 'ambassador_slot_booked' },
     }).catch((err) => console.warn('[CoachSessionService] notify booking failed:', err))
   }
 
@@ -547,7 +557,7 @@ export async function markAttendance(params: {
   }
 
   if (learnerId) {
-    await createInAppNotification({
+    await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
       title: status === 'attended' ? 'Attendance confirmed' : 'Marked as no-show',
@@ -558,7 +568,14 @@ export async function markAttendance(params: {
             : `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}".`
           : `Your coach recorded a no-show for "${slotTitle ?? 'the session'}".`,
       relatedId: bookingId,
-      metadata: { bookingId, kind: 'ambassador_attendance', pointsAwarded, pointsAmount },
+      category: 'important_updates',
+      data: {
+        priority: 'push',
+        bookingId,
+        kind: 'ambassador_attendance',
+        pointsAwarded,
+        pointsAmount,
+      },
     }).catch((err) =>
       console.warn('[CoachSessionService] notify attendance failed:', err),
     )

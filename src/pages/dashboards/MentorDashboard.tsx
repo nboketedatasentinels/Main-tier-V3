@@ -266,7 +266,7 @@ export const MentorDashboard: React.FC = () => {
                 </Button>
               </HStack>
             </Box>
-            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '220px' }}>
+            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '260px' }} maxW={{ md: '280px' }}>
               {(
                 [
                   {
@@ -310,6 +310,17 @@ export const MentorDashboard: React.FC = () => {
                   </HStack>
                 </Box>
               ))}
+              <LearnerPointsRanking
+                learners={mentees}
+                selectedId={selected?.id}
+                onSelect={(id) => {
+                  setSelectedId(id)
+                  setActiveSection('mentees')
+                  scrollTo('mentees')
+                }}
+                title="Points ranking"
+                sticky={false}
+              />
             </SimpleGrid>
           </Flex>
         </Box>
@@ -381,7 +392,7 @@ export const MentorDashboard: React.FC = () => {
               </Box>
             ) : (
               <Grid
-                templateColumns={{ base: '1fr', lg: '260px minmax(0, 1fr) 240px' }}
+                templateColumns={{ base: '1fr', lg: '280px 1fr' }}
                 gap={5}
                 alignItems="start"
               >
@@ -435,15 +446,6 @@ export const MentorDashboard: React.FC = () => {
                     </Text>
                   </Box>
                 )}
-                <LearnerPointsRanking
-                  learners={mentees}
-                  selectedId={selected?.id}
-                  onSelect={(id) => {
-                    setSelectedId(id)
-                    setActiveSection('mentees')
-                  }}
-                  title="Points ranking"
-                />
               </Grid>
             )}
           </SectionShell>

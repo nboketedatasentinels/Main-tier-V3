@@ -9,6 +9,8 @@ type LearnerPointsRankingProps = {
   onSelect?: (id: string) => void
   /** Eyebrow label shown above the list */
   title?: string
+  /** When false, the card does not stick while scrolling (e.g. overview stack). */
+  sticky?: boolean
 }
 
 const formatPoints = (n: number) =>
@@ -22,6 +24,7 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
   selectedId,
   onSelect,
   title = 'Points ranking',
+  sticky = true,
 }) => {
   const ranked = useMemo(
     () =>
@@ -39,8 +42,8 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
       borderColor="gray.200"
       p={4}
       h="fit-content"
-      position={{ lg: 'sticky' }}
-      top={{ lg: '96px' }}
+      position={sticky ? { lg: 'sticky' } : undefined}
+      top={sticky ? { lg: '96px' } : undefined}
     >
       <Text
         fontSize="xs"

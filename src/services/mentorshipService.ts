@@ -14,7 +14,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/services/firebase'
 import { awardChecklistPoints } from '@/services/pointsService'
-import { createInAppNotification } from '@/services/notificationService'
+import { notifyAsLeadership } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 
 const MENTORSHIP_SESSIONS = 'mentorship_sessions'
@@ -190,13 +190,14 @@ export async function createMentorshipSessionRequest(params: {
     created_by: learnerId,
   })
 
-  await createInAppNotification({
+  await notifyAsLeadership({
     userId: mentorId,
     type: 'session_request',
     title: 'New mentorship session request',
     message: `${learnerName ?? 'A learner'} requested a session: "${trimmedTopic}".`,
     relatedId: docRef.id,
-    metadata: { sessionId: docRef.id, learnerId, kind: 'mentorship_requested' },
+    category: 'action_required',
+    data: { priority: 'push', sessionId: docRef.id, learnerId, kind: 'mentorship_requested' },
   }).catch((err) => console.warn('[MentorshipService] notify mentor failed:', err))
 
   return docRef.id
@@ -230,13 +231,24 @@ export async function confirmMentorshipSession(params: {
   const learnerId = pickString(data.learner_id)
   const mentorName = pickString(data.mentor_name)
   if (learnerId) {
-    await createInAppNotification({
+    const whenLabel =
+      scheduledAt && !Number.isNaN(scheduledAt.getTime())
+        ? ` for ${scheduledAt.toLocaleString(undefined, {
+            weekday: 'short',
+            day: 'numeric',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}`
+        : ''
+    await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
       title: 'Your mentorship session is confirmed',
-      message: `${mentorName ?? 'Your mentor'} accepted your session request.`,
+      message: `${mentorName ?? 'Your mentor'} accepted your session request${whenLabel}.`,
       relatedId: sessionId,
-      metadata: { sessionId, kind: 'mentorship_confirmed' },
+      category: 'important_updates',
+      data: { priority: 'push', sessionId, kind: 'mentorship_confirmed' },
     }).catch((err) => console.warn('[MentorshipService] notify confirm failed:', err))
   }
 }
@@ -264,7 +276,7 @@ export async function declineMentorshipSession(params: {
   const learnerId = pickString(data.learner_id)
   const mentorName = pickString(data.mentor_name)
   if (learnerId) {
-    await createInAppNotification({
+    await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
       title: 'Session request declined',
@@ -272,7 +284,8 @@ export async function declineMentorshipSession(params: {
         ? `${mentorName ?? 'Your mentor'} declined: ${reason.trim()}`
         : `${mentorName ?? 'Your mentor'} declined your session request. Try proposing another time.`,
       relatedId: sessionId,
-      metadata: { sessionId, kind: 'mentorship_declined' },
+      category: 'important_updates',
+      data: { priority: 'push', sessionId, kind: 'mentorship_declined' },
     }).catch((err) => console.warn('[MentorshipService] notify decline failed:', err))
   }
 }
@@ -304,7 +317,7 @@ export async function cancelMentorshipSession(params: {
   const mentorId = pickString(data.mentor_id)
   const otherUserId = actorId === learnerId ? mentorId : learnerId
   if (otherUserId) {
-    await createInAppNotification({
+    await notifyAsLeadership({
       userId: otherUserId,
       type: 'important_update',
       title: 'Mentorship session cancelled',
@@ -312,7 +325,8 @@ export async function cancelMentorshipSession(params: {
         ? `The session was cancelled. Reason: ${reason.trim()}`
         : 'The session was cancelled.',
       relatedId: sessionId,
-      metadata: { sessionId, kind: 'mentorship_cancelled' },
+      category: 'important_updates',
+      data: { priority: 'push', sessionId, kind: 'mentorship_cancelled' },
     }).catch((err) => console.warn('[MentorshipService] notify cancel failed:', err))
   }
 }
@@ -415,7 +429,7 @@ export async function completeMentorshipSession(params: {
   }
 
   if (learnerId) {
-    await createInAppNotification({
+    await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
       title: 'Mentor session attended',
@@ -423,7 +437,14 @@ export async function completeMentorshipSession(params: {
         ? `${mentorName ?? 'Your mentor'} confirmed your attendance. +${pointsAmount.toLocaleString()} mentor meetup points added.`
         : `${mentorName ?? 'Your mentor'} confirmed your attendance.`,
       relatedId: sessionId,
-      metadata: { sessionId, kind: 'mentorship_completed', pointsAwarded, pointsAmount },
+      category: 'important_updates',
+      data: {
+        priority: 'push',
+        sessionId,
+        kind: 'mentorship_completed',
+        pointsAwarded,
+        pointsAmount,
+      },
     }).catch((err) => console.warn('[MentorshipService] notify complete failed:', err))
   }
 

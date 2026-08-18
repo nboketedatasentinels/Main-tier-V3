@@ -319,7 +319,7 @@ export const AmbassadorDashboard: React.FC = () => {
                 </Button>
               </HStack>
             </Box>
-            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '220px' }}>
+            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '260px' }} maxW={{ md: '280px' }}>
               <Box
                 as="button"
                 textAlign="left"
@@ -368,6 +368,17 @@ export const AmbassadorDashboard: React.FC = () => {
                   </Box>
                 </HStack>
               </Box>
+              <LearnerPointsRanking
+                learners={coachees}
+                selectedId={selected?.id}
+                onSelect={(id) => {
+                  setSelectedId(id)
+                  setActiveSection('coachees')
+                  scrollTo('coachees')
+                }}
+                title="Points ranking"
+                sticky={false}
+              />
             </SimpleGrid>
           </Flex>
         </Box>
@@ -427,7 +438,7 @@ export const AmbassadorDashboard: React.FC = () => {
               </Box>
             ) : (
               <Grid
-                templateColumns={{ base: '1fr', lg: '260px minmax(0, 1fr) 240px' }}
+                templateColumns={{ base: '1fr', lg: '280px 1fr' }}
                 gap={5}
                 alignItems="start"
               >
@@ -506,16 +517,6 @@ export const AmbassadorDashboard: React.FC = () => {
                     </Text>
                   </Box>
                 )}
-
-                <LearnerPointsRanking
-                  learners={coachees}
-                  selectedId={selected?.id}
-                  onSelect={(id) => {
-                    setSelectedId(id)
-                    setActiveSection('coachees')
-                  }}
-                  title="Points ranking"
-                />
               </Grid>
             )}
           </SectionShell>

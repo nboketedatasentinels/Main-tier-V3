@@ -221,6 +221,40 @@ export const notifySupabaseUser = async (params: {
   if (error) throw error
 }
 
+/**
+ * Mentor/coach (and learner↔leadership) notifications that must bypass the
+ * partner-only notifications_insert RLS. Lands in the same bell feed.
+ */
+export const notifyAsLeadership = async (params: {
+  userId: string
+  type: string
+  title: string
+  message: string
+  relatedId?: string | null
+  category?: string
+  data?: Record<string, unknown>
+}): Promise<void> => {
+  const { error } = await supabase.rpc('notify_as_leadership', {
+    p_uid: params.userId,
+    p_type: params.type,
+    p_title: params.title,
+    p_message: params.message,
+    p_related_id: params.relatedId ?? null,
+    p_category: params.category ?? 'important_updates',
+    p_data: params.data ?? {},
+  })
+  if (error) throw error
+}
+
+/** Fan-out when a coach publishes a slot → assigned / org coachees. */
+export const notifyCoachSlotPublished = async (slotId: string): Promise<number> => {
+  const { data, error } = await supabase.rpc('notify_coach_slot_published', {
+    p_slot_id: slotId,
+  })
+  if (error) throw error
+  return typeof data === 'number' ? data : Number(data ?? 0)
+}
+
 export const markNotificationRead = async (notificationId: string) => {
   const { error } = await supabase
     .from('notifications')
