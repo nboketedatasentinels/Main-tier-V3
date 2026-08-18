@@ -68,31 +68,8 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
             const points = learner.totalPoints ?? 0
             const rank = index + 1
 
-            return (
-              <Box
-                key={id || `${getDisplayName(learner)}-${rank}`}
-                as={onSelect && id ? 'button' : 'div'}
-                type={onSelect && id ? 'button' : undefined}
-                onClick={onSelect && id ? () => onSelect(id) : undefined}
-                w="full"
-                display="flex"
-                alignItems="center"
-                justifyContent="space-between"
-                gap={2}
-                px={2.5}
-                py={2}
-                borderRadius="lg"
-                border="1px solid"
-                borderColor={active ? '#350e6f' : 'transparent'}
-                bg={active ? 'rgba(53,14,111,0.06)' : 'transparent'}
-                _hover={
-                  onSelect && id
-                    ? { bg: active ? 'rgba(53,14,111,0.08)' : 'gray.50' }
-                    : undefined
-                }
-                cursor={onSelect && id ? 'pointer' : 'default'}
-                textAlign="left"
-              >
+            const row = (
+              <>
                 <HStack spacing={2.5} minW={0} flex={1}>
                   <Flex
                     w={7}
@@ -115,6 +92,43 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
                 <Text fontSize="xs" fontWeight="semibold" color="gray.600" flexShrink={0}>
                   {formatPoints(points)}
                 </Text>
+              </>
+            )
+
+            const rowStyles = {
+              w: 'full' as const,
+              display: 'flex' as const,
+              alignItems: 'center' as const,
+              justifyContent: 'space-between' as const,
+              gap: 2,
+              px: 2.5,
+              py: 2,
+              borderRadius: 'lg',
+              border: '1px solid',
+              borderColor: active ? '#350e6f' : 'transparent',
+              bg: active ? 'rgba(53,14,111,0.06)' : 'transparent',
+              textAlign: 'left' as const,
+            }
+
+            if (onSelect && id) {
+              return (
+                <Box
+                  key={id || `${getDisplayName(learner)}-${rank}`}
+                  as="button"
+                  type="button"
+                  onClick={() => onSelect(id)}
+                  cursor="pointer"
+                  _hover={{ bg: active ? 'rgba(53,14,111,0.08)' : 'gray.50' }}
+                  {...rowStyles}
+                >
+                  {row}
+                </Box>
+              )
+            }
+
+            return (
+              <Box key={id || `${getDisplayName(learner)}-${rank}`} {...rowStyles}>
+                {row}
               </Box>
             )
           })}
