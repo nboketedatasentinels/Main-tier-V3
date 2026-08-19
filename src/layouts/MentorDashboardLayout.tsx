@@ -251,6 +251,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           pb={{ base: 20, md: 8 }}
           flex="1"
           overflowY="auto"
+          data-mentor-main-scroll
         >
           <Stack spacing={6} maxW="1600px" mx="auto">
             <Flex justify="space-between" align="center">

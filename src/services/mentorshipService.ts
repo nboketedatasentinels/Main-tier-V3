@@ -1,36 +1,11 @@
-import {
-  Timestamp,
-  addDoc,
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  query,
-  runTransaction,
-  serverTimestamp,
-  updateDoc,
-  where,
-  type Unsubscribe,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
+/**
+ * Mentorship session requests + attendance — Supabase-backed.
+ * Replaces Firestore mentorship_sessions which fail under Supabase-only auth.
+ */
+import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
 import { notifyAsLeadership } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
-
-const MENTORSHIP_SESSIONS = 'mentorship_sessions'
-
-/** Firestore denies these under Supabase-only auth - treat as empty, not a UI error. */
-const isFirestorePermissionError = (err: unknown): boolean => {
-  const code =
-    typeof err === 'object' && err && 'code' in err
-      ? String((err as { code?: unknown }).code ?? '')
-      : ''
-  const message = err instanceof Error ? err.message : String(err ?? '')
-  return (
-    code === 'permission-denied' ||
-    /insufficient permissions|permission-denied|Missing or insufficient/i.test(message)
-  )
-}
 
 export type MentorshipSessionStatus =
   | 'requested'
@@ -38,6 +13,8 @@ export type MentorshipSessionStatus =
   | 'completed'
   | 'declined'
   | 'cancelled'
+
+export type Unsubscribe = () => void
 
 export interface MentorshipSession {
   id: string
@@ -65,17 +42,10 @@ export interface MentorshipSession {
 
 const parseTs = (value: unknown): Date | null => {
   if (!value) return null
-  if (value instanceof Timestamp) return value.toDate()
   if (value instanceof Date) return value
-  if (typeof value === 'object' && value !== null && 'toDate' in value) {
-    const toDate = (value as { toDate?: () => Date }).toDate
-    if (typeof toDate === 'function') {
-      try {
-        return toDate()
-      } catch {
-        return null
-      }
-    }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
   }
   return null
 }
@@ -83,73 +53,65 @@ const parseTs = (value: unknown): Date | null => {
 const pickString = (value: unknown): string | null =>
   typeof value === 'string' && value.trim().length > 0 ? value : null
 
-const mapSession = (id: string, data: Record<string, unknown>): MentorshipSession => ({
-  id,
-  learnerId: pickString(data.learner_id) ?? pickString(data.learnerId) ?? '',
-  mentorId: pickString(data.mentor_id) ?? pickString(data.mentorId) ?? '',
-  status: (data.status as MentorshipSessionStatus) || 'requested',
-  topic: (pickString(data.topic) ?? 'Mentorship session') as string,
-  requestMessage: pickString(data.request_message),
-  goals: pickString(data.goals),
-  proposedAt: parseTs(data.proposed_at) ?? parseTs(data.scheduled_at),
-  scheduledAt: parseTs(data.scheduled_at),
-  meetingLink: pickString(data.meeting_link),
-  declineReason: pickString(data.decline_reason),
-  cancellationReason: pickString(data.cancellation_reason),
-  cancelledBy: pickString(data.cancelled_by),
-  pointsAwarded: Boolean(data.points_awarded),
-  pointsAwardedAt: parseTs(data.points_awarded_at),
-  confirmedAt: parseTs(data.confirmed_at),
-  completedAt: parseTs(data.completed_at),
-  createdAt: parseTs(data.created_at) ?? new Date(),
-  updatedAt: parseTs(data.updated_at),
-  learnerName: pickString(data.learner_name),
-  mentorName: pickString(data.mentor_name),
+const mapSession = (row: Record<string, unknown>): MentorshipSession => ({
+  id: String(row.id ?? ''),
+  learnerId: pickString(row.learner_id) ?? '',
+  mentorId: pickString(row.mentor_id) ?? '',
+  status: (row.status as MentorshipSessionStatus) || 'requested',
+  topic: pickString(row.topic) ?? 'Mentorship session',
+  requestMessage: pickString(row.request_message),
+  goals: pickString(row.goals),
+  proposedAt: parseTs(row.proposed_at) ?? parseTs(row.scheduled_at),
+  scheduledAt: parseTs(row.scheduled_at),
+  meetingLink: pickString(row.meeting_link),
+  declineReason: pickString(row.decline_reason),
+  cancellationReason: pickString(row.cancellation_reason),
+  cancelledBy: pickString(row.cancelled_by),
+  pointsAwarded: Boolean(row.points_awarded),
+  pointsAwardedAt: parseTs(row.points_awarded_at),
+  confirmedAt: parseTs(row.confirmed_at),
+  completedAt: parseTs(row.completed_at),
+  createdAt: parseTs(row.created_at) ?? new Date(),
+  updatedAt: parseTs(row.updated_at),
+  learnerName: pickString(row.learner_name),
+  mentorName: pickString(row.mentor_name),
 })
 
 async function getJourneyContext(
   uid: string,
 ): Promise<{ journeyType: JourneyType; weekNumber: number; mentorId: string | null } | null> {
   try {
-    const { supabase } = await import('@/services/supabase')
     const { data } = await supabase
       .from('profiles')
       .select('journey_type, current_week, mentor_id, data')
       .eq('id', uid)
       .maybeSingle()
-    if (data) {
-      const nested = (data.data as Record<string, unknown> | null) || {}
-      const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
-      if (journeyType) {
-        return {
-          journeyType,
-          weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
-          mentorId: (data.mentor_id as string | null) ?? (nested.mentorId as string | null) ?? null,
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('[MentorshipService] Supabase journey context failed, trying Firestore:', err)
-  }
-
-  try {
-    const profileSnap = await getDoc(doc(db, 'profiles', uid))
-    if (!profileSnap.exists()) return null
-    const profile = profileSnap.data() as {
-      journeyType?: JourneyType
-      currentWeek?: number
-      mentorId?: string | null
-    }
-    if (!profile.journeyType) return null
+    if (!data) return null
+    const nested = (data.data as Record<string, unknown> | null) || {}
+    const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
+    if (!journeyType) return null
     return {
-      journeyType: profile.journeyType,
-      weekNumber: Math.max(1, Number(profile.currentWeek ?? 1)),
-      mentorId: profile.mentorId ?? null,
+      journeyType,
+      weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
+      mentorId: (data.mentor_id as string | null) ?? (nested.mentorId as string | null) ?? null,
     }
   } catch (err) {
     console.error('[MentorshipService] Failed to resolve journey context:', err)
     return null
   }
+}
+
+const fetchSessionsByField = async (
+  fieldName: 'learner_id' | 'mentor_id',
+  value: string,
+): Promise<MentorshipSession[]> => {
+  const { data, error } = await supabase
+    .from('mentorship_sessions')
+    .select('*')
+    .eq(fieldName, value)
+    .order('created_at', { ascending: false })
+  if (error) throw new Error(error.message)
+  return (data ?? []).map((row) => mapSession(row as Record<string, unknown>))
 }
 
 export async function createMentorshipSessionRequest(params: {
@@ -172,35 +134,105 @@ export async function createMentorshipSessionRequest(params: {
     throw new Error('Proposed time must be in the future.')
   }
 
-  const docRef = await addDoc(collection(db, MENTORSHIP_SESSIONS), {
-    learner_id: learnerId,
-    mentor_id: mentorId,
-    status: 'requested' as MentorshipSessionStatus,
-    topic: trimmedTopic,
-    request_message: requestMessage?.trim() || null,
-    goals: goals?.trim() || null,
-    proposed_at: Timestamp.fromDate(proposedAt),
-    scheduled_at: null,
-    meeting_link: null,
-    learner_name: learnerName ?? null,
-    mentor_name: mentorName ?? null,
-    points_awarded: false,
-    created_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
-    created_by: learnerId,
-  })
+  const { data, error } = await supabase
+    .from('mentorship_sessions')
+    .insert({
+      learner_id: learnerId,
+      mentor_id: mentorId,
+      status: 'requested',
+      topic: trimmedTopic,
+      request_message: requestMessage?.trim() || null,
+      goals: goals?.trim() || null,
+      proposed_at: proposedAt.toISOString(),
+      scheduled_at: null,
+      meeting_link: null,
+      learner_name: learnerName ?? null,
+      mentor_name: mentorName ?? null,
+      points_awarded: false,
+      created_by: learnerId,
+    })
+    .select('id')
+    .single()
+
+  if (error) throw new Error(error.message)
+  const sessionId = String(data.id)
 
   await notifyAsLeadership({
     userId: mentorId,
     type: 'session_request',
     title: 'New mentorship session request',
     message: `${learnerName ?? 'A learner'} requested a session: "${trimmedTopic}".`,
-    relatedId: docRef.id,
+    relatedId: sessionId,
     category: 'action_required',
-    data: { priority: 'push', sessionId: docRef.id, learnerId, kind: 'mentorship_requested' },
+    data: { priority: 'push', sessionId, learnerId, kind: 'mentorship_requested' },
   }).catch((err) => console.warn('[MentorshipService] notify mentor failed:', err))
 
-  return docRef.id
+  return sessionId
+}
+
+/** Mentor proposes a confirmed meeting to a mentee (parity with coach publishing a slot). */
+export async function createMentorScheduledSession(params: {
+  learnerId: string
+  mentorId: string
+  topic: string
+  scheduledAt: Date
+  meetingLink?: string
+  learnerName?: string
+  mentorName?: string
+}): Promise<string> {
+  const { learnerId, mentorId, topic, scheduledAt, meetingLink, learnerName, mentorName } = params
+  if (!learnerId || !mentorId) throw new Error('Learner and mentor ids are required.')
+  const trimmedTopic = topic.trim() || 'Mentorship session'
+  if (scheduledAt.getTime() < Date.now() - 60_000) {
+    throw new Error('Scheduled time must be in the future.')
+  }
+
+  const { data, error } = await supabase
+    .from('mentorship_sessions')
+    .insert({
+      learner_id: learnerId,
+      mentor_id: mentorId,
+      status: 'scheduled',
+      topic: trimmedTopic,
+      proposed_at: scheduledAt.toISOString(),
+      scheduled_at: scheduledAt.toISOString(),
+      meeting_link: meetingLink?.trim() || null,
+      learner_name: learnerName ?? null,
+      mentor_name: mentorName ?? null,
+      points_awarded: false,
+      confirmed_at: new Date().toISOString(),
+      created_by: mentorId,
+    })
+    .select('id')
+    .single()
+
+  if (error) throw new Error(error.message)
+  const sessionId = String(data.id)
+
+  const whenLabel = scheduledAt.toLocaleString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  await notifyAsLeadership({
+    userId: learnerId,
+    type: 'session_request',
+    title: 'New mentorship meeting scheduled',
+    message: `${mentorName ?? 'Your mentor'} scheduled "${trimmedTopic}" for ${whenLabel}.`,
+    relatedId: sessionId,
+    category: 'action_required',
+    data: {
+      priority: 'push',
+      sessionId,
+      mentorId,
+      kind: 'mentorship_scheduled_by_mentor',
+    },
+  }).catch((err) => console.warn('[MentorshipService] notify learner of schedule failed:', err))
+
+  return sessionId
 }
 
 export async function confirmMentorshipSession(params: {
@@ -209,27 +241,31 @@ export async function confirmMentorshipSession(params: {
   meetingLink?: string
 }): Promise<void> {
   const { sessionId, scheduledAt, meetingLink } = params
-  const sessionRef = doc(db, MENTORSHIP_SESSIONS, sessionId)
+  const { data: existing, error: readError } = await supabase
+    .from('mentorship_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .maybeSingle()
 
-  const snapshot = await getDoc(sessionRef)
-  if (!snapshot.exists()) throw new Error('Session not found.')
-  const data = snapshot.data()
-  if (data.status !== 'requested') {
+  if (readError) throw new Error(readError.message)
+  if (!existing) throw new Error('Session not found.')
+  if (existing.status !== 'requested') {
     throw new Error('Only pending requests can be confirmed.')
   }
 
   const updates: Record<string, unknown> = {
-    status: 'scheduled' as MentorshipSessionStatus,
-    confirmed_at: serverTimestamp(),
-    updated_at: serverTimestamp(),
+    status: 'scheduled',
+    confirmed_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   }
-  if (scheduledAt) updates.scheduled_at = Timestamp.fromDate(scheduledAt)
+  if (scheduledAt) updates.scheduled_at = scheduledAt.toISOString()
   if (meetingLink && meetingLink.trim()) updates.meeting_link = meetingLink.trim()
 
-  await updateDoc(sessionRef, updates)
+  const { error } = await supabase.from('mentorship_sessions').update(updates).eq('id', sessionId)
+  if (error) throw new Error(error.message)
 
-  const learnerId = pickString(data.learner_id)
-  const mentorName = pickString(data.mentor_name)
+  const learnerId = pickString(existing.learner_id)
+  const mentorName = pickString(existing.mentor_name)
   if (learnerId) {
     const whenLabel =
       scheduledAt && !Number.isNaN(scheduledAt.getTime())
@@ -258,23 +294,30 @@ export async function declineMentorshipSession(params: {
   reason?: string
 }): Promise<void> {
   const { sessionId, reason } = params
-  const sessionRef = doc(db, MENTORSHIP_SESSIONS, sessionId)
+  const { data: existing, error: readError } = await supabase
+    .from('mentorship_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .maybeSingle()
 
-  const snapshot = await getDoc(sessionRef)
-  if (!snapshot.exists()) throw new Error('Session not found.')
-  const data = snapshot.data()
-  if (data.status !== 'requested') {
+  if (readError) throw new Error(readError.message)
+  if (!existing) throw new Error('Session not found.')
+  if (existing.status !== 'requested') {
     throw new Error('Only pending requests can be declined.')
   }
 
-  await updateDoc(sessionRef, {
-    status: 'declined' as MentorshipSessionStatus,
-    decline_reason: reason?.trim() || null,
-    updated_at: serverTimestamp(),
-  })
+  const { error } = await supabase
+    .from('mentorship_sessions')
+    .update({
+      status: 'declined',
+      decline_reason: reason?.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sessionId)
+  if (error) throw new Error(error.message)
 
-  const learnerId = pickString(data.learner_id)
-  const mentorName = pickString(data.mentor_name)
+  const learnerId = pickString(existing.learner_id)
+  const mentorName = pickString(existing.mentor_name)
   if (learnerId) {
     await notifyAsLeadership({
       userId: learnerId,
@@ -296,25 +339,32 @@ export async function cancelMentorshipSession(params: {
   reason?: string
 }): Promise<void> {
   const { sessionId, actorId, reason } = params
-  const sessionRef = doc(db, MENTORSHIP_SESSIONS, sessionId)
+  const { data: existing, error: readError } = await supabase
+    .from('mentorship_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .maybeSingle()
 
-  const snapshot = await getDoc(sessionRef)
-  if (!snapshot.exists()) throw new Error('Session not found.')
-  const data = snapshot.data()
-  const currentStatus = data.status as MentorshipSessionStatus | undefined
+  if (readError) throw new Error(readError.message)
+  if (!existing) throw new Error('Session not found.')
+  const currentStatus = existing.status as MentorshipSessionStatus | undefined
   if (currentStatus === 'completed' || currentStatus === 'cancelled' || currentStatus === 'declined') {
     throw new Error('Session is already closed and cannot be cancelled.')
   }
 
-  await updateDoc(sessionRef, {
-    status: 'cancelled' as MentorshipSessionStatus,
-    cancellation_reason: reason?.trim() || null,
-    cancelled_by: actorId,
-    updated_at: serverTimestamp(),
-  })
+  const { error } = await supabase
+    .from('mentorship_sessions')
+    .update({
+      status: 'cancelled',
+      cancellation_reason: reason?.trim() || null,
+      cancelled_by: actorId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sessionId)
+  if (error) throw new Error(error.message)
 
-  const learnerId = pickString(data.learner_id)
-  const mentorId = pickString(data.mentor_id)
+  const learnerId = pickString(existing.learner_id)
+  const mentorId = pickString(existing.mentor_id)
   const otherUserId = actorId === learnerId ? mentorId : learnerId
   if (otherUserId) {
     await notifyAsLeadership({
@@ -335,53 +385,42 @@ export async function completeMentorshipSession(params: {
   sessionId: string
 }): Promise<{ pointsAwarded: boolean; pointsAmount?: number; message?: string }> {
   const { sessionId } = params
-  const sessionRef = doc(db, MENTORSHIP_SESSIONS, sessionId)
+  const { data: existing, error: readError } = await supabase
+    .from('mentorship_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .maybeSingle()
 
-  let learnerId: string | null = null
-  let mentorName: string | null = null
-  let shouldAttemptAward = false
-  let alreadyCompleted = false
-  let pointsAwarded = false
+  if (readError) throw new Error(readError.message)
+  if (!existing) throw new Error('Session not found.')
+
+  const learnerId = pickString(existing.learner_id)
+  const mentorName = pickString(existing.mentor_name)
+  let pointsAwarded = Boolean(existing.points_awarded)
   let pointsAmount = 0
   let awardMessage: string | undefined
 
-  await runTransaction(db, async (tx) => {
-    const sessionDoc = await tx.get(sessionRef)
-    if (!sessionDoc.exists()) throw new Error('Session not found.')
-
-    const data = sessionDoc.data()
-    const currentStatus = data.status as MentorshipSessionStatus | undefined
-
-    if (currentStatus === 'completed') {
-      alreadyCompleted = true
-      learnerId = pickString(data.learner_id)
-      mentorName = pickString(data.mentor_name)
-      pointsAwarded = Boolean(data.points_awarded)
-      return
-    }
-
-    if (currentStatus !== 'scheduled') {
-      throw new Error('Only confirmed sessions can be marked complete.')
-    }
-
-    learnerId = pickString(data.learner_id)
-    mentorName = pickString(data.mentor_name)
-    // Points only after attendance is confirmed — never on request/accept alone.
-    shouldAttemptAward = !data.points_awarded
-
-    tx.update(sessionRef, {
-      status: 'completed' as MentorshipSessionStatus,
-      completed_at: serverTimestamp(),
-      // Optimistically false until the ledger write succeeds.
-      points_awarded: false,
-      points_awarded_at: null,
-      updated_at: serverTimestamp(),
-    })
-  })
-
-  if (alreadyCompleted) {
+  if (existing.status === 'completed') {
     return { pointsAwarded, pointsAmount: pointsAwarded ? 2000 : 0 }
   }
+
+  if (existing.status !== 'scheduled') {
+    throw new Error('Only confirmed sessions can be marked complete.')
+  }
+
+  const shouldAttemptAward = !existing.points_awarded
+
+  const { error: completeError } = await supabase
+    .from('mentorship_sessions')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+      points_awarded: false,
+      points_awarded_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', sessionId)
+  if (completeError) throw new Error(completeError.message)
 
   if (shouldAttemptAward && learnerId) {
     try {
@@ -394,9 +433,6 @@ export async function completeMentorshipSession(params: {
           journeyType: context.journeyType,
         })
         if (!activity) {
-          console.warn(
-            `[MentorshipService] mentor_meetup activity not available for ${context.journeyType}; points skipped.`,
-          )
           awardMessage = 'Mentor meetup points are not part of this journey.'
         } else {
           const result = await awardChecklistPoints({
@@ -410,11 +446,14 @@ export async function completeMentorshipSession(params: {
           if (result.awarded || result.reason === 'already_awarded') {
             pointsAwarded = true
             pointsAmount = activity.points
-            await updateDoc(sessionRef, {
-              points_awarded: true,
-              points_awarded_at: serverTimestamp(),
-              updated_at: serverTimestamp(),
-            }).catch(() => undefined)
+            await supabase
+              .from('mentorship_sessions')
+              .update({
+                points_awarded: true,
+                points_awarded_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', sessionId)
           } else {
             awardMessage = result.message ?? 'Could not issue mentor meetup points.'
           }
@@ -422,7 +461,6 @@ export async function completeMentorshipSession(params: {
       }
     } catch (err) {
       console.error('[MentorshipService] Failed to award points on completion:', err)
-      // Session stays completed so attendance reflects reality; points can be retried.
       awardMessage =
         err instanceof Error ? err.message : 'Could not issue mentor meetup points.'
     }
@@ -457,28 +495,41 @@ const subscribeToSessionsByField = (
   onUpdate: (sessions: MentorshipSession[]) => void,
   onError?: (error: Error) => void,
 ): Unsubscribe => {
-  const q = query(collection(db, MENTORSHIP_SESSIONS), where(fieldName, '==', value))
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const sessions = snapshot.docs.map((docSnap) => mapSession(docSnap.id, docSnap.data()))
-      sessions.sort(
-        (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
-      )
-      onUpdate(sessions)
-    },
-    (err) => {
-      if (isFirestorePermissionError(err)) {
-        console.warn(
-          `[MentorshipService] Firestore unavailable under Supabase auth (${fieldName}); returning empty.`,
-        )
-        onUpdate([])
-        return
+  let cancelled = false
+
+  const refresh = async () => {
+    try {
+      const sessions = await fetchSessionsByField(fieldName, value)
+      if (!cancelled) onUpdate(sessions)
+    } catch (err) {
+      if (!cancelled) {
+        onError?.(err instanceof Error ? err : new Error(String(err)))
       }
-      console.error(`[MentorshipService] ${fieldName} subscription error:`, err)
-      onError?.(err instanceof Error ? err : new Error(String(err)))
-    },
-  )
+    }
+  }
+
+  void refresh()
+
+  const channel = supabase
+    .channel(`mentorship_sessions_${fieldName}_${value}_${Date.now()}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'mentorship_sessions',
+        filter: `${fieldName}=eq.${value}`,
+      },
+      () => {
+        void refresh()
+      },
+    )
+    .subscribe()
+
+  return () => {
+    cancelled = true
+    void supabase.removeChannel(channel)
+  }
 }
 
 export const subscribeToLearnerMentorshipSessions = (

@@ -163,7 +163,16 @@ export const MentorDashboard: React.FC = () => {
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
     const el = document.getElementById(`mentor-${key}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!el) return
+    // Layout scrolls inside an overflow container, not the window.
+    const scroller = el.closest('[data-mentor-main-scroll]') as HTMLElement | null
+    if (scroller) {
+      const top =
+        el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 12
+      scroller.scrollTo({ top, behavior: 'smooth' })
+      return
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   useEffect(() => {
@@ -457,7 +466,12 @@ export const MentorDashboard: React.FC = () => {
             subtitle="Learner requests appear here. Accept to confirm, then mark attendance complete to issue +2,000 mentor meetup points - only if they attended."
           >
             {profile?.id ? (
-              <MentorSessionsPanel mentorId={profile.id} pointsIssuanceEnabled />
+              <MentorSessionsPanel
+                mentorId={profile.id}
+                mentorName={getDisplayName(profile)}
+                mentees={assessmentLearners.map((l) => ({ id: l.id, name: l.name }))}
+                pointsIssuanceEnabled
+              />
             ) : (
               <Skeleton height="200px" borderRadius="xl" />
             )}

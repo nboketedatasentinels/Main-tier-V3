@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -23,6 +23,7 @@ import {
   ModalFooter,
   ModalHeader,
   ModalOverlay,
+  Select,
   SimpleGrid,
   Spinner,
   Stack,
@@ -38,6 +39,7 @@ import {
   cancelMentorshipSession,
   completeMentorshipSession,
   confirmMentorshipSession,
+  createMentorScheduledSession,
   declineMentorshipSession,
   type MentorshipSession,
   type MentorshipSessionStatus,
@@ -52,6 +54,9 @@ interface ActionState {
 
 interface MentorSessionsPanelProps {
   mentorId: string
+  mentorName?: string | null
+  /** Mentees the mentor can schedule with directly. */
+  mentees?: Array<{ id: string; name: string }>
   /** When false, attendance can still be confirmed but points messaging is suppressed. */
   pointsIssuanceEnabled?: boolean
 }
@@ -176,6 +181,8 @@ const SessionRow: React.FC<{ session: MentorshipSession; actions?: React.ReactNo
 
 export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
   mentorId,
+  mentorName = null,
+  mentees = [],
   pointsIssuanceEnabled = true,
 }) => {
   const toast = useToast()
@@ -187,7 +194,59 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
   const [meetingLink, setMeetingLink] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [cancelReason, setCancelReason] = useState('')
+  const [scheduleLearnerId, setScheduleLearnerId] = useState(mentees[0]?.id ?? '')
+  const [scheduleTopic, setScheduleTopic] = useState('Mentorship session')
+  const [scheduleDate, setScheduleDate] = useState(format(new Date(), 'yyyy-MM-dd'))
+  const [scheduleTime, setScheduleTime] = useState('09:00')
+  const [scheduleLink, setScheduleLink] = useState('')
+  const [scheduling, setScheduling] = useState(false)
   const modal = useDisclosure()
+
+  useEffect(() => {
+    if (!scheduleLearnerId && mentees[0]?.id) {
+      setScheduleLearnerId(mentees[0].id)
+    }
+  }, [mentees, scheduleLearnerId])
+
+  const handleScheduleMeeting = async () => {
+    const mentee = mentees.find((m) => m.id === scheduleLearnerId)
+    if (!mentee) {
+      toast({ status: 'warning', title: 'Select a mentee first' })
+      return
+    }
+    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`)
+    if (!isValid(scheduledAt)) {
+      toast({ status: 'warning', title: 'Pick a valid date and time' })
+      return
+    }
+    setScheduling(true)
+    try {
+      await createMentorScheduledSession({
+        learnerId: mentee.id,
+        mentorId,
+        topic: scheduleTopic,
+        scheduledAt,
+        meetingLink: scheduleLink,
+        learnerName: mentee.name,
+        mentorName: mentorName ?? undefined,
+      })
+      toast({
+        status: 'success',
+        title: 'Meeting scheduled',
+        description: `${mentee.name} will see this in their notifications.`,
+      })
+      setScheduleTopic('Mentorship session')
+      setScheduleLink('')
+    } catch (err) {
+      toast({
+        status: 'error',
+        title: 'Could not schedule meeting',
+        description: err instanceof Error ? err.message : 'Please try again.',
+      })
+    } finally {
+      setScheduling(false)
+    }
+  }
 
   const pending = byStatus.requested
   const upcoming = byStatus.scheduled
@@ -300,8 +359,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
           <Box>
             <Heading size="sm">Mentorship sessions</Heading>
             <Text fontSize="sm" color="text.secondary">
-              Learner requests → you accept. Mark attendance complete to issue +2,000 mentor meetup
-              points - only when they attended.
+              Schedule a meeting with a mentee, or accept learner requests. Mark attendance complete
+              to issue +2,000 mentor meetup points - only when they attended.
             </Text>
           </Box>
           <HStack spacing={3}>
@@ -317,6 +376,88 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             )}
           </HStack>
         </Flex>
+
+        <Box
+          mb={5}
+          p={4}
+          border="1px solid"
+          borderColor="border.subtle"
+          rounded="lg"
+          bg="gray.50"
+        >
+          <Text fontWeight="semibold" mb={3} fontSize="sm">
+            Schedule a meeting
+          </Text>
+          {mentees.length === 0 ? (
+            <Text fontSize="sm" color="text.secondary">
+              Assign mentees first, then you can create meetings here.
+            </Text>
+          ) : (
+            <>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3} mb={3}>
+                <FormControl>
+                  <FormLabel fontSize="sm">Mentee</FormLabel>
+                  <Select
+                    value={scheduleLearnerId}
+                    onChange={(e) => setScheduleLearnerId(e.target.value)}
+                    bg="white"
+                  >
+                    {mentees.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl>
+                  <FormLabel fontSize="sm">Topic</FormLabel>
+                  <Input
+                    value={scheduleTopic}
+                    onChange={(e) => setScheduleTopic(e.target.value)}
+                    bg="white"
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel fontSize="sm">Date</FormLabel>
+                  <Input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    bg="white"
+                  />
+                </FormControl>
+                <FormControl>
+                  <FormLabel fontSize="sm">Time</FormLabel>
+                  <Input
+                    type="time"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                    bg="white"
+                  />
+                </FormControl>
+              </SimpleGrid>
+              <FormControl mb={3}>
+                <FormLabel fontSize="sm">Meeting link (optional)</FormLabel>
+                <Input
+                  value={scheduleLink}
+                  onChange={(e) => setScheduleLink(e.target.value)}
+                  placeholder="https://..."
+                  bg="white"
+                />
+              </FormControl>
+              <Button
+                colorScheme="purple"
+                bg="#350e6f"
+                _hover={{ bg: '#27062e' }}
+                onClick={() => void handleScheduleMeeting()}
+                isLoading={scheduling}
+                leftIcon={<Calendar size={16} />}
+              >
+                Schedule meeting
+              </Button>
+            </>
+          )}
+        </Box>
 
         {loading && (
           <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="lg">
@@ -349,7 +490,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             <Icon as={Calendar} color="text.muted" boxSize={6} />
             <Text fontWeight="semibold">No sessions yet</Text>
             <Text fontSize="sm" color="text.secondary">
-              When your learners send a session request, it will appear here.
+              Schedule a meeting above, or wait for a learner request - both appear here.
             </Text>
           </Flex>
         )}
