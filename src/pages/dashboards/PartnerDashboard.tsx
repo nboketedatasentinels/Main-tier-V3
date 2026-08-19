@@ -2083,6 +2083,10 @@ export const PartnerDashboard: React.FC = () => {
   }
 
   const handleNavigate = (key: string) => {
+    if (key === 'notifications') {
+      navigate('/partner/notifications')
+      return
+    }
     if (key === 'partner-assignment') {
       navigate('/partner/partner-assignment')
       return

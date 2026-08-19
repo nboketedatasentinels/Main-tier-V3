@@ -1,5 +1,6 @@
 import {
   Archive,
+  Bell,
   BookOpen,
   Building2,
   CalendarClock,
@@ -59,6 +60,7 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
       { key: 'coachees', label: 'My coachees', icon: Users },
       { key: 'schedule', label: 'Meeting schedule', icon: CalendarClock },
       { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
+      { key: 'notifications', label: 'Notifications', icon: Bell },
       { key: 'guidelines', label: 'Coach guidelines', icon: ScrollText },
     ],
   },
@@ -75,6 +77,7 @@ export const buildPartnerNavItems = (): NavigationSection[] => [
       { key: 'programme-submissions', label: 'Programme Submissions', icon: ClipboardList },
       { key: 'course-surveys', label: 'Post assessments', icon: ListChecks },
       { key: 'organization-management', label: 'Organizations', icon: Building2 },
+      { key: 'notifications', label: 'Notifications', icon: Bell },
     ],
   },
 ]
@@ -93,6 +96,7 @@ export const buildMentorNavItems = (): NavigationSection[] => [
       { key: 'mentees', label: 'My mentees', icon: Users },
       { key: 'schedule', label: 'Meeting schedule', icon: CalendarClock },
       { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
+      { key: 'notifications', label: 'Notifications', icon: Bell },
       { key: 'guidelines', label: 'Mentor guidelines', icon: ScrollText },
     ],
   },

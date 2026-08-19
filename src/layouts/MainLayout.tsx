@@ -46,6 +46,7 @@ import {
   MessageCircle,
   MessageSquare,
   Wrench,
+  Bell,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProgrammeNotificationSync } from '@/hooks/useProgrammeNotificationSync'
@@ -276,6 +277,7 @@ export const MainLayout: React.FC = () => {
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },
           { label: 'Peer Connect', path: '/app/peer-connect', icon: Users },
+          { label: 'Notifications', path: '/app/notifications', icon: Bell },
         ],
       },
       {

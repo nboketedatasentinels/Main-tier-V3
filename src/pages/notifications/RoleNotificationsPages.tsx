@@ -35,6 +35,10 @@ export const PartnerNotificationsPage = () => {
   // else is a state-based dashboard page reached via ?page=.
   const handleNavigate = useCallback(
     (key: string) => {
+      if (key === 'notifications') {
+        navigate('/partner/notifications')
+        return
+      }
       if (key === 'partner-assignment' || key === 'learner-assignments' || key === 'course-approvals') {
         navigate(`/partner/${key}`)
         return
