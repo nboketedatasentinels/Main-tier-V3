@@ -103,6 +103,7 @@ export const MentorDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [scheduleOpenToken, setScheduleOpenToken] = useState(0)
 
   const loadMentees = async () => {
     if (!profile?.id) return
@@ -175,10 +176,20 @@ export const MentorDashboard: React.FC = () => {
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  const openMeetingSchedule = () => {
+    setScheduleOpenToken((n) => n + 1)
+    scrollTo('schedule')
+  }
+
   useEffect(() => {
     const section = (location.state as { mentorSection?: SectionKey } | null)?.mentorSection
     if (!section) return
-    const timer = window.setTimeout(() => scrollTo(section), 80)
+    const timer = window.setTimeout(() => {
+      if (section === 'schedule') {
+        setScheduleOpenToken((n) => n + 1)
+      }
+      scrollTo(section)
+    }, 80)
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state])
@@ -188,6 +199,9 @@ export const MentorDashboard: React.FC = () => {
     if (dest.kind === 'route') {
       navigate(dest.path)
       return
+    }
+    if (dest.section === 'schedule') {
+      setScheduleOpenToken((n) => n + 1)
     }
     scrollTo(dest.section)
   }
@@ -269,7 +283,7 @@ export const MentorDashboard: React.FC = () => {
                   _hover={{ bg: 'gray.50' }}
                   borderRadius="md"
                   leftIcon={<CalendarClock size={16} />}
-                  onClick={() => scrollTo('schedule')}
+                  onClick={openMeetingSchedule}
                 >
                   Meeting schedule
                 </Button>
@@ -471,6 +485,7 @@ export const MentorDashboard: React.FC = () => {
                 mentorName={getDisplayName(profile)}
                 mentees={assessmentLearners.map((l) => ({ id: l.id, name: l.name }))}
                 pointsIssuanceEnabled
+                scheduleOpenToken={scheduleOpenToken}
               />
             ) : (
               <Skeleton height="200px" borderRadius="xl" />
