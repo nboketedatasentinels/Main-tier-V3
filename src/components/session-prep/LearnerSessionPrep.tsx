@@ -1,11 +1,20 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Box, Skeleton, Text } from '@chakra-ui/react'
+import { format } from 'date-fns'
 import { SessionPrepPanel } from '@/components/session-prep/SessionPrepPanel'
 import { useMentorshipGoals } from '@/hooks/useMentorshipGoals'
+import { useLearnerMentorshipSessions } from '@/hooks/useMentorshipSessions'
 import { useSessionPrepLift } from '@/hooks/useSessionPrepLift'
 import { getDisplayName } from '@/utils/displayName'
 import { mentorMeetupCountForJourney } from '@/services/sessionPrepContent'
 import type { SessionPrepAudience } from '@/services/sessionPrepContent'
+import {
+  groupBookingsByStatus,
+  subscribeToLearnerBookings,
+  type CoachBooking,
+} from '@/services/ambassadorSessionService'
+import { supabase } from '@/services/supabase'
+import { nextCoachSessionNumber } from '@/utils/purchasedCoachSessions'
 import type { UserProfile } from '@/types'
 
 interface LearnerSessionPrepProps {
@@ -22,11 +31,23 @@ interface LearnerSessionPrepProps {
   primaryLoading?: boolean
 }
 
-/** Loads goals + LIFT and renders Session Prep for mentor or coach. */
+const formatScheduledLabel = (when: Date | null, durationMinutes: number | null): string => {
+  if (!when) return 'No upcoming session scheduled'
+  try {
+    const whenPart = `${format(when, 'EEE, MMM d')} · ${format(when, 'h:mm a')}`
+    return durationMinutes && durationMinutes > 0
+      ? `${whenPart} · ${durationMinutes} min`
+      : whenPart
+  } catch {
+    return 'Upcoming session'
+  }
+}
+
+/** Loads goals + LIFT + live session timing and renders Session Prep for mentor or coach. */
 export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   audience,
   learner,
-  sessionNumber = 1,
+  sessionNumber: sessionNumberProp,
   purchasedCoachSessions,
   windowStatus = null,
   courseTitles,
@@ -35,11 +56,115 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   primaryLoading,
 }) => {
   const learnerId = learner.id ?? null
-  const { pillars, loading: liftLoading } = useSessionPrepLift(learnerId)
+  const { pillars, developmentEdge, loading: liftLoading } = useSessionPrepLift(learnerId)
   const { goals, loading: goalsLoading } = useMentorshipGoals(
     learnerId,
     typeof learner.mentorId === 'string' ? learner.mentorId : null,
   )
+  const { sessions: mentorshipSessions, loading: mentorSessionsLoading } =
+    useLearnerMentorshipSessions(audience === 'mentor' ? learnerId : null)
+
+  const [coachBookings, setCoachBookings] = useState<CoachBooking[]>([])
+  const [coachBookingsLoading, setCoachBookingsLoading] = useState(audience === 'coach')
+  const [coachDurationMinutes, setCoachDurationMinutes] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (audience !== 'coach' || !learnerId) {
+      setCoachBookings([])
+      setCoachBookingsLoading(false)
+      return
+    }
+    setCoachBookingsLoading(true)
+    return subscribeToLearnerBookings(
+      learnerId,
+      (bookings) => {
+        setCoachBookings(bookings)
+        setCoachBookingsLoading(false)
+      },
+      () => {
+        setCoachBookings([])
+        setCoachBookingsLoading(false)
+      },
+    )
+  }, [audience, learnerId])
+
+  const mentorCompleted = useMemo(
+    () => mentorshipSessions.filter((s) => s.status === 'completed').length,
+    [mentorshipSessions],
+  )
+  const mentorUpcoming = useMemo(() => {
+    const now = Date.now()
+    return mentorshipSessions
+      .filter((s) => s.status === 'scheduled')
+      .map((s) => ({
+        when: s.scheduledAt ?? s.proposedAt,
+        topic: s.topic,
+      }))
+      .filter((s): s is { when: Date; topic: string } => Boolean(s.when && s.when.getTime() >= now - 60_000))
+      .sort((a, b) => a.when.getTime() - b.when.getTime())[0] ?? null
+  }, [mentorshipSessions])
+
+  const coachGrouped = useMemo(() => groupBookingsByStatus(coachBookings), [coachBookings])
+  const coachUpcoming = useMemo(() => {
+    const now = Date.now()
+    return coachGrouped.booked
+      .filter((b) => (b.slotScheduledAt?.getTime() ?? 0) >= now - 60_000)
+      .sort(
+        (a, b) =>
+          (a.slotScheduledAt?.getTime() ?? 0) - (b.slotScheduledAt?.getTime() ?? 0),
+      )[0] ?? null
+  }, [coachGrouped.booked])
+
+  useEffect(() => {
+    if (!coachUpcoming?.slotId) {
+      setCoachDurationMinutes(null)
+      return
+    }
+    let cancelled = false
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from('ambassador_slots')
+          .select('duration_minutes')
+          .eq('id', coachUpcoming.slotId)
+          .maybeSingle()
+        if (cancelled) return
+        const mins = Number(data?.duration_minutes)
+        setCoachDurationMinutes(Number.isFinite(mins) && mins > 0 ? mins : 60)
+      } catch {
+        if (!cancelled) setCoachDurationMinutes(60)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [coachUpcoming?.slotId])
+
+  const mentorTotal = mentorMeetupCountForJourney(
+    typeof learner.journeyType === 'string' ? learner.journeyType : null,
+  )
+  const coachPurchased = purchasedCoachSessions ?? null
+  const derivedSessionNumber =
+    audience === 'mentor'
+      ? Math.min(Math.max(1, mentorCompleted + 1), Math.max(1, mentorTotal || 1))
+      : nextCoachSessionNumber({
+          attendedCount: coachGrouped.attended.length,
+          purchased: coachPurchased ?? 5,
+        })
+  const sessionNumber = sessionNumberProp ?? derivedSessionNumber
+
+  const durationMinutes =
+    audience === 'coach' ? coachDurationMinutes : mentorUpcoming ? 60 : null
+  const scheduledWhen =
+    audience === 'coach' ? coachUpcoming?.slotScheduledAt ?? null : mentorUpcoming?.when ?? null
+  const scheduledLabel = formatScheduledLabel(scheduledWhen, durationMinutes)
+
+  const challengePreference =
+    typeof (learner as { challengePreference?: string }).challengePreference === 'string'
+      ? (learner as { challengePreference?: string }).challengePreference
+      : typeof (learner as { feedbackPreference?: string }).feedbackPreference === 'string'
+        ? (learner as { feedbackPreference?: string }).feedbackPreference
+        : null
 
   const offLimits =
     typeof (learner as { sessionOffLimits?: string }).sessionOffLimits === 'string'
@@ -66,38 +191,53 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       currentWeek: learner.currentWeek ?? null,
       goals,
       offLimits,
+      challengePreference,
       pillars,
-      chosenPillar: null,
+      chosenPillar: developmentEdge,
       windowStatus,
       sessionNumber,
       sessionTotal:
-        audience === 'mentor'
-          ? mentorMeetupCountForJourney(
-              typeof learner.journeyType === 'string' ? learner.journeyType : null,
-            )
-          : purchasedCoachSessions ?? 5,
-      purchasedCoachSessions: purchasedCoachSessions ?? 5,
+        audience === 'mentor' ? mentorTotal || null : coachPurchased ?? null,
+      purchasedCoachSessions: coachPurchased,
       courseTitles: courseTitles ?? null,
-      scheduledLabel: 'Next session · 60 minutes',
+      durationMinutes,
+      scheduledLabel,
       originLine:
         audience === 'mentor'
-          ? 'They request meet-ups. You accept or propose another time.'
-          : 'Session count comes from what was purchased for this leader.',
+          ? mentorUpcoming
+            ? `Next meet-up: ${mentorUpcoming.topic}.`
+            : 'They request meet-ups. You accept or propose another time.'
+          : coachUpcoming
+            ? `Next booked slot: ${coachUpcoming.slotTitle || 'Coaching session'}.`
+            : 'Session count comes from what was purchased for this leader.',
     }),
     [
       audience,
       learner,
       goals,
       offLimits,
+      challengePreference,
       pillars,
+      developmentEdge,
       windowStatus,
       sessionNumber,
-      purchasedCoachSessions,
+      mentorTotal,
+      coachPurchased,
       courseTitles,
+      durationMinutes,
+      scheduledLabel,
+      mentorUpcoming,
+      coachUpcoming,
     ],
   )
 
-  if (liftLoading || goalsLoading) {
+  const loading =
+    liftLoading ||
+    goalsLoading ||
+    (audience === 'mentor' && mentorSessionsLoading) ||
+    (audience === 'coach' && coachBookingsLoading)
+
+  if (loading) {
     return (
       <Box>
         <Skeleton height="420px" borderRadius="14px" />

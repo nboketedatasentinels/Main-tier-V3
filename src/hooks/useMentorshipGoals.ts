@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Timestamp, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 
 const MAX_GOALS_LENGTH = 2000
 
@@ -29,18 +28,20 @@ const emptyGoals: MentorshipGoalsDoc = {
   updatedBy: null,
 }
 
-const isFirestorePermissionError = (err: unknown): boolean => {
-  const code =
-    typeof err === 'object' && err && 'code' in err
-      ? String((err as { code?: unknown }).code ?? '')
-      : ''
-  const message = err instanceof Error ? err.message : String(err ?? '')
-  return (
-    code === 'permission-denied' ||
-    /insufficient permissions|permission-denied|Missing or insufficient/i.test(message)
-  )
+const parseTs = (value: unknown): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return value
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return null
 }
 
+/**
+ * Mentorship / coaching goals for Session Prep — Supabase-backed.
+ * (Firestore mentorship_goals returned empty under Supabase-only auth.)
+ */
 export const useMentorshipGoals = (
   learnerId?: string | null,
   assignedMentorId?: string | null,
@@ -58,49 +59,61 @@ export const useMentorshipGoals = (
       return () => undefined
     }
 
+    let cancelled = false
     setLoading(true)
     setError(null)
 
-    const ref = doc(db, 'mentorship_goals', learnerId)
-    const unsubscribe = onSnapshot(
-      ref,
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setState(emptyGoals)
-          setLoading(false)
-          return
-        }
-        const data = snapshot.data() as {
-          goals?: string
-          mentor_id?: string | null
-          updated_at?: Timestamp | null
-          updated_by?: string | null
-        }
-        setState({
-          goals: typeof data.goals === 'string' ? data.goals : '',
-          mentorId: typeof data.mentor_id === 'string' ? data.mentor_id : null,
-          updatedAt: data.updated_at instanceof Timestamp ? data.updated_at.toDate() : null,
-          updatedBy: typeof data.updated_by === 'string' ? data.updated_by : null,
-        })
-        setLoading(false)
-      },
-      (err) => {
-        if (isFirestorePermissionError(err)) {
-          // Mentorship goals still live in Firestore; under Supabase-only auth
-          // treat as empty so Leadership Council stays usable.
-          console.warn('[useMentorshipGoals] Firestore unavailable under Supabase auth; empty goals.')
-          setState(emptyGoals)
-          setError(null)
-          setLoading(false)
-          return
-        }
-        console.error('[useMentorshipGoals] load failed', err)
-        setError(err.message)
-        setLoading(false)
-      },
-    )
+    const load = async () => {
+      const { data, error: readError } = await supabase
+        .from('mentorship_goals')
+        .select('goals, mentor_id, updated_at, updated_by')
+        .eq('learner_id', learnerId)
+        .maybeSingle()
 
-    return () => unsubscribe()
+      if (cancelled) return
+      if (readError) {
+        console.error('[useMentorshipGoals] load failed', readError)
+        setError(readError.message)
+        setState(emptyGoals)
+        setLoading(false)
+        return
+      }
+      if (!data) {
+        setState(emptyGoals)
+        setLoading(false)
+        return
+      }
+      setState({
+        goals: typeof data.goals === 'string' ? data.goals : '',
+        mentorId: typeof data.mentor_id === 'string' ? data.mentor_id : null,
+        updatedAt: parseTs(data.updated_at),
+        updatedBy: typeof data.updated_by === 'string' ? data.updated_by : null,
+      })
+      setLoading(false)
+    }
+
+    void load()
+
+    const channel = supabase
+      .channel(`mentorship_goals_${learnerId}_${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'mentorship_goals',
+          filter: `learner_id=eq.${learnerId}`,
+        },
+        () => {
+          void load()
+        },
+      )
+      .subscribe()
+
+    return () => {
+      cancelled = true
+      void supabase.removeChannel(channel)
+    }
   }, [learnerId])
 
   const save = useCallback(
@@ -116,25 +129,28 @@ export const useMentorshipGoals = (
       setSaving(true)
       setError(null)
       try {
-        await setDoc(
-          doc(db, 'mentorship_goals', learnerId),
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        const actorId = user?.id ?? learnerId
+        const { error: writeError } = await supabase.from('mentorship_goals').upsert(
           {
-            user_id: learnerId,
             learner_id: learnerId,
             mentor_id: assignedMentorId ?? null,
             goals: trimmed,
-            updated_at: serverTimestamp(),
-            updated_by: learnerId,
+            updated_by: actorId,
+            updated_at: new Date().toISOString(),
           },
-          { merge: true },
+          { onConflict: 'learner_id' },
         )
+        if (writeError) throw new Error(writeError.message)
+        setState({
+          goals: trimmed,
+          mentorId: assignedMentorId ?? null,
+          updatedAt: new Date(),
+          updatedBy: actorId,
+        })
       } catch (err) {
-        if (isFirestorePermissionError(err)) {
-          const message =
-            'Goals can’t be saved yet while mentor data is migrating. Please try again later.'
-          setError(message)
-          throw new Error(message)
-        }
         const message = err instanceof Error ? err.message : 'Failed to save goals.'
         setError(message)
         throw err instanceof Error ? err : new Error(message)

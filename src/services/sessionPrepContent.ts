@@ -49,6 +49,8 @@ export interface SessionPrepInput {
   purchasedCoachSessions?: number | null
   /** Programme course titles - used for AI conversation suggestions. */
   courseTitles?: string[] | null
+  /** Minutes for the upcoming session when known from a live booking/slot. */
+  durationMinutes?: number | null
 }
 
 export interface SessionPrepModel {
@@ -164,14 +166,9 @@ const costLines = (name: string, type?: string | null): string[] => {
 
 const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
   const name = input.leaderName.split(' ')[0] || input.leaderName
-  const gap = input.pillars
-    ? resolveLowestPillar(input.pillars)
-    : input.chosenPillar
-      ? null
-      : ('F' as PillarKey)
+  const gap = input.pillars ? resolveLowestPillar(input.pillars) : null
   const chosen =
-    input.chosenPillar ||
-    (input.pillars ? resolveHighestPillar(input.pillars) : ('T' as PillarKey))
+    input.chosenPillar || (input.pillars ? resolveHighestPillar(input.pillars) : null)
   const goal = (input.goals || '').trim()
   const isCoach = input.audience === 'coach'
   const sayLabel = isCoach ? ('Ask this' as const) : ('Say this out loud' as const)
@@ -179,7 +176,7 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
   const topics: SessionPrepTopic[] = []
 
   topics.push({
-    pillarLabel: pillarName(chosen),
+    pillarLabel: chosen ? pillarName(chosen) : 'Direction',
     signalSource: goal ? 'her stated goal\ncurrent situation' : 'stated direction',
     title: isCoach
       ? 'Separate the two goals in one sentence'
@@ -195,7 +192,7 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
     sayLabel,
   })
 
-  if (gap && gap !== chosen) {
+  if (gap && chosen && gap !== chosen) {
     topics.push({
       pillarLabel: pillarName(gap),
       signalSource: 'capability gap\nintent tension',
@@ -210,20 +207,22 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
     })
   }
 
-  topics.push({
-    pillarLabel: pillarName('L'),
-    signalSource: goal ? 'their own words\nwants to be pushed' : 'leading self',
-    title: isCoach ? 'The untested assumption' : 'Defending it line by line',
-    why: isCoach
-      ? `${name} may be carrying an assumption about how much authority they are given. Test whether there is evidence for it.`
-      : goal
-        ? `Their own language around the goal suggests the issue may be less about the case and more about how much authority they are granted before they open their mouth.`
-        : `Ask whether the room trusts the case, or trusts them with the case.`,
-    sayAloud: isCoach
-      ? 'What are you assuming about how they see you that you have never tested?'
-      : 'Is it the case they do not trust, or is it you?',
-    sayLabel,
-  })
+  if (chosen) {
+    topics.push({
+      pillarLabel: pillarName('L'),
+      signalSource: goal ? 'their own words\nwants to be pushed' : 'leading self',
+      title: isCoach ? 'The untested assumption' : 'Defending it line by line',
+      why: isCoach
+        ? `${name} may be carrying an assumption about how much authority they are given. Test whether there is evidence for it.`
+        : goal
+          ? `Their own language around the goal suggests the issue may be less about the case and more about how much authority they are granted before they open their mouth.`
+          : `Ask whether the room trusts the case, or trusts them with the case.`,
+      sayAloud: isCoach
+        ? 'What are you assuming about how they see you that you have never tested?'
+        : 'Is it the case they do not trust, or is it you?',
+      sayLabel,
+    })
+  }
 
   if (input.windowStatus === 'warning' || input.windowStatus === 'alert') {
     topics.push({
@@ -241,7 +240,7 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
   }
 
   const courses = (input.courseTitles || []).map((t) => t.trim()).filter(Boolean)
-  if (isCoach && courses.length) {
+  if (courses.length) {
     const primary = courses[0]
     topics.unshift({
       pillarLabel: 'Programme',
@@ -376,7 +375,11 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     sessionPill: isCoach
       ? `Session ${sessionNumber} of ${total}${sessionNumber === 1 ? ' · contracting' : ''}`
       : `Meet-up ${sessionNumber} of ${total}`,
-    scheduledLabel: input.scheduledLabel || 'Upcoming · 60 minutes',
+    scheduledLabel:
+      input.scheduledLabel ||
+      (input.durationMinutes
+        ? `Upcoming · ${input.durationMinutes} minutes`
+        : 'No upcoming session scheduled'),
     originLine:
       input.originLine ||
       (isCoach
@@ -399,7 +402,7 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     offLimits: input.offLimits?.trim() || null,
     goalVerbatim: isCoach ? goal : null,
     challengeChips: isCoach
-      ? [input.challengePreference || 'Push me hard', 'Direct feedback'].filter(Boolean)
+      ? [input.challengePreference].filter((v): v is string => Boolean(v && v.trim()))
       : [],
     topics,
     opener:
@@ -407,7 +410,9 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
         ? {
             label: 'Opening question · first meeting only',
             quote: 'What is the question you have been carrying that you have not had anyone to ask?',
-            note: 'They asked to be pushed hard and prefer direct feedback. A real question respects that.',
+            note: input.challengePreference
+              ? `They asked for: ${input.challengePreference}. A real question respects that.`
+              : 'First meetings go better when someone asks a real question early.',
           }
         : null,
     stanceReminders: isCoach

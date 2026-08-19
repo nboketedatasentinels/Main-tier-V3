@@ -460,7 +460,12 @@ export const MentorDashboard: React.FC = () => {
                 {selected ? (
                   <Stack spacing={5} minW={0}>
                     <MentorLearnerPanel learner={selected} mentorId={profile?.id} />
-                    <LearnerSessionPrep audience="mentor" learner={selected} windowStatus="warning" />
+                    <LearnerSessionPrep
+                      audience="mentor"
+                      learner={selected}
+                      courseTitles={orgCourseTitles}
+                      windowStatus={null}
+                    />
                   </Stack>
                 ) : (
                   <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
