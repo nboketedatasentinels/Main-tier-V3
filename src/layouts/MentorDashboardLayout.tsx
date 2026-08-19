@@ -19,7 +19,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { LogOut, Menu } from 'lucide-react'
+import { CalendarClock, LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { MentorGuidelinesModal } from '@/components/mentor/MentorGuidelinesModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -231,17 +231,38 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
             position="sticky"
             top={0}
             zIndex={10}
+            gap={2}
           >
-            <HStack spacing={3} align="center">
+            <HStack spacing={3} align="center" minW={0}>
               <IconButton
                 aria-label="Open navigation"
                 icon={<Icon as={Menu} />}
                 variant="ghost"
                 onClick={drawer.onOpen}
               />
-              <Text fontWeight="bold">Mentor Dashboard</Text>
+              <Text fontWeight="bold" noOfLines={1}>
+                Mentor Dashboard
+              </Text>
             </HStack>
-            <NotificationDropdown />
+            <HStack spacing={2} flexShrink={0}>
+              <Button
+                size="sm"
+                variant="outline"
+                borderColor="gray.300"
+                color="gray.800"
+                bg="white"
+                _hover={{ bg: 'gray.50' }}
+                leftIcon={<Icon as={CalendarClock} boxSize={4} />}
+                onClick={() => onNavigate?.('schedule')}
+                aria-label="Meeting schedule"
+                px={{ base: 2, sm: 3 }}
+              >
+                <Text as="span" display={{ base: 'none', sm: 'inline' }}>
+                  Meeting schedule
+                </Text>
+              </Button>
+              <NotificationDropdown />
+            </HStack>
           </Flex>
         )}
 
@@ -254,7 +275,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           data-mentor-main-scroll
         >
           <Stack spacing={6} maxW="1600px" mx="auto">
-            <Flex justify="space-between" align="center">
+            <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
               <Box>
                 <Text fontSize="2xl" fontWeight="bold" color="brand.text">
                   Mentor Dashboard
@@ -263,6 +284,18 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
               </Box>
               {!isMobile && (
                 <HStack spacing={3}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    borderColor="gray.300"
+                    color="gray.800"
+                    bg="white"
+                    _hover={{ bg: 'gray.50' }}
+                    leftIcon={<Icon as={CalendarClock} boxSize={4} />}
+                    onClick={() => onNavigate?.('schedule')}
+                  >
+                    Meeting schedule
+                  </Button>
                   <NotificationDropdown />
                   <Avatar size="sm" name={mentorName} src={avatarUrl} />
                 </HStack>

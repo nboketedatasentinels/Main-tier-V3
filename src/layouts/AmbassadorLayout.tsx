@@ -24,7 +24,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
+import { CalendarClock, Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
@@ -280,6 +280,21 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           </HStack>
 
           <HStack spacing={3} align="center">
+            <Button
+              size="sm"
+              variant="outline"
+              borderColor="gray.300"
+              color="gray.800"
+              bg="white"
+              _hover={{ bg: 'gray.50' }}
+              leftIcon={<Icon as={CalendarClock} boxSize={4} />}
+              onClick={() => onNavigate?.('schedule')}
+              aria-label="Meeting schedule"
+            >
+              <Text as="span" display={{ base: 'none', sm: 'inline' }}>
+                Meeting schedule
+              </Text>
+            </Button>
             <NotificationDropdown />
             <Menu>
               <MenuButton
@@ -311,6 +326,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           pb={{ base: 16, md: 8 }}
           flex="1"
           overflowY="auto"
+          data-coach-main-scroll
         >
           <Stack spacing={6} maxW="1400px" mx="auto">
             {children}

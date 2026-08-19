@@ -209,7 +209,15 @@ export const AmbassadorDashboard: React.FC = () => {
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
     const el = document.getElementById(`coach-${key}`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    if (!el) return
+    const scroller = el.closest('[data-coach-main-scroll]') as HTMLElement | null
+    if (scroller) {
+      const top =
+        el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 12
+      scroller.scrollTo({ top, behavior: 'smooth' })
+      return
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   useEffect(() => {
@@ -308,7 +316,7 @@ export const AmbassadorDashboard: React.FC = () => {
                   leftIcon={<CalendarClock size={16} />}
                   onClick={() => scrollTo('schedule')}
                 >
-                  Session slots
+                  Meeting schedule
                 </Button>
                 <Button
                   variant="outline"

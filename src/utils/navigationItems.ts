@@ -57,7 +57,7 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'coachees', label: 'My coachees', icon: Users },
-      { key: 'schedule', label: 'Sessions', icon: CalendarClock },
+      { key: 'schedule', label: 'Meeting schedule', icon: CalendarClock },
       { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
       { key: 'guidelines', label: 'Coach guidelines', icon: ScrollText },
     ],
@@ -91,7 +91,7 @@ export const buildMentorNavItems = (): NavigationSection[] => [
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'mentees', label: 'My mentees', icon: Users },
-      { key: 'schedule', label: 'Meetings', icon: CalendarClock },
+      { key: 'schedule', label: 'Meeting schedule', icon: CalendarClock },
       { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
       { key: 'guidelines', label: 'Mentor guidelines', icon: ScrollText },
     ],
