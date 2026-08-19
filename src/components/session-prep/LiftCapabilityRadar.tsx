@@ -29,8 +29,11 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
   gapPillar,
   showScores = false,
 }) => {
+  const hasScores = Boolean(pillars)
+
   const shape = useMemo(() => {
-    const scores = pillars ?? { L: 55, I: 70, F: 42, T: 68 }
+    // Neutral placeholder ring only — never invent learner scores.
+    const scores = pillars ?? { L: 50, I: 50, F: 50, T: 50 }
     const cx = 120
     const cy = 95
     const maxR = 68
@@ -38,8 +41,8 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
     return { scores, cx, cy, maxR, pts, poly: pts.map((p) => `${p.x},${p.y}`).join(' ') }
   }, [pillars])
 
-  const chosen = chosenPillar
-  const gap = gapPillar && gapPillar !== chosenPillar ? gapPillar : null
+  const chosen = hasScores ? chosenPillar : null
+  const gap = hasScores && gapPillar && gapPillar !== chosenPillar ? gapPillar : null
   const chosenPt = chosen
     ? shape.pts[['L', 'I', 'F', 'T'].indexOf(chosen)]
     : null
@@ -67,13 +70,24 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
         <line x1={120} y1={95} x2={188} y2={95} stroke="rgba(35,31,48,.14)" />
         <line x1={120} y1={95} x2={120} y2={163} stroke="rgba(35,31,48,.14)" />
         <line x1={120} y1={95} x2={52} y2={95} stroke="rgba(35,31,48,.14)" />
-        <polygon
-          points={shape.poly}
-          fill="rgba(45,42,62,.13)"
-          stroke="#2D2A3E"
-          strokeWidth={1.75}
-          strokeLinejoin="round"
-        />
+        {hasScores ? (
+          <polygon
+            points={shape.poly}
+            fill="rgba(45,42,62,.13)"
+            stroke="#2D2A3E"
+            strokeWidth={1.75}
+            strokeLinejoin="round"
+          />
+        ) : (
+          <polygon
+            points={shape.poly}
+            fill="rgba(35,31,48,.04)"
+            stroke="rgba(35,31,48,.22)"
+            strokeWidth={1.25}
+            strokeDasharray="4 4"
+            strokeLinejoin="round"
+          />
+        )}
         {chosenPt && (
           <>
             <circle cx={chosenPt.x} cy={chosenPt.y} r={9} fill="none" stroke="#D4A017" strokeWidth={1.25} opacity={0.55} />
@@ -96,6 +110,7 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
           T
         </text>
         {showScores &&
+          hasScores &&
           (['L', 'I', 'F', 'T'] as PillarKey[]).map((k, i) => {
             const p = shape.pts[i]
             const offsets = [
@@ -120,28 +135,39 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
           })}
       </Box>
 
-      <List spacing={1.5} mt={2} styleType="none" ml={0}>
-        {PILLARS.map((p) => (
-          <ListItem key={p.key} display="flex" gap={2} alignItems="baseline" fontSize="12px" color="#6B6579">
-            <Text as="b" fontFamily="mono" fontSize="11px" color="#2D2A3E" w="14px">
-              {p.key}
-            </Text>
-            <Text flex="1">
-              {p.name}
-              {chosen === p.key && (
-                <Text as="span" ml={2} fontSize="9.5px" letterSpacing="0.08em" textTransform="uppercase" px={1.5} py={0.5} borderRadius="full" bg="rgba(212,160,23,.12)" color="#7A5C08" border="1px solid #D4A017">
-                  {showScores ? 'you chose this' : 'they chose this'}
-                </Text>
-              )}
-              {gap === p.key && (
-                <Text as="span" ml={2} fontSize="9.5px" letterSpacing="0.08em" textTransform="uppercase" px={1.5} py={0.5} borderRadius="full" bg="rgba(179,58,58,.09)" color="#B33A3A" border="1px solid rgba(179,58,58,.5)">
-                  {showScores ? 'your lowest' : 'the gap'}
-                </Text>
-              )}
-            </Text>
-          </ListItem>
-        ))}
-      </List>
+      {!hasScores ? (
+        <Text fontSize="12.5px" color="#6B6579" mt={2} lineHeight="1.55">
+          No LIFT Index on file yet. The radar stays empty until they complete the assessment.
+        </Text>
+      ) : (
+        <List spacing={1.5} mt={2} styleType="none" ml={0}>
+          {PILLARS.map((p) => (
+            <ListItem key={p.key} display="flex" gap={2} alignItems="baseline" fontSize="12px" color="#6B6579">
+              <Text as="b" fontFamily="mono" fontSize="11px" color="#2D2A3E" w="14px">
+                {p.key}
+              </Text>
+              <Text flex="1">
+                {p.name}
+                {showScores ? (
+                  <Text as="span" ml={2} fontFamily="mono" fontSize="11px" color="#2D2A3E">
+                    {Math.round(pillars![p.key])}
+                  </Text>
+                ) : null}
+                {chosen === p.key && (
+                  <Text as="span" ml={2} fontSize="9.5px" letterSpacing="0.08em" textTransform="uppercase" px={1.5} py={0.5} borderRadius="full" bg="rgba(212,160,23,.12)" color="#7A5C08" border="1px solid #D4A017">
+                    {showScores ? 'you chose this' : 'development edge'}
+                  </Text>
+                )}
+                {gap === p.key && (
+                  <Text as="span" ml={2} fontSize="9.5px" letterSpacing="0.08em" textTransform="uppercase" px={1.5} py={0.5} borderRadius="full" bg="rgba(179,58,58,.09)" color="#B33A3A" border="1px solid rgba(179,58,58,.5)">
+                    {showScores ? 'your lowest' : 'lowest pillar'}
+                  </Text>
+                )}
+              </Text>
+            </ListItem>
+          ))}
+        </List>
+      )}
     </Box>
   )
 }

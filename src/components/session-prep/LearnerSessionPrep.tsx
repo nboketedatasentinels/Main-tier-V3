@@ -24,11 +24,35 @@ interface LearnerSessionPrepProps {
   sessionNumber?: number
   purchasedCoachSessions?: number
   windowStatus?: 'on_track' | 'warning' | 'alert' | 'recovery' | null
-  /** Org programme courses - feed AI conversation suggestions. */
+  /** Org programme courses - feed conversation suggestions. */
   courseTitles?: string[] | null
   onPrimary?: () => void
   onSecondary?: () => void
   primaryLoading?: boolean
+}
+
+type EnrichedLearnerFields = {
+  personalityType: string | null
+  coreValues: string[]
+  jobTitle: string | null
+  companyName: string | null
+  journeyType: string | null
+  currentWeek: number | null
+  journeyStartDate: string | null
+  challengePreference: string | null
+  sessionOffLimits: string | null
+}
+
+const emptyEnrichment: EnrichedLearnerFields = {
+  personalityType: null,
+  coreValues: [],
+  jobTitle: null,
+  companyName: null,
+  journeyType: null,
+  currentWeek: null,
+  journeyStartDate: null,
+  challengePreference: null,
+  sessionOffLimits: null,
 }
 
 const formatScheduledLabel = (when: Date | null, durationMinutes: number | null): string => {
@@ -43,7 +67,13 @@ const formatScheduledLabel = (when: Date | null, durationMinutes: number | null)
   }
 }
 
-/** Loads goals + LIFT + live session timing and renders Session Prep for mentor or coach. */
+const asString = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value.trim() : null
+
+const asStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string' && Boolean(v.trim())) : []
+
+/** Loads goals + LIFT + full profile + live session timing for mentor/coach Session Prep. */
 export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   audience,
   learner,
@@ -64,9 +94,81 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   const { sessions: mentorshipSessions, loading: mentorSessionsLoading } =
     useLearnerMentorshipSessions(audience === 'mentor' ? learnerId : null)
 
+  const [enrichment, setEnrichment] = useState<EnrichedLearnerFields>(emptyEnrichment)
+  const [enrichmentLoading, setEnrichmentLoading] = useState(Boolean(learnerId))
   const [coachBookings, setCoachBookings] = useState<CoachBooking[]>([])
   const [coachBookingsLoading, setCoachBookingsLoading] = useState(audience === 'coach')
   const [coachDurationMinutes, setCoachDurationMinutes] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!learnerId) {
+      setEnrichment(emptyEnrichment)
+      setEnrichmentLoading(false)
+      return
+    }
+    let cancelled = false
+    setEnrichmentLoading(true)
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select(
+            'personality_type, core_values, first_name, last_name, full_name, company_name, company_code, journey_type, current_week, journey_start_date, data',
+          )
+          .eq('id', learnerId)
+          .maybeSingle()
+        if (cancelled) return
+        if (error || !data) {
+          setEnrichment(emptyEnrichment)
+          setEnrichmentLoading(false)
+          return
+        }
+        const nested = (data.data as Record<string, unknown> | null) || {}
+        setEnrichment({
+          personalityType:
+            asString(data.personality_type) ?? asString(nested.personalityType) ?? null,
+          coreValues:
+            asStringArray(data.core_values).length > 0
+              ? asStringArray(data.core_values)
+              : asStringArray(nested.coreValues),
+          jobTitle:
+            asString(nested.jobTitle) ??
+            asString(nested.title) ??
+            asString(nested.roleTitle) ??
+            null,
+          companyName:
+            asString(data.company_name) ??
+            asString(data.company_code) ??
+            asString(nested.companyName) ??
+            null,
+          journeyType: asString(data.journey_type) ?? asString(nested.journeyType) ?? null,
+          currentWeek:
+            typeof data.current_week === 'number'
+              ? data.current_week
+              : typeof nested.currentWeek === 'number'
+                ? nested.currentWeek
+                : null,
+          journeyStartDate:
+            asString(data.journey_start_date) ?? asString(nested.journeyStartDate) ?? null,
+          challengePreference:
+            asString(nested.challengePreference) ??
+            asString(nested.feedbackPreference) ??
+            null,
+          sessionOffLimits:
+            asString(nested.sessionOffLimits) ??
+            asString(nested.offLimits) ??
+            null,
+        })
+      } catch {
+        if (!cancelled) setEnrichment(emptyEnrichment)
+      } finally {
+        if (!cancelled) setEnrichmentLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [learnerId])
 
   useEffect(() => {
     if (audience !== 'coach' || !learnerId) {
@@ -94,25 +196,32 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   )
   const mentorUpcoming = useMemo(() => {
     const now = Date.now()
-    return mentorshipSessions
-      .filter((s) => s.status === 'scheduled')
-      .map((s) => ({
-        when: s.scheduledAt ?? s.proposedAt,
-        topic: s.topic,
-      }))
-      .filter((s): s is { when: Date; topic: string } => Boolean(s.when && s.when.getTime() >= now - 60_000))
-      .sort((a, b) => a.when.getTime() - b.when.getTime())[0] ?? null
+    return (
+      mentorshipSessions
+        .filter((s) => s.status === 'scheduled')
+        .map((s) => ({
+          when: s.scheduledAt ?? s.proposedAt,
+          topic: s.topic,
+        }))
+        .filter(
+          (s): s is { when: Date; topic: string } =>
+            Boolean(s.when && s.when.getTime() >= now - 60_000),
+        )
+        .sort((a, b) => a.when.getTime() - b.when.getTime())[0] ?? null
+    )
   }, [mentorshipSessions])
 
   const coachGrouped = useMemo(() => groupBookingsByStatus(coachBookings), [coachBookings])
   const coachUpcoming = useMemo(() => {
     const now = Date.now()
-    return coachGrouped.booked
-      .filter((b) => (b.slotScheduledAt?.getTime() ?? 0) >= now - 60_000)
-      .sort(
-        (a, b) =>
-          (a.slotScheduledAt?.getTime() ?? 0) - (b.slotScheduledAt?.getTime() ?? 0),
-      )[0] ?? null
+    return (
+      coachGrouped.booked
+        .filter((b) => (b.slotScheduledAt?.getTime() ?? 0) >= now - 60_000)
+        .sort(
+          (a, b) =>
+            (a.slotScheduledAt?.getTime() ?? 0) - (b.slotScheduledAt?.getTime() ?? 0),
+        )[0] ?? null
+    )
   }, [coachGrouped.booked])
 
   useEffect(() => {
@@ -140,9 +249,10 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
     }
   }, [coachUpcoming?.slotId])
 
-  const mentorTotal = mentorMeetupCountForJourney(
-    typeof learner.journeyType === 'string' ? learner.journeyType : null,
-  )
+  const journeyType =
+    enrichment.journeyType ||
+    (typeof learner.journeyType === 'string' ? learner.journeyType : null)
+  const mentorTotal = mentorMeetupCountForJourney(journeyType)
   const coachPurchased = purchasedCoachSessions ?? null
   const derivedSessionNumber =
     audience === 'mentor'
@@ -158,65 +268,65 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   const scheduledWhen =
     audience === 'coach' ? coachUpcoming?.slotScheduledAt ?? null : mentorUpcoming?.when ?? null
   const scheduledLabel = formatScheduledLabel(scheduledWhen, durationMinutes)
+  const upcomingSessionTopic =
+    audience === 'coach'
+      ? coachUpcoming?.slotTitle ?? null
+      : mentorUpcoming?.topic ?? null
 
-  const challengePreference =
-    typeof (learner as { challengePreference?: string }).challengePreference === 'string'
-      ? (learner as { challengePreference?: string }).challengePreference
-      : typeof (learner as { feedbackPreference?: string }).feedbackPreference === 'string'
-        ? (learner as { feedbackPreference?: string }).feedbackPreference
-        : null
-
-  const offLimits =
-    typeof (learner as { sessionOffLimits?: string }).sessionOffLimits === 'string'
-      ? (learner as { sessionOffLimits?: string }).sessionOffLimits
-      : typeof (learner as { notes?: string }).notes === 'string' &&
-          /off[- ]?limits?:/i.test((learner as { notes?: string }).notes || '')
-        ? ((learner as { notes?: string }).notes || '').replace(/^.*off[- ]?limits?:\s*/i, '').trim()
-        : null
+  const personalityType =
+    enrichment.personalityType ||
+    (typeof learner.personalityType === 'string' ? learner.personalityType : null)
+  const coreValues =
+    enrichment.coreValues.length > 0
+      ? enrichment.coreValues
+      : Array.isArray(learner.coreValues)
+        ? learner.coreValues.filter((v): v is string => typeof v === 'string')
+        : []
 
   const input = useMemo(
     () => ({
       audience,
       leaderName: getDisplayName(learner),
-      leaderRoleTitle:
-        typeof (learner as { jobTitle?: string }).jobTitle === 'string'
-          ? (learner as { jobTitle?: string }).jobTitle
-          : typeof (learner as { title?: string }).title === 'string'
-            ? (learner as { title?: string }).title
-            : null,
-      leaderOrgContext: learner.companyName || learner.companyCode || null,
-      personalityType: learner.personalityType,
-      coreValues: learner.coreValues,
-      journeyType: typeof learner.journeyType === 'string' ? learner.journeyType : null,
-      currentWeek: learner.currentWeek ?? null,
+      leaderRoleTitle: enrichment.jobTitle,
+      leaderOrgContext:
+        enrichment.companyName || learner.companyName || learner.companyCode || null,
+      personalityType,
+      coreValues,
+      journeyType,
+      journeyStartDate: enrichment.journeyStartDate,
+      currentWeek: enrichment.currentWeek ?? learner.currentWeek ?? null,
       goals,
-      offLimits,
-      challengePreference,
+      offLimits: enrichment.sessionOffLimits,
+      challengePreference: enrichment.challengePreference,
       pillars,
       chosenPillar: developmentEdge,
       windowStatus,
       sessionNumber,
-      sessionTotal:
-        audience === 'mentor' ? mentorTotal || null : coachPurchased ?? null,
+      sessionTotal: audience === 'mentor' ? mentorTotal || null : coachPurchased ?? null,
       purchasedCoachSessions: coachPurchased,
       courseTitles: courseTitles ?? null,
       durationMinutes,
       scheduledLabel,
+      upcomingSessionTopic,
       originLine:
         audience === 'mentor'
           ? mentorUpcoming
             ? `Next meet-up: ${mentorUpcoming.topic}.`
-            : 'They request meet-ups. You accept or propose another time.'
+            : 'No upcoming meet-up on the calendar yet. They request; you accept or propose.'
           : coachUpcoming
             ? `Next booked slot: ${coachUpcoming.slotTitle || 'Coaching session'}.`
-            : 'Session count comes from what was purchased for this leader.',
+            : coachPurchased
+              ? `${coachPurchased} coaching session${coachPurchased === 1 ? '' : 's'} purchased for this leader.`
+              : 'Purchased session count is not set yet.',
     }),
     [
       audience,
       learner,
+      enrichment,
+      personalityType,
+      coreValues,
+      journeyType,
       goals,
-      offLimits,
-      challengePreference,
       pillars,
       developmentEdge,
       windowStatus,
@@ -226,6 +336,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       courseTitles,
       durationMinutes,
       scheduledLabel,
+      upcomingSessionTopic,
       mentorUpcoming,
       coachUpcoming,
     ],
@@ -234,6 +345,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   const loading =
     liftLoading ||
     goalsLoading ||
+    enrichmentLoading ||
     (audience === 'mentor' && mentorSessionsLoading) ||
     (audience === 'coach' && coachBookingsLoading)
 

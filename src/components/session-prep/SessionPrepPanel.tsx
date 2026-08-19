@@ -167,7 +167,12 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 gapPillar={model.gapPillar}
                 showScores={model.showScores}
               />
-              {isLeader ? (
+              {model.liftPending ? (
+                <Text fontSize="12px" color="#6B6579" mt={2} lineHeight="1.55">
+                  Waiting on a completed LIFT Index for this leader.
+                </Text>
+              ) : null}
+              {isLeader && model.pillars ? (
                 <Text fontSize="12px" color="#6B6579" mt={2} lineHeight="1.55">
                   You take the LIFT Index again near journey end. This shape is yours, and your mentor can see it.
                 </Text>

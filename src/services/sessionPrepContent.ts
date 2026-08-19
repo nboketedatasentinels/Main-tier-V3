@@ -1,7 +1,7 @@
 /**
  * Session Prep content builder (mentor / coach / leader).
- * Deterministic, context-aware copy - not a live LLM call.
- * Matches the product brief: same profile, three readings.
+ * Deterministic, context-aware copy grounded in live profile / LIFT / goals /
+ * programme / session data — never invents learner facts.
  */
 import { PILLARS, type PillarKey } from '@/config/liftAssessment'
 import { PERSONALITY_TYPES, type PersonalityType } from '@/config/personality-data'
@@ -35,6 +35,7 @@ export interface SessionPrepInput {
   personalityType?: string | null
   coreValues?: string[] | null
   journeyType?: string | null
+  journeyStartDate?: Date | string | null
   currentWeek?: number | null
   goals?: string | null
   offLimits?: string | null
@@ -47,10 +48,12 @@ export interface SessionPrepInput {
   scheduledLabel?: string | null
   originLine?: string | null
   purchasedCoachSessions?: number | null
-  /** Programme course titles - used for AI conversation suggestions. */
+  /** Programme course titles - used for conversation suggestions. */
   courseTitles?: string[] | null
   /** Minutes for the upcoming session when known from a live booking/slot. */
   durationMinutes?: number | null
+  /** Topic from the next booked / scheduled meet-up. */
+  upcomingSessionTopic?: string | null
 }
 
 export interface SessionPrepModel {
@@ -69,6 +72,7 @@ export interface SessionPrepModel {
   chosenPillar: PillarKey | null
   gapPillar: PillarKey | null
   showScores: boolean
+  liftPending: boolean
   tendencies: string[]
   costs: string[]
   values: string[]
@@ -100,27 +104,30 @@ const coachArcLabels = (count: number): string[] => {
   return Array.from({ length: count }, (_, i) => `S${i + 1}`)
 }
 
-const mentorMonthLabels = (count: number): string[] => {
+const parseStartDate = (value?: Date | string | null): Date | null => {
+  if (!value) return null
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
+export const mentorMonthLabels = (count: number, journeyStartDate?: Date | string | null): string[] => {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-  const start = new Date().getMonth()
-  return Array.from({ length: count }, (_, i) => months[(start + i) % 12])
+  const start = parseStartDate(journeyStartDate)
+  const startMonth = start ? start.getMonth() : new Date().getMonth()
+  return Array.from({ length: Math.max(0, count) }, (_, i) => months[(startMonth + i) % 12])
 }
 
 const isPersonalityType = (value: string | null | undefined): value is PersonalityType =>
   Boolean(value && PERSONALITY_TYPES.some((p) => p.type === value))
 
 const tendencyLines = (name: string, type?: string | null): string[] => {
-  if (!isPersonalityType(type)) {
-    return [
-      `${name}'s working style is still forming. Lead with curiosity about how they decide under pressure.`,
-      'Watch what they protect first: the argument, the relationship, or the timeline.',
-    ]
-  }
-  const map: Partial<Record<PersonalityType, string[]>> = {
+  if (!isPersonalityType(type)) return []
+  const meta = PERSONALITY_TYPES.find((p) => p.type === type)
+  const specific: Partial<Record<PersonalityType, string[]>> = {
     INTJ: [
       'Often has the full argument built before speaking, so their thinking is usually further along than the room realizes.',
       'Tends to trust evidence over consensus and holds a position when the numbers support it.',
-      'Values mastery, so they are likely to go deeper on a problem than the role strictly requires.',
     ],
     INTP: [
       'Works through problems in layers before sharing a conclusion.',
@@ -139,29 +146,31 @@ const tendencyLines = (name: string, type?: string | null): string[] => {
       'Shows care through reliability more than enthusiasm.',
     ],
   }
-  return map[type] ?? [
-    `${name} shows ${PERSONALITY_TYPES.find((p) => p.type === type)?.name ?? type} patterns in how they prepare and decide.`,
+  if (specific[type]) return specific[type]!
+  return [
+    `${name} shows ${meta?.name ?? type} patterns (${type}).`,
     'Match their tempo first, then stretch the blind spot.',
   ]
 }
 
-const costLines = (name: string, type?: string | null): string[] => {
-  if (!isPersonalityType(type)) {
-    return [`Without a clear preference map, watch where ${name} over-owns versus under-asks.`]
+const costLines = (name: string, type?: string | null, values?: string[] | null): string[] => {
+  if (!isPersonalityType(type) && !(values && values.length)) return []
+  const lines: string[] = []
+  if (isPersonalityType(type)) {
+    const map: Partial<Record<PersonalityType, string[]>> = {
+      INTJ: [
+        'Arriving with a finished argument can read as arriving with the decision already made.',
+        'Depth on the technical case may crowd out the work of bringing people with them.',
+      ],
+      ENTJ: ['Speed can leave quieter stakeholders unconvinced even when the case is strong.'],
+      INTP: ['Exploring every angle can delay a decision the room already needed.'],
+    }
+    lines.push(...(map[type] ?? [`The same strength that helps ${name} can stall alignment if left unnamed.`]))
   }
-  const map: Partial<Record<PersonalityType, string[]>> = {
-    INTJ: [
-      'Arriving with a finished argument can read as arriving with the decision already made.',
-      'Depth on the technical case may be crowding out the work of bringing people with them.',
-    ],
-    ENTJ: [
-      'Speed can leave quieter stakeholders unconvinced even when the case is strong.',
-    ],
-    INTP: [
-      'Exploring every angle can delay a decision the room already needed.',
-    ],
+  if (values && values.length) {
+    lines.push(`Named values: ${values.slice(0, 5).join(', ')}. Watch where those collide with organisational politics.`)
   }
-  return map[type] ?? [`The same strength that helps ${name} can stall alignment if left unnamed.`]
+  return lines
 }
 
 const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
@@ -172,103 +181,122 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
   const goal = (input.goals || '').trim()
   const isCoach = input.audience === 'coach'
   const sayLabel = isCoach ? ('Ask this' as const) : ('Say this out loud' as const)
-
+  const courses = (input.courseTitles || []).map((t) => t.trim()).filter(Boolean)
+  const upcomingTopic = input.upcomingSessionTopic?.trim() || null
   const topics: SessionPrepTopic[] = []
 
-  topics.push({
-    pillarLabel: chosen ? pillarName(chosen) : 'Direction',
-    signalSource: goal ? 'her stated goal\ncurrent situation' : 'stated direction',
-    title: isCoach
-      ? 'Separate the two goals in one sentence'
-      : 'Getting a stalled program moving again',
-    why: goal
-      ? isCoach
-        ? `"${goal}" may be two outcomes. Contracting is cleaner if ${name} picks which one matters most.`
-        : `${name} wants progress on: "${goal}". You have likely been in a room like this.`
-      : `${name} has not written a goal yet. Use the session to make the desired outcome observable.`,
-    sayAloud: isCoach
-      ? 'If approval came through but you still had to defend every line, would that be a win?'
-      : 'What do you think that committee said about your program after you left the room?',
-    sayLabel,
-  })
-
-  if (gap && chosen && gap !== chosen) {
+  if (upcomingTopic) {
     topics.push({
-      pillarLabel: pillarName(gap),
-      signalSource: 'capability gap\nintent tension',
-      title: isCoach ? 'Who the stall is working for' : 'The part of the case that is not a case',
-      why: isCoach
-        ? `The shape shows where ${name} is strong and where they are not, and they have chosen to work on a pillar they are already strong in. Programs rarely stall for the reason given in the meeting.`
-        : `Look at the shape. ${name} is strongest on one side and weakest on ${pillarName(gap)}, and they have chosen to work on a pillar they are already good at. The gap is often the real stall.`,
+      pillarLabel: 'This meet-up',
+      signalSource: 'scheduled session',
+      title: upcomingTopic,
+      why: `${name} already has this on the calendar. Stay with their framing before you widen it.`,
       sayAloud: isCoach
-        ? 'Who is more comfortable with this program stalled than moving?'
-        : 'Who in that room needed convincing before the meeting, and did anyone do that work?',
+        ? `What would make "${upcomingTopic}" a success by the end of this hour?`
+        : `When you booked "${upcomingTopic}", what outcome were you hoping someone else would notice?`,
       sayLabel,
     })
   }
 
-  if (chosen) {
+  if (goal) {
     topics.push({
-      pillarLabel: pillarName('L'),
-      signalSource: goal ? 'their own words\nwants to be pushed' : 'leading self',
-      title: isCoach ? 'The untested assumption' : 'Defending it line by line',
+      pillarLabel: chosen ? pillarName(chosen) : 'Goal',
+      signalSource: 'stated goal',
+      title: isCoach ? 'Separate the outcomes in one sentence' : 'Pressure-test the stated goal',
       why: isCoach
-        ? `${name} may be carrying an assumption about how much authority they are given. Test whether there is evidence for it.`
-        : goal
-          ? `Their own language around the goal suggests the issue may be less about the case and more about how much authority they are granted before they open their mouth.`
-          : `Ask whether the room trusts the case, or trusts them with the case.`,
+        ? `"${goal}" may be two outcomes. Contracting is cleaner if ${name} picks which one matters most.`
+        : `${name} wrote: "${goal}". Use the meet-up to make progress observable.`,
       sayAloud: isCoach
-        ? 'What are you assuming about how they see you that you have never tested?'
-        : 'Is it the case they do not trust, or is it you?',
+        ? `If "${goal}" landed tomorrow, what would still feel unfinished?`
+        : `What part of "${goal}" is hardest to say out loud in the room that decides?`,
+      sayLabel,
+    })
+  }
+
+  for (const course of courses.slice(0, 2)) {
+    topics.push({
+      pillarLabel: 'Programme',
+      signalSource: 'assigned courses',
+      title: `Progress on ${course}`,
+      why: `${name}'s organisation programme includes ${courses.slice(0, 3).join(', ')}.`,
+      sayAloud: isCoach
+        ? `Where is ${course} actually stuck — skill, politics, or authority?`
+        : `Where has ${course} stalled under scrutiny, and what would restart it?`,
+      sayLabel,
+    })
+  }
+
+  if (gap && input.pillars) {
+    const gapScore = Math.round(input.pillars[gap])
+    const chosenScore = chosen ? Math.round(input.pillars[chosen]) : null
+    topics.push({
+      pillarLabel: pillarName(gap),
+      signalSource: 'LIFT assessment',
+      title: `The ${pillarName(gap)} gap`,
+      why:
+        chosen && chosen !== gap && chosenScore != null
+          ? `${name}'s LIFT shape is strongest on ${pillarName(chosen)} (${chosenScore}) and lowest on ${pillarName(gap)} (${gapScore}).`
+          : `${name}'s lowest LIFT pillar is ${pillarName(gap)} (${gapScore}).`,
+      sayAloud: isCoach
+        ? `What would change if you treated ${pillarName(gap)} as the real constraint this month?`
+        : `Who needs to see stronger ${pillarName(gap)} from you before they trust the rest of the case?`,
       sayLabel,
     })
   }
 
   if (input.windowStatus === 'warning' || input.windowStatus === 'alert') {
+    const week = input.currentWeek
     topics.push({
-      pillarLabel: 'Capacity',
+      pillarLabel: 'Pace',
       signalSource: 'engagement pattern',
-      title: isCoach ? 'What is being carried' : 'What this is costing her',
-      why: isCoach
-        ? `A Journey and live work pressure at the same time. Worth one question, not a whole session, unless ${name} opens it.`
-        : `They are into the Journey with live scrutiny. Worth finding out what has quietly been dropped.`,
+      title: 'What is being carried',
+      why: week
+        ? `${name} is in week ${week} with a ${input.windowStatus} engagement signal.`
+        : `${name} currently has a ${input.windowStatus} engagement signal.`,
       sayAloud: isCoach
         ? 'What are you carrying that nobody has asked you about?'
-        : 'What have you stopped doing since this started?',
+        : 'What have you quietly stopped doing since this programme intensified?',
       sayLabel,
     })
   }
 
-  const courses = (input.courseTitles || []).map((t) => t.trim()).filter(Boolean)
-  if (courses.length) {
-    const primary = courses[0]
-    topics.unshift({
-      pillarLabel: 'Programme',
-      signalSource: 'assigned courses',
-      title: `Getting ${primary} moving again`,
-      why: `${name} is on ${courses.slice(0, 3).join(', ')}. Suggest conversation points from the live programme - they do not have to use them.`,
-      sayAloud: `Where has ${primary} stalled under scrutiny, and what would restart it?`,
+  if (!topics.length) {
+    topics.push({
+      pillarLabel: 'Contract',
+      signalSource: 'limited prep data',
+      title: 'Make the outcome observable',
+      why: `${name} has limited prep signals yet (goal, LIFT, or programme detail). Use the opening minutes to agree what success looks like.`,
+      sayAloud: isCoach
+        ? 'By the end of this session, what should someone else be able to see that they cannot see now?'
+        : 'What is the one question you most need a clear answer to before we finish?',
       sayLabel,
     })
-    if (courses.some((c) => /ai|data|digital/i.test(c))) {
-      topics.splice(1, 0, {
-        pillarLabel: 'Innovation',
-        signalSource: 'course context',
-        title: 'The parts of AI-ready teams they are avoiding',
-        why: `Their programme includes digital / AI / data work. Test whether the block is skill, politics, or authority.`,
-        sayAloud: 'What part of becoming AI-ready is your team pretending is already done?',
-        sayLabel,
-      })
-    }
   }
 
   return topics.slice(0, 4)
 }
 
+const buildHeadline = (input: SessionPrepInput, first: string, goal: string | null): string => {
+  const courses = (input.courseTitles || []).map((t) => t.trim()).filter(Boolean)
+  const upcoming = input.upcomingSessionTopic?.trim()
+  if (goal) {
+    return input.audience === 'coach'
+      ? `Work the goal they wrote: "${goal}".`
+      : `${first} asked for progress on: "${goal}".`
+  }
+  if (upcoming) return `Stay with the booked topic: ${upcoming}.`
+  if (courses[0]) return `Their programme points at ${courses[0]} — test where it is actually stuck.`
+  if (input.pillars) {
+    const gap = resolveLowestPillar(input.pillars)
+    return `LIFT shows ${pillarName(gap)} as the development edge — open there if the room allows.`
+  }
+  return `Limited prep data for ${first} yet. Contract the outcome before you explore.`
+}
+
 export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel => {
   const first = input.leaderName.split(' ')[0] || input.leaderName
   const journeyType = input.journeyType && isJourneyType(input.journeyType) ? input.journeyType : null
-  const journeyLabel = journeyType ? getJourneyLabel(journeyType) : 'Journey'
+  const journeyLabel = journeyType ? getJourneyLabel(journeyType) : null
   const totalWeeks = journeyType ? JOURNEY_META[journeyType].weeks : null
   const week = input.currentWeek ?? null
   const pillars = input.pillars ?? null
@@ -277,41 +305,53 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     input.chosenPillar || (pillars ? resolveHighestPillar(pillars) : null)
 
   const mentorTotal = input.sessionTotal ?? mentorMeetupCountForJourney(journeyType)
-  const coachTotal = input.purchasedCoachSessions ?? input.sessionTotal ?? 5
+  const coachTotal = input.purchasedCoachSessions ?? input.sessionTotal ?? null
   const sessionNumber = Math.max(1, input.sessionNumber ?? 1)
+  const goal = input.goals?.trim() || null
+  const personalityTendencies = tendencyLines(first, input.personalityType)
+  const personalityCosts = costLines(first, input.personalityType, input.coreValues)
 
   if (input.audience === 'leader') {
     const mentorFirst = (input.mentorName || 'your mentor').split(' ')[0]
+    const total = Math.max(1, mentorTotal || 1)
     return {
       audience: 'leader',
       headline: '',
       personTitle: input.mentorName || 'Your mentor',
       personSubtitle: input.mentorBio || 'Assigned mentor on your organisation programme',
-      journeyLine: input.mentorBio
-        ? ''
-        : 'They can see your goal, your LIFT shape, and what you asked them not to raise.',
-      sessionPill: `Meet-up ${sessionNumber} of ${mentorTotal}`,
-      scheduledLabel: input.scheduledLabel || 'Upcoming meet-up · 60 minutes',
+      journeyLine: [
+        journeyLabel,
+        week && totalWeeks ? `Week ${week} of ${totalWeeks}` : week ? `Week ${week}` : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      sessionPill: `Meet-up ${sessionNumber} of ${total}`,
+      scheduledLabel: input.scheduledLabel || 'No upcoming meet-up scheduled',
       originLine: input.originLine || 'You request these. If you do not request one, it does not happen.',
-      arcLabels: mentorMonthLabels(mentorTotal),
-      arcCurrentIndex: Math.min(sessionNumber - 1, mentorTotal - 1),
-      arcNote: 'One a month, yours to request. If you do not request one, it does not happen.',
+      arcLabels: mentorMonthLabels(total, input.journeyStartDate),
+      arcCurrentIndex: Math.min(sessionNumber - 1, total - 1),
+      arcNote: journeyLabel
+        ? `One meet-up per month across your ${journeyLabel}. You request, they accept.`
+        : 'One meet-up per month. You request, they accept.',
       pillars,
       chosenPillar,
       gapPillar,
-      showScores: true,
+      showScores: Boolean(pillars),
+      liftPending: !pillars,
       tendencies: [],
       costs: [],
       values: input.coreValues ?? [],
       offLimits: input.offLimits?.trim() || null,
-      goalVerbatim: input.goals?.trim() || null,
+      goalVerbatim: goal,
       challengeChips: [],
       topics: [],
-      opener: {
-        label: 'If you only ask them one thing',
-        quote: 'What did it cost you to keep going when yours was paused?',
-        note: 'First meetings go better when someone asks a real question early.',
-      },
+      opener: goal
+        ? {
+            label: 'If you only ask them one thing',
+            quote: `What would unblock "${goal}" fastest from your seat?`,
+            note: 'Lead with your written goal.',
+          }
+        : null,
       stanceReminders: [],
       bringItems: [
         {
@@ -346,29 +386,21 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
   }
 
   const isCoach = input.audience === 'coach'
-  const total = isCoach ? coachTotal : mentorTotal
+  const total = Math.max(1, (isCoach ? coachTotal : mentorTotal) || 1)
   const topics = buildTopics(input)
-  const goal = input.goals?.trim() || null
-
-  const headline = isCoach
-    ? goal
-      ? `The stated goal is progress. The workable goal is more likely what happens in the room before the decision.`
-      : `Contract first. Make the outcome observable by someone other than ${first}.`
-    : goal
-      ? `${first} needs to hear how someone else survived a stalled push under scrutiny, and what it cost them.`
-      : `Find the real question ${first} has been carrying and has not had anyone to ask.`
 
   return {
     audience: input.audience,
-    headline,
+    headline: buildHeadline(input, first, goal),
     personTitle: input.leaderName,
     personSubtitle:
       [input.leaderRoleTitle, input.leaderOrgContext].filter(Boolean).join('\n') ||
       'Leader on your organisation programme',
     journeyLine: [
       journeyLabel,
-      chosenPillar ? pillarName(chosenPillar) : null,
+      chosenPillar && pillars ? pillarName(chosenPillar) : null,
       week && totalWeeks ? `Week ${week} of ${totalWeeks}` : week ? `Week ${week}` : null,
+      input.personalityType ? input.personalityType : null,
     ]
       .filter(Boolean)
       .join(' · '),
@@ -383,36 +415,44 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     originLine:
       input.originLine ||
       (isCoach
-        ? 'Session count comes from what was purchased for this leader.'
+        ? coachTotal
+          ? `${coachTotal} coaching session${coachTotal === 1 ? '' : 's'} purchased for this leader.`
+          : 'Purchased session count is not set for this leader yet.'
         : 'They request. You accept or propose another time.'),
-    arcLabels: isCoach ? coachArcLabels(total) : mentorMonthLabels(total),
+    arcLabels: isCoach ? coachArcLabels(total) : mentorMonthLabels(total, input.journeyStartDate),
     arcCurrentIndex: Math.min(sessionNumber - 1, total - 1),
     arcNote: isCoach
       ? total <= 1
         ? 'Single-session purchase: contract and commitment only.'
-        : 'Standard coaching arc from the purchase record.'
-      : `One meet-up per month across their ${journeyLabel}. They request, you accept.`,
+        : `Coaching arc across ${total} purchased sessions.`
+      : journeyLabel
+        ? `One meet-up per month across their ${journeyLabel}. They request, you accept.`
+        : 'One meet-up per month. They request, you accept.',
     pillars,
     chosenPillar,
     gapPillar,
-    showScores: false,
-    tendencies: isCoach ? [] : tendencyLines(first, input.personalityType),
-    costs: isCoach ? [] : costLines(first, input.personalityType),
+    showScores: Boolean(pillars),
+    liftPending: !pillars,
+    tendencies: personalityTendencies,
+    costs: personalityCosts,
     values: input.coreValues ?? [],
     offLimits: input.offLimits?.trim() || null,
-    goalVerbatim: isCoach ? goal : null,
-    challengeChips: isCoach
-      ? [input.challengePreference].filter((v): v is string => Boolean(v && v.trim()))
-      : [],
+    goalVerbatim: goal,
+    challengeChips: [input.challengePreference]
+      .filter((v): v is string => Boolean(v && v.trim())),
     topics,
     opener:
-      !isCoach && sessionNumber === 1
+      sessionNumber === 1
         ? {
             label: 'Opening question · first meeting only',
-            quote: 'What is the question you have been carrying that you have not had anyone to ask?',
+            quote: goal
+              ? `What would make real progress on "${goal}" undeniable to someone who was not in the room?`
+              : coursesFirstQuestion(input, isCoach),
             note: input.challengePreference
-              ? `They asked for: ${input.challengePreference}. A real question respects that.`
-              : 'First meetings go better when someone asks a real question early.',
+              ? `They asked for: ${input.challengePreference}.`
+              : goal
+                ? 'Open from their written goal.'
+                : 'Open by contracting what success looks like.',
           }
         : null,
     stanceReminders: isCoach
@@ -428,4 +468,16 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     primaryActionLabel: isCoach ? 'Mark session complete' : 'Mark meet-up complete',
     secondaryActionLabel: isCoach ? 'Suggest different areas' : 'Suggest different topics',
   }
+}
+
+const coursesFirstQuestion = (input: SessionPrepInput, isCoach: boolean): string => {
+  const course = (input.courseTitles || []).map((t) => t.trim()).filter(Boolean)[0]
+  if (course) {
+    return isCoach
+      ? `What would have to be true for ${course} to move this week?`
+      : `Where has ${course} stalled, and who noticed?`
+  }
+  return isCoach
+    ? 'By the end of this hour, what should someone else be able to see?'
+    : 'What is the question you have been carrying that you have not had anyone to ask?'
 }
