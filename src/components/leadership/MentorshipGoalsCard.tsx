@@ -46,10 +46,10 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
         title: 'Goal saved',
         description:
           audience === 'coach'
-            ? 'Visible in coaching Session Prep.'
-            : 'Visible in mentoring Session Prep.',
+            ? 'Learner notified. Also visible in Session Prep and Leadership Council.'
+            : 'Learner notified. Also visible in Session Prep and Leadership Council.',
         status: 'success',
-        duration: 2800,
+        duration: 3200,
       })
     } catch (err) {
       toast({

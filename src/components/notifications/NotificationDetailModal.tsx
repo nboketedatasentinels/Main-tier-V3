@@ -13,7 +13,13 @@ import {
 } from '@chakra-ui/react'
 import { Quote, X } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
+import { useAuth } from '@/hooks/useAuth'
 import type { NotificationRecord } from '@/types/notifications'
+import {
+  buildMeetingMailtoHref,
+  isMeetingNotification,
+  openMeetingMailto,
+} from '@/utils/meetingInvite'
 
 interface NotificationDetailModalProps {
   notification: NotificationRecord | null
@@ -36,9 +42,31 @@ export const NotificationDetailModal = ({
   isOpen,
   onClose,
 }: NotificationDetailModalProps) => {
+  const { profile } = useAuth()
   if (!notification) return null
 
   const timestamp = resolveTimestamp(notification.created_at)
+  const meeting = isMeetingNotification(notification)
+  const md = (notification.metadata ?? {}) as Record<string, unknown>
+  const storedMailto = typeof md.mailtoHref === 'string' ? md.mailtoHref : null
+
+  const handlePrimary = () => {
+    if (meeting) {
+      const href =
+        storedMailto ||
+        buildMeetingMailtoHref({
+          to: profile?.email ?? null,
+          subject: notification.title || 'Meeting invitation',
+          body: [
+            notification.message,
+            '',
+            '— Sent from T4L',
+          ].join('\n'),
+        })
+      openMeetingMailto(href)
+    }
+    onClose()
+  }
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered size={{ base: 'sm', md: 'lg' }}>
@@ -109,16 +137,39 @@ export const NotificationDetailModal = ({
           bg="whiteAlpha.100"
           borderTopWidth="1px"
           borderTopColor="whiteAlpha.200"
+          gap={2}
         >
-          <Button
-            bg="white"
-            color="#350e6f"
-            _hover={{ bg: 'whiteAlpha.900' }}
-            onClick={onClose}
-            fontWeight="semibold"
-          >
-            Got it
-          </Button>
+          {meeting ? (
+            <>
+              <Button
+                variant="ghost"
+                color="white"
+                _hover={{ bg: 'whiteAlpha.200' }}
+                onClick={onClose}
+              >
+                Dismiss
+              </Button>
+              <Button
+                bg="white"
+                color="#350e6f"
+                _hover={{ bg: 'whiteAlpha.900' }}
+                onClick={handlePrimary}
+                fontWeight="semibold"
+              >
+                OK
+              </Button>
+            </>
+          ) : (
+            <Button
+              bg="white"
+              color="#350e6f"
+              _hover={{ bg: 'whiteAlpha.900' }}
+              onClick={onClose}
+              fontWeight="semibold"
+            >
+              Got it
+            </Button>
+          )}
         </ModalFooter>
       </ModalContent>
     </Modal>

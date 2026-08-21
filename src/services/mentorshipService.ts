@@ -6,6 +6,8 @@ import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
 import { notifyAsLeadership } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
+import { buildMeetingMailtoHref } from '@/utils/meetingInvite'
+import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
 
 export type MentorshipSessionStatus =
   | 'requested'
@@ -134,6 +136,8 @@ export async function createMentorshipSessionRequest(params: {
     throw new Error('Proposed time must be in the future.')
   }
 
+  await assertMandatoryLiftComplete(learnerId)
+
   const { data, error } = await supabase
     .from('mentorship_sessions')
     .insert({
@@ -179,7 +183,11 @@ export async function createMentorScheduledSession(params: {
   meetingLink?: string
   learnerName?: string
   mentorName?: string
-}): Promise<string> {
+}): Promise<{
+  sessionId: string
+  mailtoHref: string
+  learnerEmail: string | null
+}> {
   const { learnerId, mentorId, topic, scheduledAt, meetingLink, learnerName, mentorName } = params
   if (!learnerId || !mentorId) throw new Error('Learner and mentor ids are required.')
   const trimmedTopic = topic.trim() || 'Mentorship session'
@@ -217,11 +225,37 @@ export async function createMentorScheduledSession(params: {
     minute: '2-digit',
   })
 
+  const linkLine = meetingLink?.trim() ? `\nMeeting link: ${meetingLink.trim()}` : ''
+  const emailBody = `${mentorName ?? 'Your mentor'} scheduled a mentorship meeting.
+
+Topic: ${trimmedTopic}
+When: ${whenLabel}${linkLine}
+
+— Transformation Leader (T4L)`
+
+  const { data: learnerProfile } = await supabase
+    .from('profiles')
+    .select('email')
+    .eq('id', learnerId)
+    .maybeSingle()
+  const learnerEmail =
+    typeof learnerProfile?.email === 'string' && learnerProfile.email.trim()
+      ? learnerProfile.email.trim()
+      : null
+
+  const mailtoHref = buildMeetingMailtoHref({
+    to: learnerEmail,
+    subject: `Mentorship meeting: ${trimmedTopic}`,
+    body: emailBody,
+  })
+
   await notifyAsLeadership({
     userId: learnerId,
     type: 'session_request',
     title: 'New mentorship meeting scheduled',
-    message: `${mentorName ?? 'Your mentor'} scheduled "${trimmedTopic}" for ${whenLabel}.`,
+    message: `${mentorName ?? 'Your mentor'} scheduled "${trimmedTopic}" for ${whenLabel}.${
+      meetingLink?.trim() ? ' Meeting link included.' : ''
+    }`,
     relatedId: sessionId,
     category: 'action_required',
     data: {
@@ -229,10 +263,13 @@ export async function createMentorScheduledSession(params: {
       sessionId,
       mentorId,
       kind: 'mentorship_scheduled_by_mentor',
+      mailtoHref,
+      meetingLink: meetingLink?.trim() || null,
+      scheduledAt: scheduledAt.toISOString(),
     },
   }).catch((err) => console.warn('[MentorshipService] notify learner of schedule failed:', err))
 
-  return sessionId
+  return { sessionId, mailtoHref, learnerEmail }
 }
 
 export async function confirmMentorshipSession(params: {
@@ -397,30 +434,35 @@ export async function completeMentorshipSession(params: {
   const learnerId = pickString(existing.learner_id)
   const mentorName = pickString(existing.mentor_name)
   let pointsAwarded = Boolean(existing.points_awarded)
-  let pointsAmount = 0
+  let pointsAmount = pointsAwarded ? 2000 : 0
   let awardMessage: string | undefined
 
-  if (existing.status === 'completed') {
-    return { pointsAwarded, pointsAmount: pointsAwarded ? 2000 : 0 }
+  const alreadyCompleted = existing.status === 'completed'
+  if (alreadyCompleted && pointsAwarded) {
+    return { pointsAwarded: true, pointsAmount: 2000 }
   }
 
-  if (existing.status !== 'scheduled') {
+  if (!alreadyCompleted && existing.status !== 'scheduled') {
     throw new Error('Only confirmed sessions can be marked complete.')
   }
 
   const shouldAttemptAward = !existing.points_awarded
 
-  const { error: completeError } = await supabase
-    .from('mentorship_sessions')
-    .update({
-      status: 'completed',
-      completed_at: new Date().toISOString(),
-      points_awarded: false,
-      points_awarded_at: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', sessionId)
-  if (completeError) throw new Error(completeError.message)
+  // Mark complete when still scheduled. If already completed but points were
+  // skipped (no journey / limit), allow a points-only retry below.
+  if (!alreadyCompleted) {
+    const { error: completeError } = await supabase
+      .from('mentorship_sessions')
+      .update({
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+        points_awarded: false,
+        points_awarded_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', sessionId)
+    if (completeError) throw new Error(completeError.message)
+  }
 
   if (shouldAttemptAward && learnerId) {
     try {
@@ -466,7 +508,7 @@ export async function completeMentorshipSession(params: {
     }
   }
 
-  if (learnerId) {
+  if (learnerId && !alreadyCompleted) {
     await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',

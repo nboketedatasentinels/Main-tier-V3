@@ -24,6 +24,7 @@ import {
 } from '@chakra-ui/react'
 import { LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerAdminSnapshot } from '@/hooks/partner/usePartnerAdminSnapshot'
 import { type NavigationSection, buildPartnerNavItems } from '@/utils/navigationItems'
@@ -471,6 +472,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           </HStack>
         </Box>
       )}
+      <ProgrammePushPopup />
     </Flex>
   )
 }

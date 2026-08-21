@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
+import { notifyAsLeadership } from '@/services/notificationService'
 import { supabase } from '@/services/supabase'
 
 const MAX_GOALS_LENGTH = 2000
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const asUuid = (value: unknown): string | null => {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return UUID_RE.test(trimmed) ? trimmed : null
+}
 
 export interface MentorshipGoalsDoc {
   goals: string
@@ -94,32 +104,20 @@ export const useMentorshipGoals = (
 
     void load()
 
-    const channel = supabase
-      .channel(`mentorship_goals_${learnerId}_${Date.now()}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'mentorship_goals',
-          filter: `learner_id=eq.${learnerId}`,
-        },
-        () => {
-          void load()
-        },
-      )
-      .subscribe()
-
+    // No realtime subscription here. Mentor dashboard + Session Prep often mount
+    // this hook together; supabase.channel reuse then throws
+    // "cannot add postgres_changes callbacks after subscribe()" and crashes the page.
+    // Load-on-mount + local state after save is enough for this surface.
     return () => {
       cancelled = true
-      void supabase.removeChannel(channel)
     }
   }, [learnerId])
 
   const save = useCallback(
     async (nextGoals: string) => {
-      if (!learnerId) {
-        throw new Error('A learner id is required before saving goals.')
+      const learnerUuid = asUuid(learnerId)
+      if (!learnerUuid) {
+        throw new Error('A valid learner id is required before saving goals.')
       }
       const trimmed = nextGoals.trim()
       if (trimmed.length > MAX_GOALS_LENGTH) {
@@ -132,11 +130,15 @@ export const useMentorshipGoals = (
         const {
           data: { user },
         } = await supabase.auth.getUser()
-        const actorId = user?.id ?? learnerId
+        const actorId = asUuid(user?.id) ?? learnerUuid
+        // Prefer a valid assigned id; otherwise the signed-in mentor/coach so
+        // the FK always resolves (legacy non-uuid ids caused save failures).
+        const mentorUuid = asUuid(assignedMentorId) ?? actorId
+
         const { error: writeError } = await supabase.from('mentorship_goals').upsert(
           {
-            learner_id: learnerId,
-            mentor_id: assignedMentorId ?? null,
+            learner_id: learnerUuid,
+            mentor_id: mentorUuid,
             goals: trimmed,
             updated_by: actorId,
             updated_at: new Date().toISOString(),
@@ -146,10 +148,50 @@ export const useMentorshipGoals = (
         if (writeError) throw new Error(writeError.message)
         setState({
           goals: trimmed,
-          mentorId: assignedMentorId ?? null,
+          mentorId: mentorUuid,
           updatedAt: new Date(),
           updatedBy: actorId,
         })
+
+        // Mentor/coach "sent" a goal → learner bell notification (not when
+        // the learner edits their own goal on Leadership Council).
+        if (actorId !== learnerUuid) {
+          const preview =
+            trimmed.length > 160 ? `${trimmed.slice(0, 157).trimEnd()}…` : trimmed
+          const { data: actorProfile } = await supabase
+            .from('profiles')
+            .select('full_name, role')
+            .eq('id', actorId)
+            .maybeSingle()
+          const actorRole = String(actorProfile?.role ?? '').toLowerCase()
+          const isCoach =
+            actorRole === 'ambassador' || actorRole === 'coach'
+          const actorLabel = isCoach ? 'coach' : 'mentor'
+          const actorName =
+            (typeof actorProfile?.full_name === 'string' &&
+              actorProfile.full_name.trim()) ||
+            (isCoach ? 'Your coach' : 'Your mentor')
+
+          await notifyAsLeadership({
+            userId: learnerUuid,
+            type: 'important_update',
+            title: `${actorName} updated your ${actorLabel} goal`,
+            message: preview
+              ? `"${preview}" — open Leadership Council to review.`
+              : `Your ${actorLabel} cleared your goal. Open Leadership Council to review.`,
+            relatedId: learnerUuid,
+            category: 'important_updates',
+            data: {
+              priority: 'push',
+              kind: 'mentorship_goal_updated',
+              actorId,
+              actorRole: actorLabel,
+              actionUrl: '/app/leadership-council',
+            },
+          }).catch((notifyErr) => {
+            console.warn('[useMentorshipGoals] learner notify failed', notifyErr)
+          })
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to save goals.'
         setError(message)

@@ -88,10 +88,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
     loading: goalsLoading,
     saving: goalsSaving,
     save: saveGoals,
-  } = useMentorshipGoals(
-    learnerId,
-    typeof learner.mentorId === 'string' ? learner.mentorId : coachId,
-  )
+  } = useMentorshipGoals(learnerId, coachId)
 
   const [goalsDraft, setGoalsDraft] = useState('')
   const [goalsReady, setGoalsReady] = useState(false)
@@ -208,9 +205,9 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
       await saveGoals(goalsDraft)
       toast({
         title: 'Goal saved',
-        description: 'Visible in Session Prep for this engagement.',
+        description: 'Learner notified. Also visible in Session Prep and Leadership Council.',
         status: 'success',
-        duration: 3000,
+        duration: 3200,
       })
     } catch (err) {
       toast({

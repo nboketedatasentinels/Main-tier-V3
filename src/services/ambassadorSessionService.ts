@@ -7,6 +7,7 @@ import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
 import { notifyAsLeadership, notifyCoachSlotPublished } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
+import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
 
 export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
 export type CoachBookingStatus = 'booked' | 'attended' | 'no_show' | 'cancelled'
@@ -131,6 +132,8 @@ async function getJourneyContext(
   }
 }
 
+let coachRealtimeChannelSeq = 0
+
 const subscribeQuery = <T>(
   load: () => Promise<T>,
   onUpdate: (value: T) => void,
@@ -153,24 +156,32 @@ const subscribeQuery = <T>(
 
   void run()
 
-  const channel =
-    channelName && table
-      ? supabase
-          .channel(channelName)
-          .on(
-            'postgres_changes',
-            {
-              event: '*',
-              schema: 'public',
-              table,
-              ...(filter ? { filter } : {}),
-            },
-            () => {
-              void run()
-            },
-          )
-          .subscribe()
-      : null
+  // Always unique topic — fixed names like coach-learner-bookings-<id> collide when
+  // AmbassadorDashboard + Session Prep subscribe together and crash with
+  // "cannot add postgres_changes callbacks after subscribe()".
+  let channel: ReturnType<typeof supabase.channel> | null = null
+  if (channelName && table) {
+    try {
+      channel = supabase
+        .channel(`${channelName}_${++coachRealtimeChannelSeq}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table,
+            ...(filter ? { filter } : {}),
+          },
+          () => {
+            void run()
+          },
+        )
+        .subscribe()
+    } catch (err) {
+      console.warn('[ambassadorSessionService] realtime subscribe skipped', err)
+      channel = null
+    }
+  }
 
   const poll = window.setInterval(() => {
     void run()
@@ -381,6 +392,8 @@ export async function bookCoachSlot(params: {
   const { slotId, learnerId, learnerName, companyId } = params
   if (!slotId || !learnerId) throw new Error('Slot and learner ids are required.')
 
+  await assertMandatoryLiftComplete(learnerId)
+
   const { data, error } = await supabase.rpc('book_ambassador_slot', {
     p_slot_id: slotId,
     p_learner_id: learnerId,
@@ -467,8 +480,10 @@ export async function markAttendance(params: {
   bookingId: string
   status: 'attended' | 'no_show'
   markedBy: string
+  /** When true, update attendance status only (no checklist points attempt). */
+  skipPoints?: boolean
 }): Promise<{ pointsAwarded: boolean; pointsAmount?: number; message?: string }> {
-  const { bookingId, status, markedBy } = params
+  const { bookingId, status, markedBy, skipPoints = false } = params
 
   const { data: booking, error: readError } = await supabase
     .from('ambassador_slot_bookings')
@@ -480,35 +495,70 @@ export async function markAttendance(params: {
   if (!booking) throw new Error('Booking not found.')
 
   const currentStatus = booking.status as CoachBookingStatus | undefined
+  const learnerId = pickString(booking.learner_id)
+  const slotTitle = pickString(booking.slot_title)
+  const alreadyAwarded = Boolean(booking.points_awarded)
+
+  // Same status again: allow a points-only retry when attended but not awarded.
   if (currentStatus === status) {
-    return {
-      pointsAwarded: Boolean(booking.points_awarded),
-      pointsAmount: booking.points_awarded ? 2000 : 0,
-      message: booking.points_awarded ? undefined : 'Already marked attended',
+    if (skipPoints || !(status === 'attended' && !alreadyAwarded && learnerId)) {
+      return {
+        pointsAwarded: alreadyAwarded,
+        pointsAmount: alreadyAwarded ? 2000 : 0,
+        message: alreadyAwarded ? undefined : 'Already marked attended',
+      }
+    }
+  } else {
+    if (currentStatus !== 'booked' && currentStatus !== 'attended' && currentStatus !== 'no_show') {
+      throw new Error('Attendance can only be marked on active bookings.')
+    }
+
+    const { error: updateError } = await supabase
+      .from('ambassador_slot_bookings')
+      .update({
+        status,
+        attended_at: status === 'attended' ? new Date().toISOString() : null,
+        marked_by: markedBy,
+        points_awarded: status === 'no_show' ? false : alreadyAwarded,
+        points_awarded_at: status === 'no_show' ? null : booking.points_awarded_at,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', bookingId)
+    if (updateError) throw new Error(updateError.message)
+
+    if (skipPoints) {
+      // Attendance-only update (e.g. purchased-session cap reached).
+      if (learnerId) {
+        await notifyAsLeadership({
+          userId: learnerId,
+          type: 'approval',
+          title: status === 'attended' ? 'Attendance confirmed' : 'Marked as no-show',
+          message:
+            status === 'attended'
+              ? `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}".`
+              : `Your coach recorded a no-show for "${slotTitle ?? 'the session'}".`,
+          relatedId: bookingId,
+          category: 'important_updates',
+          data: {
+            priority: 'push',
+            bookingId,
+            kind: 'ambassador_attendance',
+            pointsAwarded: false,
+            pointsAmount: 0,
+          },
+        }).catch((err) =>
+          console.warn('[CoachSessionService] notify attendance failed:', err),
+        )
+      }
+      return {
+        pointsAwarded: false,
+        pointsAmount: 0,
+        message: status === 'attended' ? 'Attendance saved without points.' : undefined,
+      }
     }
   }
 
-  if (currentStatus !== 'booked' && currentStatus !== 'attended' && currentStatus !== 'no_show') {
-    throw new Error('Attendance can only be marked on active bookings.')
-  }
-
-  const learnerId = pickString(booking.learner_id)
-  const slotTitle = pickString(booking.slot_title)
-  const shouldAttemptAward = status === 'attended' && !booking.points_awarded
-
-  const { error: updateError } = await supabase
-    .from('ambassador_slot_bookings')
-    .update({
-      status,
-      attended_at: status === 'attended' ? new Date().toISOString() : null,
-      marked_by: markedBy,
-      points_awarded: status === 'no_show' ? false : Boolean(booking.points_awarded),
-      points_awarded_at: status === 'no_show' ? null : booking.points_awarded_at,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', bookingId)
-  if (updateError) throw new Error(updateError.message)
-
+  const shouldAttemptAward = !skipPoints && status === 'attended' && !alreadyAwarded
   let pointsAwarded = false
   let pointsAmount = 0
   let awardMessage: string | undefined
@@ -556,7 +606,8 @@ export async function markAttendance(params: {
     }
   }
 
-  if (learnerId) {
+  const statusChanged = currentStatus !== status
+  if (learnerId && statusChanged) {
     await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
@@ -685,6 +736,33 @@ export const subscribeToLearnerBookings = (
     `coach-learner-bookings-${learnerId}`,
     'ambassador_slot_bookings',
     `learner_id=eq.${learnerId}`,
+  )
+
+export const subscribeToAmbassadorBookings = (
+  ambassadorId: string,
+  onUpdate: (bookings: CoachBooking[]) => void,
+  onError?: (error: Error) => void,
+): Unsubscribe =>
+  subscribeQuery(
+    async () => {
+      const { data, error } = await supabase
+        .from('ambassador_slot_bookings')
+        .select('*')
+        .eq('ambassador_id', ambassadorId)
+      if (error) throw new Error(error.message)
+      const bookings = (data ?? []).map((row) => mapBooking(row as Record<string, unknown>))
+      bookings.sort(
+        (a, b) =>
+          (b.slotScheduledAt?.getTime() ?? b.bookedAt?.getTime() ?? 0) -
+          (a.slotScheduledAt?.getTime() ?? a.bookedAt?.getTime() ?? 0),
+      )
+      return bookings
+    },
+    onUpdate,
+    onError,
+    `coach-ambassador-bookings-${ambassadorId}`,
+    'ambassador_slot_bookings',
+    `ambassador_id=eq.${ambassadorId}`,
   )
 
 export const groupBookingsByStatus = (

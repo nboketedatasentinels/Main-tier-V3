@@ -169,7 +169,9 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
               />
               {model.liftPending ? (
                 <Text fontSize="12px" color="#6B6579" mt={2} lineHeight="1.55">
-                  Waiting on a completed LIFT Index for this leader.
+                  {isLeader
+                    ? 'LIFT is required on 3-month and longer journeys. Complete it to unlock full Session Prep for you and your mentor/coach.'
+                    : 'Waiting on a completed LIFT Index for this leader. On 3M+ journeys it is compulsory before meaningful prep.'}
                 </Text>
               ) : null}
               {isLeader && model.pillars ? (

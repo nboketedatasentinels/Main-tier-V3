@@ -46,7 +46,6 @@ import {
   MessageCircle,
   MessageSquare,
   Wrench,
-  Bell,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useProgrammeNotificationSync } from '@/hooks/useProgrammeNotificationSync'
@@ -273,7 +272,6 @@ export const MainLayout: React.FC = () => {
         items: [
           { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays, isPrimary: true },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, isPrimary: true },
-          { label: 'Notifications', path: '/app/notifications', icon: Bell, isPrimary: true },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
           { label: 'Leadership Council', path: '/app/leadership-council', icon: Gavel },

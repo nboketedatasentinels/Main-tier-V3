@@ -14,12 +14,14 @@ import {
   VStack,
 } from '@chakra-ui/react'
 import { Bell, Sparkles } from 'lucide-react'
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { NotificationItem } from './NotificationItem'
+import { NotificationDetailModal } from './NotificationDetailModal'
 import { sortNotificationsByDate } from './notificationMeta'
 import { useNotifications } from '@/hooks/useNotifications'
-import { getNotificationsPath } from '@/utils/notificationRouting'
+import { getNotificationsPath, hasNotificationsInbox } from '@/utils/notificationRouting'
+import type { NotificationRecord } from '@/types/notifications'
 
 export const NotificationDropdown = () => {
   const {
@@ -35,6 +37,7 @@ export const NotificationDropdown = () => {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const navigate = useNavigate()
   const location = useLocation()
+  const [detail, setDetail] = useState<NotificationRecord | null>(null)
 
   const sortedNotifications = useMemo(
     () => sortNotificationsByDate(notifications),
@@ -47,129 +50,137 @@ export const NotificationDropdown = () => {
   }
 
   return (
-    <Popover
-      placement="bottom-end"
-      closeOnBlur
-      isOpen={isOpen}
-      onOpen={onOpen}
-      onClose={onClose}
-    >
-      <PopoverTrigger>
-        <Box position="relative">
-          <IconButton
-            aria-label="Notifications"
-            icon={<Bell size={20} color="black" />}
-            variant="ghost"
-            _hover={{ bg: 'gray.100' }}
-          />
-          {hasUnread && (
-            <Box
-              position="absolute"
-              top={-1}
-              right={-1}
-              bg="red.500"
-              color="white"
-              borderRadius="full"
-              fontSize="10px"
-              fontWeight="bold"
-              w="18px"
-              h="18px"
-              display="flex"
-              alignItems="center"
-              justifyContent="center"
-            >
-              {unreadCount}
-            </Box>
-          )}
-        </Box>
-      </PopoverTrigger>
-      <PopoverContent w={{ base: '320px', md: '400px' }} shadow="lg" borderColor="border.control">
-        <PopoverArrow />
-        <PopoverBody p={0}>
-          <VStack align="stretch" spacing={0}>
-            {/* Simplified Header */}
-            <HStack justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="border.control">
-              <HStack spacing={2}>
-                <Text fontWeight="semibold" color="gray.900">Notifications</Text>
-                {hasUnread && (
-                  <Badge
-                    bg="brand.primary"
-                    color="white"
-                    borderRadius="full"
-                    fontSize="xs"
-                    px={2}
-                  >
-                    {unreadCount}
-                  </Badge>
-                )}
-              </HStack>
-              <Text
-                as="button"
-                fontSize="sm"
-                color="gray.500"
-                cursor="pointer"
-                _hover={{ color: 'brand.primary', textDecoration: 'underline' }}
-                onClick={markAllAsRead}
+    <>
+      <Popover
+        placement="bottom-end"
+        closeOnBlur
+        isOpen={isOpen}
+        onOpen={onOpen}
+        onClose={onClose}
+      >
+        <PopoverTrigger>
+          <Box position="relative">
+            <IconButton
+              aria-label="Notifications"
+              icon={<Bell size={20} color="black" />}
+              variant="ghost"
+              _hover={{ bg: 'gray.100' }}
+            />
+            {hasUnread && (
+              <Box
+                position="absolute"
+                top={-1}
+                right={-1}
+                bg="red.500"
+                color="white"
+                borderRadius="full"
+                fontSize="10px"
+                fontWeight="bold"
+                w="18px"
+                h="18px"
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
               >
-                Mark all as read
-              </Text>
-            </HStack>
-
-            {/* Notification List */}
-            <Box maxH="400px" overflowY="auto" px={3} py={2}>
-              {loading && (
-                <HStack justify="center" py={8}>
-                  <Spinner color="text.muted" size="sm" />
-                  <Text color="gray.500" fontSize="sm">Loading...</Text>
+                {unreadCount}
+              </Box>
+            )}
+          </Box>
+        </PopoverTrigger>
+        <PopoverContent w={{ base: '320px', md: '400px' }} shadow="lg" borderColor="border.control">
+          <PopoverArrow />
+          <PopoverBody p={0}>
+            <VStack align="stretch" spacing={0}>
+              <HStack justify="space-between" px={4} py={3} borderBottomWidth="1px" borderColor="border.control">
+                <HStack spacing={2}>
+                  <Text fontWeight="semibold" color="gray.900">Notifications</Text>
+                  {hasUnread && (
+                    <Badge
+                      bg="brand.primary"
+                      color="white"
+                      borderRadius="full"
+                      fontSize="xs"
+                      px={2}
+                    >
+                      {unreadCount}
+                    </Badge>
+                  )}
                 </HStack>
-              )}
+                <Text
+                  as="button"
+                  fontSize="sm"
+                  color="gray.500"
+                  cursor="pointer"
+                  _hover={{ color: 'brand.primary', textDecoration: 'underline' }}
+                  onClick={markAllAsRead}
+                >
+                  Mark all as read
+                </Text>
+              </HStack>
 
-              {!loading && !sortedNotifications.length && (
-                <VStack py={8} spacing={2} color="gray.500">
-                  <Sparkles size={18} />
-                  <Text fontWeight="medium" fontSize="sm">You're all caught up</Text>
-                  <Text fontSize="xs" textAlign="center">
-                    No notifications to show.
-                  </Text>
+              <Box maxH="400px" overflowY="auto" px={3} py={2}>
+                {loading && (
+                  <HStack justify="center" py={8}>
+                    <Spinner color="text.muted" size="sm" />
+                    <Text color="gray.500" fontSize="sm">Loading...</Text>
+                  </HStack>
+                )}
+
+                {!loading && !sortedNotifications.length && (
+                  <VStack py={8} spacing={2} color="gray.500">
+                    <Sparkles size={18} />
+                    <Text fontWeight="medium" fontSize="sm">You're all caught up</Text>
+                    <Text fontSize="xs" textAlign="center">
+                      No notifications to show.
+                    </Text>
+                  </VStack>
+                )}
+
+                <VStack spacing={2} align="stretch">
+                  {sortedNotifications.map((notification) => (
+                    <NotificationItem
+                      key={notification.id}
+                      notification={notification}
+                      onMarkRead={() => markNotificationAsRead(notification.id)}
+                      onAction={(action) => {
+                        if (!action) return
+                        updateNotificationAction(notification, action)
+                      }}
+                      onClose={onClose}
+                      onOpenDetail={setDetail}
+                    />
+                  ))}
                 </VStack>
+              </Box>
+
+              {hasNotificationsInbox(location.pathname) && (
+                <Box px={4} py={3} borderTopWidth="1px" borderColor="border.control">
+                  <Text
+                    as="button"
+                    type="button"
+                    w="full"
+                    textAlign="center"
+                    fontSize="sm"
+                    fontWeight="semibold"
+                    color="brand.primary"
+                    cursor="pointer"
+                    _hover={{ textDecoration: 'underline' }}
+                    onClick={openNotificationsPage}
+                  >
+                    View all notifications
+                  </Text>
+                </Box>
               )}
+            </VStack>
+          </PopoverBody>
+        </PopoverContent>
+      </Popover>
 
-              <VStack spacing={2} align="stretch">
-                {sortedNotifications.map((notification) => (
-                  <NotificationItem
-                    key={notification.id}
-                    notification={notification}
-                    onMarkRead={() => markNotificationAsRead(notification.id)}
-                    onAction={(action) => {
-                      if (!action) return
-                      updateNotificationAction(notification, action)
-                    }}
-                    onClose={onClose}
-                  />
-                ))}
-              </VStack>
-            </Box>
-
-            {/* Footer - the dropdown is a preview, the page is the full inbox */}
-            <Box px={4} py={3} borderTopWidth="1px" borderColor="border.control">
-              <Text
-                as="button"
-                type="button"
-                w="full"
-                textAlign="center"
-                fontSize="sm"
-                fontWeight="semibold"
-                color="brand.primary"
-                cursor="pointer"
-                _hover={{ textDecoration: 'underline' }}
-                onClick={openNotificationsPage}
-              >
-                View all notifications
-              </Text>
-            </Box>
-          </VStack>
-        </PopoverBody>
-      </PopoverContent>
-    </Popover>
+      <NotificationDetailModal
+        notification={detail}
+        isOpen={Boolean(detail)}
+        onClose={() => setDetail(null)}
+      />
+    </>
   )
 }

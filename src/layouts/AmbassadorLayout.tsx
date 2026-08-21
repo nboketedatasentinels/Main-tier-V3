@@ -26,6 +26,7 @@ import {
 } from '@chakra-ui/react'
 import { CalendarClock, Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 import { useAuth } from '@/hooks/useAuth'
@@ -401,6 +402,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
         isOpen={showGuidelinesModal}
         onAcknowledged={() => setShowGuidelinesModal(false)}
       />
+      <ProgrammePushPopup />
     </Flex>
   )
 }

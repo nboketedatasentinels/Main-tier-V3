@@ -5,6 +5,8 @@
 import { supabase } from '@/services/supabase'
 import type { ItemScores, IntakeAnswers, LiftResult } from '@/utils/liftScoring'
 import type { PillarKey, Archetype, LeadTier } from '@/config/liftAssessment'
+import { isJourneyType } from '@/utils/journeyType'
+import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
 
 export interface LiftAssessmentRow {
   uid: string
@@ -72,6 +74,41 @@ export const hasCompletedLiftAssessment = async (uid: string): Promise<boolean> 
   return Boolean(data)
 }
 
+/**
+ * Throws when a 3M+ learner tries to use mentor/coach flows without LIFT.
+ * Soft no-op when LIFT is not required for their role/journey.
+ */
+export const assertMandatoryLiftComplete = async (learnerId: string): Promise<void> => {
+  if (!learnerId) return
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('role, journey_type, data')
+    .eq('id', learnerId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return
+
+  const nested = (data.data as Record<string, unknown> | null) ?? {}
+  const rawJourney = (data.journey_type as string | null) ?? (nested.journeyType as string | null)
+  const journeyType = isJourneyType(rawJourney) ? rawJourney : null
+
+  if (
+    !requiresMandatoryLiftAssessment({
+      role: data.role as string | null,
+      journeyType,
+    })
+  ) {
+    return
+  }
+
+  const done = await hasCompletedLiftAssessment(learnerId)
+  if (!done) {
+    throw new Error(
+      'Complete your LIFT assessment before booking or requesting mentor and coach sessions.',
+    )
+  }
+}
+
 /** Fetch the signed-in user's own assessment (for the read-only results page). */
 export const getOwnLiftAssessment = async (uid: string): Promise<LiftAssessmentRow | null> => {
   const { data, error } = await supabase
@@ -97,7 +134,19 @@ export const getSessionPrepLift = async (
   const { data, error } = await supabase.rpc('get_session_prep_lift', {
     p_learner_id: learnerId,
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    // RPC missing (404) or not deployed yet — Session Prep should still load.
+    const msg = (error.message || '').toLowerCase()
+    if (
+      msg.includes('404') ||
+      msg.includes('not find') ||
+      msg.includes('does not exist') ||
+      error.code === 'PGRST202'
+    ) {
+      return null
+    }
+    throw new Error(error.message)
+  }
   const payload = (data ?? {}) as {
     ok?: boolean
     error?: string

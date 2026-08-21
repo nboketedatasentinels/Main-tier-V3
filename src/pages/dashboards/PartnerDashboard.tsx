@@ -698,11 +698,6 @@ export const PartnerDashboard: React.FC = () => {
       && overviewMetrics.managedCompanies === 0
     return (
       <Stack spacing={8}>
-        {selectedOrgId ? (
-          <Flex justify="flex-end">
-            <PreCourseSurveyButton size="sm" kind="post" label="Post assessments" openPage={false} />
-          </Flex>
-        ) : null}
         <Card
           {...surfaceCardProps}
           role="button"
@@ -811,74 +806,6 @@ export const PartnerDashboard: React.FC = () => {
             </HStack>
           </CardBody>
         </Card>
-
-        {selectedOrgId && profile?.id ? (
-          <Card {...surfaceCardProps} id={PRE_COURSE_SURVEY_SECTION_ID} scrollMarginTop={4}>
-            <CardBody p={{ base: 4, md: 6 }}>
-              <HStack spacing={3} mb={4} align="flex-start" justify="space-between" flexWrap="wrap">
-                <HStack spacing={3} align="flex-start">
-                  <IconTile>
-                    <ClipboardCheck size={18} />
-                  </IconTile>
-                  <Stack spacing={0.5}>
-                    <Text
-                      fontSize="xs"
-                      letterSpacing="0.06em"
-                      textTransform="uppercase"
-                      color="brand.subtleText"
-                      fontWeight="semibold"
-                    >
-                      Course assessments
-                    </Text>
-                    <Text fontWeight="bold" color="brand.text">
-                      Post-course assessments for this organisation
-                    </Text>
-                    <Text fontSize="sm" color="brand.subtleText">
-                      Partners complete Post only
-                      {orgProgrammeCourseTitles.length
-                        ? ` on admin-assigned courses: ${orgProgrammeCourseTitles.join(', ')}.`
-                        : ' on courses the admin assigned on this organisation programme.'}
-                    </Text>
-                  </Stack>
-                </HStack>
-                <PreCourseSurveyButton
-                  size="sm"
-                  kind="post"
-                  label="Post assessments"
-                  onClick={() =>
-                    document
-                      .getElementById(PRE_COURSE_SURVEY_SECTION_ID)
-                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                  }
-                />
-              </HStack>
-
-              {courseAssessmentLearners.length > 0 ? (
-                <RateLearnerCourseAssessment
-                  respondentId={profile.id}
-                  raterRole="partner"
-                  learners={courseAssessmentLearners}
-                  forcedKind="post"
-                  allowedCourseTitles={orgProgrammeCourseTitles}
-                />
-              ) : (
-                <Text fontSize="sm" color="brand.subtleText">
-                  No learners in this organisation yet.
-                </Text>
-              )}
-
-              <Button
-                mt={4}
-                size="sm"
-                variant="outline"
-                borderColor="border.control"
-                onClick={() => navigate('/partner/course-surveys')}
-              >
-                Open full assessment workspace
-              </Button>
-            </CardBody>
-          </Card>
-        ) : null}
 
         {journeyProgress && journeyProgress.unconfigured && (
           <Box
@@ -1428,6 +1355,74 @@ export const PartnerDashboard: React.FC = () => {
           </CardBody>
         </Card>
         )}
+
+        {selectedOrgId && profile?.id ? (
+          <Card {...surfaceCardProps} id={PRE_COURSE_SURVEY_SECTION_ID} scrollMarginTop={4}>
+            <CardBody p={{ base: 4, md: 6 }}>
+              <HStack spacing={3} mb={4} align="flex-start" justify="space-between" flexWrap="wrap">
+                <HStack spacing={3} align="flex-start">
+                  <IconTile>
+                    <ClipboardCheck size={18} />
+                  </IconTile>
+                  <Stack spacing={0.5}>
+                    <Text
+                      fontSize="xs"
+                      letterSpacing="0.06em"
+                      textTransform="uppercase"
+                      color="brand.subtleText"
+                      fontWeight="semibold"
+                    >
+                      Course assessments
+                    </Text>
+                    <Text fontWeight="bold" color="brand.text">
+                      Post-course assessments for this organisation
+                    </Text>
+                    <Text fontSize="sm" color="brand.subtleText">
+                      Partners complete Post only
+                      {orgProgrammeCourseTitles.length
+                        ? ` on admin-assigned courses: ${orgProgrammeCourseTitles.join(', ')}.`
+                        : ' on courses the admin assigned on this organisation programme.'}
+                    </Text>
+                  </Stack>
+                </HStack>
+                <PreCourseSurveyButton
+                  size="sm"
+                  kind="post"
+                  label="Post assessments"
+                  onClick={() =>
+                    document
+                      .getElementById(PRE_COURSE_SURVEY_SECTION_ID)
+                      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  }
+                />
+              </HStack>
+
+              {courseAssessmentLearners.length > 0 ? (
+                <RateLearnerCourseAssessment
+                  respondentId={profile.id}
+                  raterRole="partner"
+                  learners={courseAssessmentLearners}
+                  forcedKind="post"
+                  allowedCourseTitles={orgProgrammeCourseTitles}
+                />
+              ) : (
+                <Text fontSize="sm" color="brand.subtleText">
+                  No learners in this organisation yet.
+                </Text>
+              )}
+
+              <Button
+                mt={4}
+                size="sm"
+                variant="outline"
+                borderColor="border.control"
+                onClick={() => navigate('/partner/course-surveys')}
+              >
+                Open full assessment workspace
+              </Button>
+            </CardBody>
+          </Card>
+        ) : null}
       </Stack>
     )
   }
@@ -2084,7 +2079,7 @@ export const PartnerDashboard: React.FC = () => {
 
   const handleNavigate = (key: string) => {
     if (key === 'notifications') {
-      navigate('/partner/notifications')
+      setActivePage('overview')
       return
     }
     if (key === 'partner-assignment') {

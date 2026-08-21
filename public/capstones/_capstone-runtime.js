@@ -213,12 +213,14 @@ async function getAccessToken() {
 async function fetchOrganizationId(uid, token) {
   try {
     const res = await sbFetch(
-      `/rest/v1/profiles?id=eq.${uid}&select=organization_id`,
+      `/rest/v1/profiles?id=eq.${uid}&select=organization_id,company_id`,
       token,
     )
     if (!res.ok) return null
     const rows = await res.json()
-    return rows?.[0]?.organization_id ?? null
+    const row = rows?.[0]
+    if (!row) return null
+    return row.organization_id || row.company_id || null
   } catch {
     return null
   }

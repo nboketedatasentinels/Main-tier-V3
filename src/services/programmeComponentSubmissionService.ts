@@ -48,20 +48,9 @@ export interface ProgrammeComponentSubmission {
 /**
  * Subscribe to all submissions for a set of organization ids.
  *
- * TEMPORARILY DISABLED - returns an empty result without subscribing.
- *
- * Programme submissions are still a Firestore-only feature: learners write them
- * from the static capstone runtime (public/capstones/_capstone-runtime.js) using
- * a Firebase auth session. After the app's auth cutover (Firebase -> Supabase)
- * the React dashboard has no Firebase session, so the old
- * `onSnapshot(programmeComponentSubmissions)` listener failed with "Missing or
- * insufficient permissions" on every (re)subscribe and flooded the console.
- *
- * Rather than churn a dead Firestore listener, we no-op here and let the page
- * render its empty state. The follow-up is to move this collection to Supabase
- * (new table + RLS via `is_partner_or_admin()`, and migrate the capstone writer)
- * - mirror partnerSupabaseReads / the interventions migration (0024). The write
- * helpers below are left intact for that migration.
+ * Live reads come from Supabase `programme_component_submissions` (RLS
+ * `pcs_select`: partners/admins can read). Learner email/name are resolved
+ * from `profiles`. Capstone HTML forms write via `/capstones/_capstone-runtime.js`.
  */
 type Raw = Record<string, unknown>
 

@@ -73,6 +73,8 @@ import { LearnerAmbassadorBookings } from '@/components/learner/LearnerAmbassado
 import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
 import { getDisplayName } from '@/utils/displayName'
 import { getJourneyLabel, isLeadershipCouncilJourney, isPartnerVisibleJourney } from '@/utils/journeyType'
+import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
+import { hasCompletedLiftAssessment } from '@/services/liftAssessmentService'
 import type { UserProfileExtended } from '@/services/userProfileService'
 
 interface LeadershipProfile extends UserProfileExtended {
@@ -176,6 +178,32 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   const [goalsDraft, setGoalsDraft] = useState('')
   const [goalsInitialized, setGoalsInitialized] = useState(false)
+  const [liftCompleted, setLiftCompleted] = useState<boolean | null>(null)
+
+  const liftRequired = requiresMandatoryLiftAssessment({
+    role: profile?.role,
+    journeyType: profile?.journeyType,
+  })
+
+  useEffect(() => {
+    let active = true
+    if (!liftRequired || !profile?.id) {
+      setLiftCompleted(true)
+      return
+    }
+    setLiftCompleted(null)
+    hasCompletedLiftAssessment(profile.id)
+      .then((done) => {
+        if (active) setLiftCompleted(done)
+      })
+      .catch(() => {
+        // Fail open for scheduling checks if the lookup errors.
+        if (active) setLiftCompleted(true)
+      })
+    return () => {
+      active = false
+    }
+  }, [liftRequired, profile?.id])
 
   const sessionsModal = useDisclosure()
   const scheduleModal = useDisclosure()
@@ -204,18 +232,23 @@ export const LeadershipCouncilPage: React.FC = () => {
     hasOrganization &&
     organizationReady &&
     supportAssignmentsReady &&
-    !assignmentsLoading
+    !assignmentsLoading &&
+    (!liftRequired || liftCompleted === true)
   const scheduleDisabledReason = !isLeadershipEligible
     ? journeyLockReason
-    : !hasOrganization
-      ? 'Link your account to an organization to unlock mentor scheduling.'
-      : !organizationReady
-        ? 'We are still confirming your organization details.'
-        : !supportAssignmentsReady
-          ? 'Support assignments are still loading.'
-          : !mentorProfile
-            ? 'A mentor must be assigned before scheduling.'
-            : null
+    : liftRequired && liftCompleted === false
+      ? 'Complete your LIFT assessment first — it unlocks mentor and coach sessions.'
+      : liftRequired && liftCompleted === null
+        ? 'Checking your LIFT assessment…'
+        : !hasOrganization
+          ? 'Link your account to an organization to unlock mentor scheduling.'
+          : !organizationReady
+            ? 'We are still confirming your organization details.'
+            : !supportAssignmentsReady
+              ? 'Support assignments are still loading.'
+              : !mentorProfile
+                ? 'A mentor must be assigned before scheduling.'
+                : null
 
   const {
     goals: savedGoals,
@@ -225,9 +258,7 @@ export const LeadershipCouncilPage: React.FC = () => {
     error: goalsError,
     save: saveGoals,
   } = useMentorshipGoals(
-    isLeadershipEligible && (mentorProfile?.id || ambassadorProfile?.id)
-      ? profile?.id ?? null
-      : null,
+    isLeadershipEligible ? profile?.id ?? null : null,
     mentorProfile?.id ?? null,
   )
 
@@ -613,6 +644,19 @@ export const LeadershipCouncilPage: React.FC = () => {
         </HStack>
       )}
 
+      {isLeadershipEligible && liftRequired && liftCompleted === false && (
+        <Alert status="warning" borderRadius="xl" variant="left-accent">
+          <AlertIcon />
+          <Box>
+            <AlertTitle>LIFT assessment required</AlertTitle>
+            <AlertDescription>
+              Complete your LIFT Index to unlock mentor scheduling, coach bookings, and Session Prep
+              for your leadership team.
+            </AlertDescription>
+          </Box>
+        </Alert>
+      )}
+
       <Grid templateColumns="1fr" gap={6} alignItems="start">
         <GridItem>
           <Tabs
@@ -957,6 +1001,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                           learnerId={profile.id}
                           learnerName={displayNameForProfile(profile)}
                           companyId={profile.companyId ?? null}
+                          bookingLockedReason={
+                            liftRequired && liftCompleted === false
+                              ? 'Complete your LIFT assessment first to book coaching sessions.'
+                              : liftRequired && liftCompleted === null
+                                ? 'Checking your LIFT assessment…'
+                                : null
+                          }
                         />
                       </>
                     )}

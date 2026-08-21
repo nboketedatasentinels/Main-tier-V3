@@ -19,8 +19,12 @@ export const resolveMentorNavDestination = (key: string): MentorNavDestination =
   if (key === 'guidelines') {
     return { kind: 'route', path: '/mentor/guidelines' }
   }
+  if (key === 'session-points') {
+    return { kind: 'route', path: '/mentor/session-points' }
+  }
+  // Notifications live in the bell only (no dedicated mentor page).
   if (key === 'notifications') {
-    return { kind: 'route', path: '/mentor/notifications' }
+    return { kind: 'route', path: '/mentor/dashboard' }
   }
   // Legacy Pre nav → Post assessments section
   if (key === 'pre-assessments') {

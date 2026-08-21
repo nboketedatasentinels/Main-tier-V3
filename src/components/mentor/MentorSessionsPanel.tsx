@@ -232,7 +232,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
     }
     setScheduling(true)
     try {
-      await createMentorScheduledSession({
+      const result = await createMentorScheduledSession({
         learnerId: mentee.id,
         mentorId,
         topic: scheduleTopic,
@@ -241,10 +241,20 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
         learnerName: mentee.name,
         mentorName: mentorName ?? undefined,
       })
+      if (result.mailtoHref) {
+        try {
+          window.location.href = result.mailtoHref
+        } catch {
+          // no mail client
+        }
+      }
       toast({
         status: 'success',
         title: 'Meeting scheduled',
-        description: `${mentee.name} will see this in their notifications.`,
+        description: result.learnerEmail
+          ? `In-app notice sent. Your email app opened so you can send the invite to ${mentee.name}.`
+          : `In-app notice sent to ${mentee.name}. Add their email on profile to send via mail.`,
+        duration: 5000,
       })
       setScheduleTopic('Mentorship session')
       setScheduleLink('')

@@ -268,7 +268,12 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
         meetingLink,
         location,
       })
-      toast({ title: 'Session created', status: 'success' })
+      toast({
+        title: 'Session created',
+        description: 'Learners got an in-app notice. They can open it in email from the popup.',
+        status: 'success',
+        duration: 4500,
+      })
       resetForm()
       createModal.onClose()
     } catch (err) {

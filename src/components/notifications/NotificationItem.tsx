@@ -9,8 +9,17 @@ import {
 } from '@chakra-ui/react'
 import { CheckCheck, ExternalLink, X } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 import { NotificationRecord } from '@/types/notifications'
-import { getNotificationDetailPath } from '@/utils/notificationRouting'
+import {
+  getNotificationDetailPath,
+  hasNotificationsInbox,
+} from '@/utils/notificationRouting'
+import {
+  buildMeetingMailtoHref,
+  isMeetingNotification,
+  openMeetingMailto,
+} from '@/utils/meetingInvite'
 import {
   isNotificationRead,
   notificationIcon,
@@ -23,6 +32,8 @@ interface NotificationItemProps {
   onMarkRead: () => void
   onAction?: (action: NotificationRecord['action_response']) => void
   onClose?: () => void
+  /** When there is no inbox page, open the detail popup instead of navigating. */
+  onOpenDetail?: (notification: NotificationRecord) => void
 }
 
 const stopClick = (e: React.MouseEvent) => {
@@ -35,22 +46,48 @@ export const NotificationItem = ({
   onMarkRead,
   onAction,
   onClose,
+  onOpenDetail,
 }: NotificationItemProps) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { profile } = useAuth()
 
   const isRead = isNotificationRead(notification)
   const timestamp = resolveTimestamp(notification.created_at)
   const hasAction =
     notification.type === 'challenge_request' && !notification.action_response
-
-  // The dropdown is a preview only - every notification opens on the full
-  // notifications page, which shows the whole message instead of two clamped
-  // lines. Any link the notification carries is offered there as an action.
-  const destination = resolveNotificationDestination(notification)
+  const meeting = isMeetingNotification(notification)
+  const destination = meeting ? null : resolveNotificationDestination(notification)
+  const hasInbox = hasNotificationsInbox(location.pathname)
 
   const handleOpen = () => {
     onClose?.()
+    onMarkRead()
+    if (meeting) {
+      const md = (notification.metadata ?? {}) as Record<string, unknown>
+      const stored = typeof md.mailtoHref === 'string' ? md.mailtoHref : null
+      openMeetingMailto(
+        stored ||
+          buildMeetingMailtoHref({
+            to: profile?.email ?? null,
+            subject: notification.title || 'Meeting invitation',
+            body: notification.message,
+          }),
+      )
+      return
+    }
+    if (destination?.kind === 'external') {
+      window.open(destination.url, '_blank', 'noopener,noreferrer')
+      return
+    }
+    if (destination?.kind === 'internal') {
+      navigate(destination.url)
+      return
+    }
+    if (!hasInbox) {
+      onOpenDetail?.(notification)
+      return
+    }
     navigate(getNotificationDetailPath(location.pathname, notification.id))
   }
 
@@ -120,7 +157,7 @@ export const NotificationItem = ({
             mt={1}
             alignSelf="flex-start"
           >
-            Read message →
+            {meeting ? 'OK → open email' : hasInbox ? 'Read message →' : 'View →'}
           </Text>
 
           {timestamp && (

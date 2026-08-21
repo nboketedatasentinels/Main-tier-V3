@@ -34,6 +34,8 @@ interface LearnerAmbassadorBookingsProps {
   /** When the coach is invited but hasn't joined yet, skip the dead Firestore load. */
   coachPending?: boolean
   pendingCoachEmail?: string | null
+  /** When set, booking actions are disabled (e.g. LIFT not completed). */
+  bookingLockedReason?: string | null
 }
 
 const bookingStatusBadge = (booking: CoachBooking): { label: string; scheme: string } => {
@@ -57,6 +59,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
   companyId,
   coachPending = false,
   pendingCoachEmail = null,
+  bookingLockedReason = null,
 }) => {
   const toast = useToast()
   // Don't hit Firestore when the coach hasn't joined - those collections are
@@ -118,6 +121,14 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
   )
 
   const handleBookSlot = async (slot: CoachSlot) => {
+    if (bookingLockedReason) {
+      toast({
+        title: 'Booking locked',
+        description: bookingLockedReason,
+        status: 'warning',
+      })
+      return
+    }
     setBookingBusyId(slot.id)
     try {
       await bookCoachSlot({
@@ -198,7 +209,7 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
         colorScheme="primary"
         onClick={() => handleBookSlot(slot)}
         isLoading={bookingBusyId === slot.id}
-        isDisabled={bookingBusyId !== null}
+        isDisabled={bookingBusyId !== null || Boolean(bookingLockedReason)}
       >
         Book slot
       </Button>
@@ -313,6 +324,12 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
             Book a slot - your coach will confirm attendance and award points.
           </Text>
         </HStack>
+        {bookingLockedReason && (
+          <Alert status="warning" rounded="lg" mb={3}>
+            <AlertIcon />
+            <AlertDescription>{bookingLockedReason}</AlertDescription>
+          </Alert>
+        )}
         {loading && (
           <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="lg">
             <Spinner size="sm" />

@@ -9,6 +9,13 @@ describe('resolveMentorNavDestination', () => {
     })
   })
 
+  it('routes session points to the award page', () => {
+    expect(resolveMentorNavDestination('session-points')).toEqual({
+      kind: 'route',
+      path: '/mentor/session-points',
+    })
+  })
+
   it('keeps dashboard section keys on the dashboard', () => {
     expect(resolveMentorNavDestination('mentees')).toEqual({
       kind: 'section',

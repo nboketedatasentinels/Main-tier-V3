@@ -23,6 +23,7 @@ import { CalendarClock, LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { MentorGuidelinesModal } from '@/components/mentor/MentorGuidelinesModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
+import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { buildMentorNavItems, NavigationSection } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
@@ -376,6 +377,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           </HStack>
         </Box>
       )}
+      <ProgrammePushPopup />
     </Flex>
   )
 }
