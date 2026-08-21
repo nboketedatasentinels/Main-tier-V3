@@ -51,6 +51,8 @@ const buildDetailView = (organization: {
   createdAt?: string | Date | { toDate?: () => Date }
   updatedAt?: string | Date | { toDate?: () => Date }
   transformationPartnerId?: string | null
+  journeyType?: string | null
+  organizationJourneyType?: string | null
   leadershipUpdatedAt?: string | Date | { toDate?: () => Date }
   leadershipUpdatedBy?: string
   assignedMentorId?: string | null
@@ -77,6 +79,9 @@ const buildDetailView = (organization: {
   programDuration: organization.programDuration,
   description: organization.description,
   transformationPartnerId: organization.transformationPartnerId ?? null,
+  journeyType: (organization.journeyType ||
+    organization.organizationJourneyType ||
+    null) as OrganizationDetailView['journeyType'],
   leadershipUpdatedAt: normalizeDate(organization.leadershipUpdatedAt as string | Date | undefined),
   leadershipUpdatedBy: organization.leadershipUpdatedBy,
   assignedMentorId: organization.assignedMentorId ?? null,

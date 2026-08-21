@@ -37,6 +37,7 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
   useDisclosure,
   useToast,
   Wrap,
@@ -58,6 +59,11 @@ import {
   resolveProgramCadence,
   resolveProgramMonthCount,
 } from '@/utils/monthlyCourseAssignments'
+import {
+  evaluateAdminFollowUpRisk,
+  followUpIssuesFromRisk,
+  pendingInviteFollowUpRisk,
+} from '@/utils/adminFollowUpRisk'
 
 const formatDate = (value?: string) => {
   if (!value) return 'Not available'
@@ -180,16 +186,38 @@ export const OrganizationDetailPage: React.FC = () => {
 
   const followUp = useDisclosure()
   const [followUpUser, setFollowUpUser] = useState<OrganizationUserProfile | null>(null)
+  const [followUpInvite, setFollowUpInvite] = useState<OrganizationInvitationProfile | null>(null)
   const [followUpIssues, setFollowUpIssues] = useState<string[]>([])
   const [followUpReason, setFollowUpReason] = useState('')
   const [followUpDeadline, setFollowUpDeadline] = useState('')
   const [followUpSubmitting, setFollowUpSubmitting] = useState(false)
 
+  const journeyRiskOpts = useMemo(
+    () => ({
+      journeyType: organization?.journeyType ?? null,
+      cohortStartDate: organization?.cohortStartDate ?? organization?.programStart ?? null,
+    }),
+    [organization],
+  )
+
   const openFollowUp = (userRow: OrganizationUserProfile) => {
+    const risk = evaluateAdminFollowUpRisk(userRow, journeyRiskOpts)
+    if (!risk.atRisk) return
     setFollowUpUser(userRow)
-    setFollowUpIssues([])
+    setFollowUpInvite(null)
+    setFollowUpIssues(followUpIssuesFromRisk(risk))
     setFollowUpReason('')
-    // Default the follow-up deadline to one week out (yyyy-mm-dd for the date input).
+    const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
+    followUp.onOpen()
+  }
+
+  const openFollowUpForInvite = (invite: OrganizationInvitationProfile) => {
+    const risk = pendingInviteFollowUpRisk()
+    setFollowUpUser(null)
+    setFollowUpInvite(invite)
+    setFollowUpIssues(followUpIssuesFromRisk(risk))
+    setFollowUpReason(`Pending invite · ${invite.email || invite.name}`)
     const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
     setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
     followUp.onOpen()
@@ -202,7 +230,9 @@ export const OrganizationDetailPage: React.FC = () => {
   }
 
   const submitFollowUp = async () => {
-    if (!followUpUser) return
+    const subjectName = followUpUser?.name || followUpInvite?.name || 'Learner'
+    const subjectId = followUpUser?.id || followUpInvite?.id || null
+    if (!followUpUser && !followUpInvite) return
     // Compose a human-readable reason from the selected issues plus any note.
     const note = followUpReason.trim()
     const summary =
@@ -217,7 +247,7 @@ export const OrganizationDetailPage: React.FC = () => {
     setFollowUpSubmitting(true)
     try {
       const interventionId = await createIntervention({
-        name: followUpUser.name,
+        name: subjectName,
         target: organization?.name || organization?.code || 'Organization',
         reason: summary,
         status: 'watch',
@@ -225,7 +255,8 @@ export const OrganizationDetailPage: React.FC = () => {
           ? new Date(followUpDeadline).toISOString()
           : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         organizationCode: organization?.code ?? null,
-        userId: followUpUser.id,
+        // Pending invites have no profile yet — leave uid null.
+        userId: followUpUser?.id ?? null,
         partnerId: recipientId,
         riskVerdicts: followUpIssues,
         assignedAdminName: profile?.fullName || profile?.email || 'Admin',
@@ -240,13 +271,15 @@ export const OrganizationDetailPage: React.FC = () => {
             type: 'partner_follow_up',
             category: 'intervention',
             title: 'Follow-up requested',
-            message: `${adminName} asked you to follow up with ${followUpUser.name}${
+            message: `${adminName} asked you to follow up with ${subjectName}${
               followUpIssues.length ? `: ${followUpIssues.join(', ')}` : ''
             }${note ? ` - ${note}` : ''}`,
-            relatedId: interventionId || followUpUser.id,
+            relatedId: interventionId || subjectId,
             data: {
-              learnerId: followUpUser.id,
-              learnerName: followUpUser.name,
+              learnerId: followUpUser?.id ?? null,
+              learnerName: subjectName,
+              inviteId: followUpInvite?.id ?? null,
+              inviteEmail: followUpInvite?.email ?? null,
               organizationCode: organization?.code ?? null,
               organizationName: organization?.name ?? null,
               issues: followUpIssues,
@@ -264,8 +297,9 @@ export const OrganizationDetailPage: React.FC = () => {
         adminId: user?.uid,
         adminName: profile?.fullName || profile?.email,
         metadata: {
-          userId: followUpUser.id,
-          userName: followUpUser.name,
+          userId: followUpUser?.id ?? null,
+          userName: subjectName,
+          inviteId: followUpInvite?.id ?? null,
           issues: followUpIssues,
           note,
         },
@@ -273,8 +307,8 @@ export const OrganizationDetailPage: React.FC = () => {
       toast({
         title: 'Follow-up requested',
         description: recipientId
-          ? `A follow-up reminder was sent to ${organization?.assignedPartnerName || 'the partner'} for ${followUpUser.name}.`
-          : `${followUpUser.name} was added to the intervention queue, but there is no partner to notify.`,
+          ? `A follow-up reminder was sent to ${organization?.assignedPartnerName || 'the partner'} for ${subjectName}.`
+          : `${subjectName} was added to the intervention queue, but there is no partner to notify.`,
         status: recipientId ? 'success' : 'warning',
       })
       followUp.onClose()
@@ -754,14 +788,28 @@ export const OrganizationDetailPage: React.FC = () => {
                               <Text fontSize="sm" color="brand.subtleText">
                                 {formatDateTime(invite.createdAt || null)}
                               </Text>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                Awaiting signup
-                              </Text>
+                              <HStack spacing={2}>
+                                <Tooltip
+                                  label="Pending invite — never joined. Ask the partner to follow up."
+                                  hasArrow
+                                >
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    colorScheme="orange"
+                                    leftIcon={<BellRing size={14} />}
+                                    onClick={() => openFollowUpForInvite(invite)}
+                                  >
+                                    Follow-up
+                                  </Button>
+                                </Tooltip>
+                              </HStack>
                             </Grid>
                           )
                         }
 
                         const userRow = row.user
+                        const risk = evaluateAdminFollowUpRisk(userRow, journeyRiskOpts)
                         return (
                           <Grid
                             key={row.id}
@@ -796,8 +844,11 @@ export const OrganizationDetailPage: React.FC = () => {
                             <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
                               {userRow.role.replace('_', ' ')}
                             </Badge>
-                            <Badge colorScheme="green" variant="subtle">
-                              Active
+                            <Badge
+                              colorScheme={risk.atRisk ? 'orange' : 'green'}
+                              variant="subtle"
+                            >
+                              {risk.atRisk ? 'At risk' : 'Active'}
                             </Badge>
                             <Text fontSize="sm" color="brand.subtleText">
                               {formatDateTime(userRow.createdAt || null)}
@@ -806,15 +857,25 @@ export const OrganizationDetailPage: React.FC = () => {
                               <Button size="sm" variant="outline" onClick={() => handleViewUser(userRow.id)}>
                                 View user
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                colorScheme="orange"
-                                leftIcon={<BellRing size={14} />}
-                                onClick={() => openFollowUp(userRow)}
+                              <Tooltip
+                                label={
+                                  risk.atRisk
+                                    ? `At risk: ${risk.labels.join(', ')}`
+                                    : 'Follow-up is only available for at-risk learners (never joined or below points target).'
+                                }
+                                hasArrow
                               >
-                                Follow-up
-                              </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  colorScheme="orange"
+                                  leftIcon={<BellRing size={14} />}
+                                  onClick={() => openFollowUp(userRow)}
+                                  isDisabled={!risk.atRisk}
+                                >
+                                  Follow-up
+                                </Button>
+                              </Tooltip>
                             </HStack>
                           </Grid>
                         )
@@ -880,7 +941,7 @@ export const OrganizationDetailPage: React.FC = () => {
           <ModalBody>
             <Stack spacing={3}>
               <Text fontSize="sm" color="brand.subtleText">
-                This adds <b>{followUpUser?.name}</b> to the intervention queue for{' '}
+                This adds <b>{followUpUser?.name || followUpInvite?.name}</b> to the intervention queue for{' '}
                 {organization?.assignedPartnerName
                   ? `${organization.assignedPartnerName} (this organization's partner)`
                   : "this organization's partner"}
