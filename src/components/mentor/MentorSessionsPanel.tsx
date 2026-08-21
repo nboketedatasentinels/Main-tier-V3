@@ -197,6 +197,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
   const [meetingLink, setMeetingLink] = useState('')
   const [declineReason, setDeclineReason] = useState('')
   const [cancelReason, setCancelReason] = useState('')
+  const ALL_MENTEES = '__all__'
+
   const [scheduleLearnerId, setScheduleLearnerId] = useState(mentees[0]?.id ?? '')
   const [scheduleTopic, setScheduleTopic] = useState('Mentorship session')
   const [scheduleDate, setScheduleDate] = useState(format(new Date(), 'yyyy-MM-dd'))
@@ -220,8 +222,11 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
   }, [scheduleOpenToken])
 
   const handleScheduleMeeting = async () => {
-    const mentee = mentees.find((m) => m.id === scheduleLearnerId)
-    if (!mentee) {
+    const targets =
+      scheduleLearnerId === ALL_MENTEES
+        ? mentees
+        : mentees.filter((m) => m.id === scheduleLearnerId)
+    if (targets.length === 0) {
       toast({ status: 'warning', title: 'Select a mentee first' })
       return
     }
@@ -232,28 +237,55 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
     }
     setScheduling(true)
     try {
-      const result = await createMentorScheduledSession({
-        learnerId: mentee.id,
-        mentorId,
-        topic: scheduleTopic,
-        scheduledAt,
-        meetingLink: scheduleLink,
-        learnerName: mentee.name,
-        mentorName: mentorName ?? undefined,
-      })
-      if (result.mailtoHref) {
+      let scheduled = 0
+      let firstMailto: string | null = null
+      const failures: string[] = []
+      for (const mentee of targets) {
         try {
-          window.location.href = result.mailtoHref
+          const result = await createMentorScheduledSession({
+            learnerId: mentee.id,
+            mentorId,
+            topic: scheduleTopic,
+            scheduledAt,
+            meetingLink: scheduleLink,
+            learnerName: mentee.name,
+            mentorName: mentorName ?? undefined,
+          })
+          scheduled += 1
+          if (!firstMailto && result.mailtoHref) firstMailto = result.mailtoHref
+        } catch (err) {
+          failures.push(mentee.name)
+          console.warn('[MentorSessions] schedule failed for', mentee.id, err)
+        }
+      }
+      if (firstMailto && targets.length === 1) {
+        try {
+          window.location.href = firstMailto
         } catch {
           // no mail client
         }
       }
+      if (scheduled === 0) {
+        throw new Error(
+          failures.length
+            ? `Could not schedule for: ${failures.join(', ')}`
+            : 'Could not schedule meeting',
+        )
+      }
       toast({
-        status: 'success',
-        title: 'Meeting scheduled',
-        description: result.learnerEmail
-          ? `In-app notice sent. Your email app opened so you can send the invite to ${mentee.name}.`
-          : `In-app notice sent to ${mentee.name}. Add their email on profile to send via mail.`,
+        status: failures.length ? 'warning' : 'success',
+        title:
+          targets.length > 1
+            ? `Meeting scheduled for ${scheduled} mentee${scheduled === 1 ? '' : 's'}`
+            : 'Meeting scheduled',
+        description:
+          targets.length > 1
+            ? failures.length
+              ? `In-app notices sent. Failed for: ${failures.join(', ')}.`
+              : 'In-app notices sent to everyone selected.'
+            : firstMailto
+              ? `In-app notice sent. Your email app opened so you can send the invite to ${targets[0].name}.`
+              : `In-app notice sent to ${targets[0].name}.`,
         duration: 5000,
       })
       setScheduleTopic('Mentorship session')
@@ -581,17 +613,28 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             ) : (
               <Stack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel>Mentee</FormLabel>
+                  <FormLabel>Who will attend</FormLabel>
                   <Select
                     value={scheduleLearnerId}
                     onChange={(e) => setScheduleLearnerId(e.target.value)}
                   >
+                    {mentees.length > 1 ? (
+                      <option value={ALL_MENTEES}>
+                        All mentees ({mentees.length})
+                      </option>
+                    ) : null}
                     {mentees.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
                       </option>
                     ))}
                   </Select>
+                  {scheduleLearnerId === ALL_MENTEES ? (
+                    <FormHelperText>
+                      Schedules the same meeting for every mentee in this organisation roster and
+                      notifies each of them.
+                    </FormHelperText>
+                  ) : null}
                 </FormControl>
                 <FormControl isRequired>
                   <FormLabel>Topic</FormLabel>

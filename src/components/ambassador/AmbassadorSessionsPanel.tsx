@@ -32,6 +32,7 @@ import {
   SimpleGrid,
   Spinner,
   Stack,
+  Select,
   Text,
   Textarea,
   useDisclosure,
@@ -52,15 +53,20 @@ import { useAmbassadorSlots, useSlotBookings } from '@/hooks/useAmbassadorSessio
 import {
   cancelCoachSlot,
   createCoachSlot,
+  bookCoachSlot,
   markAttendance,
   type CoachSlot,
 } from '@/services/ambassadorSessionService'
+
+const ALL_COACHEES = '__all__'
 
 interface AmbassadorSessionsPanelProps {
   ambassadorId: string
   ambassadorName: string
   companyId: string | null
   companyCode?: string | null
+  /** Organisation coachees available to invite / book onto a slot. */
+  coachees?: Array<{ id: string; name: string }>
 }
 
 const slotStatusBadge = (slot: CoachSlot): { label: string; scheme: string } => {
@@ -186,6 +192,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
   ambassadorName,
   companyId,
   companyCode,
+  coachees = [],
 }) => {
   const toast = useToast()
   const createModal = useDisclosure()
@@ -197,6 +204,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
   const [time, setTime] = useState('')
   const [duration, setDuration] = useState<number>(60)
   const [capacity, setCapacity] = useState<number>(5)
+  const [attendeeId, setAttendeeId] = useState<string>(ALL_COACHEES)
   const [meetingLink, setMeetingLink] = useState('')
   const [location, setLocation] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -230,6 +238,7 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
     setTime('')
     setDuration(60)
     setCapacity(5)
+    setAttendeeId(ALL_COACHEES)
     setMeetingLink('')
     setLocation('')
   }
@@ -253,9 +262,18 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
       return
     }
 
+    const invitees =
+      attendeeId === ALL_COACHEES
+        ? coachees
+        : coachees.filter((c) => c.id === attendeeId)
+    const resolvedCapacity =
+      attendeeId === ALL_COACHEES && coachees.length > 0
+        ? Math.max(coachees.length, capacity)
+        : capacity
+
     setSubmitting(true)
     try {
-      await createCoachSlot({
+      const slotId = await createCoachSlot({
         ambassadorId,
         ambassadorName,
         companyId,
@@ -264,15 +282,40 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
         description,
         scheduledAt,
         durationMinutes: duration,
-        capacity,
+        capacity: resolvedCapacity,
         meetingLink,
         location,
       })
+
+      let booked = 0
+      const failures: string[] = []
+      if (invitees.length > 0) {
+        for (const learner of invitees) {
+          try {
+            await bookCoachSlot({
+              slotId,
+              learnerId: learner.id,
+              learnerName: learner.name,
+              companyId,
+            })
+            booked += 1
+          } catch (err) {
+            failures.push(learner.name)
+            console.warn('[CoachSessions] auto-book failed for', learner.id, err)
+          }
+        }
+      }
+
       toast({
         title: 'Session created',
-        description: 'Learners got an in-app notice. They can open it in email from the popup.',
-        status: 'success',
-        duration: 4500,
+        description:
+          invitees.length > 0
+            ? `Booked ${booked} of ${invitees.length} attendee${invitees.length === 1 ? '' : 's'}.${
+                failures.length ? ` Skipped: ${failures.join(', ')}.` : ''
+              }`
+            : 'Learners got an in-app notice. They can open it in email from the popup.',
+        status: failures.length && booked === 0 ? 'warning' : 'success',
+        duration: 5000,
       })
       resetForm()
       createModal.onClose()
@@ -554,6 +597,37 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
                   <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
                 </FormControl>
               </SimpleGrid>
+
+              <FormControl>
+                <FormLabel>Who will attend</FormLabel>
+                <Select
+                  value={attendeeId}
+                  onChange={(e) => {
+                    const next = e.target.value
+                    setAttendeeId(next)
+                    if (next === ALL_COACHEES && coachees.length > 0) {
+                      setCapacity(Math.max(coachees.length, 1))
+                    } else if (next !== ALL_COACHEES) {
+                      setCapacity(1)
+                    }
+                  }}
+                >
+                  <option value={ALL_COACHEES}>
+                    All organisation coachees
+                    {coachees.length ? ` (${coachees.length})` : ''}
+                  </option>
+                  {coachees.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {attendeeId === ALL_COACHEES
+                    ? 'Books every coachee on this organisation roster into the session.'
+                    : 'Books the selected coachee into the session when you create it.'}
+                </FormHelperText>
+              </FormControl>
 
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
                 <FormControl>

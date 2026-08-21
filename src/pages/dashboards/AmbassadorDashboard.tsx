@@ -545,6 +545,10 @@ export const AmbassadorDashboard: React.FC = () => {
                     | null
                 }
                 companyCode={profile.companyCode || null}
+                coachees={coachees.map((c) => ({
+                  id: c.id,
+                  name: getDisplayName(c),
+                }))}
               />
             ) : (
               <Skeleton height="200px" borderRadius="xl" />
