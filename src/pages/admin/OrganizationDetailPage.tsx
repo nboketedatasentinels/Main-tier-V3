@@ -228,6 +228,7 @@ export const OrganizationDetailPage: React.FC = () => {
         userId: followUpUser.id,
         partnerId: recipientId,
         riskVerdicts: followUpIssues,
+        assignedAdminName: profile?.fullName || profile?.email || 'Admin',
       })
       // Notify the responsible partner directly so it shows in their in-app bell
       // (not just the intervention queue). Non-fatal if it fails.
@@ -278,9 +279,16 @@ export const OrganizationDetailPage: React.FC = () => {
       })
       followUp.onClose()
     } catch (err) {
+      console.error('[OrganizationDetailPage] follow-up failed', err)
+      const message =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === 'object' && 'message' in err
+            ? String((err as { message?: unknown }).message)
+            : 'Please try again.'
       toast({
         title: 'Could not request follow-up',
-        description: err instanceof Error ? err.message : 'Please try again.',
+        description: message || 'Please try again.',
         status: 'error',
       })
     } finally {
