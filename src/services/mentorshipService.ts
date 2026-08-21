@@ -192,7 +192,7 @@ export async function createMentorScheduledSession(params: {
   if (!learnerId || !mentorId) throw new Error('Learner and mentor ids are required.')
   const trimmedTopic = topic.trim() || 'Mentorship session'
   if (scheduledAt.getTime() < Date.now() - 60_000) {
-    throw new Error('Scheduled time must be in the future.')
+    throw new Error('Pick a date and time in the future (this slot is already in the past).')
   }
 
   const { data, error } = await supabase

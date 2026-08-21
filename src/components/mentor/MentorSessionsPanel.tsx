@@ -254,7 +254,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
           scheduled += 1
           if (!firstMailto && result.mailtoHref) firstMailto = result.mailtoHref
         } catch (err) {
-          failures.push(mentee.name)
+          const reason = err instanceof Error ? err.message : 'Unknown error'
+          failures.push(`${mentee.name} (${reason})`)
           console.warn('[MentorSessions] schedule failed for', mentee.id, err)
         }
       }
@@ -268,7 +269,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
       if (scheduled === 0) {
         throw new Error(
           failures.length
-            ? `Could not schedule for: ${failures.join(', ')}`
+            ? `Could not schedule for: ${failures.join('; ')}`
             : 'Could not schedule meeting',
         )
       }
@@ -663,6 +664,9 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                     />
                   </FormControl>
                 </SimpleGrid>
+                <Text fontSize="xs" color="text.muted">
+                  Choose a future date and time. Same-day slots only work if the time is still ahead.
+                </Text>
                 <FormControl>
                   <FormLabel>Meeting link (optional)</FormLabel>
                   <Input
