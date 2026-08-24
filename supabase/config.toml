@@ -36,3 +36,8 @@ verify_jwt = false
 
 [functions.surveymonkey-list-surveys]
 verify_jwt = false
+
+# DB webhook on programme_component_submissions → Gemini Bank A (50%) grade.
+# No user JWT; webhook calls with service path. See grade-submission/DEPLOY.md.
+[functions.grade-submission]
+verify_jwt = false
