@@ -7,6 +7,7 @@ import type { ItemScores, IntakeAnswers, LiftResult } from '@/utils/liftScoring'
 import type { PillarKey, Archetype, LeadTier } from '@/config/liftAssessment'
 import { isJourneyType } from '@/utils/journeyType'
 import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
+import { sendLiftResultsEmail } from '@/services/liftResultsEmailService'
 
 export interface LiftAssessmentRow {
   uid: string
@@ -194,6 +195,8 @@ export const submitLiftAssessment = async (
     { onConflict: 'uid' },
   )
   if (error) throw new Error(error.message)
+  // Best-effort: learner work email + employer copy when consented.
+  void sendLiftResultsEmail()
 }
 
 /**
@@ -259,6 +262,7 @@ export const completeLiftLead = async (
     p_coaching_triggered: result.coachingTriggered,
   })
   if (error) throw new Error(error.message)
+  void sendLiftResultsEmail({ leadId: id })
 }
 
 /**
@@ -272,8 +276,11 @@ export const submitLiftLead = async (
   intake: IntakeAnswers,
   itemScores: ItemScores,
   result: LiftResult,
-): Promise<void> => {
+): Promise<string | null> => {
+  // Client-owned id so we can email results without a SELECT (anon cannot read leads).
+  const id = crypto.randomUUID()
   const { error } = await supabase.from('lift_leads').insert({
+    id,
     first_name: intake.firstName ?? null,
     last_name: intake.lastName ?? null,
     email: intake.email ?? null,
@@ -299,6 +306,8 @@ export const submitLiftLead = async (
     completed_at: new Date().toISOString(),
   })
   if (error) throw new Error(error.message)
+  void sendLiftResultsEmail({ leadId: id })
+  return id
 }
 
 const mapLeadRow = (row: Raw): LiftAssessmentRow => {

@@ -25,6 +25,11 @@ verify_jwt = false
 [functions.send-course-assessment-report]
 verify_jwt = false
 
+# LIFT results to learner (+ employer copy when consented). leadId path is
+# anonymous; JWT path loads lift_assessments for the signed-in user.
+[functions.send-lift-results-email]
+verify_jwt = false
+
 # Browser-invoked SurveyMonkey live question pull; requires user Bearer + SM token secret.
 [functions.surveymonkey-survey-details]
 verify_jwt = false
