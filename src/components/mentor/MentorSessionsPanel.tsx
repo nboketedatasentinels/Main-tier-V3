@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertDescription,
@@ -35,12 +35,15 @@ import {
 import { format, formatDistanceToNow, isValid } from 'date-fns'
 import { Calendar, CheckCircle2, ExternalLink, MessageSquare, Plus, XCircle } from 'lucide-react'
 import { useMentorMentorshipSessions } from '@/hooks/useMentorshipSessions'
+import { getDefaultFutureScheduleSlot, parseLocalDateTime } from '@/utils/date'
 import {
+  cancelMentorshipMeetingGroup,
   cancelMentorshipSession,
   completeMentorshipSession,
   confirmMentorshipSession,
   createMentorScheduledSession,
   declineMentorshipSession,
+  groupMentorshipMeetings,
   type MentorshipSession,
   type MentorshipSessionStatus,
 } from '@/services/mentorshipService'
@@ -50,6 +53,8 @@ type ActionMode = 'accept' | 'decline' | 'complete' | 'cancel'
 interface ActionState {
   mode: ActionMode
   session: MentorshipSession
+  /** When cancelling a multi-attendee meeting, cancel every row. */
+  groupSessions?: MentorshipSession[]
 }
 
 interface MentorSessionsPanelProps {
@@ -89,12 +94,21 @@ const formatWhen = (date: Date | null): string => {
   }
 }
 
-const SessionRow: React.FC<{ session: MentorshipSession; actions?: React.ReactNode }> = ({
-  session,
-  actions,
-}) => {
+const SessionRow: React.FC<{
+  sessions: MentorshipSession[]
+  actions?: React.ReactNode
+}> = ({ sessions, actions }) => {
+  const session = sessions[0]
+  if (!session) return null
   const when = session.scheduledAt ?? session.proposedAt
   const badge = statusBadge(session.status)
+  const names = sessions.map((s) => s.learnerName?.trim() || 'Learner')
+  const isGroup = sessions.length > 1
+  const title = isGroup
+    ? names.length <= 2
+      ? names.join(' · ')
+      : `${names.slice(0, 2).join(' · ')} +${names.length - 2}`
+    : names[0]
   return (
     <Flex
       p={4}
@@ -113,9 +127,14 @@ const SessionRow: React.FC<{ session: MentorshipSession; actions?: React.ReactNo
         <HStack justify="space-between" align="start" spacing={3} flexWrap="wrap" mb={1}>
           <HStack spacing={2} flexWrap="wrap">
             <Text fontWeight="bold" color="text.primary">
-              {session.learnerName ?? 'Learner'}
+              {title}
             </Text>
             <Badge colorScheme={badge.scheme}>{badge.label}</Badge>
+            {isGroup ? (
+              <Badge colorScheme="purple" variant="subtle">
+                {sessions.length} attendees
+              </Badge>
+            ) : null}
           </HStack>
           {when && (
             <Text fontSize="sm" color="text.muted">
@@ -129,6 +148,11 @@ const SessionRow: React.FC<{ session: MentorshipSession; actions?: React.ReactNo
         <Text color="text.primary" mt={1}>
           {session.topic}
         </Text>
+        {isGroup ? (
+          <Text fontSize="sm" color="text.secondary" mt={1}>
+            Attendees: {names.join(', ')}
+          </Text>
+        ) : null}
         {session.goals && (
           <Box mt={2} p={2} bg="surface.subtle" rounded="md" border="1px dashed" borderColor="border.subtle">
             <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
@@ -173,9 +197,9 @@ const SessionRow: React.FC<{ session: MentorshipSession; actions?: React.ReactNo
         )}
       </Box>
       {actions && (
-        <HStack spacing={2} flexWrap="wrap">
+        <Stack spacing={2} align={{ base: 'stretch', md: 'flex-end' }}>
           {actions}
-        </HStack>
+        </Stack>
       )}
     </Flex>
   )
@@ -201,12 +225,19 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
 
   const [scheduleLearnerId, setScheduleLearnerId] = useState(mentees[0]?.id ?? '')
   const [scheduleTopic, setScheduleTopic] = useState('Mentorship session')
-  const [scheduleDate, setScheduleDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [scheduleTime, setScheduleTime] = useState('09:00')
+  const [scheduleDate, setScheduleDate] = useState(() => getDefaultFutureScheduleSlot().date)
+  const [scheduleTime, setScheduleTime] = useState(() => getDefaultFutureScheduleSlot().time)
   const [scheduleLink, setScheduleLink] = useState('')
   const [scheduling, setScheduling] = useState(false)
   const actionModal = useDisclosure()
   const scheduleModal = useDisclosure()
+
+  const openScheduleModal = () => {
+    const slot = getDefaultFutureScheduleSlot()
+    setScheduleDate(slot.date)
+    setScheduleTime(slot.time)
+    scheduleModal.onOpen()
+  }
 
   useEffect(() => {
     if (!scheduleLearnerId && mentees[0]?.id) {
@@ -216,7 +247,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
 
   useEffect(() => {
     if (scheduleOpenToken > 0) {
-      scheduleModal.onOpen()
+      openScheduleModal()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scheduleOpenToken])
@@ -230,9 +261,17 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
       toast({ status: 'warning', title: 'Select a mentee first' })
       return
     }
-    const scheduledAt = new Date(`${scheduleDate}T${scheduleTime}`)
+    const scheduledAt = parseLocalDateTime(scheduleDate, scheduleTime)
     if (!isValid(scheduledAt)) {
       toast({ status: 'warning', title: 'Pick a valid date and time' })
+      return
+    }
+    if (scheduledAt.getTime() < Date.now() - 60_000) {
+      toast({
+        status: 'warning',
+        title: 'That time is already in the past',
+        description: 'Pick a later time today, or choose another date.',
+      })
       return
     }
     setScheduling(true)
@@ -240,6 +279,12 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
       let scheduled = 0
       let firstMailto: string | null = null
       const failures: string[] = []
+      const meetingGroupId =
+        targets.length > 1
+          ? typeof crypto !== 'undefined' && 'randomUUID' in crypto
+            ? crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+          : null
       for (const mentee of targets) {
         try {
           const result = await createMentorScheduledSession({
@@ -250,6 +295,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             meetingLink: scheduleLink,
             learnerName: mentee.name,
             mentorName: mentorName ?? undefined,
+            meetingGroupId,
           })
           scheduled += 1
           if (!firstMailto && result.mailtoHref) firstMailto = result.mailtoHref
@@ -277,13 +323,15 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
         status: failures.length ? 'warning' : 'success',
         title:
           targets.length > 1
-            ? `Meeting scheduled for ${scheduled} mentee${scheduled === 1 ? '' : 's'}`
+            ? failures.length
+              ? `Meeting created · ${scheduled} of ${targets.length} invited`
+              : 'Meeting scheduled'
             : 'Meeting scheduled',
         description:
           targets.length > 1
             ? failures.length
-              ? `In-app notices sent. Failed for: ${failures.join(', ')}.`
-              : 'In-app notices sent to everyone selected.'
+              ? `One meeting with ${scheduled} attendees. Failed for: ${failures.join(', ')}.`
+              : `One meeting with ${scheduled} attendees. Everyone was notified.`
             : firstMailto
               ? `In-app notice sent. Your email app opened so you can send the invite to ${targets[0].name}.`
               : `In-app notice sent to ${targets[0].name}.`,
@@ -304,17 +352,36 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
   }
 
   const pending = byStatus.requested
-  const upcoming = byStatus.scheduled
-  const history = [...byStatus.completed, ...byStatus.declined, ...byStatus.cancelled]
-    .sort((a, b) => {
-      const aTime = (a.completedAt ?? a.updatedAt ?? a.createdAt)?.getTime() ?? 0
-      const bTime = (b.completedAt ?? b.updatedAt ?? b.createdAt)?.getTime() ?? 0
-      return bTime - aTime
-    })
-    .slice(0, 8)
+  const upcomingGroups = useMemo(
+    () => groupMentorshipMeetings(byStatus.scheduled),
+    [byStatus.scheduled],
+  )
+  const historyGroups = useMemo(
+    () =>
+      groupMentorshipMeetings([
+        ...byStatus.completed,
+        ...byStatus.declined,
+        ...byStatus.cancelled,
+      ])
+        .sort((a, b) => {
+          const aSession = a.sessions[0]
+          const bSession = b.sessions[0]
+          const aTime =
+            (aSession?.completedAt ?? aSession?.updatedAt ?? aSession?.createdAt)?.getTime() ?? 0
+          const bTime =
+            (bSession?.completedAt ?? bSession?.updatedAt ?? bSession?.createdAt)?.getTime() ?? 0
+          return bTime - aTime
+        })
+        .slice(0, 8),
+    [byStatus.completed, byStatus.declined, byStatus.cancelled],
+  )
 
-  const openAction = (mode: ActionMode, session: MentorshipSession) => {
-    setAction({ mode, session })
+  const openAction = (
+    mode: ActionMode,
+    session: MentorshipSession,
+    groupSessions?: MentorshipSession[],
+  ) => {
+    setAction({ mode, session, groupSessions })
     setAcceptedScheduleAt(
       session.proposedAt ? format(session.proposedAt, 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
     )
@@ -371,12 +438,26 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
           status: awarded ? 'success' : 'info',
         })
       } else if (mode === 'cancel') {
-        await cancelMentorshipSession({
-          sessionId: session.id,
-          actorId: mentorId,
-          reason: cancelReason,
-        })
-        toast({ title: 'Session cancelled', status: 'info' })
+        const group = action.groupSessions
+        if (group && group.length > 1) {
+          await cancelMentorshipMeetingGroup({
+            sessions: group,
+            actorId: mentorId,
+            reason: cancelReason,
+          })
+          toast({
+            title: 'Meeting cancelled',
+            description: `Cancelled for ${group.length} attendees.`,
+            status: 'info',
+          })
+        } else {
+          await cancelMentorshipSession({
+            sessionId: session.id,
+            actorId: mentorId,
+            reason: cancelReason,
+          })
+          toast({ title: 'Session cancelled', status: 'info' })
+        }
       }
       actionModal.onClose()
       setAction(null)
@@ -397,7 +478,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
       case 'complete':
         return 'Mark session as completed'
       case 'cancel':
-        return 'Cancel session'
+        return 'Cancel meeting'
     }
   }
 
@@ -424,15 +505,15 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                 {pending.length} pending
               </Badge>
             )}
-            {upcoming.length > 0 && (
+            {upcomingGroups.length > 0 && (
               <Badge colorScheme="green" variant="subtle">
-                {upcoming.length} confirmed
+                {upcomingGroups.length} confirmed
               </Badge>
             )}
             <Button
               leftIcon={<Plus size={16} />}
               colorScheme="primary"
-              onClick={scheduleModal.onOpen}
+              onClick={openScheduleModal}
               isDisabled={mentees.length === 0}
             >
               Schedule meeting
@@ -505,9 +586,9 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   {pending.map((session) => (
                     <SessionRow
                       key={session.id}
-                      session={session}
+                      sessions={[session]}
                       actions={
-                        <>
+                        <HStack spacing={2} flexWrap="wrap">
                           <Button
                             size="sm"
                             colorScheme="green"
@@ -525,7 +606,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                           >
                             Decline
                           </Button>
-                        </>
+                        </HStack>
                       }
                     />
                   ))}
@@ -533,7 +614,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
               </Box>
             )}
 
-            {upcoming.length > 0 && (
+            {upcomingGroups.length > 0 && (
               <Box>
                 <Text
                   fontSize="xs"
@@ -542,40 +623,64 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   fontWeight="semibold"
                   mb={2}
                 >
-                  Confirmed upcoming ({upcoming.length})
+                  Confirmed upcoming ({upcomingGroups.length})
                 </Text>
                 <Stack spacing={3}>
-                  {upcoming.map((session) => (
-                    <SessionRow
-                      key={session.id}
-                      session={session}
-                      actions={
-                        <>
-                          <Button
-                            size="sm"
-                            colorScheme="purple"
-                            leftIcon={<CheckCircle2 size={16} />}
-                            onClick={() => openAction('complete', session)}
-                          >
-                            Mark complete
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            colorScheme="red"
-                            onClick={() => openAction('cancel', session)}
-                          >
-                            Cancel
-                          </Button>
-                        </>
-                      }
-                    />
-                  ))}
+                  {upcomingGroups.map((group) => {
+                    const primary = group.sessions[0]
+                    if (!primary) return null
+                    const isGroup = group.sessions.length > 1
+                    return (
+                      <SessionRow
+                        key={group.key}
+                        sessions={group.sessions}
+                        actions={
+                          <>
+                            {isGroup ? (
+                              <Stack spacing={1} align="stretch">
+                                <Text fontSize="xs" color="text.muted" fontWeight="semibold">
+                                  Mark attendance per person
+                                </Text>
+                                {group.sessions.map((attendee) => (
+                                  <Button
+                                    key={attendee.id}
+                                    size="sm"
+                                    colorScheme="purple"
+                                    leftIcon={<CheckCircle2 size={16} />}
+                                    onClick={() => openAction('complete', attendee)}
+                                  >
+                                    Complete · {attendee.learnerName ?? 'Learner'}
+                                  </Button>
+                                ))}
+                              </Stack>
+                            ) : (
+                              <Button
+                                size="sm"
+                                colorScheme="purple"
+                                leftIcon={<CheckCircle2 size={16} />}
+                                onClick={() => openAction('complete', primary)}
+                              >
+                                Mark complete
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              colorScheme="red"
+                              onClick={() => openAction('cancel', primary, group.sessions)}
+                            >
+                              Cancel meeting
+                            </Button>
+                          </>
+                        }
+                      />
+                    )
+                  })}
                 </Stack>
               </Box>
             )}
 
-            {history.length > 0 && (
+            {historyGroups.length > 0 && (
               <Box>
                 <Text
                   fontSize="xs"
@@ -587,8 +692,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   Recent history
                 </Text>
                 <Stack spacing={3}>
-                  {history.map((session) => (
-                    <SessionRow key={session.id} session={session} />
+                  {historyGroups.map((group) => (
+                    <SessionRow key={group.key} sessions={group.sessions} />
                   ))}
                 </Stack>
               </Box>
@@ -632,8 +737,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   </Select>
                   {scheduleLearnerId === ALL_MENTEES ? (
                     <FormHelperText>
-                      Schedules the same meeting for every mentee in this organisation roster and
-                      notifies each of them.
+                      Creates one shared meeting. Everyone selected is invited and notified.
                     </FormHelperText>
                   ) : null}
                 </FormControl>
@@ -706,7 +810,9 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
               <Stack spacing={4}>
                 <Box p={3} bg="surface.subtle" rounded="md" border="1px dashed" borderColor="border.subtle">
                   <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="semibold">
-                    Request from {action.session.learnerName ?? 'Learner'}
+                    {action.mode === 'cancel' && (action.groupSessions?.length ?? 0) > 1
+                      ? `Meeting · ${action.groupSessions!.length} attendees`
+                      : `Request from ${action.session.learnerName ?? 'Learner'}`}
                   </Text>
                   <Text fontWeight="semibold" color="text.primary" mt={1}>
                     {action.session.topic}
@@ -714,6 +820,14 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   <Text fontSize="sm" color="text.secondary">
                     Proposed: {formatWhen(action.session.proposedAt ?? action.session.scheduledAt)}
                   </Text>
+                  {action.mode === 'cancel' && (action.groupSessions?.length ?? 0) > 1 ? (
+                    <Text fontSize="sm" color="text.secondary" mt={1}>
+                      Cancels this meeting for everyone:{' '}
+                      {action.groupSessions!
+                        .map((s) => s.learnerName?.trim() || 'Learner')
+                        .join(', ')}
+                    </Text>
+                  ) : null}
                 </Box>
 
                 {action.mode === 'accept' && (
@@ -808,7 +922,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
               {action?.mode === 'accept' && 'Confirm session'}
               {action?.mode === 'decline' && 'Decline request'}
               {action?.mode === 'complete' && 'Mark complete · award points'}
-              {action?.mode === 'cancel' && 'Cancel session'}
+              {action?.mode === 'cancel' &&
+                ((action.groupSessions?.length ?? 0) > 1 ? 'Cancel meeting' : 'Cancel session')}
             </Button>
           </ModalFooter>
         </ModalContent>

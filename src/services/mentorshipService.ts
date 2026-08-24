@@ -40,6 +40,8 @@ export interface MentorshipSession {
   updatedAt: Date | null
   learnerName: string | null
   mentorName: string | null
+  /** Shared across attendee rows when one meeting invites multiple mentees. */
+  meetingGroupId: string | null
 }
 
 const parseTs = (value: unknown): Date | null => {
@@ -77,6 +79,7 @@ const mapSession = (row: Record<string, unknown>): MentorshipSession => ({
   updatedAt: parseTs(row.updated_at),
   learnerName: pickString(row.learner_name),
   mentorName: pickString(row.mentor_name),
+  meetingGroupId: pickString(row.meeting_group_id),
 })
 
 async function getJourneyContext(
@@ -183,12 +186,23 @@ export async function createMentorScheduledSession(params: {
   meetingLink?: string
   learnerName?: string
   mentorName?: string
+  /** Same uuid for every attendee row of one multi-person meeting. */
+  meetingGroupId?: string | null
 }): Promise<{
   sessionId: string
   mailtoHref: string
   learnerEmail: string | null
 }> {
-  const { learnerId, mentorId, topic, scheduledAt, meetingLink, learnerName, mentorName } = params
+  const {
+    learnerId,
+    mentorId,
+    topic,
+    scheduledAt,
+    meetingLink,
+    learnerName,
+    mentorName,
+    meetingGroupId,
+  } = params
   if (!learnerId || !mentorId) throw new Error('Learner and mentor ids are required.')
   const trimmedTopic = topic.trim() || 'Mentorship session'
   if (scheduledAt.getTime() < Date.now() - 60_000) {
@@ -207,6 +221,7 @@ export async function createMentorScheduledSession(params: {
       meeting_link: meetingLink?.trim() || null,
       learner_name: learnerName ?? null,
       mentor_name: mentorName ?? null,
+      meeting_group_id: meetingGroupId ?? null,
       points_awarded: false,
       confirmed_at: new Date().toISOString(),
       created_by: mentorId,
@@ -416,6 +431,52 @@ export async function cancelMentorshipSession(params: {
       data: { priority: 'push', sessionId, kind: 'mentorship_cancelled' },
     }).catch((err) => console.warn('[MentorshipService] notify cancel failed:', err))
   }
+}
+
+/** Cancel every attendee row for one multi-person meeting (best-effort per row). */
+export async function cancelMentorshipMeetingGroup(params: {
+  sessions: MentorshipSession[]
+  actorId: string
+  reason?: string
+}): Promise<void> {
+  const cancellable = params.sessions.filter(
+    (s) => s.status === 'scheduled' || s.status === 'requested',
+  )
+  for (const session of cancellable) {
+    await cancelMentorshipSession({
+      sessionId: session.id,
+      actorId: params.actorId,
+      reason: params.reason,
+    })
+  }
+}
+
+/**
+ * Collapse multi-attendee schedules into one mentor-facing meeting.
+ * Prefer `meetingGroupId`; fall back to same time/topic/link for legacy bulk creates.
+ */
+export function groupMentorshipMeetings(
+  sessions: MentorshipSession[],
+): Array<{ key: string; sessions: MentorshipSession[] }> {
+  const buckets = new Map<string, MentorshipSession[]>()
+  for (const session of sessions) {
+    let key: string
+    if (session.meetingGroupId) {
+      key = `g:${session.meetingGroupId}`
+    } else if (session.status === 'requested') {
+      key = `s:${session.id}`
+    } else {
+      const when = (session.scheduledAt ?? session.proposedAt)?.getTime() ?? 0
+      key = `h:${session.status}|${when}|${session.topic}|${session.meetingLink ?? ''}`
+    }
+    const list = buckets.get(key) ?? []
+    list.push(session)
+    buckets.set(key, list)
+  }
+  return Array.from(buckets.entries()).map(([key, groupSessions]) => ({
+    key,
+    sessions: groupSessions,
+  }))
 }
 
 export async function completeMentorshipSession(params: {

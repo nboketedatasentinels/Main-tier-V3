@@ -57,6 +57,7 @@ import {
   markAttendance,
   type CoachSlot,
 } from '@/services/ambassadorSessionService'
+import { getDefaultFutureScheduleSlot, parseLocalDateTime } from '@/utils/date'
 
 const ALL_COACHEES = '__all__'
 
@@ -232,10 +233,11 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
   const cancelled = useMemo(() => slots.filter((s) => s.status === 'cancelled'), [slots])
 
   const resetForm = () => {
+    const slot = getDefaultFutureScheduleSlot()
     setTitle('')
     setDescription('')
-    setDate('')
-    setTime('')
+    setDate(slot.date)
+    setTime(slot.time)
     setDuration(60)
     setCapacity(5)
     setAttendeeId(ALL_COACHEES)
@@ -256,8 +258,8 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
       toast({ title: 'Please complete title, date, and time.', status: 'error' })
       return
     }
-    const scheduledAt = new Date(`${date}T${time}`)
-    if (isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now()) {
+    const scheduledAt = parseLocalDateTime(date, time)
+    if (isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < Date.now() - 60_000) {
       toast({ title: 'Please choose a future date and time.', status: 'error' })
       return
     }
@@ -450,7 +452,10 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
           <Button
             leftIcon={<Plus size={16} />}
             colorScheme="primary"
-            onClick={createModal.onOpen}
+            onClick={() => {
+              resetForm()
+              createModal.onOpen()
+            }}
             isDisabled={!companyId}
           >
             Create session

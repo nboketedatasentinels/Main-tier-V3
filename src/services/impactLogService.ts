@@ -19,6 +19,8 @@ export type ImpactLogRecord = {
   title: string
   description: string
   categoryGroup: 'esg' | 'business'
+  /** New Impact Log v3: activity | claim | esg */
+  entryKind?: 'activity' | 'claim' | 'esg'
   esgCategory?: string
   activityType?: string
   businessCategory?: string
@@ -46,6 +48,12 @@ export type ImpactLogRecord = {
   volHourRateApplied?: number
   sasbTopic?: string
   usdValueSource?: 'auto' | 'manual'
+  /** Improvement-claim payload (jsonb). */
+  claim?: Record<string, unknown>
+  claimStatus?: string
+  esgMetric?: string
+  esgQty?: number
+  auditTrail?: string[]
   createdAt: string
 }
 
@@ -92,7 +100,9 @@ const toRecord = (row: ImpactLogRow): ImpactLogRecord => {
   }
 }
 
-export type CreateImpactLogInput = Omit<ImpactLogRecord, 'id'>
+export type CreateImpactLogInput = Omit<ImpactLogRecord, 'id' | 'createdAt'> & {
+  createdAt?: string
+}
 
 export async function createImpactLog(entry: CreateImpactLogInput): Promise<ImpactLogRecord> {
   const id = crypto.randomUUID()
@@ -177,6 +187,52 @@ export async function updateImpactLogVerificationStatus(
     .eq('id', id)
 
   if (error) throw new Error(error.message)
+}
+
+/** Merge fields into impact_logs.data (+ optional top-level columns). */
+export async function patchImpactLog(
+  id: string,
+  patch: Partial<ImpactLogRecord> & { auditLine?: string },
+): Promise<ImpactLogRecord> {
+  const { data: existing, error: readError } = await supabase
+    .from('impact_logs')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (readError) throw new Error(readError.message)
+  if (!existing) throw new Error('Impact log not found.')
+
+  const prev = (
+    existing.data && typeof existing.data === 'object' ? existing.data : {}
+  ) as Record<string, unknown>
+  const { auditLine, ...rest } = patch
+  const audit = Array.isArray(prev.auditTrail) ? [...(prev.auditTrail as string[])] : []
+  if (auditLine) audit.push(auditLine)
+
+  const nextData = {
+    ...prev,
+    ...rest,
+    claim: rest.claim ? { ...(prev.claim as object), ...rest.claim } : prev.claim,
+    auditTrail: audit,
+  }
+
+  const updateRow: Record<string, unknown> = {
+    data: nextData,
+    updated_at: new Date().toISOString(),
+  }
+  if (rest.usdValue != null) updateRow.usd_value = rest.usdValue
+  if (rest.verificationStatus) updateRow.verification_status = rest.verificationStatus
+  if (rest.title) updateRow.title = rest.title
+  if (rest.description != null) updateRow.description = rest.description
+
+  const { data, error } = await supabase
+    .from('impact_logs')
+    .update(updateRow)
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) throw new Error(error.message)
+  return toRecord(data as ImpactLogRow)
 }
 
 export async function deleteImpactLog(id: string): Promise<void> {
