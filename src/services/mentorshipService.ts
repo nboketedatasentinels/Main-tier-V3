@@ -9,7 +9,7 @@ import { notifyAsLeadership } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { buildMeetingMailtoHref } from '@/utils/meetingInvite'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
-import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
+import { resolveLearnerJourneyContextDetailed } from '@/services/learnerJourneyContext'
 import {
   assertMentorMeetingAllowedThisMonth,
 } from '@/services/sessionMonthLimit'
@@ -89,10 +89,11 @@ const mapSession = (row: Record<string, unknown>): MentorshipSession => ({
 
 async function getJourneyContext(
   uid: string,
-): Promise<{ journeyType: JourneyType; weekNumber: number; mentorId: string | null } | null> {
-  const ctx = await resolveLearnerJourneyContext(uid)
-  if (!ctx) return null
-  return { journeyType: ctx.journeyType, weekNumber: ctx.weekNumber, mentorId: null }
+): Promise<
+  | { ok: true; journeyType: JourneyType; weekNumber: number }
+  | { ok: false; reason: 'forbidden' | 'missing_journey' | 'unavailable' }
+> {
+  return resolveLearnerJourneyContextDetailed(uid)
 }
 
 const fetchSessionsByField = async (
@@ -542,8 +543,17 @@ export async function completeMentorshipSession(params: {
   if (shouldAttemptAward && learnerId) {
     try {
       const context = await getJourneyContext(learnerId)
-      if (!context?.journeyType) {
-        awardMessage = 'Session marked attended, but no active journey was found for points.'
+      if (!context.ok) {
+        if (context.reason === 'forbidden') {
+          awardMessage =
+            'Attendance saved, but mentor points could not be issued (mentor link not recognised). Try Issue +2,000 again, or ask a partner to assign you as this learner’s mentor.'
+        } else if (context.reason === 'missing_journey') {
+          awardMessage =
+            'Session marked attended, but this learner has no journey type set — points need an active journey (e.g. 3M / 6M / 9M).'
+        } else {
+          awardMessage =
+            'Session marked attended, but journey details could not be loaded for points. Try Issue +2,000 again.'
+        }
       } else {
         const activity = getActivityDefinitionById({
           activityId: 'mentor_meetup',

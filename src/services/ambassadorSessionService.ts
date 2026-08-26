@@ -9,7 +9,7 @@ import { upsertChecklistActivity } from '@/services/checklistService'
 import { notifyAsLeadership, notifyCoachSlotPublished } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
-import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
+import { resolveLearnerJourneyContextDetailed } from '@/services/learnerJourneyContext'
 import { assertCoachMeetingAllowedThisMonth } from '@/services/sessionMonthLimit'
 
 export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
@@ -112,10 +112,8 @@ const mapBooking = (row: Record<string, unknown>): CoachBooking => ({
 
 const bookingIdFor = (slotId: string, learnerId: string) => `${slotId}__${learnerId}`
 
-async function getJourneyContext(
-  uid: string,
-): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
-  return resolveLearnerJourneyContext(uid)
+async function getJourneyContext(uid: string) {
+  return resolveLearnerJourneyContextDetailed(uid)
 }
 
 let coachRealtimeChannelSeq = 0
@@ -583,8 +581,17 @@ export async function markAttendance(params: {
   if (shouldAttemptAward && learnerId) {
     try {
       const context = await getJourneyContext(learnerId)
-      if (!context) {
-        awardMessage = 'Attendance saved, but no active journey was found for points.'
+      if (!context.ok) {
+        if (context.reason === 'forbidden') {
+          awardMessage =
+            'Attendance saved, but coach points could not be issued (coach link not recognised). Try Issue +2,000 again.'
+        } else if (context.reason === 'missing_journey') {
+          awardMessage =
+            'Attendance saved, but this learner has no journey type set — points need an active journey (e.g. 3M / 6M / 9M).'
+        } else {
+          awardMessage =
+            'Attendance saved, but journey details could not be loaded for points. Try Issue +2,000 again.'
+        }
       } else {
         const activity = getActivityDefinitionById({
           activityId: 'ambassador_session',
