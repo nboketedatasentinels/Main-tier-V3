@@ -30,31 +30,60 @@ export function isLeadershipAssignedActivity(activity: ActivityLike): boolean {
   return type === 'partner_issued' || type === 'mentor_issued' || type === 'ambassador_issued'
 }
 
+/** Short CTA / toast title — action first. */
+export function getLeadershipAssignedActionTitle(activity: ActivityLike): string {
+  switch (activity.id) {
+    case 'webinar_workbook':
+      return 'Attend the webinar'
+    case 'weekly_session':
+      return 'Attend the weekly session'
+    case 'book_club':
+      return 'Attend book club'
+    case 'shameless_circle':
+      return 'Attend Shameless Circle'
+    case 'lift_module':
+      return 'Complete the LIFT module'
+    case 'mentor_meetup':
+      return 'Attend your mentor session'
+    case 'ambassador_session':
+      return 'Attend your coach session'
+    default:
+      break
+  }
+  if (activity.approvalType === 'mentor_issued') return 'Complete with your mentor'
+  if (activity.approvalType === 'ambassador_issued') return 'Complete with your coach'
+  return 'Complete this activity'
+}
+
+/**
+ * Action-first guidance: what to do → who marks it → miss it = no marks.
+ * No “you don’t need to upload” opener.
+ */
 export function getLeadershipAssignedGuidance(activity: ActivityLike): string {
   switch (activity.id) {
     case 'webinar_workbook':
-      return 'You don’t need to submit or upload anything here. Your partner will assign marks when you attend the webinar.'
+      return 'Attend the live webinar. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
     case 'weekly_session':
-      return 'You don’t need to submit or upload anything here. Your partner will assign marks when you attend the weekly session.'
+      return 'Attend the weekly session. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
     case 'book_club':
-      return 'You don’t need to submit or upload anything here. Your partner will assign marks when you attend the book club session.'
+      return 'Attend the book club session. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
     case 'shameless_circle':
-      return 'You don’t need to submit or upload anything here. Your partner will assign marks when you attend the Shameless Circle session.'
+      return 'Attend Shameless Circle. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
     case 'lift_module':
-      return 'You don’t need to submit or upload anything here. Your partner will assign marks when this LIFT module is completed and verified.'
+      return 'Complete the LIFT module. Your partner assigns the marks when it’s verified — if you don’t finish it, you won’t get marks for this activity.'
     case 'mentor_meetup':
-      return 'You don’t need to submit or upload anything here. Your mentor will assign +2,000 points when they confirm you attended the mentorship session.'
+      return 'Attend your mentorship session. Your mentor assigns +2,000 points after they confirm you were there — if you don’t attend, you won’t get those points.'
     case 'ambassador_session':
-      return 'You don’t need to submit or upload anything here. Your coach will assign +2,000 points when they confirm you attended the coaching session.'
+      return 'Attend your coaching session. Your coach assigns +2,000 points after they confirm you were there — if you don’t attend, you won’t get those points.'
     default:
       break
   }
 
   if (activity.approvalType === 'mentor_issued') {
-    return 'You don’t need to submit or upload anything here. Your mentor will assign marks when they confirm your attendance or completion.'
+    return 'Do the work with your mentor. They assign the marks when it’s confirmed — if you don’t complete it, you won’t get marks for this activity.'
   }
   if (activity.approvalType === 'ambassador_issued') {
-    return 'You don’t need to submit or upload anything here. Your coach will assign marks when they confirm your attendance or completion.'
+    return 'Do the work with your coach. They assign the marks when it’s confirmed — if you don’t complete it, you won’t get marks for this activity.'
   }
-  return 'You don’t need to submit or upload anything here. Your partner will assign marks for this activity when you attend or complete it.'
+  return 'Complete this activity as required. Your partner assigns the marks when it’s confirmed — if you don’t do it, you won’t get marks for this activity.'
 }

@@ -31,6 +31,7 @@ import { ProgrammeComponentPartsPanel } from '@/components/courses/ProgrammeComp
 import type { ProgrammeComponentType } from '@/config/pillarProgrammeComponents'
 import type { Pillar } from '@/types/pillar'
 import {
+  getLeadershipAssignedActionTitle,
   getLeadershipAssignedGuidance,
   isLeadershipAssignedActivity,
 } from '@/utils/leadershipAssignedActivities'
@@ -369,9 +370,7 @@ export const ActivityRow = ({
           ? `Claim${attemptSuffix}${ptsSuffix}`
           : `Claim${ptsSuffix}`
       }
-      if (activity.approvalType === 'mentor_issued') return 'Mentor assigns marks'
-      if (activity.approvalType === 'ambassador_issued') return 'Coach assigns marks'
-      return 'Partner assigns marks'
+      return getLeadershipAssignedActionTitle(activity)
     }
     if (requiresPartnerApproval) {
       return claimAttempt > 1
@@ -442,14 +441,9 @@ export const ActivityRow = ({
       }
       toast({
         status: 'info',
-        title:
-          activity.approvalType === 'mentor_issued'
-            ? 'Mentor assigns your marks'
-            : activity.approvalType === 'ambassador_issued'
-              ? 'Coach assigns your marks'
-              : 'Partner assigns your marks',
+        title: getLeadershipAssignedActionTitle(activity),
         description: getLeadershipAssignedGuidance(activity),
-        duration: 7000,
+        duration: 8000,
         isClosable: true,
       })
       return
