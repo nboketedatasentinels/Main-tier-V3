@@ -8,6 +8,7 @@ import { notifyAsLeadership } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { buildMeetingMailtoHref } from '@/utils/meetingInvite'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
+import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
 
 export type MentorshipSessionStatus =
   | 'requested'
@@ -85,25 +86,9 @@ const mapSession = (row: Record<string, unknown>): MentorshipSession => ({
 async function getJourneyContext(
   uid: string,
 ): Promise<{ journeyType: JourneyType; weekNumber: number; mentorId: string | null } | null> {
-  try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('journey_type, current_week, mentor_id, data')
-      .eq('id', uid)
-      .maybeSingle()
-    if (!data) return null
-    const nested = (data.data as Record<string, unknown> | null) || {}
-    const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
-    if (!journeyType) return null
-    return {
-      journeyType,
-      weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
-      mentorId: (data.mentor_id as string | null) ?? (nested.mentorId as string | null) ?? null,
-    }
-  } catch (err) {
-    console.error('[MentorshipService] Failed to resolve journey context:', err)
-    return null
-  }
+  const ctx = await resolveLearnerJourneyContext(uid)
+  if (!ctx) return null
+  return { journeyType: ctx.journeyType, weekNumber: ctx.weekNumber, mentorId: null }
 }
 
 const fetchSessionsByField = async (
@@ -570,13 +555,20 @@ export async function completeMentorshipSession(params: {
   }
 
   if (learnerId && !alreadyCompleted) {
+    const mentorLabel = mentorName?.trim()
+      ? `Mentor ${mentorName.trim()}`
+      : 'Your mentor'
     await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
-      title: 'Mentor session attended',
+      title: pointsAwarded
+        ? `${mentorLabel} confirmed your attendance · +${pointsAmount.toLocaleString()} points`
+        : `${mentorLabel} confirmed your attendance`,
       message: pointsAwarded
-        ? `${mentorName ?? 'Your mentor'} confirmed your attendance. +${pointsAmount.toLocaleString()} mentor meetup points added.`
-        : `${mentorName ?? 'Your mentor'} confirmed your attendance.`,
+        ? `${mentorLabel} marked you as attended for this mentorship session. +${pointsAmount.toLocaleString()} Mentor Meet Up points were added to your journey.`
+        : `${mentorLabel} marked you as attended for this mentorship session.${
+            awardMessage ? ` ${awardMessage}` : ''
+          }`,
       relatedId: sessionId,
       category: 'important_updates',
       data: {
@@ -585,6 +577,8 @@ export async function completeMentorshipSession(params: {
         kind: 'mentorship_completed',
         pointsAwarded,
         pointsAmount,
+        actorRole: 'mentor',
+        actorName: mentorName,
       },
     }).catch((err) => console.warn('[MentorshipService] notify complete failed:', err))
   }

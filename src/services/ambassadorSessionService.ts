@@ -8,6 +8,7 @@ import { awardChecklistPoints } from '@/services/pointsService'
 import { notifyAsLeadership, notifyCoachSlotPublished } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
+import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
 
 export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
 export type CoachBookingStatus = 'booked' | 'attended' | 'no_show' | 'cancelled'
@@ -112,24 +113,7 @@ const bookingIdFor = (slotId: string, learnerId: string) => `${slotId}__${learne
 async function getJourneyContext(
   uid: string,
 ): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
-  try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('journey_type, current_week, data')
-      .eq('id', uid)
-      .maybeSingle()
-    if (!data) return null
-    const nested = (data.data as Record<string, unknown> | null) || {}
-    const journeyType = (data.journey_type || nested.journeyType) as JourneyType | undefined
-    if (!journeyType) return null
-    return {
-      journeyType,
-      weekNumber: Math.max(1, Number(data.current_week ?? nested.currentWeek ?? 1)),
-    }
-  } catch (err) {
-    console.error('[CoachSessionService] Journey context failed:', err)
-    return null
-  }
+  return resolveLearnerJourneyContext(uid)
 }
 
 let coachRealtimeChannelSeq = 0
@@ -498,6 +482,21 @@ export async function markAttendance(params: {
   const learnerId = pickString(booking.learner_id)
   const slotTitle = pickString(booking.slot_title)
   const alreadyAwarded = Boolean(booking.points_awarded)
+  const slotId = pickString(booking.slot_id)
+  let coachName: string | null = null
+  if (slotId) {
+    const { data: slotRow } = await supabase
+      .from('ambassador_slots')
+      .select('ambassador_name, title')
+      .eq('id', slotId)
+      .maybeSingle()
+    coachName = pickString(slotRow?.ambassador_name)
+    if (!slotTitle && slotRow) {
+      // keep slotTitle from booking when present
+    }
+  }
+  const coachLabel = coachName?.trim() ? `Coach ${coachName.trim()}` : 'Your coach'
+  const sessionLabel = slotTitle ?? 'the session'
 
   // Same status again: allow a points-only retry when attended but not awarded.
   if (currentStatus === status) {
@@ -532,11 +531,14 @@ export async function markAttendance(params: {
         await notifyAsLeadership({
           userId: learnerId,
           type: 'approval',
-          title: status === 'attended' ? 'Attendance confirmed' : 'Marked as no-show',
+          title:
+            status === 'attended'
+              ? `${coachLabel} confirmed your attendance`
+              : `${coachLabel} recorded a no-show`,
           message:
             status === 'attended'
-              ? `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}".`
-              : `Your coach recorded a no-show for "${slotTitle ?? 'the session'}".`,
+              ? `${coachLabel} confirmed your attendance at "${sessionLabel}".`
+              : `${coachLabel} recorded a no-show for "${sessionLabel}".`,
           relatedId: bookingId,
           category: 'important_updates',
           data: {
@@ -545,6 +547,8 @@ export async function markAttendance(params: {
             kind: 'ambassador_attendance',
             pointsAwarded: false,
             pointsAmount: 0,
+            actorRole: 'coach',
+            actorName: coachName,
           },
         }).catch((err) =>
           console.warn('[CoachSessionService] notify attendance failed:', err),
@@ -611,13 +615,20 @@ export async function markAttendance(params: {
     await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
-      title: status === 'attended' ? 'Attendance confirmed' : 'Marked as no-show',
+      title:
+        status === 'attended'
+          ? pointsAwarded
+            ? `${coachLabel} confirmed your attendance · +${pointsAmount.toLocaleString()} points`
+            : `${coachLabel} confirmed your attendance`
+          : `${coachLabel} recorded a no-show`,
       message:
         status === 'attended'
           ? pointsAwarded
-            ? `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}". +${pointsAmount.toLocaleString()} points added.`
-            : `Your coach confirmed your attendance at "${slotTitle ?? 'the session'}".`
-          : `Your coach recorded a no-show for "${slotTitle ?? 'the session'}".`,
+            ? `${coachLabel} confirmed your attendance at "${sessionLabel}". +${pointsAmount.toLocaleString()} Coach Session points were added to your journey.`
+            : `${coachLabel} confirmed your attendance at "${sessionLabel}".${
+                awardMessage ? ` ${awardMessage}` : ''
+              }`
+          : `${coachLabel} recorded a no-show for "${sessionLabel}".`,
       relatedId: bookingId,
       category: 'important_updates',
       data: {
@@ -626,6 +637,8 @@ export async function markAttendance(params: {
         kind: 'ambassador_attendance',
         pointsAwarded,
         pointsAmount,
+        actorRole: 'coach',
+        actorName: coachName,
       },
     }).catch((err) =>
       console.warn('[CoachSessionService] notify attendance failed:', err),

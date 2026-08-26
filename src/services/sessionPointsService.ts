@@ -8,7 +8,6 @@ import {
   getActivityDefinitionById,
   type JourneyType,
 } from '@/config/pointsConfig'
-import { isJourneyType } from '@/utils/journeyType'
 import {
   completeMentorshipSession,
   type MentorshipSession,
@@ -18,6 +17,7 @@ import {
   type CoachBooking,
 } from '@/services/ambassadorSessionService'
 import { resolvePurchasedCoachSessions } from '@/utils/purchasedCoachSessions'
+import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
 
 export type SessionPointsRole = 'mentor' | 'coach'
 
@@ -102,15 +102,19 @@ async function countCoachBookingAwards(learnerId: string, coachId?: string): Pro
 }
 
 export async function getLearnerJourneyType(learnerId: string): Promise<JourneyType | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('journey_type, data')
-    .eq('id', learnerId)
-    .maybeSingle()
-  if (error || !data) return null
-  const nested = (data.data as Record<string, unknown> | null) || {}
-  const raw = (data.journey_type as string | null) ?? (nested.journeyType as string | null)
-  return raw && isJourneyType(raw) ? raw : null
+  const ctx = await resolveLearnerJourneyContext(learnerId)
+  return ctx?.journeyType ?? null
+}
+
+/**
+ * Resolve a learner's journey for session-points issuance. Uses a SECURITY
+ * DEFINER RPC so mentors/coaches can read journey_type even when profiles
+ * SELECT RLS would otherwise hide the mentee row.
+ */
+export async function resolveLearnerJourneyForSessionPoints(
+  learnerId: string,
+): Promise<{ journeyType: JourneyType; weekNumber: number } | null> {
+  return resolveLearnerJourneyContext(learnerId)
 }
 
 export async function getSessionPointsQuota(params: {

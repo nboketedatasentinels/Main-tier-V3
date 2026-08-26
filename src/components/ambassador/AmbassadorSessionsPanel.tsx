@@ -165,9 +165,15 @@ const SlotBookingsRow: React.FC<{
                 leftIcon={<CheckCircle2 size={14} />}
                 onClick={() => handleMark(booking.id, 'attended')}
                 isLoading={busyId === booking.id}
-                isDisabled={busyId !== null}
+                isDisabled={
+                  busyId !== null || (booking.status === 'attended' && booking.pointsAwarded)
+                }
               >
-                Attended
+                {booking.status === 'attended' && booking.pointsAwarded
+                  ? 'Attended · +2,000'
+                  : booking.status === 'attended'
+                    ? 'Retry points'
+                    : 'Attended'}
               </Button>
               <Button
                 size="sm"
@@ -176,7 +182,7 @@ const SlotBookingsRow: React.FC<{
                 leftIcon={<MinusCircle size={14} />}
                 onClick={() => handleMark(booking.id, 'no_show')}
                 isLoading={busyId === booking.id}
-                isDisabled={busyId !== null}
+                isDisabled={busyId !== null || booking.status === 'attended'}
               >
                 No-show
               </Button>
@@ -256,6 +262,14 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
     }
     if (!title.trim() || !date || !time) {
       toast({ title: 'Please complete title, date, and time.', status: 'error' })
+      return
+    }
+    if (!meetingLink.trim()) {
+      toast({
+        title: 'Meeting link is required',
+        description: 'Add a Zoom, Teams, or Meet link so learners can join.',
+        status: 'error',
+      })
       return
     }
     const scheduledAt = parseLocalDateTime(date, time)
@@ -668,8 +682,8 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
                 </FormControl>
               </SimpleGrid>
 
-              <FormControl>
-                <FormLabel>Meeting link (optional)</FormLabel>
+              <FormControl isRequired>
+                <FormLabel>Meeting link</FormLabel>
                 <Input
                   type="url"
                   placeholder="https://..."

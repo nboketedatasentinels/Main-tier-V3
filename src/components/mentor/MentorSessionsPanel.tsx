@@ -274,6 +274,15 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
       })
       return
     }
+    const link = scheduleLink.trim()
+    if (!link) {
+      toast({
+        status: 'warning',
+        title: 'Meeting link is required',
+        description: 'Add a Zoom, Teams, or Meet link so mentees can join.',
+      })
+      return
+    }
     setScheduling(true)
     try {
       let scheduled = 0
@@ -292,7 +301,7 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
             mentorId,
             topic: scheduleTopic,
             scheduledAt,
-            meetingLink: scheduleLink,
+            meetingLink: link,
             learnerName: mentee.name,
             mentorName: mentorName ?? undefined,
             meetingGroupId,
@@ -410,10 +419,14 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
         if (scheduledAt && !isValid(scheduledAt)) {
           throw new Error('Please provide a valid date and time.')
         }
+        const link = meetingLink.trim()
+        if (!link) {
+          throw new Error('Meeting link is required so the learner can join.')
+        }
         await confirmMentorshipSession({
           sessionId: session.id,
           scheduledAt: scheduledAt ?? undefined,
-          meetingLink: meetingLink.trim() || undefined,
+          meetingLink: link,
         })
         toast({ title: 'Session confirmed', status: 'success' })
       } else if (mode === 'decline') {
@@ -641,18 +654,43 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                                 <Text fontSize="xs" color="text.muted" fontWeight="semibold">
                                   Mark attendance per person
                                 </Text>
-                                {group.sessions.map((attendee) => (
-                                  <Button
-                                    key={attendee.id}
-                                    size="sm"
-                                    colorScheme="purple"
-                                    leftIcon={<CheckCircle2 size={16} />}
-                                    onClick={() => openAction('complete', attendee)}
-                                  >
-                                    Complete · {attendee.learnerName ?? 'Learner'}
-                                  </Button>
-                                ))}
+                                {group.sessions.map((attendee) =>
+                                  attendee.status === 'completed' ? (
+                                    <Button
+                                      key={attendee.id}
+                                      size="sm"
+                                      colorScheme="green"
+                                      variant="outline"
+                                      leftIcon={<CheckCircle2 size={16} />}
+                                      isDisabled
+                                    >
+                                      Attended · {attendee.learnerName ?? 'Learner'}
+                                      {attendee.pointsAwarded ? ' · +2,000' : ''}
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      key={attendee.id}
+                                      size="sm"
+                                      colorScheme="purple"
+                                      leftIcon={<CheckCircle2 size={16} />}
+                                      onClick={() => openAction('complete', attendee)}
+                                    >
+                                      Complete · {attendee.learnerName ?? 'Learner'}
+                                    </Button>
+                                  ),
+                                )}
                               </Stack>
+                            ) : primary.status === 'completed' ? (
+                              <Button
+                                size="sm"
+                                colorScheme="green"
+                                variant="outline"
+                                leftIcon={<CheckCircle2 size={16} />}
+                                isDisabled
+                              >
+                                Attended
+                                {primary.pointsAwarded ? ' · +2,000 points' : ''}
+                              </Button>
                             ) : (
                               <Button
                                 size="sm"
@@ -692,9 +730,36 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                   Recent history
                 </Text>
                 <Stack spacing={3}>
-                  {historyGroups.map((group) => (
-                    <SessionRow key={group.key} sessions={group.sessions} />
-                  ))}
+                  {historyGroups.map((group) => {
+                    const needsPointsRetry =
+                      pointsIssuanceEnabled &&
+                      group.sessions.some((s) => s.status === 'completed' && !s.pointsAwarded)
+                    return (
+                      <SessionRow
+                        key={group.key}
+                        sessions={group.sessions}
+                        actions={
+                          needsPointsRetry ? (
+                            <Stack spacing={1} align="stretch">
+                              {group.sessions
+                                .filter((s) => s.status === 'completed' && !s.pointsAwarded)
+                                .map((s) => (
+                                  <Button
+                                    key={s.id}
+                                    size="sm"
+                                    colorScheme="purple"
+                                    leftIcon={<CheckCircle2 size={16} />}
+                                    onClick={() => openAction('complete', s)}
+                                  >
+                                    Issue +2,000 · {s.learnerName ?? 'Learner'}
+                                  </Button>
+                                ))}
+                            </Stack>
+                          ) : undefined
+                        }
+                      />
+                    )
+                  })}
                 </Stack>
               </Box>
             )}
@@ -771,8 +836,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                 <Text fontSize="xs" color="text.muted">
                   Choose a future date and time. Same-day slots only work if the time is still ahead.
                 </Text>
-                <FormControl>
-                  <FormLabel>Meeting link (optional)</FormLabel>
+                <FormControl isRequired>
+                  <FormLabel>Meeting link</FormLabel>
                   <Input
                     type="url"
                     placeholder="https://..."
@@ -850,8 +915,8 @@ export const MentorSessionsPanel: React.FC<MentorSessionsPanelProps> = ({
                         />
                       </FormControl>
                     </SimpleGrid>
-                    <FormControl>
-                      <FormLabel>Meeting link (optional)</FormLabel>
+                    <FormControl isRequired>
+                      <FormLabel>Meeting link</FormLabel>
                       <Input
                         type="url"
                         placeholder="Zoom, Teams, Meet..."
