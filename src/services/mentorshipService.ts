@@ -10,6 +10,9 @@ import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConf
 import { buildMeetingMailtoHref } from '@/utils/meetingInvite'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
 import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
+import {
+  assertMentorMeetingAllowedThisMonth,
+} from '@/services/sessionMonthLimit'
 
 export type MentorshipSessionStatus =
   | 'requested'
@@ -127,6 +130,12 @@ export async function createMentorshipSessionRequest(params: {
 
   await assertMandatoryLiftComplete(learnerId)
 
+  await assertMentorMeetingAllowedThisMonth({
+    learnerId,
+    sessionAt: proposedAt,
+    forSelf: true,
+  })
+
   const { data, error } = await supabase
     .from('mentorship_sessions')
     .insert({
@@ -194,6 +203,11 @@ export async function createMentorScheduledSession(params: {
   if (scheduledAt.getTime() < Date.now() - 60_000) {
     throw new Error('Pick a date and time in the future (this slot is already in the past).')
   }
+
+  await assertMentorMeetingAllowedThisMonth({
+    learnerId,
+    sessionAt: scheduledAt,
+  })
 
   const { data, error } = await supabase
     .from('mentorship_sessions')
@@ -291,6 +305,21 @@ export async function confirmMentorshipSession(params: {
     throw new Error('Only pending requests can be confirmed.')
   }
 
+  const learnerId = pickString(existing.learner_id)
+  const meetingAt =
+    scheduledAt ??
+    parseTs(existing.scheduled_at) ??
+    parseTs(existing.proposed_at) ??
+    new Date()
+
+  if (learnerId) {
+    await assertMentorMeetingAllowedThisMonth({
+      learnerId,
+      sessionAt: meetingAt,
+      excludeSessionId: sessionId,
+    })
+  }
+
   const updates: Record<string, unknown> = {
     status: 'scheduled',
     confirmed_at: new Date().toISOString(),
@@ -302,7 +331,6 @@ export async function confirmMentorshipSession(params: {
   const { error } = await supabase.from('mentorship_sessions').update(updates).eq('id', sessionId)
   if (error) throw new Error(error.message)
 
-  const learnerId = pickString(existing.learner_id)
   const mentorName = pickString(existing.mentor_name)
   if (learnerId) {
     const whenLabel =

@@ -316,7 +316,8 @@ export const AmbassadorSessionsPanel: React.FC<AmbassadorSessionsPanelProps> = (
             })
             booked += 1
           } catch (err) {
-            failures.push(learner.name)
+            const reason = err instanceof Error ? err.message : 'Could not book'
+            failures.push(`${learner.name} (${reason})`)
             console.warn('[CoachSessions] auto-book failed for', learner.id, err)
           }
         }

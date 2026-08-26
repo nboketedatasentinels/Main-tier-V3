@@ -10,6 +10,7 @@ import { notifyAsLeadership, notifyCoachSlotPublished } from '@/services/notific
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
 import { resolveLearnerJourneyContext } from '@/services/learnerJourneyContext'
+import { assertCoachMeetingAllowedThisMonth } from '@/services/sessionMonthLimit'
 
 export type CoachSlotStatus = 'open' | 'full' | 'cancelled' | 'completed'
 export type CoachBookingStatus = 'booked' | 'attended' | 'no_show' | 'cancelled'
@@ -379,6 +380,23 @@ export async function bookCoachSlot(params: {
 
   await assertMandatoryLiftComplete(learnerId)
 
+  const { data: slotRow, error: slotReadError } = await supabase
+    .from('ambassador_slots')
+    .select('ambassador_id, title, scheduled_at')
+    .eq('id', slotId)
+    .maybeSingle()
+  if (slotReadError) throw new Error(slotReadError.message)
+  if (!slotRow) throw new Error('Session slot not found.')
+
+  const sessionAt = slotRow.scheduled_at ? new Date(String(slotRow.scheduled_at)) : new Date()
+  const { data: auth } = await supabase.auth.getUser()
+  const forSelf = auth?.user?.id === learnerId
+  await assertCoachMeetingAllowedThisMonth({
+    learnerId,
+    sessionAt,
+    forSelf,
+  })
+
   const { data, error } = await supabase.rpc('book_ambassador_slot', {
     p_slot_id: slotId,
     p_learner_id: learnerId,
@@ -389,18 +407,12 @@ export async function bookCoachSlot(params: {
   if (error) throw new Error(error.message)
   const bookingId = String(data)
 
-  const { data: slot } = await supabase
-    .from('ambassador_slots')
-    .select('ambassador_id, title')
-    .eq('id', slotId)
-    .maybeSingle()
-
-  if (slot?.ambassador_id) {
+  if (slotRow.ambassador_id) {
     await notifyAsLeadership({
-      userId: slot.ambassador_id,
+      userId: slotRow.ambassador_id,
       type: 'session_request',
       title: 'New booking on your coaching session',
-      message: `${learnerName ?? 'A learner'} booked "${slot.title ?? 'your session'}".`,
+      message: `${learnerName ?? 'A learner'} booked "${slotRow.title ?? 'your session'}".`,
       relatedId: slotId,
       category: 'action_required',
       data: { priority: 'push', slotId, bookingId, learnerId, kind: 'ambassador_slot_booked' },
