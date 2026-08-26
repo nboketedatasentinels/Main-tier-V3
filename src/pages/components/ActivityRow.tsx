@@ -9,6 +9,7 @@ import {
   Icon,
   Stack,
   Text,
+  useToast,
 } from '@chakra-ui/react'
 import {
   AlertTriangle,
@@ -29,6 +30,10 @@ import { CoursePodcastSeriesPanel } from '@/components/courses/CoursePodcastSeri
 import { ProgrammeComponentPartsPanel } from '@/components/courses/ProgrammeComponentParts'
 import type { ProgrammeComponentType } from '@/config/pillarProgrammeComponents'
 import type { Pillar } from '@/types/pillar'
+import {
+  getLeadershipAssignedGuidance,
+  isLeadershipAssignedActivity,
+} from '@/utils/leadershipAssignedActivities'
 
 const PROGRAMME_COMPONENTS_HREF = '/app/weekly-checklist'
 
@@ -181,6 +186,7 @@ export const ActivityRow = ({
   isActionInFlight,
 }: ActivityRowProps) => {
   const navigate = useNavigate()
+  const toast = useToast()
 
   const programmeComponentType = PROGRAMME_COMPONENT_ACTIVITIES[activity.id]
   const isProgrammeComponent = Boolean(programmeComponentType)
@@ -188,13 +194,16 @@ export const ActivityRow = ({
   const isExternalAiToolSubmission =
     activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
   const isPartnerIssued = activity.approvalType === 'partner_issued'
+  const isAssignedByLeadership = isLeadershipAssignedActivity(activity)
   // Capstone / case study / practical open their parts list instead of a
   // checklist "Submit" CTA - points are claimed from the part runtime itself.
+  // Partner/mentor/coach attendance activities must NOT open the proof upload
+  // modal — marks are issued after attendance confirmation.
   const requiresPartnerApproval = Boolean(
     !isProgrammeComponent &&
+      !isAssignedByLeadership &&
       (activity.approvalType === 'partner_approved' ||
         activity.requiresApproval ||
-        // Non-programme partner_issued items still use proof → pending → reward.
         (isPartnerIssued && !activity.issuedByPartner)),
   )
   // No longer a passive state: non-issued partner_issued items are now
@@ -354,6 +363,16 @@ export const ActivityRow = ({
     if (weekClaimComplete) return 'Done this week'
     if (visualState === 'pending_review') return 'Submitted'
     if (visualState === 'rejected') return 'Try again'
+    if (isAssignedByLeadership) {
+      if (isPartnerIssued && activity.issuedByPartner) {
+        return claimAttempt > 1
+          ? `Claim${attemptSuffix}${ptsSuffix}`
+          : `Claim${ptsSuffix}`
+      }
+      if (activity.approvalType === 'mentor_issued') return 'Mentor assigns marks'
+      if (activity.approvalType === 'ambassador_issued') return 'Coach assigns marks'
+      return 'Partner assigns marks'
+    }
     if (requiresPartnerApproval) {
       return claimAttempt > 1
         ? `Submit${attemptSuffix}${ptsSuffix}`
@@ -413,6 +432,26 @@ export const ActivityRow = ({
     if (primaryActionDisabled) return
     if (activity.id === 'impact_log') {
       navigate('/app/impact')
+      return
+    }
+    // Partner/mentor/coach assign marks after attendance — no learner upload.
+    if (isAssignedByLeadership) {
+      if (isPartnerIssued && activity.issuedByPartner && !isExternalAiToolSubmission) {
+        onMarkCompleted(activity)
+        return
+      }
+      toast({
+        status: 'info',
+        title:
+          activity.approvalType === 'mentor_issued'
+            ? 'Mentor assigns your marks'
+            : activity.approvalType === 'ambassador_issued'
+              ? 'Coach assigns your marks'
+              : 'Partner assigns your marks',
+        description: getLeadershipAssignedGuidance(activity),
+        duration: 7000,
+        isClosable: true,
+      })
       return
     }
     if (requiresPartnerApproval) {
@@ -597,6 +636,20 @@ export const ActivityRow = ({
               <Text fontSize="sm" color="gray.700" lineHeight="1.6">
                 {activity.description}
               </Text>
+            )}
+
+            {isAssignedByLeadership && !isProgrammeComponent && (
+              <Box
+                p={3}
+                rounded="md"
+                border="1px solid"
+                borderColor="purple.100"
+                bg="purple.50"
+              >
+                <Text fontSize="sm" color="purple.800" lineHeight="1.55" fontWeight="medium">
+                  {getLeadershipAssignedGuidance(activity)}
+                </Text>
+              </Box>
             )}
 
             {activity.freeTierNotice && !isProgrammeComponent && (

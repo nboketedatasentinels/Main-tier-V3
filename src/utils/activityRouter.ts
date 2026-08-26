@@ -1,5 +1,6 @@
 import { awardChecklistPoints } from '@/services/pointsService';
 import { ActivityDef, JourneyType } from '@/config/pointsConfig';
+import { isLeadershipAssignedActivity } from '@/utils/leadershipAssignedActivities';
 
 interface CompletionParams<TActivity extends ActivityDef> {
   uid: string;
@@ -74,14 +75,17 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
         break;
 
       case 'partner_approved':
-        // This type requires proof submission via UI modal
+        // Attendance activities (webinar / weekly session) are partner-marked —
+        // never open the proof upload path from the checklist.
+        if (isLeadershipAssignedActivity(activity)) {
+          break
+        }
         onProofRequired(activity);
         break;
 
       case 'partner_issued':
-        // Partner must issue/award. If the learner reaches this path before the
-        // partner has issued, route to the proof/pending flow so points are not
-        // granted instantly.
+        // Partner must issue/award. Issued items can be claimed; attendance
+        // items waiting on the partner stay info-only (no proof upload).
         if ((activity as TActivity & { issuedByPartner?: boolean }).issuedByPartner) {
           await awardOrExplain({
             uid,
@@ -93,15 +97,14 @@ export async function handleActivityCompletion<TActivity extends ActivityDef>(
             onSuccess,
             onError,
           });
-        } else {
+        } else if (!isLeadershipAssignedActivity(activity)) {
           onProofRequired(activity);
         }
         break;
 
       case 'mentor_issued':
       case 'ambassador_issued':
-        // These remain locked until assignment logic is implemented.
-        // No action from learner side here.
+        // Marks come from mentor/coach attendance confirmation — no learner claim.
         break;
 
       default:
