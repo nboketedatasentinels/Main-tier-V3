@@ -56,21 +56,21 @@ export function getLeadershipAssignedActionTitle(activity: ActivityLike): string
 }
 
 /**
- * Action-first guidance: what to do → who marks it → miss it = no marks.
- * No “you don’t need to upload” opener.
+ * Same voice for every assigned activity:
+ * Attend/complete X. Who assigns points after they confirm — if you don’t, you won’t get those points.
  */
 export function getLeadershipAssignedGuidance(activity: ActivityLike): string {
   switch (activity.id) {
     case 'webinar_workbook':
-      return 'Attend the live webinar. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
+      return 'Attend the live webinar. Your partner assigns the points after they confirm you were there — if you don’t attend, you won’t get those points.'
     case 'weekly_session':
-      return 'Attend the weekly session. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
+      return 'Attend the weekly session. Your partner assigns the points after they confirm you were there — if you don’t attend, you won’t get those points.'
     case 'book_club':
-      return 'Attend the book club session. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
+      return 'Attend the book club session. Your partner assigns the points after they confirm you were there — if you don’t attend, you won’t get those points.'
     case 'shameless_circle':
-      return 'Attend Shameless Circle. Your partner assigns the marks after you show up — if you miss it, you won’t get marks for this activity.'
+      return 'Attend Shameless Circle. Your partner assigns the points after they confirm you were there — if you don’t attend, you won’t get those points.'
     case 'lift_module':
-      return 'Complete the LIFT module. Your partner assigns the marks when it’s verified — if you don’t finish it, you won’t get marks for this activity.'
+      return 'Complete the LIFT module. Your partner assigns the points after they confirm it’s done — if you don’t finish it, you won’t get those points.'
     case 'mentor_meetup':
       return 'Attend your mentorship session. Your mentor assigns +2,000 points after they confirm you were there — if you don’t attend, you won’t get those points.'
     case 'ambassador_session':
@@ -80,10 +80,10 @@ export function getLeadershipAssignedGuidance(activity: ActivityLike): string {
   }
 
   if (activity.approvalType === 'mentor_issued') {
-    return 'Do the work with your mentor. They assign the marks when it’s confirmed — if you don’t complete it, you won’t get marks for this activity.'
+    return 'Complete this with your mentor. Your mentor assigns the points after they confirm it’s done — if you don’t complete it, you won’t get those points.'
   }
   if (activity.approvalType === 'ambassador_issued') {
-    return 'Do the work with your coach. They assign the marks when it’s confirmed — if you don’t complete it, you won’t get marks for this activity.'
+    return 'Complete this with your coach. Your coach assigns the points after they confirm it’s done — if you don’t complete it, you won’t get those points.'
   }
-  return 'Complete this activity as required. Your partner assigns the marks when it’s confirmed — if you don’t do it, you won’t get marks for this activity.'
+  return 'Complete this activity. Your partner assigns the points after they confirm it’s done — if you don’t complete it, you won’t get those points.'
 }
