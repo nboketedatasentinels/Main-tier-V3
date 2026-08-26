@@ -13,7 +13,8 @@
  *     collects every named input/textarea and UPSERTs the submission into the
  *     Supabase `programme_component_submissions` table via the REST API
  *     (unique on user_id + component_id, so resubmits update in place).
- *  5. Shows a small status banner with success / error.
+ *  5. On success: clears the form, reloads the page, then shows a success
+ *     banner (flash message via sessionStorage so it survives the refresh).
  *
  * Row-Level Security enforces that a learner can only write their own row
  * (pcs_insert: user_id = auth.uid()); partners/admins of the org can read.
@@ -62,6 +63,8 @@ function readSession(url) {
   }
 }
 
+const SUBMIT_FLASH_KEY = 't4l_capstone_submit_flash'
+
 function showBanner(kind, message) {
   let banner = document.getElementById('__t4l_submission_banner')
   if (!banner) {
@@ -93,6 +96,59 @@ function showBanner(kind, message) {
   banner.style.color = tone.color
   banner.textContent = message
 }
+
+/** Clear every named field so a reload / next edit starts blank. */
+function clearFormFields() {
+  const inputs = document.querySelectorAll('input[name], textarea[name], select[name]')
+  inputs.forEach((el) => {
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      el.checked = false
+    } else {
+      el.value = ''
+    }
+    el.dispatchEvent(new Event('input', { bubbles: true }))
+    el.dispatchEvent(new Event('change', { bubbles: true }))
+  })
+  if (typeof window.recountWords === 'function') {
+    try {
+      window.recountWords()
+    } catch {
+      // non-fatal
+    }
+  }
+}
+
+/** Persist success copy across reload, then show it once on the next load. */
+function flashSuccessAndReload(message) {
+  try {
+    sessionStorage.setItem(
+      SUBMIT_FLASH_KEY,
+      JSON.stringify({ message, at: Date.now() }),
+    )
+  } catch {
+    // sessionStorage unavailable — still clear + reload; banner may be lost.
+  }
+  clearFormFields()
+  window.location.reload()
+}
+
+function consumeSubmitFlash() {
+  try {
+    const raw = sessionStorage.getItem(SUBMIT_FLASH_KEY)
+    if (!raw) return
+    sessionStorage.removeItem(SUBMIT_FLASH_KEY)
+    const parsed = JSON.parse(raw)
+    const message = typeof parsed?.message === 'string' ? parsed.message : null
+    if (!message) return
+    // Drop stale flashes (e.g. tab restored hours later).
+    if (typeof parsed.at === 'number' && Date.now() - parsed.at > 5 * 60 * 1000) return
+    showBanner('success', message)
+  } catch {
+    // non-fatal
+  }
+}
+
+consumeSubmitFlash()
 
 function collectAnswers() {
   const answers = {}
@@ -329,12 +385,11 @@ async function submit() {
     const reviewerLabel = organizationId
       ? 'Your partner can now review.'
       : 'A T4L assessor can now review your Practitioner Capstone.'
-    showBanner(
-      'success',
-      isResubmission
-        ? `Resubmitted. ${reviewerLabel}`
-        : `Submitted. ${reviewerLabel}`,
-    )
+    const successMessage = isResubmission
+      ? `Resubmitted. ${reviewerLabel}`
+      : `Submitted. ${reviewerLabel}`
+    // Clear fields + reload so the form is empty; flash keeps the success banner.
+    flashSuccessAndReload(successMessage)
   } catch (err) {
     console.error('[capstone-runtime] save failed', err)
     showBanner('error', "We couldn't save your submission. Check your connection and try again.")

@@ -422,7 +422,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
           ) : null}
 
           {model.opener ? (
-            <Box mt={6} bg="#2D2A3E" color="#FDF8EF" borderRadius="10px" p={5}>
+            <Box mt={6} bg="#2D2A3E" color="white" borderRadius="10px" p={5}>
               <MonoLabel color="#D4A017">{model.opener.label}</MonoLabel>
               <Text
                 as="q"
@@ -430,10 +430,11 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 fontFamily="'DM Serif Display', Georgia, serif"
                 fontSize={{ base: '18px', md: '20px' }}
                 lineHeight="1.4"
+                color="white"
               >
                 {model.opener.quote}
               </Text>
-              <Text fontSize="12.5px" lineHeight="1.6" color="rgba(253,248,239,.6)" mt={3} m={0}>
+              <Text fontSize="12.5px" lineHeight="1.6" color="whiteAlpha.800" mt={3} m={0}>
                 {model.opener.note}
               </Text>
             </Box>
