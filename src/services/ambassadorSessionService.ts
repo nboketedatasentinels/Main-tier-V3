@@ -5,6 +5,7 @@
  */
 import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
+import { upsertChecklistActivity } from '@/services/checklistService'
 import { notifyAsLeadership, notifyCoachSlotPublished } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
@@ -598,6 +599,19 @@ export async function markAttendance(params: {
                 points_awarded_at: new Date().toISOString(),
               })
               .eq('id', bookingId)
+            // Mark Done on the learner checklist for this week (ledger drives the count).
+            await upsertChecklistActivity({
+              userId: learnerId,
+              weekNumber: context.weekNumber,
+              activityId: 'ambassador_session',
+              patch: {
+                status: 'completed',
+                hasInteracted: true,
+                issuedByPartner: false,
+              },
+            }).catch((err) =>
+              console.warn('[CoachSessionService] checklist upsert after points failed:', err),
+            )
           } else {
             awardMessage = result.message ?? 'Could not issue coach session points.'
           }

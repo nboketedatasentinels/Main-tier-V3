@@ -13,6 +13,7 @@ import {
 import { db } from '@/services/firebase'
 import { getActivityDefinitionById, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints } from '@/services/pointsService'
+import { upsertChecklistActivity } from '@/services/checklistService'
 import { createInAppNotification } from '@/services/notificationService'
 import { logAdminAction } from '@/services/superAdminService'
 import { removeUndefinedFields } from '@/utils/firestore'
@@ -225,6 +226,20 @@ export const markCourseCompleted = async (
       source: 'partner_course_completion',
       claimRef,
     })
+    await upsertChecklistActivity({
+      userId: learnerId,
+      weekNumber: resolvedWeek,
+      activityId: 'lift_module',
+      patch: {
+        status: 'completed',
+        hasInteracted: true,
+        issuedByPartner: true,
+        issuedBy: partnerId,
+        issuedAt: new Date().toISOString(),
+      },
+    }).catch((err) =>
+      console.warn('[CourseCompletion] checklist upsert after points failed:', err),
+    )
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     if (message.toLowerCase().includes('total activity limit reached')) {

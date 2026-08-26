@@ -520,6 +520,23 @@ export function useWeeklyChecklistViewModel() {
     }
   }, [selectedWeek, user, ledgerRefreshKey])
 
+  // Keep DONE (0/3 → 1/3) in sync when partner / mentor / coach awards land
+  // in points_ledger — same realtime source as Journey Progress / Glance.
+  useEffect(() => {
+    if (!user?.uid) return
+    const channel = supabase
+      .channel(`checklist_points_ledger_${user.uid}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'points_ledger', filter: `uid=eq.${user.uid}` },
+        () => refreshLedger(),
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(channel)
+    }
+  }, [user?.uid, refreshLedger])
+
   // Live map of pending verification weeks (across the journey). Source of
   // truth is Supabase `point_verifications` - the same store proof submit
   // writes to. Used by ActivityList to move that week out of To-do into

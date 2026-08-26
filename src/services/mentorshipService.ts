@@ -4,6 +4,7 @@
  */
 import { supabase } from '@/services/supabase'
 import { awardChecklistPoints } from '@/services/pointsService'
+import { upsertChecklistActivity } from '@/services/checklistService'
 import { notifyAsLeadership } from '@/services/notificationService'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { buildMeetingMailtoHref } from '@/utils/meetingInvite'
@@ -542,6 +543,19 @@ export async function completeMentorshipSession(params: {
                 updated_at: new Date().toISOString(),
               })
               .eq('id', sessionId)
+            // Mark Done on the learner checklist for this week (ledger drives the count).
+            await upsertChecklistActivity({
+              userId: learnerId,
+              weekNumber: context.weekNumber,
+              activityId: 'mentor_meetup',
+              patch: {
+                status: 'completed',
+                hasInteracted: true,
+                issuedByPartner: false,
+              },
+            }).catch((err) =>
+              console.warn('[MentorshipService] checklist upsert after points failed:', err),
+            )
           } else {
             awardMessage = result.message ?? 'Could not issue mentor meetup points.'
           }
