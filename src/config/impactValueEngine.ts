@@ -442,6 +442,11 @@ export function bandOf(net: number) {
   return IMPACT_VALUE_BANDS.find((b) => net <= b.max) || IMPACT_VALUE_BANDS[IMPACT_VALUE_BANDS.length - 1]
 }
 
+/** True when the value band requires finance sign-off (Band 2+). */
+export function bandNeedsFinance(net: number): boolean {
+  return (bandOf(net).need as readonly string[]).includes('finance')
+}
+
 export const IMPACT_RATE_LIB = [
   {
     pat: 'Manual report replaced by an automated or digital report',
@@ -605,9 +610,18 @@ export function claimInputsFromRecord(e: {
   }
 }
 
-export function nextClaimStatus(current: string): ImpactClaimStatus | null {
-  if (current === 'Submitted') return 'Measure Owner Confirmed'
-  if (current === 'Measure Owner Confirmed') return 'Recognized'
+export function nextClaimStatus(
+  current: string,
+  opts?: { needsFinance?: boolean },
+): ImpactClaimStatus | null {
+  const needsFinance = opts?.needsFinance !== false
+  if (current === 'Submitted') {
+    return needsFinance ? 'Measure Owner Confirmed' : 'Recognized'
+  }
+  if (current === 'Measure Owner Confirmed') {
+    // Partner can mark finance done in one step, or land on Finance Validated then Recognize.
+    return needsFinance ? 'Finance Validated' : 'Recognized'
+  }
   if (current === 'Finance Validated') return 'Recognized'
   return null
 }

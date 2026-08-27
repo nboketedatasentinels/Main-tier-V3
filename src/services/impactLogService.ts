@@ -51,6 +51,11 @@ export type ImpactLogRecord = {
   /** Improvement-claim payload (jsonb). */
   claim?: Record<string, unknown>
   claimStatus?: string
+  /** Email confirmation routing for improvement claims. */
+  needsFinance?: boolean
+  ownerEmail?: string
+  financeName?: string
+  financeEmail?: string
   esgMetric?: string
   esgQty?: number
   auditTrail?: string[]

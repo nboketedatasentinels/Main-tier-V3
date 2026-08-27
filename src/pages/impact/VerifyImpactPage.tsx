@@ -24,8 +24,9 @@ import {
 } from '@/services/impactVerificationService'
 
 /**
- * Public token page for impact-log verifiers (in or out of org).
- * Linked from the verification email - no login required.
+ * Public token page for impact verifiers (in or out of org).
+ * Linked from the verification email — no login required.
+ * Handles both activity-log points verification and improvement-claim confirmation.
  */
 export function VerifyImpactPage() {
   const [searchParams] = useSearchParams()
@@ -65,13 +66,45 @@ export function VerifyImpactPage() {
     }
   }, [token])
 
-  const summaryLines = useMemo(() => {
-    const summary = verification?.impactSummary
+  const summary = verification?.impactSummary
+  const isClaim =
+    (summary &&
+      typeof summary === 'object' &&
+      (summary as { kind?: string }).kind === 'improvement_claim') ||
+    verification?.verifierRole === 'measure_owner' ||
+    verification?.verifierRole === 'finance'
+
+  const roleLabel =
+    verification?.verifierRole === 'finance'
+      ? 'Finance validator'
+      : verification?.verifierRole === 'measure_owner'
+        ? 'Measure owner'
+        : verification?.verifierRole || 'Verifier'
+
+  const summaryRows = useMemo(() => {
     if (!summary || typeof summary !== 'object') return []
-    return Object.entries(summary)
-      .filter(([, value]) => value != null && String(value).trim() !== '')
-      .map(([key, value]) => `${key}: ${String(value)}`)
-  }, [verification])
+    const s = summary as Record<string, unknown>
+    const preferred = [
+      ['valueLabel', 'Indicative value'],
+      ['net', 'Net / period'],
+      ['bucket', 'Bucket'],
+      ['band', 'Value band'],
+      ['window', 'Measurement window'],
+      ['source', 'Source'],
+      ['evidence', 'Evidence'],
+      ['needsFinance', 'Finance required after owner'],
+    ] as const
+    const rows: { label: string; value: string }[] = []
+    for (const [key, label] of preferred) {
+      const raw = s[key]
+      if (raw == null || String(raw).trim() === '') continue
+      let value = String(raw)
+      if (key === 'needsFinance') value = raw === true || raw === 'true' ? 'Yes' : 'No'
+      if (key === 'net' && typeof raw === 'number') value = `$${Math.round(raw).toLocaleString()}`
+      rows.push({ label, value })
+    }
+    return rows
+  }, [summary])
 
   const alreadyDone = verification?.status === 'approved' || verification?.status === 'rejected'
 
@@ -86,11 +119,25 @@ export function VerifyImpactPage() {
           ? { ...prev, status: 'approved' }
           : ((result?.verification as ImpactVerificationRecord) ?? null),
       )
-      setResultMessage(
-        result?.alreadyResolved
-          ? 'This impact log was already resolved.'
-          : 'Approved. The learner has been awarded their points.',
-      )
+      if (result?.alreadyResolved) {
+        setResultMessage('This request was already resolved.')
+      } else if (result?.claimConfirmation) {
+        if (result.recognized) {
+          setResultMessage(
+            'Confirmed. The claim is recognized and the value can appear on the Impact Log dashboard.',
+          )
+        } else if (result.financeEmailed) {
+          setResultMessage(
+            'Measure owner confirmation recorded. Finance has been emailed to validate next.',
+          )
+        } else {
+          setResultMessage(
+            `Confirmation recorded${result.claimStatus ? ` · ${result.claimStatus}` : ''}.`,
+          )
+        }
+      } else {
+        setResultMessage('Approved. The learner has been awarded their points.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Approval failed.')
     } finally {
@@ -109,11 +156,13 @@ export function VerifyImpactPage() {
           ? { ...prev, status: 'rejected' }
           : ((result?.verification as ImpactVerificationRecord) ?? null),
       )
-      setResultMessage(
-        result?.alreadyResolved
-          ? 'This impact log was already resolved.'
-          : 'Rejected. The learner received zero points for this impact log.',
-      )
+      if (result?.alreadyResolved) {
+        setResultMessage('This request was already resolved.')
+      } else if (result?.claimConfirmation || isClaim) {
+        setResultMessage('Sent back. The learner was notified to revise the claim. No headline value was added.')
+      } else {
+        setResultMessage('Rejected. The learner received zero points for this impact log.')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Rejection failed.')
     } finally {
@@ -126,14 +175,22 @@ export function VerifyImpactPage() {
       <Container maxW="lg">
         <VStack spacing={6} align="stretch">
           <Box>
-            <Text fontSize="sm" color="gray.500" fontWeight="semibold" letterSpacing="0.06em" textTransform="uppercase">
+            <Text
+              fontSize="sm"
+              color="gray.500"
+              fontWeight="semibold"
+              letterSpacing="0.06em"
+              textTransform="uppercase"
+            >
               Transformation Leader
             </Text>
             <Heading size="lg" mt={1} color="#27062e">
-              Verify impact log
+              {isClaim ? 'Confirm improvement claim' : 'Verify impact log'}
             </Heading>
             <Text mt={2} color="gray.600">
-              Review this impact entry and approve or reject it. Approval awards points; rejection awards none.
+              {isClaim
+                ? 'Review this improvement claim and confirm or send it back. Confirmation updates the Impact Log value journey — it does not award journey points.'
+                : 'Review this impact entry and approve or reject it. Approval awards points; rejection awards none.'}
             </Text>
           </Box>
 
@@ -178,32 +235,35 @@ export function VerifyImpactPage() {
 
                 <Box>
                   <Text fontSize="sm" color="gray.500">
-                    Activity
+                    {isClaim ? 'Claim' : 'Activity'}
                   </Text>
-                  <Text fontWeight="semibold">{verification.activityTitle || 'Impact activity'}</Text>
+                  <Text fontWeight="semibold">
+                    {verification.activityTitle || (isClaim ? 'Improvement claim' : 'Impact activity')}
+                  </Text>
                 </Box>
 
                 <Box>
                   <Text fontSize="sm" color="gray.500">
                     Your role
                   </Text>
-                  <Text fontWeight="semibold" textTransform="capitalize">
-                    {verification.verifierRole || 'verifier'}
-                  </Text>
+                  <Text fontWeight="semibold">{roleLabel}</Text>
                   <Text fontSize="sm" color="gray.600">
                     {verification.verifierName} · {verification.verifierEmail}
                   </Text>
                 </Box>
 
-                {summaryLines.length > 0 && (
+                {summaryRows.length > 0 && (
                   <Box>
                     <Text fontSize="sm" color="gray.500" mb={1}>
                       Details
                     </Text>
                     <Stack spacing={1}>
-                      {summaryLines.map((line) => (
-                        <Text key={line} fontSize="sm">
-                          {line}
+                      {summaryRows.map((row) => (
+                        <Text key={row.label} fontSize="sm">
+                          <Text as="span" color="gray.500">
+                            {row.label}:{' '}
+                          </Text>
+                          {row.value}
                         </Text>
                       ))}
                     </Stack>
@@ -224,7 +284,7 @@ export function VerifyImpactPage() {
                     {(decisionHint === 'reject' || !decisionHint) && (
                       <Box>
                         <Text fontSize="sm" fontWeight="medium" mb={1}>
-                          Rejection reason (optional)
+                          {isClaim ? 'Reason if sending back (optional)' : 'Rejection reason (optional)'}
                         </Text>
                         <Textarea
                           value={rejectionReason}
@@ -237,20 +297,20 @@ export function VerifyImpactPage() {
                     <HStack spacing={3} pt={2}>
                       <Button
                         colorScheme="green"
-                        onClick={handleApprove}
+                        onClick={() => void handleApprove()}
                         isLoading={submitting}
                         flex={1}
                       >
-                        Approve
+                        {isClaim ? 'Confirm' : 'Approve'}
                       </Button>
                       <Button
                         colorScheme="red"
                         variant="outline"
-                        onClick={handleReject}
+                        onClick={() => void handleReject()}
                         isLoading={submitting}
                         flex={1}
                       >
-                        Reject
+                        {isClaim ? 'Send back' : 'Reject'}
                       </Button>
                     </HStack>
                   </>

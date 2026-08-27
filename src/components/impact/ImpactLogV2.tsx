@@ -56,6 +56,8 @@ import {
   IMPACT_RECURRENCE,
   IMPACT_SOURCES,
   IMPACT_WASTES,
+  bandOf,
+  bandNeedsFinance,
   formatMoney,
   gradeFromBaseline,
   valuation,
@@ -84,6 +86,7 @@ import { ImpactRegisterPanel } from '@/components/impact/ImpactRegisterPanel'
 import { ImpactRatesAdmin } from '@/components/impact/ImpactRatesAdmin'
 import { ImpactRatesViewer } from '@/components/impact/ImpactRatesViewer'
 import { ImpactExportPanel } from '@/components/impact/ImpactExportPanel'
+import { requestClaimConfirmations } from '@/services/impactClaimConfirmationService'
 
 type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'claims' | 'export'
 
@@ -127,7 +130,9 @@ type ClaimDraft = {
   implCost: number
   recurrence: string
   ownerV: string
+  ownerEmail: string
   financeV: string
+  financeEmail: string
   attest: boolean
 }
 
@@ -171,7 +176,9 @@ const blankClaim = (): ClaimDraft => ({
   implCost: 0,
   recurrence: IMPACT_RECURRENCE[0],
   ownerV: '',
+  ownerEmail: '',
   financeV: '',
+  financeEmail: '',
   attest: false,
 })
 
@@ -473,8 +480,28 @@ export const ImpactLogV2: React.FC = () => {
       toast({ status: 'warning', title: 'Nominate who confirms the number.' })
       return
     }
+    const ownerEmail = claim.ownerEmail.trim().toLowerCase()
+    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(ownerEmail)) {
+      toast({ status: 'warning', title: 'Add a valid work email for the measure owner.' })
+      return
+    }
     const inputs = toClaimInputs(claim)
     const v = valuation(inputs, rates)
+    const needsFinance = bandNeedsFinance(v.net)
+    const financeEmail = claim.financeEmail.trim().toLowerCase()
+    if (needsFinance) {
+      if (!claim.financeV.trim()) {
+        toast({ status: 'warning', title: 'This value band needs a finance validator name.' })
+        return
+      }
+      if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(financeEmail)) {
+        toast({
+          status: 'warning',
+          title: 'Add a valid finance email. This band requires finance validation.',
+        })
+        return
+      }
+    }
     setSubmitting(true)
     try {
       const wasteOrGrowth =
@@ -487,7 +514,9 @@ export const ImpactLogV2: React.FC = () => {
           : claim.cat === 'eff'
             ? 'Efficiency Gains'
             : 'Revenue Growth'
-      await createImpactLog(
+      const windowLabel = `${claim.wStart} to ${claim.wEnd}`
+      // Submitted claims stay Tier 1 / $0 on the headline until email confirmation advances them.
+      const created = await createImpactLog(
         removeUndefinedFields({
           userId: user.uid,
           companyId: profile?.companyId,
@@ -506,22 +535,22 @@ export const ImpactLogV2: React.FC = () => {
               ? Math.abs(Number(claim.base) - Number(claim.post)) * Number(claim.occ || 1)
               : 0,
           peopleImpacted: 0,
-          usdValue: v.tier === 1 ? 0 : Math.round(v.net),
+          usdValue: 0,
           usdValueSource: 'auto',
-          verificationLevel:
-            v.tier === 3
-              ? 'Tier 3: Verified'
-              : v.tier === 2
-                ? 'Tier 2: Partner Verified'
-                : 'Tier 1: Self-Reported',
+          verificationLevel: 'Tier 1: Self-Reported',
           verificationStatus: 'pending',
           claimStatus: 'Submitted',
-          verifierName: claim.ownerV,
-          verifierEmail: '',
+          verifierName: claim.ownerV.trim(),
+          verifierEmail: ownerEmail,
           evidenceLink: claim.evidenceRef || undefined,
+          needsFinance,
+          ownerEmail,
+          financeName: claim.financeV.trim() || undefined,
+          financeEmail: needsFinance ? financeEmail : undefined,
           claim: {
             ...inputs,
-            tier: v.tier,
+            tier: 1,
+            indicativeTier: v.tier,
             grade: v.grade,
             gross: Math.round(v.gross),
             net: Math.round(v.net),
@@ -533,29 +562,55 @@ export const ImpactLogV2: React.FC = () => {
             measure: claim.measure,
             formula: claim.formula,
             scope: `${claim.scopeType} · ${claim.scopeValue || 'unnamed'}`,
-            window: `${claim.wStart} to ${claim.wEnd}`,
+            window: windowLabel,
             attrReason: claim.attrReason,
             intervention: claim.intervention,
             direction: claim.direction,
             target: claim.target,
             evidenceType: claim.evidence,
+            finance: claim.financeV.trim() || undefined,
           },
           points: 0,
-          impactValue: Math.round(v.net),
+          impactValue: 0,
           scp: 0,
           verificationMultiplier: v.conf || 1,
+          auditTrail: [
+            `${new Date().toISOString().slice(0, 16)} · submitted · confirmation emailed to measure owner`,
+          ],
         }) as Parameters<typeof createImpactLog>[0],
       )
+
+      const confirm = await requestClaimConfirmations({
+        impactLogId: created.id,
+        measureTitle: claim.measure.trim(),
+        net: v.net,
+        tier: v.tier,
+        bucket: v.bucket,
+        ownerName: claim.ownerV.trim(),
+        ownerEmail,
+        financeName: claim.financeV.trim() || undefined,
+        financeEmail: needsFinance ? financeEmail : undefined,
+        learnerName: displayName,
+        learnerEmail: profile?.email || user.email || null,
+        organizationName: profile?.companyName || null,
+        evidenceRef: claim.evidenceRef || undefined,
+        source: claim.source || undefined,
+        window: windowLabel,
+      })
+
       toast({
-        status: 'success',
-        title: `Claim submitted at Tier ${v.tier}`,
+        status: confirm.ownerEmailed ? 'success' : 'warning',
+        title: confirm.ownerEmailed
+          ? 'Claim submitted — confirmation email sent'
+          : 'Claim saved, email not sent',
         description:
-          v.tier === 1
-            ? 'No currency value will be reported until evidence strengthens.'
-            : `Net ${formatMoney(v.net)} per period. Routed for verification.`,
+          confirm.warning ||
+          (confirm.needsFinance
+            ? `Sent to ${ownerEmail}. After they confirm, finance (${financeEmail}) will be emailed before headline value.`
+            : `Sent to ${ownerEmail}. Once they confirm, the value can appear on your dashboard.`),
       })
       resetEntry()
-      setTab('register')
+      setTab('claims')
       await reload()
     } catch (err) {
       toast({
@@ -1622,29 +1677,64 @@ export const ImpactLogV2: React.FC = () => {
                   <AlertIcon />
                   <Box>
                     <AlertTitle>
-                      {live.tier === 1 ? 'No currency value' : formatMoney(live.net)} · Tier {live.tier}
+                      {live.tier === 1 ? 'No currency value' : formatMoney(live.net)} ·{' '}
+                      {bandOf(live.net).name}
                     </AlertTitle>
                     <AlertDescription fontSize="sm">
-                      After submit: measure owner confirms, then finance if the band requires it.
+                      We email the measure owner a one-click confirm link. Headline $ stays at $0 until
+                      they confirm
+                      {bandNeedsFinance(live.net)
+                        ? ', then finance validates.'
+                        : '.'}
                     </AlertDescription>
                   </Box>
                 </Alert>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                   <FormControl isRequired>
-                    <FormLabel>Who confirms the number</FormLabel>
+                    <FormLabel>Measure owner name</FormLabel>
                     <Input
                       value={claim.ownerV}
                       onChange={(e) => setClaim((d) => ({ ...d, ownerV: e.target.value }))}
-                      placeholder="Name of measure owner"
+                      placeholder="Who owns this measure"
                     />
                   </FormControl>
-                  <FormControl>
-                    <FormLabel>Finance validator (optional)</FormLabel>
+                  <FormControl isRequired>
+                    <FormLabel>Measure owner email</FormLabel>
+                    <Input
+                      type="email"
+                      value={claim.ownerEmail}
+                      onChange={(e) => setClaim((d) => ({ ...d, ownerEmail: e.target.value }))}
+                      placeholder="name@company.com"
+                    />
+                    <FormHelperText>They receive the confirmation link (no login required).</FormHelperText>
+                  </FormControl>
+                  <FormControl isRequired={bandNeedsFinance(live.net)}>
+                    <FormLabel>
+                      Finance validator
+                      {bandNeedsFinance(live.net) ? '' : ' (optional)'}
+                    </FormLabel>
                     <Input
                       value={claim.financeV}
                       onChange={(e) => setClaim((d) => ({ ...d, financeV: e.target.value }))}
-                      placeholder="Name of finance reviewer"
+                      placeholder="Finance reviewer name"
                     />
+                  </FormControl>
+                  <FormControl isRequired={bandNeedsFinance(live.net)}>
+                    <FormLabel>
+                      Finance email
+                      {bandNeedsFinance(live.net) ? '' : ' (optional)'}
+                    </FormLabel>
+                    <Input
+                      type="email"
+                      value={claim.financeEmail}
+                      onChange={(e) => setClaim((d) => ({ ...d, financeEmail: e.target.value }))}
+                      placeholder="finance@company.com"
+                    />
+                    <FormHelperText>
+                      {bandNeedsFinance(live.net)
+                        ? 'Emailed after the measure owner confirms — required for this band.'
+                        : 'Only needed if your org wants a second sign-off.'}
+                    </FormHelperText>
                   </FormControl>
                 </SimpleGrid>
                 <Checkbox

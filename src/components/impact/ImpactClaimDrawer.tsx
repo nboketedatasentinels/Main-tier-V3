@@ -20,6 +20,7 @@ import {
 } from '@chakra-ui/react'
 import {
   CLAIM_STATE_ORDER,
+  bandNeedsFinance,
   claimInputsFromRecord,
   formatMoney,
   nextClaimStatus,
@@ -83,22 +84,45 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
     }
   }
 
+  const needsFinance =
+    entry.needsFinance === true ||
+    (entry.needsFinance !== false && Boolean(v && bandNeedsFinance(v.net)))
+
   const advance = () =>
     run(async () => {
-      const next = nextClaimStatus(status)
+      const next = nextClaimStatus(status, { needsFinance })
       if (!next) throw new Error('Nothing to advance.')
       const recognized = next === 'Recognized'
+      const ownerConfirmed = next === 'Measure Owner Confirmed'
+      const financeValidated = next === 'Finance Validated'
+      const nextTier = recognized
+        ? 3
+        : ownerConfirmed || financeValidated
+          ? 2
+          : Number(entry.claim?.tier || 1)
+      const nextUsd =
+        recognized || ownerConfirmed || financeValidated
+          ? Math.round(v?.net ?? Number(entry.claim?.net ?? entry.usdValue ?? 0))
+          : entry.usdValue
       await patchImpactLog(entry.id, {
         claimStatus: next,
         verificationStatus: recognized ? 'approved' : 'pending',
-        usdValue: recognized && v ? Math.round(v.net) : entry.usdValue,
+        verificationLevel:
+          nextTier === 3
+            ? 'Tier 3: Verified'
+            : nextTier === 2
+              ? 'Tier 2: Partner Verified'
+              : 'Tier 1: Self-Reported',
+        usdValue: nextUsd,
+        impactValue: recognized ? nextUsd : entry.impactValue,
         claim: {
           ...(entry.claim || {}),
+          tier: nextTier,
           sustain90: recognized ? 'Not yet due' : entry.claim?.sustain90,
         },
         auditLine: `${new Date().toISOString().slice(0, 16)} · status → ${next}`,
       })
-    }, `Moved to ${nextClaimStatus(status)}`)
+    }, `Moved to ${nextClaimStatus(status, { needsFinance })}`)
 
   const sendBack = () =>
     run(async () => {
@@ -168,12 +192,18 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
         </DrawerHeader>
         <DrawerBody>
           <HStack spacing={2} flexWrap="wrap" mb={4}>
-            {v && <Badge colorScheme="purple">Tier {v.tier}</Badge>}
+            {v && <Badge colorScheme="purple">Tier {Number(entry.claim?.tier ?? v.tier)}</Badge>}
             {v && <Badge>Baseline {v.grade}</Badge>}
             {entry.claim?.bucket != null && <Badge colorScheme="green">{String(entry.claim.bucket)}</Badge>}
             <Badge variant="outline">
               {cat?.n || '-'} · {sub || '-'}
             </Badge>
+            {entry.ownerEmail && status === 'Submitted' && (
+              <Badge colorScheme="blue">Awaiting owner · {entry.ownerEmail}</Badge>
+            )}
+            {needsFinance && status === 'Measure Owner Confirmed' && entry.financeEmail && (
+              <Badge colorScheme="orange">Awaiting finance · {entry.financeEmail}</Badge>
+            )}
           </HStack>
 
           {typeof entry.claim?.reverseReason === 'string' && entry.claim.reverseReason && (
@@ -285,7 +315,9 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
                 rows={2}
               />
               <Stack spacing={2}>
-                {(status === 'Submitted' || status === 'Measure Owner Confirmed') && (
+                {(status === 'Submitted' ||
+                  status === 'Measure Owner Confirmed' ||
+                  status === 'Finance Validated') && (
                   <>
                     <Button size="sm" colorScheme="primary" isLoading={busy} onClick={() => void advance()}>
                       Advance status

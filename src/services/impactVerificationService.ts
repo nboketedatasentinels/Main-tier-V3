@@ -230,11 +230,18 @@ async function invokeResolve(params: {
   decision: 'preview' | 'approve' | 'reject'
   rejectionReason?: string
 }) {
+  const appBaseUrl =
+    (import.meta.env.VITE_APP_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
+    (typeof window !== 'undefined' ? window.location.origin : undefined)
   const { data, error } = await supabase.functions.invoke<{
     success: boolean
     verification?: ImpactVerificationRecord
     alreadyResolved?: boolean
     pointsAwarded?: boolean
+    claimConfirmation?: boolean
+    claimStatus?: string
+    recognized?: boolean
+    financeEmailed?: boolean
     error?: string
     message?: string
   }>(RESOLVE_FN, {
@@ -242,6 +249,7 @@ async function invokeResolve(params: {
       token: params.token,
       decision: params.decision,
       rejectionReason: params.rejectionReason,
+      ...(appBaseUrl ? { appBaseUrl } : {}),
     },
   })
   if (error) throw new Error(error.message)
