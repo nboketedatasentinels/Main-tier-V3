@@ -3,13 +3,9 @@
  * Replaces Firestore mentorship_sessions which fail under Supabase-only auth.
  */
 import { supabase } from '@/services/supabase'
-import { awardChecklistPoints } from '@/services/pointsService'
-import { upsertChecklistActivity } from '@/services/checklistService'
 import { notifyAsLeadership } from '@/services/notificationService'
-import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { buildMeetingMailtoHref } from '@/utils/meetingInvite'
 import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
-import { resolveLearnerJourneyContextDetailed } from '@/services/learnerJourneyContext'
 import {
   assertMentorMeetingAllowedThisMonth,
 } from '@/services/sessionMonthLimit'
@@ -86,15 +82,6 @@ const mapSession = (row: Record<string, unknown>): MentorshipSession => ({
   mentorName: pickString(row.mentor_name),
   meetingGroupId: pickString(row.meeting_group_id),
 })
-
-async function getJourneyContext(
-  uid: string,
-): Promise<
-  | { ok: true; journeyType: JourneyType; weekNumber: number }
-  | { ok: false; reason: 'forbidden' | 'missing_journey' | 'unavailable' }
-> {
-  return resolveLearnerJourneyContextDetailed(uid)
-}
 
 const fetchSessionsByField = async (
   fieldName: 'learner_id' | 'mentor_id',
@@ -522,87 +509,52 @@ export async function completeMentorshipSession(params: {
     throw new Error('Only confirmed sessions can be marked complete.')
   }
 
-  const shouldAttemptAward = !existing.points_awarded
+  // Atomic server path: complete (if needed) + award +2,000 in one RPC.
+  const { data: awardRaw, error: awardError } = await supabase.rpc(
+    'award_mentorship_session_points',
+    { p_session_id: sessionId },
+  )
 
-  // Mark complete when still scheduled. If already completed but points were
-  // skipped (no journey / limit), allow a points-only retry below.
-  if (!alreadyCompleted) {
-    const { error: completeError } = await supabase
-      .from('mentorship_sessions')
-      .update({
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-        points_awarded: false,
-        points_awarded_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', sessionId)
-    if (completeError) throw new Error(completeError.message)
-  }
-
-  if (shouldAttemptAward && learnerId) {
-    try {
-      const context = await getJourneyContext(learnerId)
-      if (!context.ok) {
-        if (context.reason === 'forbidden') {
-          awardMessage =
-            'Attendance saved, but mentor points could not be issued (mentor link not recognised). Try Issue +2,000 again, or ask a partner to assign you as this learner’s mentor.'
-        } else if (context.reason === 'missing_journey') {
-          awardMessage =
-            'Session marked attended, but this learner has no journey type set — points need an active journey (e.g. 3M / 6M / 9M).'
-        } else {
-          awardMessage =
-            'Session marked attended, but journey details could not be loaded for points. Try Issue +2,000 again.'
-        }
-      } else {
-        const activity = getActivityDefinitionById({
-          activityId: 'mentor_meetup',
-          journeyType: context.journeyType,
+  if (awardError) {
+    if (!alreadyCompleted) {
+      await supabase
+        .from('mentorship_sessions')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        if (!activity) {
-          awardMessage = 'Mentor meetup points are not part of this journey.'
-        } else {
-          const result = await awardChecklistPoints({
-            uid: learnerId,
-            journeyType: context.journeyType,
-            weekNumber: context.weekNumber,
-            activity,
-            source: 'mentor_confirmed_session',
-            claimRef: `mentor_session:${sessionId}`,
-          })
-          if (result.awarded || result.reason === 'already_awarded') {
-            pointsAwarded = true
-            pointsAmount = activity.points
-            await supabase
-              .from('mentorship_sessions')
-              .update({
-                points_awarded: true,
-                points_awarded_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              })
-              .eq('id', sessionId)
-            // Mark Done on the learner checklist for this week (ledger drives the count).
-            await upsertChecklistActivity({
-              userId: learnerId,
-              weekNumber: context.weekNumber,
-              activityId: 'mentor_meetup',
-              patch: {
-                status: 'completed',
-                hasInteracted: true,
-                issuedByPartner: false,
-              },
-            }).catch((err) =>
-              console.warn('[MentorshipService] checklist upsert after points failed:', err),
-            )
-          } else {
-            awardMessage = result.message ?? 'Could not issue mentor meetup points.'
-          }
-        }
-      }
-    } catch (err) {
-      console.error('[MentorshipService] Failed to award points on completion:', err)
+        .eq('id', sessionId)
+    }
+    console.error('[MentorshipService] award_mentorship_session_points failed', awardError)
+    awardMessage =
+      awardError.message ||
+      'Attendance saved, but points could not be issued. Try Issue +2,000 again.'
+  } else {
+    const award = (awardRaw ?? {}) as {
+      ok?: boolean
+      awarded?: boolean
+      points?: number
+      error?: string
+      message?: string
+      reason?: string
+    }
+    if (award.ok && (award.awarded || award.reason === 'already_awarded')) {
+      pointsAwarded = true
+      pointsAmount = Number(award.points) || 2000
+    } else if (award.error === 'missing_journey') {
       awardMessage =
-        err instanceof Error ? err.message : 'Could not issue mentor meetup points.'
+        'Attendance saved, but this learner has no journey type set (needs 3M / 6M / 9M).'
+    } else if (award.error === 'forbidden') {
+      awardMessage =
+        'Attendance saved, but you are not allowed to issue mentor points for this learner.'
+    } else if (award.error === 'limit_exceeded') {
+      awardMessage =
+        'Attendance saved, but this learner has already used all mentor meetup points for their journey.'
+    } else if (!award.ok) {
+      awardMessage =
+        award.message ||
+        `Attendance saved, but points were not issued (${award.error ?? 'unknown'}). Try Issue +2,000 again.`
     }
   }
 
