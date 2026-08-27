@@ -10,7 +10,8 @@ import {
   Textarea,
   useToast,
 } from '@chakra-ui/react'
-import { format } from 'date-fns'
+import { Download } from 'lucide-react'
+import { format, endOfDay, startOfDay, subYears } from 'date-fns'
 import {
   IMPACT_CATS,
   IMPACT_ESG_PILLARS,
@@ -22,10 +23,14 @@ import {
   type ImpactRateCard,
 } from '@/config/impactValueEngine'
 import type { ImpactLogRecord } from '@/services/impactLogService'
+import type { ExportFilters, ImpactLogEntry } from '@/pages/impact/ImpactLogPage'
+import { generateImpactPdfReport } from '@/reports/impactPdfReport'
 
 type Props = {
   entries: ImpactLogRecord[]
   rates: ImpactRateCard[]
+  user?: unknown
+  profile?: { companyName?: string | null; companyId?: string | null } | null
 }
 
 type Tab = 'register' | 'board' | 'waste' | 'esg'
@@ -35,9 +40,34 @@ function csvEscape(v: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
+function toPdfEntries(entries: ImpactLogRecord[]): ImpactLogEntry[] {
+  return entries.map((e) => ({
+    ...e,
+    categoryGroup: e.categoryGroup || (e.entryKind === 'esg' ? 'esg' : 'business'),
+    verificationLevel: e.verificationLevel || 'Tier 1: Self-Reported',
+    points: Number(e.points ?? 0),
+    impactValue: Number(e.impactValue ?? e.usdValue ?? 0),
+    scp: Number(e.scp ?? 0),
+    verificationMultiplier: Number(e.verificationMultiplier ?? 1),
+  })) as ImpactLogEntry[]
+}
+
+function applyPdfFilters(list: ImpactLogEntry[], filters: ExportFilters): ImpactLogEntry[] {
+  return list.filter((entry) => {
+    if (!entry.date) return true
+    const entryDate = new Date(entry.date)
+    if (Number.isNaN(entryDate.getTime())) return true
+    if (entryDate < filters.dateRange.start || entryDate > filters.dateRange.end) return false
+    if (filters.impactType === 'esg' && entry.categoryGroup !== 'esg') return false
+    if (filters.impactType === 'business' && entry.categoryGroup !== 'business') return false
+    return true
+  })
+}
+
+export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, user, profile }) => {
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('register')
+  const [pdfBusy, setPdfBusy] = useState(false)
   const today = format(new Date(), 'yyyy-MM-dd')
 
   const claims = entries.filter((e) => e.entryKind === 'claim' || (!e.entryKind && e.categoryGroup === 'business'))
@@ -45,6 +75,37 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
     (e) => e.claimStatus === 'Recognized' || e.verificationStatus === 'approved',
   )
   const esg = entries.filter((e) => e.entryKind === 'esg' || e.categoryGroup === 'esg')
+
+  const downloadPdf = async () => {
+    setPdfBusy(true)
+    try {
+      const pdfEntries = toPdfEntries(entries)
+      if (!pdfEntries.length) {
+        throw new Error('Nothing to include yet. Log an activity, claim, or ESG entry first.')
+      }
+      const filters: ExportFilters = {
+        dateRange: {
+          start: startOfDay(subYears(new Date(), 10)),
+          end: endOfDay(new Date()),
+        },
+        impactType: 'all',
+      }
+      await generateImpactPdfReport(pdfEntries, filters, user, profile, applyPdfFilters)
+      toast({
+        status: 'success',
+        title: 'PDF downloaded',
+        description: 'Your impact report has been saved.',
+      })
+    } catch (err) {
+      toast({
+        status: 'error',
+        title: 'PDF download failed',
+        description: err instanceof Error ? err.message : 'Try again',
+      })
+    } finally {
+      setPdfBusy(false)
+    }
+  }
 
   const registerCsv = useMemo(() => {
     const head = [
@@ -135,15 +196,27 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
 
   return (
     <Stack spacing={4}>
-      <Box>
-        <Heading size="md" mb={1}>
-          Export
-        </Heading>
-        <Text fontSize="sm" color="text.secondary">
-          Four different hand-offs: CSV for finance systems, a board one-pager, a waste pattern
-          summary, and an ESG pack. Each is formatted for a different reader.
-        </Text>
-      </Box>
+      <Flex justify="space-between" align={{ base: 'stretch', md: 'flex-start' }} gap={3} flexWrap="wrap">
+        <Box flex="1" minW="220px">
+          <Heading size="md" mb={1}>
+            Export
+          </Heading>
+          <Text fontSize="sm" color="text.secondary">
+            Download a board-ready PDF, or pick a hand-off format: CSV for finance, one-pager,
+            waste summary, or ESG pack.
+          </Text>
+        </Box>
+        <Button
+          colorScheme="primary"
+          leftIcon={<Download size={16} />}
+          onClick={() => void downloadPdf()}
+          isLoading={pdfBusy}
+          loadingText="Building PDF…"
+          flexShrink={0}
+        >
+          Download PDF
+        </Button>
+      </Flex>
 
       <HStack spacing={2} flexWrap="wrap">
         {(

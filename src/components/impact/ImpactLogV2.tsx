@@ -1698,6 +1698,8 @@ export const ImpactLogV2: React.FC = () => {
           <ImpactExportPanel
             entries={isAdmin && orgEntries.length ? orgEntries : entries}
             rates={rates}
+            user={user}
+            profile={profile}
           />
         )}
       </Box>
