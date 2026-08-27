@@ -269,21 +269,12 @@ export const LeadershipBoardPage: React.FC = () => {
 
   const { activityHistoryByCategory, isLoading: activityHistoryLoading } = useUserActivityHistory(profile?.id)
 
+  /** Treemap + tooltip: one bucket per activity (never merge courses with podcasts). */
   const activityHistoryByTitle = useMemo(() => {
-    const normalizeCategory = (raw: string): string => {
-      const v = (raw || '').trim()
-      if (!v) return 'Other'
-      const lower = v.toLowerCase()
-      if (lower === 'esg impact' || lower === 'business impact' || lower === 'impact') return 'Impact Logs'
-      if (lower === 'networking') return 'Peer Sessions'
-      if (lower === 'learning') return 'Courses & Podcasts'
-      if (lower === 'community') return 'Group Sessions'
-      return v
-    }
-    const map: Record<string, typeof activityHistoryByCategory[string]> = {}
-    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
+    const map: Record<string, (typeof activityHistoryByCategory)[string]> = {}
+    Object.values(activityHistoryByCategory).forEach((entries) => {
       entries.forEach((entry) => {
-        const key = normalizeCategory(entry.category || category)
+        const key = (entry.activityTitle || entry.activityId || 'Other').trim() || 'Other'
         if (!map[key]) map[key] = []
         map[key].push(entry)
       })
@@ -554,36 +545,25 @@ export const LeadershipBoardPage: React.FC = () => {
   const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
 
   const userBreakdown = useMemo(() => {
-    const normalizeCategory = (raw: string): string => {
-      const v = (raw || '').trim()
-      if (!v) return 'Other'
-      const lower = v.toLowerCase()
-      if (lower === 'esg impact' || lower === 'business impact' || lower === 'impact') return 'Impact Logs'
-      if (lower === 'networking') return 'Peer Sessions'
-      if (lower === 'learning') return 'Courses & Podcasts'
-      if (lower === 'community') return 'Group Sessions'
-      return v
-    }
-
-    const categoryTotals = new Map<string, number>()
+    const activityTotals = new Map<string, number>()
     let totalPoints = 0
 
-    Object.entries(activityHistoryByCategory).forEach(([category, entries]) => {
+    Object.values(activityHistoryByCategory).forEach((entries) => {
       entries.forEach((entry) => {
         if (entry.points <= 0) return
-        const name = normalizeCategory(entry.category || category)
-        categoryTotals.set(name, (categoryTotals.get(name) ?? 0) + entry.points)
+        const name = (entry.activityTitle || entry.activityId || 'Other').trim() || 'Other'
+        activityTotals.set(name, (activityTotals.get(name) ?? 0) + entry.points)
         totalPoints += entry.points
       })
     })
 
     if (displayTotalPoints > totalPoints) {
       const unaccounted = displayTotalPoints - totalPoints
-      categoryTotals.set('Other', (categoryTotals.get('Other') ?? 0) + unaccounted)
+      activityTotals.set('Other', (activityTotals.get('Other') ?? 0) + unaccounted)
       totalPoints = displayTotalPoints
     }
 
-    return Array.from(categoryTotals.entries())
+    return Array.from(activityTotals.entries())
       .map(([name, points]) => ({
         name,
         value: points,
