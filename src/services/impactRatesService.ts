@@ -4,6 +4,58 @@
 import { supabase } from '@/services/supabase'
 import { DEFAULT_IMPACT_RATES, type ImpactRateCard } from '@/config/impactValueEngine'
 
+const showRatesKey = (companyId: string) => `t4l_impact_show_rates_${companyId}`
+
+const SHOW_RATES_SETTING = 'showImpactRatesToLearners'
+
+/** Whether practitioners may see dollar figures on the value register. */
+export async function getShowRatesToLearners(companyId?: string | null): Promise<boolean> {
+  if (!companyId) return false
+  try {
+    const { data, error } = await supabase
+      .from('organizations')
+      .select('settings')
+      .eq('id', companyId)
+      .maybeSingle()
+    if (error) throw error
+    const settings = (data?.settings as Record<string, unknown> | null) ?? {}
+    if (typeof settings[SHOW_RATES_SETTING] === 'boolean') {
+      return settings[SHOW_RATES_SETTING] as boolean
+    }
+  } catch (err) {
+    console.warn('[impactRates] could not read org rate visibility', err)
+  }
+  if (typeof localStorage !== 'undefined') {
+    return localStorage.getItem(showRatesKey(companyId)) === '1'
+  }
+  return false
+}
+
+export async function setShowRatesToLearners(
+  companyId: string | null | undefined,
+  show: boolean,
+): Promise<void> {
+  if (!companyId) return
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem(showRatesKey(companyId), show ? '1' : '0')
+  }
+  const { data, error: readErr } = await supabase
+    .from('organizations')
+    .select('settings')
+    .eq('id', companyId)
+    .maybeSingle()
+  if (readErr) throw new Error(readErr.message)
+  const settings = {
+    ...((data?.settings as Record<string, unknown> | null) ?? {}),
+    [SHOW_RATES_SETTING]: show,
+  }
+  const { error } = await supabase
+    .from('organizations')
+    .update({ settings, updated_at: new Date().toISOString() })
+    .eq('id', companyId)
+  if (error) throw new Error(error.message)
+}
+
 export type ImpactValueRateRow = ImpactRateCard & {
   status: 'Draft' | 'Published'
   companyId?: string | null
@@ -53,7 +105,7 @@ const mapRow = (row: DbRow): ImpactValueRateRow => {
 
 export async function listImpactValueRates(companyId?: string | null): Promise<ImpactValueRateRow[]> {
   try {
-    let q = supabase.from('impact_value_rates').select('*').order('created_at', { ascending: false })
+    const q = supabase.from('impact_value_rates').select('*').order('created_at', { ascending: false })
     const { data, error } = await q
     if (error) throw error
     const rows = (data as DbRow[] | null)?.map(mapRow) ?? []

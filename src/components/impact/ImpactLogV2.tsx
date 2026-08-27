@@ -12,13 +12,20 @@ import {
   Box,
   Button,
   Checkbox,
+  Collapse,
   Flex,
   FormControl,
   FormHelperText,
   FormLabel,
   Heading,
   HStack,
+  Icon,
+  IconButton,
   Input,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   Progress,
   Select,
   SimpleGrid,
@@ -26,10 +33,12 @@ import {
   Stack,
   Text,
   Textarea,
+  Tooltip,
   useToast,
   Wrap,
   WrapItem,
 } from '@chakra-ui/react'
+import { Info, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { ESGCategory } from '@/types'
@@ -65,7 +74,7 @@ import {
   listMyImpactLogs,
   type ImpactLogRecord,
 } from '@/services/impactLogService'
-import { listImpactValueRates } from '@/services/impactRatesService'
+import { listImpactValueRates, getShowRatesToLearners } from '@/services/impactRatesService'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { ImpactHelpButton, ImpactHelpModal } from '@/components/impact/ImpactHelpModal'
 import { ImpactClaimDrawer } from '@/components/impact/ImpactClaimDrawer'
@@ -73,9 +82,10 @@ import { ImpactValueDashboard } from '@/components/impact/ImpactValueDashboard'
 import { ImpactWastePanel } from '@/components/impact/ImpactWastePanel'
 import { ImpactRegisterPanel } from '@/components/impact/ImpactRegisterPanel'
 import { ImpactRatesAdmin } from '@/components/impact/ImpactRatesAdmin'
+import { ImpactRatesViewer } from '@/components/impact/ImpactRatesViewer'
 import { ImpactExportPanel } from '@/components/impact/ImpactExportPanel'
 
-type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'rates' | 'export'
+type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'claims' | 'export'
 
 type ClaimDraft = {
   step: number
@@ -217,6 +227,8 @@ export const ImpactLogV2: React.FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [helpKey, setHelpKey] = useState<ImpactHelpKey | null>(null)
   const [openClaim, setOpenClaim] = useState<ImpactLogRecord | null>(null)
+  const [showJourney, setShowJourney] = useState(false)
+  const [showRatesToLearners, setShowRatesToLearnersState] = useState(false)
 
   // Activity draft
   const [aTitle, setATitle] = useState('')
@@ -269,6 +281,22 @@ export const ImpactLogV2: React.FC = () => {
     void reload()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, profile?.companyId])
+
+  useEffect(() => {
+    let cancelled = false
+    void getShowRatesToLearners(profile?.companyId).then((v) => {
+      if (!cancelled) setShowRatesToLearnersState(v)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [profile?.companyId, tab])
+
+  const startEntry = (kind: ImpactEntryKind) => {
+    if (kind === 'claim') setClaim(blankClaim())
+    setEntry(kind)
+    setTab('log')
+  }
 
   const statsFor = (list: ImpactLogRecord[]) => {
     const claims = list.filter((e) => entryKindOf(e) === 'claim')
@@ -576,43 +604,67 @@ export const ImpactLogV2: React.FC = () => {
         {navBtn('dash', 'Value dashboard')}
         {navBtn('waste', 'Where value comes from')}
         {navBtn('register', 'Value register')}
-        {isAdmin ? navBtn('rates', 'Value rates · admin') : null}
+        {navBtn('claims', 'Claims ledger')}
         {navBtn('export', 'Export')}
       </Flex>
 
       {tab === 'log' && !entry && (
-        <Box
-          bg="linear-gradient(180deg, #fff 0%, #FDFBF8 70%, transparent 100%)"
-          borderBottom="1px solid"
-          borderColor="border.subtle"
-          px={{ base: 4, md: 6 }}
-          pt={8}
-          pb={2}
-        >
-          <Text
-            fontSize="xs"
-            letterSpacing="0.12em"
-            textTransform="uppercase"
-            color="brand.accent"
-            fontWeight="bold"
-            mb={2}
+        <>
+          <Box
+            position="relative"
+            overflow="hidden"
+            bgGradient="linear(to-r, #350e6f, #8b5a3c)"
+            color="white"
+            px={{ base: 4, md: 6 }}
+            py={{ base: 4, md: 5 }}
           >
-            Impact log
-          </Text>
-          <Heading size="lg" maxW="17ch" mb={2} fontWeight="semibold">
-            What you changed, and what it added up to.
-          </Heading>
-          <Text color="text.secondary" maxW="44ch" fontSize="sm" mb={6}>
-            Your validated improvements, your organisation&apos;s, and the same rules behind every
-            figure. Points stay on your journey dashboard, not here.
-            <ImpactHelpButton k="howvalued" onOpen={setHelpKey} />
-          </Text>
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={0} borderTop="2px solid" borderColor="brand.accent">
-            <Box p={5} bg="rgba(253,247,238,0.7)" borderRight={{ md: '1px solid' }} borderColor="border.subtle">
+            <Box
+              position="absolute"
+              top="-40%"
+              right="-8%"
+              w="280px"
+              h="280px"
+              borderRadius="full"
+              bg="whiteAlpha.100"
+              filter="blur(50px)"
+              pointerEvents="none"
+            />
+            <HStack spacing={2} mb={2} position="relative">
+              <Badge
+                bg="whiteAlpha.200"
+                color="white"
+                px={2.5}
+                py={0.5}
+                borderRadius="full"
+                fontSize="xs"
+                fontWeight="semibold"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Impact log
+              </Badge>
+              <ImpactHelpButton k="howvalued" onOpen={setHelpKey} />
+            </HStack>
+            <Heading size="md" mb={1} color="white" fontWeight="semibold" position="relative">
+              Log what changed, and what it added up to
+            </Heading>
+            <Text fontSize="sm" color="whiteAlpha.800" maxW="48ch" position="relative">
+              Organisation totals and your pipeline first. Points stay on your journey dashboard.
+            </Text>
+          </Box>
+
+          <SimpleGrid
+            columns={{ base: 1, md: 3 }}
+            spacing={0}
+            borderBottom="1px solid"
+            borderColor="border.subtle"
+            bg="surface.default"
+          >
+            <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
               <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
                 You · {displayName.split(' ')[0]}
               </Text>
-              <Text fontSize="3xl" fontWeight="bold" color="brand.accent" lineHeight="1.1" my={1}>
+              <Text fontSize="2xl" fontWeight="bold" color="brand.accent" lineHeight="1.15" my={1}>
                 {formatMoney(meStats.money)}
               </Text>
               <Text fontSize="sm" color="text.secondary">
@@ -630,11 +682,11 @@ export const ImpactLogV2: React.FC = () => {
                 {pctMe.toFixed(0)}% of organisation validated value
               </Text>
             </Box>
-            <Box p={5} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
+            <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
               <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
                 Organisation
               </Text>
-              <Text fontSize="3xl" fontWeight="bold" lineHeight="1.1" my={1}>
+              <Text fontSize="2xl" fontWeight="bold" lineHeight="1.15" my={1}>
                 {formatMoney(orgStats.money)}
               </Text>
               <Text fontSize="sm" color="text.secondary">
@@ -642,11 +694,11 @@ export const ImpactLogV2: React.FC = () => {
                 {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs released
               </Text>
             </Box>
-            <Box p={5}>
-              <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
+            <Box p={{ base: 4, md: 5 }} bg="tint.brandPrimary">
+              <Text fontSize="xs" textTransform="uppercase" color="brand.primary" fontWeight="bold">
                 Pipeline (Tier 2)
               </Text>
-              <Text fontSize="3xl" fontWeight="bold" lineHeight="1.1" my={1} color="brand.primary">
+              <Text fontSize="2xl" fontWeight="bold" lineHeight="1.15" my={1} color="brand.primary">
                 {formatMoney(
                   entries
                     .filter((e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2)
@@ -658,24 +710,7 @@ export const ImpactLogV2: React.FC = () => {
               </Text>
             </Box>
           </SimpleGrid>
-          <HStack spacing={2} py={5} flexWrap="wrap">
-            <Button
-              colorScheme="primary"
-              onClick={() => {
-                setClaim(blankClaim())
-                setEntry('claim')
-              }}
-            >
-              Claim an improvement
-            </Button>
-            <Button variant="outline" onClick={() => setEntry('activity')}>
-              Log an activity
-            </Button>
-            <Button variant="outline" onClick={() => setEntry('esg')}>
-              Log an ESG contribution
-            </Button>
-          </HStack>
-        </Box>
+        </>
       )}
 
       <Box maxW="1140px" mx="auto" px={{ base: 4, md: 5 }} py={5}>
@@ -741,10 +776,7 @@ export const ImpactLogV2: React.FC = () => {
                       size="sm"
                       colorScheme={card.k === 'claim' ? 'primary' : undefined}
                       variant={card.k === 'claim' ? 'solid' : 'outline'}
-                      onClick={() => {
-                        if (card.k === 'claim') setClaim(blankClaim())
-                        setEntry(card.k)
-                      }}
+                      onClick={() => startEntry(card.k)}
                     >
                       {card.k === 'claim' ? 'Start a claim' : card.k === 'esg' ? 'Log ESG' : 'Log an activity'}
                     </Button>
@@ -753,36 +785,50 @@ export const ImpactLogV2: React.FC = () => {
               </SimpleGrid>
             </Box>
 
-            <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
-              <Text
-                fontSize="xs"
-                letterSpacing="0.12em"
-                textTransform="uppercase"
-                color="brand.accent"
-                fontWeight="bold"
-                mb={2}
-              >
-                The claim journey
-              </Text>
-              <Heading size="sm" mb={3}>
-                How a claim moves once you submit it
-                <ImpactHelpButton k="journey" onOpen={setHelpKey} />
-              </Heading>
-              <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={3}>
-                {CLAIM_JOURNEY_STEPS.map(([num, title, desc]) => (
-                  <Box key={num} p={3} border="1px solid" borderColor="border.subtle" rounded="lg">
-                    <Text fontSize="xs" color="text.muted" fontWeight="bold">
-                      {num}
-                    </Text>
-                    <Text fontWeight="semibold" fontSize="sm">
-                      {title}
-                    </Text>
-                    <Text fontSize="xs" color="text.secondary">
-                      {desc}
-                    </Text>
-                  </Box>
-                ))}
-              </SimpleGrid>
+            <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
+              <Flex align="center" justify="space-between" gap={3} flexWrap="wrap">
+                <Box>
+                  <Text
+                    fontSize="xs"
+                    letterSpacing="0.12em"
+                    textTransform="uppercase"
+                    color="brand.accent"
+                    fontWeight="bold"
+                    mb={1}
+                  >
+                    The claim journey
+                  </Text>
+                  <Heading size="sm">
+                    How a claim moves once you submit it
+                  </Heading>
+                </Box>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<Icon as={Info} boxSize={3.5} />}
+                  onClick={() => setShowJourney((v) => !v)}
+                  aria-expanded={showJourney}
+                >
+                  {showJourney ? 'Hide info' : 'Info'}
+                </Button>
+              </Flex>
+              <Collapse in={showJourney} animateOpacity>
+                <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={3} mt={4}>
+                  {CLAIM_JOURNEY_STEPS.map(([num, title, desc]) => (
+                    <Box key={num} p={3} border="1px solid" borderColor="border.subtle" rounded="lg">
+                      <Text fontSize="xs" color="text.muted" fontWeight="bold">
+                        {num}
+                      </Text>
+                      <Text fontWeight="semibold" fontSize="sm">
+                        {title}
+                      </Text>
+                      <Text fontSize="xs" color="text.secondary">
+                        {desc}
+                      </Text>
+                    </Box>
+                  ))}
+                </SimpleGrid>
+              </Collapse>
             </Box>
 
             <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
@@ -1623,21 +1669,28 @@ export const ImpactLogV2: React.FC = () => {
           />
         )}
 
-        {tab === 'register' && (
+        {tab === 'register' &&
+          (isAdmin ? (
+            <ImpactRatesAdmin
+              companyId={profile?.companyId}
+              userId={user?.uid}
+              onHelp={setHelpKey}
+              onRatesChanged={setRates}
+            />
+          ) : (
+            <ImpactRatesViewer
+              rates={rates}
+              showFigures={showRatesToLearners}
+              onHelp={setHelpKey}
+            />
+          ))}
+
+        {tab === 'claims' && (
           <ImpactRegisterPanel
             entries={isAdmin && orgEntries.length ? orgEntries : entries}
             rates={rates}
             onHelp={setHelpKey}
             onOpenClaim={setOpenClaim}
-          />
-        )}
-
-        {tab === 'rates' && isAdmin && (
-          <ImpactRatesAdmin
-            companyId={profile?.companyId}
-            userId={user?.uid}
-            onHelp={setHelpKey}
-            onRatesChanged={setRates}
           />
         )}
 
@@ -1648,6 +1701,31 @@ export const ImpactLogV2: React.FC = () => {
           />
         )}
       </Box>
+
+      {tab === 'log' && !entry && (
+        <Menu placement="top-end">
+          <Tooltip label="Quick actions" hasArrow>
+            <MenuButton
+              as={IconButton}
+              aria-label="Quick actions"
+              icon={<Icon as={Plus} boxSize={6} />}
+              colorScheme="primary"
+              rounded="full"
+              size="lg"
+              position="fixed"
+              bottom={{ base: 6, md: 8 }}
+              right={{ base: 5, md: 8 }}
+              zIndex={20}
+              boxShadow="lg"
+            />
+          </Tooltip>
+          <MenuList zIndex={21}>
+            <MenuItem onClick={() => startEntry('claim')}>Claim an improvement</MenuItem>
+            <MenuItem onClick={() => startEntry('activity')}>Log an activity</MenuItem>
+            <MenuItem onClick={() => startEntry('esg')}>Log an ESG contribution</MenuItem>
+          </MenuList>
+        </Menu>
+      )}
 
       <Box
         borderTop="1px solid"

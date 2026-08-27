@@ -61,11 +61,12 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
     <Stack spacing={4}>
       <Box>
         <Heading size="md" mb={1}>
-          Value register
+          Claims ledger
           <ImpactHelpButton k="journey" onOpen={onHelp} />
         </Heading>
         <Text fontSize="sm" color="text.secondary">
-          Source of truth. Every figure on the dashboard drills back here.
+          Every logged claim, activity, and ESG entry. Dashboard figures drill back here. Org rates
+          live under Value register.
         </Text>
       </Box>
 

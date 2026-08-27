@@ -36,8 +36,10 @@ import {
 } from '@/config/impactValueEngine'
 import {
   deleteImpactValueRate,
+  getShowRatesToLearners,
   listImpactValueRates,
   publishImpactValueRate,
+  setShowRatesToLearners,
   upsertImpactValueRate,
   type ImpactValueRateRow,
 } from '@/services/impactRatesService'
@@ -64,6 +66,16 @@ export const ImpactRatesAdmin: React.FC<Props> = ({
   const [showToLearners, setShowToLearners] = useState(false)
   const [calc, setCalc] = useState({ before: 6, after: 1.5, per: 12, rateId: '' })
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void getShowRatesToLearners(companyId).then((v) => {
+      if (!cancelled) setShowToLearners(v)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [companyId])
 
   const reload = async () => {
     setLoading(true)
@@ -162,19 +174,81 @@ export const ImpactRatesAdmin: React.FC<Props> = ({
     <Stack spacing={5}>
       <Box p={4} border="1px solid" borderColor="purple.100" bg="purple.50" rounded="xl">
         <Text fontSize="xs" color="brand.accent" fontWeight="bold" textTransform="uppercase" mb={1}>
-          Administrator screen
+          Partner · value register
         </Text>
         <Heading size="md" mb={1}>
-          Value rates
+          Organisation rates
           <ImpactHelpButton k="rates" onOpen={onHelp} />
         </Heading>
         <Text fontSize="sm" color="text.secondary" mb={3}>
-          Practitioners never type money. Finance returns cost-of-employment figures once; the
-          platform derives hourly rates.
+          Send this to finance or HR. They enter cost-of-employment for each grade once; the
+          platform derives hourly rates and auto-values claims. Practitioners never type money.
+          There is no hard cap on rates: use real figures for your organisation (high-pay
+          employers included).
         </Text>
-        <Checkbox isChecked={showToLearners} onChange={(e) => setShowToLearners(e.target.checked)}>
+        <Checkbox
+          isChecked={showToLearners}
+          onChange={(e) => {
+            const next = e.target.checked
+            setShowToLearners(next)
+            void setShowRatesToLearners(companyId, next)
+              .then(() =>
+                toast({
+                  status: 'success',
+                  title: next ? 'Learners can see rates' : 'Rates hidden from learners',
+                  duration: 2500,
+                }),
+              )
+              .catch((err) =>
+                toast({
+                  status: 'error',
+                  title: 'Could not save visibility',
+                  description: err instanceof Error ? err.message : undefined,
+                }),
+              )
+          }}
+        >
           Show rate figures to practitioners (off by default)
         </Checkbox>
+        <Button
+          mt={3}
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            const body = [
+              'Please fill our T4L Impact value register.',
+              '',
+              'For each grade / role we need:',
+              '• Annual cost of employment (or loaded cost)',
+              '• Paid hours per year (default 1,880)',
+              '• Optional: margin per unit, cost per defect',
+              '',
+              'These become our organisation standards for valuing time saved and related improvements.',
+              'Open Impact Log → Value register in the partner portal to enter or update grades.',
+            ].join('\n')
+            void navigator.clipboard.writeText(body).then(
+              () => toast({ status: 'success', title: 'Finance brief copied' }),
+              () => toast({ status: 'warning', title: 'Could not copy. Select and copy manually' }),
+            )
+          }}
+        >
+          Copy brief for finance / HR
+        </Button>
+      </Box>
+
+      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl">
+        <Heading size="sm" mb={1}>
+          Guidelines (not caps)
+        </Heading>
+        <Text fontSize="sm" color="text.secondary" mb={2}>
+          Use these patterns so finance knows which rate to supply. Numbers should reflect your
+          organisation, not a country average if your pay scales differ.
+        </Text>
+        <Text fontSize="xs" color="text.muted">
+          Typical patterns: hourly cost of employment for time saved; cost per correction for
+          quality; contribution margin per unit for volume; holding cost for inventory. See the
+          rate library below.
+        </Text>
       </Box>
 
       <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl">
@@ -363,9 +437,7 @@ export const ImpactRatesAdmin: React.FC<Props> = ({
                     />
                   </Td>
                   <Td isNumeric>
-                    <Text fontWeight="bold">
-                      {showToLearners || true ? `$${r.hourly.toFixed(2)}` : '•••'}
-                    </Text>
+                    <Text fontWeight="bold">${r.hourly.toFixed(2)}</Text>
                   </Td>
                   <Td isNumeric>
                     <Input

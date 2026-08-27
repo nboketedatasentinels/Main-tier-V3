@@ -28,7 +28,7 @@ type Props = {
   rates: ImpactRateCard[]
 }
 
-type Tab = 'register' | 'board' | 'waste' | 'esg' | 'json'
+type Tab = 'register' | 'board' | 'waste' | 'esg'
 
 function csvEscape(v: unknown): string {
   const s = String(v ?? '')
@@ -87,29 +87,9 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
     return [head, ...rows].map((r) => r.map(csvEscape).join(',')).join('\n')
   }, [entries, rates])
 
-  const auditJson = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          exported_at: today,
-          policy: {
-            headline_tiers: [3],
-            buckets_never_summed: true,
-            annualisation_requires_90d_check: true,
-            points_tracked: 'journey dashboard, not the impact log',
-          },
-          rates,
-          entries,
-        },
-        null,
-        2,
-      ),
-    [today, rates, entries],
-  )
-
-  const download = (name: string, text: string) => {
+  const download = (name: string, text: string, mime = 'text/csv;charset=utf-8') => {
     try {
-      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+      const blob = new Blob([text], { type: mime })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -142,6 +122,17 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
     .filter((e) => e.claim?.bucket === 'capacity')
     .reduce((s, e) => s + Number(e.hours || 0), 0)
 
+  const wasteRows = IMPACT_WASTES.map((w) => {
+    const matched = validated.filter((c) => c.claim?.waste === w.k)
+    const value = matched.reduce((s, e) => s + Number(e.usdValue || 0), 0)
+    return { k: w.k, label: w.n, count: matched.length, value }
+  }).filter((w) => w.count > 0)
+  const growthRows = IMPACT_GROWTH.map((g) => {
+    const matched = validated.filter((c) => c.claim?.growth === g.k)
+    const value = matched.reduce((s, e) => s + Number(e.usdValue || 0), 0)
+    return { k: g.k, label: g.n, count: matched.length, value }
+  }).filter((g) => g.count > 0)
+
   return (
     <Stack spacing={4}>
       <Box>
@@ -149,18 +140,18 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
           Export
         </Heading>
         <Text fontSize="sm" color="text.secondary">
-          Register for finance, one-pager for the sponsor, ESG hand-off, audit JSON.
+          Four different hand-offs: CSV for finance systems, a board one-pager, a waste pattern
+          summary, and an ESG pack. Each is formatted for a different reader.
         </Text>
       </Box>
 
       <HStack spacing={2} flexWrap="wrap">
         {(
           [
-            ['register', 'Value register (CSV)'],
+            ['register', 'Finance CSV'],
             ['board', 'Board one-pager'],
-            ['waste', 'Waste summary'],
+            ['waste', 'Waste / growth summary'],
             ['esg', 'ESG hand-off'],
-            ['json', 'Audit JSON'],
           ] as const
         ).map(([k, l]) => (
           <Button
@@ -176,115 +167,195 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
       </HStack>
 
       {tab === 'register' && (
-        <Box>
+        <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl" bg="gray.50">
+          <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" color="text.muted" mb={1}>
+            For finance systems · machine-readable
+          </Text>
+          <Heading size="sm" mb={2}>
+            Claims ledger CSV
+          </Heading>
+          <Text fontSize="sm" color="text.secondary" mb={3}>
+            Flat file with one row per entry. Import into Excel or your finance tool.
+          </Text>
           <HStack mb={3}>
-            <Button size="sm" colorScheme="primary" onClick={() => download(`t4l_value_register_${today}.csv`, registerCsv)}>
+            <Button
+              size="sm"
+              colorScheme="primary"
+              onClick={() => download(`t4l_claims_ledger_${today}.csv`, registerCsv)}
+            >
               Download CSV
             </Button>
             <Button size="sm" variant="outline" onClick={() => void copy(registerCsv)}>
               Copy
             </Button>
           </HStack>
-          <Textarea value={registerCsv} readOnly rows={14} fontFamily="mono" fontSize="xs" />
+          <Textarea value={registerCsv} readOnly rows={14} fontFamily="mono" fontSize="xs" bg="white" />
         </Box>
       )}
 
       {tab === 'board' && (
-        <Box p={6} border="1px solid" borderColor="border.subtle" rounded="xl" bg="white" className="sheet">
-          <Flex justify="space-between" borderBottom="2px solid" borderColor="brand.accent" pb={3} mb={4}>
-            <Box>
-              <Text fontSize="xs" color="brand.accent" fontWeight="bold" textTransform="uppercase">
-                Transformation Leader · LIFT
-              </Text>
-              <Heading size="sm">Improvement value report</Heading>
-              <Text fontSize="sm" color="text.secondary">
-                Prepared {today}
-              </Text>
-            </Box>
-            <Button size="sm" onClick={() => window.print()}>
-              Print / PDF
-            </Button>
-          </Flex>
-          <SimpleMoney cash={cash} avoid={avoid} capHours={capHours} />
-          <Text fontSize="sm" my={4}>
-            <b>Basis of preparation.</b> Figures come from claims with a locked baseline from a named
-            system, valued from finance-returned rates, reduced for attribution, realisation and
-            evidence confidence. Cash, avoidance and capacity are never summed.
-          </Text>
-          <Stack spacing={1}>
-            {validated.map((e) => (
-              <Flex key={e.id} justify="space-between" fontSize="sm" py={1} borderBottom="1px solid" borderColor="border.subtle">
-                <Text>
-                  {e.title} · {e.date}
+        <Box
+          p={0}
+          border="1px solid"
+          borderColor="brand.primary"
+          rounded="xl"
+          overflow="hidden"
+          bg="white"
+          className="sheet"
+        >
+          <Box bgGradient="linear(to-r, #350e6f, #8b5a3c)" color="white" px={6} py={5}>
+            <Flex justify="space-between" align="flex-start" gap={4} flexWrap="wrap">
+              <Box>
+                <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" letterSpacing="0.08em" opacity={0.9}>
+                  Transformation Leader · Board pack
                 </Text>
-                <Text fontFamily="mono">{formatMoney(Number(e.usdValue || 0))}</Text>
-              </Flex>
-            ))}
-          </Stack>
+                <Heading size="md" mt={1} color="white">
+                  Improvement value report
+                </Heading>
+                <Text fontSize="sm" opacity={0.85} mt={1}>
+                  Prepared {today} · validated claims only
+                </Text>
+              </Box>
+              <Button size="sm" bg="whiteAlpha.200" color="white" _hover={{ bg: 'whiteAlpha.300' }} onClick={() => window.print()}>
+                Print / PDF
+              </Button>
+            </Flex>
+          </Box>
+          <Box px={6} py={5}>
+            <SimpleMoney cash={cash} avoid={avoid} capHours={capHours} />
+            <Text fontSize="sm" my={4} color="text.secondary">
+              <b>Basis of preparation.</b> Figures come from claims with a locked baseline from a
+              named system, valued from finance-returned rates, reduced for attribution, realisation
+              and evidence confidence. Cash, avoidance and capacity are never summed.
+            </Text>
+            <Heading size="xs" mb={2} textTransform="uppercase" letterSpacing="0.06em" color="text.muted">
+              Recognised improvements
+            </Heading>
+            <Stack spacing={0}>
+              {validated.map((e) => (
+                <Flex
+                  key={e.id}
+                  justify="space-between"
+                  fontSize="sm"
+                  py={2.5}
+                  borderBottom="1px solid"
+                  borderColor="border.subtle"
+                >
+                  <Text>
+                    {e.title} · {e.date}
+                  </Text>
+                  <Text fontFamily="mono" fontWeight="semibold">
+                    {formatMoney(Number(e.usdValue || 0))}
+                  </Text>
+                </Flex>
+              ))}
+              {validated.length === 0 && (
+                <Text fontSize="sm" color="text.secondary">
+                  No recognised claims yet.
+                </Text>
+              )}
+            </Stack>
+          </Box>
         </Box>
       )}
 
       {tab === 'waste' && (
-        <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl">
-          <Heading size="sm" mb={3}>
-            Pattern report · wastes & growth
+        <Box p={5} border="1px dashed" borderColor="orange.300" rounded="xl" bg="orange.50">
+          <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" color="orange.700" mb={1}>
+            Pattern report · ops / lean lens
+          </Text>
+          <Heading size="sm" mb={1}>
+            Where value is coming from
+          </Heading>
+          <Text fontSize="sm" color="text.secondary" mb={4}>
+            Count and value by waste type and revenue growth pattern, not a finance ledger.
+          </Text>
+          <Heading size="xs" mb={2}>
+            Wastes
+          </Heading>
+          <Stack spacing={2} mb={4}>
+            {(wasteRows.length
+              ? wasteRows
+              : IMPACT_WASTES.map((w) => ({ k: w.k, label: w.n, count: 0, value: 0 }))
+            ).map((w) => (
+              <Flex key={w.k} justify="space-between" fontSize="sm" bg="white" px={3} py={2} rounded="md">
+                <Text>{w.label}</Text>
+                <HStack spacing={4}>
+                  <Text color="text.muted">{w.count} claims</Text>
+                  <Text fontFamily="mono">{formatMoney(w.value)}</Text>
+                </HStack>
+              </Flex>
+            ))}
+          </Stack>
+          <Heading size="xs" mb={2}>
+            Growth patterns
           </Heading>
           <Stack spacing={2}>
-            {IMPACT_WASTES.map((w) => {
-              const n = validated.filter((c) => c.claim?.waste === w.k).length
-              return (
-                <Flex key={w.k} justify="space-between" fontSize="sm">
-                  <Text>{w.n}</Text>
-                  <Text>{n} claims</Text>
-                </Flex>
-              )
-            })}
+            {(growthRows.length
+              ? growthRows
+              : IMPACT_GROWTH.map((g) => ({ k: g.k, label: g.n, count: 0, value: 0 }))
+            ).map((g) => (
+              <Flex key={g.k} justify="space-between" fontSize="sm" bg="white" px={3} py={2} rounded="md">
+                <Text>{g.label}</Text>
+                <HStack spacing={4}>
+                  <Text color="text.muted">{g.count} claims</Text>
+                  <Text fontFamily="mono">{formatMoney(g.value)}</Text>
+                </HStack>
+              </Flex>
+            ))}
           </Stack>
-          <Button mt={4} size="sm" onClick={() => window.print()}>
+          <Button mt={4} size="sm" colorScheme="orange" variant="outline" onClick={() => window.print()}>
             Print / PDF
           </Button>
         </Box>
       )}
 
       {tab === 'esg' && (
-        <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl">
+        <Box p={5} border="2px solid" borderColor="green.600" rounded="xl" bg="green.50">
+          <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" color="green.800" mb={1}>
+            ESG team hand-off · not financially valued
+          </Text>
           <Heading size="sm" mb={1}>
-            ESG hand-off
+            ESG contributions
           </Heading>
           <Text fontSize="sm" color="text.secondary" mb={3}>
-            Not valued, not tiered, not aggregated with the financial register.
+            Own units only. Not tiered, not aggregated with the financial register.
           </Text>
           <Stack spacing={2}>
             {esg.map((e) => (
-              <Flex key={e.id} justify="space-between" fontSize="sm" gap={3}>
+              <Flex
+                key={e.id}
+                justify="space-between"
+                fontSize="sm"
+                gap={3}
+                bg="white"
+                px={3}
+                py={2}
+                rounded="md"
+                borderLeft="3px solid"
+                borderColor="green.500"
+              >
                 <Box>
                   <Text fontWeight="medium">{e.esgMetric || e.title}</Text>
                   <Text fontSize="xs" color="text.muted">
-                    {(IMPACT_ESG_PILLARS.find((p) => p.n.toLowerCase().includes(String(e.esgCategory || '').toLowerCase())) ||
-                      IMPACT_ESG_PILLARS[0]
+                    {(
+                      IMPACT_ESG_PILLARS.find((p) =>
+                        p.n.toLowerCase().includes(String(e.esgCategory || '').toLowerCase()),
+                      ) || IMPACT_ESG_PILLARS[0]
                     ).n}{' '}
                     · {e.date}
                   </Text>
                 </Box>
-                <Text fontFamily="mono">{e.esgQty ?? e.peopleImpacted}</Text>
+                <Text fontFamily="mono" fontWeight="semibold">
+                  {e.esgQty ?? e.peopleImpacted}
+                </Text>
               </Flex>
             ))}
             {esg.length === 0 && <Text fontSize="sm">No ESG entries yet.</Text>}
           </Stack>
-        </Box>
-      )}
-
-      {tab === 'json' && (
-        <Box>
-          <HStack mb={3}>
-            <Button size="sm" colorScheme="primary" onClick={() => download(`t4l_impact_audit_${today}.json`, auditJson)}>
-              Download JSON
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => void copy(auditJson)}>
-              Copy
-            </Button>
-          </HStack>
-          <Textarea value={auditJson} readOnly rows={16} fontFamily="mono" fontSize="xs" />
+          <Button mt={4} size="sm" colorScheme="green" variant="outline" onClick={() => window.print()}>
+            Print / PDF
+          </Button>
         </Box>
       )}
     </Stack>
@@ -302,11 +373,20 @@ const SimpleMoney: React.FC<{ cash: number; avoid: number; capHours: number }> =
       ['Cost avoidance / period', formatMoney(avoid)],
       ['Capacity released', `${capHours.toFixed(1)} hrs`],
     ].map(([l, v]) => (
-      <Box key={l} flex="1" minW="160px" p={3} border="1px solid" borderColor="border.subtle" rounded="md">
+      <Box
+        key={l}
+        flex="1"
+        minW="160px"
+        p={4}
+        border="1px solid"
+        borderColor="border.subtle"
+        rounded="lg"
+        bg="gray.50"
+      >
         <Text fontSize="xs" color="text.muted" textTransform="uppercase" fontWeight="bold">
           {l}
         </Text>
-        <Text fontSize="xl" fontWeight="bold">
+        <Text fontSize="xl" fontWeight="bold" mt={1}>
           {v}
         </Text>
       </Box>
