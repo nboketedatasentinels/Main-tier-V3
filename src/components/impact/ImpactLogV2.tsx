@@ -722,11 +722,16 @@ export const ImpactLogV2: React.FC = () => {
         )}
 
         {tab === 'log' && !entry && !loading && (
-          <Stack spacing={5}>
-            <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
+          <Stack spacing={6}>
+            <Box
+              p={{ base: 5, md: 6 }}
+              rounded="2xl"
+              bg="surface.default"
+              boxShadow="card"
+            >
               <Text
                 fontSize="xs"
-                letterSpacing="0.12em"
+                letterSpacing="0.14em"
                 textTransform="uppercase"
                 color="brand.accent"
                 fontWeight="bold"
@@ -734,10 +739,10 @@ export const ImpactLogV2: React.FC = () => {
               >
                 Three kinds of entry
               </Text>
-              <Heading size="md" mb={1}>
+              <Heading size="md" mb={1} letterSpacing="-0.02em">
                 Log your impact
               </Heading>
-              <Text fontSize="sm" color="text.secondary" mb={4}>
+              <Text fontSize="sm" color="text.secondary" mb={5} maxW="54ch">
                 Pick the one that matches what you have. They are reported separately and never mixed.
               </Text>
               <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
@@ -757,40 +762,59 @@ export const ImpactLogV2: React.FC = () => {
                     title: 'ESG contribution',
                     body: 'Env / social / governance in their own units. Goes to the ESG team, not finance.',
                   },
-                ].map((card) => (
-                  <Box
-                    key={card.k}
-                    p={4}
-                    border="1.5px solid"
-                    borderColor={card.k === 'claim' ? 'brand.primary' : 'border.subtle'}
-                    rounded="xl"
-                    bg={card.k === 'claim' ? 'tint.brandPrimary' : 'surface.default'}
-                  >
-                    <Text fontWeight="bold" mb={1}>
-                      {card.title}
-                    </Text>
-                    <Text fontSize="sm" color="text.secondary" mb={4}>
-                      {card.body}
-                    </Text>
-                    <Button
-                      size="sm"
-                      colorScheme={card.k === 'claim' ? 'primary' : undefined}
-                      variant={card.k === 'claim' ? 'solid' : 'outline'}
-                      onClick={() => startEntry(card.k)}
+                ].map((card) => {
+                  const featured = card.k === 'claim'
+                  return (
+                    <Box
+                      key={card.k}
+                      p={5}
+                      rounded="2xl"
+                      bg={featured ? 'tint.brandPrimary' : 'surface.subtle'}
+                      boxShadow={featured ? 'md' : 'sm'}
+                      transition="box-shadow 0.2s ease, transform 0.2s ease"
+                      _hover={{
+                        boxShadow: featured ? 'card-elevated' : 'md',
+                        transform: 'translateY(-2px)',
+                      }}
                     >
-                      {card.k === 'claim' ? 'Start a claim' : card.k === 'esg' ? 'Log ESG' : 'Log an activity'}
-                    </Button>
-                  </Box>
-                ))}
+                      <Text fontWeight="bold" mb={1.5} color="text.primary">
+                        {card.title}
+                      </Text>
+                      <Text fontSize="sm" color="text.secondary" mb={5} lineHeight="1.5">
+                        {card.body}
+                      </Text>
+                      <Button
+                        size="sm"
+                        colorScheme={featured ? 'primary' : undefined}
+                        variant={featured ? 'solid' : 'ghost'}
+                        bg={featured ? undefined : 'white'}
+                        boxShadow={featured ? undefined : 'sm'}
+                        onClick={() => startEntry(card.k)}
+                      >
+                        {card.k === 'claim'
+                          ? 'Start a claim'
+                          : card.k === 'esg'
+                            ? 'Log ESG'
+                            : 'Log an activity'}
+                      </Button>
+                    </Box>
+                  )
+                })}
               </SimpleGrid>
             </Box>
 
-            <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
+            <Box
+              px={{ base: 4, md: 5 }}
+              py={4}
+              rounded="2xl"
+              bg="surface.default"
+              boxShadow="sm"
+            >
               <Flex align="center" justify="space-between" gap={3} flexWrap="wrap">
                 <Box>
                   <Text
                     fontSize="xs"
-                    letterSpacing="0.12em"
+                    letterSpacing="0.14em"
                     textTransform="uppercase"
                     color="brand.accent"
                     fontWeight="bold"
@@ -798,13 +822,14 @@ export const ImpactLogV2: React.FC = () => {
                   >
                     The claim journey
                   </Text>
-                  <Heading size="sm">
+                  <Heading size="sm" letterSpacing="-0.01em">
                     How a claim moves once you submit it
                   </Heading>
                 </Box>
                 <Button
                   size="sm"
-                  variant="outline"
+                  variant="ghost"
+                  bg="surface.subtle"
                   leftIcon={<Icon as={Info} boxSize={3.5} />}
                   onClick={() => setShowJourney((v) => !v)}
                   aria-expanded={showJourney}
@@ -815,14 +840,20 @@ export const ImpactLogV2: React.FC = () => {
               <Collapse in={showJourney} animateOpacity>
                 <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={3} mt={4}>
                   {CLAIM_JOURNEY_STEPS.map(([num, title, desc]) => (
-                    <Box key={num} p={3} border="1px solid" borderColor="border.subtle" rounded="lg">
-                      <Text fontSize="xs" color="text.muted" fontWeight="bold">
+                    <Box
+                      key={num}
+                      p={3.5}
+                      rounded="xl"
+                      bg="surface.subtle"
+                      boxShadow="xs"
+                    >
+                      <Text fontSize="xs" color="brand.accent" fontWeight="bold" mb={0.5}>
                         {num}
                       </Text>
-                      <Text fontWeight="semibold" fontSize="sm">
+                      <Text fontWeight="semibold" fontSize="sm" mb={1}>
                         {title}
                       </Text>
-                      <Text fontSize="xs" color="text.secondary">
+                      <Text fontSize="xs" color="text.secondary" lineHeight="1.45">
                         {desc}
                       </Text>
                     </Box>
@@ -831,10 +862,15 @@ export const ImpactLogV2: React.FC = () => {
               </Collapse>
             </Box>
 
-            <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
+            <Box
+              p={{ base: 5, md: 6 }}
+              rounded="2xl"
+              bg="surface.default"
+              boxShadow="sm"
+            >
               <Text
                 fontSize="xs"
-                letterSpacing="0.12em"
+                letterSpacing="0.14em"
                 textTransform="uppercase"
                 color="brand.accent"
                 fontWeight="bold"
@@ -847,7 +883,7 @@ export const ImpactLogV2: React.FC = () => {
                   Nothing logged yet. Start with an activity, ESG contribution, or improvement claim.
                 </Text>
               ) : (
-                <Stack spacing={2}>
+                <Stack spacing={2.5}>
                   {entries.slice(0, 12).map((e) => {
                     const kind = entryKindOf(e)
                     return (
@@ -858,12 +894,13 @@ export const ImpactLogV2: React.FC = () => {
                         textAlign="left"
                         justify="space-between"
                         gap={3}
-                        p={3}
-                        border="1px solid"
-                        borderColor="border.subtle"
-                        rounded="md"
+                        p={3.5}
+                        rounded="xl"
+                        bg="surface.subtle"
+                        boxShadow="xs"
                         flexWrap="wrap"
-                        _hover={{ bg: 'orange.50' }}
+                        transition="background 0.15s ease, box-shadow 0.15s ease"
+                        _hover={{ bg: 'orange.50', boxShadow: 'sm' }}
                         onClick={() => setOpenClaim(e)}
                       >
                         <Box>
