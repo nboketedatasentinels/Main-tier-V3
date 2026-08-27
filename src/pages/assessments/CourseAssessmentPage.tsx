@@ -228,10 +228,12 @@ export default function CourseAssessmentPage() {
                 {kindLabel} assessment
               </Text>
               <Heading
+                as="h1"
                 size={{ base: 'md', md: 'lg' }}
                 letterSpacing="-0.02em"
                 lineHeight="1.2"
-                color="white"
+                // Global theme forces h1–h6 to text.primary (dark); beat it for this plum header.
+                sx={{ color: '#ffffff !important' }}
               >
                 {liveDefinition?.title ||
                   activeCatalog?.title ||
