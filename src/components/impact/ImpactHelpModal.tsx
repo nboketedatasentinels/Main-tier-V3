@@ -35,31 +35,6 @@ export const ImpactHelpModal: React.FC<Props> = ({ helpKey, onClose }) => {
         <ModalBody pb={6}>
           {h && (
             <>
-              <Box
-                position="relative"
-                borderRadius="xl"
-                overflow="hidden"
-                bg="linear-gradient(150deg,#2A2438,#1A1726)"
-                aspectRatio={16 / 9}
-                mb={3}
-                display="grid"
-                placeItems="center"
-              >
-                <Box
-                  w="56px"
-                  h="56px"
-                  borderRadius="full"
-                  border="1.5px solid"
-                  borderColor="whiteAlpha.500"
-                  bg="whiteAlpha.200"
-                />
-                <Text position="absolute" top={3} right={3} fontSize="xs" color="yellow.300" fontWeight="bold">
-                  WALKTHROUGH
-                </Text>
-                <Text position="absolute" bottom={3} left={3} fontSize="xs" color="whiteAlpha.700">
-                  {h.vid} · drop Loom / YouTube here
-                </Text>
-              </Box>
               <Text fontSize="sm" color="text.secondary" whiteSpace="pre-wrap" mb={4}>
                 {h.p}
               </Text>
