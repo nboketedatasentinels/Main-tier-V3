@@ -59,6 +59,7 @@ import {
   updateSubmissionReview,
   approveSubmissionAndAward,
   getComponentPoints,
+  getAiBankAScore,
   type ProgrammeComponentSubmission,
   type ProgrammeComponentType,
   type ProgrammeSubmissionStatus,
@@ -239,7 +240,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
             </HStack>
             <Text color="gray.600" fontSize="sm">
               Capstone, case study, and practical work from learners in your organisations.
-              Open one to review the answers and leave feedback.
+              Gemini pre-grades each submission; you confirm, add Bank B judgment, and approve.
             </Text>
           </Box>
         </Flex>
@@ -353,6 +354,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                       <Th>Learner</Th>
                       <Th>Component</Th>
                       <Th>Type</Th>
+                      <Th>AI grade</Th>
                       <Th>Submitted</Th>
                       <Th>Status</Th>
                       <Th width="100px">Action</Th>
@@ -411,6 +413,9 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                                 -
                               </Text>
                             )}
+                          </Td>
+                          <Td>
+                            <AiGradeBadge submission={row} />
                           </Td>
                           <Td>
                             <Text fontSize="xs" color="gray.600">
@@ -491,6 +496,67 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, color }) => (
   </Box>
 )
 
+const AiGradeBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ submission }) => {
+  const ai = submission.aiGrade
+  if (!ai) {
+    return (
+      <Text fontSize="xs" color="gray.400">
+        Pending
+      </Text>
+    )
+  }
+  if (ai.status === 'error') {
+    return (
+      <Badge colorScheme="red" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+        AI error
+      </Badge>
+    )
+  }
+  if (ai.status !== 'completed') {
+    return (
+      <Badge colorScheme="gray" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+        Grading…
+      </Badge>
+    )
+  }
+  const display =
+    ai.score != null
+      ? Math.round(ai.score)
+      : getAiBankAScore(ai) != null
+        ? `${getAiBankAScore(ai)}/50`
+        : null
+  if (display == null) {
+    return (
+      <Text fontSize="xs" color="gray.400">
+        —
+      </Text>
+    )
+  }
+  return (
+    <HStack spacing={1}>
+      <Badge
+        colorScheme={ai.pass === false ? 'orange' : 'green'}
+        variant="subtle"
+        fontSize="2xs"
+        textTransform="none"
+        rounded="md"
+      >
+        {typeof display === 'number' ? `${display}/100` : display}
+      </Badge>
+      {ai.pass === true && (
+        <Text fontSize="2xs" color="green.700">
+          Pass
+        </Text>
+      )}
+      {ai.pass === false && (
+        <Text fontSize="2xs" color="orange.700">
+          Fail
+        </Text>
+      )}
+    </HStack>
+  )
+}
+
 interface DrawerProps {
   isOpen: boolean
   onClose: () => void
@@ -511,6 +577,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const [status, setStatus] = useState<ProgrammeSubmissionStatus>('in_review')
   const [notes, setNotes] = useState('')
   const [score, setScore] = useState<string>('')
+  const [partnerBankB, setPartnerBankB] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [learnerJourneyType, setLearnerJourneyType] = useState<JourneyType | null>(null)
 
@@ -518,7 +585,15 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     if (!submission) return
     setStatus(submission.status === 'submitted' ? 'in_review' : submission.status)
     setNotes(submission.partnerNotes ?? '')
-    setScore(submission.score !== null ? String(submission.score) : '')
+    const aiScore =
+      submission.aiGrade?.status === 'completed' && submission.aiGrade.score != null
+        ? Math.round(submission.aiGrade.score)
+        : null
+    const initialScore = submission.finalScore ?? submission.score ?? aiScore
+    setScore(initialScore !== null ? String(initialScore) : '')
+    setPartnerBankB(
+      submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : '',
+    )
   }, [submission])
 
   useEffect(() => {
@@ -555,6 +630,19 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const passFailMode =
     (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) ||
     componentPoints === 0
+  const ai = submission.aiGrade
+  const aiBankA = getAiBankAScore(ai)
+  const aiFeedback =
+    (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
+
+  const applyAiSuggestion = () => {
+    if (ai?.status !== 'completed') return
+    if (ai.score != null) setScore(String(Math.round(ai.score)))
+    else if (aiBankA != null) setScore(String(aiBankA * 2))
+    if (aiFeedback && !notes.trim()) setNotes(aiFeedback)
+    if (ai.pass === false) setStatus('needs_revision')
+    else if (ai.pass === true) setStatus('approved')
+  }
 
   const handleSave = async () => {
     if (!reviewerId) {
@@ -565,6 +653,19 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     try {
       const scoreNum = score.trim() === '' ? null : Number(score)
       const cleanScore = Number.isFinite(scoreNum as number) ? (scoreNum as number) : null
+      const bankBRaw = partnerBankB.trim() === '' ? null : Number(partnerBankB)
+      let partnerScore50: number | null =
+        bankBRaw != null && Number.isFinite(bankBRaw)
+          ? Math.max(0, Math.min(50, Math.round(bankBRaw)))
+          : null
+      let finalScore: number | null = cleanScore
+      if (aiBankA != null && partnerScore50 != null) {
+        finalScore = Math.max(0, Math.min(100, aiBankA + partnerScore50))
+      } else if (cleanScore != null && aiBankA != null && partnerScore50 == null) {
+        // Treat overall score as final; derive Bank B from remainder.
+        partnerScore50 = Math.max(0, Math.min(50, Math.round(cleanScore) - aiBankA))
+        finalScore = Math.max(0, Math.min(100, Math.round(cleanScore)))
+      }
       const cleanNotes = notes.trim() === '' ? null : notes.trim()
 
       if (status === 'approved') {
@@ -574,7 +675,9 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           reviewerId,
           reviewerName,
           partnerNotes: cleanNotes,
-          score: cleanScore,
+          score: finalScore ?? cleanScore,
+          partnerScore50,
+          finalScore,
         })
         const isPassMark = passFailMode || result.points === 0
         onSaved({
@@ -604,7 +707,9 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         await updateSubmissionReview(submission.id, {
           status,
           partnerNotes: cleanNotes,
-          score: cleanScore,
+          score: finalScore ?? cleanScore,
+          partnerScore50,
+          finalScore,
           reviewerId,
           reviewerName,
         })
@@ -724,6 +829,92 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
 
             <Box
               p={4}
+              bg="white"
+              border="1px solid"
+              borderColor={
+                ai?.status === 'error'
+                  ? 'red.200'
+                  : ai?.status === 'completed'
+                    ? 'green.200'
+                    : 'gray.200'
+              }
+              rounded="lg"
+            >
+              <Stack spacing={3}>
+                <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
+                  <Text fontSize="sm" fontWeight="bold" color={PLUM}>
+                    AI advisory grade
+                  </Text>
+                  <AiGradeBadge submission={submission} />
+                </Flex>
+                {!ai && (
+                  <Text fontSize="sm" color="gray.600">
+                    Waiting for Gemini to grade this submission. Refresh in a few seconds if it stays
+                    empty.
+                  </Text>
+                )}
+                {ai?.status === 'error' && (
+                  <Alert status="warning" rounded="md" py={2}>
+                    <AlertIcon />
+                    <AlertDescription fontSize="sm">
+                      {ai.error || 'AI grading failed. You can still review and score manually.'}
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {ai?.status === 'completed' && (
+                  <>
+                    <HStack spacing={4} flexWrap="wrap">
+                      {ai.score != null && (
+                        <Text fontSize="sm" color="gray.700">
+                          Score{' '}
+                          <Text as="span" fontWeight="bold">
+                            {Math.round(ai.score)}/100
+                          </Text>
+                        </Text>
+                      )}
+                      {aiBankA != null && (
+                        <Text fontSize="sm" color="gray.700">
+                          Bank A{' '}
+                          <Text as="span" fontWeight="bold">
+                            {aiBankA}/50
+                          </Text>
+                        </Text>
+                      )}
+                      {ai.pass != null && (
+                        <Badge colorScheme={ai.pass ? 'green' : 'orange'} textTransform="none">
+                          AI {ai.pass ? 'Pass' : 'Fail'}
+                        </Badge>
+                      )}
+                    </HStack>
+                    {aiFeedback && (
+                      <Box
+                        p={3}
+                        bg="gray.50"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        rounded="md"
+                      >
+                        <Text fontSize="xs" fontWeight="semibold" color="gray.500" mb={1}>
+                          AI feedback
+                        </Text>
+                        <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
+                          {aiFeedback}
+                        </Text>
+                      </Box>
+                    )}
+                    <Button size="xs" variant="outline" colorScheme="purple" onClick={applyAiSuggestion}>
+                      Apply AI suggestion to my review
+                    </Button>
+                    <Text fontSize="xs" color="gray.500">
+                      Advisory only — AI never awards points. You remain the gate.
+                    </Text>
+                  </>
+                )}
+              </Stack>
+            </Box>
+
+            <Box
+              p={4}
               bg="#f9f5fb"
               border="1px solid"
               borderColor="#e6dbef"
@@ -806,7 +997,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 </FormControl>
                 <FormControl>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    {passFailMode ? 'Optional score note (0-100)' : 'Score (optional, 0-100)'}
+                    {passFailMode ? 'Optional score note (0-100)' : 'Final score (optional, 0-100)'}
                   </FormLabel>
                   <NumberInput
                     size="sm"
@@ -819,6 +1010,32 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     <NumberInputField placeholder="-" />
                   </NumberInput>
                 </FormControl>
+                {aiBankA != null && (
+                  <FormControl>
+                    <FormLabel fontSize="xs" color="gray.600" mb={1}>
+                      Your Bank B judgment (0–50)
+                    </FormLabel>
+                    <NumberInput
+                      size="sm"
+                      min={0}
+                      max={50}
+                      value={partnerBankB}
+                      onChange={(v) => {
+                        setPartnerBankB(v)
+                        const n = Number(v)
+                        if (Number.isFinite(n)) {
+                          setScore(String(Math.max(0, Math.min(100, aiBankA + Math.round(n)))))
+                        }
+                      }}
+                      bg="white"
+                    >
+                      <NumberInputField placeholder={`AI Bank A is ${aiBankA}/50`} />
+                    </NumberInput>
+                    <Text fontSize="xs" color="gray.500" mt={1}>
+                      Final = AI Bank A ({aiBankA}) + your Bank B.
+                    </Text>
+                  </FormControl>
+                )}
                 <FormControl>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
                     Feedback for the learner

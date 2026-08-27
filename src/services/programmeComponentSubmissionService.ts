@@ -17,6 +17,21 @@ export type ProgrammeSubmissionStatus =
   | 'approved'
   | 'needs_revision'
 
+/** Advisory Gemini grade written by `grade-submission` (never awards points alone). */
+export type ProgrammeAiGrade = {
+  status: 'pending' | 'completed' | 'error' | string
+  /** Legacy 0–100 advisory score from current grader. */
+  score?: number | null
+  /** Bank A score 0–50 when 50/50 schema is used. */
+  aiScore50?: number | null
+  feedback?: string | null
+  feedbackForPartner?: string | null
+  pass?: boolean | null
+  model?: string | null
+  gradedAt?: string | null
+  error?: string | null
+}
+
 export interface ProgrammeComponentSubmission {
   /** Firestore doc id - format: `{uid}__{componentId}`. */
   id: string
@@ -43,6 +58,12 @@ export interface ProgrammeComponentSubmission {
   reviewerName: string | null
   partnerNotes: string | null
   score: number | null
+  /** Gemini advisory grade (Bank A / legacy 0–100). */
+  aiGrade: ProgrammeAiGrade | null
+  /** Partner Bank B score 0–50 (judgment/context). */
+  partnerScore50: number | null
+  /** Combined final 0–100 when both banks are set. */
+  finalScore: number | null
 }
 
 /**
@@ -58,6 +79,49 @@ const toDate = (v: unknown): Date | null => {
   if (!v || typeof v !== 'string') return null
   const d = new Date(v)
   return Number.isNaN(d.getTime()) ? null : d
+}
+
+const toFiniteNumber = (v: unknown): number | null => {
+  if (typeof v === 'number' && Number.isFinite(v)) return v
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  return null
+}
+
+export function mapAiGrade(raw: unknown): ProgrammeAiGrade | null {
+  if (!raw || typeof raw !== 'object') return null
+  const g = raw as Record<string, unknown>
+  const status = typeof g.status === 'string' ? g.status : 'pending'
+  const score = toFiniteNumber(g.score)
+  const aiScore50 =
+    toFiniteNumber(g.ai_score_50) ??
+    (score != null ? Math.min(50, Math.round(score / 2)) : null)
+  return {
+    status,
+    score,
+    aiScore50,
+    feedback: typeof g.feedback === 'string' ? g.feedback : null,
+    feedbackForPartner:
+      typeof g.feedback_for_partner === 'string' ? g.feedback_for_partner : null,
+    pass: typeof g.pass === 'boolean' ? g.pass : null,
+    model: typeof g.model === 'string' ? g.model : null,
+    gradedAt: typeof g.graded_at === 'string' ? g.graded_at : null,
+    error: typeof g.error === 'string' ? g.error : null,
+  }
+}
+
+/** Prefer Bank A 0–50, else half of legacy 0–100, else null. */
+export function getAiBankAScore(ai: ProgrammeAiGrade | null | undefined): number | null {
+  if (!ai || ai.status !== 'completed') return null
+  if (ai.aiScore50 != null && Number.isFinite(ai.aiScore50)) {
+    return Math.max(0, Math.min(50, Math.round(ai.aiScore50)))
+  }
+  if (ai.score != null && Number.isFinite(ai.score)) {
+    return Math.max(0, Math.min(50, Math.round(ai.score / 2)))
+  }
+  return null
 }
 
 const mapRow = (
@@ -89,7 +153,10 @@ const mapRow = (
     reviewedBy: (row.reviewed_by as string) ?? null,
     reviewerName: (row.reviewer_name as string) ?? null,
     partnerNotes: (row.partner_notes as string) ?? null,
-    score: typeof row.score === 'number' ? row.score : null,
+    score: toFiniteNumber(row.score),
+    aiGrade: mapAiGrade(row.ai_grade),
+    partnerScore50: toFiniteNumber(row.partner_score_50),
+    finalScore: toFiniteNumber(row.final_score),
   }
 }
 
@@ -168,6 +235,9 @@ export interface ReviewUpdate {
   status: ProgrammeSubmissionStatus
   partnerNotes: string | null
   score: number | null
+  /** Optional Bank B (0–50). When set with AI Bank A, also writes final_score. */
+  partnerScore50?: number | null
+  finalScore?: number | null
   reviewerId: string
   reviewerName: string
 }
@@ -177,17 +247,24 @@ export async function updateSubmissionReview(
   update: ReviewUpdate,
 ): Promise<void> {
   const nowIso = new Date().toISOString()
+  const patch: Record<string, unknown> = {
+    status: update.status,
+    partner_notes: update.partnerNotes,
+    score: update.score,
+    reviewed_by: update.reviewerId,
+    reviewer_name: update.reviewerName,
+    reviewed_at: nowIso,
+    last_updated_at: nowIso,
+  }
+  if (update.partnerScore50 !== undefined) {
+    patch.partner_score_50 = update.partnerScore50
+  }
+  if (update.finalScore !== undefined) {
+    patch.final_score = update.finalScore
+  }
   const { error } = await supabase
     .from('programme_component_submissions')
-    .update({
-      status: update.status,
-      partner_notes: update.partnerNotes,
-      score: update.score,
-      reviewed_by: update.reviewerId,
-      reviewer_name: update.reviewerName,
-      reviewed_at: nowIso,
-      last_updated_at: nowIso,
-    })
+    .update(patch)
     .eq('id', submissionId)
   if (error) throw new Error(error.message)
 }
@@ -233,8 +310,18 @@ export async function approveSubmissionAndAward(params: {
   reviewerName: string
   partnerNotes: string | null
   score: number | null
+  partnerScore50?: number | null
+  finalScore?: number | null
 }): Promise<ApproveAndAwardResult> {
-  const { submission, reviewerId, reviewerName, partnerNotes, score } = params
+  const {
+    submission,
+    reviewerId,
+    reviewerName,
+    partnerNotes,
+    score,
+    partnerScore50,
+    finalScore,
+  } = params
 
   if (!submission.uid) throw new Error('Submission is missing the learner id.')
   if (!submission.componentType) throw new Error('Submission is missing its component type.')
@@ -260,6 +347,8 @@ export async function approveSubmissionAndAward(params: {
       status: 'approved',
       partnerNotes,
       score,
+      partnerScore50,
+      finalScore,
       reviewerId,
       reviewerName,
     })
@@ -282,6 +371,8 @@ export async function approveSubmissionAndAward(params: {
     status: 'approved',
     partnerNotes,
     score,
+    partnerScore50,
+    finalScore,
     reviewerId,
     reviewerName,
   })
