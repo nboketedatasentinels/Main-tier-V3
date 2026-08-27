@@ -195,8 +195,8 @@ export default function CourseAssessmentPage() {
           <Button
             variant="ghost"
             size="sm"
-            color="whiteAlpha.800"
-            leftIcon={<ArrowLeft size={16} />}
+            color="white"
+            leftIcon={<ArrowLeft size={16} color="currentColor" />}
             mb={4}
             _hover={{ bg: 'whiteAlpha.100', color: 'white' }}
             onClick={() => navigate(returnTo.startsWith('/') ? returnTo : '/app/weekly-glance')}
@@ -212,26 +212,32 @@ export default function CourseAssessmentPage() {
               align="center"
               justify="center"
               flexShrink={0}
+              color="white"
             >
-              <Icon as={ClipboardList} boxSize={6} />
+              <Icon as={ClipboardList} boxSize={6} color="white" />
             </Flex>
-            <Box>
+            <Box color="white">
               <Text
                 fontSize="xs"
                 fontWeight="semibold"
                 letterSpacing="0.14em"
                 textTransform="uppercase"
-                color="accent.highlight"
+                color="text.accentGold"
                 mb={1}
               >
                 {kindLabel} assessment
               </Text>
-              <Heading size={{ base: 'md', md: 'lg' }} letterSpacing="-0.02em" lineHeight="1.2">
+              <Heading
+                size={{ base: 'md', md: 'lg' }}
+                letterSpacing="-0.02em"
+                lineHeight="1.2"
+                color="white"
+              >
                 {liveDefinition?.title ||
                   activeCatalog?.title ||
                   (kind === 'pre' ? 'Before you begin' : 'After the course')}
               </Heading>
-              <Text mt={2} fontSize="sm" color="whiteAlpha.800" maxW="540px" lineHeight="1.6">
+              <Text mt={2} fontSize="sm" color="whiteAlpha.900" maxW="540px" lineHeight="1.6">
                 {kind === 'pre'
                   ? 'A short baseline on how you currently show up. Honest answers help you and your support team.'
                   : 'Reflect on how you show up now - the same questions as Pre, so growth is visible.'}

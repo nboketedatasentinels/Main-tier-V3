@@ -347,7 +347,14 @@ export function CourseAssessmentForm({
                           color={active ? 'white' : 'gray.700'}
                           borderColor={active ? '#350e6f' : 'gray.200'}
                           fontWeight={active ? 'bold' : 'medium'}
-                          _hover={{ bg: active ? '#27062e' : 'gray.50' }}
+                          _hover={{
+                            bg: active ? '#27062e' : 'gray.50',
+                            color: active ? 'white' : 'gray.700',
+                          }}
+                          _active={{
+                            bg: active ? '#27062e' : 'gray.100',
+                            color: active ? 'white' : 'gray.800',
+                          }}
                           onClick={() => setAnswer(index, n)}
                         >
                           {n}
