@@ -176,7 +176,7 @@ export const LeadershipBoardPage: React.FC = () => {
     'purple.400',
     'tint.brandPrimary',
   ])
-  const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.LAST_7_DAYS)
+  const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.ALL_TIME)
   const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
   const [currentProfile, setCurrentProfile] = useState<UserProfile | null>(null)
@@ -542,8 +542,22 @@ export const LeadershipBoardPage: React.FC = () => {
   })
 
   const isPointsReady = Boolean(profile) && profilesLoaded && transactionsLoaded
-  const displayTotalPoints = userRow?.totalPoints ?? profile?.totalPoints ?? 0
 
+  // Prefer the viewer's own full points_ledger sum (same source as Weekly Glance).
+  const personalLedgerTotal = useMemo(() => {
+    let sum = 0
+    Object.values(activityHistoryByCategory).forEach((entries) => {
+      entries.forEach((entry) => {
+        if (entry.points > 0) sum += entry.points
+      })
+    })
+    return sum
+  }, [activityHistoryByCategory])
+
+  const displayTotalPoints =
+    personalLedgerTotal > 0
+      ? personalLedgerTotal
+      : (userRow?.totalPoints ?? profile?.totalPoints ?? 0)
   const userBreakdown = useMemo(() => {
     const activityTotals = new Map<string, number>()
     let totalPoints = 0

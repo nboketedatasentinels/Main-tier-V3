@@ -97,7 +97,17 @@ export const useLeaderboardMetrics = ({
     })
   }, [challenges, context?.type, segmentProfileIds])
 
-  const aggregatedPoints = useMemo(() => {
+  // All-time ledger sum — same source of truth as Weekly Glance / JourneyHeader.
+  // Never apply the timeframe filter here; that belongs only on period points.
+  const allTimePoints = useMemo(() => {
+    const totals: Record<string, number> = {}
+    segmentTransactions.forEach((tx) => {
+      totals[tx.userId] = (totals[tx.userId] || 0) + tx.points
+    })
+    return totals
+  }, [segmentTransactions])
+
+  const timeframePoints = useMemo(() => {
     const totals: Record<string, number> = {}
     segmentTransactions.forEach((tx) => {
       const createdAt = tx.createdAt ? new Date(tx.createdAt) : null
@@ -134,6 +144,7 @@ export const useLeaderboardMetrics = ({
   const segmentSize = useMemo(() => segmentProfiles.length, [segmentProfiles])
 
   const leaderboardRows: LeaderboardRow[] = useMemo(() => {
+    const ledgerLoaded = segmentTransactions.length > 0
     const rows = segmentProfiles
       .filter((candidate) => canViewerSeeCandidateOnLeaderboard({
         viewer: profile,
@@ -141,14 +152,19 @@ export const useLeaderboardMetrics = ({
         context,
       }))
       .map((user) => {
-        // Rank from the live transaction sum so the cached profile.totalPoints
-        // can never poison the order. Fall back to the cached field only when
-        // no transactions have been observed yet.
-        const ledgerTotal = aggregatedPoints[user.id] ?? user.totalPoints ?? 0
-        const activePoints = timeframe === LeaderboardTimeframe.ALL_TIME
-          ? ledgerTotal
-          : aggregatedPoints[user.id] || 0
-        const badgeCount = Math.max(1, Math.round(activePoints / 500))
+        const hasLedgerRows = Object.prototype.hasOwnProperty.call(allTimePoints, user.id)
+        // Prefer live ledger. Fall back to cached profile.totalPoints only when
+        // the org ledger load was empty/failed (no txs for anyone).
+        const ledgerTotal = hasLedgerRows
+          ? allTimePoints[user.id]
+          : ledgerLoaded
+            ? 0
+            : (user.totalPoints ?? 0)
+        const activePoints =
+          timeframe === LeaderboardTimeframe.ALL_TIME
+            ? ledgerTotal
+            : (timeframePoints[user.id] || 0)
+        const badgeCount = Math.max(1, Math.round(ledgerTotal / 500))
 
         return {
           user,
@@ -183,7 +199,7 @@ export const useLeaderboardMetrics = ({
     return [...rankedRows].sort((a, b) =>
       sortDirection === 'asc' ? a.totalPoints - b.totalPoints : b.totalPoints - a.totalPoints
     )
-  }, [aggregatedPoints, context, profile, segmentProfiles, sortDirection, sortField, timeframe])
+  }, [allTimePoints, context, profile, segmentProfiles, sortDirection, sortField, timeframe, timeframePoints, segmentTransactions.length])
 
   const percentile = useMemo(() => {
     if (!profile) return 'Top 100%'

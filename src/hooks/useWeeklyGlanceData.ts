@@ -512,7 +512,6 @@ export const useWeeklyGlanceData = () => {
           .select('*')
           .eq('uid', profileId)
           .order('created_at', { ascending: false })
-          .limit(100)
         if (error) throw new Error(error.message)
         if (!isActive) return
 
