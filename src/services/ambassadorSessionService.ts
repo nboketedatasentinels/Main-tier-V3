@@ -644,34 +644,36 @@ export async function markAttendance(params: {
   }
 
   const statusChanged = currentStatus !== status
-  if (learnerId && statusChanged) {
+  const newlyAwardedPoints = pointsAwarded && !alreadyAwarded
+  if (learnerId && (statusChanged || newlyAwardedPoints)) {
     await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
-      title:
-        status === 'attended'
-          ? pointsAwarded
-            ? `${coachLabel} confirmed your attendance · +${pointsAmount.toLocaleString()} points`
-            : `${coachLabel} confirmed your attendance`
+      title: newlyAwardedPoints
+        ? `+${(pointsAmount || 2000).toLocaleString()} Coach Session points`
+        : status === 'attended'
+          ? `${coachLabel} confirmed your attendance`
           : `${coachLabel} recorded a no-show`,
-      message:
-        status === 'attended'
-          ? pointsAwarded
-            ? `${coachLabel} confirmed your attendance at "${sessionLabel}". +${pointsAmount.toLocaleString()} Coach Session points were added to your journey.`
-            : `${coachLabel} confirmed your attendance at "${sessionLabel}".${
-                awardMessage ? ` ${awardMessage}` : ''
-              }`
+      message: newlyAwardedPoints
+        ? statusChanged
+          ? `${coachLabel} confirmed your attendance at "${sessionLabel}" and added +${(pointsAmount || 2000).toLocaleString()} Coach Session points to your journey.`
+          : `${coachLabel} issued +${(pointsAmount || 2000).toLocaleString()} Coach Session points for "${sessionLabel}". They are on your journey dashboard.`
+        : status === 'attended'
+          ? `${coachLabel} confirmed your attendance at "${sessionLabel}".${
+              awardMessage ? ` ${awardMessage}` : ''
+            }`
           : `${coachLabel} recorded a no-show for "${sessionLabel}".`,
       relatedId: bookingId,
       category: 'important_updates',
       data: {
         priority: 'push',
         bookingId,
-        kind: 'ambassador_attendance',
-        pointsAwarded,
-        pointsAmount,
+        kind: newlyAwardedPoints ? 'coach_points_awarded' : 'ambassador_attendance',
+        pointsAwarded: newlyAwardedPoints,
+        pointsAmount: newlyAwardedPoints ? pointsAmount || 2000 : 0,
         actorRole: 'coach',
         actorName: coachName,
+        source: 'Coach Session',
       },
     }).catch((err) =>
       console.warn('[CoachSessionService] notify attendance failed:', err),

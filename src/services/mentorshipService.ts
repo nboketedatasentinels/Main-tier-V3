@@ -496,9 +496,11 @@ export async function completeMentorshipSession(params: {
 
   const learnerId = pickString(existing.learner_id)
   const mentorName = pickString(existing.mentor_name)
-  let pointsAwarded = Boolean(existing.points_awarded)
+  const hadPointsAlready = Boolean(existing.points_awarded)
+  let pointsAwarded = hadPointsAlready
   let pointsAmount = pointsAwarded ? 2000 : 0
   let awardMessage: string | undefined
+  let newlyAwarded = false
 
   const alreadyCompleted = existing.status === 'completed'
   if (alreadyCompleted && pointsAwarded) {
@@ -542,6 +544,7 @@ export async function completeMentorshipSession(params: {
     if (award.ok && (award.awarded || award.reason === 'already_awarded')) {
       pointsAwarded = true
       pointsAmount = Number(award.points) || 2000
+      newlyAwarded = Boolean(award.awarded) && !hadPointsAlready
     } else if (award.error === 'missing_journey') {
       awardMessage =
         'Attendance saved, but this learner has no journey type set (needs 3M / 6M / 9M).'
@@ -558,18 +561,23 @@ export async function completeMentorshipSession(params: {
     }
   }
 
-  if (learnerId && !alreadyCompleted) {
-    const mentorLabel = mentorName?.trim()
-      ? `Mentor ${mentorName.trim()}`
-      : 'Your mentor'
+  const mentorLabel = mentorName?.trim() ? `Mentor ${mentorName.trim()}` : 'Your mentor'
+  const shouldNotify =
+    Boolean(learnerId) &&
+    ((!alreadyCompleted && !hadPointsAlready) || newlyAwarded)
+
+  if (learnerId && shouldNotify) {
+    const pointsJustIssued = newlyAwarded || (pointsAwarded && !hadPointsAlready && !alreadyCompleted)
     await notifyAsLeadership({
       userId: learnerId,
       type: 'approval',
-      title: pointsAwarded
-        ? `${mentorLabel} confirmed your attendance · +${pointsAmount.toLocaleString()} points`
+      title: pointsJustIssued
+        ? `+${pointsAmount.toLocaleString()} Mentor Meet Up points`
         : `${mentorLabel} confirmed your attendance`,
-      message: pointsAwarded
-        ? `${mentorLabel} marked you as attended for this mentorship session. +${pointsAmount.toLocaleString()} Mentor Meet Up points were added to your journey.`
+      message: pointsJustIssued
+        ? alreadyCompleted
+          ? `${mentorLabel} issued +${pointsAmount.toLocaleString()} Mentor Meet Up points for your mentorship session attendance. They are on your journey dashboard.`
+          : `${mentorLabel} confirmed you attended your mentorship session and added +${pointsAmount.toLocaleString()} Mentor Meet Up points to your journey.`
         : `${mentorLabel} marked you as attended for this mentorship session.${
             awardMessage ? ` ${awardMessage}` : ''
           }`,
@@ -578,11 +586,12 @@ export async function completeMentorshipSession(params: {
       data: {
         priority: 'push',
         sessionId,
-        kind: 'mentorship_completed',
-        pointsAwarded,
-        pointsAmount,
+        kind: pointsJustIssued ? 'mentorship_points_awarded' : 'mentorship_completed',
+        pointsAwarded: pointsJustIssued,
+        pointsAmount: pointsJustIssued ? pointsAmount : 0,
         actorRole: 'mentor',
         actorName: mentorName,
+        source: 'Mentor Meet Up',
       },
     }).catch((err) => console.warn('[MentorshipService] notify complete failed:', err))
   }
