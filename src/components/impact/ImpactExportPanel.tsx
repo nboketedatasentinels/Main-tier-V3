@@ -11,7 +11,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { Download } from 'lucide-react'
-import { format, endOfDay, startOfDay, subYears } from 'date-fns'
+import { format } from 'date-fns'
 import {
   IMPACT_CATS,
   IMPACT_ESG_PILLARS,
@@ -23,8 +23,7 @@ import {
   type ImpactRateCard,
 } from '@/config/impactValueEngine'
 import type { ImpactLogRecord } from '@/services/impactLogService'
-import type { ExportFilters, ImpactLogEntry } from '@/pages/impact/ImpactLogPage'
-import { generateImpactPdfReport } from '@/reports/impactPdfReport'
+import { downloadImprovementValueReportPdf } from '@/reports/t4lImprovementValueReportPdf'
 
 type Props = {
   entries: ImpactLogRecord[]
@@ -40,31 +39,7 @@ function csvEscape(v: unknown): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
-function toPdfEntries(entries: ImpactLogRecord[]): ImpactLogEntry[] {
-  return entries.map((e) => ({
-    ...e,
-    categoryGroup: e.categoryGroup || (e.entryKind === 'esg' ? 'esg' : 'business'),
-    verificationLevel: e.verificationLevel || 'Tier 1: Self-Reported',
-    points: Number(e.points ?? 0),
-    impactValue: Number(e.impactValue ?? e.usdValue ?? 0),
-    scp: Number(e.scp ?? 0),
-    verificationMultiplier: Number(e.verificationMultiplier ?? 1),
-  })) as ImpactLogEntry[]
-}
-
-function applyPdfFilters(list: ImpactLogEntry[], filters: ExportFilters): ImpactLogEntry[] {
-  return list.filter((entry) => {
-    if (!entry.date) return true
-    const entryDate = new Date(entry.date)
-    if (Number.isNaN(entryDate.getTime())) return true
-    if (entryDate < filters.dateRange.start || entryDate > filters.dateRange.end) return false
-    if (filters.impactType === 'esg' && entry.categoryGroup !== 'esg') return false
-    if (filters.impactType === 'business' && entry.categoryGroup !== 'business') return false
-    return true
-  })
-}
-
-export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, user, profile }) => {
+export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) => {
   const toast = useToast()
   const [tab, setTab] = useState<Tab>('register')
   const [pdfBusy, setPdfBusy] = useState(false)
@@ -79,22 +54,15 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, user, profi
   const downloadPdf = async () => {
     setPdfBusy(true)
     try {
-      const pdfEntries = toPdfEntries(entries)
-      if (!pdfEntries.length) {
-        throw new Error('Nothing to include yet. Log an activity, claim, or ESG entry first.')
-      }
-      const filters: ExportFilters = {
-        dateRange: {
-          start: startOfDay(subYears(new Date(), 10)),
-          end: endOfDay(new Date()),
-        },
-        impactType: 'all',
-      }
-      await generateImpactPdfReport(pdfEntries, filters, user, profile, applyPdfFilters)
+      const name = await downloadImprovementValueReportPdf({
+        entries,
+        rates,
+        orgName: profile?.companyName,
+      })
       toast({
         status: 'success',
         title: 'PDF downloaded',
-        description: 'Your impact report has been saved.',
+        description: name,
       })
     } catch (err) {
       toast({
@@ -202,8 +170,8 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, user, profi
             Export
           </Heading>
           <Text fontSize="sm" color="text.secondary">
-            Download a board-ready PDF, or pick a hand-off format: CSV for finance, one-pager,
-            waste summary, or ESG pack.
+            Download the Template 1 board pack (Improvement value report), or pick another hand-off:
+            CSV for finance, on-screen one-pager, waste summary, or ESG pack.
           </Text>
         </Box>
         <Button
