@@ -138,7 +138,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                   </Text>
                   <Badge>{k}</Badge>
                   {v && <Badge colorScheme="purple">Tier {v.tier}</Badge>}
-                  <Badge variant="outline">{st || '—'}</Badge>
+                  <Badge variant="outline">{st || '-'}</Badge>
                 </HStack>
                 <Text fontWeight="semibold">{e.title}</Text>
                 <Text fontSize="xs" color="text.muted">
@@ -166,7 +166,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                   ? formatMoney(v.net)
                   : k === 'esg'
                     ? 'not valued'
-                    : '—'}
+                    : '-'}
               </Text>
             </Flex>
           )

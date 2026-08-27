@@ -75,7 +75,7 @@ export const ImpactWastePanel: React.FC<Props> = ({ entries, rates, onHelp, onOp
                     {w.d} · {w.count} claim{w.count === 1 ? '' : 's'}
                   </Text>
                 </Box>
-                <Text fontFamily="mono">{w.v ? formatMoneyK(w.v) : '—'}</Text>
+                <Text fontFamily="mono">{w.v ? formatMoneyK(w.v) : '-'}</Text>
               </Flex>
               <Progress value={(w.v / maxW) * 100} size="sm" colorScheme="purple" rounded="full" />
             </Box>
@@ -99,7 +99,7 @@ export const ImpactWastePanel: React.FC<Props> = ({ entries, rates, onHelp, onOp
                 Nothing claimed yet against {none.length} wastes
               </Text>
               <Text fontSize="xs" color="text.secondary">
-                {none.map((w) => w.n).join(', ')}. Either clean — or nobody has looked yet.
+                {none.map((w) => w.n).join(', ')}. Either clean, or nobody has looked yet.
               </Text>
             </Box>
           )}
@@ -116,7 +116,7 @@ export const ImpactWastePanel: React.FC<Props> = ({ entries, rates, onHelp, onOp
               <Text>
                 {g.n} <Badge ml={2}>{g.count}</Badge>
               </Text>
-              <Text fontFamily="mono">{g.v ? formatMoney(g.v) : '—'}</Text>
+              <Text fontFamily="mono">{g.v ? formatMoney(g.v) : '-'}</Text>
             </Flex>
           ))}
         </Stack>

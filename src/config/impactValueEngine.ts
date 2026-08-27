@@ -1,5 +1,5 @@
 /**
- * T4L Impact Log — value taxonomy + valuation engine (prototype v3).
+ * T4L Impact Log: value taxonomy + valuation engine (prototype v3).
  * Points stay on the journey dashboard; this module only computes money / tiers.
  */
 
@@ -455,7 +455,7 @@ export const IMPACT_RATE_LIB = [
     rate: 'Hourly rate for the grade waiting',
     needs: 'Cost of employment for the grade',
     fam: 'time' as const,
-    ex: 'Invoices waited 6.5 hours, now 2.4 — hours released × rate.',
+    ex: 'Invoices waited 6.5 hours, now 2.4; hours released × rate.',
   },
   {
     pat: 'Rework, errors or corrections reduced',
@@ -474,7 +474,7 @@ export const IMPACT_RATE_LIB = [
   {
     pat: 'Stock, spares or work in progress reduced',
     rate: 'None. The saving is already money.',
-    needs: 'Nothing — enter currency change directly',
+    needs: 'Nothing. Enter currency change directly',
     fam: 'cost' as const,
     ex: 'Spares fell $14,800 → $11,200 = $3,600.',
   },
@@ -497,7 +497,7 @@ export const IMPACT_RATE_LIB = [
     rate: 'No currency value',
     needs: 'Nothing',
     fam: 'risk' as const,
-    ex: 'Recorded with severity — never inside the money headline.',
+    ex: 'Recorded with severity, never inside the money headline.',
   },
 ]
 

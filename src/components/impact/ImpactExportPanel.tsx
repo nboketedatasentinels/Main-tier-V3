@@ -119,7 +119,7 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates }) => {
       a.remove()
       setTimeout(() => URL.revokeObjectURL(url), 500)
     } catch {
-      toast({ status: 'warning', title: 'Download blocked — copy from the box instead' })
+      toast({ status: 'warning', title: 'Download blocked. Copy from the box instead' })
     }
   }
 

@@ -1,4 +1,4 @@
-/** Impact Log help library — ? buttons + modal copy (video slot for Loom/YT). */
+/** Impact Log help library: ? buttons + modal copy (video slot for Loom/YT). */
 
 export type ImpactHelpKey =
   | 'baseline'
@@ -23,7 +23,7 @@ export const IMPACT_HELP: Record<
 > = {
   baseline: {
     t: 'What a baseline is, and why 12 months',
-    p: 'A baseline is what the number looked like before you changed anything, measured long enough to be representative. Twelve months catches busy and quiet periods. Three to eleven months works with a caveat. Anything shorter keeps the claim indicative — it never reaches the finance headline.',
+    p: 'A baseline is what the number looked like before you changed anything, measured long enough to be representative. Twelve months catches busy and quiet periods. Three to eleven months works with a caveat. Anything shorter keeps the claim indicative; it never reaches the finance headline.',
     eg: 'Invoice cycle time averaged 6.5 hours across 2,140 invoices from July to June. That is the baseline. Locking it before the change makes it evidence rather than an argument.',
     vid: 'Setting a baseline in three minutes',
   },
@@ -35,7 +35,7 @@ export const IMPACT_HELP: Record<
   },
   tier: {
     t: 'The three evidence tiers',
-    p: 'Tier 1 Declared carries no money. Tier 2 Confirmed is indicative at 70% confidence. Tier 3 Validated carries full value and is the only tier in the headline. You do not choose your tier — it is worked out from baseline grade, evidence, window, and who has signed.',
+    p: 'Tier 1 Declared carries no money. Tier 2 Confirmed is indicative at 70% confidence. Tier 3 Validated carries full value and is the only tier in the headline. You do not choose your tier; it is worked out from baseline grade, evidence, window, and who has signed.',
     eg: 'A grade A baseline, an extract attached, three periods measured, and a finance validator gives Tier 3.',
     vid: 'How tiers are worked out',
   },
@@ -65,7 +65,7 @@ export const IMPACT_HELP: Record<
   },
   waste: {
     t: 'Why the 8 wastes',
-    p: 'Filing every improvement against one of the 8 wastes turns individual wins into a pattern. When one waste keeps producing value it usually means one root cause across processes — a programme, not a series of claims.',
+    p: 'Filing every improvement against one of the 8 wastes turns individual wins into a pattern. When one waste keeps producing value it usually means one root cause across processes: a programme, not a series of claims.',
     eg: 'Waiting has produced three validated claims across two departments. That is a queue problem.',
     vid: 'Using the 8 wastes as a value map',
   },
@@ -84,7 +84,7 @@ export const IMPACT_HELP: Record<
   esg: {
     t: 'ESG entries',
     p: 'ESG entries record environmental, social and governance contribution in their own units. They carry no currency value and never touch the finance register.',
-    eg: '96 reams of paper removed by digital approval — counted as reams, not dollars.',
+    eg: '96 reams of paper removed by digital approval, counted as reams, not dollars.',
     vid: 'Logging an ESG contribution',
   },
   rules: {
@@ -101,14 +101,14 @@ export const IMPACT_HELP: Record<
   },
   integrity: {
     t: 'Points and integrity',
-    p: 'Points are earned for defining a measure, locking a baseline, declaring a target, submitting evidence, reaching Tier 2/3, and passing 90 days. Points are never a function of the dollar figure. Withdrawing an honest claim costs nothing already earned. Points live on the journey dashboard — not here.',
+    p: 'Points are earned for defining a measure, locking a baseline, declaring a target, submitting evidence, reaching Tier 2/3, and passing 90 days. Points are never a function of the dollar figure. Withdrawing an honest claim costs nothing already earned. Points live on the journey dashboard, not here.',
     eg: 'A $400 claim with grade A baseline and finance validation can earn more points than a $40,000 recall claim.',
     vid: 'Why points ignore the size of the number',
   },
   scope: {
     t: 'What this does not cover',
     p: 'This is an improvement record, not a ledger and not an ESG report. Finance reconciles it quarterly. ESG reporting is produced by the ESG team from their own set.',
-    eg: 'Last quarter 86% of validated value was confirmed in the accounts — published rather than hidden.',
+    eg: 'Last quarter 86% of validated value was confirmed in the accounts, published rather than hidden.',
     vid: 'Scope and boundaries',
   },
 }

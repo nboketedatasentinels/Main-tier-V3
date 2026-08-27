@@ -172,7 +172,7 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
             {v && <Badge>Baseline {v.grade}</Badge>}
             {entry.claim?.bucket != null && <Badge colorScheme="green">{String(entry.claim.bucket)}</Badge>}
             <Badge variant="outline">
-              {cat?.n || '—'} · {sub || '—'}
+              {cat?.n || '-'} · {sub || '-'}
             </Badge>
           </HStack>
 
@@ -209,7 +209,7 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
                     Net / period
                   </Text>
                   <Text fontWeight="bold" color="brand.primary">
-                    {v && v.tier > 1 ? formatMoney(v.net) : '—'}
+                    {v && v.tier > 1 ? formatMoney(v.net) : '-'}
                   </Text>
                 </Box>
               </Flex>

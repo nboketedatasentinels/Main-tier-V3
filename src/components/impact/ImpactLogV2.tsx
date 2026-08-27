@@ -1,5 +1,5 @@
 /**
- * Impact Log v3 — learner experience (hero, 3 entry types, claim wizard).
+ * Impact Log v3: learner experience (hero, 3 entry types, claim wizard).
  * Uses Chakra + existing impact_logs service. Points stay on the journey dashboard.
  */
 import React, { useEffect, useMemo, useState } from 'react'
@@ -604,7 +604,7 @@ export const ImpactLogV2: React.FC = () => {
           </Heading>
           <Text color="text.secondary" maxW="44ch" fontSize="sm" mb={6}>
             Your validated improvements, your organisation&apos;s, and the same rules behind every
-            figure. Points stay on your journey dashboard — not here.
+            figure. Points stay on your journey dashboard, not here.
             <ImpactHelpButton k="howvalued" onOpen={setHelpKey} />
           </Text>
           <SimpleGrid columns={{ base: 1, md: 3 }} spacing={0} borderTop="2px solid" borderColor="brand.accent">
@@ -654,7 +654,7 @@ export const ImpactLogV2: React.FC = () => {
                 )}
               </Text>
               <Text fontSize="sm" color="text.secondary">
-                Indicative only — never inside the headline.
+                Indicative only, never inside the headline.
               </Text>
             </Box>
           </SimpleGrid>
@@ -837,7 +837,7 @@ export const ImpactLogV2: React.FC = () => {
                             ? formatMoney(Number(e.usdValue))
                             : kind === 'esg'
                               ? 'not valued'
-                              : '—'}
+                              : '-'}
                         </Text>
                       </Flex>
                     )
@@ -854,7 +854,7 @@ export const ImpactLogV2: React.FC = () => {
               What did you do
             </Heading>
             <Text fontSize="sm" color="text.secondary" mb={4}>
-              Builds your portfolio. No currency value — turning hours into money needs a claim.
+              Builds your portfolio. No currency value; turning hours into money needs a claim.
             </Text>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <FormControl isRequired>
@@ -1429,7 +1429,7 @@ export const ImpactLogV2: React.FC = () => {
                   <AlertIcon />
                   <AlertDescription fontSize="sm">
                     You do not enter the money. The platform works it out from your baseline, result,
-                    and organisation rates — then applies attribution, realisation, and confidence.
+                    and organisation rates, then applies attribution, realisation, and confidence.
                   </AlertDescription>
                 </Alert>
                 <FormControl>
