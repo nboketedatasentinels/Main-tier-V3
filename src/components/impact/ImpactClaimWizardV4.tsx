@@ -606,14 +606,20 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   />
                 </FormControl>
               </SimpleGrid>
-              <SimpleGrid columns={{ base: 1, md: isCustom ? 2 : 1 }} gap={3} maxW={{ md: isCustom ? '100%' : '240px' }}>
+              <Flex
+                direction={{ base: 'column', md: 'row' }}
+                gap={3}
+                align={{ base: 'stretch', md: 'flex-end' }}
+                maxW={{ md: isCustom ? '100%' : '240px' }}
+              >
                 {isCustom && (
-                  <FormControl>
-                    <FormLabel fontSize="sm" mb={1}>
+                  <FormControl flex="1" minW={0}>
+                    <FormLabel fontSize="sm" mb={1} display="flex" alignItems="center" minH="20px">
                       Type
                     </FormLabel>
                     <Select
                       size="sm"
+                      h="32px"
                       value={draft.fam}
                       onChange={(e) => {
                         const next = e.target.value as ClaimFlowFam
@@ -628,12 +634,17 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                     </Select>
                   </FormControl>
                 )}
-                <FormControl>
-                  <FormLabel fontSize="sm" mb={1}>
+                <FormControl flex="1" minW={0}>
+                  <FormLabel fontSize="sm" mb={1} display="flex" alignItems="center" gap={0} minH="20px">
                     Unit
                     <HelpBtn k="unit" onOpen={setHelpKey} />
                   </FormLabel>
-                  <Select size="sm" value={draft.unit} onChange={(e) => patch({ unit: e.target.value })}>
+                  <Select
+                    size="sm"
+                    h="32px"
+                    value={draft.unit}
+                    onChange={(e) => patch({ unit: e.target.value })}
+                  >
                     {unitOpts.map((u) => (
                       <option key={u} value={u}>
                         {u}
@@ -641,7 +652,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                     ))}
                   </Select>
                 </FormControl>
-              </SimpleGrid>
+              </Flex>
               {preset && (
                 <Text fontSize="xs" color="text.muted">
                   Valuation: {preset.valueRule}
