@@ -481,23 +481,27 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       />
 
       {draft.step > 1 && (
-        <Box mb={4} px={3} py={3} rounded="lg" borderWidth="1px" borderColor="border.subtle" bg="gray.50">
-          <Text fontSize="10px" letterSpacing="0.12em" textTransform="uppercase" color="black" fontWeight="700" mb={1}>
+        <Box mb={5} px={3.5} py={3} rounded="lg" borderWidth="1px" borderColor="border.subtle" bg="gray.50">
+          <Text fontSize="10px" letterSpacing="0.12em" textTransform="uppercase" color="black" fontWeight="700" mb={1.5}>
             Your improvement in one sentence
           </Text>
-          <Text fontSize="sm" color="black" lineHeight="tall">
+          <Text fontSize="sm" color="black" lineHeight="1.55">
             You {preset?.dir === 'up' ? 'increased' : 'reduced'}{' '}
             {preset || isCustom ? (
               <Bold>{draft.name || preset?.name.toLowerCase() || 'your measure'}</Bold>
             ) : (
               <Pend>what you are measuring</Pend>
-            )}{' '}
+            )}
             {draft.where ? (
               <>
+                {' '}
                 in <Bold>{draft.where}</Bold>
               </>
             ) : (
-              <Pend>in a team or process</Pend>
+              <>
+                {' '}
+                <Pend>in a team or process</Pend>
+              </>
             )}
             . It was{' '}
             {nn(draft.before) ? (
@@ -720,20 +724,25 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       )}
 
       {draft.step === 3 && (
-        <Stack spacing={3}>
-          <Heading size="md">
-            The before number
-            <HelpBtn k="before" onOpen={setHelpKey} />
-          </Heading>
-          <Text color="text.secondary" fontSize="sm">
-            {preset?.ask || 'What did it look like before you changed anything?'} Answer for how things were before you
-            changed anything.
-          </Text>
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-            <FormControl>
-              <FormLabel fontSize="sm">Before you changed anything, it was</FormLabel>
+        <Stack spacing={4}>
+          <Box>
+            <Heading size="md">
+              Before
+              <HelpBtn k="before" onOpen={setHelpKey} />
+            </Heading>
+            <Text color="text.secondary" fontSize="sm" mt={1}>
+              {preset?.ask || 'What it was before you changed anything.'}
+            </Text>
+          </Box>
+
+          <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+            <FormControl isRequired>
+              <FormLabel fontSize="sm" mb={1}>
+                Before value
+              </FormLabel>
               <Flex>
                 <Input
+                  size="sm"
                   borderRightRadius={0}
                   inputMode="decimal"
                   value={draft.before}
@@ -742,8 +751,9 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   onChange={(e) => patch({ before: e.target.value })}
                 />
                 <Select
+                  size="sm"
                   borderLeftRadius={0}
-                  maxW="150px"
+                  maxW="130px"
                   value={draft.unit}
                   onChange={(e) => patch({ unit: e.target.value })}
                 >
@@ -754,74 +764,77 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   ))}
                 </Select>
               </Flex>
-              <FormHelperText>{preset?.eg || 'Use the same definition you will use for after.'}</FormHelperText>
             </FormControl>
+
             <FormControl>
-              <FormLabel fontSize="sm">
-                How far back does that number go
+              <FormLabel fontSize="sm" mb={1}>
+                How far back
                 <HelpBtn k="months" onOpen={setHelpKey} />
               </FormLabel>
-              <Select value={draft.months} onChange={(e) => patch({ months: Number(e.target.value) })}>
+              <Select size="sm" value={draft.months} onChange={(e) => patch({ months: Number(e.target.value) })}>
                 {MONTH_OPTS.map((o) => (
                   <option key={o.value} value={o.value}>
                     {o.label}
                   </option>
                 ))}
               </Select>
-              <FormHelperText>
-                Twelve months is best because it covers your busy and quiet spells. Less is fine, it just means the
-                number is marked as an estimate.
-              </FormHelperText>
+            </FormControl>
+
+            <FormControl gridColumn={{ md: '1 / -1' }}>
+              <FormLabel fontSize="sm" mb={1}>
+                Source
+              </FormLabel>
+              <Input
+                size="sm"
+                value={draft.evidenceRef}
+                placeholder="System or record · e.g. SAP report 28 June"
+                onChange={(e) => patch({ evidenceRef: e.target.value })}
+              />
             </FormControl>
           </SimpleGrid>
-          <Checkbox
-            isChecked={draft.lockedBefore}
-            onChange={(e) => patch({ lockedBefore: e.target.checked })}
-            colorScheme="primary"
+
+          <Stack
+            spacing={3}
+            pt={3}
+            borderTopWidth="1px"
+            borderColor="border.subtle"
           >
-            <Text fontSize="sm">
-              <Bold>I got this from a system or a record, before I made the change.</Bold> Untick if you worked it out
-              afterwards.
-            </Text>
-          </Checkbox>
-          <FormControl>
-            <FormLabel fontSize="sm">Where did the number come from</FormLabel>
-            <Input
-              value={draft.evidenceRef}
-              placeholder="e.g. SAP report run 28 June, or the shift log book"
-              onChange={(e) => patch({ evidenceRef: e.target.value })}
-            />
-            <FormHelperText>A system name and a date is enough. You can attach the file later.</FormHelperText>
-          </FormControl>
-          <Checkbox isChecked={draft.locked} onChange={(e) => patch({ locked: e.target.checked })} colorScheme="primary">
-            <Text fontSize="sm">
-              <Bold>
-                Lock this before number.
+            <Checkbox
+              size="sm"
+              isChecked={draft.lockedBefore}
+              onChange={(e) => patch({ lockedBefore: e.target.checked })}
+              colorScheme="primary"
+              alignItems="flex-start"
+            >
+              <Text fontSize="sm" color="black" lineHeight="1.4">
+                Taken from a system or record before the change
+              </Text>
+            </Checkbox>
+            <Checkbox
+              size="sm"
+              isChecked={draft.locked}
+              onChange={(e) => patch({ locked: e.target.checked })}
+              colorScheme="primary"
+              alignItems="flex-start"
+            >
+              <Text fontSize="sm" color="black" lineHeight="1.4">
+                Lock this before number
                 <HelpBtn k="lock" onOpen={setHelpKey} />
-              </Bold>{' '}
-              After this it cannot be quietly changed. This is what makes anyone believe the improvement later.
-            </Text>
-          </Checkbox>
-          {draft.locked && (
-            <Note variant="good" title="Locked">
-              {format(new Date(), 'yyyy-MM-dd')}, by you. Anyone reviewing this can see it was locked before the result
-              was entered.
-            </Note>
-          )}
-          {!draft.lockedBefore || m < 3 ? (
-            <Note variant="warn" title="This will be marked as an estimate">
-              Either the number came from memory or from after the change. That is allowed. It just means the value stays
-              unverified and does not go into any organization total.
-            </Note>
-          ) : m >= 12 ? (
-            <Note variant="good" title="Strong before number">
-              Twelve months from a system, locked before the change. This can be fully verified once someone checks it.
-            </Note>
-          ) : (
-            <Note variant="info" title="Good enough">
-              Less than a year, so we note that seasonality is not covered. It can still be fully verified.
-            </Note>
-          )}
+              </Text>
+            </Checkbox>
+          </Stack>
+
+          <Text fontSize="xs" color="text.muted">
+            {!draft.lockedBefore || m < 3
+              ? 'Marked as an estimate until it comes from a locked system record covering at least 3 months.'
+              : m >= 12
+                ? draft.locked
+                  ? 'Strong baseline — 12 months from a system, locked.'
+                  : 'Strong period — lock the number to finish this step.'
+                : draft.locked
+                  ? 'Solid baseline — locked, under 12 months so seasonality is noted.'
+                  : 'Lock the number to finish this step.'}
+          </Text>
         </Stack>
       )}
 
