@@ -242,10 +242,14 @@ function Chip({
       textAlign="left"
       fontWeight="600"
       bg={on ? PURPLE : 'white'}
-      color={on ? 'white' : 'inherit'}
+      color={on ? 'white' : 'gray.800'}
       borderWidth="1px"
       borderColor={on ? PURPLE : 'gray.300'}
-      _hover={{ borderColor: PURPLE, color: on ? 'white' : PURPLE, bg: on ? '#4a148c' : 'gray.50' }}
+      _hover={{
+        borderColor: PURPLE,
+        color: on ? 'white' : PURPLE,
+        bg: on ? '#4a148c' : 'purple.50',
+      }}
     >
       {children}
     </Button>
@@ -808,25 +812,33 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
               <FormHelperText>Same unit as your before number, so the two can be compared.</FormHelperText>
             </FormControl>
             <Box>
-              <Text fontSize="sm" fontWeight="600" mb={2}>
+              <Text fontSize="sm" fontWeight="600" mb={2} color="black">
                 Not sure? Use a typical one
               </Text>
               <Wrap spacing={2}>
                 {(
                   [
-                    ['A modest goal', 0.85],
-                    ['A typical goal', 1 - (preset?.typical || 30) / 100],
-                    ['An ambitious goal', 0.5],
+                    ['Modest', 0.85],
+                    ['Typical', 1 - (preset?.typical || 30) / 100],
+                    ['Ambitious', 0.5],
                   ] as const
                 ).map(([lab, factor]) => {
-                  const v = preset?.dir === 'up' ? nn(draft.before) * (2 - factor) : nn(draft.before) * factor
+                  const before = nn(draft.before)
+                  const v =
+                    before <= 0
+                      ? 0
+                      : preset?.dir === 'up'
+                        ? before * (2 - factor)
+                        : before * factor
                   return (
                     <WrapItem key={lab}>
-                      <Chip onClick={() => patch({ target: v.toFixed(2) })}>
+                      <Chip onClick={() => before > 0 && patch({ target: v.toFixed(2) })}>
                         <Box>
-                          <Text>{lab}</Text>
-                          <Text fontWeight="400" fontSize="11px">
-                            {f1(v)} {draft.unit}
+                          <Text fontSize="xs" fontWeight="700" color="inherit">
+                            {lab}
+                          </Text>
+                          <Text fontWeight="500" fontSize="11px" color="inherit" opacity={0.85}>
+                            {before > 0 ? `${f1(v)} ${draft.unit}` : 'Enter before first'}
                           </Text>
                         </Box>
                       </Chip>
@@ -835,8 +847,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 })}
               </Wrap>
               <Text fontSize="xs" color="gray.500" mt={2}>
-                Across other organizations, this kind of improvement typically lands around {preset?.typical || 30}{' '}
-                percent. You can put in anything.
+                Typical improvement for this measure is about {preset?.typical || 30}%. Click a chip to fill the goal.
               </Text>
             </Box>
           </SimpleGrid>
