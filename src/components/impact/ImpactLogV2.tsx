@@ -70,6 +70,7 @@ import {
   type ImpactWasteKey,
 } from '@/config/impactValueEngine'
 import type { ImpactHelpKey } from '@/config/impactHelp'
+import { computeEsgUsdValue, resolveEsgRate, VOLUNTEER_HOURLY_RATE } from '@/config/esgImpactRates'
 import {
   createImpactLog,
   listCompanyImpactLogs,
@@ -105,6 +106,8 @@ type ClaimDraft = {
   scopeType: string
   scopeValue: string
   months: number
+  /** What the baseline measures: hours, dollars, or people. */
+  baselineType: 'hours' | 'dollars' | 'people'
   obs: number
   base: string
   lockedBefore: boolean
@@ -143,7 +146,7 @@ const blankClaim = (): ClaimDraft => ({
   cat: 'eff',
   waste: 'waiting',
   growth: 'acquire',
-  measure: '',
+  measure: 'Waiting',
   family: 'time',
   unit: 'hours',
   formula: '',
@@ -151,7 +154,8 @@ const blankClaim = (): ClaimDraft => ({
   scopeType: 'Process',
   scopeValue: '',
   months: 12,
-  obs: 0,
+  baselineType: 'hours',
+  obs: 12,
   base: '',
   lockedBefore: true,
   locked: false,
@@ -182,6 +186,54 @@ const blankClaim = (): ClaimDraft => ({
   attest: false,
 })
 
+/** Map claim category → default metric family / unit. */
+function familyForCat(cat: ImpactCatKey): { family: ImpactFamilyKey; unit: string } {
+  if (cat === 'rev') return { family: 'revenue', unit: 'USD' }
+  if (cat === 'cost') return { family: 'cost', unit: 'USD' }
+  return { family: 'time', unit: 'hours' }
+}
+
+function applyBaselineType(
+  type: ClaimDraft['baselineType'],
+  cat: ImpactCatKey,
+): Pick<ClaimDraft, 'baselineType' | 'family' | 'unit'> {
+  if (type === 'hours') return { baselineType: type, family: 'time', unit: 'hours' }
+  if (type === 'people') return { baselineType: type, family: 'volume', unit: 'units' }
+  if (cat === 'rev') return { baselineType: type, family: 'revenue', unit: 'USD' }
+  return { baselineType: type, family: 'cost', unit: 'USD' }
+}
+
+function applyCategoryPick(
+  d: ClaimDraft,
+  patch: Partial<Pick<ClaimDraft, 'cat' | 'waste' | 'growth'>>,
+): ClaimDraft {
+  const cat = patch.cat ?? d.cat
+  const waste = patch.waste ?? d.waste
+  const growth = patch.growth ?? d.growth
+  const label =
+    cat === 'rev'
+      ? IMPACT_GROWTH.find((g) => g.k === growth)?.n || ''
+      : IMPACT_WASTES.find((w) => w.k === waste)?.n || ''
+  const fam = familyForCat(cat)
+  const measure =
+    !d.measure.trim() ||
+    IMPACT_WASTES.some((w) => w.n === d.measure) ||
+    IMPACT_GROWTH.some((g) => g.n === d.measure)
+      ? label
+      : d.measure
+  return {
+    ...d,
+    ...patch,
+    cat,
+    waste,
+    growth,
+    measure,
+    family: fam.family,
+    unit: fam.unit,
+    baselineType: fam.family === 'time' ? 'hours' : fam.family === 'revenue' || fam.family === 'cost' ? 'dollars' : d.baselineType,
+  }
+}
+
 const CLAIM_STEPS = ['Category', 'Measure', 'Baseline', 'Target', 'Result', 'Value', 'Verify']
 
 function toClaimInputs(d: ClaimDraft): ImpactClaimInputs {
@@ -196,7 +248,7 @@ function toClaimInputs(d: ClaimDraft): ImpactClaimInputs {
     realization: Number(d.realization) || 1,
     implCost: Number(d.implCost) || 0,
     months: Number(d.months) || 0,
-    obs: Number(d.obs) || 0,
+    obs: Number(d.obs) || Number(d.months) || 0,
     lockedBefore: d.lockedBefore,
     source: d.source,
     evidence: d.evidenceRef ? d.evidence : '',
@@ -236,15 +288,6 @@ export const ImpactLogV2: React.FC = () => {
   const [openClaim, setOpenClaim] = useState<ImpactLogRecord | null>(null)
   const [showJourney, setShowJourney] = useState(false)
   const [showRatesToLearners, setShowRatesToLearnersState] = useState(false)
-
-  // Activity draft
-  const [aTitle, setATitle] = useState('')
-  const [aDate, setADate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [aPillar, setAPillar] = useState<string>(IMPACT_LIFT_PILLARS[2])
-  const [aType, setAType] = useState<string>(IMPACT_ACTIVITY_TYPES[4])
-  const [aDesc, setADesc] = useState('')
-  const [aPeople, setAPeople] = useState(1)
-  const [aHours, setAHours] = useState(1)
 
   // ESG draft
   const [ePillar, setEPillar] = useState<'env' | 'soc' | 'gov'>('env')
@@ -299,6 +342,10 @@ export const ImpactLogV2: React.FC = () => {
     }
   }, [profile?.companyId, tab])
 
+  useEffect(() => {
+    if (tab === 'register' && !isAdmin) setTab('log')
+  }, [tab, isAdmin])
+
   const startEntry = (kind: ImpactEntryKind) => {
     if (kind === 'claim') setClaim(blankClaim())
     setEntry(kind)
@@ -311,16 +358,23 @@ export const ImpactLogV2: React.FC = () => {
     const money = validated
       .filter((e) => (e.claim?.bucket as string) !== 'capacity')
       .reduce((s, e) => s + Number(e.usdValue || e.claim?.net || 0), 0)
-    const hours = validated
+    const capacityHours = validated
       .filter((e) => (e.claim?.bucket as string) === 'capacity')
       .reduce((s, e) => s + Number(e.hours || 0), 0)
+    const hours = list.reduce((s, e) => s + Number(e.hours || 0), 0)
+    const peopleReached = list.reduce((s, e) => s + Number(e.peopleImpacted || 0), 0)
+    const acts = list.filter((e) => entryKindOf(e) === 'activity').length
+    const esg = list.filter((e) => entryKindOf(e) === 'esg').length
+    const claimCount = claims.length
     return {
       money,
-      hours,
+      hours: hours || capacityHours,
+      peopleReached,
       validated: validated.length,
-      acts: list.filter((e) => entryKindOf(e) === 'activity').length,
-      esg: list.filter((e) => entryKindOf(e) === 'esg').length,
-      people: new Set(list.map((e) => e.userId)).size,
+      claims: claimCount,
+      acts,
+      esg,
+      people: new Set(list.map((e) => e.userId).filter(Boolean)).size,
     }
   }
 
@@ -334,69 +388,15 @@ export const ImpactLogV2: React.FC = () => {
 
   const resetEntry = () => {
     setEntry(null)
-    setATitle('')
-    setADesc('')
-    setAPeople(1)
-    setAHours(1)
     setEQty('')
     setENote('')
     setClaim(blankClaim())
   }
 
-  const saveActivity = async () => {
-    if (!user?.uid) return
-    if (!aTitle.trim() || !aDesc.trim()) {
-      toast({ status: 'warning', title: 'Add a title and what you did' })
-      return
-    }
-    setSubmitting(true)
-    try {
-      await createImpactLog(
-        removeUndefinedFields({
-          userId: user.uid,
-          companyId: profile?.companyId,
-          sourcePlatform: 'transformation_tier',
-          title: aTitle.trim(),
-          description: aDesc.trim(),
-          categoryGroup: 'business',
-          entryKind: 'activity',
-          activityType: aType,
-          liftPillars: [aPillar],
-          date: aDate,
-          hours: Number(aHours) || 0,
-          peopleImpacted: Number(aPeople) || 0,
-          usdValue: 0,
-          verificationLevel: 'Tier 1: Self-Reported',
-          verificationStatus: 'pending',
-          claimStatus: 'Awaiting partner confirmation',
-          points: 0,
-          impactValue: 0,
-          scp: 0,
-          verificationMultiplier: 1,
-        }) as Parameters<typeof createImpactLog>[0],
-      )
-      toast({
-        status: 'success',
-        title: 'Activity submitted',
-        description: 'Goes to your cohort partner for confirmation. No currency value.',
-      })
-      resetEntry()
-      await reload()
-    } catch (err) {
-      toast({
-        status: 'error',
-        title: 'Could not save activity',
-        description: err instanceof Error ? err.message : 'Try again',
-      })
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   const saveEsg = async () => {
     if (!user?.uid) return
     if (!eQty || !eNote.trim()) {
-      toast({ status: 'warning', title: 'Add quantity and what changed' })
+      toast({ status: 'warning', title: 'Add how many and what changed' })
       return
     }
     setSubmitting(true)
@@ -407,6 +407,15 @@ export const ImpactLogV2: React.FC = () => {
         soc: ESGCategory.SOCIAL,
         gov: ESGCategory.GOVERNANCE,
       }
+      const esgCategory = esgMap[ePillar]
+      const qty = Number(eQty) || 0
+      const rateInfo = resolveEsgRate({ esgCategory, metricLabel: eMetric })
+      const usd = computeEsgUsdValue({
+        esgCategory,
+        metricLabel: eMetric,
+        quantity: qty,
+        hours: 0,
+      })
       await createImpactLog(
         removeUndefinedFields({
           userId: user.uid,
@@ -416,27 +425,32 @@ export const ImpactLogV2: React.FC = () => {
           description: eNote.trim(),
           categoryGroup: 'esg',
           entryKind: 'esg',
-          esgCategory: esgMap[ePillar],
+          esgCategory,
+          activityType: rateInfo.activityType,
           esgMetric: eMetric,
-          esgQty: Number(eQty) || 0,
+          esgQty: qty,
           liftPillars: pillar ? [pillar.n] : [],
           date: eDate,
           hours: 0,
-          peopleImpacted: ePillar === 'soc' ? Number(eQty) || 0 : 0,
-          usdValue: 0,
+          peopleImpacted: qty,
+          usdValue: Math.round(usd * 100) / 100,
+          usdValueSource: 'auto',
+          unitRateApplied: rateInfo.unitRate,
+          volHourRateApplied: VOLUNTEER_HOURLY_RATE,
+          sasbTopic: rateInfo.sasbTopic,
           verificationLevel: 'Tier 1: Self-Reported',
           verificationStatus: 'pending',
           claimStatus: 'Sent to ESG team',
           points: 0,
-          impactValue: 0,
+          impactValue: Math.round(usd),
           scp: 0,
           verificationMultiplier: 1,
         }) as Parameters<typeof createImpactLog>[0],
       )
       toast({
         status: 'success',
-        title: 'ESG contribution sent',
-        description: 'Routed to the ESG reporting set. Not valued in the finance register.',
+        title: 'ESG contribution logged',
+        description: `Estimated ${formatMoney(usd)} using the standard ESG rate card.`,
       })
       resetEntry()
       await reload()
@@ -452,7 +466,9 @@ export const ImpactLogV2: React.FC = () => {
   }
 
   const guardClaimStep = (): string | null => {
+    if (claim.step === 1 && !claim.measure.trim()) return 'Name the measure (KPI) before you continue.'
     if (claim.step === 2 && !claim.measure.trim()) return 'Name the measure before you continue.'
+    if (claim.step === 3 && claim.months < 3) return 'Baseline needs at least 3 months of data.'
     if (claim.step === 3 && (claim.base === '' || claim.base === null))
       return 'Enter the baseline value.'
     if (claim.step === 3 && !claim.locked) return 'Lock the baseline before you continue.'
@@ -658,7 +674,7 @@ export const ImpactLogV2: React.FC = () => {
         {navBtn('log', 'Log impact')}
         {navBtn('dash', 'Value dashboard')}
         {navBtn('waste', 'Where value comes from')}
-        {navBtn('register', 'Value register')}
+        {isAdmin && navBtn('register', 'Value register')}
         {navBtn('claims', 'Claims ledger')}
         {navBtn('export', 'Export')}
       </Flex>
@@ -723,7 +739,12 @@ export const ImpactLogV2: React.FC = () => {
                 {formatMoney(meStats.money)}
               </Text>
               <Text fontSize="sm" color="text.secondary">
-                {meStats.validated} validated · {meStats.acts} activities · {meStats.esg} ESG
+                {meStats.claims} improvement claim{meStats.claims === 1 ? '' : 's'} · {meStats.esg}{' '}
+                ESG · {meStats.acts > 0 ? `${meStats.acts} activit${meStats.acts === 1 ? 'y' : 'ies'}` : `${meStats.validated} validated`}
+              </Text>
+              <Text fontSize="sm" color="text.secondary" mt={1}>
+                {meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs ·{' '}
+                {meStats.peopleReached.toLocaleString()} people reached
               </Text>
               <Progress
                 value={pctMe}
@@ -741,12 +762,16 @@ export const ImpactLogV2: React.FC = () => {
               <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
                 Organisation
               </Text>
-              <Text fontSize="2xl" fontWeight="bold" lineHeight="1.15" my={1}>
+              <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
                 {formatMoney(orgStats.money)}
               </Text>
               <Text fontSize="sm" color="text.secondary">
                 {orgStats.validated} validated · {orgStats.people} contributing ·{' '}
-                {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs released
+                {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs
+              </Text>
+              <Text fontSize="sm" color="text.secondary" mt={1}>
+                {orgStats.claims} claims · {orgStats.esg} ESG ·{' '}
+                {orgStats.peopleReached.toLocaleString()} people reached
               </Text>
             </Box>
             <Box p={{ base: 4, md: 5 }} bg="tint.brandPrimary">
@@ -792,30 +817,26 @@ export const ImpactLogV2: React.FC = () => {
                 fontWeight="bold"
                 mb={1}
               >
-                Three kinds of entry
+                Two kinds of entry
               </Text>
               <Heading size="md" mb={1} letterSpacing="-0.02em">
                 Log your impact
               </Heading>
               <Text fontSize="sm" color="text.secondary" mb={5} maxW="54ch">
-                Pick the one that matches what you have. They are reported separately and never mixed.
+                Improvement claims put verified dollars on the organisation register. ESG uses the same
+                auto-rates as before. They stay in separate buckets.
               </Text>
-              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                 {[
                   {
-                    k: 'activity' as const,
-                    title: 'Activity log',
-                    body: 'Workshops, coaching, training. People reached and hours. No currency value.',
-                  },
-                  {
                     k: 'claim' as const,
-                    title: 'Improvement claim',
-                    body: 'Measured improvement with baseline and evidence. You never type the money.',
+                    title: 'Log improvement',
+                    body: 'Measured before/after with baseline and evidence. Measure owner confirms by email before headline $.',
                   },
                   {
                     k: 'esg' as const,
-                    title: 'ESG contribution',
-                    body: 'Env / social / governance in their own units. Goes to the ESG team, not finance.',
+                    title: 'Log ESG',
+                    body: 'Env / social / governance with the standard auto-calculated USD estimate.',
                   },
                 ].map((card) => {
                   const featured = card.k === 'claim'
@@ -846,11 +867,7 @@ export const ImpactLogV2: React.FC = () => {
                         boxShadow={featured ? undefined : 'sm'}
                         onClick={() => startEntry(card.k)}
                       >
-                        {card.k === 'claim'
-                          ? 'Start a claim'
-                          : card.k === 'esg'
-                            ? 'Log ESG'
-                            : 'Log an activity'}
+                        {card.k === 'claim' ? 'Start a claim' : 'Log ESG'}
                       </Button>
                     </Box>
                   )
@@ -935,7 +952,7 @@ export const ImpactLogV2: React.FC = () => {
               </Text>
               {entries.length === 0 ? (
                 <Text fontSize="sm" color="text.secondary">
-                  Nothing logged yet. Start with an activity, ESG contribution, or improvement claim.
+                  Nothing logged yet. Start with an improvement claim or ESG contribution.
                 </Text>
               ) : (
                 <Stack spacing={2.5}>
@@ -961,20 +978,26 @@ export const ImpactLogV2: React.FC = () => {
                         <Box>
                           <HStack spacing={2} mb={0.5}>
                             <Text fontWeight="semibold">{e.title}</Text>
-                            <Badge>{kind}</Badge>
+                            <Badge>{kind === 'claim' ? 'improvement' : kind}</Badge>
                             {kind === 'claim' && e.claim?.tier != null && (
                               <Badge colorScheme="purple">Tier {String(e.claim.tier)}</Badge>
+                            )}
+                            {kind === 'claim' && e.claimStatus === 'Submitted' && (
+                              <Badge colorScheme="blue">Awaiting confirmation</Badge>
                             )}
                           </HStack>
                           <Text fontSize="xs" color="text.muted">
                             {e.date} · {e.claimStatus || e.verificationStatus || 'pending'}
+                            {kind === 'esg' && e.esgQty != null
+                              ? ` · ${e.esgQty} ${e.esgMetric || 'units'}`
+                              : ''}
                           </Text>
                         </Box>
-                        <Text fontFamily="mono" fontSize="sm">
-                          {kind === 'claim' && Number(e.usdValue)
+                        <Text fontFamily="mono" fontSize="sm" color="black">
+                          {Number(e.usdValue)
                             ? formatMoney(Number(e.usdValue))
-                            : kind === 'esg'
-                              ? 'not valued'
+                            : kind === 'claim'
+                              ? '$0'
                               : '-'}
                         </Text>
                       </Flex>
@@ -986,87 +1009,28 @@ export const ImpactLogV2: React.FC = () => {
           </Stack>
         )}
 
-        {tab === 'log' && entry === 'activity' && (
-          <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
-            <Heading size="md" mb={1}>
-              What did you do
-            </Heading>
-            <Text fontSize="sm" color="text.secondary" mb={4}>
-              Builds your portfolio. No currency value; turning hours into money needs a claim.
-            </Text>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>Activity title</FormLabel>
-                <Input value={aTitle} onChange={(e) => setATitle(e.target.value)} />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Date</FormLabel>
-                <Input type="date" value={aDate} onChange={(e) => setADate(e.target.value)} />
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>LIFT pillar</FormLabel>
-                <Select value={aPillar} onChange={(e) => setAPillar(e.target.value)}>
-                  {IMPACT_LIFT_PILLARS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Activity type</FormLabel>
-                <Select value={aType} onChange={(e) => setAType(e.target.value)}>
-                  {IMPACT_ACTIVITY_TYPES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-            </SimpleGrid>
-            <FormControl isRequired mt={4}>
-              <FormLabel>What you did and the result</FormLabel>
-              <Textarea value={aDesc} onChange={(e) => setADesc(e.target.value)} rows={3} />
-            </FormControl>
-            <SimpleGrid columns={2} spacing={4} mt={4}>
-              <FormControl>
-                <FormLabel>People reached</FormLabel>
-                <Input
-                  type="number"
-                  min={0}
-                  value={aPeople}
-                  onChange={(e) => setAPeople(Number(e.target.value))}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel>Hours contributed</FormLabel>
-                <Input
-                  type="number"
-                  step={0.25}
-                  min={0}
-                  value={aHours}
-                  onChange={(e) => setAHours(Number(e.target.value))}
-                />
-              </FormControl>
-            </SimpleGrid>
-            <Flex mt={6} gap={3} justify="flex-end">
-              <Button variant="ghost" onClick={resetEntry} isDisabled={submitting}>
-                Cancel
-              </Button>
-              <Button colorScheme="primary" onClick={() => void saveActivity()} isLoading={submitting}>
-                Submit activity
-              </Button>
-            </Flex>
-          </Box>
-        )}
-
         {tab === 'log' && entry === 'esg' && (
           <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
             <Heading size="md" mb={1}>
-              ESG contribution
+              Log ESG
             </Heading>
             <Text fontSize="sm" color="text.secondary" mb={4}>
-              Recorded in its own units. Never touches the finance register.
+              Same auto-calculation as before: quantity × standard unit rate
+              {eQty
+                ? ` · estimate ${formatMoney(
+                    computeEsgUsdValue({
+                      esgCategory:
+                        ePillar === 'env'
+                          ? ESGCategory.ENVIRONMENTAL
+                          : ePillar === 'soc'
+                            ? ESGCategory.SOCIAL
+                            : ESGCategory.GOVERNANCE,
+                      metricLabel: eMetric,
+                      quantity: Number(eQty) || 0,
+                    }),
+                  )}`
+                : ''}
+              .
             </Text>
             <Wrap mb={4}>
               {IMPACT_ESG_PILLARS.map((p) => (
@@ -1097,8 +1061,37 @@ export const ImpactLogV2: React.FC = () => {
                 </Select>
               </FormControl>
               <FormControl isRequired>
-                <FormLabel>How much</FormLabel>
+                <FormLabel>
+                  How many (
+                  {
+                    resolveEsgRate({
+                      esgCategory:
+                        ePillar === 'env'
+                          ? ESGCategory.ENVIRONMENTAL
+                          : ePillar === 'soc'
+                            ? ESGCategory.SOCIAL
+                            : ESGCategory.GOVERNANCE,
+                      metricLabel: eMetric,
+                    }).unitLabel
+                  }
+                  )
+                </FormLabel>
                 <Input type="number" value={eQty} onChange={(e) => setEQty(e.target.value)} />
+                <FormHelperText>
+                  Rate{' '}
+                  {formatMoney(
+                    resolveEsgRate({
+                      esgCategory:
+                        ePillar === 'env'
+                          ? ESGCategory.ENVIRONMENTAL
+                          : ePillar === 'soc'
+                            ? ESGCategory.SOCIAL
+                            : ESGCategory.GOVERNANCE,
+                      metricLabel: eMetric,
+                    }).unitRate,
+                  )}{' '}
+                  per unit
+                </FormHelperText>
               </FormControl>
               <FormControl isRequired>
                 <FormLabel>Date</FormLabel>
@@ -1114,7 +1107,7 @@ export const ImpactLogV2: React.FC = () => {
                 Cancel
               </Button>
               <Button colorScheme="primary" onClick={() => void saveEsg()} isLoading={submitting}>
-                Send to ESG team
+                Log ESG
               </Button>
             </Flex>
           </Box>
@@ -1171,7 +1164,7 @@ export const ImpactLogV2: React.FC = () => {
                       borderColor={claim.cat === c.k ? 'brand.primary' : 'border.subtle'}
                       rounded="xl"
                       bg={claim.cat === c.k ? 'tint.brandPrimary' : 'surface.default'}
-                      onClick={() => setClaim((d) => ({ ...d, cat: c.k }))}
+                      onClick={() => setClaim((d) => applyCategoryPick(d, { cat: c.k }))}
                     >
                       <Text fontWeight="bold">{c.n}</Text>
                       <Text fontSize="xs" color="text.secondary" mt={1}>
@@ -1201,9 +1194,12 @@ export const ImpactLogV2: React.FC = () => {
                           }
                           onClick={() =>
                             setClaim((d) =>
-                              claim.cat === 'rev'
-                                ? { ...d, growth: w.k as ImpactGrowthKey }
-                                : { ...d, waste: w.k as ImpactWasteKey },
+                              applyCategoryPick(
+                                d,
+                                claim.cat === 'rev'
+                                  ? { growth: w.k as ImpactGrowthKey }
+                                  : { waste: w.k as ImpactWasteKey },
+                              ),
                             )
                           }
                         >
@@ -1213,6 +1209,25 @@ export const ImpactLogV2: React.FC = () => {
                     ))}
                   </Wrap>
                 </FormControl>
+                <FormControl isRequired>
+                  <FormLabel>Measure name (KPI)</FormLabel>
+                  <Input
+                    value={claim.measure}
+                    placeholder="e.g. AI governance revenue growth, invoice cycle time"
+                    onChange={(e) => setClaim((d) => ({ ...d, measure: e.target.value }))}
+                  />
+                  <FormHelperText>
+                    What you are measuring. Prefills from the type above — edit to make it specific.
+                  </FormHelperText>
+                </FormControl>
+                <Alert status="info" rounded="md" py={2}>
+                  <AlertIcon />
+                  <AlertDescription fontSize="sm">
+                    Metric family on the next step is set from this category (
+                    {IMPACT_METRIC_FAMILIES.find((f) => f.k === claim.family)?.n || claim.family} ·{' '}
+                    {claim.unit}).
+                  </AlertDescription>
+                </Alert>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                   <FormControl isRequired>
                     <FormLabel>LIFT pillar</FormLabel>
@@ -1246,11 +1261,21 @@ export const ImpactLogV2: React.FC = () => {
 
             {claim.step === 2 && (
               <Stack spacing={4}>
+                <Alert status="success" rounded="md" py={2}>
+                  <AlertIcon />
+                  <AlertDescription fontSize="sm">
+                    Measure: <strong>{claim.measure || '—'}</strong> · family{' '}
+                    <strong>
+                      {IMPACT_METRIC_FAMILIES.find((f) => f.k === claim.family)?.n} ({claim.unit})
+                    </strong>{' '}
+                    from your category. Adjust only if needed.
+                  </AlertDescription>
+                </Alert>
                 <FormControl isRequired>
                   <FormLabel>Measure name</FormLabel>
                   <Input
                     value={claim.measure}
-                    placeholder="e.g. Supplier invoice cycle time, Accounts Payable"
+                    placeholder="e.g. Retention and churn — enterprise SaaS"
                     onChange={(e) => setClaim((d) => ({ ...d, measure: e.target.value }))}
                   />
                 </FormControl>
@@ -1261,7 +1286,8 @@ export const ImpactLogV2: React.FC = () => {
                       value={claim.family}
                       onChange={(e) => {
                         const fam = e.target.value as ImpactFamilyKey
-                        const units = IMPACT_METRIC_FAMILIES.find((f) => f.k === fam)?.units || ['hours']
+                        const units =
+                          IMPACT_METRIC_FAMILIES.find((f) => f.k === fam)?.units || ['hours']
                         setClaim((d) => ({ ...d, family: fam, unit: units[0] }))
                       }}
                     >
@@ -1348,7 +1374,7 @@ export const ImpactLogV2: React.FC = () => {
                   <AlertIcon />
                   <AlertDescription fontSize="sm">
                     A baseline is what the number looked like before you changed anything. Twelve months
-                    is best. Lock it before continuing.
+                    is best; minimum three months.
                   </AlertDescription>
                 </Alert>
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
@@ -1356,22 +1382,37 @@ export const ImpactLogV2: React.FC = () => {
                     <FormLabel>Months of data</FormLabel>
                     <Select
                       value={String(claim.months)}
-                      onChange={(e) => setClaim((d) => ({ ...d, months: Number(e.target.value) }))}
+                      onChange={(e) => {
+                        const months = Number(e.target.value)
+                        setClaim((d) => ({ ...d, months, obs: months }))
+                      }}
                     >
-                      {[0, 1, 2, 3, 6, 9, 12, 18, 24].map((m) => (
+                      {[3, 6, 9, 12, 18, 24].map((m) => (
                         <option key={m} value={m}>
-                          {m}
+                          {m === 12 ? '12 (recommended)' : m}
                         </option>
                       ))}
                     </Select>
                   </FormControl>
-                  <FormControl>
-                    <FormLabel>Observations</FormLabel>
-                    <Input
-                      type="number"
-                      value={claim.obs}
-                      onChange={(e) => setClaim((d) => ({ ...d, obs: Number(e.target.value) }))}
-                    />
+                  <FormControl isRequired>
+                    <FormLabel>Baseline type</FormLabel>
+                    <Select
+                      value={claim.baselineType}
+                      onChange={(e) => {
+                        const baselineType = e.target.value as ClaimDraft['baselineType']
+                        setClaim((d) => ({
+                          ...d,
+                          ...applyBaselineType(baselineType, d.cat),
+                        }))
+                      }}
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="dollars">Dollars</option>
+                      <option value="people">People</option>
+                    </Select>
+                    <FormHelperText>
+                      What you observed over those months — sets unit to {claim.unit}.
+                    </FormHelperText>
                   </FormControl>
                   <FormControl isRequired>
                     <FormLabel>Baseline value ({claim.unit})</FormLabel>
@@ -1401,7 +1442,7 @@ export const ImpactLogV2: React.FC = () => {
                     Grade{' '}
                     {gradeFromBaseline(
                       claim.months,
-                      claim.obs,
+                      claim.obs || claim.months,
                       claim.lockedBefore,
                       claim.source,
                     )}
@@ -1813,12 +1854,27 @@ export const ImpactLogV2: React.FC = () => {
           ))}
 
         {tab === 'claims' && (
-          <ImpactRegisterPanel
-            entries={isAdmin && orgEntries.length ? orgEntries : entries}
-            rates={rates}
-            onHelp={setHelpKey}
-            onOpenClaim={setOpenClaim}
-          />
+          <>
+            {isAdmin && (
+              <Alert status="info" rounded="lg" mb={4}>
+                <AlertIcon />
+                <Box>
+                  <AlertTitle>Partner review</AlertTitle>
+                  <AlertDescription fontSize="sm">
+                    Open any Submitted claim to review answers and advance status. Measure owners in
+                    your organisation also get an email confirm link — both paths update the same
+                    journey.
+                  </AlertDescription>
+                </Box>
+              </Alert>
+            )}
+            <ImpactRegisterPanel
+              entries={isAdmin && orgEntries.length ? orgEntries : entries}
+              rates={rates}
+              onHelp={setHelpKey}
+              onOpenClaim={setOpenClaim}
+            />
+          </>
         )}
 
         {tab === 'export' && (
@@ -1849,9 +1905,8 @@ export const ImpactLogV2: React.FC = () => {
             />
           </Tooltip>
           <MenuList zIndex={21}>
-            <MenuItem onClick={() => startEntry('claim')}>Claim an improvement</MenuItem>
-            <MenuItem onClick={() => startEntry('activity')}>Log an activity</MenuItem>
-            <MenuItem onClick={() => startEntry('esg')}>Log an ESG contribution</MenuItem>
+            <MenuItem onClick={() => startEntry('claim')}>Log improvement</MenuItem>
+            <MenuItem onClick={() => startEntry('esg')}>Log ESG</MenuItem>
           </MenuList>
         </Menu>
       )}

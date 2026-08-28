@@ -206,6 +206,16 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
             )}
           </HStack>
 
+          {canModerate && status === 'Submitted' && (
+            <Box mb={4} p={3} bg="blue.50" borderLeft="3px solid" borderColor="blue.400" rounded="md">
+              <Text fontSize="sm" color="gray.800">
+                Measure owner was emailed a confirm link
+                {entry.ownerEmail ? ` (${entry.ownerEmail})` : ''}. You can also advance status here
+                after reviewing the answers — same gate as the email confirmation.
+              </Text>
+            </Box>
+          )}
+
           {typeof entry.claim?.reverseReason === 'string' && entry.claim.reverseReason && (
             <Box mb={4} p={3} bg="red.50" borderLeft="3px solid" borderColor="red.400" rounded="md">
               <Text fontSize="sm">{String(entry.claim.reverseReason)}</Text>

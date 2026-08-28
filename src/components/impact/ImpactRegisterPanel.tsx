@@ -65,8 +65,8 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
           <ImpactHelpButton k="journey" onOpen={onHelp} />
         </Heading>
         <Text fontSize="sm" color="text.secondary">
-          Every logged claim, activity, and ESG entry. Dashboard figures drill back here. Org rates
-          live under Value register.
+          Every improvement claim and ESG entry. Open a claim to review answers, advance status, or
+          send it back. Measure owners also confirm by email via the link sent on submit.
         </Text>
       </Box>
 
