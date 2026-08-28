@@ -167,6 +167,18 @@ export async function listCompanyImpactLogs(companyId: string): Promise<ImpactLo
   return (data as ImpactLogRow[] | null)?.map(toRecord) ?? []
 }
 
+/** Platform-wide list for T4L admin sector rollup (RLS: partner/admin). */
+export async function listAllImpactLogs(limit = 2000): Promise<ImpactLogRecord[]> {
+  const { data, error } = await supabase
+    .from('impact_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) throw new Error(error.message)
+  return (data as ImpactLogRow[] | null)?.map(toRecord) ?? []
+}
+
 export async function updateImpactLogVerificationStatus(
   id: string,
   status: NonNullable<ImpactLogRecord['verificationStatus']>,

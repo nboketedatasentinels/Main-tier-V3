@@ -11,7 +11,6 @@ import {
   Badge,
   Box,
   Button,
-  Checkbox,
   Collapse,
   Flex,
   FormControl,
@@ -39,39 +38,28 @@ import {
   WrapItem,
 } from '@chakra-ui/react'
 import { Info, Plus } from 'lucide-react'
-import { format, addWeeks, parseISO, isValid } from 'date-fns'
+import { format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { ESGCategory } from '@/types'
 import {
   CLAIM_JOURNEY_STEPS,
   DEFAULT_IMPACT_RATES,
-  IMPACT_ACTIVITY_TYPES,
-  IMPACT_CATS,
   IMPACT_ESG_PILLARS,
-  IMPACT_EVIDENCE_TYPES,
   IMPACT_GROWTH,
-  IMPACT_LIFT_PILLARS,
-  IMPACT_METRIC_FAMILIES,
-  IMPACT_REASONS,
-  IMPACT_RECURRENCE,
-  IMPACT_SOURCES,
   IMPACT_WASTES,
   bandNeedsFinance,
   formatMoney,
   gradeFromBaseline,
-  valuation,
-  type ImpactCatKey,
-  type ImpactClaimInputs,
   type ImpactEntryKind,
   type ImpactFamilyKey,
-  type ImpactGrowthKey,
   type ImpactRateCard,
-  type ImpactWasteKey,
 } from '@/config/impactValueEngine'
 import type { ImpactHelpKey } from '@/config/impactHelp'
+import { CLAIM_FLOW_GROWTH, CLAIM_FLOW_WASTES } from '@/config/impactClaimFlowV4'
 import { computeEsgUsdValue, resolveEsgRate, VOLUNTEER_HOURLY_RATE } from '@/config/esgImpactRates'
 import {
   createImpactLog,
+  listAllImpactLogs,
   listCompanyImpactLogs,
   listMyImpactLogs,
   type ImpactLogRecord,
@@ -80,195 +68,28 @@ import { listImpactValueRates, getShowRatesToLearners } from '@/services/impactR
 import { removeUndefinedFields } from '@/utils/firestore'
 import { ImpactHelpButton, ImpactHelpModal } from '@/components/impact/ImpactHelpModal'
 import { ImpactClaimDrawer } from '@/components/impact/ImpactClaimDrawer'
+import {
+  ImpactClaimWizardV4,
+  type ClaimWizardSubmitPayload,
+} from '@/components/impact/ImpactClaimWizardV4'
 import { ImpactValueDashboard } from '@/components/impact/ImpactValueDashboard'
 import { ImpactWastePanel } from '@/components/impact/ImpactWastePanel'
 import { ImpactRegisterPanel } from '@/components/impact/ImpactRegisterPanel'
 import { ImpactRatesAdmin } from '@/components/impact/ImpactRatesAdmin'
 import { ImpactRatesViewer } from '@/components/impact/ImpactRatesViewer'
 import { ImpactExportPanel } from '@/components/impact/ImpactExportPanel'
+import { ImpactSectorRollup } from '@/components/impact/ImpactSectorRollup'
 import { requestClaimConfirmations } from '@/services/impactClaimConfirmationService'
 
-type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'claims' | 'export'
+type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'claims' | 'sector' | 'export'
 
-type ClaimDraft = {
-  step: number
-  pillar: string
-  activity: string
-  cat: ImpactCatKey
-  waste: ImpactWasteKey
-  growth: ImpactGrowthKey
-  measure: string
-  family: ImpactFamilyKey
-  unit: string
-  formula: string
-  source: string
-  scopeType: string
-  scopeValue: string
-  months: number
-  /** What the baseline measures: hours, dollars, or people. */
-  baselineType: 'hours' | 'dollars' | 'people'
-  obs: number
-  base: string
-  lockedBefore: boolean
-  locked: boolean
-  bRef: string
-  direction: 'Decrease' | 'Increase'
-  target: string
-  targetDate: string
-  intervention: string
-  intStart: string
-  wStart: string
-  wEnd: string
-  windowP: number
-  post: string
-  occ: number
-  sustained: boolean
-  evidence: string
-  evidenceRef: string
-  rateId: string
-  attribution: number
-  attrReason: string
-  realization: number
-  implCost: number
-  recurrence: string
-  ownerV: string
-  ownerEmail: string
-  financeV: string
-  financeEmail: string
-  attest: boolean
-}
-
-const blankClaim = (): ClaimDraft => ({
-  step: 1,
-  pillar: IMPACT_LIFT_PILLARS[3],
-  activity: 'Automation',
-  cat: 'eff',
-  waste: 'waiting',
-  growth: 'acquire',
-  measure: 'Waiting',
-  family: 'time',
-  unit: 'hours',
-  formula: '',
-  source: 'SAP ERP',
-  scopeType: 'Process',
-  scopeValue: '',
-  months: 12,
-  baselineType: 'hours',
-  obs: 12,
-  base: '',
-  lockedBefore: true,
-  locked: false,
-  bRef: '',
-  direction: 'Increase',
-  target: '',
-  targetDate: minTargetDateIso(),
-  intervention: '',
-  intStart: format(new Date(), 'yyyy-MM-dd'),
-  wStart: format(new Date(), 'yyyy-MM-dd'),
-  wEnd: format(new Date(), 'yyyy-MM-dd'),
-  windowP: 3,
-  post: '',
-  occ: 1,
-  sustained: true,
-  evidence: IMPACT_EVIDENCE_TYPES[0],
-  evidenceRef: '',
-  rateId: 'R2',
-  attribution: 100,
-  attrReason: IMPACT_REASONS[0],
-  realization: 0.5,
-  implCost: 0,
-  recurrence: IMPACT_RECURRENCE[0],
-  ownerV: '',
-  ownerEmail: '',
-  financeV: '',
-  financeEmail: '',
-  attest: false,
-})
-
-/** Map claim category → default metric family / unit. */
-function familyForCat(cat: ImpactCatKey): { family: ImpactFamilyKey; unit: string } {
-  if (cat === 'rev') return { family: 'revenue', unit: 'USD' }
-  if (cat === 'cost') return { family: 'cost', unit: 'USD' }
-  return { family: 'time', unit: 'hours' }
-}
-
-function applyBaselineType(
-  type: ClaimDraft['baselineType'],
-  cat: ImpactCatKey,
-): Pick<ClaimDraft, 'baselineType' | 'family' | 'unit'> {
-  if (type === 'hours') return { baselineType: type, family: 'time', unit: 'hours' }
-  if (type === 'people') return { baselineType: type, family: 'volume', unit: 'people' }
-  if (cat === 'rev') return { baselineType: type, family: 'revenue', unit: 'USD' }
-  return { baselineType: type, family: 'cost', unit: 'USD' }
-}
-
-function minTargetDateIso(): string {
-  return format(addWeeks(new Date(), 6), 'yyyy-MM-dd')
-}
-
-function unitLabel(unit: string, baselineType: ClaimDraft['baselineType']): string {
-  if (baselineType === 'people' || unit === 'people') return 'people'
-  if (baselineType === 'dollars' || unit === 'USD' || unit === 'BWP' || unit === 'GHS' || unit === 'KES')
-    return unit === 'USD' ? 'dollars (USD)' : unit
-  if (baselineType === 'hours' || unit === 'hours' || unit === 'days' || unit === 'minutes') return unit
-  return unit
-}
-
-function applyCategoryPick(
-  d: ClaimDraft,
-  patch: Partial<Pick<ClaimDraft, 'cat' | 'waste' | 'growth'>>,
-): ClaimDraft {
-  const cat = patch.cat ?? d.cat
-  const waste = patch.waste ?? d.waste
-  const growth = patch.growth ?? d.growth
-  const label =
-    cat === 'rev'
-      ? IMPACT_GROWTH.find((g) => g.k === growth)?.n || ''
-      : IMPACT_WASTES.find((w) => w.k === waste)?.n || ''
-  const fam = familyForCat(cat)
-  const measure =
-    !d.measure.trim() ||
-    IMPACT_WASTES.some((w) => w.n === d.measure) ||
-    IMPACT_GROWTH.some((g) => g.n === d.measure)
-      ? label
-      : d.measure
-  return {
-    ...d,
-    ...patch,
-    cat,
-    waste,
-    growth,
-    measure,
-    family: fam.family,
-    unit: fam.unit,
-    baselineType: fam.family === 'time' ? 'hours' : fam.family === 'revenue' || fam.family === 'cost' ? 'dollars' : d.baselineType,
-  }
-}
-
-const CLAIM_STEPS = ['Category', 'Measure', 'Baseline', 'Target', 'Result', 'Value', 'Verify']
-
-function toClaimInputs(d: ClaimDraft): ImpactClaimInputs {
-  return {
-    family: d.family,
-    unit: d.unit,
-    base: Number(d.base) || 0,
-    post: Number(d.post) || 0,
-    occ: Number(d.occ) || 1,
-    rateId: d.rateId,
-    attribution: Number(d.attribution) || 100,
-    realization: Number(d.realization) || 1,
-    implCost: Number(d.implCost) || 0,
-    months: Number(d.months) || 0,
-    obs: Number(d.obs) || Number(d.months) || 0,
-    lockedBefore: d.lockedBefore,
-    source: d.source,
-    evidence: d.evidenceRef ? d.evidence : '',
-    owner: d.ownerV,
-    finance: d.financeV,
-    windowP: Number(d.windowP) || 0,
-    recurrence: d.recurrence,
-    sustain90: d.sustained ? 'Holding' : 'Not yet due',
-  }
+function familyFromClaimFam(fam: ClaimWizardSubmitPayload['calc']['fam']): ImpactFamilyKey {
+  if (fam === 'time') return 'time'
+  if (fam === 'people') return 'volume'
+  if (fam === 'money') return 'cost'
+  if (fam === 'items') return 'quality'
+  if (fam === 'revenue') return 'revenue'
+  return 'time'
 }
 
 function entryKindOf(e: ImpactLogRecord): ImpactEntryKind {
@@ -286,11 +107,12 @@ function isValidatedClaim(e: ImpactLogRecord): boolean {
 }
 
 export const ImpactLogV2: React.FC = () => {
-  const { user, profile, isAdmin } = useAuth()
+  const { user, profile, isAdmin, isSuperAdmin } = useAuth()
   const toast = useToast()
   const [tab, setTab] = useState<ViewTab>('log')
   const [entries, setEntries] = useState<ImpactLogRecord[]>([])
   const [orgEntries, setOrgEntries] = useState<ImpactLogRecord[]>([])
+  const [platformEntries, setPlatformEntries] = useState<ImpactLogRecord[]>([])
   const [rates, setRates] = useState<ImpactRateCard[]>(DEFAULT_IMPACT_RATES)
   const [loading, setLoading] = useState(true)
   const [entry, setEntry] = useState<ImpactEntryKind | null>(null)
@@ -307,7 +129,6 @@ export const ImpactLogV2: React.FC = () => {
   const [eNote, setENote] = useState('')
   const [eDate, setEDate] = useState(format(new Date(), 'yyyy-MM-dd'))
 
-  const [claim, setClaim] = useState<ClaimDraft>(blankClaim)
 
   const displayName =
     [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') ||
@@ -329,6 +150,16 @@ export const ImpactLogV2: React.FC = () => {
         setOrgEntries(org)
       } else {
         setOrgEntries([])
+      }
+      if (isSuperAdmin) {
+        try {
+          setPlatformEntries(await listAllImpactLogs())
+        } catch (err) {
+          console.warn('[ImpactLogV2] platform rollup load failed', err)
+          setPlatformEntries([])
+        }
+      } else {
+        setPlatformEntries([])
       }
     } catch (err) {
       console.error('[ImpactLogV2] load failed', err)
@@ -358,7 +189,6 @@ export const ImpactLogV2: React.FC = () => {
   }, [tab, isAdmin])
 
   const startEntry = (kind: ImpactEntryKind) => {
-    if (kind === 'claim') setClaim(blankClaim())
     setEntry(kind)
     setTab('log')
   }
@@ -401,7 +231,6 @@ export const ImpactLogV2: React.FC = () => {
     setEntry(null)
     setEQty('')
     setENote('')
-    setClaim(blankClaim())
   }
 
   const saveEsg = async () => {
@@ -476,139 +305,110 @@ export const ImpactLogV2: React.FC = () => {
     }
   }
 
-  const guardClaimStep = (): string | null => {
-    if (claim.step === 1 && !claim.measure.trim()) return 'Name the measure (KPI) before you continue.'
-    if (claim.step === 2 && !claim.measure.trim()) return 'Name the measure before you continue.'
-    if (claim.step === 3 && claim.months < 3) return 'Baseline needs at least 3 months of data.'
-    if (claim.step === 3 && (claim.base === '' || claim.base === null))
-      return 'Enter the baseline value.'
-    if (claim.step === 3 && !claim.locked) return 'Lock the baseline before you continue.'
-    if (claim.step === 4 && claim.target === '') return 'Enter the target value.'
-    if (claim.step === 4) {
-      const minIso = minTargetDateIso()
-      const td = claim.targetDate
-      const parsed = td ? parseISO(td) : null
-      if (!parsed || !isValid(parsed) || td < minIso) {
-        return 'Target date must be at least 6 weeks out (shortest improvement cycle).'
-      }
-    }
-    if (claim.step === 5 && claim.post === '') return 'Enter the result for your measurement window.'
-    return null
-  }
-
-  const nextClaim = () => {
-    const g = guardClaimStep()
-    if (g) {
-      toast({ status: 'warning', title: g })
-      return
-    }
-    setClaim((c) => ({ ...c, step: Math.min(7, c.step + 1) }))
-  }
-
-  const submitClaim = async () => {
+  const submitClaim = async (payload: ClaimWizardSubmitPayload) => {
     if (!user?.uid) return
-    if (!claim.attest) {
-      toast({ status: 'warning', title: 'Tick the attestation before you submit.' })
-      return
-    }
-    if (!claim.ownerV.trim()) {
-      toast({ status: 'warning', title: 'Nominate who confirms the number.' })
-      return
-    }
-    const ownerEmail = claim.ownerEmail.trim().toLowerCase()
-    if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(ownerEmail)) {
-      toast({ status: 'warning', title: 'Add a valid work email for the measure owner.' })
-      return
-    }
-    const inputs = toClaimInputs(claim)
-    const v = valuation(inputs, rates)
-    const needsFinance = bandNeedsFinance(v.net)
-    const financeEmail = claim.financeEmail.trim().toLowerCase()
-    if (needsFinance) {
-      if (!claim.financeV.trim()) {
-        toast({ status: 'warning', title: 'This value band needs a finance validator name.' })
-        return
-      }
-      if (!/^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/.test(financeEmail)) {
-        toast({
-          status: 'warning',
-          title: 'Add a valid finance email. This band requires finance validation.',
-        })
-        return
-      }
-    }
+    const ownerEmail = payload.ownerEmail.trim().toLowerCase()
+    const financeEmail = payload.financeEmail.trim().toLowerCase()
+    const needsFinance = bandNeedsFinance(payload.calc.net)
+    const wasteOrGrowth =
+      payload.cat === 'rev'
+        ? CLAIM_FLOW_GROWTH.find((g) => g.k === payload.growth)?.n ||
+          IMPACT_GROWTH.find((g) => g.k === payload.growth)?.n
+        : CLAIM_FLOW_WASTES.find((w) => w.k === payload.waste)?.n ||
+          IMPACT_WASTES.find((w) => w.k === payload.waste)?.n
+    const businessCategory =
+      payload.cat === 'cost'
+        ? 'Cost Savings'
+        : payload.cat === 'eff'
+          ? 'Efficiency Gains'
+          : 'Revenue Growth'
+    const family = familyFromClaimFam(payload.calc.fam)
+    const grade = gradeFromBaseline(
+      payload.months,
+      payload.months,
+      payload.lockedBefore,
+      payload.evidence,
+    )
+    const industry = profile?.companyName?.trim() || 'Unassigned sector'
+
     setSubmitting(true)
     try {
-      const wasteOrGrowth =
-        claim.cat === 'rev'
-          ? IMPACT_GROWTH.find((g) => g.k === claim.growth)?.n
-          : IMPACT_WASTES.find((w) => w.k === claim.waste)?.n
-      const businessCategory =
-        claim.cat === 'cost'
-          ? 'Cost Savings'
-          : claim.cat === 'eff'
-            ? 'Efficiency Gains'
-            : 'Revenue Growth'
-      const windowLabel = `${claim.wStart} to ${claim.wEnd}`
-      // Submitted claims stay Tier 1 / $0 on the headline until email confirmation advances them.
       const created = await createImpactLog(
         removeUndefinedFields({
           userId: user.uid,
           companyId: profile?.companyId,
           sourcePlatform: 'transformation_tier',
-          title: claim.measure.trim(),
-          description: claim.intervention || claim.formula || claim.measure,
+          title: payload.measureName.trim(),
+          description: payload.intervention || payload.measureName,
           categoryGroup: 'business',
           entryKind: 'claim',
           businessCategory,
           businessActivity: wasteOrGrowth,
-          activityType: claim.activity,
-          liftPillars: [claim.pillar],
-          date: claim.wEnd || format(new Date(), 'yyyy-MM-dd'),
+          activityType: payload.presetId || 'Custom',
+          liftPillars: [],
+          date: payload.windowTo || format(new Date(), 'yyyy-MM-dd'),
           hours:
-            inputs.family === 'time'
-              ? Math.abs(Number(claim.base) - Number(claim.post)) * Number(claim.occ || 1)
+            family === 'time'
+              ? Math.abs(payload.before - payload.after) * (payload.count || 1)
               : 0,
-          peopleImpacted: 0,
+          peopleImpacted: family === 'volume' ? Math.abs(payload.before - payload.after) : 0,
           usdValue: 0,
           usdValueSource: 'auto',
           verificationLevel: 'Tier 1: Self-Reported',
           verificationStatus: 'pending',
           claimStatus: 'Submitted',
-          verifierName: claim.ownerV.trim(),
+          verifierName: payload.ownerName.trim(),
           verifierEmail: ownerEmail,
-          evidenceLink: claim.evidenceRef || undefined,
+          evidenceLink: payload.evidenceRef || undefined,
           needsFinance,
           ownerEmail,
-          financeName: claim.financeV.trim() || undefined,
+          financeName: payload.financeName.trim() || undefined,
           financeEmail: needsFinance ? financeEmail : undefined,
           claim: {
-            ...inputs,
+            family,
+            unit: payload.unit,
+            base: payload.before,
+            post: payload.after,
+            occ: payload.count || 1,
+            rateId: rates[0]?.id,
+            attribution: 100,
+            realization: payload.realized ? 1 : 0.5,
+            implCost: 0,
+            months: payload.months,
+            obs: payload.months,
+            lockedBefore: payload.lockedBefore,
+            source: payload.evidence,
+            evidence: payload.evidenceRef ? payload.evidence : '',
+            owner: payload.ownerName.trim(),
+            finance: payload.financeName.trim() || undefined,
+            windowP: payload.periods,
+            recurrence: 'Ongoing',
+            sustain90: payload.sustained ? 'Holding' : 'Not yet due',
             tier: 1,
-            indicativeTier: v.tier,
-            grade: v.grade,
-            gross: Math.round(v.gross),
-            net: Math.round(v.net),
-            bucket: v.bucket,
-            conf: v.conf,
-            cat: claim.cat,
-            waste: claim.waste,
-            growth: claim.growth,
-            measure: claim.measure,
-            formula: claim.formula,
-            scope: `${claim.scopeType} · ${claim.scopeValue || 'unnamed'}`,
-            window: windowLabel,
-            attrReason: claim.attrReason,
-            intervention: claim.intervention,
-            direction: claim.direction,
-            target: claim.target,
-            evidenceType: claim.evidence,
-            finance: claim.financeV.trim() || undefined,
+            indicativeTier: 2,
+            grade,
+            gross: Math.round(payload.calc.gross),
+            net: Math.round(payload.calc.net),
+            bucket: payload.calc.bucket,
+            conf: payload.realized ? 1 : 0.5,
+            cat: payload.cat,
+            waste: payload.waste,
+            growth: payload.growth,
+            measure: payload.measureName,
+            formula: payload.calc.basis,
+            scope: payload.where || 'unnamed',
+            window: payload.windowLabel,
+            intervention: payload.intervention,
+            target: payload.target,
+            evidenceType: payload.evidence,
+            presetId: payload.presetId,
+            industry,
+            locked: payload.locked,
           },
           points: 0,
           impactValue: 0,
           scp: 0,
-          verificationMultiplier: v.conf || 1,
+          verificationMultiplier: payload.realized ? 1 : 0.5,
           auditTrail: [
             `${new Date().toISOString().slice(0, 16)} · submitted · confirmation emailed to measure owner`,
           ],
@@ -617,20 +417,20 @@ export const ImpactLogV2: React.FC = () => {
 
       const confirm = await requestClaimConfirmations({
         impactLogId: created.id,
-        measureTitle: claim.measure.trim(),
-        net: v.net,
-        tier: v.tier,
-        bucket: v.bucket,
-        ownerName: claim.ownerV.trim(),
+        measureTitle: payload.measureName.trim(),
+        net: payload.calc.net,
+        tier: 2,
+        bucket: payload.calc.bucket,
+        ownerName: payload.ownerName.trim(),
         ownerEmail,
-        financeName: claim.financeV.trim() || undefined,
+        financeName: payload.financeName.trim() || undefined,
         financeEmail: needsFinance ? financeEmail : undefined,
         learnerName: displayName,
         learnerEmail: profile?.email || user.email || null,
         organizationName: profile?.companyName || null,
-        evidenceRef: claim.evidenceRef || undefined,
-        source: claim.source || undefined,
-        window: windowLabel,
+        evidenceRef: payload.evidenceRef || undefined,
+        source: payload.evidence || undefined,
+        window: payload.windowLabel,
       })
 
       toast({
@@ -674,8 +474,6 @@ export const ImpactLogV2: React.FC = () => {
     </Button>
   )
 
-  const live = valuation(toClaimInputs(claim), rates)
-
   return (
     <Box>
       <Flex
@@ -695,6 +493,7 @@ export const ImpactLogV2: React.FC = () => {
         {navBtn('waste', 'Where value comes from')}
         {isAdmin && navBtn('register', 'Value register')}
         {navBtn('claims', 'Claims ledger')}
+        {isSuperAdmin && navBtn('sector', 'By sector')}
         {navBtn('export', 'Export')}
       </Flex>
 
@@ -1133,761 +932,12 @@ export const ImpactLogV2: React.FC = () => {
         )}
 
         {tab === 'log' && entry === 'claim' && (
-          <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
-            <Text fontSize="xs" color="brand.accent" fontWeight="bold" textTransform="uppercase" mb={2}>
-              Improvement claim · step {claim.step} of 7
-            </Text>
-            <Wrap mb={3}>
-              {CLAIM_STEPS.map((label, i) => (
-                <WrapItem key={label}>
-                  <Badge
-                    colorScheme={i + 1 === claim.step ? 'purple' : i + 1 < claim.step ? 'green' : 'gray'}
-                  >
-                    {i + 1}. {label}
-                  </Badge>
-                </WrapItem>
-              ))}
-            </Wrap>
-            <Progress value={(claim.step / 7) * 100} size="sm" colorScheme="yellow" mb={4} rounded="full" />
-
-            {claim.step > 2 && (
-              <Alert status="info" rounded="lg" mb={4}>
-                <AlertIcon />
-                <Box>
-                  <AlertTitle>
-                    Tier {live.tier} · Baseline grade {live.grade}
-                  </AlertTitle>
-                  <AlertDescription fontSize="sm">
-                    {live.tier === 1
-                      ? 'No currency value at Tier 1.'
-                      : `Net per period on current inputs: ${formatMoney(live.net)}`}
-                  </AlertDescription>
-                </Box>
-              </Alert>
-            )}
-
-            {claim.step === 1 && (
-              <Stack spacing={4}>
-                <Heading size="sm">
-                  What kind of value is this
-                  <ImpactHelpButton k="waste" onOpen={setHelpKey} />
-                </Heading>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
-                  {IMPACT_CATS.map((c) => (
-                    <Box
-                      key={c.k}
-                      as="button"
-                      textAlign="left"
-                      p={4}
-                      border="1.5px solid"
-                      borderColor={claim.cat === c.k ? 'brand.primary' : 'border.subtle'}
-                      rounded="xl"
-                      bg={claim.cat === c.k ? 'tint.brandPrimary' : 'surface.default'}
-                      onClick={() => setClaim((d) => applyCategoryPick(d, { cat: c.k }))}
-                    >
-                      <Text fontWeight="bold">{c.n}</Text>
-                      <Text fontSize="xs" color="text.secondary" mt={1}>
-                        {c.d}
-                      </Text>
-                    </Box>
-                  ))}
-                </SimpleGrid>
-                <FormControl>
-                  <FormLabel>
-                    {claim.cat === 'rev' ? 'Type of revenue growth' : 'Which of the 8 wastes'}
-                  </FormLabel>
-                  <Wrap>
-                    {(claim.cat === 'rev' ? IMPACT_GROWTH : IMPACT_WASTES).map((w) => (
-                      <WrapItem key={w.k}>
-                        <Button
-                          size="sm"
-                          variant={
-                            (claim.cat === 'rev' ? claim.growth : claim.waste) === w.k
-                              ? 'solid'
-                              : 'outline'
-                          }
-                          colorScheme={
-                            (claim.cat === 'rev' ? claim.growth : claim.waste) === w.k
-                              ? 'primary'
-                              : undefined
-                          }
-                          onClick={() =>
-                            setClaim((d) =>
-                              applyCategoryPick(
-                                d,
-                                claim.cat === 'rev'
-                                  ? { growth: w.k as ImpactGrowthKey }
-                                  : { waste: w.k as ImpactWasteKey },
-                              ),
-                            )
-                          }
-                        >
-                          {w.n}
-                        </Button>
-                      </WrapItem>
-                    ))}
-                  </Wrap>
-                </FormControl>
-                <FormControl isRequired>
-                  <FormLabel>Measure name (KPI)</FormLabel>
-                  <Input
-                    value={claim.measure}
-                    placeholder="e.g. AI governance revenue growth, invoice cycle time"
-                    onChange={(e) => setClaim((d) => ({ ...d, measure: e.target.value }))}
-                  />
-                  <FormHelperText>
-                    What you are measuring. Prefills from the type above — edit to make it specific.
-                  </FormHelperText>
-                </FormControl>
-                <Alert status="info" rounded="md" py={2}>
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    Metric family on the next step is set from this category (
-                    {IMPACT_METRIC_FAMILIES.find((f) => f.k === claim.family)?.n || claim.family} ·{' '}
-                    {claim.unit}).
-                  </AlertDescription>
-                </Alert>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl isRequired>
-                    <FormLabel>LIFT pillar</FormLabel>
-                    <Select
-                      value={claim.pillar}
-                      onChange={(e) => setClaim((d) => ({ ...d, pillar: e.target.value }))}
-                    >
-                      {IMPACT_LIFT_PILLARS.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>What you changed</FormLabel>
-                    <Select
-                      value={claim.activity}
-                      onChange={(e) => setClaim((d) => ({ ...d, activity: e.target.value }))}
-                    >
-                      {IMPACT_ACTIVITY_TYPES.map((t) => (
-                        <option key={t} value={t}>
-                          {t}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </SimpleGrid>
-              </Stack>
-            )}
-
-            {claim.step === 2 && (
-              <Stack spacing={4}>
-                <Alert status="success" rounded="md" py={2}>
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    Measure: <strong>{claim.measure || '—'}</strong> · family{' '}
-                    <strong>
-                      {IMPACT_METRIC_FAMILIES.find((f) => f.k === claim.family)?.n} ({claim.unit})
-                    </strong>{' '}
-                    from your category. Adjust only if needed.
-                  </AlertDescription>
-                </Alert>
-                <FormControl isRequired>
-                  <FormLabel>Measure name</FormLabel>
-                  <Input
-                    value={claim.measure}
-                    placeholder="e.g. Retention and churn — enterprise SaaS"
-                    onChange={(e) => setClaim((d) => ({ ...d, measure: e.target.value }))}
-                  />
-                </FormControl>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                  <FormControl isRequired>
-                    <FormLabel>Metric family</FormLabel>
-                    <Select
-                      value={claim.family}
-                      onChange={(e) => {
-                        const fam = e.target.value as ImpactFamilyKey
-                        const units =
-                          IMPACT_METRIC_FAMILIES.find((f) => f.k === fam)?.units || ['hours']
-                        setClaim((d) => ({ ...d, family: fam, unit: units[0] }))
-                      }}
-                    >
-                      {IMPACT_METRIC_FAMILIES.map((f) => (
-                        <option key={f.k} value={f.k}>
-                          {f.n}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Unit</FormLabel>
-                    <Select
-                      value={claim.unit}
-                      onChange={(e) => setClaim((d) => ({ ...d, unit: e.target.value }))}
-                    >
-                      {(IMPACT_METRIC_FAMILIES.find((f) => f.k === claim.family)?.units || []).map(
-                        (u) => (
-                          <option key={u} value={u}>
-                            {u}
-                          </option>
-                        ),
-                      )}
-                    </Select>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Source system</FormLabel>
-                    <Select
-                      value={claim.source}
-                      onChange={(e) => setClaim((d) => ({ ...d, source: e.target.value }))}
-                    >
-                      {IMPACT_SOURCES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </Select>
-                    <FormHelperText>
-                      {claim.source === 'Practitioner recall (no system)'
-                        ? 'Recall only caps this at Tier 1.'
-                        : 'Approved source supports Tier 3.'}
-                    </FormHelperText>
-                  </FormControl>
-                </SimpleGrid>
-                <FormControl>
-                  <FormLabel>How the number is calculated</FormLabel>
-                  <Input
-                    value={claim.formula}
-                    onChange={(e) => setClaim((d) => ({ ...d, formula: e.target.value }))}
-                    placeholder="e.g. Median days from invoice receipt to payment"
-                  />
-                </FormControl>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl>
-                    <FormLabel>Scope type</FormLabel>
-                    <Select
-                      value={claim.scopeType}
-                      onChange={(e) => setClaim((d) => ({ ...d, scopeType: e.target.value }))}
-                    >
-                      {['Department', 'Process', 'Site / plant', 'Team', 'Product line', 'Customer segment'].map(
-                        (s) => (
-                          <option key={s} value={s}>
-                            {s}
-                          </option>
-                        ),
-                      )}
-                    </Select>
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Scope name</FormLabel>
-                    <Input
-                      value={claim.scopeValue}
-                      onChange={(e) => setClaim((d) => ({ ...d, scopeValue: e.target.value }))}
-                      placeholder="e.g. AP invoice intake"
-                    />
-                  </FormControl>
-                </SimpleGrid>
-              </Stack>
-            )}
-
-            {claim.step === 3 && (
-              <Stack spacing={4}>
-                <Alert status="warning" rounded="lg">
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    A baseline is what the number looked like before you changed anything. Twelve months
-                    is best; minimum three months.
-                  </AlertDescription>
-                </Alert>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                  <FormControl isRequired>
-                    <FormLabel>Months of data</FormLabel>
-                    <Select
-                      value={String(claim.months)}
-                      onChange={(e) => {
-                        const months = Number(e.target.value)
-                        setClaim((d) => ({ ...d, months, obs: months }))
-                      }}
-                    >
-                      {[3, 6, 9, 12, 18, 24].map((m) => (
-                        <option key={m} value={m}>
-                          {m === 12 ? '12 (recommended)' : m}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Baseline type</FormLabel>
-                    <Select
-                      value={claim.baselineType}
-                      onChange={(e) => {
-                        const baselineType = e.target.value as ClaimDraft['baselineType']
-                        setClaim((d) => ({
-                          ...d,
-                          ...applyBaselineType(baselineType, d.cat),
-                        }))
-                      }}
-                    >
-                      <option value="hours">Hours</option>
-                      <option value="dollars">Dollars</option>
-                      <option value="people">People</option>
-                    </Select>
-                    <FormHelperText>
-                      What you observed over those months — sets unit to {claim.unit}.
-                    </FormHelperText>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>
-                      Baseline value ({unitLabel(claim.unit, claim.baselineType)})
-                    </FormLabel>
-                    <Input
-                      type="number"
-                      value={claim.base}
-                      onChange={(e) => setClaim((d) => ({ ...d, base: e.target.value }))}
-                    />
-                  </FormControl>
-                </SimpleGrid>
-                <Checkbox
-                  isChecked={claim.lockedBefore}
-                  onChange={(e) => setClaim((d) => ({ ...d, lockedBefore: e.target.checked }))}
-                >
-                  This baseline was pulled before the change started.
-                </Checkbox>
-                <FormControl>
-                  <FormLabel>Extract reference</FormLabel>
-                  <Input
-                    value={claim.bRef}
-                    onChange={(e) => setClaim((d) => ({ ...d, bRef: e.target.value }))}
-                    placeholder="e.g. SAP extract, run 28 Jun 2026"
-                  />
-                </FormControl>
-                <HStack>
-                  <Badge colorScheme="purple" fontSize="md" px={3} py={1}>
-                    Grade{' '}
-                    {gradeFromBaseline(
-                      claim.months,
-                      claim.obs || claim.months,
-                      claim.lockedBefore,
-                      claim.source,
-                    )}
-                  </Badge>
-                  <Checkbox
-                    isChecked={claim.locked}
-                    onChange={(e) => setClaim((d) => ({ ...d, locked: e.target.checked }))}
-                  >
-                    Lock this baseline
-                  </Checkbox>
-                </HStack>
-              </Stack>
-            )}
-
-            {claim.step === 4 && (
-              <Stack spacing={4}>
-                <Alert status="info" rounded="lg">
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    Example: baseline 20 people on a webinar, target 100 people → direction is{' '}
-                    <strong>Increase</strong>. Target uses the same unit as your baseline (
-                    {unitLabel(claim.unit, claim.baselineType)}).
-                  </AlertDescription>
-                </Alert>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                  <FormControl>
-                    <FormLabel>Direction</FormLabel>
-                    <Select
-                      value={claim.direction}
-                      onChange={(e) =>
-                        setClaim((d) => ({
-                          ...d,
-                          direction: e.target.value as 'Decrease' | 'Increase',
-                        }))
-                      }
-                    >
-                      <option value="Increase">Increase</option>
-                      <option value="Decrease">Decrease</option>
-                    </Select>
-                    <FormHelperText>
-                      Are you trying to grow the number or reduce it?
-                    </FormHelperText>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>
-                      Target value ({unitLabel(claim.unit, claim.baselineType)})
-                    </FormLabel>
-                    <Input
-                      type="number"
-                      value={claim.target}
-                      onChange={(e) => setClaim((d) => ({ ...d, target: e.target.value }))}
-                    />
-                    <FormHelperText>
-                      Same unit as baseline — not always hours.
-                    </FormHelperText>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Target date</FormLabel>
-                    <Input
-                      type="date"
-                      min={minTargetDateIso()}
-                      value={claim.targetDate}
-                      onChange={(e) => setClaim((d) => ({ ...d, targetDate: e.target.value }))}
-                    />
-                    <FormHelperText>Minimum 6 weeks out (shortest improvement cycle).</FormHelperText>
-                  </FormControl>
-                </SimpleGrid>
-                <FormControl isRequired>
-                  <FormLabel>What you are changing</FormLabel>
-                  <Textarea
-                    value={claim.intervention}
-                    onChange={(e) => setClaim((d) => ({ ...d, intervention: e.target.value }))}
-                    rows={3}
-                    placeholder="What process, tool, or behaviour are you changing to hit the target?"
-                  />
-                </FormControl>
-                <FormControl>
-                  <FormLabel>Change start date</FormLabel>
-                  <Input
-                    type="date"
-                    value={claim.intStart}
-                    onChange={(e) => setClaim((d) => ({ ...d, intStart: e.target.value }))}
-                  />
-                </FormControl>
-              </Stack>
-            )}
-
-            {claim.step === 5 && (
-              <Stack spacing={4}>
-                <Alert status="info" rounded="lg">
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    Result uses your baseline unit ({unitLabel(claim.unit, claim.baselineType)}) — people,
-                    hours, or money, matching what you measured.
-                  </AlertDescription>
-                </Alert>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl>
-                    <FormLabel>Measurement window start</FormLabel>
-                    <Input
-                      type="date"
-                      value={claim.wStart}
-                      onChange={(e) => setClaim((d) => ({ ...d, wStart: e.target.value }))}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Measurement window end</FormLabel>
-                    <Input
-                      type="date"
-                      value={claim.wEnd}
-                      onChange={(e) => setClaim((d) => ({ ...d, wEnd: e.target.value }))}
-                    />
-                  </FormControl>
-                </SimpleGrid>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl>
-                    <FormLabel>How many full cycles did you measure?</FormLabel>
-                    <Select
-                      value={String(claim.windowP)}
-                      onChange={(e) => setClaim((d) => ({ ...d, windowP: Number(e.target.value) }))}
-                    >
-                      {[1, 2, 3, 4, 5, 6, 12].map((n) => (
-                        <option key={n} value={n}>
-                          {n} {n === 1 ? 'cycle' : 'cycles'}
-                        </option>
-                      ))}
-                    </Select>
-                    <FormHelperText>
-                      Example: if you track monthly webinar attendance for 3 months, choose 3. Three or
-                      more supports stronger evidence (Tier 3 window rule).
-                    </FormHelperText>
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>
-                      Result after the change ({unitLabel(claim.unit, claim.baselineType)})
-                    </FormLabel>
-                    <Input
-                      type="number"
-                      value={claim.post}
-                      onChange={(e) => setClaim((d) => ({ ...d, post: e.target.value }))}
-                    />
-                    <FormHelperText>
-                      Same unit as baseline and target — not always hours.
-                    </FormHelperText>
-                  </FormControl>
-                </SimpleGrid>
-                {(claim.family === 'time' ||
-                  claim.family === 'volume' ||
-                  claim.family === 'quality') && (
-                  <FormControl>
-                    <FormLabel>
-                      {claim.family === 'time'
-                        ? 'How many times this task runs in a period'
-                        : 'Volume in a period'}
-                    </FormLabel>
-                    <Input
-                      type="number"
-                      value={claim.occ}
-                      onChange={(e) => setClaim((d) => ({ ...d, occ: Number(e.target.value) }))}
-                    />
-                  </FormControl>
-                )}
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl>
-                    <FormLabel>Evidence type</FormLabel>
-                    <Select
-                      value={claim.evidence}
-                      onChange={(e) => setClaim((d) => ({ ...d, evidence: e.target.value }))}
-                    >
-                      {IMPACT_EVIDENCE_TYPES.map((ev) => (
-                        <option key={ev} value={ev}>
-                          {ev}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Evidence reference</FormLabel>
-                    <Input
-                      value={claim.evidenceRef}
-                      onChange={(e) => setClaim((d) => ({ ...d, evidenceRef: e.target.value }))}
-                    />
-                  </FormControl>
-                </SimpleGrid>
-                <Checkbox
-                  isChecked={claim.sustained}
-                  onChange={(e) => setClaim((d) => ({ ...d, sustained: e.target.checked }))}
-                >
-                  The improvement is still holding today.
-                </Checkbox>
-              </Stack>
-            )}
-
-            {claim.step === 6 && (
-              <Stack spacing={4}>
-                <Alert status="success" rounded="lg">
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    You do not enter the money. The platform works it out from your baseline, result,
-                    and organisation rates, then applies attribution, realisation, and confidence.
-                  </AlertDescription>
-                </Alert>
-                <FormControl>
-                  <FormLabel>Rate set</FormLabel>
-                  <Select
-                    value={claim.rateId}
-                    onChange={(e) => setClaim((d) => ({ ...d, rateId: e.target.value }))}
-                  >
-                    {rates.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.country} · {r.grade} ({r.scope})
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
-                  <FormControl>
-                    <FormLabel>Attribution %</FormLabel>
-                    <Select
-                      value={String(claim.attribution)}
-                      onChange={(e) =>
-                        setClaim((d) => ({ ...d, attribution: Number(e.target.value) }))
-                      }
-                    >
-                      {[100, 90, 75, 70, 60, 50, 40, 25].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Why that share</FormLabel>
-                    <Select
-                      value={claim.attrReason}
-                      onChange={(e) => setClaim((d) => ({ ...d, attrReason: e.target.value }))}
-                    >
-                      {IMPACT_REASONS.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel>Does it repeat</FormLabel>
-                    <Select
-                      value={claim.recurrence}
-                      onChange={(e) => setClaim((d) => ({ ...d, recurrence: e.target.value }))}
-                    >
-                      {IMPACT_RECURRENCE.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </SimpleGrid>
-                {claim.family === 'time' && (
-                  <Checkbox
-                    isChecked={claim.realization === 1}
-                    onChange={(e) =>
-                      setClaim((d) => ({ ...d, realization: e.target.checked ? 1 : 0.5 }))
-                    }
-                  >
-                    Released hours turned into cash (headcount / overtime / contractor evidence).
-                  </Checkbox>
-                )}
-                <FormControl>
-                  <FormLabel>What it cost to do</FormLabel>
-                  <Input
-                    type="number"
-                    value={claim.implCost}
-                    onChange={(e) => setClaim((d) => ({ ...d, implCost: Number(e.target.value) }))}
-                  />
-                </FormControl>
-                <SimpleGrid columns={3} spacing={3}>
-                  <Box p={3} border="1px solid" borderColor="border.subtle" rounded="lg">
-                    <Text fontSize="xs" color="text.muted">
-                      Bucket
-                    </Text>
-                    <Text fontWeight="bold">{live.bucket}</Text>
-                  </Box>
-                  <Box p={3} border="1px solid" borderColor="border.subtle" rounded="lg">
-                    <Text fontSize="xs" color="text.muted">
-                      Net per period
-                    </Text>
-                    <Text fontWeight="bold">
-                      {live.tier === 1 ? 'no value' : formatMoney(live.net)}
-                    </Text>
-                  </Box>
-                  <Box p={3} border="1px solid" borderColor="border.subtle" rounded="lg" bg="tint.brandPrimary">
-                    <Text fontSize="xs" color="text.muted">
-                      Gross → net
-                    </Text>
-                    <Text fontSize="sm">
-                      {formatMoney(live.gross)} → {formatMoney(live.net)}
-                    </Text>
-                  </Box>
-                </SimpleGrid>
-              </Stack>
-            )}
-
-            {claim.step === 7 && (
-              <Stack spacing={4}>
-                <Alert status="info" rounded="lg">
-                  <AlertIcon />
-                  <Box>
-                    <AlertTitle>
-                      Submitted as Tier 1 · no headline $ yet
-                      {live.tier > 1 ? ` · indicative ${formatMoney(live.net)} / period` : ''}
-                    </AlertTitle>
-                    <AlertDescription fontSize="sm">
-                      Self-submitted claims stay Tier 1 until someone independent confirms. That is
-                      expected — even with a full rate set, currency only lands after review.
-                    </AlertDescription>
-                  </Box>
-                </Alert>
-                <Box p={4} rounded="lg" bg="surface.subtle" border="1px solid" borderColor="border.subtle">
-                  <Text fontSize="sm" fontWeight="bold" mb={2}>
-                    How you reach Tier 2 and Tier 3
-                  </Text>
-                  <Stack spacing={2} fontSize="sm" color="text.secondary">
-                    <Text>
-                      <strong>Tier 1 · Self-reported</strong> — you submit. Dashboard headline stays $0.
-                    </Text>
-                    <Text>
-                      <strong>Tier 2 · Measure owner confirmed</strong> — the owner below confirms via
-                      email (or a partner advances in Claims ledger). Value can show in the pipeline.
-                    </Text>
-                    <Text>
-                      <strong>Tier 3 · Recognised</strong> — finance confirms when the band needs it
-                      (about $1,000+), or owner alone for smaller bands. Headline organisation $ updates.
-                    </Text>
-                  </Stack>
-                </Box>
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                  <FormControl isRequired>
-                    <FormLabel>Measure owner name</FormLabel>
-                    <Input
-                      value={claim.ownerV}
-                      onChange={(e) => setClaim((d) => ({ ...d, ownerV: e.target.value }))}
-                      placeholder="Who owns this measure"
-                    />
-                  </FormControl>
-                  <FormControl isRequired>
-                    <FormLabel>Measure owner email</FormLabel>
-                    <Input
-                      type="email"
-                      value={claim.ownerEmail}
-                      onChange={(e) => setClaim((d) => ({ ...d, ownerEmail: e.target.value }))}
-                      placeholder="name@company.com"
-                    />
-                    <FormHelperText>
-                      Prefer someone in your organisation. They get a one-click confirm link (no login).
-                    </FormHelperText>
-                  </FormControl>
-                  <FormControl isRequired={bandNeedsFinance(live.net)}>
-                    <FormLabel>
-                      Finance validator
-                      {bandNeedsFinance(live.net) ? '' : ' (optional)'}
-                    </FormLabel>
-                    <Input
-                      value={claim.financeV}
-                      onChange={(e) => setClaim((d) => ({ ...d, financeV: e.target.value }))}
-                      placeholder="Finance reviewer name"
-                    />
-                  </FormControl>
-                  <FormControl isRequired={bandNeedsFinance(live.net)}>
-                    <FormLabel>
-                      Finance email
-                      {bandNeedsFinance(live.net) ? '' : ' (optional)'}
-                    </FormLabel>
-                    <Input
-                      type="email"
-                      value={claim.financeEmail}
-                      onChange={(e) => setClaim((d) => ({ ...d, financeEmail: e.target.value }))}
-                      placeholder="finance@company.com"
-                    />
-                    <FormHelperText>
-                      {bandNeedsFinance(live.net)
-                        ? 'Required for this value band — emailed after the measure owner confirms.'
-                        : 'Optional second sign-off for smaller bands.'}
-                    </FormHelperText>
-                  </FormControl>
-                </SimpleGrid>
-                <Checkbox
-                  isChecked={claim.attest}
-                  onChange={(e) => setClaim((d) => ({ ...d, attest: e.target.checked }))}
-                >
-                  The data behind this claim comes from the source I named, and I have not claimed this
-                  improvement anywhere else.
-                </Checkbox>
-              </Stack>
-            )}
-
-            <Flex mt={6} gap={3} justify="flex-end" align="center" flexWrap="wrap">
-              <Text fontSize="sm" color="text.secondary" mr="auto">
-                {claim.step >= 3 && live.tier > 1
-                  ? `Net per period · ${formatMoney(live.net)}`
-                  : claim.step >= 3
-                    ? 'No currency value at Tier 1'
-                    : ''}
-              </Text>
-              {claim.step > 1 ? (
-                <Button variant="outline" onClick={() => setClaim((d) => ({ ...d, step: d.step - 1 }))}>
-                  Back
-                </Button>
-              ) : (
-                <Button variant="ghost" onClick={resetEntry}>
-                  Cancel
-                </Button>
-              )}
-              {claim.step < 7 ? (
-                <Button colorScheme="primary" onClick={nextClaim}>
-                  Next
-                </Button>
-              ) : (
-                <Button colorScheme="yellow" onClick={() => void submitClaim()} isLoading={submitting}>
-                  Submit claim
-                </Button>
-              )}
-            </Flex>
-          </Box>
+          <ImpactClaimWizardV4
+            rates={rates}
+            submitting={submitting}
+            onCancel={resetEntry}
+            onSubmit={submitClaim}
+          />
         )}
 
         {tab === 'dash' && (
@@ -1947,6 +997,19 @@ export const ImpactLogV2: React.FC = () => {
               onOpenClaim={setOpenClaim}
             />
           </>
+        )}
+
+        {tab === 'sector' && isSuperAdmin && (
+          <ImpactSectorRollup
+            entries={
+              platformEntries.length
+                ? platformEntries
+                : orgEntries.length
+                  ? orgEntries
+                  : entries
+            }
+            onHelp={setHelpKey}
+          />
         )}
 
         {tab === 'export' && (
