@@ -452,8 +452,10 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 rounded="md"
                 fontSize="xs"
                 fontWeight="600"
-                bg={on ? PURPLE : done ? 'green.50' : 'gray.100'}
-                color={on ? 'white' : done ? 'green.700' : 'gray.500'}
+                bg={on ? PURPLE : done ? 'orange.50' : 'gray.100'}
+                color={on ? 'white' : done ? '#8a6a12' : 'gray.500'}
+                borderWidth={done && !on ? '1px' : '0'}
+                borderColor={done && !on ? 'brand.gold' : 'transparent'}
               >
                 {n}. {label}
               </Box>
