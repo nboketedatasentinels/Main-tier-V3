@@ -253,13 +253,6 @@ function Chip({
   )
 }
 
-function Pend({ children }: { children: React.ReactNode }) {
-  return (
-    <Text as="span" fontStyle="italic" color="blackAlpha.600">
-      {children}
-    </Text>
-  )
-}
 function Bold({ children, purple }: { children: React.ReactNode; purple?: boolean }) {
   return (
     <Text as="span" fontWeight="700" color={purple ? PURPLE : 'black'}>
