@@ -660,52 +660,72 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
             </Text>
           </Box>
 
-          <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-            <FormControl isRequired>
-              <FormLabel fontSize="sm" mb={1}>
-                Before value
-              </FormLabel>
-              <Flex>
-                <Input
-                  size="sm"
-                  borderRightRadius={0}
-                  inputMode="decimal"
-                  value={draft.before}
-                  placeholder="e.g. 6.5"
-                  bg={!nn(draft.before) ? 'yellow.50' : undefined}
-                  onChange={(e) => patch({ before: e.target.value })}
-                />
+          <Stack spacing={4}>
+            <Flex
+              direction={{ base: 'column', md: 'row' }}
+              gap={4}
+              align={{ base: 'stretch', md: 'flex-end' }}
+            >
+              <FormControl isRequired flex="1" minW={0}>
+                <FormLabel
+                  fontSize="sm"
+                  mb={1}
+                  display="flex"
+                  alignItems="center"
+                  minH="20px"
+                  sx={{ '& > span:last-of-type': { ml: 0.5 } }}
+                >
+                  Before value
+                </FormLabel>
+                <Flex>
+                  <Input
+                    size="sm"
+                    h="32px"
+                    borderRightRadius={0}
+                    inputMode="decimal"
+                    value={draft.before}
+                    placeholder="e.g. 6.5"
+                    bg={!nn(draft.before) ? 'yellow.50' : undefined}
+                    onChange={(e) => patch({ before: e.target.value })}
+                  />
+                  <Select
+                    size="sm"
+                    h="32px"
+                    borderLeftRadius={0}
+                    maxW="130px"
+                    value={draft.unit}
+                    onChange={(e) => patch({ unit: e.target.value })}
+                  >
+                    {unitOpts.map((u) => (
+                      <option key={u} value={u}>
+                        {u}
+                      </option>
+                    ))}
+                  </Select>
+                </Flex>
+              </FormControl>
+
+              <FormControl flex="1" minW={0}>
+                <FormLabel fontSize="sm" mb={1} display="flex" alignItems="center" gap={0} minH="20px">
+                  How far back
+                  <HelpBtn k="months" onOpen={setHelpKey} />
+                </FormLabel>
                 <Select
                   size="sm"
-                  borderLeftRadius={0}
-                  maxW="130px"
-                  value={draft.unit}
-                  onChange={(e) => patch({ unit: e.target.value })}
+                  h="32px"
+                  value={draft.months}
+                  onChange={(e) => patch({ months: Number(e.target.value) })}
                 >
-                  {unitOpts.map((u) => (
-                    <option key={u} value={u}>
-                      {u}
+                  {MONTH_OPTS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
                     </option>
                   ))}
                 </Select>
-              </Flex>
-            </FormControl>
+              </FormControl>
+            </Flex>
 
             <FormControl>
-              <FormLabel fontSize="sm" mb={1}>
-                How far back
-                <HelpBtn k="months" onOpen={setHelpKey} />
-              </FormLabel>
-              <Select size="sm" value={draft.months} onChange={(e) => patch({ months: Number(e.target.value) })}>
-                {MONTH_OPTS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-
-            <FormControl gridColumn={{ md: '1 / -1' }}>
               <FormLabel fontSize="sm" mb={1}>
                 Source
               </FormLabel>
@@ -716,7 +736,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 onChange={(e) => patch({ evidenceRef: e.target.value })}
               />
             </FormControl>
-          </SimpleGrid>
+          </Stack>
 
           <Stack
             spacing={3}
