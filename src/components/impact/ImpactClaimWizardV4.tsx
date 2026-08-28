@@ -258,14 +258,14 @@ function Chip({
 
 function Pend({ children }: { children: React.ReactNode }) {
   return (
-    <Text as="span" fontStyle="italic" color="gray.400">
+    <Text as="span" fontStyle="italic" color="blackAlpha.600">
       {children}
     </Text>
   )
 }
 function Bold({ children, purple }: { children: React.ReactNode; purple?: boolean }) {
   return (
-    <Text as="span" fontWeight="600" color={purple ? PURPLE : undefined}>
+    <Text as="span" fontWeight="700" color={purple ? PURPLE : 'black'}>
       {children}
     </Text>
   )
@@ -480,49 +480,55 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
         sx={{ '& > div': { background: 'linear-gradient(90deg, #eab130, #f9db59)' } }}
       />
 
-      {draft.step > 1 && (preset || isCustom || nn(draft.before) || nn(draft.after)) && (
-        <Box mb={4} px={3} py={2.5} rounded="lg" borderWidth="1px" borderColor="purple.100" bg="purple.50">
-          <Text fontSize="xs" color="text.secondary" lineHeight="short">
-            <Text as="span" fontWeight="700" color={PURPLE} textTransform="uppercase" letterSpacing="0.08em" fontSize="10px" mr={2}>
-              Summary
-            </Text>
+      {draft.step > 1 && (
+        <Box mb={4} px={3} py={3} rounded="lg" borderWidth="1px" borderColor="border.subtle" bg="gray.50">
+          <Text fontSize="10px" letterSpacing="0.12em" textTransform="uppercase" color="black" fontWeight="700" mb={1}>
+            Your improvement in one sentence
+          </Text>
+          <Text fontSize="sm" color="black" lineHeight="tall">
             You {preset?.dir === 'up' ? 'increased' : 'reduced'}{' '}
-            <Bold purple>{draft.name || preset?.name.toLowerCase() || 'your measure'}</Bold>
+            {preset || isCustom ? (
+              <Bold>{draft.name || preset?.name.toLowerCase() || 'your measure'}</Bold>
+            ) : (
+              <Pend>what you are measuring</Pend>
+            )}{' '}
             {draft.where ? (
               <>
-                {' '}
-                in <Bold purple>{draft.where}</Bold>
+                in <Bold>{draft.where}</Bold>
               </>
+            ) : (
+              <Pend>in a team or process</Pend>
+            )}
+            . It was{' '}
+            {nn(draft.before) ? (
+              <Bold>
+                {f1(draft.before)} {draft.unit}
+              </Bold>
+            ) : (
+              <Pend>the before number</Pend>
+            )}
+            , now it is{' '}
+            {nn(draft.after) ? (
+              <Bold>
+                {f1(draft.after)} {draft.unit}
+              </Bold>
+            ) : (
+              <Pend>the after number</Pend>
+            )}
+            {preset && preset.count !== 'none' ? (
+              nn(draft.count) ? (
+                <>
+                  , across <Bold>{f1(draft.count)}</Bold> {preset.count === 'people' ? 'people' : 'a month'}
+                </>
+              ) : (
+                <Pend>, and how often it happens</Pend>
+              )
             ) : null}
-            {nn(draft.before) || nn(draft.after) ? (
-              <>
-                : {nn(draft.before) ? (
-                  <Bold purple>
-                    {f1(draft.before)} {draft.unit}
-                  </Bold>
-                ) : (
-                  <Pend>—</Pend>
-                )}
-                {' → '}
-                {nn(draft.after) ? (
-                  <Bold purple>
-                    {f1(draft.after)} {draft.unit}
-                  </Bold>
-                ) : (
-                  <Pend>—</Pend>
-                )}
-              </>
-            ) : null}
-            {preset && preset.count !== 'none' && nn(draft.count) ? (
-              <>
-                {' '}
-                · <Bold purple>{f1(draft.count)}</Bold> {preset.count === 'people' ? 'people' : '/ month'}
-              </>
-            ) : null}
+            .
             {preset && nn(draft.before) && nn(draft.after) ? (
               <>
                 {' '}
-                · ~<Bold purple>{formatMoneyFlow(calc.net)}/mo</Bold>
+                That is worth about <Bold>{formatMoneyFlow(calc.net)} a month</Bold>.
               </>
             ) : null}
           </Text>
