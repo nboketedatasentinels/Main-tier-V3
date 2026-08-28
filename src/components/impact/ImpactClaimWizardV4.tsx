@@ -18,7 +18,6 @@ import {
   ModalContent,
   ModalHeader,
   ModalOverlay,
-  Progress,
   Select,
   SimpleGrid,
   Stack,
@@ -439,7 +438,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       <Text fontSize="10px" letterSpacing="0.14em" textTransform="uppercase" color="brand.gold" fontWeight="700" mb={2}>
         Log an improvement · step {draft.step} of 6
       </Text>
-      <Wrap spacing={1} mb={2}>
+      <Wrap spacing={1} mb={4}>
         {CLAIM_FLOW_STEPS.map((label, i) => {
           const n = i + 1
           const on = n === draft.step
@@ -463,14 +462,6 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
           )
         })}
       </Wrap>
-      <Progress
-        value={(draft.step / 6) * 100}
-        size="sm"
-        mb={4}
-        borderRadius="full"
-        bg="gray.100"
-        sx={{ '& > div': { background: 'linear-gradient(90deg, #eab130, #f9db59)' } }}
-      />
 
       {draft.step === 1 && (
         <Stack spacing={4}>
