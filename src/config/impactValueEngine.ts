@@ -101,7 +101,7 @@ export const IMPACT_METRIC_FAMILIES = [
   {
     k: 'volume' as const,
     n: 'Volume / throughput',
-    units: ['units', 'transactions', 'cases'],
+    units: ['people', 'units', 'transactions', 'cases'],
     conv: 'margin' as const,
   },
   {
@@ -387,12 +387,19 @@ export function formatMoney(n: number): string {
 }
 
 export const CLAIM_JOURNEY_STEPS = [
-  ['01', 'You submit', 'Baseline, result, evidence and the calculation are locked to the claim.'],
-  ['02', 'Owner of the number confirms', 'Approves, adjusts your attribution with a reason, or sends it back.'],
-  ['03', 'Finance validates', 'Required from $1,000. Checks your extract against the source system.'],
-  ['04', 'Department head signs', 'Only above $25,000. Above $250,000 finance recalculates independently.'],
-  ['05', 'Recognised', 'Enters the register and the headline figure.'],
-  ['06', '90 and 180 day check', 'Still holding, partly, or not. The value follows the answer.'],
+  ['01', 'You submit', 'Baseline, result, evidence and the calculation are locked. Starts at Tier 1 (no headline $).'],
+  [
+    '02',
+    'Measure owner confirms',
+    'Someone who owns the number reviews the email link. That moves the claim to Tier 2 (pipeline value).',
+  ],
+  [
+    '03',
+    'Finance validates (when needed)',
+    'From about $1,000, finance confirms the extract. That reaches Tier 3 / Recognised headline $.',
+  ],
+  ['04', 'Recognised', 'Enters the register and the organisation headline figure.'],
+  ['05', '90 and 180 day check', 'Still holding, partly, or not. The value follows the answer.'],
 ] as const
 
 export type ImpactEntryKind = 'activity' | 'claim' | 'esg'

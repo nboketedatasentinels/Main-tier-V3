@@ -39,7 +39,7 @@ import {
   WrapItem,
 } from '@chakra-ui/react'
 import { Info, Plus } from 'lucide-react'
-import { format } from 'date-fns'
+import { format, addWeeks, parseISO, isValid } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { ESGCategory } from '@/types'
 import {
@@ -56,7 +56,6 @@ import {
   IMPACT_RECURRENCE,
   IMPACT_SOURCES,
   IMPACT_WASTES,
-  bandOf,
   bandNeedsFinance,
   formatMoney,
   gradeFromBaseline,
@@ -160,9 +159,9 @@ const blankClaim = (): ClaimDraft => ({
   lockedBefore: true,
   locked: false,
   bRef: '',
-  direction: 'Decrease',
+  direction: 'Increase',
   target: '',
-  targetDate: format(new Date(), 'yyyy-MM-dd'),
+  targetDate: minTargetDateIso(),
   intervention: '',
   intStart: format(new Date(), 'yyyy-MM-dd'),
   wStart: format(new Date(), 'yyyy-MM-dd'),
@@ -198,9 +197,21 @@ function applyBaselineType(
   cat: ImpactCatKey,
 ): Pick<ClaimDraft, 'baselineType' | 'family' | 'unit'> {
   if (type === 'hours') return { baselineType: type, family: 'time', unit: 'hours' }
-  if (type === 'people') return { baselineType: type, family: 'volume', unit: 'units' }
+  if (type === 'people') return { baselineType: type, family: 'volume', unit: 'people' }
   if (cat === 'rev') return { baselineType: type, family: 'revenue', unit: 'USD' }
   return { baselineType: type, family: 'cost', unit: 'USD' }
+}
+
+function minTargetDateIso(): string {
+  return format(addWeeks(new Date(), 6), 'yyyy-MM-dd')
+}
+
+function unitLabel(unit: string, baselineType: ClaimDraft['baselineType']): string {
+  if (baselineType === 'people' || unit === 'people') return 'people'
+  if (baselineType === 'dollars' || unit === 'USD' || unit === 'BWP' || unit === 'GHS' || unit === 'KES')
+    return unit === 'USD' ? 'dollars (USD)' : unit
+  if (baselineType === 'hours' || unit === 'hours' || unit === 'days' || unit === 'minutes') return unit
+  return unit
 }
 
 function applyCategoryPick(
@@ -473,6 +484,14 @@ export const ImpactLogV2: React.FC = () => {
       return 'Enter the baseline value.'
     if (claim.step === 3 && !claim.locked) return 'Lock the baseline before you continue.'
     if (claim.step === 4 && claim.target === '') return 'Enter the target value.'
+    if (claim.step === 4) {
+      const minIso = minTargetDateIso()
+      const td = claim.targetDate
+      const parsed = td ? parseISO(td) : null
+      if (!parsed || !isValid(parsed) || td < minIso) {
+        return 'Target date must be at least 6 weeks out (shortest improvement cycle).'
+      }
+    }
     if (claim.step === 5 && claim.post === '') return 'Enter the result for your measurement window.'
     return null
   }
@@ -1415,7 +1434,9 @@ export const ImpactLogV2: React.FC = () => {
                     </FormHelperText>
                   </FormControl>
                   <FormControl isRequired>
-                    <FormLabel>Baseline value ({claim.unit})</FormLabel>
+                    <FormLabel>
+                      Baseline value ({unitLabel(claim.unit, claim.baselineType)})
+                    </FormLabel>
                     <Input
                       type="number"
                       value={claim.base}
@@ -1459,6 +1480,14 @@ export const ImpactLogV2: React.FC = () => {
 
             {claim.step === 4 && (
               <Stack spacing={4}>
+                <Alert status="info" rounded="lg">
+                  <AlertIcon />
+                  <AlertDescription fontSize="sm">
+                    Example: baseline 20 people on a webinar, target 100 people → direction is{' '}
+                    <strong>Increase</strong>. Target uses the same unit as your baseline (
+                    {unitLabel(claim.unit, claim.baselineType)}).
+                  </AlertDescription>
+                </Alert>
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
                   <FormControl>
                     <FormLabel>Direction</FormLabel>
@@ -1471,25 +1500,35 @@ export const ImpactLogV2: React.FC = () => {
                         }))
                       }
                     >
-                      <option value="Decrease">Decrease</option>
                       <option value="Increase">Increase</option>
+                      <option value="Decrease">Decrease</option>
                     </Select>
+                    <FormHelperText>
+                      Are you trying to grow the number or reduce it?
+                    </FormHelperText>
                   </FormControl>
                   <FormControl isRequired>
-                    <FormLabel>Target value ({claim.unit})</FormLabel>
+                    <FormLabel>
+                      Target value ({unitLabel(claim.unit, claim.baselineType)})
+                    </FormLabel>
                     <Input
                       type="number"
                       value={claim.target}
                       onChange={(e) => setClaim((d) => ({ ...d, target: e.target.value }))}
                     />
+                    <FormHelperText>
+                      Same unit as baseline — not always hours.
+                    </FormHelperText>
                   </FormControl>
-                  <FormControl>
+                  <FormControl isRequired>
                     <FormLabel>Target date</FormLabel>
                     <Input
                       type="date"
+                      min={minTargetDateIso()}
                       value={claim.targetDate}
                       onChange={(e) => setClaim((d) => ({ ...d, targetDate: e.target.value }))}
                     />
+                    <FormHelperText>Minimum 6 weeks out (shortest improvement cycle).</FormHelperText>
                   </FormControl>
                 </SimpleGrid>
                 <FormControl isRequired>
@@ -1498,6 +1537,7 @@ export const ImpactLogV2: React.FC = () => {
                     value={claim.intervention}
                     onChange={(e) => setClaim((d) => ({ ...d, intervention: e.target.value }))}
                     rows={3}
+                    placeholder="What process, tool, or behaviour are you changing to hit the target?"
                   />
                 </FormControl>
                 <FormControl>
@@ -1513,9 +1553,16 @@ export const ImpactLogV2: React.FC = () => {
 
             {claim.step === 5 && (
               <Stack spacing={4}>
-                <SimpleGrid columns={{ base: 1, md: 4 }} spacing={4}>
+                <Alert status="info" rounded="lg">
+                  <AlertIcon />
+                  <AlertDescription fontSize="sm">
+                    Result uses your baseline unit ({unitLabel(claim.unit, claim.baselineType)}) — people,
+                    hours, or money, matching what you measured.
+                  </AlertDescription>
+                </Alert>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                   <FormControl>
-                    <FormLabel>Window start</FormLabel>
+                    <FormLabel>Measurement window start</FormLabel>
                     <Input
                       type="date"
                       value={claim.wStart}
@@ -1523,36 +1570,44 @@ export const ImpactLogV2: React.FC = () => {
                     />
                   </FormControl>
                   <FormControl>
-                    <FormLabel>Window end</FormLabel>
+                    <FormLabel>Measurement window end</FormLabel>
                     <Input
                       type="date"
                       value={claim.wEnd}
                       onChange={(e) => setClaim((d) => ({ ...d, wEnd: e.target.value }))}
                     />
                   </FormControl>
+                </SimpleGrid>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                   <FormControl>
-                    <FormLabel>Complete periods</FormLabel>
+                    <FormLabel>How many full cycles did you measure?</FormLabel>
                     <Select
                       value={String(claim.windowP)}
                       onChange={(e) => setClaim((d) => ({ ...d, windowP: Number(e.target.value) }))}
                     >
                       {[1, 2, 3, 4, 5, 6, 12].map((n) => (
                         <option key={n} value={n}>
-                          {n}
+                          {n} {n === 1 ? 'cycle' : 'cycles'}
                         </option>
                       ))}
                     </Select>
                     <FormHelperText>
-                      {claim.windowP < 3 ? 'Tier 3 needs 3 or more.' : 'Meets Tier 3 window rule.'}
+                      Example: if you track monthly webinar attendance for 3 months, choose 3. Three or
+                      more supports stronger evidence (Tier 3 window rule).
                     </FormHelperText>
                   </FormControl>
                   <FormControl isRequired>
-                    <FormLabel>Result ({claim.unit})</FormLabel>
+                    <FormLabel>
+                      Result after the change ({unitLabel(claim.unit, claim.baselineType)})
+                    </FormLabel>
                     <Input
                       type="number"
                       value={claim.post}
                       onChange={(e) => setClaim((d) => ({ ...d, post: e.target.value }))}
                     />
+                    <FormHelperText>
+                      Same unit as baseline and target — not always hours.
+                    </FormHelperText>
                   </FormControl>
                 </SimpleGrid>
                 {(claim.family === 'time' ||
@@ -1718,18 +1773,33 @@ export const ImpactLogV2: React.FC = () => {
                   <AlertIcon />
                   <Box>
                     <AlertTitle>
-                      {live.tier === 1 ? 'No currency value' : formatMoney(live.net)} ·{' '}
-                      {bandOf(live.net).name}
+                      Submitted as Tier 1 · no headline $ yet
+                      {live.tier > 1 ? ` · indicative ${formatMoney(live.net)} / period` : ''}
                     </AlertTitle>
                     <AlertDescription fontSize="sm">
-                      We email the measure owner a one-click confirm link. Headline $ stays at $0 until
-                      they confirm
-                      {bandNeedsFinance(live.net)
-                        ? ', then finance validates.'
-                        : '.'}
+                      Self-submitted claims stay Tier 1 until someone independent confirms. That is
+                      expected — even with a full rate set, currency only lands after review.
                     </AlertDescription>
                   </Box>
                 </Alert>
+                <Box p={4} rounded="lg" bg="surface.subtle" border="1px solid" borderColor="border.subtle">
+                  <Text fontSize="sm" fontWeight="bold" mb={2}>
+                    How you reach Tier 2 and Tier 3
+                  </Text>
+                  <Stack spacing={2} fontSize="sm" color="text.secondary">
+                    <Text>
+                      <strong>Tier 1 · Self-reported</strong> — you submit. Dashboard headline stays $0.
+                    </Text>
+                    <Text>
+                      <strong>Tier 2 · Measure owner confirmed</strong> — the owner below confirms via
+                      email (or a partner advances in Claims ledger). Value can show in the pipeline.
+                    </Text>
+                    <Text>
+                      <strong>Tier 3 · Recognised</strong> — finance confirms when the band needs it
+                      (about $1,000+), or owner alone for smaller bands. Headline organisation $ updates.
+                    </Text>
+                  </Stack>
+                </Box>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                   <FormControl isRequired>
                     <FormLabel>Measure owner name</FormLabel>
@@ -1747,7 +1817,9 @@ export const ImpactLogV2: React.FC = () => {
                       onChange={(e) => setClaim((d) => ({ ...d, ownerEmail: e.target.value }))}
                       placeholder="name@company.com"
                     />
-                    <FormHelperText>They receive the confirmation link (no login required).</FormHelperText>
+                    <FormHelperText>
+                      Prefer someone in your organisation. They get a one-click confirm link (no login).
+                    </FormHelperText>
                   </FormControl>
                   <FormControl isRequired={bandNeedsFinance(live.net)}>
                     <FormLabel>
@@ -1773,8 +1845,8 @@ export const ImpactLogV2: React.FC = () => {
                     />
                     <FormHelperText>
                       {bandNeedsFinance(live.net)
-                        ? 'Emailed after the measure owner confirms — required for this band.'
-                        : 'Only needed if your org wants a second sign-off.'}
+                        ? 'Required for this value band — emailed after the measure owner confirms.'
+                        : 'Optional second sign-off for smaller bands.'}
                     </FormHelperText>
                   </FormControl>
                 </SimpleGrid>
