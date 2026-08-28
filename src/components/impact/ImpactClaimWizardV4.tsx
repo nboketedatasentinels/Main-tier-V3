@@ -574,7 +574,6 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 <WrapItem key={w.k}>
                   <Chip
                     on={chipSel === w.k}
-                    title={w.d}
                     onClick={() =>
                       patch(rev ? { growth: w.k, preset: null, unit: '' } : { waste: w.k, preset: null, unit: '' })
                     }
@@ -584,14 +583,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 </WrapItem>
               ))}
             </Wrap>
-            <Text fontSize="xs" color="gray.500" mt={2}>
-              {chipList.find((w) => w.k === chipSel)?.d}
-            </Text>
           </Box>
-          <Note variant="info" title="Why we ask this first">
-            It narrows the next screen from fifteen options to three or four that match what you actually did. It also
-            lets Transformation Leader add up the same kind of improvement across every client.
-          </Note>
         </Stack>
       )}
 
