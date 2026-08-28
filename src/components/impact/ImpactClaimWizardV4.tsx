@@ -462,6 +462,15 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
           )
         })}
       </Wrap>
+      <Box mb={5} h="6px" bg="gray.100" borderRadius="full" overflow="hidden" aria-hidden>
+        <Box
+          h="100%"
+          borderRadius="full"
+          bg="linear-gradient(90deg, #eab130, #f9db59)"
+          width={`${(draft.step / CLAIM_FLOW_STEPS.length) * 100}%`}
+          transition="width 0.35s ease"
+        />
+      </Box>
 
       {draft.step === 1 && (
         <Stack spacing={4}>
