@@ -226,17 +226,14 @@ function Chip({
   on,
   onClick,
   children,
-  title,
 }: {
   on?: boolean
   onClick: () => void
   children: React.ReactNode
-  title?: string
 }) {
   return (
     <Button
       size="sm"
-      title={title}
       onClick={onClick}
       borderRadius="full"
       h="auto"
