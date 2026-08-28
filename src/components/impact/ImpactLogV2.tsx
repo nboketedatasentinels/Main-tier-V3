@@ -719,7 +719,7 @@ export const ImpactLogV2: React.FC = () => {
               <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
                 You · {displayName.split(' ')[0]}
               </Text>
-              <Text fontSize="2xl" fontWeight="bold" color="brand.accent" lineHeight="1.15" my={1}>
+              <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
                 {formatMoney(meStats.money)}
               </Text>
               <Text fontSize="sm" color="text.secondary">
