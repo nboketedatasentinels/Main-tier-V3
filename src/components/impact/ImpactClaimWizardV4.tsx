@@ -11,7 +11,6 @@ import {
   FormHelperText,
   FormLabel,
   Heading,
-  HStack,
   Input,
   Modal,
   ModalBody,
@@ -59,15 +58,6 @@ const MONTH_OPTS = [
   { value: 0, label: 'Just my memory' },
 ]
 const PERIOD_OPTS = [1, 2, 3, 4, 6, 12]
-const RATE_LABEL: Record<string, string> = {
-  hourly: 'hourly rate',
-  annual: 'cost of employment',
-  perError: 'cost per error',
-  perTrip: 'cost per trip',
-  holding: 'stock holding cost',
-  margin: 'gross margin',
-  none: 'no rate needed',
-}
 
 export type ClaimWizardDraft = {
   step: number
@@ -340,16 +330,14 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
   const tip = useMemo(() => {
     if (draft.step === 1) return 'Pick the closest fit. You can change it later.'
     if (draft.step === 2)
-      return preset
-        ? `Using the standard measure: ${preset.name.toLowerCase()}`
-        : 'Pick the one that sounds most like your work.'
+      return preset ? `Measure: ${preset.name}` : isCustom ? 'Custom measure' : 'Select a measure to continue.'
     if (draft.step === 3)
-      return nn(draft.before) ? `Before: ${f1(draft.before)} ${draft.unit}` : 'Enter what it was before you changed anything.'
+      return nn(draft.before) ? `Before: ${f1(draft.before)} ${draft.unit}` : 'Enter the before number.'
     if (draft.step === 4)
-      return nn(draft.target) ? `Goal: ${f1(draft.target)} ${draft.unit}` : 'A goal is what you were aiming for.'
-    if (draft.step === 5) return nn(draft.after) ? `After: ${f1(draft.after)} ${draft.unit}` : 'Enter what it is now.'
-    return `Worth about ${formatMoneyFlow(calc.net)} a month once it is checked.`
-  }, [calc.net, draft, preset])
+      return nn(draft.target) ? `Goal: ${f1(draft.target)} ${draft.unit}` : 'Set the goal you aimed for.'
+    if (draft.step === 5) return nn(draft.after) ? `After: ${f1(draft.after)} ${draft.unit}` : 'Enter the after number.'
+    return `~${formatMoneyFlow(calc.net)} / month after checking.`
+  }, [calc.net, draft, isCustom, preset])
 
   const guard = (): string | null => {
     if (draft.step === 2 && !draft.preset) return 'Choose what you are measuring.'
@@ -492,56 +480,49 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
         sx={{ '& > div': { background: 'linear-gradient(90deg, #eab130, #f9db59)' } }}
       />
 
-      {draft.step > 1 && (
-        <Box mb={4} p={4} rounded="lg" borderWidth="1px" borderColor="purple.100" bgGradient="linear(to-b, purple.50, white)">
-          <Text fontSize="10px" letterSpacing="0.14em" textTransform="uppercase" color={PURPLE} fontWeight="700" mb={1}>
-            Your improvement in one sentence
-          </Text>
-          <Text fontSize="md" lineHeight="tall">
+      {draft.step > 1 && (preset || isCustom || nn(draft.before) || nn(draft.after)) && (
+        <Box mb={4} px={3} py={2.5} rounded="lg" borderWidth="1px" borderColor="purple.100" bg="purple.50">
+          <Text fontSize="xs" color="text.secondary" lineHeight="short">
+            <Text as="span" fontWeight="700" color={PURPLE} textTransform="uppercase" letterSpacing="0.08em" fontSize="10px" mr={2}>
+              Summary
+            </Text>
             You {preset?.dir === 'up' ? 'increased' : 'reduced'}{' '}
-            {preset || isCustom ? (
-              <Bold purple>{draft.name || preset?.name.toLowerCase() || 'your measure'}</Bold>
-            ) : (
-              <Pend>what you are measuring</Pend>
-            )}{' '}
+            <Bold purple>{draft.name || preset?.name.toLowerCase() || 'your measure'}</Bold>
             {draft.where ? (
               <>
+                {' '}
                 in <Bold purple>{draft.where}</Bold>
               </>
-            ) : (
-              <Pend>in a team or process</Pend>
-            )}
-            . It was{' '}
-            {nn(draft.before) ? (
-              <Bold purple>
-                {f1(draft.before)} {draft.unit}
-              </Bold>
-            ) : (
-              <Pend>the before number</Pend>
-            )}
-            , now it is{' '}
-            {nn(draft.after) ? (
-              <Bold purple>
-                {f1(draft.after)} {draft.unit}
-              </Bold>
-            ) : (
-              <Pend>the after number</Pend>
-            )}
-            {preset && preset.count !== 'none' ? (
-              nn(draft.count) ? (
-                <>
-                  , across <Bold purple>{f1(draft.count)}</Bold> {preset.count === 'people' ? 'people' : 'a month'}
-                </>
-              ) : (
-                <Pend>, and how often it happens</Pend>
-              )
             ) : null}
-            .
+            {nn(draft.before) || nn(draft.after) ? (
+              <>
+                : {nn(draft.before) ? (
+                  <Bold purple>
+                    {f1(draft.before)} {draft.unit}
+                  </Bold>
+                ) : (
+                  <Pend>—</Pend>
+                )}
+                {' → '}
+                {nn(draft.after) ? (
+                  <Bold purple>
+                    {f1(draft.after)} {draft.unit}
+                  </Bold>
+                ) : (
+                  <Pend>—</Pend>
+                )}
+              </>
+            ) : null}
+            {preset && preset.count !== 'none' && nn(draft.count) ? (
+              <>
+                {' '}
+                · <Bold purple>{f1(draft.count)}</Bold> {preset.count === 'people' ? 'people' : '/ month'}
+              </>
+            ) : null}
             {preset && nn(draft.before) && nn(draft.after) ? (
               <>
                 {' '}
-                That is worth about <Bold purple>{formatMoneyFlow(calc.net)} a month</Bold>, using{' '}
-                {calc.rateSupplied ? "your organization's own figures" : 'a T4L default figure'}.
+                · ~<Bold purple>{formatMoneyFlow(calc.net)}/mo</Bold>
               </>
             ) : null}
           </Text>
@@ -605,68 +586,95 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       )}
 
       {draft.step === 2 && (
-        <Stack spacing={3}>
-          <Heading size="md">
-            What are you measuring
-            <HelpBtn k="measure" onOpen={setHelpKey} />
-          </Heading>
-          <Text color="text.secondary" fontSize="sm">
-            These are the standard ways this kind of improvement gets measured. Pick the closest. It sets the units and
-            the sums for you.
-          </Text>
-          {shown.map((x) => (
-            <CardPick key={x.id} on={draft.preset === x.id} onClick={() => pickPreset(x.id)}>
-              <Text fontWeight="600">{x.name}</Text>
-              <Text fontSize="sm" color="text.secondary">
-                {x.ask}
-              </Text>
-              <HStack mt={2} spacing={2} flexWrap="wrap">
-                <Box as="span" fontSize="xs" px={2} py={0.5} rounded="full" bg="purple.50" color="purple.800">
-                  measured in {x.unit}
-                </Box>
-                <Box as="span" fontSize="xs" px={2} py={0.5} rounded="full" bg="blue.50" color="blue.800">
-                  {x.needs === 'none' ? 'no rate needed' : `uses your ${RATE_LABEL[x.needs] || x.needs}`}
-                </Box>
-                <Box as="span" fontSize="xs" px={2} py={0.5} rounded="full" bg="gray.100" color="gray.600">
-                  {x.eg}
-                </Box>
-              </HStack>
-            </CardPick>
-          ))}
-          <CardPick on={isCustom} onClick={() => pickPreset('CUSTOM')}>
-            <Text fontWeight="600">None of these fit</Text>
-            <Text fontSize="sm" color="text.secondary">
-              Describe it yourself. It still gets checked, but it will not roll up with the standard measures.
+        <Stack spacing={4}>
+          <Box>
+            <Heading size="md">
+              What are you measuring
+              <HelpBtn k="measure" onOpen={setHelpKey} />
+            </Heading>
+            <Text color="text.secondary" fontSize="sm" mt={1}>
+              Pick the closest standard measure.
             </Text>
-          </CardPick>
+          </Box>
+
+          <Stack spacing={2}>
+            {shown.map((x) => (
+              <CardPick key={x.id} on={draft.preset === x.id} onClick={() => pickPreset(x.id)}>
+                <Flex align="center" justify="space-between" gap={3} flexWrap="wrap">
+                  <Box minW={0} flex="1">
+                    <Text fontWeight="600" fontSize="sm">
+                      {x.name}
+                    </Text>
+                    <Text fontSize="xs" color="text.muted" noOfLines={1} mt={0.5}>
+                      e.g. {x.eg}
+                    </Text>
+                  </Box>
+                  <Box
+                    as="span"
+                    fontSize="xs"
+                    fontWeight="600"
+                    px={2}
+                    py={0.5}
+                    rounded="md"
+                    bg={draft.preset === x.id ? 'white' : 'gray.100'}
+                    color="gray.700"
+                    flexShrink={0}
+                  >
+                    {x.unit}
+                  </Box>
+                </Flex>
+              </CardPick>
+            ))}
+            <CardPick on={isCustom} onClick={() => pickPreset('CUSTOM')}>
+              <Text fontWeight="600" fontSize="sm">
+                Custom measure
+              </Text>
+              <Text fontSize="xs" color="text.muted" mt={0.5}>
+                Won’t roll up with standard measures across clients.
+              </Text>
+            </CardPick>
+          </Stack>
+
           {(preset || isCustom) && (
-            <Stack spacing={3} mt={2}>
+            <Stack
+              spacing={3}
+              pt={3}
+              borderTopWidth="1px"
+              borderColor="border.subtle"
+            >
               <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
-                <FormControl>
-                  <FormLabel fontSize="sm">Give it a short name</FormLabel>
+                <FormControl isRequired>
+                  <FormLabel fontSize="sm" mb={1}>
+                    Name
+                  </FormLabel>
                   <Input
+                    size="sm"
                     value={draft.name}
-                    placeholder={preset ? `${preset.name}, Accounts Payable` : 'e.g. My custom measure'}
+                    placeholder={preset ? `${preset.name} · team` : 'Short label for your list'}
                     bg={!draft.name ? 'yellow.50' : undefined}
                     onChange={(e) => patch({ name: e.target.value })}
                   />
-                  <FormHelperText>How you will recognise it in your list.</FormHelperText>
                 </FormControl>
                 <FormControl>
-                  <FormLabel fontSize="sm">Where does this happen</FormLabel>
+                  <FormLabel fontSize="sm" mb={1}>
+                    Where
+                  </FormLabel>
                   <Input
+                    size="sm"
                     value={draft.where}
-                    placeholder="e.g. Accounts Payable, Warehouse 2, Planning team"
+                    placeholder="Team, site or process"
                     onChange={(e) => patch({ where: e.target.value })}
                   />
-                  <FormHelperText>The team, site or process.</FormHelperText>
                 </FormControl>
               </SimpleGrid>
-              <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+              <SimpleGrid columns={{ base: 1, md: isCustom ? 2 : 1 }} gap={3} maxW={{ md: isCustom ? '100%' : '240px' }}>
                 {isCustom && (
                   <FormControl>
-                    <FormLabel fontSize="sm">Unit family</FormLabel>
+                    <FormLabel fontSize="sm" mb={1}>
+                      Type
+                    </FormLabel>
                     <Select
+                      size="sm"
                       value={draft.fam}
                       onChange={(e) => {
                         const next = e.target.value as ClaimFlowFam
@@ -682,25 +690,24 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   </FormControl>
                 )}
                 <FormControl>
-                  <FormLabel fontSize="sm">
-                    Measured in
+                  <FormLabel fontSize="sm" mb={1}>
+                    Unit
                     <HelpBtn k="unit" onOpen={setHelpKey} />
                   </FormLabel>
-                  <Select value={draft.unit} onChange={(e) => patch({ unit: e.target.value })}>
+                  <Select size="sm" value={draft.unit} onChange={(e) => patch({ unit: e.target.value })}>
                     {unitOpts.map((u) => (
                       <option key={u} value={u}>
                         {u}
                       </option>
                     ))}
                   </Select>
-                  <FormHelperText>{CLAIM_FLOW_UNITS[fam].label}. Change it if your team counts it differently.</FormHelperText>
                 </FormControl>
-                {preset && (
-                  <Note variant="gold" title="How this one turns into money">
-                    {preset.valueRule}
-                  </Note>
-                )}
               </SimpleGrid>
+              {preset && (
+                <Text fontSize="xs" color="text.muted">
+                  Valuation: {preset.valueRule}
+                </Text>
+              )}
             </Stack>
           )}
         </Stack>
