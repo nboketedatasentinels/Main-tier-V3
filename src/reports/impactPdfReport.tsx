@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: COLORS.primary,
-    backgroundColor: '#f6f3ef',
+    backgroundColor: '#f4f7fb',
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 3,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
 
   // Narrative box
   narrative: {
-    backgroundColor: '#f6f3ef',
+    backgroundColor: '#f4f7fb',
     borderLeftWidth: 3,
     borderLeftColor: COLORS.primary,
     borderRadius: 4,
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     paddingHorizontal: 6,
     borderRadius: 100,
-    backgroundColor: '#f6f3ef',
+    backgroundColor: '#f4f7fb',
     color: COLORS.primary,
   },
 

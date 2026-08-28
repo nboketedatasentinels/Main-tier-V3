@@ -14,11 +14,11 @@ const accentGoldScale = {
 }
 
 const brandActionScale = {
-  // Light tints: warm stone (professional). Avoid lavender “AI purple”.
-  50: '#f6f3ef',
-  100: '#ebe5de',
-  200: '#ddd4ca',
-  300: '#c4b5a5',
+  // Light tints: whitish blue (cool, professional selected surfaces).
+  50: '#f4f7fb',
+  100: '#e9eef5',
+  200: '#d8e1ec',
+  300: '#b8c6d6',
   400: '#a180d6',
   500: '#7f4fc2',
   600: '#5e2ea4',
@@ -33,7 +33,7 @@ const brandColors = {
   dark: '#2D0B5B',
   indigo: '#3B0F7A',
   // Legacy/compatibility aliases mapped to new semantic neutrals
-  primaryMuted: '#f6f3ef',
+  primaryMuted: '#f4f7fb',
   canvas: '#f8fafc',
   accent: '#f8fafc',
   sidebar: '#f1f5f9',
@@ -85,8 +85,8 @@ const colors = {
   accent: {
     warning: '#eab130',  // Gold
     highlight: '#f9db59', // Yellow (backgrounds only, never text)
-    purpleSubtle: '#f6f3ef', // warm stone tint for selected / guidance surfaces
-    purpleBorder: '#d4cbc1', // soft stone border for callouts
+    purpleSubtle: '#f4f7fb', // whitish blue tint for selected / guidance surfaces
+    purpleBorder: '#c5d0de', // soft blue-gray border for callouts
   },
   focusRing: {
     default: 'rgba(53, 14, 111, 0.45)',
@@ -99,7 +99,7 @@ const colors = {
   // Tint Tokens - 80% blend toward white for safe backgrounds
   tint: {
     brandDark: '#d4cdd5',
-    brandPrimary: '#ebe5de',
+    brandPrimary: '#e9eef5',
     danger: '#fdddce',
     accentWarning: '#fbefd6',
     accentHighlight: '#fef8de',
