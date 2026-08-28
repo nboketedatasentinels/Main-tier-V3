@@ -245,7 +245,7 @@ function Chip({
       color={on ? 'white' : 'inherit'}
       borderWidth="1px"
       borderColor={on ? PURPLE : 'gray.300'}
-      _hover={{ borderColor: PURPLE, color: on ? 'white' : PURPLE, bg: on ? '#4a148c' : 'purple.50' }}
+      _hover={{ borderColor: PURPLE, color: on ? 'white' : PURPLE, bg: on ? '#4a148c' : 'gray.50' }}
     >
       {children}
     </Button>
@@ -280,9 +280,9 @@ function CardPick({
       borderWidth="1.5px"
       borderColor={on ? PURPLE : 'gray.200'}
       bg={on ? 'purple.50' : 'white'}
-      boxShadow={on ? '0 0 0 3px rgba(53,14,111,.09)' : undefined}
+      boxShadow={on ? '0 0 0 3px rgba(39,6,46,.08)' : undefined}
       onClick={onClick}
-      _hover={{ borderColor: 'purple.300' }}
+      _hover={{ borderColor: on ? PURPLE : 'gray.400' }}
       transition="all 0.15s"
     >
       {children}
