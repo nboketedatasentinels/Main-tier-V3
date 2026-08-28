@@ -477,65 +477,6 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
         sx={{ '& > div': { background: 'linear-gradient(90deg, #eab130, #f9db59)' } }}
       />
 
-      {draft.step > 1 && (
-        <Box mb={5} px={3.5} py={3} rounded="lg" borderWidth="1px" borderColor="border.subtle" bg="gray.50">
-          <Text fontSize="10px" letterSpacing="0.12em" textTransform="uppercase" color="black" fontWeight="700" mb={1.5}>
-            Your improvement in one sentence
-          </Text>
-          <Text fontSize="sm" color="black" lineHeight="1.55">
-            You {preset?.dir === 'up' ? 'increased' : 'reduced'}{' '}
-            {preset || isCustom ? (
-              <Bold>{draft.name || preset?.name.toLowerCase() || 'your measure'}</Bold>
-            ) : (
-              <Pend>what you are measuring</Pend>
-            )}
-            {draft.where ? (
-              <>
-                {' '}
-                in <Bold>{draft.where}</Bold>
-              </>
-            ) : (
-              <>
-                {' '}
-                <Pend>in a team or process</Pend>
-              </>
-            )}
-            . It was{' '}
-            {nn(draft.before) ? (
-              <Bold>
-                {f1(draft.before)} {draft.unit}
-              </Bold>
-            ) : (
-              <Pend>the before number</Pend>
-            )}
-            , now it is{' '}
-            {nn(draft.after) ? (
-              <Bold>
-                {f1(draft.after)} {draft.unit}
-              </Bold>
-            ) : (
-              <Pend>the after number</Pend>
-            )}
-            {preset && preset.count !== 'none' ? (
-              nn(draft.count) ? (
-                <>
-                  , across <Bold>{f1(draft.count)}</Bold> {preset.count === 'people' ? 'people' : 'a month'}
-                </>
-              ) : (
-                <Pend>, and how often it happens</Pend>
-              )
-            ) : null}
-            .
-            {preset && nn(draft.before) && nn(draft.after) ? (
-              <>
-                {' '}
-                That is worth about <Bold>{formatMoneyFlow(calc.net)} a month</Bold>.
-              </>
-            ) : null}
-          </Text>
-        </Box>
-      )}
-
       {draft.step === 1 && (
         <Stack spacing={4}>
           <Heading size="md">
