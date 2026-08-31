@@ -104,7 +104,7 @@ function wrapHtml(orgName: string | undefined, inner: string): string {
     </div>
     <div style="padding:24px;color:${INK};font-size:14px;line-height:1.55">${inner}</div>
     <div style="padding:16px 24px;border-top:1px solid ${HAIR};color:${MUTE};font-size:12px">
-      Confidential — for sponsor / HR / senior management / line managers.
+      Confidential - for sponsor / HR / senior management / line managers.
     </div>
   </div>
   </body></html>`;

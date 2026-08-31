@@ -123,7 +123,7 @@
     <div class="capstone-badge">Capstone</div>
   </div>
   <h1 class="header-title">The Transformation <em>Operating Model</em></h1>
-  <p class="header-desc">A six-section operating model for the AI-era transformation. The AI Operating Hour discipline (Week 1). The Transformation Thesis (Week 2). The Capability Map (Week 3). The Data Foundation Audit (Week 4 - the heaviest week). The Adoption Curve Read (Week 5). The AI Integration section (judgement, not adoption). One running document, 1,500–2,000 words. Plus the Lessons Synthesis paragraph that names what has integrated across the six weeks.</p>
+  <p class="header-desc">A six-section operating model for the AI-era transformation. The AI Operating Hour discipline (Week 1). The Transformation Thesis (Week 2). The Capability Map (Week 3). The Data Foundation Audit (Week 4 - the heaviest week). The Adoption Curve Read (Week 5). The AI Integration section (judgement, not adoption). One running document, 1,500-2,000 words. Plus the Lessons Synthesis paragraph that names what has integrated across the six weeks.</p>
 </div>
 <div class="content">
   <div class="capstone-callout">
@@ -139,7 +139,7 @@
     <ul class="standard-list">
       <li>The six sections read as one running document with through-lines between them - not six exercises stapled together.</li>
       <li>Each section draws on the actual Practical from its corresponding week - same use case, refined and integrated.</li>
-      <li>Total length is 1,500–2,000 words.</li>
+      <li>Total length is 1,500-2,000 words.</li>
       <li>The Operating Model could be handed to an incoming CEO with no context, and would survive scrutiny without the practitioner in the room.</li>
       <li>The AI Integration section names what was kept, what was rejected, and why - evaluative judgement, not summary.</li>
       <li>The Lessons Synthesis names a pattern the practitioner did not see clearly in Week 1.</li>
@@ -160,14 +160,14 @@
   </div>
   <div class="step-card">
     <div class="step-header"><div class="step-num-badge"><span>2</span></div><div><div class="step-label">Step 2</div><div class="step-title">Write the Six-Section Operating Model</div></div></div>
-    <p class="step-desc">Six sections, one running document. Total target length is 1,500–2,000 words across the six combined.</p>
+    <p class="step-desc">Six sections, one running document. Total target length is 1,500-2,000 words across the six combined.</p>
     <div class="om-card">
       <div class="om-card-label">The Transformation Operating Model</div>
-      <div class="om-card-sub">Six sections · one running document · 1,500–2,000 words</div>
+      <div class="om-card-sub">Six sections · one running document · 1,500-2,000 words</div>
       <div id="sections"></div>
     </div>
     <div style="background:rgba(74,59,140,.04);border:1.5px solid var(--purple-light);border-radius:10px;padding:14px 18px;margin-top:12px;display:flex;justify-content:space-between;align-items:center">
-      <div><div style="font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase">Total Operating Model</div><div style="font-size:12px;color:#666;margin-top:2px;font-style:italic">Target: 1,500–2,000 words across the six sections</div></div>
+      <div><div style="font-size:11px;font-weight:700;color:var(--purple);letter-spacing:.06em;text-transform:uppercase">Total Operating Model</div><div style="font-size:12px;color:#666;margin-top:2px;font-style:italic">Target: 1,500-2,000 words across the six sections</div></div>
       <div style="font-family:'DM Serif Display',serif;font-size:24px;color:var(--plum)"><span id="total-words">0</span> words</div>
     </div>
   </div>
@@ -218,12 +218,12 @@
 </div>
 <script>
 const sections = [
-  { num: '01', tag: 'Drawing on Week 1', name: 'AI Operating Hour Discipline', helper: 'Cadence, what the lens tests, what has shifted in decision-making.', suggested: '150–250 words' },
-  { num: '02', tag: 'Drawing on Week 2', name: 'Transformation Thesis', helper: 'Defensible to an incoming CEO. Stated outcome, dependent claims, runnable test.', suggested: '250–350 words' },
-  { num: '03', tag: 'Drawing on Week 3', name: 'Capability Map', helper: 'Five-row map summarised. Gaps named. The downplayed gap surfaced.', suggested: '200–300 words' },
-  { num: '04', tag: 'Drawing on Week 4', name: 'Data Foundation Audit', helper: 'Five-dimension audit. The downplayed gap. Cost to close. Recommended call.', suggested: '280–380 words' },
-  { num: '05', tag: 'Drawing on Week 5', name: 'Adoption Curve Read', helper: 'Cited metric, what it masks, genuine signal, shift signals, recommended action.', suggested: '250–350 words' },
-  { num: '06', tag: 'The AI Integration Section', name: 'AI Integration - Judgement, Not Adoption', helper: 'One Digital Edge exercise. Kept, rejected, why. Evaluative judgement.', suggested: '250–350 words' }
+  { num: '01', tag: 'Drawing on Week 1', name: 'AI Operating Hour Discipline', helper: 'Cadence, what the lens tests, what has shifted in decision-making.', suggested: '150-250 words' },
+  { num: '02', tag: 'Drawing on Week 2', name: 'Transformation Thesis', helper: 'Defensible to an incoming CEO. Stated outcome, dependent claims, runnable test.', suggested: '250-350 words' },
+  { num: '03', tag: 'Drawing on Week 3', name: 'Capability Map', helper: 'Five-row map summarised. Gaps named. The downplayed gap surfaced.', suggested: '200-300 words' },
+  { num: '04', tag: 'Drawing on Week 4', name: 'Data Foundation Audit', helper: 'Five-dimension audit. The downplayed gap. Cost to close. Recommended call.', suggested: '280-380 words' },
+  { num: '05', tag: 'Drawing on Week 5', name: 'Adoption Curve Read', helper: 'Cited metric, what it masks, genuine signal, shift signals, recommended action.', suggested: '250-350 words' },
+  { num: '06', tag: 'The AI Integration Section', name: 'AI Integration - Judgement, Not Adoption', helper: 'One Digital Edge exercise. Kept, rejected, why. Evaluative judgement.', suggested: '250-350 words' }
 ];
 const root = document.getElementById('sections');
 sections.forEach((s, i) => {
@@ -272,8 +272,8 @@ function submitPractical() {
     if (el) total += countWords(el.value);
   }
   let warnings = [];
-  if (total < 1500) warnings.push("Operating Model is " + total + " words - target is 1,500–2,000.");
-  if (total > 2000) warnings.push("Operating Model is " + total + " words - target is 1,500–2,000.");
+  if (total < 1500) warnings.push("Operating Model is " + total + " words - target is 1,500-2,000.");
+  if (total > 2000) warnings.push("Operating Model is " + total + " words - target is 1,500-2,000.");
   if (warnings.length > 0 && !confirm(warnings.join("\n") + "\n\nSubmit anyway?")) return;
   if (!confirm("Submit Practical 6 (the Capstone)? This triggers the 7,000-point Module 2 payout.")) return;
   alert("Submission received. (In production, this POSTs to /api/practicals/submit with submission_type = PRACTICAL_W6_CAPSTONE_MODULE2_CLOSE)");

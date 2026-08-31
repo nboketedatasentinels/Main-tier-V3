@@ -126,7 +126,7 @@ function flashSuccessAndReload(message) {
       JSON.stringify({ message, at: Date.now() }),
     )
   } catch {
-    // sessionStorage unavailable — still clear + reload; banner may be lost.
+    // sessionStorage unavailable - still clear + reload; banner may be lost.
   }
   clearFormFields()
   window.location.reload()

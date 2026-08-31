@@ -46,7 +46,7 @@ DUBNER: And what exactly are you trying to get them to do?
 
 MILKMAN: We tell them it's a 28-day program, and the goal is to get you to build a lasting exercise habit, ideally forever. That was our goal. Let's make all these habits stick.
 
-DUBNER: So the idea is you get people to sign up, you give them encouragement and incentives? Or there's some cash rewards or—?
+DUBNER: So the idea is you get people to sign up, you give them encouragement and incentives? Or there's some cash rewards or - ?
 
 MILKMAN: Yes. There was cash promised and delivered. So we were paying, order of magnitude, like a quarter for every gym visit. Better than nothing, but not a lot.
 
@@ -70,11 +70,11 @@ We were hoping to improve upon the performance of that. And nothing did. So basi
 
 DUBNER: Okay, I seem to recall that part of this project was asking all your fellow researchers when they design experiments to make a prediction of how well their experiment would work. And these are some of the best and brightest minds in behavioral sciences, so presumably their predictions are not terrible. Were they terrible?
 
-DUCKWORTH: So what we learn was that our scientists are quite optimistic about behavior change, and on average they thought "Oh, about 40 percent likelihood that my experiment worked." Whereas when the data come in, it's — it's close to zero.
+DUCKWORTH: So what we learn was that our scientists are quite optimistic about behavior change, and on average they thought "Oh, about 40 percent likelihood that my experiment worked." Whereas when the data come in, it's - it's close to zero.
 
-DUBNER: It strikes me, knowing nothing about anything, that what you were trying to do as your first big project — getting people to go to the gym more on a lasting basis — is the opposite of low-hanging fruit.
+DUBNER: It strikes me, knowing nothing about anything, that what you were trying to do as your first big project - getting people to go to the gym more on a lasting basis - is the opposite of low-hanging fruit.
 
-MILKMAN: Oh, that's interesting. Okay. I do think it's worth mentioning again, we actually didn't fail at getting people to go to the gym. During the 28-day program, most of the different versions of the program did create behavior change — so, 50 to 75 percent created significant boosts in exercise for 28 days. It's just that we didn't do very well creating lasting change.
+MILKMAN: Oh, that's interesting. Okay. I do think it's worth mentioning again, we actually didn't fail at getting people to go to the gym. During the 28-day program, most of the different versions of the program did create behavior change - so, 50 to 75 percent created significant boosts in exercise for 28 days. It's just that we didn't do very well creating lasting change.
 
 So after our 28-day program, pretty much we saw nothing in terms of behavior change. All 53 versions of the program, pretty much nothing sticks. And that was the ultimate goal. So that was a major failure.
 
@@ -90,6 +90,6 @@ I don't have a question. I just wanted to read that into the record. No, I do ha
 
 DUCKWORTH: If you think of the most self-controlled person you know, you might think, "Wow they have no fun. They never go out to, say, Freakonomics Radio Live. They only drink water. They work all day and they have no play. And that's no way to live. But in fact there is research on the extremes of self-control, and there is no data that show that really self-controlled people are any less happy.
 
-Self-control is the ability to align your behavior with what you want. If what you want is a life of spontaneity and ice cream cones, then that's the behavior that you have to align to. That's the goal. But the kinds of problems that Behavior Change for Good is working on — exercise; for teenagers, studying; for those people who have had a heart attack, taking your medications. These are things that most people actually value as goals and they simply interfere with other things that we could do — not taking our medication, hanging out on Snapchat all day, not going to the gym and binge-watching Game of Thrones instead at home on the couch. These are all temptations that are just more pleasing in the moment, but we later regret. So you can write back to this cranky listener, they're misunderstanding what it really means to actually have a lot of self-control.
+Self-control is the ability to align your behavior with what you want. If what you want is a life of spontaneity and ice cream cones, then that's the behavior that you have to align to. That's the goal. But the kinds of problems that Behavior Change for Good is working on - exercise; for teenagers, studying; for those people who have had a heart attack, taking your medications. These are things that most people actually value as goals and they simply interfere with other things that we could do - not taking our medication, hanging out on Snapchat all day, not going to the gym and binge-watching Game of Thrones instead at home on the couch. These are all temptations that are just more pleasing in the moment, but we later regret. So you can write back to this cranky listener, they're misunderstanding what it really means to actually have a lot of self-control.
 
 DUBNER: Well, I will say this: despite your struggles so far, I know that you two are super-gritty people and that you're going to keep at it. And I really look forward to hearing the results down the road. So can we say thank you so much to Angela Duckworth and Katy Milkman.

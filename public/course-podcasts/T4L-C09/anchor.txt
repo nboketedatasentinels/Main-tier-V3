@@ -35,15 +35,15 @@ Everything below is the publisher text for that section, unedited.
 
 **Gautam Kumra:** Kiran, you are in a very small minority of women founders and entrepreneurs across Asia. It's an honor to have you here. When you reflect on your journey, what are some of the main milestones to getting to where you are?
 
-**Kiran Mazumdar-Shaw:** In the 1970s, I met a biotech entrepreneur from Ireland [Leslie Auchincloss, founder of Biocon Bio Chemicals] who asked me to join him in starting a biotech company in India. As I was interested in biotechnology, I thought I would give it a go. I also realized that India had no biotech industry—most businesses at the time focused on trading or were ancillaries to big companies and multinationals. As a daughter of a brew master, I had a scientific interest in biotech as I thought it was closely aligned to brewing. I began by applying fermentation technology to develop enzymes.
+**Kiran Mazumdar-Shaw:** In the 1970s, I met a biotech entrepreneur from Ireland [Leslie Auchincloss, founder of Biocon Bio Chemicals] who asked me to join him in starting a biotech company in India. As I was interested in biotechnology, I thought I would give it a go. I also realized that India had no biotech industry - most businesses at the time focused on trading or were ancillaries to big companies and multinationals. As a daughter of a brew master, I had a scientific interest in biotech as I thought it was closely aligned to brewing. I began by applying fermentation technology to develop enzymes.
 
-I consider Biocon to be the first tech start-up in India because no one at the time was looking to start a science- and technology-led business, or use new technology. From the beginning, I was driven to pursue a differentiated path led by science and technology—that drive has kept me motivated throughout my journey. As an entrepreneur, I believe in the power of science and technology, and I have always tried to challenge the status quo. I also have adopted the ethos of always asking myself what I can do next. That's how I have built Biocon over the years.
+I consider Biocon to be the first tech start-up in India because no one at the time was looking to start a science- and technology-led business, or use new technology. From the beginning, I was driven to pursue a differentiated path led by science and technology - that drive has kept me motivated throughout my journey. As an entrepreneur, I believe in the power of science and technology, and I have always tried to challenge the status quo. I also have adopted the ethos of always asking myself what I can do next. That's how I have built Biocon over the years.
 
 I partnered with a US company at one stage, which didn't work very well, but when I began my own start-up in Boston, it was successful and went public last year for a billion dollars. I've also founded a CAR-T [a type of cancer treatment] start-up in India.
 
-**Gautam Kumra:** It seems you have a North Star—the feeling of being driven by something.
+**Gautam Kumra:** It seems you have a North Star - the feeling of being driven by something.
 
-**Kiran Mazumdar-Shaw:** I have two North Stars. One is driven by science and seeing where it can take you. The other one is making a difference to healthcare by creating access to affordable, life-saving medicines. We are doing wonderful things with science and coming up with great new drugs and therapies, but how many people around the world can afford them? Being based in India, I realize how little access patients here have to new therapies and drugs. I am trying to address this challenge and not just in terms of biosimilars—for example, if I develop a new drug, how do I get Indian patients to participate in trials and benefit from good, new drugs?
+**Kiran Mazumdar-Shaw:** I have two North Stars. One is driven by science and seeing where it can take you. The other one is making a difference to healthcare by creating access to affordable, life-saving medicines. We are doing wonderful things with science and coming up with great new drugs and therapies, but how many people around the world can afford them? Being based in India, I realize how little access patients here have to new therapies and drugs. I am trying to address this challenge and not just in terms of biosimilars - for example, if I develop a new drug, how do I get Indian patients to participate in trials and benefit from good, new drugs?
 
 **Gautam Kumra:** How do you operate in the ecosystem and engage with the relevant stakeholders?
 
@@ -67,7 +67,7 @@ In India, we're stuck at the early stage of government funding. I think we need 
 
 **Gautam Kumra:** I notice two things about many founder entrepreneurs: They value loyalty and have the ability to get extraordinary performance from relatively ordinary people.
 
-**Kiran Mazumdar-Shaw:** I agree with both of those. Biocon is a living example of getting ordinary people to do extraordinary things. I think this is because many of the experts at Biocon have grown with the company, some for 25 to 30 years. Even those who have joined more recently and have imbibed our culture have added value, because they bring new expertise and ways of doing things. Not everyone has to be homegrown, but loyalty is important. If you give a problem to an ordinary person that they can crack—even someone who doesn't come with great credentials—they become more confident. They gain a sense of achievement and are able to take on bigger and bigger problems. That's what finally makes them extraordinary.
+**Kiran Mazumdar-Shaw:** I agree with both of those. Biocon is a living example of getting ordinary people to do extraordinary things. I think this is because many of the experts at Biocon have grown with the company, some for 25 to 30 years. Even those who have joined more recently and have imbibed our culture have added value, because they bring new expertise and ways of doing things. Not everyone has to be homegrown, but loyalty is important. If you give a problem to an ordinary person that they can crack - even someone who doesn't come with great credentials - they become more confident. They gain a sense of achievement and are able to take on bigger and bigger problems. That's what finally makes them extraordinary.
 
 As an entrepreneur, I've always believed you can only build something valuable and impactful if you endure. I've never sold my business even though there have been many opportunities to sell to a bigger company. Similarly, I think employees need to endure. That's why I have such a large number of people who have worked with me for decades. Gen Zers are very different, but I am trying to see whether we, as a company, can create stability in their jobs so that they stay with us.
 
@@ -75,7 +75,7 @@ As an entrepreneur, I've always believed you can only build something valuable a
 
 **Kiran Mazumdar-Shaw:** I think we have very good metrics to judge people's performance. Of course, as all companies do, we have corporate goals, which require a collective effort. We also have departmental and individual goals. We are very clear about what those goals should be. At an individual level, what do you want to see out of a person's performance? At a departmental level, what are the departmental goals that are important to achieve corporate success? Each department has something to contribute. Finally, at a corporate level, what are the most important things for us to achieve?
 
-You need to have that matrix very well worked out. I often tell people, "Please don't give me subjective goals that say something like, 'We should improve and we should do this or that.'" You have to give me measurable goals—tell me how you will improve and what it is that you're looking at.
+You need to have that matrix very well worked out. I often tell people, "Please don't give me subjective goals that say something like, 'We should improve and we should do this or that.'" You have to give me measurable goals - tell me how you will improve and what it is that you're looking at.
 
 **Gautam Kumra:** What do you think about the role of innovation and how to scale it?
 
@@ -85,7 +85,7 @@ You need to have that matrix very well worked out. I often tell people, "Please 
 
 **Kiran Mazumdar-Shaw:** I started the business by developing enzymes. When I realized that I had an opportunity to develop biopharmaceuticals, the trade-off was very easy: Enzymes were low-priced, high-volume products and biopharmaceuticals were high-value, low-volume products. To become a billion-dollar company, I would have had to invest a huge amount in enzyme technology. It was much easier to become a billion-dollar company in biopharmaceuticals. That was my first approach to why we should move from enzymes to biopharmaceuticals.
 
-Then, in biopharmaceuticals, I started with novel biomolecules and thought about ramping up quickly. However, this became a very arduous path, so I needed an opportunity to build a big business—and I found it in biosimilars and generics.
+Then, in biopharmaceuticals, I started with novel biomolecules and thought about ramping up quickly. However, this became a very arduous path, so I needed an opportunity to build a big business - and I found it in biosimilars and generics.
 
 After that, I developed a research services company to emulate what IT companies had done when they started their own IT research arms. That's how I started Syngene [a contract research, development, and manufacturing organization].
 
@@ -95,7 +95,7 @@ These were inflection points where I started looking at opportunities. They were
 
 **Kiran Mazumdar-Shaw:** Obviously, I'm a big risk-taker; however, it is always calculated risk. I don't take wild risks and bet on the whole business. But, for instance, I took the risk of moving from enzymes to biopharmaceuticals, because I felt I had the technology base to do so. I sold the enzymes business as soon as my biopharmaceuticals business started delivering. I invested everything into biopharmaceuticals because I felt that was the path ahead.
 
-Then I started developing biosimilars and got into a partnership with Mylan Pharmaceuticals, which was a very important inflection point for me. The biggest risk I took was when I decided not to form a joint venture with Mylan but to buy it out instead. I made the biggest acquisition in Indian pharmaceutical history—$3.3 billion. Today, we are in a position to comfortably pay down that acquisition debt. The business is doing well, we're getting good market share, and our pipeline is growing. It's a risk I took but it paid off in a big way and takes us to the next level.
+Then I started developing biosimilars and got into a partnership with Mylan Pharmaceuticals, which was a very important inflection point for me. The biggest risk I took was when I decided not to form a joint venture with Mylan but to buy it out instead. I made the biggest acquisition in Indian pharmaceutical history - $3.3 billion. Today, we are in a position to comfortably pay down that acquisition debt. The business is doing well, we're getting good market share, and our pipeline is growing. It's a risk I took but it paid off in a big way and takes us to the next level.
 
 **Gautam Kumra:** When you think about risk, how do you judge how much you are willing to take?
 
@@ -111,7 +111,7 @@ Then I started developing biosimilars and got into a partnership with Mylan Phar
 
 **Jennifer Chiang:** We hear CEOs talking about an alternate sounding board for their ideas. Did you have a network of trusted advisers on your journey?
 
-**Kiran Mazumdar-Shaw:** My late husband was a great sounding board for me. He used to refer to us as scientifically aggressive, but financially frugal. He taught me a lot about how to take a calculated risk, how to measure the risk, and how to make sure that I could achieve what I wanted without going crazy. Today, I have a very good leadership team with which I can brainstorm new ideas. Even when I was building Biocon, I discussed developments with my close team. I can ideate and strategize, but ultimately, they have to deliver—so if they don't buy into what I'm saying, we're not going to be successful.
+**Kiran Mazumdar-Shaw:** My late husband was a great sounding board for me. He used to refer to us as scientifically aggressive, but financially frugal. He taught me a lot about how to take a calculated risk, how to measure the risk, and how to make sure that I could achieve what I wanted without going crazy. Today, I have a very good leadership team with which I can brainstorm new ideas. Even when I was building Biocon, I discussed developments with my close team. I can ideate and strategize, but ultimately, they have to deliver - so if they don't buy into what I'm saying, we're not going to be successful.
 
 **Gautam Kumra:** You must have had some tough moments. How do you remain resilient?
 

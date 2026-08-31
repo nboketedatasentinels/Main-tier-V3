@@ -9,9 +9,9 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // consented, a copy to their employer contact.
 //
 // Two call paths:
-//   1) { leadId } — anonymous public funnel. Service role loads the completed
+//   1) { leadId } - anonymous public funnel. Service role loads the completed
 //      lift_leads row and sends from DB fields (client scores are ignored).
-//   2) Authenticated JWT, no leadId — loads lift_assessments for auth.uid().
+//   2) Authenticated JWT, no leadId - loads lift_assessments for auth.uid().
 //
 // verify_jwt = false in config.toml; we authorize in-function.
 // Transport: same SMTP mailbox as welcome / impact verification mail.
@@ -276,7 +276,7 @@ async function loadFromAssessment(userId: string, authEmail: string): Promise<Li
 }
 
 function edgeLabel(key: string | null): string {
-  if (!key) return "—";
+  if (!key) return "-";
   return PILLAR_LABEL[key] || key;
 }
 
@@ -288,7 +288,7 @@ function buildHtml(snapshot: LiftSnapshot, audience: "learner" | "employer"): st
   const intro =
     audience === "employer"
       ? `<p style="margin:0 0 16px;color:${BODY};font-size:15px;line-height:1.55">${escapeHtml(snapshot.recipientName)} completed the LIFT Index and asked Transformation Leader to share their profile with this address.</p>`
-      : `<p style="margin:0 0 16px;color:${BODY};font-size:15px;line-height:1.55">Here is your LIFT Index profile so you never lose it. Keep this email — your pattern is a useful baseline for the next 90 days.</p>`;
+      : `<p style="margin:0 0 16px;color:${BODY};font-size:15px;line-height:1.55">Here is your LIFT Index profile so you never lose it. Keep this email - your pattern is a useful baseline for the next 90 days.</p>`;
 
   const pillarRows = (["L", "I", "F", "T"] as const)
     .map((key) => {
@@ -339,10 +339,10 @@ function buildText(snapshot: LiftSnapshot, audience: "learner" | "employer"): st
     `LIFT Index: ${snapshot.liftIndex} / 64`,
     `Growth edge: ${edgeLabel(snapshot.developmentEdge)}`,
     "",
-    `L — ${PILLAR_LABEL.L}: ${snapshot.pillars.L}/16`,
-    `I — ${PILLAR_LABEL.I}: ${snapshot.pillars.I}/16`,
-    `F — ${PILLAR_LABEL.F}: ${snapshot.pillars.F}/16`,
-    `T — ${PILLAR_LABEL.T}: ${snapshot.pillars.T}/16`,
+    `L - ${PILLAR_LABEL.L}: ${snapshot.pillars.L}/16`,
+    `I - ${PILLAR_LABEL.I}: ${snapshot.pillars.I}/16`,
+    `F - ${PILLAR_LABEL.F}: ${snapshot.pillars.F}/16`,
+    `T - ${PILLAR_LABEL.T}: ${snapshot.pillars.T}/16`,
     "",
     "Retake the LIFT Index in 90 days to see how your pattern shifts.",
     `${APP_NAME} · https://app.t4leader.com`,
@@ -360,7 +360,7 @@ async function sendMails(snapshot: LiftSnapshot): Promise<{ learner: boolean; em
   await transport.sendMail({
     from: `"${APP_NAME}" <${fromEmail}>`,
     to: snapshot.recipientEmail,
-    subject: `Your LIFT Index result — ${snapshot.archetype}`,
+    subject: `Your LIFT Index result - ${snapshot.archetype}`,
     text: buildText(snapshot, "learner"),
     html: buildHtml(snapshot, "learner"),
   });
@@ -374,7 +374,7 @@ async function sendMails(snapshot: LiftSnapshot): Promise<{ learner: boolean; em
     await transport.sendMail({
       from: `"${APP_NAME}" <${fromEmail}>`,
       to: snapshot.employerEmail,
-      subject: `LIFT Index results shared with you — ${snapshot.recipientName}`,
+      subject: `LIFT Index results shared with you - ${snapshot.recipientName}`,
       text: buildText(snapshot, "employer"),
       html: buildHtml(snapshot, "employer"),
     });
