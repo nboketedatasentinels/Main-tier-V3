@@ -116,6 +116,10 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     label: 'Find Peer Match',
     href: '/app/peer-connect',
   },
+  peer_to_peer: {
+    label: 'Join Peer Session',
+    href: '/app/peer-connect?tab=sessions',
+  },
   challenger: {
     label: 'Challenge a Friend',
     href: '/app/peer-connect?tab=sessions',
@@ -1110,6 +1114,22 @@ export function useWeeklyChecklistViewModel() {
           title: 'Internal error',
           description: 'Invalid activity selected.',
           status: 'error',
+        })
+        return
+      }
+
+      // Peer Matching / Peer-to-Peer are earned via Peer Connect - never from a
+      // checklist self-claim click.
+      if (activity.id === 'peer_matching' || activity.id === 'peer_to_peer') {
+        triggerHaptic('warning')
+        toast({
+          title: 'Complete this on Peer Connect',
+          description:
+            activity.id === 'peer_matching'
+              ? 'Find your peer match first. Points unlock after you complete the match window.'
+              : 'Join a peer session first. Points unlock after the session is completed.',
+          status: 'info',
+          duration: 6000,
         })
         return
       }

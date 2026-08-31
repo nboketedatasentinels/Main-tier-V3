@@ -82,6 +82,7 @@ const STATUS_TEXT: Record<VisualState, string> = {
 
 const APPROVAL_LABEL: Record<string, string> = {
   self: 'Self',
+  auto: 'Auto',
   partner_approved: 'Partner approves',
   partner_issued: 'Partner issues',
   mentor_issued: 'Mentor issues',
@@ -196,6 +197,10 @@ export const ActivityRow = ({
 
   const isExternalAiToolSubmission =
     activity.id === 'ai_tool_review' && Boolean(activity.quickActionLink?.external)
+  // Peer Matching / Peer-to-Peer must not self-award from the checklist.
+  // One CTA only: go do the real peer work on Peer Connect.
+  const isPeerWorkActivity =
+    activity.id === 'peer_matching' || activity.id === 'peer_to_peer'
   const isPartnerIssued = activity.approvalType === 'partner_issued'
   const isAssignedByLeadership = isLeadershipAssignedActivity(activity)
   // Capstone / case study / practical open their parts list instead of a
@@ -283,8 +288,9 @@ export const ActivityRow = ({
             : 'Done this week'
           : STATUS_TEXT[visualState]
 
-  const approvalLabel =
-    APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
+  const approvalLabel = isPeerWorkActivity
+    ? 'Peer Connect'
+    : APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
 
   // Month rows expose remaining capacity (e.g. 0/3 at 2,000 → +6,000).
   // Per-claim CTAs still use activity.points below.
@@ -435,6 +441,12 @@ export const ActivityRow = ({
       navigate('/app/impact')
       return
     }
+    // Peer activities: navigate only - never self-claim points from this row.
+    if (isPeerWorkActivity) {
+      const href = activity.quickActionLink?.href || '/app/peer-connect'
+      navigate(href)
+      return
+    }
     // LIFT pillar course: go to the course cards on Weekly Glance.
     // Personality + values tests must be on file before the course can open.
     if (activity.id === 'lift_module') {
@@ -473,7 +485,7 @@ export const ActivityRow = ({
     }
     if (requiresPartnerApproval) {
       onOpenProof(activity)
-    } else if (!isExternalAiToolSubmission) {
+    } else if (!isExternalAiToolSubmission && !isPeerWorkActivity) {
       onMarkCompleted(activity)
     }
   }
@@ -726,6 +738,43 @@ export const ActivityRow = ({
                 pt={1}
               >
                 <HStack spacing={2} flexWrap="wrap">
+                  {/* Peer Matching / Peer-to-Peer: one CTA only - go do the work.
+                      Never show a second button that self-awards points. */}
+                  {isPeerWorkActivity && activity.quickActionLink ? (
+                    <Button
+                      as={RouterLink}
+                      to={activity.quickActionLink.href}
+                      size="sm"
+                      bg="#350e6f"
+                      color="white"
+                      _hover={{ bg: '#27062e', color: 'white', textDecoration: 'none' }}
+                      fontWeight="semibold"
+                      isDisabled={isFullyComplete || lockedByWeek || lockedByAvailability}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {activity.quickActionLink.label}
+                    </Button>
+                  ) : isPeerWorkActivity ? (
+                    <Button
+                      size="sm"
+                      bg="#350e6f"
+                      color="white"
+                      _hover={{ bg: '#27062e' }}
+                      fontWeight="semibold"
+                      isDisabled={isFullyComplete || lockedByWeek || lockedByAvailability}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(
+                          activity.id === 'peer_to_peer'
+                            ? '/app/peer-connect?tab=sessions'
+                            : '/app/peer-connect',
+                        )
+                      }}
+                    >
+                      {activity.id === 'peer_to_peer' ? 'Join Peer Session' : 'Find Peer Match'}
+                    </Button>
+                  ) : (
+                    <>
                   {/* Quick action (e.g. "Register for webinar", "Find peer match")
                       renders first - it's the preparatory step the learner takes
                       before they can claim the primary action. */}
@@ -837,6 +886,8 @@ export const ActivityRow = ({
                     >
                       Learn more
                     </Button>
+                  )}
+                    </>
                   )}
                 </HStack>
 

@@ -304,11 +304,12 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     description: "Participate in a group peer-to-peer session.",
     points: 1000,
     behaviorType: "window_limited",
-    approvalType: "self",
+    // Not self-claimable from the checklist - points come from a real peer session.
+    approvalType: "auto",
     week: 1,
     category: "Networking",
     flexibleWeeks: true,
-    frequencyNote: "One session per window.",
+    frequencyNote: "Join a peer session on Peer Connect. Points unlock after the session is completed.",
   },
   {
     id: "impact_log",
@@ -373,11 +374,12 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     points: 1000,
     behaviorType: "ongoing",
     defaultMaxPerWindow: 2,
-    approvalType: "self",
+    // Not self-claimable from the checklist - points come from a real peer match.
+    approvalType: "auto",
     week: 3,
     category: "Networking",
     flexibleWeeks: true,
-    frequencyNote: "Connect with matched peers regularly.",
+    frequencyNote: "Find your peer match on Peer Connect. Points unlock after the match window.",
   },
   {
     id: "challenger",
