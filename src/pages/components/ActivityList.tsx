@@ -382,14 +382,17 @@ export const ActivityList = ({
             continue
           }
 
-          const remainingInMonth = Math.max(0, monthCap - monthDone)
+          // Include pending submissions in DONE (0/3 → 1/3) so learners see
+          // progress while partner review is outstanding. Remaining capacity
+          // stays open for additional proof claims in the month.
+          const remainingInMonth = Math.max(0, monthCap - usedInMonth)
           pushWeekRow(claimWeek, {
             activity,
             weekOverride: claimWeek,
             occurrence: month,
             occurrenceNumber,
             occurrenceTotal: monthCap,
-            occurrenceDone: Math.min(monthCap, monthDone),
+            occurrenceDone: Math.min(monthCap, usedInMonth),
             rowKind: 'todo',
           })
           todoTotalCount += 1

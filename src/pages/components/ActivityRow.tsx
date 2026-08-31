@@ -239,30 +239,29 @@ export const ActivityRow = ({
   )
   const completedCount = activity.completedCount ?? 0
   const hasMultipleOccurrences = totalFrequency > 1
-  // Pending submissions count toward progress so DONE doesn't stay at 0/6
-  // while the learner is locked out of re-submitting.
+  // Pending submissions count toward progress so DONE doesn't stay at 0/3
+  // while the learner waits for partner review.
   const pendingClaims = Math.max(
     0,
     pendingCount,
-    visualState === 'pending_review' ? 1 : 0,
+    // Only use the visual pending bump when the parent did not pass a scoped
+    // occurrenceDone (month rows already fold pending into that number).
+    typeof occurrenceDone === 'number' ? 0 : visualState === 'pending_review' ? 1 : 0,
   )
-  const consumedCount =
-    typeof occurrenceDone === 'number'
-      ? occurrenceDone
-      : completedCount + pendingClaims
+  const baseDoneCount = typeof occurrenceDone === 'number' ? occurrenceDone : completedCount
+  const consumedCount = baseDoneCount + pendingClaims
   // Progress numerator: month-local when provided, otherwise journey-total.
   const displayDoneCount = Math.min(totalFrequency, Math.max(0, consumedCount))
   // Line-through + lock ONLY when this row's frequency is fully used
-  // (month quota e.g. 3/3, or journey max e.g. 9/9).
+  // (month quota e.g. 3/3, or journey max e.g. 9/9). Pending claims count
+  // as used capacity so learners are not stuck at 2/3 with no Submit left.
   const isFullyComplete =
     activity.availability.state === 'permanently_exhausted' ||
-    (typeof occurrenceDone === 'number'
-      ? occurrenceDone >= totalFrequency
-      : completedCount >= totalFrequency) ||
+    consumedCount >= totalFrequency ||
     (totalFrequency === 1 &&
       (visualState === 'completed' ||
         (weekClaimComplete && visualState !== 'pending_review')))
-  const showStrike = isFullyComplete
+  const showStrike = isFullyComplete && visualState !== 'pending_review'
   // Done column:
   //   once  → "1" until done, then "1 / 1"
   //   twice → "0 / 2" → "1 / 2" → "2 / 2"
@@ -273,15 +272,16 @@ export const ActivityRow = ({
         ? '1 / 1'
         : '1'
       : `${displayDoneCount} / ${totalFrequency}`
-  const statusBadgeLabel = isFullyComplete
-    ? 'Completed'
-    : visualState === 'pending_review'
+  const statusBadgeLabel =
+    visualState === 'pending_review'
       ? STATUS_TEXT.pending_review
-      : weekClaimComplete
-        ? typeof occurrenceDone === 'number'
-          ? 'Done this month'
-          : 'Done this week'
-        : STATUS_TEXT[visualState]
+      : isFullyComplete
+        ? 'Completed'
+        : weekClaimComplete
+          ? typeof occurrenceDone === 'number'
+            ? 'Done this month'
+            : 'Done this week'
+          : STATUS_TEXT[visualState]
 
   const approvalLabel =
     APPROVAL_LABEL[activity.approvalType ?? ''] ?? 'Self'
