@@ -405,6 +405,7 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
       }
 
       let emailSent = false
+      let emailError: string | undefined
       try {
         const formatMoney = (value: unknown) => {
           const n = Number(value)
@@ -504,7 +505,12 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
           sections: emailSections,
         })
         emailSent = sendResult.success
+        if (!sendResult.success) {
+          emailError = sendResult.error || 'Verifier email could not be sent'
+          console.error('[LegacyEsgLogForm] Verifier email failed', sendResult.error)
+        }
       } catch (err) {
+        emailError = err instanceof Error ? err.message : 'Failed to create/send verifier request'
         console.error('[LegacyEsgLogForm] Failed to create/send verifier request', err)
       }
 
@@ -515,22 +521,30 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
         console.warn('[LegacyEsgLogForm] Badge award skipped', badgeError)
       }
 
-      toast({
-        title: pointsAwarded
-          ? `ESG logged · +${pointsToAward.toLocaleString()} pts`
-          : 'ESG logged',
-        description: pointsAwarded
-          ? emailSent
-            ? `Checklist updated. We also emailed ${trimmedVerifierName} (${trimmedVerifierEmail}).`
-            : 'Checklist occurrence and journey points were updated.'
-          : awardMessage ||
-            (emailSent
-              ? `Saved. We emailed ${trimmedVerifierName}. Points may still be catching up - refresh Weekly Checklist.`
-              : 'Saved. Open Weekly Checklist and refresh if points are not visible yet.'),
-        status: pointsAwarded ? 'success' : 'warning',
-        duration: 8000,
-        isClosable: true,
-      })
+      if (!emailSent) {
+        toast({
+          title: 'ESG saved, but verifier was not emailed',
+          description: `${trimmedVerifierName} (${trimmedVerifierEmail}) did not get the approval email.${
+            emailError ? ` ${emailError}` : ''
+          } Please try again or ask support to check SMTP / send-impact-verification-email.`,
+          status: 'error',
+          duration: 12000,
+          isClosable: true,
+        })
+      } else {
+        toast({
+          title: pointsAwarded
+            ? `ESG logged · +${pointsToAward.toLocaleString()} pts`
+            : 'ESG logged',
+          description: pointsAwarded
+            ? `Checklist updated. We emailed ${trimmedVerifierName} (${trimmedVerifierEmail}).`
+            : awardMessage ||
+              `Saved and emailed ${trimmedVerifierName}. Refresh Weekly Checklist if points are not visible yet.`,
+          status: pointsAwarded ? 'success' : 'warning',
+          duration: 8000,
+          isClosable: true,
+        })
+      }
 
       await onSaved()
     } catch (error) {
@@ -650,9 +664,7 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>
-            Evidence <Text as="span" color="red.500">*</Text>
-          </FormLabel>
+          <FormLabel>Evidence</FormLabel>
           <Input
             placeholder="URL to supporting evidence (photo, document, etc.)"
             value={evidenceLink}
@@ -747,7 +759,7 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
 
         <Box p={4} bg="purple.50" border="1px solid" borderColor="purple.100" rounded="lg">
           <Text fontWeight="semibold" mb={1}>
-            Verifier <Text as="span" color="red.500">*</Text>
+            Verifier
           </Text>
           <Text fontSize="sm" color="text.muted" mb={3}>
             Someone in or outside your organization. We email them this impact log. Role is Verifier -

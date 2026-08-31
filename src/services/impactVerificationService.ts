@@ -68,7 +68,9 @@ export async function createImpactVerification(
     p_points_to_award: params.pointsToAward,
   })
   if (error) throw new Error(error.message)
-  const row = data as CreateImpactVerificationResult
+  const row = (
+    typeof data === 'string' ? (JSON.parse(data) as CreateImpactVerificationResult) : data
+  ) as CreateImpactVerificationResult
   if (!row?.token || !row?.id) {
     throw new Error('Failed to create impact verification')
   }
@@ -92,29 +94,41 @@ export async function sendImpactVerificationEmail(params: {
   organizationName?: string | null
   sections?: ImpactVerificationEmailSection[]
   summaryLines?: string[]
-}): Promise<{ success: boolean }> {
+}): Promise<{ success: boolean; error?: string }> {
   const appBaseUrl = (import.meta.env.VITE_APP_BASE_URL as string | undefined)?.replace(/\/$/, '')
   try {
-    const { data, error } = await supabase.functions.invoke<{ success: boolean }>(SEND_FN, {
-      body: {
-        to: params.to,
-        verifierName: params.verifierName,
-        learnerName: params.learnerName,
-        learnerEmail: params.learnerEmail ?? undefined,
-        token: params.token,
-        activityTitle: params.activityTitle,
-        submittedAt: params.submittedAt,
-        organizationName: params.organizationName ?? undefined,
-        sections: params.sections ?? [],
-        summaryLines: params.summaryLines ?? [],
-        ...(appBaseUrl ? { appBaseUrl } : {}),
+    const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>(
+      SEND_FN,
+      {
+        body: {
+          to: params.to,
+          verifierName: params.verifierName,
+          learnerName: params.learnerName,
+          learnerEmail: params.learnerEmail ?? undefined,
+          token: params.token,
+          activityTitle: params.activityTitle,
+          submittedAt: params.submittedAt,
+          organizationName: params.organizationName ?? undefined,
+          sections: params.sections ?? [],
+          summaryLines: params.summaryLines ?? [],
+          ...(appBaseUrl ? { appBaseUrl } : {}),
+        },
       },
-    })
+    )
     if (error) throw error
-    return { success: Boolean(data?.success) }
+    if (!data?.success) {
+      return {
+        success: false,
+        error: data?.error || 'Email function returned without success',
+      }
+    }
+    return { success: true }
   } catch (error) {
     console.warn('[impactVerificationService] Failed to send verifier email', error)
-    return { success: false }
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send verifier email',
+    }
   }
 }
 
