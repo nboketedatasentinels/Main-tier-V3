@@ -233,22 +233,26 @@ function Chip({
   return (
     <Button
       size="sm"
+      variant="outline"
       onClick={onClick}
       borderRadius="full"
       h="auto"
       py={2}
-      px={3}
+      px={3.5}
       whiteSpace="normal"
       textAlign="left"
       fontWeight="600"
       bg={on ? PURPLE : 'white'}
-      color={on ? 'white' : 'gray.800'}
+      color={on ? 'white' : 'black'}
       borderWidth="1px"
       borderColor={on ? PURPLE : 'gray.300'}
       _hover={{
         borderColor: PURPLE,
-        color: on ? 'white' : PURPLE,
+        color: on ? 'white' : 'black',
         bg: on ? '#4a148c' : 'purple.50',
+      }}
+      sx={{
+        '& *': { color: 'inherit !important' },
       }}
     >
       {children}
@@ -844,11 +848,11 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   return (
                     <WrapItem key={lab}>
                       <Chip onClick={() => before > 0 && patch({ target: v.toFixed(2) })}>
-                        <Box>
-                          <Text fontSize="xs" fontWeight="700" color="inherit">
+                        <Box color="black">
+                          <Text fontSize="xs" fontWeight="700" color="black">
                             {lab}
                           </Text>
-                          <Text fontWeight="500" fontSize="11px" color="inherit" opacity={0.85}>
+                          <Text fontWeight="500" fontSize="11px" color="black" opacity={0.75}>
                             {before > 0 ? `${f1(v)} ${draft.unit}` : 'Enter before first'}
                           </Text>
                         </Box>
