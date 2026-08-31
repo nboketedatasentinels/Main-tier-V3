@@ -13,38 +13,28 @@ import {
   Button,
   Collapse,
   Flex,
-  FormControl,
-  FormHelperText,
-  FormLabel,
   Heading,
   HStack,
   Icon,
   IconButton,
-  Input,
   Menu,
   MenuButton,
   MenuItem,
   MenuList,
   Progress,
-  Select,
   SimpleGrid,
   Spinner,
   Stack,
   Text,
-  Textarea,
   Tooltip,
   useToast,
-  Wrap,
-  WrapItem,
 } from '@chakra-ui/react'
 import { Info, Plus } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
-import { ESGCategory } from '@/types'
 import {
   CLAIM_JOURNEY_STEPS,
   DEFAULT_IMPACT_RATES,
-  IMPACT_ESG_PILLARS,
   IMPACT_GROWTH,
   IMPACT_WASTES,
   bandNeedsFinance,
@@ -56,7 +46,6 @@ import {
 } from '@/config/impactValueEngine'
 import type { ImpactHelpKey } from '@/config/impactHelp'
 import { CLAIM_FLOW_GROWTH, CLAIM_FLOW_WASTES } from '@/config/impactClaimFlowV4'
-import { computeEsgUsdValue, resolveEsgRate, VOLUNTEER_HOURLY_RATE } from '@/config/esgImpactRates'
 import {
   createImpactLog,
   listAllImpactLogs,
@@ -80,6 +69,7 @@ import { ImpactRatesViewer } from '@/components/impact/ImpactRatesViewer'
 import { ImpactExportPanel } from '@/components/impact/ImpactExportPanel'
 import { ImpactSectorRollup } from '@/components/impact/ImpactSectorRollup'
 import { requestClaimConfirmations } from '@/services/impactClaimConfirmationService'
+import { LegacyEsgLogForm } from '@/components/impact/LegacyEsgLogForm'
 
 type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'claims' | 'sector' | 'export'
 
@@ -121,14 +111,6 @@ export const ImpactLogV2: React.FC = () => {
   const [openClaim, setOpenClaim] = useState<ImpactLogRecord | null>(null)
   const [showJourney, setShowJourney] = useState(false)
   const [showRatesToLearners, setShowRatesToLearnersState] = useState(false)
-
-  // ESG draft
-  const [ePillar, setEPillar] = useState<'env' | 'soc' | 'gov'>('env')
-  const [eMetric, setEMetric] = useState(IMPACT_ESG_PILLARS[0].items[0])
-  const [eQty, setEQty] = useState('')
-  const [eNote, setENote] = useState('')
-  const [eDate, setEDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-
 
   const displayName =
     [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') ||
@@ -229,80 +211,6 @@ export const ImpactLogV2: React.FC = () => {
 
   const resetEntry = () => {
     setEntry(null)
-    setEQty('')
-    setENote('')
-  }
-
-  const saveEsg = async () => {
-    if (!user?.uid) return
-    if (!eQty || !eNote.trim()) {
-      toast({ status: 'warning', title: 'Add how many and what changed' })
-      return
-    }
-    setSubmitting(true)
-    try {
-      const pillar = IMPACT_ESG_PILLARS.find((p) => p.k === ePillar)
-      const esgMap = {
-        env: ESGCategory.ENVIRONMENTAL,
-        soc: ESGCategory.SOCIAL,
-        gov: ESGCategory.GOVERNANCE,
-      }
-      const esgCategory = esgMap[ePillar]
-      const qty = Number(eQty) || 0
-      const rateInfo = resolveEsgRate({ esgCategory, metricLabel: eMetric })
-      const usd = computeEsgUsdValue({
-        esgCategory,
-        metricLabel: eMetric,
-        quantity: qty,
-        hours: 0,
-      })
-      await createImpactLog(
-        removeUndefinedFields({
-          userId: user.uid,
-          companyId: profile?.companyId,
-          sourcePlatform: 'transformation_tier',
-          title: eMetric,
-          description: eNote.trim(),
-          categoryGroup: 'esg',
-          entryKind: 'esg',
-          esgCategory,
-          activityType: rateInfo.activityType,
-          esgMetric: eMetric,
-          esgQty: qty,
-          liftPillars: pillar ? [pillar.n] : [],
-          date: eDate,
-          hours: 0,
-          peopleImpacted: qty,
-          usdValue: Math.round(usd * 100) / 100,
-          usdValueSource: 'auto',
-          unitRateApplied: rateInfo.unitRate,
-          volHourRateApplied: VOLUNTEER_HOURLY_RATE,
-          sasbTopic: rateInfo.sasbTopic,
-          verificationLevel: 'Tier 1: Self-Reported',
-          verificationStatus: 'pending',
-          claimStatus: 'Sent to ESG team',
-          points: 0,
-          impactValue: Math.round(usd),
-          scp: 0,
-          verificationMultiplier: 1,
-        }) as Parameters<typeof createImpactLog>[0],
-      )
-      toast({
-        status: 'success',
-        title: 'ESG contribution logged',
-        description: `Estimated ${formatMoney(usd)} using the standard ESG rate card.`,
-      })
-      resetEntry()
-      await reload()
-    } catch (err) {
-      toast({
-        status: 'error',
-        title: 'Could not save ESG entry',
-        description: err instanceof Error ? err.message : 'Try again',
-      })
-    } finally {
-      setSubmitting(false)
-    }
   }
 
   const submitClaim = async (payload: ClaimWizardSubmitPayload) => {
@@ -641,8 +549,8 @@ export const ImpactLogV2: React.FC = () => {
                 Log your impact
               </Heading>
               <Text fontSize="sm" color="text.secondary" mb={5} maxW="54ch">
-                Improvement claims put verified dollars on the organisation register. ESG uses the same
-                auto-rates as before. They stay in separate buckets.
+                Improvement claims put verified dollars on the organisation register. ESG uses the
+                previous verifier + tier flow. They stay in separate buckets.
               </Text>
               <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                 {[
@@ -654,7 +562,7 @@ export const ImpactLogV2: React.FC = () => {
                   {
                     k: 'esg' as const,
                     title: 'Log ESG',
-                    body: 'Env / social / governance with the standard auto-calculated USD estimate.',
+                    body: 'Env / social / governance with verifier email, verification tiers, and auto USD - same as before.',
                   },
                 ].map((card) => {
                   const featured = card.k === 'claim'
@@ -828,107 +736,13 @@ export const ImpactLogV2: React.FC = () => {
         )}
 
         {tab === 'log' && entry === 'esg' && (
-          <Box p={5} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
-            <Heading size="md" mb={1}>
-              Log ESG
-            </Heading>
-            <Text fontSize="sm" color="text.secondary" mb={4}>
-              Same auto-calculation as before: quantity × standard unit rate
-              {eQty
-                ? ` · estimate ${formatMoney(
-                    computeEsgUsdValue({
-                      esgCategory:
-                        ePillar === 'env'
-                          ? ESGCategory.ENVIRONMENTAL
-                          : ePillar === 'soc'
-                            ? ESGCategory.SOCIAL
-                            : ESGCategory.GOVERNANCE,
-                      metricLabel: eMetric,
-                      quantity: Number(eQty) || 0,
-                    }),
-                  )}`
-                : ''}
-              .
-            </Text>
-            <Wrap mb={4}>
-              {IMPACT_ESG_PILLARS.map((p) => (
-                <WrapItem key={p.k}>
-                  <Button
-                    size="sm"
-                    variant={ePillar === p.k ? 'solid' : 'outline'}
-                    colorScheme={ePillar === p.k ? 'green' : undefined}
-                    onClick={() => {
-                      setEPillar(p.k)
-                      setEMetric(p.items[0])
-                    }}
-                  >
-                    {p.n}
-                  </Button>
-                </WrapItem>
-              ))}
-            </Wrap>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-              <FormControl isRequired>
-                <FormLabel>What are you counting</FormLabel>
-                <Select value={eMetric} onChange={(e) => setEMetric(e.target.value)}>
-                  {(IMPACT_ESG_PILLARS.find((p) => p.k === ePillar)?.items || []).map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>
-                  How many (
-                  {
-                    resolveEsgRate({
-                      esgCategory:
-                        ePillar === 'env'
-                          ? ESGCategory.ENVIRONMENTAL
-                          : ePillar === 'soc'
-                            ? ESGCategory.SOCIAL
-                            : ESGCategory.GOVERNANCE,
-                      metricLabel: eMetric,
-                    }).unitLabel
-                  }
-                  )
-                </FormLabel>
-                <Input type="number" value={eQty} onChange={(e) => setEQty(e.target.value)} />
-                <FormHelperText>
-                  Rate{' '}
-                  {formatMoney(
-                    resolveEsgRate({
-                      esgCategory:
-                        ePillar === 'env'
-                          ? ESGCategory.ENVIRONMENTAL
-                          : ePillar === 'soc'
-                            ? ESGCategory.SOCIAL
-                            : ESGCategory.GOVERNANCE,
-                      metricLabel: eMetric,
-                    }).unitRate,
-                  )}{' '}
-                  per unit
-                </FormHelperText>
-              </FormControl>
-              <FormControl isRequired>
-                <FormLabel>Date</FormLabel>
-                <Input type="date" value={eDate} onChange={(e) => setEDate(e.target.value)} />
-              </FormControl>
-            </SimpleGrid>
-            <FormControl isRequired mt={4}>
-              <FormLabel>What changed</FormLabel>
-              <Textarea value={eNote} onChange={(e) => setENote(e.target.value)} rows={3} />
-            </FormControl>
-            <Flex mt={6} gap={3} justify="flex-end">
-              <Button variant="ghost" onClick={resetEntry} isDisabled={submitting}>
-                Cancel
-              </Button>
-              <Button colorScheme="primary" onClick={() => void saveEsg()} isLoading={submitting}>
-                Log ESG
-              </Button>
-            </Flex>
-          </Box>
+          <LegacyEsgLogForm
+            onCancel={resetEntry}
+            onSaved={async () => {
+              resetEntry()
+              await reload()
+            }}
+          />
         )}
 
         {tab === 'log' && entry === 'claim' && (
