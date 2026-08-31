@@ -74,6 +74,7 @@ import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
   buildMonthlyAssignmentsSummary,
+  computeProgramEndDateInputValue,
   formatMonthRange,
   getAssignedCourseIdsFromMonthlyAssignments,
   getProgramSegmentAvailabilityStatus,
@@ -219,6 +220,14 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
   const cohortStartDate = useMemo(
     () => (form.cohortStartDate ? new Date(String(form.cohortStartDate)) : null),
     [form.cohortStartDate],
+  )
+  const programEndDate = useMemo(
+    () =>
+      computeProgramEndDateInputValue(
+        form.cohortStartDate ? String(form.cohortStartDate) : '',
+        form.programDuration,
+      ),
+    [form.cohortStartDate, form.programDuration],
   )
   const sortedCourses = useMemo(() => {
     const catalogue = getMonthlyJourneyCourseOptions()
@@ -696,6 +705,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         journeyType: resolvedJourneyType,
         programDurationWeeks,
         cohortStartDate: form.cohortStartDate ? String(form.cohortStartDate) : null,
+        programEnd: programEndDate || null,
         village: form.village ?? null,
         cluster: form.cluster ?? null,
         pillar: form.programDuration === 1.5 ? form.pillar ?? null : null,
@@ -714,6 +724,7 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
         code: form.code.toUpperCase(),
         organizationJourneyType: resolvedJourneyType ?? undefined,
         programDurationWeeks: programDurationWeeks ?? undefined,
+        programEnd: programEndDate || undefined,
         pillar: form.programDuration === 1.5 ? form.pillar : undefined,
         monthlyCourseAssignments: assignmentsToSave,
         courseAssignments: orderedCourseAssignments,
@@ -1130,6 +1141,15 @@ export const CreateOrganizationModal: React.FC<CreateOrganizationModalProps> = (
                       value={form.cohortStartDate ? String(form.cohortStartDate) : ''}
                       onChange={(e) => updateField('cohortStartDate', e.target.value)}
                     />
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Program end date</FormLabel>
+                    <Input type="date" value={programEndDate} isReadOnly bg="gray.50" />
+                    <FormHelperText>
+                      Auto-calculated from cohort start date and program duration.
+                    </FormHelperText>
                   </FormControl>
                 </GridItem>
                 <GridItem colSpan={{ base: 1, md: 2 }}>

@@ -65,6 +65,7 @@ import { normalizeEmail } from '@/utils/email'
 import {
   MonthlyCourseAssignments,
   buildMonthlyAssignmentsFromArray,
+  computeProgramEndDateInputValue,
   formatMonthRange,
   getAssignedCourseIdsFromMonthlyAssignments,
   getProgramSegmentAvailabilityStatus,
@@ -204,6 +205,14 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const cohortStartDate = useMemo(
     () => (form.cohortStartDate ? new Date(String(form.cohortStartDate)) : null),
     [form.cohortStartDate],
+  )
+  const programEndDate = useMemo(
+    () =>
+      computeProgramEndDateInputValue(
+        toDateInputValue(form.cohortStartDate as string | Date | undefined),
+        form.programDuration,
+      ),
+    [form.cohortStartDate, form.programDuration],
   )
   const duplicateCourses = useMemo(() => {
     const seen = new Set<string>()
@@ -712,6 +721,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         journeyType: resolvedJourneyType,
         programDurationWeeks,
         cohortStartDate: toDateInputValue(form.cohortStartDate as string | Date | undefined) || null,
+        programEnd: programEndDate || null,
         village: form.village ?? null,
         cluster: form.cluster ?? null,
         pillar: form.programDuration === 1.5 ? form.pillar ?? null : null,
@@ -781,6 +791,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         id: organization.id,
         organizationJourneyType: resolvedJourneyType ?? undefined,
         programDurationWeeks: programDurationWeeks ?? undefined,
+        programEnd: programEndDate || undefined,
         pillar: form.programDuration === 1.5 ? form.pillar : undefined,
         monthlyCourseAssignments: assignmentsToSave,
         courseAssignments: orderedCourseAssignments,
@@ -994,6 +1005,15 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                     />
                     <FormHelperText>
                       The cohort start date set when this organization was created.
+                    </FormHelperText>
+                  </FormControl>
+                </GridItem>
+                <GridItem>
+                  <FormControl>
+                    <FormLabel>Program end date</FormLabel>
+                    <Input type="date" value={programEndDate} isReadOnly bg="gray.50" />
+                    <FormHelperText>
+                      Auto-calculated from program start date and duration.
                     </FormHelperText>
                   </FormControl>
                 </GridItem>

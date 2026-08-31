@@ -278,6 +278,8 @@ export interface OrgWriteExtras {
   description?: string | null
   /** Default purchased coaching sessions for learners in this org (1-20). */
   purchasedCoachSessions?: number | null
+  /** Program end date (YYYY-MM-DD), derived from start + duration. */
+  programEnd?: string | null
 }
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
@@ -288,6 +290,7 @@ const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   programDurationMonths: e.programDurationMonths ?? null,
   partnerEmail: e.partnerEmail ? e.partnerEmail.trim().toLowerCase() : null,
   description: e.description ?? null,
+  programEnd: e.programEnd ? String(e.programEnd).slice(0, 10) : null,
   // Course assignments live in the settings jsonb (the org table has no column
   // for them). Read back by useOrganizationProgramCourses + monthlyCoursesService.
   monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,
@@ -576,6 +579,12 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
           : typeof existingSettings.purchasedCoachSessions === 'string'
             ? Number(existingSettings.purchasedCoachSessions)
             : null,
+    programEnd:
+      patch.programEnd !== undefined
+        ? patch.programEnd
+        : typeof existingSettings.programEnd === 'string'
+          ? existingSettings.programEnd
+          : null,
   }
   updates.settings = { ...existingSettings, ...buildSettings(nextExtras) }
 

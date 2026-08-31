@@ -796,6 +796,7 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
         : typeof settings.purchasedCoachSessions === 'string'
           ? Number(settings.purchasedCoachSessions) || null
           : null,
+    programEnd: typeof settings.programEnd === 'string' ? settings.programEnd.slice(0, 10) : undefined,
   }
 }
 

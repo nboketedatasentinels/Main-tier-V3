@@ -53,11 +53,8 @@ import { createIntervention } from '@/services/partnerInterventionsService'
 import { notifySupabaseUser } from '@/services/notificationService'
 import type { OrganizationInvitationProfile, OrganizationUserProfile } from '@/types/admin'
 import {
-  addDays,
-  addMonths,
+  computeProgramEndDate,
   getProgramDurationLabel,
-  resolveProgramCadence,
-  resolveProgramMonthCount,
 } from '@/utils/monthlyCourseAssignments'
 import {
   evaluateAdminFollowUpRisk,
@@ -98,11 +95,8 @@ const deriveProgramDates = (org?: {
   const startDate = new Date(startIso)
   if (Number.isNaN(startDate.getTime())) return { start: startIso, end: org?.programEnd }
   if (org?.programEnd) return { start: startIso, end: org.programEnd }
-  const endDate =
-    resolveProgramCadence(org?.programDuration) === 'biweekly'
-      ? addDays(startDate, 6 * 7)
-      : addMonths(startDate, resolveProgramMonthCount(org?.programDuration))
-  return { start: startIso, end: endDate.toISOString() }
+  const endDate = computeProgramEndDate(startDate, org?.programDuration)
+  return { start: startIso, end: endDate ? endDate.toISOString() : undefined }
 }
 
 // Preset issues an admin can flag when asking a partner to follow up on a

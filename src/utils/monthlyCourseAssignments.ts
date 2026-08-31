@@ -197,6 +197,46 @@ export const addDays = (date: Date, days: number): Date => {
   return result
 }
 
+/** Local YYYY-MM-DD for HTML date inputs (avoids UTC day-shift from toISOString). */
+export const formatDateInputValue = (date: Date): string => {
+  if (Number.isNaN(date.getTime())) return ''
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+/**
+ * Program end from cohort start + journey duration.
+ * 6-week Power Journey → +42 days; monthly journeys → +N months.
+ */
+export const computeProgramEndDate = (
+  cohortStartDate: Date,
+  programDuration?: number | string | null,
+): Date | null => {
+  if (Number.isNaN(cohortStartDate.getTime())) return null
+  const months = resolveProgramMonthCount(programDuration)
+  if (months <= 0) return null
+  if (resolveProgramCadence(programDuration) === 'biweekly') {
+    return addDays(cohortStartDate, 6 * 7)
+  }
+  return addMonths(cohortStartDate, months)
+}
+
+/** Autofill helper for admin org forms (start + duration → end as YYYY-MM-DD). */
+export const computeProgramEndDateInputValue = (
+  startInput?: string | null,
+  programDuration?: number | string | null,
+): string => {
+  const start = String(startInput ?? '')
+    .trim()
+    .slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return ''
+  const startDate = new Date(`${start}T00:00:00`)
+  const endDate = computeProgramEndDate(startDate, programDuration)
+  return endDate ? formatDateInputValue(endDate) : ''
+}
+
 export const getProgramSegmentDateRange = (params: {
   cohortStartDate: Date
   segmentIndex: number
