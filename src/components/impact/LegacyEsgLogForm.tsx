@@ -261,7 +261,6 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
     if (!user?.uid) return
     setSubmitting(true)
     const errors: string[] = []
-    const requirements = VERIFICATION_REQUIREMENTS[verificationLevel]
 
     let effectiveActivityType = activityType
     if (!effectiveActivityType || !isActivityTypeAllowedForCategory('esg', esgCategory, effectiveActivityType)) {
