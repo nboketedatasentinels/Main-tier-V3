@@ -12,10 +12,11 @@ import {
   Wrap,
   WrapItem,
 } from '@chakra-ui/react'
+import { BOOK_CLUB_JOIN_URL } from '@/config/communityLinks'
 import { ArrowUpRight, Circle, MessageCircle } from 'lucide-react'
 
-/** Free Practitioner Community application (Zoho survey). */
-const JOIN_NOW_URL = 'https://survey.zohopublic.com/zs/NSCZzU'
+/** Free Practitioner Community / Global Book Club application (Zoho survey). */
+const JOIN_NOW_URL = BOOK_CLUB_JOIN_URL
 
 const STATS = [
   {

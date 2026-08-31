@@ -1,10 +1,9 @@
 import React, { useCallback, useState } from 'react'
 import { ArrowUpRight } from 'lucide-react'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
+import { BOOK_CLUB_JOIN_URL } from '@/config/communityLinks'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/services/firebase'
-
-const HUB_URL = 'https://chat.whatsapp.com/IJO0RJlUX9CDO1vciAHIsu'
 
 export const JoinUs: React.FC = () => {
   const { user, profile } = useAuth()
@@ -35,30 +34,29 @@ export const JoinUs: React.FC = () => {
     <section className="space-y-6 rounded-2xl border border-border-subtle bg-surface-default p-8 shadow-sm">
       <div className="space-y-3">
         <h2 className="text-xl font-semibold text-text-primary">
-          Book club management lives on the Global Book Club hub
+          Join the Global Book Club
         </h2>
         <div className="space-y-3 text-base leading-relaxed text-text-secondary">
           <p>
-            Our reading ecosystem is coordinated through an external platform where you can see upcoming selections, join
-            discussions, and manage your membership.
+            Our reading ecosystem is coordinated through the Practitioner Community where you can see upcoming
+            selections, join discussions, and manage your membership.
           </p>
           <p>
-            Visit the Global Book Club hub to get plugged into the latest reads and conversation spaces. We log your visit with
-            Firebase so we can keep the ecosystem experience seamless across the app and our discussion space.
+            Apply via the form below to get plugged into the latest reads and conversation spaces.
           </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <a
-          href={HUB_URL}
+          href={BOOK_CLUB_JOIN_URL}
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleJoinClick}
           className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-6 py-3 text-sm font-semibold !text-white shadow-sm transition hover:bg-brand-dark hover:!text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-primary focus-visible:ring focus-visible:ring-offset-2 focus-visible:ring-brand-primary focus-visible:ring-offset-surface-default"
           style={{ color: '#ffffff' }}
         >
-          Go to the Global Book Club hub
+          Join the Global Book Club
           <ArrowUpRight className="ml-2 h-4 w-4 text-white" aria-hidden="true" />
         </a>
         <a
@@ -70,7 +68,7 @@ export const JoinUs: React.FC = () => {
           View Books
           <ArrowUpRight className="ml-2 h-4 w-4" aria-hidden="true" />
         </a>
-        {isLogging && <span className="text-sm text-text-muted">Syncing with Firebase...</span>}
+        {isLogging && <span className="text-sm text-text-muted">Saving visit...</span>}
       </div>
     </section>
   )
