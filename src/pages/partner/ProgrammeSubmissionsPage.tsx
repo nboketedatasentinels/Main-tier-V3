@@ -1,53 +1,53 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
-  Badge,
-  Box,
-  Button,
-  Drawer,
-  DrawerBody,
-  DrawerCloseButton,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerOverlay,
-  Flex,
-  FormControl,
-  FormLabel,
-  HStack,
-  Heading,
-  Icon,
-  Input,
-  NumberInput,
-  NumberInputField,
-  Select,
-  SimpleGrid,
-  Spinner,
-  Stack,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Textarea,
-  Th,
-  Thead,
-  Tr,
-  useDisclosure,
-  useToast,
+ Alert,
+ AlertDescription,
+ AlertIcon,
+ AlertTitle,
+ Badge,
+ Box,
+ Button,
+ Drawer,
+ DrawerBody,
+ DrawerCloseButton,
+ DrawerContent,
+ DrawerFooter,
+ DrawerHeader,
+ DrawerOverlay,
+ Flex,
+ FormControl,
+ FormLabel,
+ HStack,
+ Heading,
+ Icon,
+ Input,
+ NumberInput,
+ NumberInputField,
+ Select,
+ SimpleGrid,
+ Spinner,
+ Stack,
+ Table,
+ Tbody,
+ Td,
+ Text,
+ Textarea,
+ Th,
+ Thead,
+ Tr,
+ useDisclosure,
+ useToast,
 } from '@chakra-ui/react'
 import {
-  Award,
-  BookMarked,
-  ClipboardList,
-  ExternalLink,
-  FileText,
-  Search,
-  Wrench,
-  type LucideIcon,
+ Award,
+ BookMarked,
+ ClipboardList,
+ ExternalLink,
+ FileText,
+ Search,
+ Wrench,
+ type LucideIcon,
 } from 'lucide-react'
 import PartnerLayout from '@/layouts/PartnerLayout'
 import { useAuth } from '@/hooks/useAuth'
@@ -55,14 +55,14 @@ import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
 import {
-  subscribeToSubmissionsByOrgIds,
-  updateSubmissionReview,
-  approveSubmissionAndAward,
-  getComponentPoints,
-  getAiBankAScore,
-  type ProgrammeComponentSubmission,
-  type ProgrammeComponentType,
-  type ProgrammeSubmissionStatus,
+ subscribeToSubmissionsByOrgIds,
+ updateSubmissionReview,
+ approveSubmissionAndAward,
+ getComponentPoints,
+ getAiBankAScore,
+ type ProgrammeComponentSubmission,
+ type ProgrammeComponentType,
+ type ProgrammeSubmissionStatus,
 } from '@/services/programmeComponentSubmissionService'
 import { getDisplayName } from '@/utils/displayName'
 import { isJourneyType, isMonthBasedJourney } from '@/utils/journeyType'
@@ -73,1009 +73,1007 @@ const PLUM = '#27062e'
 const ROYAL = '#350e6f'
 
 const TYPE_META: Record<
-  ProgrammeComponentType,
-  { label: string; icon: LucideIcon; color: string; bg: string }
+ ProgrammeComponentType,
+ { label: string; icon: LucideIcon; color: string; bg: string }
 > = {
-  capstone: { label: 'Capstone', icon: Award, color: '#350e6f', bg: '#f4f0fb' },
-  case_study: { label: 'Case Study', icon: BookMarked, color: '#8a6310', bg: '#fdf6e3' },
-  practical: { label: 'Practical', icon: Wrench, color: '#c4400a', bg: '#fdece1' },
+ capstone: { label: 'Capstone', icon: Award, color: '#350e6f', bg: '#f4f0fb' },
+ case_study: { label: 'Case Study', icon: BookMarked, color: '#8a6310', bg: '#fdf6e3' },
+ practical: { label: 'Practical', icon: Wrench, color: '#c4400a', bg: '#fdece1' },
 }
 
 const STATUS_META: Record<
-  ProgrammeSubmissionStatus,
-  { label: string; colorScheme: string }
+ ProgrammeSubmissionStatus,
+ { label: string; colorScheme: string }
 > = {
-  submitted: { label: 'New', colorScheme: 'purple' },
-  in_review: { label: 'In review', colorScheme: 'blue' },
-  approved: { label: 'Approved', colorScheme: 'green' },
-  needs_revision: { label: 'Needs revision', colorScheme: 'orange' },
+ submitted: { label: 'New', colorScheme: 'purple' },
+ in_review: { label: 'In review', colorScheme: 'blue' },
+ approved: { label: 'Approved', colorScheme: 'green' },
+ needs_revision: { label: 'Needs revision', colorScheme: 'orange' },
 }
 
 const STATUS_OPTIONS: ProgrammeSubmissionStatus[] = [
-  'submitted',
-  'in_review',
-  'approved',
-  'needs_revision',
+ 'submitted',
+ 'in_review',
+ 'approved',
+ 'needs_revision',
 ]
 
 const formatAnswerKey = (key: string): string =>
-  key
-    .replace(/^section_\d+_/, '')
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+ key
+ .replace(/^section_\d+_/, '')
+ .replace(/_/g, ' ')
+ .replace(/\b\w/g, (c) => c.toUpperCase())
 
 const formatDate = (date: Date | null): string => {
-  if (!date) return '-'
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffH = diffMs / (1000 * 60 * 60)
-  if (diffH < 24)
-    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
-  if (diffH < 24 * 7)
-    return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+ if (!date) return '-'
+ const now = new Date()
+ const diffMs = now.getTime() - date.getTime()
+ const diffH = diffMs / (1000 * 60 * 60)
+ if (diffH < 24)
+ return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+ if (diffH < 24 * 7)
+ return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+ return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 const ProgrammeSubmissionsPage: React.FC = () => {
-  const toast = useToast()
-  const navigate = useNavigate()
-  const { profile } = useAuth()
-  const { organizations, loading: orgsLoading } = usePartnerOrganizations()
-  const drawer = useDisclosure()
+ const toast = useToast()
+ const navigate = useNavigate()
+ const { profile } = useAuth()
+ const { organizations, loading: orgsLoading } = usePartnerOrganizations()
+ const drawer = useDisclosure()
 
-  const handleNavigate = useCallback(
-    (key: string) => handlePartnerSidebarNavigate(navigate, key, 'programme-submissions'),
-    [navigate],
-  )
+ const handleNavigate = useCallback(
+ (key: string) => handlePartnerSidebarNavigate(navigate, key, 'programme-submissions'),
+ [navigate],
+ )
 
-  const orgOptions = useMemo(
-    () =>
-      organizations
-        .filter((o) => Boolean(o.id))
-        .map((o) => ({ id: o.id!, code: o.code, name: o.name })),
-    [organizations],
-  )
+ const orgOptions = useMemo(
+ () =>
+ organizations
+ .filter((o) => Boolean(o.id))
+ .map((o) => ({ id: o.id!, code: o.code, name: o.name })),
+ [organizations],
+ )
 
-  const { selectedOrg: selectedOrgId, setSelectedOrg: setSelectedOrgId } = usePartnerSelectedOrg()
+ const { selectedOrg: selectedOrgId, setSelectedOrg: setSelectedOrgId } = usePartnerSelectedOrg()
 
-  useEffect(() => {
-    if (selectedOrgId) return
-    if (orgOptions.length > 0) setSelectedOrgId(orgOptions[0].id)
-  }, [orgOptions, selectedOrgId, setSelectedOrgId])
+ useEffect(() => {
+ if (selectedOrgId) return
+ if (orgOptions.length > 0) setSelectedOrgId(orgOptions[0].id)
+ }, [orgOptions, selectedOrgId, setSelectedOrgId])
 
-  const visibleOrgIds = useMemo(() => {
-    if (selectedOrgId && selectedOrgId !== 'all') return [selectedOrgId]
-    return orgOptions.map((o) => o.id)
-  }, [selectedOrgId, orgOptions])
+ const visibleOrgIds = useMemo(() => {
+ if (selectedOrgId && selectedOrgId !== 'all') return [selectedOrgId]
+ return orgOptions.map((o) => o.id)
+ }, [selectedOrgId, orgOptions])
 
-  const [submissions, setSubmissions] = useState<ProgrammeComponentSubmission[]>([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [typeFilter, setTypeFilter] = useState<'all' | ProgrammeComponentType>('all')
-  const [statusFilter, setStatusFilter] = useState<'all' | ProgrammeSubmissionStatus>('all')
+ const [submissions, setSubmissions] = useState<ProgrammeComponentSubmission[]>([])
+ const [loading, setLoading] = useState(true)
+ const [search, setSearch] = useState('')
+ const [typeFilter, setTypeFilter] = useState<'all' | ProgrammeComponentType>('all')
+ const [statusFilter, setStatusFilter] = useState<'all' | ProgrammeSubmissionStatus>('all')
 
-  useEffect(() => {
-    if (visibleOrgIds.length === 0) {
-      setSubmissions([])
-      setLoading(false)
-      return () => undefined
-    }
-    setLoading(true)
-    const unsubscribe = subscribeToSubmissionsByOrgIds(
-      visibleOrgIds,
-      (rows) => {
-        setSubmissions(rows)
-        setLoading(false)
-      },
-      () => setLoading(false),
-    )
-    return () => unsubscribe()
-  }, [visibleOrgIds])
+ useEffect(() => {
+ if (visibleOrgIds.length === 0) {
+ setSubmissions([])
+ setLoading(false)
+ return () => undefined
+ }
+ setLoading(true)
+ const unsubscribe = subscribeToSubmissionsByOrgIds(
+ visibleOrgIds,
+ (rows) => {
+ setSubmissions(rows)
+ setLoading(false)
+ },
+ () => setLoading(false),
+ )
+ return () => unsubscribe()
+ }, [visibleOrgIds])
 
-  const filtered = useMemo(() => {
-    const term = search.trim().toLowerCase()
-    return submissions.filter((row) => {
-      if (typeFilter !== 'all' && row.componentType !== typeFilter) return false
-      if (statusFilter !== 'all' && row.status !== statusFilter) return false
-      if (!term) return true
-      const haystack = [
-        row.displayName ?? '',
-        row.email ?? '',
-        row.componentTitle ?? '',
-        row.componentId,
-        row.partTitle ?? '',
-      ]
-        .join(' ')
-        .toLowerCase()
-      return haystack.includes(term)
-    })
-  }, [submissions, search, typeFilter, statusFilter])
+ const filtered = useMemo(() => {
+ const term = search.trim().toLowerCase()
+ return submissions.filter((row) => {
+ if (typeFilter !== 'all' && row.componentType !== typeFilter) return false
+ if (statusFilter !== 'all' && row.status !== statusFilter) return false
+ if (!term) return true
+ const haystack = [
+ row.displayName ?? '',
+ row.email ?? '',
+ row.componentTitle ?? '',
+ row.componentId,
+ row.partTitle ?? '',
+ ]
+ .join(' ')
+ .toLowerCase()
+ return haystack.includes(term)
+ })
+ }, [submissions, search, typeFilter, statusFilter])
 
-  const counts = useMemo(() => {
-    const next: Record<ProgrammeSubmissionStatus | 'total', number> = {
-      total: submissions.length,
-      submitted: 0,
-      in_review: 0,
-      approved: 0,
-      needs_revision: 0,
-    }
-    submissions.forEach((s) => {
-      next[s.status] = (next[s.status] ?? 0) + 1
-    })
-    return next
-  }, [submissions])
+ const counts = useMemo(() => {
+ const next: Record<ProgrammeSubmissionStatus | 'total', number> = {
+ total: submissions.length,
+ submitted: 0,
+ in_review: 0,
+ approved: 0,
+ needs_revision: 0,
+ }
+ submissions.forEach((s) => {
+ next[s.status] = (next[s.status] ?? 0) + 1
+ })
+ return next
+ }, [submissions])
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selectedSubmission = useMemo(
-    () => submissions.find((s) => s.id === selectedId) ?? null,
-    [submissions, selectedId],
-  )
+ const [selectedId, setSelectedId] = useState<string | null>(null)
+ const selectedSubmission = useMemo(
+ () => submissions.find((s) => s.id === selectedId) ?? null,
+ [submissions, selectedId],
+ )
 
-  const openSubmission = (row: ProgrammeComponentSubmission) => {
-    setSelectedId(row.id)
-    drawer.onOpen()
-  }
+ const openSubmission = (row: ProgrammeComponentSubmission) => {
+ setSelectedId(row.id)
+ drawer.onOpen()
+ }
 
-  const closeDrawer = () => {
-    drawer.onClose()
-    setSelectedId(null)
-  }
+ const closeDrawer = () => {
+ drawer.onClose()
+ setSelectedId(null)
+ }
 
-  return (
-    <PartnerLayout
-      activeItem="programme-submissions"
-      organizations={orgOptions.map((o) => ({ id: o.id, code: o.code, name: o.name }))}
-      selectedOrg={selectedOrgId || 'all'}
-      onSelectOrg={(v) => setSelectedOrgId(v === 'all' ? '' : v)}
-      onNavigate={handleNavigate}
-    >
-      <Stack spacing={6}>
-        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} flexWrap="wrap">
-          <Box>
-            <HStack spacing={2} mb={1}>
-              <Icon as={ClipboardList} color={ROYAL} boxSize={5} />
-              <Heading size="lg" color={PLUM}>
-                Programme submissions
-              </Heading>
-            </HStack>
-            <Text color="gray.600" fontSize="sm">
-              Capstone, case study, and practical work from learners in your organisations.
-              Gemini pre-grades each submission; you confirm, add Bank B judgment, and approve.
-            </Text>
-          </Box>
-        </Flex>
+ return (
+ <PartnerLayout
+ activeItem="programme-submissions"
+ organizations={orgOptions.map((o) => ({ id: o.id, code: o.code, name: o.name }))}
+ selectedOrg={selectedOrgId || 'all'}
+ onSelectOrg={(v) => setSelectedOrgId(v === 'all' ? '' : v)}
+ onNavigate={handleNavigate}
+ >
+ <Stack spacing={6}>
+ <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} flexWrap="wrap">
+ <Box>
+ <HStack spacing={2} mb={1}>
+ <Icon as={ClipboardList} color={ROYAL} boxSize={5} />
+ <Heading size="lg" color={PLUM}>
+ Programme submissions
+ </Heading>
+ </HStack>
+ <Text color="gray.600" fontSize="sm">
+ Capstone, case study, and practical work from learners in your organisations.
+ Gemini pre-grades each submission; you confirm, add Bank B judgment, and approve.
+ </Text>
+ </Box>
+ </Flex>
 
-        {!orgOptions.length && !orgsLoading && (
-          <Alert status="info" rounded="lg">
-            <AlertIcon />
-            <Box>
-              <AlertTitle>No organisations yet</AlertTitle>
-              <AlertDescription>
-                Ask a super admin to assign you to an organisation before you can review programme submissions.
-              </AlertDescription>
-            </Box>
-          </Alert>
-        )}
+ {!orgOptions.length && !orgsLoading && (
+ <Alert status="info" rounded="lg">
+ <AlertIcon />
+ <Box>
+ <AlertTitle>No organisations yet</AlertTitle>
+ <AlertDescription>
+ Ask a super admin to assign you to an organisation before you can review programme submissions.
+ </AlertDescription>
+ </Box>
+ </Alert>
+ )}
 
-        {orgOptions.length > 0 && (
-          <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3}>
-            <StatTile label="Total" value={counts.total} color="gray.700" />
-            <StatTile label="New" value={counts.submitted} color={ROYAL} />
-            <StatTile label="In review" value={counts.in_review} color="#1e3a8a" />
-            <StatTile label="Approved" value={counts.approved} color="#0f6c2e" />
-            <StatTile label="Needs revision" value={counts.needs_revision} color="#9a3412" />
-          </SimpleGrid>
-        )}
+ {orgOptions.length > 0 && (
+ <SimpleGrid columns={{ base: 2, md: 5 }} spacing={3}>
+ <StatTile label="Total" value={counts.total} color="gray.700" />
+ <StatTile label="New" value={counts.submitted} color={ROYAL} />
+ <StatTile label="In review" value={counts.in_review} color="#1e3a8a" />
+ <StatTile label="Approved" value={counts.approved} color="#0f6c2e" />
+ <StatTile label="Needs revision" value={counts.needs_revision} color="#9a3412" />
+ </SimpleGrid>
+ )}
 
-        {orgOptions.length > 0 && (
-          <Box bg="white" rounded="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
-            <Flex
-              gap={3}
-              p={4}
-              borderBottom="1px solid"
-              borderColor="gray.200"
-              flexWrap="wrap"
-              align="flex-end"
-            >
-              <FormControl maxW={{ base: 'full', md: 'sm' }}>
-                <FormLabel fontSize="xs" color="gray.500" mb={1}>
-                  Search
-                </FormLabel>
-                <HStack
-                  border="1px solid"
-                  borderColor="gray.300"
-                  rounded="md"
-                  px={3}
-                  bg="white"
-                  _focusWithin={{ borderColor: ROYAL, boxShadow: `0 0 0 1px ${ROYAL}` }}
-                >
-                  <Icon as={Search} boxSize={4} color="gray.400" />
-                  <Input
-                    variant="unstyled"
-                    placeholder="Learner name, email, component..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    size="sm"
-                  />
-                </HStack>
-              </FormControl>
-              <FormControl maxW={{ base: 'full', md: '180px' }}>
-                <FormLabel fontSize="xs" color="gray.500" mb={1}>
-                  Type
-                </FormLabel>
-                <Select
-                  size="sm"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
-                >
-                  <option value="all">All types</option>
-                  <option value="capstone">Capstone</option>
-                  <option value="case_study">Case Study</option>
-                  <option value="practical">Practical</option>
-                </Select>
-              </FormControl>
-              <FormControl maxW={{ base: 'full', md: '180px' }}>
-                <FormLabel fontSize="xs" color="gray.500" mb={1}>
-                  Status
-                </FormLabel>
-                <Select
-                  size="sm"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                >
-                  <option value="all">All statuses</option>
-                  <option value="submitted">New</option>
-                  <option value="in_review">In review</option>
-                  <option value="approved">Approved</option>
-                  <option value="needs_revision">Needs revision</option>
-                </Select>
-              </FormControl>
-            </Flex>
+ {orgOptions.length > 0 && (
+ <Box bg="white" rounded="lg" border="1px solid" borderColor="gray.200" overflow="hidden">
+ <Flex
+ gap={3}
+ p={4}
+ borderBottom="1px solid"
+ borderColor="gray.200"
+ flexWrap="wrap"
+ align="flex-end"
+ >
+ <FormControl maxW={{ base: 'full', md: 'sm' }}>
+ <FormLabel fontSize="xs" color="gray.500" mb={1}>
+ Search
+ </FormLabel>
+ <HStack
+ border="1px solid"
+ borderColor="gray.300"
+ rounded="md"
+ px={3}
+ bg="white"
+ _focusWithin={{ borderColor: ROYAL, boxShadow: `0 0 0 1px ${ROYAL}` }}
+ >
+ <Icon as={Search} boxSize={4} color="gray.400" />
+ <Input
+ variant="unstyled"
+ placeholder="Learner name, email, component..."
+ value={search}
+ onChange={(e) => setSearch(e.target.value)}
+ size="sm"
+ />
+ </HStack>
+ </FormControl>
+ <FormControl maxW={{ base: 'full', md: '180px' }}>
+ <FormLabel fontSize="xs" color="gray.500" mb={1}>
+ Type
+ </FormLabel>
+ <Select
+ size="sm"
+ value={typeFilter}
+ onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+ >
+ <option value="all">All types</option>
+ <option value="capstone">Capstone</option>
+ <option value="case_study">Case Study</option>
+ <option value="practical">Practical</option>
+ </Select>
+ </FormControl>
+ <FormControl maxW={{ base: 'full', md: '180px' }}>
+ <FormLabel fontSize="xs" color="gray.500" mb={1}>
+ Status
+ </FormLabel>
+ <Select
+ size="sm"
+ value={statusFilter}
+ onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+ >
+ <option value="all">All statuses</option>
+ <option value="submitted">New</option>
+ <option value="in_review">In review</option>
+ <option value="approved">Approved</option>
+ <option value="needs_revision">Needs revision</option>
+ </Select>
+ </FormControl>
+ </Flex>
 
-            {loading ? (
-              <HStack p={6} spacing={3} color="gray.500">
-                <Spinner size="sm" />
-                <Text>Loading submissions...</Text>
-              </HStack>
-            ) : filtered.length === 0 ? (
-              <Box p={10} textAlign="center">
-                <Icon as={FileText} boxSize={8} color="gray.300" mb={2} />
-                <Text fontSize="sm" color="gray.500">
-                  {submissions.length === 0
-                    ? 'No submissions yet. Learners will appear here as they submit work.'
-                    : 'No submissions match your filters.'}
-                </Text>
-              </Box>
-            ) : (
-              <Box overflowX="auto">
-                <Table size="sm" variant="simple">
-                  <Thead bg="gray.50">
-                    <Tr>
-                      <Th>Learner</Th>
-                      <Th>Component</Th>
-                      <Th>Type</Th>
-                      <Th>AI grade</Th>
-                      <Th>Submitted</Th>
-                      <Th>Status</Th>
-                      <Th width="100px">Action</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {filtered.map((row) => {
-                      const typeMeta = row.componentType ? TYPE_META[row.componentType] : null
-                      const statusMeta = STATUS_META[row.status]
-                      return (
-                        <Tr
-                          key={row.id}
-                          _hover={{ bg: 'gray.50', cursor: 'pointer' }}
-                          onClick={() => openSubmission(row)}
-                        >
-                          <Td>
-                            <Stack spacing={0}>
-                              <Text fontWeight="medium" color="gray.900">
-                                {row.displayName || 'Unnamed learner'}
-                              </Text>
-                              <Text fontSize="xs" color="gray.500">
-                                {row.email ?? '-'}
-                              </Text>
-                            </Stack>
-                          </Td>
-                          <Td>
-                            <Stack spacing={0}>
-                              <Text fontSize="sm" color="gray.800" noOfLines={1}>
-                                {row.componentTitle || row.componentId}
-                              </Text>
-                              {row.partTitle && (
-                                <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                                  {row.partTitle}
-                                </Text>
-                              )}
-                            </Stack>
-                          </Td>
-                          <Td>
-                            {typeMeta ? (
-                              <HStack spacing={1.5}>
-                                <Box
-                                  p={1}
-                                  bg={typeMeta.bg}
-                                  color={typeMeta.color}
-                                  rounded="md"
-                                  display="inline-flex"
-                                >
-                                  <Icon as={typeMeta.icon} boxSize={3} />
-                                </Box>
-                                <Text fontSize="xs" fontWeight="medium" color="gray.700">
-                                  {typeMeta.label}
-                                </Text>
-                              </HStack>
-                            ) : (
-                              <Text fontSize="xs" color="gray.400">
-                                -
-                              </Text>
-                            )}
-                          </Td>
-                          <Td>
-                            <AiGradeBadge submission={row} />
-                          </Td>
-                          <Td>
-                            <Text fontSize="xs" color="gray.600">
-                              {formatDate(row.lastUpdatedAt ?? row.submittedAt)}
-                            </Text>
-                          </Td>
-                          <Td>
-                            <Badge
-                              colorScheme={statusMeta.colorScheme}
-                              variant="subtle"
-                              fontSize="2xs"
-                              textTransform="none"
-                              rounded="md"
-                              px={2}
-                            >
-                              {statusMeta.label}
-                            </Badge>
-                          </Td>
-                          <Td>
-                            <Button
-                              size="xs"
-                              variant="outline"
-                              borderColor="gray.300"
-                              color={ROYAL}
-                              _hover={{ bg: 'gray.50', borderColor: ROYAL }}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openSubmission(row)
-                              }}
-                            >
-                              Review
-                            </Button>
-                          </Td>
-                        </Tr>
-                      )
-                    })}
-                  </Tbody>
-                </Table>
-              </Box>
-            )}
-          </Box>
-        )}
-      </Stack>
+ {loading ? (
+ <HStack p={6} spacing={3} color="gray.500">
+ <Spinner size="sm" />
+ <Text>Loading submissions...</Text>
+ </HStack>
+ ) : filtered.length === 0 ? (
+ <Box p={10} textAlign="center">
+ <Icon as={FileText} boxSize={8} color="gray.300" mb={2} />
+ <Text fontSize="sm" color="gray.500">
+ {submissions.length === 0
+ ? 'No submissions yet. Learners will appear here as they submit work.'
+ : 'No submissions match your filters.'}
+ </Text>
+ </Box>
+ ) : (
+ <Box overflowX="auto">
+ <Table size="sm" variant="simple">
+ <Thead bg="gray.50">
+ <Tr>
+ <Th>Learner</Th>
+ <Th>Component</Th>
+ <Th>Type</Th>
+ <Th>AI grade</Th>
+ <Th>Submitted</Th>
+ <Th>Status</Th>
+ <Th width="100px">Action</Th>
+ </Tr>
+ </Thead>
+ <Tbody>
+ {filtered.map((row) => {
+ const typeMeta = row.componentType ? TYPE_META[row.componentType] : null
+ const statusMeta = STATUS_META[row.status]
+ return (
+ <Tr
+ key={row.id}
+ _hover={{ bg: 'gray.50', cursor: 'pointer' }}
+ onClick={() => openSubmission(row)}
+ >
+ <Td>
+ <Stack spacing={0}>
+ <Text fontWeight="medium" color="gray.900">
+ {row.displayName || 'Unnamed learner'}
+ </Text>
+ <Text fontSize="xs" color="gray.500">
+ {row.email ?? '-'}
+ </Text>
+ </Stack>
+ </Td>
+ <Td>
+ <Stack spacing={0}>
+ <Text fontSize="sm" color="gray.800" noOfLines={1}>
+ {row.componentTitle || row.componentId}
+ </Text>
+ {row.partTitle && (
+ <Text fontSize="xs" color="gray.500" noOfLines={1}>
+ {row.partTitle}
+ </Text>
+ )}
+ </Stack>
+ </Td>
+ <Td>
+ {typeMeta ? (
+ <HStack spacing={1.5}>
+ <Box
+ p={1}
+ bg={typeMeta.bg}
+ color={typeMeta.color}
+ rounded="md"
+ display="inline-flex"
+ >
+ <Icon as={typeMeta.icon} boxSize={3} />
+ </Box>
+ <Text fontSize="xs" fontWeight="medium" color="gray.700">
+ {typeMeta.label}
+ </Text>
+ </HStack>
+ ) : (
+ <Text fontSize="xs" color="gray.400">
+ -
+ </Text>
+ )}
+ </Td>
+ <Td>
+ <AiGradeBadge submission={row} />
+ </Td>
+ <Td>
+ <Text fontSize="xs" color="gray.600">
+ {formatDate(row.lastUpdatedAt ?? row.submittedAt)}
+ </Text>
+ </Td>
+ <Td>
+ <Badge
+ colorScheme={statusMeta.colorScheme}
+ variant="subtle"
+ fontSize="2xs"
+ textTransform="none"
+ rounded="md"
+ px={2}
+ >
+ {statusMeta.label}
+ </Badge>
+ </Td>
+ <Td>
+ <Button
+ size="xs"
+ variant="outline"
+ borderColor="gray.300"
+ color={ROYAL}
+ _hover={{ bg: 'gray.50', borderColor: ROYAL }}
+ onClick={(e) => {
+ e.stopPropagation()
+ openSubmission(row)
+ }}
+ >
+ Review
+ </Button>
+ </Td>
+ </Tr>
+ )
+ })}
+ </Tbody>
+ </Table>
+ </Box>
+ )}
+ </Box>
+ )}
+ </Stack>
 
-      <SubmissionReviewDrawer
-        isOpen={drawer.isOpen}
-        onClose={closeDrawer}
-        submission={selectedSubmission}
-        reviewerId={profile?.id ?? null}
-        reviewerName={getDisplayName(profile, 'Partner')}
-        onSaved={(toastInput) => toast(toastInput)}
-      />
-    </PartnerLayout>
-  )
+ <SubmissionReviewDrawer
+ isOpen={drawer.isOpen}
+ onClose={closeDrawer}
+ submission={selectedSubmission}
+ reviewerId={profile?.id ?? null}
+ reviewerName={getDisplayName(profile, 'Partner')}
+ onSaved={(toastInput) => toast(toastInput)}
+ />
+ </PartnerLayout>
+ )
 }
 
 interface StatTileProps {
-  label: string
-  value: number
-  color: string
+ label: string
+ value: number
+ color: string
 }
 
 const StatTile: React.FC<StatTileProps> = ({ label, value, color }) => (
-  <Box
-    bg="white"
-    rounded="lg"
-    border="1px solid"
-    borderColor="gray.200"
-    p={4}
-    boxShadow="0 1px 2px rgba(0,0,0,0.03)"
-  >
-    <Text fontSize="2xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
-      {label}
-    </Text>
-    <Text fontSize="2xl" fontWeight="bold" color={color}>
-      {value}
-    </Text>
-  </Box>
+ <Box
+ bg="white"
+ rounded="lg"
+ border="1px solid"
+ borderColor="gray.200"
+ p={4}
+ boxShadow="0 1px 2px rgba(0,0,0,0.03)"
+ >
+ <Text fontSize="2xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
+ {label}
+ </Text>
+ <Text fontSize="2xl" fontWeight="bold" color={color}>
+ {value}
+ </Text>
+ </Box>
 )
 
 const AiGradeBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ submission }) => {
-  const ai = submission.aiGrade
-  if (!ai) {
-    return (
-      <Text fontSize="xs" color="gray.400">
-        Pending
-      </Text>
-    )
-  }
-  if (ai.status === 'error') {
-    return (
-      <Badge colorScheme="red" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
-        AI error
-      </Badge>
-    )
-  }
-  if (ai.status !== 'completed') {
-    return (
-      <Badge colorScheme="gray" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
-        Grading…
-      </Badge>
-    )
-  }
-  const display =
-    ai.score != null
-      ? Math.round(ai.score)
-      : getAiBankAScore(ai) != null
-        ? `${getAiBankAScore(ai)}/50`
-        : null
-  if (display == null) {
-    return (
-      <Text fontSize="xs" color="gray.400">
-        —
-      </Text>
-    )
-  }
-  return (
-    <HStack spacing={1}>
-      <Badge
-        colorScheme={ai.pass === false ? 'orange' : 'green'}
-        variant="subtle"
-        fontSize="2xs"
-        textTransform="none"
-        rounded="md"
-      >
-        {typeof display === 'number' ? `${display}/100` : display}
-      </Badge>
-      {ai.pass === true && (
-        <Text fontSize="2xs" color="green.700">
-          Pass
-        </Text>
-      )}
-      {ai.pass === false && (
-        <Text fontSize="2xs" color="orange.700">
-          Fail
-        </Text>
-      )}
-    </HStack>
-  )
+ const ai = submission.aiGrade
+ if (!ai) {
+ return (
+ <Text fontSize="xs" color="gray.400">
+ Pending
+ </Text>
+ )
+ }
+ if (ai.status === 'error') {
+ return (
+ <Badge colorScheme="red" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+ AI error
+ </Badge>
+ )
+ }
+ if (ai.status !== 'completed') {
+ return (
+ <Badge colorScheme="gray" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+ Grading…
+ </Badge>
+ )
+ }
+ const display =
+ ai.score != null
+ ? Math.round(ai.score)
+ : getAiBankAScore(ai) != null
+ ? `${getAiBankAScore(ai)}/50`
+ : null
+ if (display == null) {
+ return (
+ <Text fontSize="xs" color="gray.400"> - </Text>
+ )
+ }
+ return (
+ <HStack spacing={1}>
+ <Badge
+ colorScheme={ai.pass === false ? 'orange' : 'green'}
+ variant="subtle"
+ fontSize="2xs"
+ textTransform="none"
+ rounded="md"
+ >
+ {typeof display === 'number' ? `${display}/100` : display}
+ </Badge>
+ {ai.pass === true && (
+ <Text fontSize="2xs" color="green.700">
+ Pass
+ </Text>
+ )}
+ {ai.pass === false && (
+ <Text fontSize="2xs" color="orange.700">
+ Fail
+ </Text>
+ )}
+ </HStack>
+ )
 }
 
 interface DrawerProps {
-  isOpen: boolean
-  onClose: () => void
-  submission: ProgrammeComponentSubmission | null
-  reviewerId: string | null
-  reviewerName: string
-  onSaved: (toast: Parameters<ReturnType<typeof useToast>>[0]) => void
+ isOpen: boolean
+ onClose: () => void
+ submission: ProgrammeComponentSubmission | null
+ reviewerId: string | null
+ reviewerName: string
+ onSaved: (toast: Parameters<ReturnType<typeof useToast>>[0]) => void
 }
 
 const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
-  isOpen,
-  onClose,
-  submission,
-  reviewerId,
-  reviewerName,
-  onSaved,
+ isOpen,
+ onClose,
+ submission,
+ reviewerId,
+ reviewerName,
+ onSaved,
 }) => {
-  const [status, setStatus] = useState<ProgrammeSubmissionStatus>('in_review')
-  const [notes, setNotes] = useState('')
-  const [score, setScore] = useState<string>('')
-  const [partnerBankB, setPartnerBankB] = useState<string>('')
-  const [saving, setSaving] = useState(false)
-  const [learnerJourneyType, setLearnerJourneyType] = useState<JourneyType | null>(null)
+ const [status, setStatus] = useState<ProgrammeSubmissionStatus>('in_review')
+ const [notes, setNotes] = useState('')
+ const [score, setScore] = useState<string>('')
+ const [partnerBankB, setPartnerBankB] = useState<string>('')
+ const [saving, setSaving] = useState(false)
+ const [learnerJourneyType, setLearnerJourneyType] = useState<JourneyType | null>(null)
 
-  useEffect(() => {
-    if (!submission) return
-    setStatus(submission.status === 'submitted' ? 'in_review' : submission.status)
-    setNotes(submission.partnerNotes ?? '')
-    const aiScore =
-      submission.aiGrade?.status === 'completed' && submission.aiGrade.score != null
-        ? Math.round(submission.aiGrade.score)
-        : null
-    const initialScore = submission.finalScore ?? submission.score ?? aiScore
-    setScore(initialScore !== null ? String(initialScore) : '')
-    setPartnerBankB(
-      submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : '',
-    )
-  }, [submission])
+ useEffect(() => {
+ if (!submission) return
+ setStatus(submission.status === 'submitted' ? 'in_review' : submission.status)
+ setNotes(submission.partnerNotes ?? '')
+ const aiScore =
+ submission.aiGrade?.status === 'completed' && submission.aiGrade.score != null
+ ? Math.round(submission.aiGrade.score)
+ : null
+ const initialScore = submission.finalScore ?? submission.score ?? aiScore
+ setScore(initialScore !== null ? String(initialScore) : '')
+ setPartnerBankB(
+ submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : '',
+ )
+ }, [submission])
 
-  useEffect(() => {
-    if (!submission?.uid) {
-      setLearnerJourneyType(null)
-      return
-    }
-    let cancelled = false
-    ;(async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('journey_type, data')
-        .eq('id', submission.uid)
-        .maybeSingle()
-      if (cancelled) return
-      const raw =
-        (data?.journey_type as string | null) ||
-        ((data?.data as { journeyType?: string } | null)?.journeyType ?? null)
-      setLearnerJourneyType(isJourneyType(raw) ? raw : null)
-    })().catch(() => {
-      if (!cancelled) setLearnerJourneyType(null)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [submission?.uid])
+ useEffect(() => {
+ if (!submission?.uid) {
+ setLearnerJourneyType(null)
+ return
+ }
+ let cancelled = false
+ ;(async () => {
+ const { data } = await supabase
+ .from('profiles')
+ .select('journey_type, data')
+ .eq('id', submission.uid)
+ .maybeSingle()
+ if (cancelled) return
+ const raw =
+ (data?.journey_type as string | null) ||
+ ((data?.data as { journeyType?: string } | null)?.journeyType ?? null)
+ setLearnerJourneyType(isJourneyType(raw) ? raw : null)
+ })().catch(() => {
+ if (!cancelled) setLearnerJourneyType(null)
+ })
+ return () => {
+ cancelled = true
+ }
+ }, [submission?.uid])
 
-  if (!submission) return null
+ if (!submission) return null
 
-  const typeMeta = submission.componentType ? TYPE_META[submission.componentType] : null
-  const journeyForPoints = learnerJourneyType ?? '6W'
-  const componentPoints = getComponentPoints(submission.componentType, journeyForPoints)
-  // 3M / 6M / 9M programme components are graded Pass/Fail (0 checklist points).
-  const passFailMode =
-    (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) ||
-    componentPoints === 0
-  const ai = submission.aiGrade
-  const aiBankA = getAiBankAScore(ai)
-  const aiFeedback =
-    (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
+ const typeMeta = submission.componentType ? TYPE_META[submission.componentType] : null
+ const journeyForPoints = learnerJourneyType ?? '6W'
+ const componentPoints = getComponentPoints(submission.componentType, journeyForPoints)
+ // 3M / 6M / 9M programme components are graded Pass/Fail (0 checklist points).
+ const passFailMode =
+ (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) ||
+ componentPoints === 0
+ const ai = submission.aiGrade
+ const aiBankA = getAiBankAScore(ai)
+ const aiFeedback =
+ (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
 
-  const applyAiSuggestion = () => {
-    if (ai?.status !== 'completed') return
-    if (ai.score != null) setScore(String(Math.round(ai.score)))
-    else if (aiBankA != null) setScore(String(aiBankA * 2))
-    if (aiFeedback && !notes.trim()) setNotes(aiFeedback)
-    if (ai.pass === false) setStatus('needs_revision')
-    else if (ai.pass === true) setStatus('approved')
-  }
+ const applyAiSuggestion = () => {
+ if (ai?.status !== 'completed') return
+ if (ai.score != null) setScore(String(Math.round(ai.score)))
+ else if (aiBankA != null) setScore(String(aiBankA * 2))
+ if (aiFeedback && !notes.trim()) setNotes(aiFeedback)
+ if (ai.pass === false) setStatus('needs_revision')
+ else if (ai.pass === true) setStatus('approved')
+ }
 
-  const handleSave = async () => {
-    if (!reviewerId) {
-      onSaved({ status: 'error', title: 'You need to be signed in to save.' })
-      return
-    }
-    setSaving(true)
-    try {
-      const scoreNum = score.trim() === '' ? null : Number(score)
-      const cleanScore = Number.isFinite(scoreNum as number) ? (scoreNum as number) : null
-      const bankBRaw = partnerBankB.trim() === '' ? null : Number(partnerBankB)
-      let partnerScore50: number | null =
-        bankBRaw != null && Number.isFinite(bankBRaw)
-          ? Math.max(0, Math.min(50, Math.round(bankBRaw)))
-          : null
-      let finalScore: number | null = cleanScore
-      if (aiBankA != null && partnerScore50 != null) {
-        finalScore = Math.max(0, Math.min(100, aiBankA + partnerScore50))
-      } else if (cleanScore != null && aiBankA != null && partnerScore50 == null) {
-        // Treat overall score as final; derive Bank B from remainder.
-        partnerScore50 = Math.max(0, Math.min(50, Math.round(cleanScore) - aiBankA))
-        finalScore = Math.max(0, Math.min(100, Math.round(cleanScore)))
-      }
-      const cleanNotes = notes.trim() === '' ? null : notes.trim()
+ const handleSave = async () => {
+ if (!reviewerId) {
+ onSaved({ status: 'error', title: 'You need to be signed in to save.' })
+ return
+ }
+ setSaving(true)
+ try {
+ const scoreNum = score.trim() === '' ? null : Number(score)
+ const cleanScore = Number.isFinite(scoreNum as number) ? (scoreNum as number) : null
+ const bankBRaw = partnerBankB.trim() === '' ? null : Number(partnerBankB)
+ let partnerScore50: number | null =
+ bankBRaw != null && Number.isFinite(bankBRaw)
+ ? Math.max(0, Math.min(50, Math.round(bankBRaw)))
+ : null
+ let finalScore: number | null = cleanScore
+ if (aiBankA != null && partnerScore50 != null) {
+ finalScore = Math.max(0, Math.min(100, aiBankA + partnerScore50))
+ } else if (cleanScore != null && aiBankA != null && partnerScore50 == null) {
+ // Treat overall score as final; derive Bank B from remainder.
+ partnerScore50 = Math.max(0, Math.min(50, Math.round(cleanScore) - aiBankA))
+ finalScore = Math.max(0, Math.min(100, Math.round(cleanScore)))
+ }
+ const cleanNotes = notes.trim() === '' ? null : notes.trim()
 
-      if (status === 'approved') {
-        // Approving awards points on 6W; on month journeys this is a Pass mark.
-        const result = await approveSubmissionAndAward({
-          submission,
-          reviewerId,
-          reviewerName,
-          partnerNotes: cleanNotes,
-          score: finalScore ?? cleanScore,
-          partnerScore50,
-          finalScore,
-        })
-        const isPassMark = passFailMode || result.points === 0
-        onSaved({
-          status: 'success',
-          title: !result.pointsEligible
-            ? isPassMark
-              ? 'Passed'
-              : 'Approved'
-            : result.alreadyAwarded
-              ? isPassMark
-                ? 'Already marked Pass'
-                : 'Already awarded'
-              : isPassMark
-                ? 'Passed'
-                : `Approved · +${result.points.toLocaleString()} pts`,
-          description: !result.pointsEligible
-            ? 'Your review and feedback were saved. This component is graded Pass/Fail and does not award points.'
-            : result.alreadyAwarded
-              ? isPassMark
-                ? 'This submission was already marked Pass. Your feedback was saved.'
-                : 'This submission was already credited, so no new points were added. Your feedback was saved.'
-              : isPassMark
-                ? 'Marked as Pass. The learner has been notified — no checklist points are awarded.'
-                : `${result.points.toLocaleString()} points were awarded to the learner and they have been notified.`,
-        })
-      } else {
-        await updateSubmissionReview(submission.id, {
-          status,
-          partnerNotes: cleanNotes,
-          score: finalScore ?? cleanScore,
-          partnerScore50,
-          finalScore,
-          reviewerId,
-          reviewerName,
-        })
-        onSaved({
-          status: 'success',
-          title:
-            passFailMode && status === 'needs_revision'
-              ? 'Marked as Fail / needs revision'
-              : 'Review saved',
-          description: 'The learner will see your decision and feedback.',
-        })
-      }
-      onClose()
-    } catch (err) {
-      console.error('[ProgrammeSubmissions] save failed', err)
-      onSaved({
-        status: 'error',
-        title: 'Could not save your review',
-        description: 'Please try again in a moment.',
-      })
-    } finally {
-      setSaving(false)
-    }
-  }
+ if (status === 'approved') {
+ // Approving awards points on 6W; on month journeys this is a Pass mark.
+ const result = await approveSubmissionAndAward({
+ submission,
+ reviewerId,
+ reviewerName,
+ partnerNotes: cleanNotes,
+ score: finalScore ?? cleanScore,
+ partnerScore50,
+ finalScore,
+ })
+ const isPassMark = passFailMode || result.points === 0
+ onSaved({
+ status: 'success',
+ title: !result.pointsEligible
+ ? isPassMark
+ ? 'Passed'
+ : 'Approved'
+ : result.alreadyAwarded
+ ? isPassMark
+ ? 'Already marked Pass'
+ : 'Already awarded'
+ : isPassMark
+ ? 'Passed'
+ : `Approved · +${result.points.toLocaleString()} pts`,
+ description: !result.pointsEligible
+ ? 'Your review and feedback were saved. This component is graded Pass/Fail and does not award points.'
+ : result.alreadyAwarded
+ ? isPassMark
+ ? 'This submission was already marked Pass. Your feedback was saved.'
+ : 'This submission was already credited, so no new points were added. Your feedback was saved.'
+ : isPassMark
+ ? 'Marked as Pass. The learner has been notified - no checklist points are awarded.'
+ : `${result.points.toLocaleString()} points were awarded to the learner and they have been notified.`,
+ })
+ } else {
+ await updateSubmissionReview(submission.id, {
+ status,
+ partnerNotes: cleanNotes,
+ score: finalScore ?? cleanScore,
+ partnerScore50,
+ finalScore,
+ reviewerId,
+ reviewerName,
+ })
+ onSaved({
+ status: 'success',
+ title:
+ passFailMode && status === 'needs_revision'
+ ? 'Marked as Fail / needs revision'
+ : 'Review saved',
+ description: 'The learner will see your decision and feedback.',
+ })
+ }
+ onClose()
+ } catch (err) {
+ console.error('[ProgrammeSubmissions] save failed', err)
+ onSaved({
+ status: 'error',
+ title: 'Could not save your review',
+ description: 'Please try again in a moment.',
+ })
+ } finally {
+ setSaving(false)
+ }
+ }
 
-  return (
-    <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="lg">
-      <DrawerOverlay />
-      <DrawerContent>
-        <DrawerCloseButton />
-        <DrawerHeader borderBottom="1px solid" borderColor="gray.200">
-          <Stack spacing={1}>
-            <HStack spacing={2}>
-              {typeMeta && (
-                <Box p={1.5} bg={typeMeta.bg} color={typeMeta.color} rounded="md">
-                  <Icon as={typeMeta.icon} boxSize={4} />
-                </Box>
-              )}
-              <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
-                {typeMeta?.label ?? 'Submission'}
-              </Text>
-            </HStack>
-            <Text fontSize="lg" fontWeight="bold" color={PLUM} lineHeight="1.25">
-              {submission.componentTitle || submission.componentId}
-            </Text>
-            {submission.partTitle && (
-              <Text fontSize="sm" color="gray.600">
-                {submission.partTitle}
-              </Text>
-            )}
-            <HStack spacing={3} fontSize="xs" color="gray.500" mt={1}>
-              <Text>
-                <Text as="span" fontWeight="semibold" color="gray.700">
-                  {submission.displayName || 'Unnamed learner'}
-                </Text>
-                {submission.email ? ` (${submission.email})` : ''}
-              </Text>
-              <Text>·</Text>
-              <Text>Submitted {formatDate(submission.submittedAt)}</Text>
-              {submission.resubmittedAt && (
-                <>
-                  <Text>·</Text>
-                  <Text color="#9a3412">Resubmitted {formatDate(submission.resubmittedAt)}</Text>
-                </>
-              )}
-            </HStack>
-          </Stack>
-        </DrawerHeader>
+ return (
+ <Drawer isOpen={isOpen} onClose={onClose} placement="right" size="lg">
+ <DrawerOverlay />
+ <DrawerContent>
+ <DrawerCloseButton />
+ <DrawerHeader borderBottom="1px solid" borderColor="gray.200">
+ <Stack spacing={1}>
+ <HStack spacing={2}>
+ {typeMeta && (
+ <Box p={1.5} bg={typeMeta.bg} color={typeMeta.color} rounded="md">
+ <Icon as={typeMeta.icon} boxSize={4} />
+ </Box>
+ )}
+ <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
+ {typeMeta?.label ?? 'Submission'}
+ </Text>
+ </HStack>
+ <Text fontSize="lg" fontWeight="bold" color={PLUM} lineHeight="1.25">
+ {submission.componentTitle || submission.componentId}
+ </Text>
+ {submission.partTitle && (
+ <Text fontSize="sm" color="gray.600">
+ {submission.partTitle}
+ </Text>
+ )}
+ <HStack spacing={3} fontSize="xs" color="gray.500" mt={1}>
+ <Text>
+ <Text as="span" fontWeight="semibold" color="gray.700">
+ {submission.displayName || 'Unnamed learner'}
+ </Text>
+ {submission.email ? ` (${submission.email})` : ''}
+ </Text>
+ <Text>·</Text>
+ <Text>Submitted {formatDate(submission.submittedAt)}</Text>
+ {submission.resubmittedAt && (
+ <>
+ <Text>·</Text>
+ <Text color="#9a3412">Resubmitted {formatDate(submission.resubmittedAt)}</Text>
+ </>
+ )}
+ </HStack>
+ </Stack>
+ </DrawerHeader>
 
-        <DrawerBody>
-          <Stack spacing={6}>
-            {submission.sourcePage && (
-              <Button
-                as="a"
-                href={submission.sourcePage}
-                target="_blank"
-                rel="noopener noreferrer"
-                size="xs"
-                variant="outline"
-                rightIcon={<Icon as={ExternalLink} boxSize={3} />}
-                alignSelf="flex-start"
-              >
-                Open the original form
-              </Button>
-            )}
+ <DrawerBody>
+ <Stack spacing={6}>
+ {submission.sourcePage && (
+ <Button
+ as="a"
+ href={submission.sourcePage}
+ target="_blank"
+ rel="noopener noreferrer"
+ size="xs"
+ variant="outline"
+ rightIcon={<Icon as={ExternalLink} boxSize={3} />}
+ alignSelf="flex-start"
+ >
+ Open the original form
+ </Button>
+ )}
 
-            <Stack spacing={2}>
-              <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
-                Learner answers ({submission.answerCount})
-              </Text>
-              {Object.entries(submission.answers).length === 0 ? (
-                <Text fontSize="sm" color="gray.500">
-                  No answers captured.
-                </Text>
-              ) : (
-                <Stack spacing={3}>
-                  {Object.entries(submission.answers).map(([key, value]) => (
-                    <Box
-                      key={key}
-                      p={3}
-                      bg="gray.50"
-                      border="1px solid"
-                      borderColor="gray.200"
-                      rounded="md"
-                    >
-                      <Text fontSize="xs" fontWeight="semibold" color="gray.600" mb={1}>
-                        {formatAnswerKey(key)}
-                      </Text>
-                      <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
-                        {value || <Text as="span" color="gray.400">(empty)</Text>}
-                      </Text>
-                    </Box>
-                  ))}
-                </Stack>
-              )}
-            </Stack>
+ <Stack spacing={2}>
+ <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
+ Learner answers ({submission.answerCount})
+ </Text>
+ {Object.entries(submission.answers).length === 0 ? (
+ <Text fontSize="sm" color="gray.500">
+ No answers captured.
+ </Text>
+ ) : (
+ <Stack spacing={3}>
+ {Object.entries(submission.answers).map(([key, value]) => (
+ <Box
+ key={key}
+ p={3}
+ bg="gray.50"
+ border="1px solid"
+ borderColor="gray.200"
+ rounded="md"
+ >
+ <Text fontSize="xs" fontWeight="semibold" color="gray.600" mb={1}>
+ {formatAnswerKey(key)}
+ </Text>
+ <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
+ {value || <Text as="span" color="gray.400">(empty)</Text>}
+ </Text>
+ </Box>
+ ))}
+ </Stack>
+ )}
+ </Stack>
 
-            <Box
-              p={4}
-              bg="white"
-              border="1px solid"
-              borderColor={
-                ai?.status === 'error'
-                  ? 'red.200'
-                  : ai?.status === 'completed'
-                    ? 'green.200'
-                    : 'gray.200'
-              }
-              rounded="lg"
-            >
-              <Stack spacing={3}>
-                <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
-                  <Text fontSize="sm" fontWeight="bold" color={PLUM}>
-                    AI advisory grade
-                  </Text>
-                  <AiGradeBadge submission={submission} />
-                </Flex>
-                {!ai && (
-                  <Text fontSize="sm" color="gray.600">
-                    Waiting for Gemini to grade this submission. Refresh in a few seconds if it stays
-                    empty.
-                  </Text>
-                )}
-                {ai?.status === 'error' && (
-                  <Alert status="warning" rounded="md" py={2}>
-                    <AlertIcon />
-                    <AlertDescription fontSize="sm">
-                      {ai.error || 'AI grading failed. You can still review and score manually.'}
-                    </AlertDescription>
-                  </Alert>
-                )}
-                {ai?.status === 'completed' && (
-                  <>
-                    <HStack spacing={4} flexWrap="wrap">
-                      {ai.score != null && (
-                        <Text fontSize="sm" color="gray.700">
-                          Score{' '}
-                          <Text as="span" fontWeight="bold">
-                            {Math.round(ai.score)}/100
-                          </Text>
-                        </Text>
-                      )}
-                      {aiBankA != null && (
-                        <Text fontSize="sm" color="gray.700">
-                          Bank A{' '}
-                          <Text as="span" fontWeight="bold">
-                            {aiBankA}/50
-                          </Text>
-                        </Text>
-                      )}
-                      {ai.pass != null && (
-                        <Badge colorScheme={ai.pass ? 'green' : 'orange'} textTransform="none">
-                          AI {ai.pass ? 'Pass' : 'Fail'}
-                        </Badge>
-                      )}
-                    </HStack>
-                    {aiFeedback && (
-                      <Box
-                        p={3}
-                        bg="gray.50"
-                        border="1px solid"
-                        borderColor="gray.200"
-                        rounded="md"
-                      >
-                        <Text fontSize="xs" fontWeight="semibold" color="gray.500" mb={1}>
-                          AI feedback
-                        </Text>
-                        <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
-                          {aiFeedback}
-                        </Text>
-                      </Box>
-                    )}
-                    <Button size="xs" variant="outline" colorScheme="purple" onClick={applyAiSuggestion}>
-                      Apply AI suggestion to my review
-                    </Button>
-                    <Text fontSize="xs" color="gray.500">
-                      Advisory only — AI never awards points. You remain the gate.
-                    </Text>
-                  </>
-                )}
-              </Stack>
-            </Box>
+ <Box
+ p={4}
+ bg="white"
+ border="1px solid"
+ borderColor={
+ ai?.status === 'error'
+ ? 'red.200'
+ : ai?.status === 'completed'
+ ? 'green.200'
+ : 'gray.200'
+ }
+ rounded="lg"
+ >
+ <Stack spacing={3}>
+ <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
+ <Text fontSize="sm" fontWeight="bold" color={PLUM}>
+ AI advisory grade
+ </Text>
+ <AiGradeBadge submission={submission} />
+ </Flex>
+ {!ai && (
+ <Text fontSize="sm" color="gray.600">
+ Waiting for Gemini to grade this submission. Refresh in a few seconds if it stays
+ empty.
+ </Text>
+ )}
+ {ai?.status === 'error' && (
+ <Alert status="warning" rounded="md" py={2}>
+ <AlertIcon />
+ <AlertDescription fontSize="sm">
+ {ai.error || 'AI grading failed. You can still review and score manually.'}
+ </AlertDescription>
+ </Alert>
+ )}
+ {ai?.status === 'completed' && (
+ <>
+ <HStack spacing={4} flexWrap="wrap">
+ {ai.score != null && (
+ <Text fontSize="sm" color="gray.700">
+ Score{' '}
+ <Text as="span" fontWeight="bold">
+ {Math.round(ai.score)}/100
+ </Text>
+ </Text>
+ )}
+ {aiBankA != null && (
+ <Text fontSize="sm" color="gray.700">
+ Bank A{' '}
+ <Text as="span" fontWeight="bold">
+ {aiBankA}/50
+ </Text>
+ </Text>
+ )}
+ {ai.pass != null && (
+ <Badge colorScheme={ai.pass ? 'green' : 'orange'} textTransform="none">
+ AI {ai.pass ? 'Pass' : 'Fail'}
+ </Badge>
+ )}
+ </HStack>
+ {aiFeedback && (
+ <Box
+ p={3}
+ bg="gray.50"
+ border="1px solid"
+ borderColor="gray.200"
+ rounded="md"
+ >
+ <Text fontSize="xs" fontWeight="semibold" color="gray.500" mb={1}>
+ AI feedback
+ </Text>
+ <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
+ {aiFeedback}
+ </Text>
+ </Box>
+ )}
+ <Button size="xs" variant="outline" colorScheme="purple" onClick={applyAiSuggestion}>
+ Apply AI suggestion to my review
+ </Button>
+ <Text fontSize="xs" color="gray.500">
+ Advisory only - AI never awards points. You remain the gate.
+ </Text>
+ </>
+ )}
+ </Stack>
+ </Box>
 
-            <Box
-              p={4}
-              bg="#f9f5fb"
-              border="1px solid"
-              borderColor="#e6dbef"
-              rounded="lg"
-            >
-              <Stack spacing={4}>
-                <Text fontSize="sm" fontWeight="bold" color={PLUM}>
-                  Your review
-                </Text>
-                {submission.componentType && (
-                  <HStack
-                    spacing={2}
-                    align="flex-start"
-                    p={2.5}
-                    bg="white"
-                    border="1px solid"
-                    borderColor="#e6dbef"
-                    rounded="md"
-                  >
-                    <Icon as={Award} boxSize={4} color={ROYAL} mt="1px" />
-                    {passFailMode ? (
-                      <Text fontSize="xs" color="gray.700">
-                        This is a{' '}
-                        <Text as="span" fontWeight="semibold">
-                          Pass / Fail
-                        </Text>{' '}
-                        assessment — no checklist points. Set status to{' '}
-                        <Text as="span" fontWeight="semibold">
-                          Approved
-                        </Text>{' '}
-                        for Pass, or{' '}
-                        <Text as="span" fontWeight="semibold">
-                          Needs revision
-                        </Text>{' '}
-                        for Fail.
-                      </Text>
-                    ) : componentPoints > 0 ? (
-                      <Text fontSize="xs" color="gray.700">
-                        Setting status to{' '}
-                        <Text as="span" fontWeight="semibold">
-                          Approved
-                        </Text>{' '}
-                        awards{' '}
-                        <Text as="span" fontWeight="bold" color={PLUM}>
-                          {componentPoints.toLocaleString()} pts
-                        </Text>{' '}
-                        to the learner. Re-approving won't award twice.
-                      </Text>
-                    ) : (
-                      <Text fontSize="xs" color="gray.700">
-                        This component is reviewed but{' '}
-                        <Text as="span" fontWeight="semibold">
-                          does not award points
-                        </Text>
-                        . Your status and feedback are saved for the learner.
-                      </Text>
-                    )}
-                  </HStack>
-                )}
-                <FormControl>
-                  <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    Status
-                  </FormLabel>
-                  <Select
-                    size="sm"
-                    bg="white"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as ProgrammeSubmissionStatus)}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s} value={s}>
-                        {passFailMode && s === 'approved'
-                          ? 'Pass (Approved)'
-                          : passFailMode && s === 'needs_revision'
-                            ? 'Fail (Needs revision)'
-                            : STATUS_META[s].label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl>
-                  <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    {passFailMode ? 'Optional score note (0-100)' : 'Final score (optional, 0-100)'}
-                  </FormLabel>
-                  <NumberInput
-                    size="sm"
-                    min={0}
-                    max={100}
-                    value={score}
-                    onChange={(v) => setScore(v)}
-                    bg="white"
-                  >
-                    <NumberInputField placeholder="-" />
-                  </NumberInput>
-                </FormControl>
-                {aiBankA != null && (
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                      Your Bank B judgment (0–50)
-                    </FormLabel>
-                    <NumberInput
-                      size="sm"
-                      min={0}
-                      max={50}
-                      value={partnerBankB}
-                      onChange={(v) => {
-                        setPartnerBankB(v)
-                        const n = Number(v)
-                        if (Number.isFinite(n)) {
-                          setScore(String(Math.max(0, Math.min(100, aiBankA + Math.round(n)))))
-                        }
-                      }}
-                      bg="white"
-                    >
-                      <NumberInputField placeholder={`AI Bank A is ${aiBankA}/50`} />
-                    </NumberInput>
-                    <Text fontSize="xs" color="gray.500" mt={1}>
-                      Final = AI Bank A ({aiBankA}) + your Bank B.
-                    </Text>
-                  </FormControl>
-                )}
-                <FormControl>
-                  <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    Feedback for the learner
-                  </FormLabel>
-                  <Textarea
-                    size="sm"
-                    bg="white"
-                    minH="120px"
-                    placeholder="What was strong, what to refine, and the one thing to change before resubmitting..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                </FormControl>
-                {submission.reviewedAt && submission.reviewerName && (
-                  <Text fontSize="xs" color="gray.500">
-                    Last reviewed by {submission.reviewerName} on {formatDate(submission.reviewedAt)}
-                  </Text>
-                )}
-              </Stack>
-            </Box>
-          </Stack>
-        </DrawerBody>
+ <Box
+ p={4}
+ bg="#f9f5fb"
+ border="1px solid"
+ borderColor="#e6dbef"
+ rounded="lg"
+ >
+ <Stack spacing={4}>
+ <Text fontSize="sm" fontWeight="bold" color={PLUM}>
+ Your review
+ </Text>
+ {submission.componentType && (
+ <HStack
+ spacing={2}
+ align="flex-start"
+ p={2.5}
+ bg="white"
+ border="1px solid"
+ borderColor="#e6dbef"
+ rounded="md"
+ >
+ <Icon as={Award} boxSize={4} color={ROYAL} mt="1px" />
+ {passFailMode ? (
+ <Text fontSize="xs" color="gray.700">
+ This is a{' '}
+ <Text as="span" fontWeight="semibold">
+ Pass / Fail
+ </Text>{' '}
+ assessment - no checklist points. Set status to{' '}
+ <Text as="span" fontWeight="semibold">
+ Approved
+ </Text>{' '}
+ for Pass, or{' '}
+ <Text as="span" fontWeight="semibold">
+ Needs revision
+ </Text>{' '}
+ for Fail.
+ </Text>
+ ) : componentPoints > 0 ? (
+ <Text fontSize="xs" color="gray.700">
+ Setting status to{' '}
+ <Text as="span" fontWeight="semibold">
+ Approved
+ </Text>{' '}
+ awards{' '}
+ <Text as="span" fontWeight="bold" color={PLUM}>
+ {componentPoints.toLocaleString()} pts
+ </Text>{' '}
+ to the learner. Re-approving won't award twice.
+ </Text>
+ ) : (
+ <Text fontSize="xs" color="gray.700">
+ This component is reviewed but{' '}
+ <Text as="span" fontWeight="semibold">
+ does not award points
+ </Text>
+ . Your status and feedback are saved for the learner.
+ </Text>
+ )}
+ </HStack>
+ )}
+ <FormControl>
+ <FormLabel fontSize="xs" color="gray.600" mb={1}>
+ Status
+ </FormLabel>
+ <Select
+ size="sm"
+ bg="white"
+ value={status}
+ onChange={(e) => setStatus(e.target.value as ProgrammeSubmissionStatus)}
+ >
+ {STATUS_OPTIONS.map((s) => (
+ <option key={s} value={s}>
+ {passFailMode && s === 'approved'
+ ? 'Pass (Approved)'
+ : passFailMode && s === 'needs_revision'
+ ? 'Fail (Needs revision)'
+ : STATUS_META[s].label}
+ </option>
+ ))}
+ </Select>
+ </FormControl>
+ <FormControl>
+ <FormLabel fontSize="xs" color="gray.600" mb={1}>
+ {passFailMode ? 'Optional score note (0-100)' : 'Final score (optional, 0-100)'}
+ </FormLabel>
+ <NumberInput
+ size="sm"
+ min={0}
+ max={100}
+ value={score}
+ onChange={(v) => setScore(v)}
+ bg="white"
+ >
+ <NumberInputField placeholder="-" />
+ </NumberInput>
+ </FormControl>
+ {aiBankA != null && (
+ <FormControl>
+ <FormLabel fontSize="xs" color="gray.600" mb={1}>
+ Your Bank B judgment (0-50)
+ </FormLabel>
+ <NumberInput
+ size="sm"
+ min={0}
+ max={50}
+ value={partnerBankB}
+ onChange={(v) => {
+ setPartnerBankB(v)
+ const n = Number(v)
+ if (Number.isFinite(n)) {
+ setScore(String(Math.max(0, Math.min(100, aiBankA + Math.round(n)))))
+ }
+ }}
+ bg="white"
+ >
+ <NumberInputField placeholder={`AI Bank A is ${aiBankA}/50`} />
+ </NumberInput>
+ <Text fontSize="xs" color="gray.500" mt={1}>
+ Final = AI Bank A ({aiBankA}) + your Bank B.
+ </Text>
+ </FormControl>
+ )}
+ <FormControl>
+ <FormLabel fontSize="xs" color="gray.600" mb={1}>
+ Feedback for the learner
+ </FormLabel>
+ <Textarea
+ size="sm"
+ bg="white"
+ minH="120px"
+ placeholder="What was strong, what to refine, and the one thing to change before resubmitting..."
+ value={notes}
+ onChange={(e) => setNotes(e.target.value)}
+ />
+ </FormControl>
+ {submission.reviewedAt && submission.reviewerName && (
+ <Text fontSize="xs" color="gray.500">
+ Last reviewed by {submission.reviewerName} on {formatDate(submission.reviewedAt)}
+ </Text>
+ )}
+ </Stack>
+ </Box>
+ </Stack>
+ </DrawerBody>
 
-        <DrawerFooter borderTop="1px solid" borderColor="gray.200">
-          <Button variant="outline" mr={3} onClick={onClose} isDisabled={saving}>
-            Close
-          </Button>
-          <Button
-            bg={ROYAL}
-            color="white"
-            _hover={{ bg: PLUM }}
-            isLoading={saving}
-            onClick={handleSave}
-          >
-            Save review
-          </Button>
-        </DrawerFooter>
-      </DrawerContent>
-    </Drawer>
-  )
+ <DrawerFooter borderTop="1px solid" borderColor="gray.200">
+ <Button variant="outline" mr={3} onClick={onClose} isDisabled={saving}>
+ Close
+ </Button>
+ <Button
+ bg={ROYAL}
+ color="white"
+ _hover={{ bg: PLUM }}
+ isLoading={saving}
+ onClick={handleSave}
+ >
+ Save review
+ </Button>
+ </DrawerFooter>
+ </DrawerContent>
+ </Drawer>
+ )
 }
 
 export default ProgrammeSubmissionsPage

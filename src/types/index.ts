@@ -11,744 +11,744 @@ export type { StandardRole, AllRoles };
 
 // Transformation Tier Types
 export enum TransformationTier {
-  INDIVIDUAL_FREE = 'individual_free',
-  INDIVIDUAL_PAID = 'individual_paid',
-  CORPORATE_MEMBER = 'corporate_member',
-  CORPORATE_LEADER = 'corporate_leader',
+ INDIVIDUAL_FREE = 'individual_free',
+ INDIVIDUAL_PAID = 'individual_paid',
+ CORPORATE_MEMBER = 'corporate_member',
+ CORPORATE_LEADER = 'corporate_leader',
 }
 
 // Account Status Types
 export enum AccountStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-  PENDING = 'pending',
-  SUSPENDED = 'suspended',
+ ACTIVE = 'active',
+ INACTIVE = 'inactive',
+ PENDING = 'pending',
+ SUSPENDED = 'suspended',
 }
 
 // Dashboard Preferences
 export interface DashboardPreferences {
-  defaultRoute?: string
-  lockedToFreeExperience?: boolean
-  source?: string
-  lastUpdatedAt?: string
+ defaultRoute?: string
+ lockedToFreeExperience?: boolean
+ source?: string
+ lastUpdatedAt?: string
 }
 
 // User Profile
 export interface UserProfile {
-  id: string
-  email:string
-  firstName: string
-  lastName: string
-  fullName: string
-  role: StandardRole
-  membershipStatus?: 'free' | 'paid'
-  avatarUrl?: string
-  photoURL?: string
-  bio?: string
-  phoneNumber?: string
-  linkedinUrl?: string
-  emailVerified?: boolean
-  emailVerificationGracePeriodEnd?: string
-  grandfatheredAt?: string
-  
-  // Journey & Progress
-  journeyType: JourneyType;
-  programDurationWeeks?: number;
-  journeyStartDate?: string | null;
-  currentJourneyId?: string
-  currentWeek?: number
-  totalPoints: number
-  level: number
-  referralCount?: number
-  referralCode?: string | null
-  referredBy?: string | null
-  referralStatus?: 'pending' | 'credited' | 'rejected' | null
-  claimedRewards?: number[]
-  
-  // Organization
-  companyId?: string | null
-  companyCode?: string | null
-  companyName?: string | null
-  organizationId?: string | null
-  villageId?: string
-  clusterId?: string
-  corporateVillageId?: string
-  cohortIdentifier?: string
+ id: string
+ email:string
+ firstName: string
+ lastName: string
+ fullName: string
+ role: StandardRole
+ membershipStatus?: 'free' | 'paid'
+ avatarUrl?: string
+ photoURL?: string
+ bio?: string
+ phoneNumber?: string
+ linkedinUrl?: string
+ emailVerified?: boolean
+ emailVerificationGracePeriodEnd?: string
+ grandfatheredAt?: string
+ 
+ // Journey & Progress
+ journeyType: JourneyType;
+ programDurationWeeks?: number;
+ journeyStartDate?: string | null;
+ currentJourneyId?: string
+ currentWeek?: number
+ totalPoints: number
+ level: number
+ referralCount?: number
+ referralCode?: string | null
+ referredBy?: string | null
+ referralStatus?: 'pending' | 'credited' | 'rejected' | null
+ claimedRewards?: number[]
+ 
+ // Organization
+ companyId?: string | null
+ companyCode?: string | null
+ companyName?: string | null
+ organizationId?: string | null
+ villageId?: string
+ clusterId?: string
+ corporateVillageId?: string
+ cohortIdentifier?: string
 
-  // Availability & preferences
-  timezone?: string
-  availabilityStatus?: string
-  notes?: string
-  matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
-  preferredMatchDay?: number
-  matchNotificationPreference?: 'email' | 'in_app' | 'both'
-  lastMatchRefreshDate?: string
+ // Availability & preferences
+ timezone?: string
+ availabilityStatus?: string
+ notes?: string
+ matchRefreshPreference?: 'weekly' | 'biweekly' | 'on-demand' | 'disabled'
+ preferredMatchDay?: number
+ matchNotificationPreference?: 'email' | 'in_app' | 'both'
+ lastMatchRefreshDate?: string
 
-  // Leadership relations
-  mentorId?: string
-  ambassadorId?: string
-  /** Line manager who rates learner Pre + Post course assessments */
-  lineManagerId?: string | null
-  mentorOverrideId?: string | null
-  ambassadorOverrideId?: string | null
-  isActiveCoach?: boolean
+ // Leadership relations
+ mentorId?: string
+ ambassadorId?: string
+ /** Line manager who rates learner Pre + Post course assessments */
+ lineManagerId?: string | null
+ mentorOverrideId?: string | null
+ ambassadorOverrideId?: string | null
+ isActiveCoach?: boolean
 
-  // Journey Status
-  journeyStatus?: 'active' | 'completed' | 'failed' | 'abandoned'
-  completedAt?: string
-  
-  // Account Management
-  accountStatus?: AccountStatus | string
-  lastInteraction?: string
-  registrationDate?: string
-  lastActive?: string
-  mustChangePassword?: boolean
-  
-  // Onboarding
-  onboardingComplete?: boolean
-  onboardingSkipped?: boolean
-  hasSeenDashboardTour?: boolean
-  /** ISO timestamp when mentor acknowledged Mentor Guidelines (first-login modal) */
-  mentorGuidelinesAcknowledgedAt?: string
-  /** ISO timestamp when coach acknowledged Coach Guidelines (first-login modal) */
-  coachGuidelinesAcknowledgedAt?: string
-  /** Purchased Transformation Coaching sessions for this learner (1–5). */
-  purchasedCoachSessions?: number
-  /** Coach-authored learning plans keyed by learner id (stored on coach profile). */
-  coachingPlans?: Record<
-    string,
-    {
-      purchasedSessions: number
-      sessions: Array<{ index: number; title: string; focus: string; notes: string }>
-      updatedAt: string
-    }
-  >
-  /**
-   * Written answers for native course-podcast assessments (keyed by
-   * `{packId}-{slot}`, e.g. T4L-C01-anchor). Used until AI grading ships.
-   */
-  coursePodcastAnswers?: Record<
-    string,
-    {
-      catalogueCourseId: string
-      packId: string
-      slot: string
-      answers: string[]
-      submittedAt: string
-    }
-  >
+ // Journey Status
+ journeyStatus?: 'active' | 'completed' | 'failed' | 'abandoned'
+ completedAt?: string
+ 
+ // Account Management
+ accountStatus?: AccountStatus | string
+ lastInteraction?: string
+ registrationDate?: string
+ lastActive?: string
+ mustChangePassword?: boolean
+ 
+ // Onboarding
+ onboardingComplete?: boolean
+ onboardingSkipped?: boolean
+ hasSeenDashboardTour?: boolean
+ /** ISO timestamp when mentor acknowledged Mentor Guidelines (first-login modal) */
+ mentorGuidelinesAcknowledgedAt?: string
+ /** ISO timestamp when coach acknowledged Coach Guidelines (first-login modal) */
+ coachGuidelinesAcknowledgedAt?: string
+ /** Purchased Transformation Coaching sessions for this learner (1-5). */
+ purchasedCoachSessions?: number
+ /** Coach-authored learning plans keyed by learner id (stored on coach profile). */
+ coachingPlans?: Record<
+ string,
+ {
+ purchasedSessions: number
+ sessions: Array<{ index: number; title: string; focus: string; notes: string }>
+ updatedAt: string
+ }
+ >
+ /**
+ * Written answers for native course-podcast assessments (keyed by
+ * `{packId}-{slot}`, e.g. T4L-C01-anchor). Used until AI grading ships.
+ */
+ coursePodcastAnswers?: Record<
+ string,
+ {
+ catalogueCourseId: string
+ packId: string
+ slot: string
+ answers: string[]
+ submittedAt: string
+ }
+ >
 
-  // Role-Based Features
-  transformationTier?: TransformationTier | string
-  assignedOrganizations?: string[]
-  dashboardPreferences?: DashboardPreferences
-  defaultDashboardRoute?: string
-  
-  // Settings
-  /**
-   * @deprecated Legacy onboarding flag. Always true for all users.
-   */
-  isOnboarded: boolean
-  fcmTokens?: string[]
-  personalityType?: string
-  coreValues?: string[]
-  /** Age band from demographics (often stored in profiles.data). */
-  ageRange?: string
-  /** Collected alongside the personality profile; lives in the `data` jsonb. */
-  country?: string
-  region?: string
-  hasCompletedPersonalityTest?: boolean
-  hasCompletedValuesTest?: boolean
-  /** ISO timestamp when the learner opened the 16Personalities test (unlocks results 1h later). */
-  personalityTestStartedAt?: string
-  /** ISO timestamp when the learner opened the Personal Values test (unlocks results 1h later). */
-  valuesTestStartedAt?: string
-  personalityTestResultUrl?: string
-  valuesTestResultUrl?: string
-  personalityTestProofUrl?: string
-  valuesTestProofUrl?: string
-  privacySettings?: PrivacySettings
-  leaderboardVisibility?: 'public' | 'company' | 'private'
+ // Role-Based Features
+ transformationTier?: TransformationTier | string
+ assignedOrganizations?: string[]
+ dashboardPreferences?: DashboardPreferences
+ defaultDashboardRoute?: string
+ 
+ // Settings
+ /**
+ * @deprecated Legacy onboarding flag. Always true for all users.
+ */
+ isOnboarded: boolean
+ fcmTokens?: string[]
+ personalityType?: string
+ coreValues?: string[]
+ /** Age band from demographics (often stored in profiles.data). */
+ ageRange?: string
+ /** Collected alongside the personality profile; lives in the `data` jsonb. */
+ country?: string
+ region?: string
+ hasCompletedPersonalityTest?: boolean
+ hasCompletedValuesTest?: boolean
+ /** ISO timestamp when the learner opened the 16Personalities test (unlocks results 1h later). */
+ personalityTestStartedAt?: string
+ /** ISO timestamp when the learner opened the Personal Values test (unlocks results 1h later). */
+ valuesTestStartedAt?: string
+ personalityTestResultUrl?: string
+ valuesTestResultUrl?: string
+ personalityTestProofUrl?: string
+ valuesTestProofUrl?: string
+ privacySettings?: PrivacySettings
+ leaderboardVisibility?: 'public' | 'company' | 'private'
 
-  // Timestamps
-  createdAt: string
-  updatedAt: string
-  lastActiveAt?: string
+ // Timestamps
+ createdAt: string
+ updatedAt: string
+ lastActiveAt?: string
 }
 
 export type GenderOption =
-  | 'prefer_not_to_say'
-  | 'male'
-  | 'female'
-  | 'non_binary'
-  | 'other'
+ | 'prefer_not_to_say'
+ | 'male'
+ | 'female'
+ | 'non_binary'
+ | 'other'
 
 export interface Organization {
-  id: string
-  code: string
-  name: string
-  status: 'active' | 'inactive' | 'suspended'
-  createdAt: string
-  updatedAt: string
-  memberCount: number
-  settings?: Record<string, unknown>
-  transformation_partner_id?: string | null
-  journeyType?: JourneyType
-  programDurationWeeks?: number
-  cohortStartDate?: string
-  hasMentor?: boolean
-  hasAmbassador?: boolean
+ id: string
+ code: string
+ name: string
+ status: 'active' | 'inactive' | 'suspended'
+ createdAt: string
+ updatedAt: string
+ memberCount: number
+ settings?: Record<string, unknown>
+ transformation_partner_id?: string | null
+ journeyType?: JourneyType
+ programDurationWeeks?: number
+ cohortStartDate?: string
+ hasMentor?: boolean
+ hasAmbassador?: boolean
 }
 
 export interface PrivacySettings {
-  showOnLeaderboard: boolean
-  allowPeerMatching: boolean
-  shareImpactPublicly: boolean
+ showOnLeaderboard: boolean
+ allowPeerMatching: boolean
+ shareImpactPublicly: boolean
 }
 
 export interface Journey {
-  id: string
-  name: string
-  type: JourneyType;
-  description: string
-  durationWeeks: number
-  totalPointsTarget: number
-  weeklyPointsTarget: number
-  minPointsPerWeek: number
-  maxPointsPerWeek?: number
-  maxPointsTotal?: number
-  completionThresholdPct?: number
-  badgeId?: string
-  isActive: boolean
-  isPremium: boolean
-  courses?: Course[]
-  phases?: JourneyPhase[]
-  createdAt: string
-  updatedAt: string
+ id: string
+ name: string
+ type: JourneyType;
+ description: string
+ durationWeeks: number
+ totalPointsTarget: number
+ weeklyPointsTarget: number
+ minPointsPerWeek: number
+ maxPointsPerWeek?: number
+ maxPointsTotal?: number
+ completionThresholdPct?: number
+ badgeId?: string
+ isActive: boolean
+ isPremium: boolean
+ courses?: Course[]
+ phases?: JourneyPhase[]
+ createdAt: string
+ updatedAt: string
 }
 
 export interface JourneyConfig {
-  id: string
-  journeyType: JourneyType
-  name: string
-  description: string
-  durationWeeks: number
-  totalPointsTarget: number
-  weeklyPointsTarget: number
-  minPointsPerWeek: number
-  maxPointsPerWeek?: number
-  maxPointsTotal?: number
-  completionThresholdPct?: number
-  timelineDisplay?: 'duration' | 'course-count'
-  activityIds: string[]
-  mode?: 'intro' | 'full'
-  isActive: boolean
-  isPremium: boolean
-  createdAt: string
-  updatedAt: string
+ id: string
+ journeyType: JourneyType
+ name: string
+ description: string
+ durationWeeks: number
+ totalPointsTarget: number
+ weeklyPointsTarget: number
+ minPointsPerWeek: number
+ maxPointsPerWeek?: number
+ maxPointsTotal?: number
+ completionThresholdPct?: number
+ timelineDisplay?: 'duration' | 'course-count'
+ activityIds: string[]
+ mode?: 'intro' | 'full'
+ isActive: boolean
+ isPremium: boolean
+ createdAt: string
+ updatedAt: string
 }
 
 export interface JourneyPhase {
-  id: string
-  journeyId: string
-  name: string
-  description: string
-  weekStart: number
-  weekEnd: number
-  pointsTarget: number
+ id: string
+ journeyId: string
+ name: string
+ description: string
+ weekStart: number
+ weekEnd: number
+ pointsTarget: number
 }
 
 // User Journey Progress
 export interface UserJourney {
-  id: string
-  userId: string
-  journeyId: string
-  startDate: string
-  endDate?: string
-  currentWeek: number
-  totalPoints: number
-  status: 'active' | 'completed' | 'paused' | 'abandoned'
-  completedAt?: string
-  createdAt: string
-  updatedAt: string
+ id: string
+ userId: string
+ journeyId: string
+ startDate: string
+ endDate?: string
+ currentWeek: number
+ totalPoints: number
+ status: 'active' | 'completed' | 'paused' | 'abandoned'
+ completedAt?: string
+ createdAt: string
+ updatedAt: string
 }
 
 // Activity Types
 export enum ActivityType {
-  PODCAST_WATCH = 'podcast_watch',
-  PODCAST_WORKBOOK = 'podcast_workbook',
-  WEBINAR_ATTEND = 'webinar_attend',
-  WEBINAR_WORKBOOK = 'webinar_workbook',
-  PEER_MATCHING = 'peer_matching',
-  BOOK_CLUB = 'book_club',
-  PEER_TO_PEER_MONTHLY = 'peer_to_peer_monthly',
-  LINKEDIN_ENGAGEMENT = 'linkedin_engagement',
-  COURSE_MODULE = 'course_module',
-  EVENT_ATTENDANCE = 'event_attendance',
-  COMMUNITY_POST = 'community_post',
+ PODCAST_WATCH = 'podcast_watch',
+ PODCAST_WORKBOOK = 'podcast_workbook',
+ WEBINAR_ATTEND = 'webinar_attend',
+ WEBINAR_WORKBOOK = 'webinar_workbook',
+ PEER_MATCHING = 'peer_matching',
+ BOOK_CLUB = 'book_club',
+ PEER_TO_PEER_MONTHLY = 'peer_to_peer_monthly',
+ LINKEDIN_ENGAGEMENT = 'linkedin_engagement',
+ COURSE_MODULE = 'course_module',
+ EVENT_ATTENDANCE = 'event_attendance',
+ COMMUNITY_POST = 'community_post',
 }
 
 export interface Activity {
-  id: string
-  name: string
-  type: ActivityType
-  description: string
-  points: number
-  requiresProof: boolean
-  isRecurring: boolean
-  createdAt: string
+ id: string
+ name: string
+ type: ActivityType
+ description: string
+ points: number
+ requiresProof: boolean
+ isRecurring: boolean
+ createdAt: string
 }
 
 export interface ActivityCatalogEntry {
-  id: string
-  baseId: string
-  title: string
-  description: string
-  points: number
-  maxPerMonth: number
-  maxPerWeek?: number
-  cooldownWeeks?: number
-  approvalType?: ApprovalType
-  requiresApproval?: boolean
-  verification?: 'honor' | 'partner_approval'
-  isFreeTier?: boolean
-  week: number
-  category: string
-  tags?: string[]
-  flexibleWeeks?: boolean
-  frequencyNote?: string
-  visibility?: {
-    requiresMentor?: boolean
-    requiresCoach?: boolean
-  }
-  isActive: boolean
-  createdAt: string
-  updatedAt: string
+ id: string
+ baseId: string
+ title: string
+ description: string
+ points: number
+ maxPerMonth: number
+ maxPerWeek?: number
+ cooldownWeeks?: number
+ approvalType?: ApprovalType
+ requiresApproval?: boolean
+ verification?: 'honor' | 'partner_approval'
+ isFreeTier?: boolean
+ week: number
+ category: string
+ tags?: string[]
+ flexibleWeeks?: boolean
+ frequencyNote?: string
+ visibility?: {
+ requiresMentor?: boolean
+ requiresCoach?: boolean
+ }
+ isActive: boolean
+ createdAt: string
+ updatedAt: string
 }
 
 export interface ActivityDefinition {
-  id: string
-  title: string
-  description: string
-  category: string
-  points: number
-  maxPerWindow: number
-  maxPerClaim?: number
-  approvalType?: ApprovalType
-  requiresApproval?: boolean
-  verification?: 'honor' | 'mentor_approval' | 'partner_approval'
-  isActive: boolean
-  tags?: string[]
-  createdAt: string
-  updatedAt: string
+ id: string
+ title: string
+ description: string
+ category: string
+ points: number
+ maxPerWindow: number
+ maxPerClaim?: number
+ approvalType?: ApprovalType
+ requiresApproval?: boolean
+ verification?: 'honor' | 'mentor_approval' | 'partner_approval'
+ isActive: boolean
+ tags?: string[]
+ createdAt: string
+ updatedAt: string
 }
 
 export interface TwoWeekWindow {
-  id: string
-  journeyType: JourneyType
-  windowNumber: number
-  startDate: string
-  endDate: string
-  weekStart: number
-  weekEnd: number
-  label?: string
-  status: 'upcoming' | 'open' | 'closed'
-  createdAt: string
-  updatedAt: string
+ id: string
+ journeyType: JourneyType
+ windowNumber: number
+ startDate: string
+ endDate: string
+ weekStart: number
+ weekEnd: number
+ label?: string
+ status: 'upcoming' | 'open' | 'closed'
+ createdAt: string
+ updatedAt: string
 }
 
 export interface WindowTarget {
-  id: string
-  journeyType: JourneyType
-  windowNumber: number
-  targetPoints: number
-  minPoints?: number
-  maxPoints?: number
-  createdAt: string
-  updatedAt: string
+ id: string
+ journeyType: JourneyType
+ windowNumber: number
+ targetPoints: number
+ minPoints?: number
+ maxPoints?: number
+ createdAt: string
+ updatedAt: string
 }
 
 export interface ActivityClaim {
-  id: string
-  uid: string
-  orgId?: string
-  activityId: string
-  windowId: string
-  windowNumber: number
-  status: 'draft' | 'pending' | 'approved' | 'rejected' | 'voided'
-  pointsClaimed: number
-  proofUrl?: string
-  notes?: string
-  submittedAt?: string
-  reviewedAt?: string
-  reviewedBy?: string
-  rejectionReason?: string
-  createdAt: string
-  updatedAt: string
+ id: string
+ uid: string
+ orgId?: string
+ activityId: string
+ windowId: string
+ windowNumber: number
+ status: 'draft' | 'pending' | 'approved' | 'rejected' | 'voided'
+ pointsClaimed: number
+ proofUrl?: string
+ notes?: string
+ submittedAt?: string
+ reviewedAt?: string
+ reviewedBy?: string
+ rejectionReason?: string
+ createdAt: string
+ updatedAt: string
 }
 
 export interface PointsLedgerEntry {
-  id: string
-  uid: string
-  activityId: string
-  activityClaimId?: string
-  windowId?: string
-  windowNumber?: number
-  weekNumber?: number
-  points: number
-  source: 'activity_claim' | 'weekly_checklist' | 'impact_log' | 'manual_adjustment'
-  status: 'posted' | 'voided'
-  createdAt: string
-  updatedAt: string
+ id: string
+ uid: string
+ activityId: string
+ activityClaimId?: string
+ windowId?: string
+ windowNumber?: number
+ weekNumber?: number
+ points: number
+ source: 'activity_claim' | 'weekly_checklist' | 'impact_log' | 'manual_adjustment'
+ status: 'posted' | 'voided'
+ createdAt: string
+ updatedAt: string
 }
 
 export interface BadgeAward {
-  id: string
-  uid: string
-  badgeId: string
-  windowId?: string
-  windowNumber?: number
-  reason?: string
-  awardedAt: string
-  awardedBy?: string
-  createdAt: string
-  updatedAt: string
+ id: string
+ uid: string
+ badgeId: string
+ windowId?: string
+ windowNumber?: number
+ reason?: string
+ awardedAt: string
+ awardedBy?: string
+ createdAt: string
+ updatedAt: string
 }
 
 export interface NotificationQueueEntry {
-  id: string
-  uid: string
-  type: 'achievement' | 'approval' | 'reminder' | 'system'
-  channel: 'in_app' | 'email' | 'sms'
-  payload: Record<string, unknown>
-  status: 'queued' | 'processing' | 'sent' | 'failed'
-  scheduledFor?: string
-  attempts: number
-  lastAttemptAt?: string
-  createdAt: string
-  updatedAt: string
+ id: string
+ uid: string
+ type: 'achievement' | 'approval' | 'reminder' | 'system'
+ channel: 'in_app' | 'email' | 'sms'
+ payload: Record<string, unknown>
+ status: 'queued' | 'processing' | 'sent' | 'failed'
+ scheduledFor?: string
+ attempts: number
+ lastAttemptAt?: string
+ createdAt: string
+ updatedAt: string
 }
 
 // Weekly Activity Tracking
 export interface WeeklyProgress {
-  uid: string;
-  weekNumber: number;
-  monthNumber: number;
-  weeklyTarget: number;
-  pointsEarned: number;
-  engagementCount?: number;
-  status: "on_track" | "warning" | "alert" | "recovery";
-  updatedAt: string | Date | { toDate: () => Date };
+ uid: string;
+ weekNumber: number;
+ monthNumber: number;
+ weeklyTarget: number;
+ pointsEarned: number;
+ engagementCount?: number;
+ status: "on_track" | "warning" | "alert" | "recovery";
+ updatedAt: string | Date | { toDate: () => Date };
 }
 
 export interface WindowProgress {
-  uid: string;
-  journeyType: string;
-  windowNumber: number;
-  pointsEarned: number;
-  windowTarget: number;
-  status: 'on_track' | 'warning' | 'alert' | 'recovery';
-  previousStatus?: 'on_track' | 'warning' | 'alert' | 'recovery';
-  updatedAt?: unknown;
+ uid: string;
+ journeyType: string;
+ windowNumber: number;
+ pointsEarned: number;
+ windowTarget: number;
+ status: 'on_track' | 'warning' | 'alert' | 'recovery';
+ previousStatus?: 'on_track' | 'warning' | 'alert' | 'recovery';
+ updatedAt?: unknown;
 }
 
 export enum ActivityStatus {
-  NOT_STARTED = 'not_started',
-  PENDING = 'pending',
-  COMPLETED = 'completed',
+ NOT_STARTED = 'not_started',
+ PENDING = 'pending',
+ COMPLETED = 'completed',
 }
 
 export interface WeeklyActivity {
-  id: string
-  userId: string
-  journeyId: string
-  weekNumber: number
-  activityId: string
-  status: ActivityStatus
-  pointsEarned: number
-  proofUrl?: string
-  completedAt?: string
-  notes?: string
-  createdAt: string
-  updatedAt: string
+ id: string
+ userId: string
+ journeyId: string
+ weekNumber: number
+ activityId: string
+ status: ActivityStatus
+ pointsEarned: number
+ proofUrl?: string
+ completedAt?: string
+ notes?: string
+ createdAt: string
+ updatedAt: string
 }
 
 // Courses
 export interface Course {
-  id: string
-  name: string
-  description: string
-  modules: CourseModule[]
-  totalPoints: number
-  estimatedHours: number
-  isActive: boolean
-  createdAt: string
+ id: string
+ name: string
+ description: string
+ modules: CourseModule[]
+ totalPoints: number
+ estimatedHours: number
+ isActive: boolean
+ createdAt: string
 }
 
 export interface CourseModule {
-  id: string
-  courseId: string
-  name: string
-  description: string
-  content: string
-  points: number
-  order: number
-  isActive: boolean
+ id: string
+ courseId: string
+ name: string
+ description: string
+ content: string
+ points: number
+ order: number
+ isActive: boolean
 }
 
 export interface UserCourseProgress {
-  id: string
-  userId: string
-  courseId: string
-  moduleId: string
-  isCompleted: boolean
-  pointsEarned: number
-  completedAt?: string
-  createdAt: string
+ id: string
+ userId: string
+ courseId: string
+ moduleId: string
+ isCompleted: boolean
+ pointsEarned: number
+ completedAt?: string
+ createdAt: string
 }
 
 // Impact Log
 export enum ImpactCategory {
-  PERSONAL = 'personal',
-  PROFESSIONAL = 'professional',
-  COMMUNITY = 'community',
-  ENVIRONMENTAL = 'environmental',
+ PERSONAL = 'personal',
+ PROFESSIONAL = 'professional',
+ COMMUNITY = 'community',
+ ENVIRONMENTAL = 'environmental',
 }
 
 export enum ESGCategory {
-  ENVIRONMENTAL = 'environmental',
-  SOCIAL = 'social',
-  GOVERNANCE = 'governance',
+ ENVIRONMENTAL = 'environmental',
+ SOCIAL = 'social',
+ GOVERNANCE = 'governance',
 }
 
 export enum BusinessCategory {
-  EFFICIENCY = 'efficiency',
-  REVENUE = 'revenue',
-  COST_SAVINGS = 'cost_savings',
-  QUALITY = 'quality',
-  INNOVATION = 'innovation',
-  CUSTOMER_SATISFACTION = 'customer_satisfaction',
+ EFFICIENCY = 'efficiency',
+ REVENUE = 'revenue',
+ COST_SAVINGS = 'cost_savings',
+ QUALITY = 'quality',
+ INNOVATION = 'innovation',
+ CUSTOMER_SATISFACTION = 'customer_satisfaction',
 }
 
 export interface ImpactLog {
-  id: string
-  userId: string
-  title: string
-  description: string
-  category: ImpactCategory
-  esgCategory?: ESGCategory
-  businessCategory?: BusinessCategory
-  hoursInvested: number
-  usdValue: number
-  peopleImpacted: number
-  isCompanyImpact: boolean
-  companyId?: string
-  proofUrls?: string[]
-  tags?: string[]
-  createdAt: string
-  updatedAt: string
+ id: string
+ userId: string
+ title: string
+ description: string
+ category: ImpactCategory
+ esgCategory?: ESGCategory
+ businessCategory?: BusinessCategory
+ hoursInvested: number
+ usdValue: number
+ peopleImpacted: number
+ isCompanyImpact: boolean
+ companyId?: string
+ proofUrls?: string[]
+ tags?: string[]
+ createdAt: string
+ updatedAt: string
 }
 
 // Badges & Achievements
 export interface Badge {
-  id: string
-  name: string
-  description: string
-  iconUrl: string
-  color: string
-  type: 'journey' | 'activity' | 'milestone' | 'special'
-  criteria: string
-  pointsRequired?: number
-  createdAt: string
+ id: string
+ name: string
+ description: string
+ iconUrl: string
+ color: string
+ type: 'journey' | 'activity' | 'milestone' | 'special'
+ criteria: string
+ pointsRequired?: number
+ createdAt: string
 }
 
 export interface UserBadge {
-  id: string
-  userId: string
-  badgeId: string
-  earnedAt: string
-  journey?: string
+ id: string
+ userId: string
+ badgeId: string
+ earnedAt: string
+ journey?: string
 }
 
 // Leaderboard
 export interface LeaderboardEntry {
-  userId: string
-  user: UserProfile
-  points: number
-  level: number
-  rank: number
-  badgeCount: number
-  journeyName?: string
+ userId: string
+ user: UserProfile
+ points: number
+ level: number
+ rank: number
+ badgeCount: number
+ journeyName?: string
 }
 
 export enum LeaderboardView {
-  GLOBAL = 'global',
-  COMPANY = 'company',
-  VILLAGE = 'village',
-  CLUSTER = 'cluster',
+ GLOBAL = 'global',
+ COMPANY = 'company',
+ VILLAGE = 'village',
+ CLUSTER = 'cluster',
 }
 
 export enum LeaderboardTimeframe {
-  ALL_TIME = 'all_time',
-  LAST_7_DAYS = 'last_7_days',
-  LAST_30_DAYS = 'last_30_days',
-  CURRENT_JOURNEY = 'current_journey',
+ ALL_TIME = 'all_time',
+ LAST_7_DAYS = 'last_7_days',
+ LAST_30_DAYS = 'last_30_days',
+ CURRENT_JOURNEY = 'current_journey',
 }
 
 // Community
 export interface Village {
-  id: string
-  name: string
-  description: string
-  creatorId: string
-  companyId?: string
-  memberCount: number
-  isActive: boolean
-  createdAt: string
+ id: string
+ name: string
+ description: string
+ creatorId: string
+ companyId?: string
+ memberCount: number
+ isActive: boolean
+ createdAt: string
 }
 
 export interface Cluster {
-  id: string
-  name: string
-  description: string
-  companyId: string
-  villageId?: string
-  memberCount: number
-  isActive: boolean
-  createdAt: string
+ id: string
+ name: string
+ description: string
+ companyId: string
+ villageId?: string
+ memberCount: number
+ isActive: boolean
+ createdAt: string
 }
 
 // Events
 export interface Event {
-  id: string
-  title: string
-  description: string
-  eventType: 'webinar' | 'workshop' | 'networking' | 'book_club' | 'other'
-  startTime: string
-  endTime: string
-  location?: string
-  isVirtual: boolean
-  meetingUrl?: string
-  points: number
-  maxAttendees?: number
-  currentAttendees: number
-  qrCode?: string
-  isPublic: boolean
-  organizerId: string
-  createdAt: string
+ id: string
+ title: string
+ description: string
+ eventType: 'webinar' | 'workshop' | 'networking' | 'book_club' | 'other'
+ startTime: string
+ endTime: string
+ location?: string
+ isVirtual: boolean
+ meetingUrl?: string
+ points: number
+ maxAttendees?: number
+ currentAttendees: number
+ qrCode?: string
+ isPublic: boolean
+ organizerId: string
+ createdAt: string
 }
 
 export interface EventAttendance {
-  id: string
-  eventId: string
-  userId: string
-  checkInTime: string
-  pointsAwarded: number
+ id: string
+ eventId: string
+ userId: string
+ checkInTime: string
+ pointsAwarded: number
 }
 
 // Notifications
 export enum NotificationType {
-  ACHIEVEMENT = 'achievement',
-  BELOW_TARGET = 'below_target',
-  EVENT_REMINDER = 'event_reminder',
-  ANNOUNCEMENT = 'announcement',
-  MENTOR_MESSAGE = 'mentor_message',
-  SYSTEM = 'system',
+ ACHIEVEMENT = 'achievement',
+ BELOW_TARGET = 'below_target',
+ EVENT_REMINDER = 'event_reminder',
+ ANNOUNCEMENT = 'announcement',
+ MENTOR_MESSAGE = 'mentor_message',
+ SYSTEM = 'system',
 }
 
 export interface Notification {
-  id: string
-  userId: string
-  type: NotificationType
-  title: string
-  message: string
-  actionUrl?: string
-  isRead: boolean
-  createdAt: string
+ id: string
+ userId: string
+ type: NotificationType
+ title: string
+ message: string
+ actionUrl?: string
+ isRead: boolean
+ createdAt: string
 }
 
 // Subscription & Payment
 export enum SubscriptionTier {
-  FREE = 'free',
-  BASIC = 'basic',
-  PREMIUM = 'premium',
-  ENTERPRISE = 'enterprise',
+ FREE = 'free',
+ BASIC = 'basic',
+ PREMIUM = 'premium',
+ ENTERPRISE = 'enterprise',
 }
 
 export interface Subscription {
-  id: string
-  userId: string
-  tier: SubscriptionTier
-  stripeSubscriptionId?: string
-  stripePriceId?: string
-  status: 'active' | 'cancelled' | 'past_due' | 'trialing'
-  currentPeriodStart: string
-  currentPeriodEnd: string
-  cancelAtPeriodEnd: boolean
-  createdAt: string
-  updatedAt: string
+ id: string
+ userId: string
+ tier: SubscriptionTier
+ stripeSubscriptionId?: string
+ stripePriceId?: string
+ status: 'active' | 'cancelled' | 'past_due' | 'trialing'
+ currentPeriodStart: string
+ currentPeriodEnd: string
+ cancelAtPeriodEnd: boolean
+ createdAt: string
+ updatedAt: string
 }
 
 // Analytics
 export interface UserAnalytics {
-  userId: string
-  totalPoints: number
-  weeklyAverage: number
-  monthlyAverage: number
-  currentStreak: number
-  longestStreak: number
-  activitiesCompleted: number
-  badgesEarned: number
-  impactHours: number
-  impactValue: number
-  peopleImpacted: number
-  joinedAt: string
+ userId: string
+ totalPoints: number
+ weeklyAverage: number
+ monthlyAverage: number
+ currentStreak: number
+ longestStreak: number
+ activitiesCompleted: number
+ badgesEarned: number
+ impactHours: number
+ impactValue: number
+ peopleImpacted: number
+ joinedAt: string
 }
 
 export interface CompanyAnalytics {
-  companyId: string
-  totalMembers: number
-  activeMembers: number
-  totalPoints: number
-  averagePointsPerMember: number
-  completionRate: number
-  engagementRate: number
-  topPerformers: LeaderboardEntry[]
-  riskUsers: UserProfile[]
-  totalImpactHours: number
-  totalImpactValue: number
+ companyId: string
+ totalMembers: number
+ activeMembers: number
+ totalPoints: number
+ averagePointsPerMember: number
+ completionRate: number
+ engagementRate: number
+ topPerformers: LeaderboardEntry[]
+ riskUsers: UserProfile[]
+ totalImpactHours: number
+ totalImpactValue: number
 }
 
 // API Response Types
 export interface ApiResponse<T> {
-  data?: T
-  error?: ApiError
-  success: boolean
+ data?: T
+ error?: ApiError
+ success: boolean
 }
 
 export interface ApiError {
-  message: string
-  code?: string
-  details?: unknown
+ message: string
+ code?: string
+ details?: unknown
 }
 
 export interface PaginatedResponse<T> {
-  data: T[]
-  total: number
-  page: number
-  pageSize: number
-  hasMore: boolean
+ data: T[]
+ total: number
+ page: number
+ pageSize: number
+ hasMore: boolean
 }
 
 // Inspiration Quote
 export interface InspirationQuote {
-  id: string
-  week_number: number
-  quote_text: string
-  author?: string
-  category?: string
-  isActive?: boolean
-  createdAt?: string
-  updatedAt?: string
-  year?: number
+ id: string
+ week_number: number
+ quote_text: string
+ author?: string
+ category?: string
+ isActive?: boolean
+ createdAt?: string
+ updatedAt?: string
+ year?: number
 }

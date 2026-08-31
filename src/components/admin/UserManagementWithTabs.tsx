@@ -17,198 +17,198 @@ const TAB_STORAGE_KEY = 'user-management-active-tab'
  */
 
 function useManagedUsers() {
-  const [users, setUsers] = useState<ManagedUserRecord[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+ const [users, setUsers] = useState<ManagedUserRecord[]>([])
+ const [loading, setLoading] = useState(true)
+ const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
+ useEffect(() => {
+ setLoading(true)
+ setError(null)
 
-    // 🔁 Subscribe once
-    const unsubscribe = listenToUsers(
-      (items) => {
-        const mapped = items.map((user) => {
-          const userData = user as ManagedUserRecord & {
-            companyId?: string
-            companyCode?: string
-            companyName?: string
-            membershipStatus?: string
-            accountStatus?: string
-            transformationTier?: string
-            full_name?: string
-            name?: string
-            displayName?: string
-            assignedOrganizations?: string[]
-            accessLastUpdatedAt?: Date | null
-            accessLastUpdatedBy?: string | null
-            accessLastUpdatedByName?: string | null
-            accessLastReason?: string | null
-          }
-          return {
-            id: userData.id,
-            name: getDisplayName(userData, 'Member'),
-            email: userData.email,
-            role: userData.role as ManagedUserRecord['role'],
-            membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
-            // Prefer real company/organization id. Do not invent companyId from
-            // assignedOrganizations[0] - that made multi-org partners look like
-            // they belonged only to the first org and confused the org filter.
-            companyId: userData.companyId || null,
-            companyName: userData.companyName || null,
-            companyCode: userData.companyCode || null,
-            lastActive: userData.lastActive instanceof Date ? userData.lastActive : null,
-            createdAt: userData.createdAt instanceof Date ? userData.createdAt : null,
-            accountStatus: userData.accountStatus || 'active',
-            transformationTier: userData.transformationTier || null,
-            journeyType: userData.journeyType || null,
-            assignedOrganizations: Array.isArray(userData.assignedOrganizations)
-              ? userData.assignedOrganizations
-              : undefined,
-            accessLastUpdatedAt:
-              userData.accessLastUpdatedAt instanceof Date
-                ? userData.accessLastUpdatedAt
-                : null,
-            accessLastUpdatedBy: userData.accessLastUpdatedBy || null,
-            accessLastUpdatedByName: userData.accessLastUpdatedByName || null,
-            accessLastReason: userData.accessLastReason || null,
-            notes: userData.notes || '',
-          }
-        }) as ManagedUserRecord[]
-        setUsers(mapped)
-        setLoading(false)
-      },
-      (err: unknown) => {
-        console.error('[UserManagementWithTabs] listenToUsers failed:', err)
-        setError('Failed to load users. Check Firestore permissions and the users query.')
-        setLoading(false)
-      },
-    )
+ // 🔁 Subscribe once
+ const unsubscribe = listenToUsers(
+ (items) => {
+ const mapped = items.map((user) => {
+ const userData = user as ManagedUserRecord & {
+ companyId?: string
+ companyCode?: string
+ companyName?: string
+ membershipStatus?: string
+ accountStatus?: string
+ transformationTier?: string
+ full_name?: string
+ name?: string
+ displayName?: string
+ assignedOrganizations?: string[]
+ accessLastUpdatedAt?: Date | null
+ accessLastUpdatedBy?: string | null
+ accessLastUpdatedByName?: string | null
+ accessLastReason?: string | null
+ }
+ return {
+ id: userData.id,
+ name: getDisplayName(userData, 'Member'),
+ email: userData.email,
+ role: userData.role as ManagedUserRecord['role'],
+ membershipStatus: (userData.membershipStatus as 'free' | 'paid' | 'inactive') || 'free',
+ // Prefer real company/organization id. Do not invent companyId from
+ // assignedOrganizations[0] - that made multi-org partners look like
+ // they belonged only to the first org and confused the org filter.
+ companyId: userData.companyId || null,
+ companyName: userData.companyName || null,
+ companyCode: userData.companyCode || null,
+ lastActive: userData.lastActive instanceof Date ? userData.lastActive : null,
+ createdAt: userData.createdAt instanceof Date ? userData.createdAt : null,
+ accountStatus: userData.accountStatus || 'active',
+ transformationTier: userData.transformationTier || null,
+ journeyType: userData.journeyType || null,
+ assignedOrganizations: Array.isArray(userData.assignedOrganizations)
+ ? userData.assignedOrganizations
+ : undefined,
+ accessLastUpdatedAt:
+ userData.accessLastUpdatedAt instanceof Date
+ ? userData.accessLastUpdatedAt
+ : null,
+ accessLastUpdatedBy: userData.accessLastUpdatedBy || null,
+ accessLastUpdatedByName: userData.accessLastUpdatedByName || null,
+ accessLastReason: userData.accessLastReason || null,
+ notes: userData.notes || '',
+ }
+ }) as ManagedUserRecord[]
+ setUsers(mapped)
+ setLoading(false)
+ },
+ (err: unknown) => {
+ console.error('[UserManagementWithTabs] listenToUsers failed:', err)
+ setError('Failed to load users. Check Firestore permissions and the users query.')
+ setLoading(false)
+ },
+ )
 
-    return () => {
-      try {
-        unsubscribe?.()
-      } catch (e) {
-        console.warn('[UserManagementWithTabs] unsubscribe failed:', e)
-      }
-    }
-  }, [])
+ return () => {
+ try {
+ unsubscribe?.()
+ } catch (e) {
+ console.warn('[UserManagementWithTabs] unsubscribe failed:', e)
+ }
+ }
+ }, [])
 
-  return { users, loading, error }
+ return { users, loading, error }
 }
 
 function useManagedOrganizations() {
-  const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
-  const [loading, setLoading] = useState(true)
+ const [organizations, setOrganizations] = useState<OrganizationOption[]>([])
+ const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    setLoading(true)
+ useEffect(() => {
+ setLoading(true)
 
-    const unsubscribe = listenToOrganizations(
-      (items) => {
-        const mapped = items
-          .filter((org) => org.id)
-          .map((org) => ({
-            id: org.id!,
-            name: org.name,
-            code: org.code,
-          }))
-        setOrganizations(mapped)
-        setLoading(false)
-      },
-      (err: unknown) => {
-        console.error('[UserManagementWithTabs] listenToOrganizations failed:', err)
-        setLoading(false)
-      },
-    )
+ const unsubscribe = listenToOrganizations(
+ (items) => {
+ const mapped = items
+ .filter((org) => org.id)
+ .map((org) => ({
+ id: org.id!,
+ name: org.name,
+ code: org.code,
+ }))
+ setOrganizations(mapped)
+ setLoading(false)
+ },
+ (err: unknown) => {
+ console.error('[UserManagementWithTabs] listenToOrganizations failed:', err)
+ setLoading(false)
+ },
+ )
 
-    return () => {
-      try {
-        unsubscribe?.()
-      } catch (e) {
-        console.warn('[UserManagementWithTabs] org unsubscribe failed:', e)
-      }
-    }
-  }, [])
+ return () => {
+ try {
+ unsubscribe?.()
+ } catch (e) {
+ console.warn('[UserManagementWithTabs] org unsubscribe failed:', e)
+ }
+ }
+ }, [])
 
-  return { organizations, loading }
+ return { organizations, loading }
 }
 
 export const UserManagementWithTabs = () => {
-  const [tabIndex, setTabIndex] = useState(() => {
-    if (typeof window === 'undefined') return 0
-    const stored = sessionStorage.getItem(TAB_STORAGE_KEY)
-    const parsed = stored ? Number.parseInt(stored, 10) : 0
-    return Number.isFinite(parsed) ? parsed : 0
-  })
+ const [tabIndex, setTabIndex] = useState(() => {
+ if (typeof window === 'undefined') return 0
+ const stored = sessionStorage.getItem(TAB_STORAGE_KEY)
+ const parsed = stored ? Number.parseInt(stored, 10) : 0
+ return Number.isFinite(parsed) ? parsed : 0
+ })
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem(TAB_STORAGE_KEY, tabIndex.toString())
-    }
-  }, [tabIndex])
+ useEffect(() => {
+ if (typeof window !== 'undefined') {
+ sessionStorage.setItem(TAB_STORAGE_KEY, tabIndex.toString())
+ }
+ }, [tabIndex])
 
-  const { users, loading, error } = useManagedUsers()
-  const { organizations, loading: loadingOrgs } = useManagedOrganizations()
+ const { users, loading, error } = useManagedUsers()
+ const { organizations, loading: loadingOrgs } = useManagedOrganizations()
 
-  // Computed counts for tab badges
-  // Exclude platform admins so the badge matches the role cards below (which
-  // don't count super_admins). Normalized so legacy admin strings don't slip in.
-  const userCount = users.filter(u => normalizeRole(u.role) !== 'super_admin').length
-  const mentorCount = users.filter(u => normalizeRole(u.role) === 'mentor').length
-  const ambassadorCount = users.filter(u => normalizeRole(u.role) === 'ambassador').length
-  const partnerCount = users.filter(u => normalizeRole(u.role) === 'partner').length
-  const leadershipCount = mentorCount + ambassadorCount + partnerCount
+ // Computed counts for tab badges
+ // Exclude platform admins so the badge matches the role cards below (which
+ // don't count super_admins). Normalized so legacy admin strings don't slip in.
+ const userCount = users.filter(u => normalizeRole(u.role) !== 'super_admin').length
+ const mentorCount = users.filter(u => normalizeRole(u.role) === 'mentor').length
+ const ambassadorCount = users.filter(u => normalizeRole(u.role) === 'ambassador').length
+ const partnerCount = users.filter(u => normalizeRole(u.role) === 'partner').length
+ const leadershipCount = mentorCount + ambassadorCount + partnerCount
 
-  // Optional: derived subsets per tab (keeps tab components simpler)
-  const memo = useMemo(() => {
-    return {
-      users,
-      // Hide platform admins from Users Management — they are not managed here.
-      managedUsers: users.filter((u) => normalizeRole(u.role) !== 'super_admin'),
-      organizations,
-    }
-  }, [users, organizations])
+ // Optional: derived subsets per tab (keeps tab components simpler)
+ const memo = useMemo(() => {
+ return {
+ users,
+ // Hide platform admins from Users Management - they are not managed here.
+ managedUsers: users.filter((u) => normalizeRole(u.role) !== 'super_admin'),
+ organizations,
+ }
+ }, [users, organizations])
 
-  return (
-    <>
-      {error && (
-        <Alert status="warning" borderRadius="xl" mb={4}>
-          <AlertIcon />
-          {error}
-        </Alert>
-      )}
+ return (
+ <>
+ {error && (
+ <Alert status="warning" borderRadius="xl" mb={4}>
+ <AlertIcon />
+ {error}
+ </Alert>
+ )}
 
-      <Tabs
-        index={tabIndex}
-        onChange={setTabIndex}
-        colorScheme="purple"
-        variant="enclosed"
-        isLazy
-        lazyBehavior="keepMounted"
-      >
-        <TabList overflowX="auto" pb={2}>
-          <Tab whiteSpace="nowrap">
-            Users Management
-            <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
-          </Tab>
-          <Tab whiteSpace="nowrap">
-            Leadership Council
-            <Badge ml={2} colorScheme="gray" fontSize="xs">{leadershipCount}</Badge>
-          </Tab>
-        </TabList>
+ <Tabs
+ index={tabIndex}
+ onChange={setTabIndex}
+ colorScheme="purple"
+ variant="enclosed"
+ isLazy
+ lazyBehavior="keepMounted"
+ >
+ <TabList overflowX="auto" pb={2}>
+ <Tab whiteSpace="nowrap">
+ Users Management
+ <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
+ </Tab>
+ <Tab whiteSpace="nowrap">
+ Leadership Council
+ <Badge ml={2} colorScheme="gray" fontSize="xs">{leadershipCount}</Badge>
+ </Tab>
+ </TabList>
 
-        <TabPanels>
-          <TabPanel px={0}>
-            {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
-            <UsersManagementTab users={memo.managedUsers} loading={loading} />
-          </TabPanel>
+ <TabPanels>
+ <TabPanel px={0}>
+ {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
+ <UsersManagementTab users={memo.managedUsers} loading={loading} />
+ </TabPanel>
 
-          <TabPanel px={0}>
-            <LeadershipCouncil users={memo.users} organizations={memo.organizations} loadingUsers={loading || loadingOrgs} />
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
-    </>
-  )
+ <TabPanel px={0}>
+ <LeadershipCouncil users={memo.users} organizations={memo.organizations} loadingUsers={loading || loadingOrgs} />
+ </TabPanel>
+ </TabPanels>
+ </Tabs>
+ </>
+ )
 }

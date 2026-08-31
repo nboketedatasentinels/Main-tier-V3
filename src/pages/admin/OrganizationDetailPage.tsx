@@ -1,47 +1,47 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Alert,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
-  Badge,
-  Box,
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  Button,
-  Card,
-  CardBody,
-  Divider,
-  Flex,
-  Grid,
-  GridItem,
-  HStack,
-  IconButton,
-  Input,
-  InputGroup,
-  InputLeftElement,
-  FormControl,
-  FormLabel,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalCloseButton,
-  ModalBody,
-  ModalFooter,
-  Select,
-  SimpleGrid,
-  Skeleton,
-  SkeletonText,
-  Stack,
-  Text,
-  Textarea,
-  Tooltip,
-  useDisclosure,
-  useToast,
-  Wrap,
-  WrapItem,
+ Alert,
+ AlertDescription,
+ AlertIcon,
+ AlertTitle,
+ Badge,
+ Box,
+ Breadcrumb,
+ BreadcrumbItem,
+ BreadcrumbLink,
+ Button,
+ Card,
+ CardBody,
+ Divider,
+ Flex,
+ Grid,
+ GridItem,
+ HStack,
+ IconButton,
+ Input,
+ InputGroup,
+ InputLeftElement,
+ FormControl,
+ FormLabel,
+ Modal,
+ ModalOverlay,
+ ModalContent,
+ ModalHeader,
+ ModalCloseButton,
+ ModalBody,
+ ModalFooter,
+ Select,
+ SimpleGrid,
+ Skeleton,
+ SkeletonText,
+ Stack,
+ Text,
+ Textarea,
+ Tooltip,
+ useDisclosure,
+ useToast,
+ Wrap,
+ WrapItem,
 } from '@chakra-ui/react'
 import { ArrowLeft, BellRing, Search, User } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -53,32 +53,32 @@ import { createIntervention } from '@/services/partnerInterventionsService'
 import { notifySupabaseUser } from '@/services/notificationService'
 import type { OrganizationInvitationProfile, OrganizationUserProfile } from '@/types/admin'
 import {
-  addDays,
-  addMonths,
-  getProgramDurationLabel,
-  resolveProgramCadence,
-  resolveProgramMonthCount,
+ addDays,
+ addMonths,
+ getProgramDurationLabel,
+ resolveProgramCadence,
+ resolveProgramMonthCount,
 } from '@/utils/monthlyCourseAssignments'
 import {
-  evaluateAdminFollowUpRisk,
-  followUpIssuesFromRisk,
-  pendingInviteFollowUpRisk,
+ evaluateAdminFollowUpRisk,
+ followUpIssuesFromRisk,
+ pendingInviteFollowUpRisk,
 } from '@/utils/adminFollowUpRisk'
 
 const formatDate = (value?: string) => {
-  if (!value) return 'Not available'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Not available'
-  return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
+ if (!value) return 'Not available'
+ const date = new Date(value)
+ if (Number.isNaN(date.getTime())) return 'Not available'
+ return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(date)
 }
 
 const formatDateTime = (value?: Date | null) => {
-  if (!value) return 'Never'
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(value)
+ if (!value) return 'Never'
+ return new Intl.DateTimeFormat(undefined, {
+ month: 'short',
+ day: 'numeric',
+ year: 'numeric',
+ }).format(value)
 }
 
 // Program start/end are often left blank on the org record, but they can always
@@ -86,23 +86,23 @@ const formatDateTime = (value?: Date | null) => {
 // duration (6 weeks for the biweekly journey, else N months). Keeps the overview
 // from showing a careless "Not available" when the data is inferable.
 const deriveProgramDates = (org?: {
-  programStart?: string
-  programEnd?: string
-  cohortStartDate?: unknown
-  programDuration?: number
+ programStart?: string
+ programEnd?: string
+ cohortStartDate?: unknown
+ programDuration?: number
 }): { start?: string; end?: string } => {
-  const startIso =
-    org?.programStart ||
-    (typeof org?.cohortStartDate === 'string' ? org.cohortStartDate : undefined)
-  if (!startIso) return { start: undefined, end: undefined }
-  const startDate = new Date(startIso)
-  if (Number.isNaN(startDate.getTime())) return { start: startIso, end: org?.programEnd }
-  if (org?.programEnd) return { start: startIso, end: org.programEnd }
-  const endDate =
-    resolveProgramCadence(org?.programDuration) === 'biweekly'
-      ? addDays(startDate, 6 * 7)
-      : addMonths(startDate, resolveProgramMonthCount(org?.programDuration))
-  return { start: startIso, end: endDate.toISOString() }
+ const startIso =
+ org?.programStart ||
+ (typeof org?.cohortStartDate === 'string' ? org.cohortStartDate : undefined)
+ if (!startIso) return { start: undefined, end: undefined }
+ const startDate = new Date(startIso)
+ if (Number.isNaN(startDate.getTime())) return { start: startIso, end: org?.programEnd }
+ if (org?.programEnd) return { start: startIso, end: org.programEnd }
+ const endDate =
+ resolveProgramCadence(org?.programDuration) === 'biweekly'
+ ? addDays(startDate, 6 * 7)
+ : addMonths(startDate, resolveProgramMonthCount(org?.programDuration))
+ return { start: startIso, end: endDate.toISOString() }
 }
 
 // Preset issues an admin can flag when asking a partner to follow up on a
@@ -110,14 +110,14 @@ const deriveProgramDates = (org?: {
 // (inactivity, points shortfall, stalled progress) so the two sides speak the
 // same language. Selections are stored on the intervention's riskVerdicts.
 const FOLLOW_UP_ISSUES = [
-  'Not active',
-  'Slow progress',
-  'Below points target',
-  'Missed check-ins',
-  'Incomplete onboarding',
-  'Low engagement',
-  'Membership lapsed',
-  'Needs encouragement',
+ 'Not active',
+ 'Slow progress',
+ 'Below points target',
+ 'Missed check-ins',
+ 'Incomplete onboarding',
+ 'Low engagement',
+ 'Membership lapsed',
+ 'Needs encouragement',
 ]
 
 const usersPageSize = 10
@@ -125,886 +125,886 @@ const usersPageSize = 10
 type OrgUserListFilter = 'all' | 'pending' | 'active'
 
 type OrgUserListRow =
-  | { kind: 'active'; id: string; user: OrganizationUserProfile }
-  | { kind: 'pending'; id: string; invite: OrganizationInvitationProfile }
+ | { kind: 'active'; id: string; user: OrganizationUserProfile }
+ | { kind: 'pending'; id: string; invite: OrganizationInvitationProfile }
 
 export const OrganizationDetailPage: React.FC = () => {
-  const { organizationId } = useParams()
-  const navigate = useNavigate()
-  const toast = useToast()
-  const { profile, user, isSuperAdmin } = useAuth()
-  const unauthorizedLogged = useRef(false)
+ const { organizationId } = useParams()
+ const navigate = useNavigate()
+ const toast = useToast()
+ const { profile, user, isSuperAdmin } = useAuth()
+ const unauthorizedLogged = useRef(false)
 
-  const {
-    organization,
-    users,
-    courseTitles,
-    loading,
-    error,
-    reload,
-    invitations,
-    statistics,
-    totalCount,
-  } = useOrganizationDetails(organizationId)
-  const [usersSearchQuery, setUsersSearchQuery] = useState('')
-  const [usersStatusFilter, setUsersStatusFilter] = useState<OrgUserListFilter>('all')
-  const [usersPage, setUsersPage] = useState(1)
+ const {
+ organization,
+ users,
+ courseTitles,
+ loading,
+ error,
+ reload,
+ invitations,
+ statistics,
+ totalCount,
+ } = useOrganizationDetails(organizationId)
+ const [usersSearchQuery, setUsersSearchQuery] = useState('')
+ const [usersStatusFilter, setUsersStatusFilter] = useState<OrgUserListFilter>('all')
+ const [usersPage, setUsersPage] = useState(1)
 
-  useEffect(() => {
-    if (error !== 'unauthorized' || unauthorizedLogged.current) return
-    unauthorizedLogged.current = true
-    toast({
-      title: 'Access restricted',
-      description: 'You do not have permission to view this organization.',
-      status: 'error',
-    })
-    logAdminAction({
-      action: 'Unauthorized organization access attempt',
-      organizationName: organization?.name,
-      organizationCode: organization?.code || organizationId,
-      adminId: user?.uid,
-      adminName: profile?.fullName || profile?.email,
-      metadata: { organizationId },
-    })
-    navigate('/unauthorized', { replace: true })
-  }, [error, navigate, organization, organizationId, profile, toast, user])
+ useEffect(() => {
+ if (error !== 'unauthorized' || unauthorizedLogged.current) return
+ unauthorizedLogged.current = true
+ toast({
+ title: 'Access restricted',
+ description: 'You do not have permission to view this organization.',
+ status: 'error',
+ })
+ logAdminAction({
+ action: 'Unauthorized organization access attempt',
+ organizationName: organization?.name,
+ organizationCode: organization?.code || organizationId,
+ adminId: user?.uid,
+ adminName: profile?.fullName || profile?.email,
+ metadata: { organizationId },
+ })
+ navigate('/unauthorized', { replace: true })
+ }, [error, navigate, organization, organizationId, profile, toast, user])
 
-  const isPartnerView = window.location.pathname.startsWith('/partner')
-  const breadcrumbBase = isSuperAdmin
-    ? { label: 'Super admin', path: '/admin/dashboard' }
-    : { label: 'Partner', path: '/partner/dashboard' }
-  const organizationListPath = breadcrumbBase.path
+ const isPartnerView = window.location.pathname.startsWith('/partner')
+ const breadcrumbBase = isSuperAdmin
+ ? { label: 'Super admin', path: '/admin/dashboard' }
+ : { label: 'Partner', path: '/partner/dashboard' }
+ const organizationListPath = breadcrumbBase.path
 
-  const handleBack = () => {
-    navigate(organizationListPath)
-  }
+ const handleBack = () => {
+ navigate(organizationListPath)
+ }
 
-  const handleViewUser = (userId: string) => {
-    const base = isPartnerView ? '/partner' : '/admin'
-    navigate(`${base}/user/${userId}`)
-  }
+ const handleViewUser = (userId: string) => {
+ const base = isPartnerView ? '/partner' : '/admin'
+ navigate(`${base}/user/${userId}`)
+ }
 
-  const followUp = useDisclosure()
-  const [followUpUser, setFollowUpUser] = useState<OrganizationUserProfile | null>(null)
-  const [followUpInvite, setFollowUpInvite] = useState<OrganizationInvitationProfile | null>(null)
-  const [followUpIssues, setFollowUpIssues] = useState<string[]>([])
-  const [followUpReason, setFollowUpReason] = useState('')
-  const [followUpDeadline, setFollowUpDeadline] = useState('')
-  const [followUpSubmitting, setFollowUpSubmitting] = useState(false)
+ const followUp = useDisclosure()
+ const [followUpUser, setFollowUpUser] = useState<OrganizationUserProfile | null>(null)
+ const [followUpInvite, setFollowUpInvite] = useState<OrganizationInvitationProfile | null>(null)
+ const [followUpIssues, setFollowUpIssues] = useState<string[]>([])
+ const [followUpReason, setFollowUpReason] = useState('')
+ const [followUpDeadline, setFollowUpDeadline] = useState('')
+ const [followUpSubmitting, setFollowUpSubmitting] = useState(false)
 
-  const journeyRiskOpts = useMemo(
-    () => ({
-      journeyType: organization?.journeyType ?? null,
-      cohortStartDate: organization?.cohortStartDate ?? organization?.programStart ?? null,
-    }),
-    [organization],
-  )
+ const journeyRiskOpts = useMemo(
+ () => ({
+ journeyType: organization?.journeyType ?? null,
+ cohortStartDate: organization?.cohortStartDate ?? organization?.programStart ?? null,
+ }),
+ [organization],
+ )
 
-  const openFollowUp = (userRow: OrganizationUserProfile) => {
-    const risk = evaluateAdminFollowUpRisk(userRow, journeyRiskOpts)
-    if (!risk.atRisk) return
-    setFollowUpUser(userRow)
-    setFollowUpInvite(null)
-    setFollowUpIssues(followUpIssuesFromRisk(risk))
-    setFollowUpReason('')
-    const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
-    followUp.onOpen()
-  }
+ const openFollowUp = (userRow: OrganizationUserProfile) => {
+ const risk = evaluateAdminFollowUpRisk(userRow, journeyRiskOpts)
+ if (!risk.atRisk) return
+ setFollowUpUser(userRow)
+ setFollowUpInvite(null)
+ setFollowUpIssues(followUpIssuesFromRisk(risk))
+ setFollowUpReason('')
+ const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+ setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
+ followUp.onOpen()
+ }
 
-  const openFollowUpForInvite = (invite: OrganizationInvitationProfile) => {
-    const risk = pendingInviteFollowUpRisk()
-    setFollowUpUser(null)
-    setFollowUpInvite(invite)
-    setFollowUpIssues(followUpIssuesFromRisk(risk))
-    setFollowUpReason(`Pending invite · ${invite.email || invite.name}`)
-    const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-    setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
-    followUp.onOpen()
-  }
+ const openFollowUpForInvite = (invite: OrganizationInvitationProfile) => {
+ const risk = pendingInviteFollowUpRisk()
+ setFollowUpUser(null)
+ setFollowUpInvite(invite)
+ setFollowUpIssues(followUpIssuesFromRisk(risk))
+ setFollowUpReason(`Pending invite · ${invite.email || invite.name}`)
+ const inAWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+ setFollowUpDeadline(inAWeek.toISOString().slice(0, 10))
+ followUp.onOpen()
+ }
 
-  const toggleFollowUpIssue = (issue: string) => {
-    setFollowUpIssues((prev) =>
-      prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue],
-    )
-  }
+ const toggleFollowUpIssue = (issue: string) => {
+ setFollowUpIssues((prev) =>
+ prev.includes(issue) ? prev.filter((i) => i !== issue) : [...prev, issue],
+ )
+ }
 
-  const submitFollowUp = async () => {
-    const subjectName = followUpUser?.name || followUpInvite?.name || 'Learner'
-    const subjectId = followUpUser?.id || followUpInvite?.id || null
-    if (!followUpUser && !followUpInvite) return
-    // Compose a human-readable reason from the selected issues plus any note.
-    const note = followUpReason.trim()
-    const summary =
-      [followUpIssues.join(', '), note].filter(Boolean).join(' - ') ||
-      'Follow-up requested by admin'
-    const partnerId = organization?.transformationPartnerId ?? null
-    // Who should get the "follow up" reminder in their bell: the org's assigned
-    // partner, or - when a partner is the one requesting it and the org has no
-    // partner on record yet - the acting partner themselves. This guarantees the
-    // partner who sends a follow-up always gets a reminder to act on it.
-    const recipientId = partnerId ?? (isPartnerView ? user?.uid ?? null : null)
-    setFollowUpSubmitting(true)
-    try {
-      const interventionId = await createIntervention({
-        name: subjectName,
-        target: organization?.name || organization?.code || 'Organization',
-        reason: summary,
-        status: 'watch',
-        deadline: followUpDeadline
-          ? new Date(followUpDeadline).toISOString()
-          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        organizationCode: organization?.code ?? null,
-        // Pending invites have no profile yet — leave uid null.
-        userId: followUpUser?.id ?? null,
-        partnerId: recipientId,
-        riskVerdicts: followUpIssues,
-        assignedAdminName: profile?.fullName || profile?.email || 'Admin',
-      })
-      // Notify the responsible partner directly so it shows in their in-app bell
-      // (not just the intervention queue). Non-fatal if it fails.
-      if (recipientId) {
-        try {
-          const adminName = profile?.fullName || profile?.email || 'An admin'
-          await notifySupabaseUser({
-            userId: recipientId,
-            type: 'partner_follow_up',
-            category: 'intervention',
-            title: 'Follow-up requested',
-            message: `${adminName} asked you to follow up with ${subjectName}${
-              followUpIssues.length ? `: ${followUpIssues.join(', ')}` : ''
-            }${note ? ` - ${note}` : ''}`,
-            relatedId: interventionId || subjectId,
-            data: {
-              learnerId: followUpUser?.id ?? null,
-              learnerName: subjectName,
-              inviteId: followUpInvite?.id ?? null,
-              inviteEmail: followUpInvite?.email ?? null,
-              organizationCode: organization?.code ?? null,
-              organizationName: organization?.name ?? null,
-              issues: followUpIssues,
-              note,
-            },
-          })
-        } catch (notifyErr) {
-          console.error('Follow-up partner notification failed', notifyErr)
-        }
-      }
-      logAdminAction({
-        action: 'Requested partner follow-up on learner',
-        organizationName: organization?.name,
-        organizationCode: organization?.code || organizationId,
-        adminId: user?.uid,
-        adminName: profile?.fullName || profile?.email,
-        metadata: {
-          userId: followUpUser?.id ?? null,
-          userName: subjectName,
-          inviteId: followUpInvite?.id ?? null,
-          issues: followUpIssues,
-          note,
-        },
-      })
-      toast({
-        title: 'Follow-up requested',
-        description: recipientId
-          ? `A follow-up reminder was sent to ${organization?.assignedPartnerName || 'the partner'} for ${subjectName}.`
-          : `${subjectName} was added to the intervention queue, but there is no partner to notify.`,
-        status: recipientId ? 'success' : 'warning',
-      })
-      followUp.onClose()
-    } catch (err) {
-      console.error('[OrganizationDetailPage] follow-up failed', err)
-      const message =
-        err instanceof Error
-          ? err.message
-          : err && typeof err === 'object' && 'message' in err
-            ? String((err as { message?: unknown }).message)
-            : 'Please try again.'
-      toast({
-        title: 'Could not request follow-up',
-        description: message || 'Please try again.',
-        status: 'error',
-      })
-    } finally {
-      setFollowUpSubmitting(false)
-    }
-  }
+ const submitFollowUp = async () => {
+ const subjectName = followUpUser?.name || followUpInvite?.name || 'Learner'
+ const subjectId = followUpUser?.id || followUpInvite?.id || null
+ if (!followUpUser && !followUpInvite) return
+ // Compose a human-readable reason from the selected issues plus any note.
+ const note = followUpReason.trim()
+ const summary =
+ [followUpIssues.join(', '), note].filter(Boolean).join(' - ') ||
+ 'Follow-up requested by admin'
+ const partnerId = organization?.transformationPartnerId ?? null
+ // Who should get the "follow up" reminder in their bell: the org's assigned
+ // partner, or - when a partner is the one requesting it and the org has no
+ // partner on record yet - the acting partner themselves. This guarantees the
+ // partner who sends a follow-up always gets a reminder to act on it.
+ const recipientId = partnerId ?? (isPartnerView ? user?.uid ?? null : null)
+ setFollowUpSubmitting(true)
+ try {
+ const interventionId = await createIntervention({
+ name: subjectName,
+ target: organization?.name || organization?.code || 'Organization',
+ reason: summary,
+ status: 'watch',
+ deadline: followUpDeadline
+ ? new Date(followUpDeadline).toISOString()
+ : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+ organizationCode: organization?.code ?? null,
+ // Pending invites have no profile yet - leave uid null.
+ userId: followUpUser?.id ?? null,
+ partnerId: recipientId,
+ riskVerdicts: followUpIssues,
+ assignedAdminName: profile?.fullName || profile?.email || 'Admin',
+ })
+ // Notify the responsible partner directly so it shows in their in-app bell
+ // (not just the intervention queue). Non-fatal if it fails.
+ if (recipientId) {
+ try {
+ const adminName = profile?.fullName || profile?.email || 'An admin'
+ await notifySupabaseUser({
+ userId: recipientId,
+ type: 'partner_follow_up',
+ category: 'intervention',
+ title: 'Follow-up requested',
+ message: `${adminName} asked you to follow up with ${subjectName}${
+ followUpIssues.length ? `: ${followUpIssues.join(', ')}` : ''
+ }${note ? ` - ${note}` : ''}`,
+ relatedId: interventionId || subjectId,
+ data: {
+ learnerId: followUpUser?.id ?? null,
+ learnerName: subjectName,
+ inviteId: followUpInvite?.id ?? null,
+ inviteEmail: followUpInvite?.email ?? null,
+ organizationCode: organization?.code ?? null,
+ organizationName: organization?.name ?? null,
+ issues: followUpIssues,
+ note,
+ },
+ })
+ } catch (notifyErr) {
+ console.error('Follow-up partner notification failed', notifyErr)
+ }
+ }
+ logAdminAction({
+ action: 'Requested partner follow-up on learner',
+ organizationName: organization?.name,
+ organizationCode: organization?.code || organizationId,
+ adminId: user?.uid,
+ adminName: profile?.fullName || profile?.email,
+ metadata: {
+ userId: followUpUser?.id ?? null,
+ userName: subjectName,
+ inviteId: followUpInvite?.id ?? null,
+ issues: followUpIssues,
+ note,
+ },
+ })
+ toast({
+ title: 'Follow-up requested',
+ description: recipientId
+ ? `A follow-up reminder was sent to ${organization?.assignedPartnerName || 'the partner'} for ${subjectName}.`
+ : `${subjectName} was added to the intervention queue, but there is no partner to notify.`,
+ status: recipientId ? 'success' : 'warning',
+ })
+ followUp.onClose()
+ } catch (err) {
+ console.error('[OrganizationDetailPage] follow-up failed', err)
+ const message =
+ err instanceof Error
+ ? err.message
+ : err && typeof err === 'object' && 'message' in err
+ ? String((err as { message?: unknown }).message)
+ : 'Please try again.'
+ toast({
+ title: 'Could not request follow-up',
+ description: message || 'Please try again.',
+ status: 'error',
+ })
+ } finally {
+ setFollowUpSubmitting(false)
+ }
+ }
 
-  const clearUsersFilters = () => {
-    setUsersSearchQuery('')
-    setUsersStatusFilter('all')
-  }
+ const clearUsersFilters = () => {
+ setUsersSearchQuery('')
+ setUsersStatusFilter('all')
+ }
 
-  const programDates = useMemo(
-    () =>
-      deriveProgramDates(
-        organization
-          ? {
-              programStart: organization.programStart,
-              programEnd: organization.programEnd,
-              cohortStartDate: organization.cohortStartDate,
-              programDuration: organization.programDuration,
-            }
-          : undefined,
-      ),
-    [organization],
-  )
+ const programDates = useMemo(
+ () =>
+ deriveProgramDates(
+ organization
+ ? {
+ programStart: organization.programStart,
+ programEnd: organization.programEnd,
+ cohortStartDate: organization.cohortStartDate,
+ programDuration: organization.programDuration,
+ }
+ : undefined,
+ ),
+ [organization],
+ )
 
-  const pendingInvitationCount = useMemo(
-    () => invitations.filter((invite) => (invite.status || '').toLowerCase() === 'pending').length,
-    [invitations],
-  )
+ const pendingInvitationCount = useMemo(
+ () => invitations.filter((invite) => (invite.status || '').toLowerCase() === 'pending').length,
+ [invitations],
+ )
 
-  // Unified org roster: active = enrolled profiles; pending invite = invited
-  // emails that have never signed up (already de-duped against members in the hook).
-  const userListRows = useMemo<OrgUserListRow[]>(() => {
-    const activeRows: OrgUserListRow[] = users.map((member) => ({
-      kind: 'active',
-      id: `active-${member.id}`,
-      user: member,
-    }))
-    const pendingRows: OrgUserListRow[] = invitations
-      .filter((invite) => (invite.status || '').toLowerCase() === 'pending')
-      .map((invite) => ({
-        kind: 'pending',
-        id: `pending-${invite.id}`,
-        invite,
-      }))
-    return [...activeRows, ...pendingRows]
-  }, [invitations, users])
+ // Unified org roster: active = enrolled profiles; pending invite = invited
+ // emails that have never signed up (already de-duped against members in the hook).
+ const userListRows = useMemo<OrgUserListRow[]>(() => {
+ const activeRows: OrgUserListRow[] = users.map((member) => ({
+ kind: 'active',
+ id: `active-${member.id}`,
+ user: member,
+ }))
+ const pendingRows: OrgUserListRow[] = invitations
+ .filter((invite) => (invite.status || '').toLowerCase() === 'pending')
+ .map((invite) => ({
+ kind: 'pending',
+ id: `pending-${invite.id}`,
+ invite,
+ }))
+ return [...activeRows, ...pendingRows]
+ }, [invitations, users])
 
-  const filteredUserListRows = useMemo(() => {
-    const search = usersSearchQuery.trim().toLowerCase()
-    return userListRows.filter((row) => {
-      if (usersStatusFilter === 'active' && row.kind !== 'active') return false
-      if (usersStatusFilter === 'pending' && row.kind !== 'pending') return false
+ const filteredUserListRows = useMemo(() => {
+ const search = usersSearchQuery.trim().toLowerCase()
+ return userListRows.filter((row) => {
+ if (usersStatusFilter === 'active' && row.kind !== 'active') return false
+ if (usersStatusFilter === 'pending' && row.kind !== 'pending') return false
 
-      if (!search) return true
-      if (row.kind === 'active') {
-        return (
-          (row.user.name || '').toLowerCase().includes(search) ||
-          (row.user.email || '').toLowerCase().includes(search)
-        )
-      }
-      return (
-        (row.invite.name || '').toLowerCase().includes(search) ||
-        (row.invite.email || '').toLowerCase().includes(search) ||
-        (row.invite.code || '').toLowerCase().includes(search)
-      )
-    })
-  }, [userListRows, usersSearchQuery, usersStatusFilter])
+ if (!search) return true
+ if (row.kind === 'active') {
+ return (
+ (row.user.name || '').toLowerCase().includes(search) ||
+ (row.user.email || '').toLowerCase().includes(search)
+ )
+ }
+ return (
+ (row.invite.name || '').toLowerCase().includes(search) ||
+ (row.invite.email || '').toLowerCase().includes(search) ||
+ (row.invite.code || '').toLowerCase().includes(search)
+ )
+ })
+ }, [userListRows, usersSearchQuery, usersStatusFilter])
 
-  const usersPageCount = Math.max(1, Math.ceil(filteredUserListRows.length / usersPageSize))
-  const currentUsersPage = Math.min(usersPage, usersPageCount)
-  const paginatedUserListRows = useMemo(() => {
-    const start = (currentUsersPage - 1) * usersPageSize
-    return filteredUserListRows.slice(start, start + usersPageSize)
-  }, [currentUsersPage, filteredUserListRows])
-  const usersStartIndex = Math.min((currentUsersPage - 1) * usersPageSize + 1, filteredUserListRows.length || 0)
-  const usersEndIndex = Math.min(currentUsersPage * usersPageSize, filteredUserListRows.length || 0)
-  const usersFiltersActive = usersSearchQuery.trim().length > 0 || usersStatusFilter !== 'all'
+ const usersPageCount = Math.max(1, Math.ceil(filteredUserListRows.length / usersPageSize))
+ const currentUsersPage = Math.min(usersPage, usersPageCount)
+ const paginatedUserListRows = useMemo(() => {
+ const start = (currentUsersPage - 1) * usersPageSize
+ return filteredUserListRows.slice(start, start + usersPageSize)
+ }, [currentUsersPage, filteredUserListRows])
+ const usersStartIndex = Math.min((currentUsersPage - 1) * usersPageSize + 1, filteredUserListRows.length || 0)
+ const usersEndIndex = Math.min(currentUsersPage * usersPageSize, filteredUserListRows.length || 0)
+ const usersFiltersActive = usersSearchQuery.trim().length > 0 || usersStatusFilter !== 'all'
 
-  useEffect(() => {
-    setUsersPage(1)
-  }, [usersSearchQuery, usersStatusFilter])
+ useEffect(() => {
+ setUsersPage(1)
+ }, [usersSearchQuery, usersStatusFilter])
 
-  if (error && error !== 'unauthorized') {
-    const title =
-      error === 'not_found'
-        ? 'Organization not found'
-        : error === 'invalid'
-          ? 'Invalid organization ID'
-          : 'Unable to load organization'
-    const description =
-      error === 'not_found'
-        ? 'We could not locate this organization. Please check the link or try again.'
-        : error === 'invalid'
-          ? 'The organization ID provided is not valid.'
-          : 'There was a problem loading the organization details. Please try again.'
+ if (error && error !== 'unauthorized') {
+ const title =
+ error === 'not_found'
+ ? 'Organization not found'
+ : error === 'invalid'
+ ? 'Invalid organization ID'
+ : 'Unable to load organization'
+ const description =
+ error === 'not_found'
+ ? 'We could not locate this organization. Please check the link or try again.'
+ : error === 'invalid'
+ ? 'The organization ID provided is not valid.'
+ : 'There was a problem loading the organization details. Please try again.'
 
-    return (
-      <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody py={4}>
-            <Alert status="error" borderRadius="md" bg="red.50">
-              <AlertIcon />
-              <Box flex="1">
-                <AlertTitle>{title}</AlertTitle>
-                <AlertDescription>{description}</AlertDescription>
-              </Box>
-              <Button variant="outline" onClick={reload}>
-                Retry
-              </Button>
-            </Alert>
-          </CardBody>
-        </Card>
-      </Box>
-    )
-  }
+ return (
+ <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
+ <Card bg="white" border="1px solid" borderColor="brand.border">
+ <CardBody py={4}>
+ <Alert status="error" borderRadius="md" bg="red.50">
+ <AlertIcon />
+ <Box flex="1">
+ <AlertTitle>{title}</AlertTitle>
+ <AlertDescription>{description}</AlertDescription>
+ </Box>
+ <Button variant="outline" onClick={reload}>
+ Retry
+ </Button>
+ </Alert>
+ </CardBody>
+ </Card>
+ </Box>
+ )
+ }
 
-  return (
-    <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
-      <Stack spacing={6}>
-        <Breadcrumb
-          fontSize="sm"
-          color="brand.subtleText"
-          separator="/"
-          spacing={2}
-          listProps={{
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            m: 0,
-            p: 0,
-            listStyleType: 'none',
-          }}
-        >
-          <BreadcrumbItem display="inline-flex" alignItems="center" m={0}>
-            <BreadcrumbLink onClick={() => navigate(breadcrumbBase.path)}>
-              {breadcrumbBase.label}
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbItem display="inline-flex" alignItems="center" m={0}>
-            <BreadcrumbLink onClick={() => navigate(organizationListPath)}>
-              Organizations
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbItem isCurrentPage display="inline-flex" alignItems="center" m={0}>
-            <BreadcrumbLink>{organization?.name || 'Organization'}</BreadcrumbLink>
-          </BreadcrumbItem>
-        </Breadcrumb>
+ return (
+ <Box bg="brand.canvas" minH={{ base: '100dvh', md: '100vh' }} px={{ base: 4, md: 8 }} py={8}>
+ <Stack spacing={6}>
+ <Breadcrumb
+ fontSize="sm"
+ color="brand.subtleText"
+ separator="/"
+ spacing={2}
+ listProps={{
+ display: 'flex',
+ flexDirection: 'row',
+ flexWrap: 'wrap',
+ alignItems: 'center',
+ m: 0,
+ p: 0,
+ listStyleType: 'none',
+ }}
+ >
+ <BreadcrumbItem display="inline-flex" alignItems="center" m={0}>
+ <BreadcrumbLink onClick={() => navigate(breadcrumbBase.path)}>
+ {breadcrumbBase.label}
+ </BreadcrumbLink>
+ </BreadcrumbItem>
+ <BreadcrumbItem display="inline-flex" alignItems="center" m={0}>
+ <BreadcrumbLink onClick={() => navigate(organizationListPath)}>
+ Organizations
+ </BreadcrumbLink>
+ </BreadcrumbItem>
+ <BreadcrumbItem isCurrentPage display="inline-flex" alignItems="center" m={0}>
+ <BreadcrumbLink>{organization?.name || 'Organization'}</BreadcrumbLink>
+ </BreadcrumbItem>
+ </Breadcrumb>
 
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody py={4}>
-            <HStack justify="space-between" align="center" wrap="wrap" spacing={4}>
-              <HStack spacing={3}>
-                <IconButton
-                  aria-label="Back to organizations"
-                  icon={<ArrowLeft size={18} />}
-                  variant="outline"
-                  onClick={handleBack}
-                />
-                <Stack spacing={1.5}>
-                  <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="brand.text" lineHeight="1.1">
-                    {organization?.name || 'Loading organization'}
-                  </Text>
-                  <HStack spacing={2}>
-                    <Badge colorScheme="purple">
-                      Code: {organization?.code || 'N/A'}
-                    </Badge>
-                    {organization?.status && <StatusBadge status={organization.status} />}
-                  </HStack>
-                </Stack>
-              </HStack>
-              <Button variant="outline" leftIcon={<ArrowLeft size={16} />} onClick={handleBack}>
-                Back to organizations
-              </Button>
-            </HStack>
-          </CardBody>
-        </Card>
+ <Card bg="white" border="1px solid" borderColor="brand.border">
+ <CardBody py={4}>
+ <HStack justify="space-between" align="center" wrap="wrap" spacing={4}>
+ <HStack spacing={3}>
+ <IconButton
+ aria-label="Back to organizations"
+ icon={<ArrowLeft size={18} />}
+ variant="outline"
+ onClick={handleBack}
+ />
+ <Stack spacing={1.5}>
+ <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" color="brand.text" lineHeight="1.1">
+ {organization?.name || 'Loading organization'}
+ </Text>
+ <HStack spacing={2}>
+ <Badge colorScheme="purple">
+ Code: {organization?.code || 'N/A'}
+ </Badge>
+ {organization?.status && <StatusBadge status={organization.status} />}
+ </HStack>
+ </Stack>
+ </HStack>
+ <Button variant="outline" leftIcon={<ArrowLeft size={16} />} onClick={handleBack}>
+ Back to organizations
+ </Button>
+ </HStack>
+ </CardBody>
+ </Card>
 
-        <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} alignItems="stretch">
-          <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody py={4}>
-              <Stack spacing={3}>
-                <Text fontWeight="bold" color="brand.text">
-                  Organization overview
-                </Text>
-                {loading ? (
-                  <SkeletonText noOfLines={5} spacing={3} />
-                ) : (
-                  <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={3}>
-                    {[
-                      {
-                        // Enrolled members (profiles linked to the org), including
-                        // people invited when the organization was created.
-                        label: 'Total users',
-                        value: `${statistics?.totalMembers ?? organization?.memberCount ?? totalCount ?? 0}`,
-                      },
-                      {
-                        label: 'Pending invites',
-                        value: `${pendingInvitationCount}`,
-                      },
-                      {
-                        label: 'Cohort size',
-                        value: `${organization?.teamSize ?? 0}`,
-                      },
-                      { label: 'Village', value: organization?.village || 'Not assigned' },
-                      { label: 'Cluster', value: organization?.cluster || 'Not assigned' },
-                      { label: 'Program start', value: formatDate(programDates.start) },
-                      { label: 'Program end', value: formatDate(programDates.end) },
-                      { label: 'Cohort start', value: formatDate(organization?.cohortStartDate) },
-                      {
-                        label: 'Program duration',
-                        value: getProgramDurationLabel(organization?.programDuration) || 'Not set',
-                      },
-                      { label: 'Created', value: formatDate(organization?.createdAt) },
-                      { label: 'Updated', value: formatDate(organization?.updatedAt) },
-                    ].map((field) => (
-                      <Stack key={field.label} spacing={0.5} minW={0}>
-                        <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{field.label}</Text>
-                        <Text fontSize="sm" fontWeight="semibold" color="brand.text">{field.value}</Text>
-                      </Stack>
-                    ))}
-                  </SimpleGrid>
-                )}
-              </Stack>
-            </CardBody>
-          </Card>
+ <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={6} alignItems="stretch">
+ <Card bg="white" border="1px solid" borderColor="brand.border">
+ <CardBody py={4}>
+ <Stack spacing={3}>
+ <Text fontWeight="bold" color="brand.text">
+ Organization overview
+ </Text>
+ {loading ? (
+ <SkeletonText noOfLines={5} spacing={3} />
+ ) : (
+ <SimpleGrid columns={{ base: 2, sm: 3 }} spacingX={6} spacingY={3}>
+ {[
+ {
+ // Enrolled members (profiles linked to the org), including
+ // people invited when the organization was created.
+ label: 'Total users',
+ value: `${statistics?.totalMembers ?? organization?.memberCount ?? totalCount ?? 0}`,
+ },
+ {
+ label: 'Pending invites',
+ value: `${pendingInvitationCount}`,
+ },
+ {
+ label: 'Cohort size',
+ value: `${organization?.teamSize ?? 0}`,
+ },
+ { label: 'Village', value: organization?.village || 'Not assigned' },
+ { label: 'Cluster', value: organization?.cluster || 'Not assigned' },
+ { label: 'Program start', value: formatDate(programDates.start) },
+ { label: 'Program end', value: formatDate(programDates.end) },
+ { label: 'Cohort start', value: formatDate(organization?.cohortStartDate) },
+ {
+ label: 'Program duration',
+ value: getProgramDurationLabel(organization?.programDuration) || 'Not set',
+ },
+ { label: 'Created', value: formatDate(organization?.createdAt) },
+ { label: 'Updated', value: formatDate(organization?.updatedAt) },
+ ].map((field) => (
+ <Stack key={field.label} spacing={0.5} minW={0}>
+ <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{field.label}</Text>
+ <Text fontSize="sm" fontWeight="semibold" color="brand.text">{field.value}</Text>
+ </Stack>
+ ))}
+ </SimpleGrid>
+ )}
+ </Stack>
+ </CardBody>
+ </Card>
 
-          <Card bg="white" border="1px solid" borderColor="brand.border">
-            <CardBody py={4}>
-              <Stack spacing={3}>
-                <Text fontWeight="bold" color="brand.text">
-                  Leadership & support
-                </Text>
-                {loading ? (
-                  <SkeletonText noOfLines={5} spacing={3} />
-                ) : (
-                  <Stack spacing={0} divider={<Divider />}>
-                    {[
-                      {
-                        role: 'Transformation partner',
-                        name: organization?.assignedPartnerName,
-                        email: organization?.assignedPartnerEmail,
-                      },
-                      {
-                        role: 'Mentor',
-                        name: organization?.assignedMentorName,
-                        email: organization?.assignedMentorEmail,
-                      },
-                      {
-                        role: 'Coach',
-                        name: organization?.assignedAmbassadorName,
-                        email: organization?.assignedAmbassadorEmail,
-                      },
-                    ].map((person) => (
-                      <HStack key={person.role} justify="space-between" align="center" py={2} spacing={4}>
-                        <Text fontSize="sm" color="brand.subtleText">{person.role}</Text>
-                        <Stack spacing={0} align="flex-end" minW={0}>
-                          <Text
-                            fontWeight="semibold"
-                            color={person.name ? 'brand.text' : 'brand.subtleText'}
-                            noOfLines={1}
-                          >
-                            {person.name || 'Not assigned'}
-                          </Text>
-                          {person.email && (
-                            <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{person.email}</Text>
-                          )}
-                        </Stack>
-                      </HStack>
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-            </CardBody>
-          </Card>
-        </SimpleGrid>
+ <Card bg="white" border="1px solid" borderColor="brand.border">
+ <CardBody py={4}>
+ <Stack spacing={3}>
+ <Text fontWeight="bold" color="brand.text">
+ Leadership & support
+ </Text>
+ {loading ? (
+ <SkeletonText noOfLines={5} spacing={3} />
+ ) : (
+ <Stack spacing={0} divider={<Divider />}>
+ {[
+ {
+ role: 'Transformation partner',
+ name: organization?.assignedPartnerName,
+ email: organization?.assignedPartnerEmail,
+ },
+ {
+ role: 'Mentor',
+ name: organization?.assignedMentorName,
+ email: organization?.assignedMentorEmail,
+ },
+ {
+ role: 'Coach',
+ name: organization?.assignedAmbassadorName,
+ email: organization?.assignedAmbassadorEmail,
+ },
+ ].map((person) => (
+ <HStack key={person.role} justify="space-between" align="center" py={2} spacing={4}>
+ <Text fontSize="sm" color="brand.subtleText">{person.role}</Text>
+ <Stack spacing={0} align="flex-end" minW={0}>
+ <Text
+ fontWeight="semibold"
+ color={person.name ? 'brand.text' : 'brand.subtleText'}
+ noOfLines={1}
+ >
+ {person.name || 'Not assigned'}
+ </Text>
+ {person.email && (
+ <Text fontSize="xs" color="brand.subtleText" noOfLines={1}>{person.email}</Text>
+ )}
+ </Stack>
+ </HStack>
+ ))}
+ </Stack>
+ )}
+ </Stack>
+ </CardBody>
+ </Card>
+ </SimpleGrid>
 
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody py={4}>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align="center">
-                <Text fontWeight="bold" color="brand.text">
-                  Course assignments
-                </Text>
-                <Badge colorScheme="purple">{courseTitles.length} courses</Badge>
-              </HStack>
-              {loading ? (
-                <SkeletonText noOfLines={2} spacing={3} />
-              ) : courseTitles.length ? (
-                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                  {courseTitles.map((course, index) => (
-                    <HStack
-                      key={course}
-                      p={3}
-                      spacing={3}
-                      borderRadius="md"
-                      border="1px solid"
-                      borderColor="brand.border"
-                      bg="brand.accent"
-                      align="center"
-                    >
-                      <Flex
-                        flexShrink={0}
-                        w={7}
-                        h={7}
-                        borderRadius="md"
-                        bg="white"
-                        border="1px solid"
-                        borderColor="brand.border"
-                        align="center"
-                        justify="center"
-                      >
-                        <Text fontSize="xs" fontWeight="bold" color="brand.subtleText">{index + 1}</Text>
-                      </Flex>
-                      <Text fontSize="sm" fontWeight="semibold" color="brand.text">{course}</Text>
-                    </HStack>
-                  ))}
-                </SimpleGrid>
-              ) : (
-                <Box p={3} borderRadius="md" border="1px dashed" borderColor="brand.border">
-                  <Text color="brand.subtleText">No courses assigned yet.</Text>
-                </Box>
-              )}
-            </Stack>
-          </CardBody>
-        </Card>
+ <Card bg="white" border="1px solid" borderColor="brand.border">
+ <CardBody py={4}>
+ <Stack spacing={3}>
+ <HStack justify="space-between" align="center">
+ <Text fontWeight="bold" color="brand.text">
+ Course assignments
+ </Text>
+ <Badge colorScheme="purple">{courseTitles.length} courses</Badge>
+ </HStack>
+ {loading ? (
+ <SkeletonText noOfLines={2} spacing={3} />
+ ) : courseTitles.length ? (
+ <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
+ {courseTitles.map((course, index) => (
+ <HStack
+ key={course}
+ p={3}
+ spacing={3}
+ borderRadius="md"
+ border="1px solid"
+ borderColor="brand.border"
+ bg="brand.accent"
+ align="center"
+ >
+ <Flex
+ flexShrink={0}
+ w={7}
+ h={7}
+ borderRadius="md"
+ bg="white"
+ border="1px solid"
+ borderColor="brand.border"
+ align="center"
+ justify="center"
+ >
+ <Text fontSize="xs" fontWeight="bold" color="brand.subtleText">{index + 1}</Text>
+ </Flex>
+ <Text fontSize="sm" fontWeight="semibold" color="brand.text">{course}</Text>
+ </HStack>
+ ))}
+ </SimpleGrid>
+ ) : (
+ <Box p={3} borderRadius="md" border="1px dashed" borderColor="brand.border">
+ <Text color="brand.subtleText">No courses assigned yet.</Text>
+ </Box>
+ )}
+ </Stack>
+ </CardBody>
+ </Card>
 
-        <Card bg="white" border="1px solid" borderColor="brand.border">
-          <CardBody py={4}>
-            <Stack spacing={3}>
-              <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
-                <Stack spacing={1}>
-                  <Text fontWeight="bold" color="brand.text">
-                    Users ({filteredUserListRows.length})
-                  </Text>
-                  <Text fontSize="sm" color="brand.subtleText">
-                    Showing {usersStartIndex}-{usersEndIndex} of {filteredUserListRows.length} users.
-                  </Text>
-                </Stack>
-                <HStack spacing={2}>
-                  <Badge colorScheme={pendingInvitationCount > 0 ? 'yellow' : 'gray'}>
-                    {pendingInvitationCount > 0
-                      ? `${pendingInvitationCount} pending invite${pendingInvitationCount === 1 ? '' : 's'}`
-                      : 'No pending invites'}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    onClick={clearUsersFilters}
-                    isDisabled={!usersFiltersActive}
-                  >
-                    Clear filters
-                  </Button>
-                </HStack>
-              </HStack>
+ <Card bg="white" border="1px solid" borderColor="brand.border">
+ <CardBody py={4}>
+ <Stack spacing={3}>
+ <HStack justify="space-between" align={{ base: 'flex-start', md: 'center' }} wrap="wrap" spacing={3}>
+ <Stack spacing={1}>
+ <Text fontWeight="bold" color="brand.text">
+ Users ({filteredUserListRows.length})
+ </Text>
+ <Text fontSize="sm" color="brand.subtleText">
+ Showing {usersStartIndex}-{usersEndIndex} of {filteredUserListRows.length} users.
+ </Text>
+ </Stack>
+ <HStack spacing={2}>
+ <Badge colorScheme={pendingInvitationCount > 0 ? 'yellow' : 'gray'}>
+ {pendingInvitationCount > 0
+ ? `${pendingInvitationCount} pending invite${pendingInvitationCount === 1 ? '' : 's'}`
+ : 'No pending invites'}
+ </Badge>
+ <Button
+ variant="outline"
+ onClick={clearUsersFilters}
+ isDisabled={!usersFiltersActive}
+ >
+ Clear filters
+ </Button>
+ </HStack>
+ </HStack>
 
-              <Grid templateColumns={{ base: '1fr', md: '2fr 1fr' }} gap={3}>
-                <GridItem colSpan={{ base: 1, md: 1 }}>
-                  <InputGroup>
-                    <InputLeftElement pointerEvents="none">
-                      <Search size={16} />
-                    </InputLeftElement>
-                    <Input
-                      placeholder="Search by name, email, or code"
-                      value={usersSearchQuery}
-                      onChange={(event) => setUsersSearchQuery(event.target.value)}
-                      bg="white"
-                    />
-                  </InputGroup>
-                </GridItem>
-                <Select
-                  value={usersStatusFilter}
-                  onChange={(event) => setUsersStatusFilter(event.target.value as OrgUserListFilter)}
-                >
-                  <option value="all">All users</option>
-                  <option value="pending">Pending invite</option>
-                  <option value="active">Active</option>
-                </Select>
-              </Grid>
+ <Grid templateColumns={{ base: '1fr', md: '2fr 1fr' }} gap={3}>
+ <GridItem colSpan={{ base: 1, md: 1 }}>
+ <InputGroup>
+ <InputLeftElement pointerEvents="none">
+ <Search size={16} />
+ </InputLeftElement>
+ <Input
+ placeholder="Search by name, email, or code"
+ value={usersSearchQuery}
+ onChange={(event) => setUsersSearchQuery(event.target.value)}
+ bg="white"
+ />
+ </InputGroup>
+ </GridItem>
+ <Select
+ value={usersStatusFilter}
+ onChange={(event) => setUsersStatusFilter(event.target.value as OrgUserListFilter)}
+ >
+ <option value="all">All users</option>
+ <option value="pending">Pending invite</option>
+ <option value="active">Active</option>
+ </Select>
+ </Grid>
 
-              <Divider />
+ <Divider />
 
-              {loading ? (
-                <Stack spacing={3}>
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <Skeleton key={index} height="52px" borderRadius="md" />
-                  ))}
-                </Stack>
-              ) : paginatedUserListRows.length ? (
-                <Box overflowX="auto">
-                  <Box minW="920px">
-                    <Grid templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr" gap={2} pb={2}>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
-                        User
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
-                        Email / Code
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
-                        Role
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
-                        Status
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
-                        Added
-                      </Text>
-                      <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
-                        Actions
-                      </Text>
-                    </Grid>
+ {loading ? (
+ <Stack spacing={3}>
+ {Array.from({ length: 3 }).map((_, index) => (
+ <Skeleton key={index} height="52px" borderRadius="md" />
+ ))}
+ </Stack>
+ ) : paginatedUserListRows.length ? (
+ <Box overflowX="auto">
+ <Box minW="920px">
+ <Grid templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr" gap={2} pb={2}>
+ <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+ User
+ </Text>
+ <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+ Email / Code
+ </Text>
+ <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+ Role
+ </Text>
+ <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+ Status
+ </Text>
+ <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+ Added
+ </Text>
+ <Text fontSize="sm" color="brand.subtleText" fontWeight="semibold" px={2} py={1}>
+ Actions
+ </Text>
+ </Grid>
 
-                    <Stack spacing={2}>
-                      {paginatedUserListRows.map((row) => {
-                        if (row.kind === 'pending') {
-                          const invite = row.invite
-                          return (
-                            <Grid
-                              key={row.id}
-                              templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr"
-                              gap={2}
-                              p={3}
-                              borderRadius="md"
-                              border="1px solid"
-                              borderColor="brand.border"
-                              bg="brand.accent"
-                              alignItems="center"
-                            >
-                              <HStack spacing={3}>
-                                <Box
-                                  w={8}
-                                  h={8}
-                                  borderRadius="full"
-                                  bg="white"
-                                  border="1px solid"
-                                  borderColor="brand.border"
-                                  display="flex"
-                                  alignItems="center"
-                                  justifyContent="center"
-                                >
-                                  <User size={16} />
-                                </Box>
-                                <Text fontWeight="semibold" color="brand.text">
-                                  {invite.name || 'Invited user'}
-                                </Text>
-                              </HStack>
-                              <Stack spacing={0}>
-                                <Text color="brand.text">{invite.email || 'No email provided'}</Text>
-                                {invite.method === 'one_time_code' && invite.code ? (
-                                  <Text fontSize="xs" color="brand.subtleText">
-                                    Code: {invite.code}
-                                  </Text>
-                                ) : null}
-                              </Stack>
-                              <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
-                                {(invite.role || 'user').replace('_', ' ')}
-                              </Badge>
-                              <Badge colorScheme="yellow" variant="subtle">
-                                Pending invite
-                              </Badge>
-                              <Text fontSize="sm" color="brand.subtleText">
-                                {formatDateTime(invite.createdAt || null)}
-                              </Text>
-                              <HStack spacing={2}>
-                                <Tooltip
-                                  label="Pending invite — never joined. Ask the partner to follow up."
-                                  hasArrow
-                                >
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    colorScheme="orange"
-                                    leftIcon={<BellRing size={14} />}
-                                    onClick={() => openFollowUpForInvite(invite)}
-                                  >
-                                    Follow-up
-                                  </Button>
-                                </Tooltip>
-                              </HStack>
-                            </Grid>
-                          )
-                        }
+ <Stack spacing={2}>
+ {paginatedUserListRows.map((row) => {
+ if (row.kind === 'pending') {
+ const invite = row.invite
+ return (
+ <Grid
+ key={row.id}
+ templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr"
+ gap={2}
+ p={3}
+ borderRadius="md"
+ border="1px solid"
+ borderColor="brand.border"
+ bg="brand.accent"
+ alignItems="center"
+ >
+ <HStack spacing={3}>
+ <Box
+ w={8}
+ h={8}
+ borderRadius="full"
+ bg="white"
+ border="1px solid"
+ borderColor="brand.border"
+ display="flex"
+ alignItems="center"
+ justifyContent="center"
+ >
+ <User size={16} />
+ </Box>
+ <Text fontWeight="semibold" color="brand.text">
+ {invite.name || 'Invited user'}
+ </Text>
+ </HStack>
+ <Stack spacing={0}>
+ <Text color="brand.text">{invite.email || 'No email provided'}</Text>
+ {invite.method === 'one_time_code' && invite.code ? (
+ <Text fontSize="xs" color="brand.subtleText">
+ Code: {invite.code}
+ </Text>
+ ) : null}
+ </Stack>
+ <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
+ {(invite.role || 'user').replace('_', ' ')}
+ </Badge>
+ <Badge colorScheme="yellow" variant="subtle">
+ Pending invite
+ </Badge>
+ <Text fontSize="sm" color="brand.subtleText">
+ {formatDateTime(invite.createdAt || null)}
+ </Text>
+ <HStack spacing={2}>
+ <Tooltip
+ label="Pending invite - never joined. Ask the partner to follow up."
+ hasArrow
+ >
+ <Button
+ size="sm"
+ variant="ghost"
+ colorScheme="orange"
+ leftIcon={<BellRing size={14} />}
+ onClick={() => openFollowUpForInvite(invite)}
+ >
+ Follow-up
+ </Button>
+ </Tooltip>
+ </HStack>
+ </Grid>
+ )
+ }
 
-                        const userRow = row.user
-                        const risk = evaluateAdminFollowUpRisk(userRow, journeyRiskOpts)
-                        return (
-                          <Grid
-                            key={row.id}
-                            templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr"
-                            gap={2}
-                            p={3}
-                            borderRadius="md"
-                            border="1px solid"
-                            borderColor="brand.border"
-                            bg="brand.accent"
-                            alignItems="center"
-                          >
-                            <HStack spacing={3}>
-                              <Box
-                                w={8}
-                                h={8}
-                                borderRadius="full"
-                                bg="white"
-                                border="1px solid"
-                                borderColor="brand.border"
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                              >
-                                <User size={16} />
-                              </Box>
-                              <Text fontWeight="semibold" color="brand.text">
-                                {userRow.name || 'No name'}
-                              </Text>
-                            </HStack>
-                            <Text color="brand.text">{userRow.email || 'No email'}</Text>
-                            <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
-                              {userRow.role.replace('_', ' ')}
-                            </Badge>
-                            <Badge
-                              colorScheme={risk.atRisk ? 'orange' : 'green'}
-                              variant="subtle"
-                            >
-                              {risk.atRisk ? 'At risk' : 'Active'}
-                            </Badge>
-                            <Text fontSize="sm" color="brand.subtleText">
-                              {formatDateTime(userRow.createdAt || null)}
-                            </Text>
-                            <HStack spacing={2}>
-                              <Button size="sm" variant="outline" onClick={() => handleViewUser(userRow.id)}>
-                                View user
-                              </Button>
-                              <Tooltip
-                                label={
-                                  risk.atRisk
-                                    ? `At risk: ${risk.labels.join(', ')}`
-                                    : 'Follow-up is only available for at-risk learners (never joined or below points target).'
-                                }
-                                hasArrow
-                              >
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  colorScheme="orange"
-                                  leftIcon={<BellRing size={14} />}
-                                  onClick={() => openFollowUp(userRow)}
-                                  isDisabled={!risk.atRisk}
-                                >
-                                  Follow-up
-                                </Button>
-                              </Tooltip>
-                            </HStack>
-                          </Grid>
-                        )
-                      })}
-                    </Stack>
-                  </Box>
-                </Box>
-              ) : (
-                <Box p={4} borderRadius="md" border="1px dashed" borderColor="brand.border">
-                  <Text color="brand.subtleText">
-                    {userListRows.length === 0
-                      ? 'No users have been added to this organization yet.'
-                      : 'No users match the current search or filters.'}
-                  </Text>
-                </Box>
-              )}
+ const userRow = row.user
+ const risk = evaluateAdminFollowUpRisk(userRow, journeyRiskOpts)
+ return (
+ <Grid
+ key={row.id}
+ templateColumns="2fr 2fr 1fr 1.2fr 1.2fr 1.6fr"
+ gap={2}
+ p={3}
+ borderRadius="md"
+ border="1px solid"
+ borderColor="brand.border"
+ bg="brand.accent"
+ alignItems="center"
+ >
+ <HStack spacing={3}>
+ <Box
+ w={8}
+ h={8}
+ borderRadius="full"
+ bg="white"
+ border="1px solid"
+ borderColor="brand.border"
+ display="flex"
+ alignItems="center"
+ justifyContent="center"
+ >
+ <User size={16} />
+ </Box>
+ <Text fontWeight="semibold" color="brand.text">
+ {userRow.name || 'No name'}
+ </Text>
+ </HStack>
+ <Text color="brand.text">{userRow.email || 'No email'}</Text>
+ <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
+ {userRow.role.replace('_', ' ')}
+ </Badge>
+ <Badge
+ colorScheme={risk.atRisk ? 'orange' : 'green'}
+ variant="subtle"
+ >
+ {risk.atRisk ? 'At risk' : 'Active'}
+ </Badge>
+ <Text fontSize="sm" color="brand.subtleText">
+ {formatDateTime(userRow.createdAt || null)}
+ </Text>
+ <HStack spacing={2}>
+ <Button size="sm" variant="outline" onClick={() => handleViewUser(userRow.id)}>
+ View user
+ </Button>
+ <Tooltip
+ label={
+ risk.atRisk
+ ? `At risk: ${risk.labels.join(', ')}`
+ : 'Follow-up is only available for at-risk learners (never joined or below points target).'
+ }
+ hasArrow
+ >
+ <Button
+ size="sm"
+ variant="ghost"
+ colorScheme="orange"
+ leftIcon={<BellRing size={14} />}
+ onClick={() => openFollowUp(userRow)}
+ isDisabled={!risk.atRisk}
+ >
+ Follow-up
+ </Button>
+ </Tooltip>
+ </HStack>
+ </Grid>
+ )
+ })}
+ </Stack>
+ </Box>
+ </Box>
+ ) : (
+ <Box p={4} borderRadius="md" border="1px dashed" borderColor="brand.border">
+ <Text color="brand.subtleText">
+ {userListRows.length === 0
+ ? 'No users have been added to this organization yet.'
+ : 'No users match the current search or filters.'}
+ </Text>
+ </Box>
+ )}
 
-              <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
-                <Text fontSize="sm" color="brand.subtleText">
-                  Showing {usersStartIndex}-{usersEndIndex} of {filteredUserListRows.length} users
-                </Text>
-                <HStack spacing={2}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setUsersPage(currentUsersPage - 1)}
-                    isDisabled={currentUsersPage <= 1}
-                  >
-                    Previous
-                  </Button>
-                  <Select
-                    size="sm"
-                    value={currentUsersPage}
-                    onChange={(event) => setUsersPage(Number(event.target.value))}
-                    width="auto"
-                  >
-                    {Array.from({ length: usersPageCount }).map((_, index) => (
-                      <option key={index} value={index + 1}>
-                        Page {index + 1}
-                      </option>
-                    ))}
-                  </Select>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setUsersPage(currentUsersPage + 1)}
-                    isDisabled={currentUsersPage >= usersPageCount}
-                  >
-                    Next
-                  </Button>
-                </HStack>
-              </Flex>
-            </Stack>
-          </CardBody>
-        </Card>
-      </Stack>
+ <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
+ <Text fontSize="sm" color="brand.subtleText">
+ Showing {usersStartIndex}-{usersEndIndex} of {filteredUserListRows.length} users
+ </Text>
+ <HStack spacing={2}>
+ <Button
+ size="sm"
+ variant="outline"
+ onClick={() => setUsersPage(currentUsersPage - 1)}
+ isDisabled={currentUsersPage <= 1}
+ >
+ Previous
+ </Button>
+ <Select
+ size="sm"
+ value={currentUsersPage}
+ onChange={(event) => setUsersPage(Number(event.target.value))}
+ width="auto"
+ >
+ {Array.from({ length: usersPageCount }).map((_, index) => (
+ <option key={index} value={index + 1}>
+ Page {index + 1}
+ </option>
+ ))}
+ </Select>
+ <Button
+ size="sm"
+ variant="outline"
+ onClick={() => setUsersPage(currentUsersPage + 1)}
+ isDisabled={currentUsersPage >= usersPageCount}
+ >
+ Next
+ </Button>
+ </HStack>
+ </Flex>
+ </Stack>
+ </CardBody>
+ </Card>
+ </Stack>
 
-      <Modal isOpen={followUp.isOpen} onClose={followUp.onClose} isCentered>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Ask partner to follow up</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <Stack spacing={3}>
-              <Text fontSize="sm" color="brand.subtleText">
-                This adds <b>{followUpUser?.name || followUpInvite?.name}</b> to the intervention queue for{' '}
-                {organization?.assignedPartnerName
-                  ? `${organization.assignedPartnerName} (this organization's partner)`
-                  : "this organization's partner"}
-                .
-              </Text>
-              <FormControl>
-                <FormLabel fontSize="sm">What's the issue?</FormLabel>
-                <Wrap spacing={2}>
-                  {FOLLOW_UP_ISSUES.map((issue) => {
-                    const selected = followUpIssues.includes(issue)
-                    return (
-                      <WrapItem key={issue}>
-                        <Button
-                          size="sm"
-                          borderRadius="full"
-                          variant={selected ? 'solid' : 'outline'}
-                          colorScheme={selected ? 'orange' : 'gray'}
-                          onClick={() => toggleFollowUpIssue(issue)}
-                        >
-                          {issue}
-                        </Button>
-                      </WrapItem>
-                    )
-                  })}
-                </Wrap>
-              </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">Additional note (optional)</FormLabel>
-                <Textarea
-                  value={followUpReason}
-                  onChange={(event) => setFollowUpReason(event.target.value)}
-                  placeholder="Any extra context for the partner…"
-                  rows={2}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">Follow-up by</FormLabel>
-                <Input
-                  type="date"
-                  value={followUpDeadline}
-                  onChange={(event) => setFollowUpDeadline(event.target.value)}
-                />
-              </FormControl>
-            </Stack>
-          </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={followUp.onClose}>
-              Cancel
-            </Button>
-            <Button
-              colorScheme="orange"
-              onClick={submitFollowUp}
-              isLoading={followUpSubmitting}
-              isDisabled={!followUpIssues.length && !followUpReason.trim()}
-              leftIcon={<BellRing size={16} />}
-            >
-              Request follow-up
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
-    </Box>
-  )
+ <Modal isOpen={followUp.isOpen} onClose={followUp.onClose} isCentered>
+ <ModalOverlay />
+ <ModalContent>
+ <ModalHeader>Ask partner to follow up</ModalHeader>
+ <ModalCloseButton />
+ <ModalBody>
+ <Stack spacing={3}>
+ <Text fontSize="sm" color="brand.subtleText">
+ This adds <b>{followUpUser?.name || followUpInvite?.name}</b> to the intervention queue for{' '}
+ {organization?.assignedPartnerName
+ ? `${organization.assignedPartnerName} (this organization's partner)`
+ : "this organization's partner"}
+ .
+ </Text>
+ <FormControl>
+ <FormLabel fontSize="sm">What's the issue?</FormLabel>
+ <Wrap spacing={2}>
+ {FOLLOW_UP_ISSUES.map((issue) => {
+ const selected = followUpIssues.includes(issue)
+ return (
+ <WrapItem key={issue}>
+ <Button
+ size="sm"
+ borderRadius="full"
+ variant={selected ? 'solid' : 'outline'}
+ colorScheme={selected ? 'orange' : 'gray'}
+ onClick={() => toggleFollowUpIssue(issue)}
+ >
+ {issue}
+ </Button>
+ </WrapItem>
+ )
+ })}
+ </Wrap>
+ </FormControl>
+ <FormControl>
+ <FormLabel fontSize="sm">Additional note (optional)</FormLabel>
+ <Textarea
+ value={followUpReason}
+ onChange={(event) => setFollowUpReason(event.target.value)}
+ placeholder="Any extra context for the partner…"
+ rows={2}
+ />
+ </FormControl>
+ <FormControl>
+ <FormLabel fontSize="sm">Follow-up by</FormLabel>
+ <Input
+ type="date"
+ value={followUpDeadline}
+ onChange={(event) => setFollowUpDeadline(event.target.value)}
+ />
+ </FormControl>
+ </Stack>
+ </ModalBody>
+ <ModalFooter>
+ <Button variant="ghost" mr={3} onClick={followUp.onClose}>
+ Cancel
+ </Button>
+ <Button
+ colorScheme="orange"
+ onClick={submitFollowUp}
+ isLoading={followUpSubmitting}
+ isDisabled={!followUpIssues.length && !followUpReason.trim()}
+ leftIcon={<BellRing size={16} />}
+ >
+ Request follow-up
+ </Button>
+ </ModalFooter>
+ </ModalContent>
+ </Modal>
+ </Box>
+ )
 }
 
 export default OrganizationDetailPage

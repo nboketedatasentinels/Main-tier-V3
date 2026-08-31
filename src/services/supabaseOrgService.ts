@@ -15,34 +15,34 @@ import { normalizeRole } from '@/utils/role'
  * email across orgs, but cannot be reused as partner/mentor/coach.
  */
 export const roleConflictBucket = (role: string | null | undefined): string => {
-  const normalized = normalizeRole(role)
-  if (normalized === 'user' || normalized === 'paid_member' || normalized === 'free_user') {
-    return 'user'
-  }
-  return normalized
+ const normalized = normalizeRole(role)
+ if (normalized === 'user' || normalized === 'paid_member' || normalized === 'free_user') {
+ return 'user'
+ }
+ return normalized
 }
 
 export const formatRoleConflictLabel = (role: string | null | undefined): string => {
-  const bucket = roleConflictBucket(role)
-  switch (bucket) {
-    case 'partner':
-      return 'Partner'
-    case 'mentor':
-      return 'Mentor'
-    case 'ambassador':
-      return 'Coach'
-    case 'super_admin':
-      return 'Super Admin'
-    case 'user':
-    default:
-      return 'User'
-  }
+ const bucket = roleConflictBucket(role)
+ switch (bucket) {
+ case 'partner':
+ return 'Partner'
+ case 'mentor':
+ return 'Mentor'
+ case 'ambassador':
+ return 'Coach'
+ case 'super_admin':
+ return 'Super Admin'
+ case 'user':
+ default:
+ return 'User'
+ }
 }
 
 export type EmailRoleLookup = {
-  email: string
-  role: string | null
-  source: 'profile' | 'invitation' | 'none'
+ email: string
+ role: string | null
+ source: 'profile' | 'invitation' | 'none'
 }
 
 /**
@@ -51,35 +51,35 @@ export type EmailRoleLookup = {
  * different role when creating/editing organizations.
  */
 export const lookupEmailRole = async (email: string): Promise<EmailRoleLookup> => {
-  const normalized = email.trim().toLowerCase()
-  if (!normalized) {
-    return { email: normalized, role: null, source: 'none' }
-  }
+ const normalized = email.trim().toLowerCase()
+ if (!normalized) {
+ return { email: normalized, role: null, source: 'none' }
+ }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .ilike('email', normalized)
-    .maybeSingle()
-  if (profileError) throw new Error(profileError.message)
-  if (profile?.role) {
-    return { email: normalized, role: String(profile.role), source: 'profile' }
-  }
+ const { data: profile, error: profileError } = await supabase
+ .from('profiles')
+ .select('role')
+ .ilike('email', normalized)
+ .maybeSingle()
+ if (profileError) throw new Error(profileError.message)
+ if (profile?.role) {
+ return { email: normalized, role: String(profile.role), source: 'profile' }
+ }
 
-  const { data: invite, error: inviteError } = await supabase
-    .from('invitations')
-    .select('role')
-    .ilike('email', normalized)
-    .eq('status', 'pending')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-  if (inviteError) throw new Error(inviteError.message)
-  if (invite?.role) {
-    return { email: normalized, role: String(invite.role), source: 'invitation' }
-  }
+ const { data: invite, error: inviteError } = await supabase
+ .from('invitations')
+ .select('role')
+ .ilike('email', normalized)
+ .eq('status', 'pending')
+ .order('created_at', { ascending: false })
+ .limit(1)
+ .maybeSingle()
+ if (inviteError) throw new Error(inviteError.message)
+ if (invite?.role) {
+ return { email: normalized, role: String(invite.role), source: 'invitation' }
+ }
 
-  return { email: normalized, role: null, source: 'none' }
+ return { email: normalized, role: null, source: 'none' }
 }
 
 /**
@@ -88,27 +88,27 @@ export const lookupEmailRole = async (email: string): Promise<EmailRoleLookup> =
  * promoted into a leadership role. Same-role reuse across orgs is allowed.
  */
 export const assertEmailAvailableForRole = async (
-  email: string,
-  intendedRole: string,
+ email: string,
+ intendedRole: string,
 ): Promise<void> => {
-  const normalized = email.trim().toLowerCase()
-  if (!normalized) return
+ const normalized = email.trim().toLowerCase()
+ if (!normalized) return
 
-  const existing = await lookupEmailRole(normalized)
-  if (!existing.role) return
+ const existing = await lookupEmailRole(normalized)
+ if (!existing.role) return
 
-  const currentBucket = roleConflictBucket(existing.role)
-  const intendedBucket = roleConflictBucket(intendedRole)
-  if (currentBucket === intendedBucket) return
+ const currentBucket = roleConflictBucket(existing.role)
+ const intendedBucket = roleConflictBucket(intendedRole)
+ if (currentBucket === intendedBucket) return
 
-  const privileged = new Set(['partner', 'mentor', 'ambassador', 'super_admin'])
-  // Learner / unpaid → mentor|partner|coach is an allowed promotion path.
-  if (currentBucket === 'user' && privileged.has(intendedBucket)) return
+ const privileged = new Set(['partner', 'mentor', 'ambassador', 'super_admin'])
+ // Learner / unpaid → mentor|partner|coach is an allowed promotion path.
+ if (currentBucket === 'user' && privileged.has(intendedBucket)) return
 
-  throw new Error(
-    `${normalized} is already assigned as a ${formatRoleConflictLabel(existing.role)}. ` +
-      `Don't use this email for a different role (${formatRoleConflictLabel(intendedRole)}).`,
-  )
+ throw new Error(
+ `${normalized} is already assigned as a ${formatRoleConflictLabel(existing.role)}. ` +
+ `Don't use this email for a different role (${formatRoleConflictLabel(intendedRole)}).`,
+ )
 }
 
 
@@ -118,21 +118,21 @@ export const assertEmailAvailableForRole = async (
  * assignment that triggered it.
  */
 const fetchProfileContact = async (
-  userId: string,
+ userId: string,
 ): Promise<{ email: string | null; name: string | null }> => {
-  try {
-    const { data } = await supabase
-      .from('profiles')
-      .select('email, full_name')
-      .eq('id', userId)
-      .maybeSingle()
-    return {
-      email: (data?.email as string) ?? null,
-      name: (data?.full_name as string) ?? null,
-    }
-  } catch {
-    return { email: null, name: null }
-  }
+ try {
+ const { data } = await supabase
+ .from('profiles')
+ .select('email, full_name')
+ .eq('id', userId)
+ .maybeSingle()
+ return {
+ email: (data?.email as string) ?? null,
+ name: (data?.full_name as string) ?? null,
+ }
+ } catch {
+ return { email: null, name: null }
+ }
 }
 
 /**
@@ -141,21 +141,21 @@ const fetchProfileContact = async (
  * sign-up page, so members are emailed their org's code alongside its name.
  */
 const fetchOrgSummary = async (
-  orgId: string,
+ orgId: string,
 ): Promise<{ name: string | null; code: string | null }> => {
-  try {
-    const { data } = await supabase
-      .from('organizations')
-      .select('name, code')
-      .eq('id', orgId)
-      .maybeSingle()
-    return {
-      name: (data?.name as string) ?? null,
-      code: (data?.code as string) ?? null,
-    }
-  } catch {
-    return { name: null, code: null }
-  }
+ try {
+ const { data } = await supabase
+ .from('organizations')
+ .select('name, code')
+ .eq('id', orgId)
+ .maybeSingle()
+ return {
+ name: (data?.name as string) ?? null,
+ code: (data?.code as string) ?? null,
+ }
+ } catch {
+ return { name: null, code: null }
+ }
 }
 
 /**
@@ -164,24 +164,24 @@ const fetchOrgSummary = async (
  * roll back the assignment. Fire-and-forget (`void`) from the callers.
  */
 const dispatchWelcomeEmail = async (params: {
-  to: string | null
-  name: string | null
-  role: WelcomeRole
-  organizationName: string | null
-  organizationCode?: string | null
+ to: string | null
+ name: string | null
+ role: WelcomeRole
+ organizationName: string | null
+ organizationCode?: string | null
 }): Promise<void> => {
-  if (!params.to) return
-  try {
-    await sendRoleWelcomeEmail({
-      to: params.to,
-      recipientName: params.name || params.to,
-      role: params.role,
-      organizationName: params.organizationName,
-      organizationCode: params.organizationCode ?? null,
-    })
-  } catch (error) {
-    console.warn('[supabaseOrgService] welcome email dispatch failed', error)
-  }
+ if (!params.to) return
+ try {
+ await sendRoleWelcomeEmail({
+ to: params.to,
+ recipientName: params.name || params.to,
+ role: params.role,
+ organizationName: params.organizationName,
+ organizationCode: params.organizationCode ?? null,
+ })
+ } catch (error) {
+ console.warn('[supabaseOrgService] welcome email dispatch failed', error)
+ }
 }
 
 /**
@@ -191,66 +191,66 @@ const dispatchWelcomeEmail = async (params: {
  * permits sending a welcome to the caller's OWN address (see authorizeCaller).
  */
 const dispatchSelfJoinWelcomeEmail = async (
-  organizationName: string | null,
-  organizationCode: string | null = null,
+ organizationName: string | null,
+ organizationCode: string | null = null,
 ): Promise<void> => {
-  try {
-    const { data } = await supabase.auth.getUser()
-    const user = data?.user
-    if (!user?.email) return
-    const { name } = await fetchProfileContact(user.id)
-    void dispatchWelcomeEmail({
-      to: user.email,
-      name,
-      role: 'user',
-      organizationName,
-      organizationCode,
-    })
-  } catch (error) {
-    console.warn('[supabaseOrgService] self-join welcome email skipped', error)
-  }
+ try {
+ const { data } = await supabase.auth.getUser()
+ const user = data?.user
+ if (!user?.email) return
+ const { name } = await fetchProfileContact(user.id)
+ void dispatchWelcomeEmail({
+ to: user.email,
+ name,
+ role: 'user',
+ organizationName,
+ organizationCode,
+ })
+ } catch (error) {
+ console.warn('[supabaseOrgService] self-join welcome email skipped', error)
+ }
 }
 
 export interface OrgRecord {
-  id: string
-  code: string | null
-  name: string | null
-  status: string
-  transformationPartnerId: string | null
-  journeyType: string | null
-  programDurationWeeks: number | null
-  memberCount: number
-  createdAt: string
+ id: string
+ code: string | null
+ name: string | null
+ status: string
+ transformationPartnerId: string | null
+ journeyType: string | null
+ programDurationWeeks: number | null
+ memberCount: number
+ createdAt: string
 }
 
 export interface PartnerCandidate {
-  id: string
-  fullName: string | null
-  email: string | null
-  role: string | null
+ id: string
+ fullName: string | null
+ email: string | null
+ role: string | null
 }
 
 type Raw = Record<string, unknown>
 
 const mapOrg = (row: Raw): OrgRecord => ({
-  id: row.id as string,
-  code: (row.code as string) ?? null,
-  name: (row.name as string) ?? null,
-  status: (row.status as string) ?? 'active',
-  transformationPartnerId: (row.transformation_partner_id as string) ?? null,
-  journeyType: (row.journey_type as string) ?? null,
-  programDurationWeeks: (row.program_duration_weeks as number) ?? null,
-  memberCount: (row.member_count as number) ?? 0,
-  createdAt: (row.created_at as string) ?? '',
+ id: row.id as string,
+ code: (row.code as string) ?? null,
+ name: (row.name as string) ?? null,
+ status: (row.status as string) ?? 'active',
+ transformationPartnerId: (row.transformation_partner_id as string) ?? null,
+ journeyType: (row.journey_type as string) ?? null,
+ programDurationWeeks: (row.program_duration_weeks as number) ?? null,
+ memberCount: (row.member_count as number) ?? 0,
+ createdAt: (row.created_at as string) ?? '',
 })
 
 export const listOrganizations = async (): Promise<OrgRecord[]> => {
-  const { data, error } = await supabase
-    .from('organizations')
-    .select('*')
-    .order('created_at', { ascending: false })
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((r) => mapOrg(r as Raw))
+ const { data, error } = await supabase
+ .from('organizations')
+ .select('*')
+ .order('created_at', { ascending: false })
+ if (error) throw new Error(error.message)
+ return (data ?? []).map((r) => mapOrg(r as Raw))
 }
 
 /**
@@ -259,152 +259,152 @@ export const listOrganizations = async (): Promise<OrgRecord[]> => {
  * jsonb long-tail. cohort_start_date is its own timestamptz column.
  */
 export interface OrgWriteExtras {
-  status?: string
-  cohortStartDate?: string | null
-  village?: string | null
-  cluster?: string | null
-  pillar?: string | null
-  teamSize?: number | null
-  programDurationMonths?: number | null
-  /** Email of the assigned transformation partner (they claim it on signup). */
-  partnerEmail?: string | null
-  /** Per-month course assignment map, e.g. { "1": "courseId", "2": "" }. */
-  monthlyCourseAssignments?: Record<string, string> | null
-  /** Flat course assignment array (legacy/array mode). */
-  courseAssignments?: string[] | null
-  /** Which assignment shape the org uses. */
-  courseAssignmentStructure?: 'monthly' | 'array' | null
-  /** Free-text organization description. */
-  description?: string | null
-  /** Default purchased coaching sessions for learners in this org (1–20). */
-  purchasedCoachSessions?: number | null
+ status?: string
+ cohortStartDate?: string | null
+ village?: string | null
+ cluster?: string | null
+ pillar?: string | null
+ teamSize?: number | null
+ programDurationMonths?: number | null
+ /** Email of the assigned transformation partner (they claim it on signup). */
+ partnerEmail?: string | null
+ /** Per-month course assignment map, e.g. { "1": "courseId", "2": "" }. */
+ monthlyCourseAssignments?: Record<string, string> | null
+ /** Flat course assignment array (legacy/array mode). */
+ courseAssignments?: string[] | null
+ /** Which assignment shape the org uses. */
+ courseAssignmentStructure?: 'monthly' | 'array' | null
+ /** Free-text organization description. */
+ description?: string | null
+ /** Default purchased coaching sessions for learners in this org (1-20). */
+ purchasedCoachSessions?: number | null
 }
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
-  village: e.village ?? null,
-  cluster: e.cluster ?? null,
-  pillar: e.pillar ?? null,
-  teamSize: e.teamSize ?? null,
-  programDurationMonths: e.programDurationMonths ?? null,
-  partnerEmail: e.partnerEmail ? e.partnerEmail.trim().toLowerCase() : null,
-  description: e.description ?? null,
-  // Course assignments live in the settings jsonb (the org table has no column
-  // for them). Read back by useOrganizationProgramCourses + monthlyCoursesService.
-  monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,
-  courseAssignments: e.courseAssignments ?? null,
-  courseAssignmentStructure: e.courseAssignmentStructure ?? null,
-  ...(e.purchasedCoachSessions !== undefined
-    ? {
-        purchasedCoachSessions:
-          typeof e.purchasedCoachSessions === 'number' && Number.isFinite(e.purchasedCoachSessions)
-            ? Math.round(e.purchasedCoachSessions)
-            : null,
-      }
-    : {}),
+ village: e.village ?? null,
+ cluster: e.cluster ?? null,
+ pillar: e.pillar ?? null,
+ teamSize: e.teamSize ?? null,
+ programDurationMonths: e.programDurationMonths ?? null,
+ partnerEmail: e.partnerEmail ? e.partnerEmail.trim().toLowerCase() : null,
+ description: e.description ?? null,
+ // Course assignments live in the settings jsonb (the org table has no column
+ // for them). Read back by useOrganizationProgramCourses + monthlyCoursesService.
+ monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,
+ courseAssignments: e.courseAssignments ?? null,
+ courseAssignmentStructure: e.courseAssignmentStructure ?? null,
+ ...(e.purchasedCoachSessions !== undefined
+ ? {
+ purchasedCoachSessions:
+ typeof e.purchasedCoachSessions === 'number' && Number.isFinite(e.purchasedCoachSessions)
+ ? Math.round(e.purchasedCoachSessions)
+ : null,
+ }
+ : {}),
 })
 
 /** Add a SECURITY DEFINER claim used by partner signup (see claim_partner_access RPC). */
 export const claimPartnerAccess = async (): Promise<string> => {
-  const { data, error } = await supabase.rpc('claim_partner_access')
-  if (error) throw new Error(error.message)
-  return (data as string) ?? 'error'
+ const { data, error } = await supabase.rpc('claim_partner_access')
+ if (error) throw new Error(error.message)
+ return (data as string) ?? 'error'
 }
 
 export interface CreateOrgInput extends OrgWriteExtras {
-  name: string
-  code: string
-  journeyType?: string | null
-  programDurationWeeks?: number | null
+ name: string
+ code: string
+ journeyType?: string | null
+ programDurationWeeks?: number | null
 }
 
 export const createOrganization = async (input: CreateOrgInput): Promise<OrgRecord> => {
-  const partnerEmail = input.partnerEmail?.trim().toLowerCase()
-  // Validate role conflicts before inserting so we never leave an orphan org
-  // when the partner email is already used as a different role.
-  if (partnerEmail) {
-    await assertEmailAvailableForRole(partnerEmail, 'partner')
-  }
+ const partnerEmail = input.partnerEmail?.trim().toLowerCase()
+ // Validate role conflicts before inserting so we never leave an orphan org
+ // when the partner email is already used as a different role.
+ if (partnerEmail) {
+ await assertEmailAvailableForRole(partnerEmail, 'partner')
+ }
 
-  const id =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `org_${Date.now()}`
-  const { data, error } = await supabase
-    .from('organizations')
-    // Create the org ACTIVE so members can enroll immediately. The type-the-code
-    // path (claim_organization_code) rejects any org whose status is not
-    // 'active'; the DB column default is 'pending', which silently blocked
-    // self-enrollment for every new org. 'active' is a valid status_check value.
-    .insert({
-      id,
-      name: input.name.trim(),
-      code: input.code.trim().toUpperCase(),
-      status: 'active',
-      journey_type: input.journeyType ?? null,
-      program_duration_weeks: input.programDurationWeeks ?? null,
-      cohort_start_date: input.cohortStartDate || null,
-      settings: buildSettings(input),
-    })
-    .select('*')
-    .single()
-  if (error) throw new Error(error.message)
+ const id =
+ typeof crypto !== 'undefined' && 'randomUUID' in crypto
+ ? crypto.randomUUID()
+ : `org_${Date.now()}`
+ const { data, error } = await supabase
+ .from('organizations')
+ // Create the org ACTIVE so members can enroll immediately. The type-the-code
+ // path (claim_organization_code) rejects any org whose status is not
+ // 'active'; the DB column default is 'pending', which silently blocked
+ // self-enrollment for every new org. 'active' is a valid status_check value.
+ .insert({
+ id,
+ name: input.name.trim(),
+ code: input.code.trim().toUpperCase(),
+ status: 'active',
+ journey_type: input.journeyType ?? null,
+ program_duration_weeks: input.programDurationWeeks ?? null,
+ cohort_start_date: input.cohortStartDate || null,
+ settings: buildSettings(input),
+ })
+ .select('*')
+ .single()
+ if (error) throw new Error(error.message)
 
-  // If a partner email was supplied and it already belongs to a registered
-  // user, link them now (promote + set transformation_partner_id) so the org
-  // shows the partner instead of "Unassigned". If the email has no account yet,
-  // it stays a pending claim in settings.partnerEmail (claimed on signup).
-  if (partnerEmail) {
-    try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('email', partnerEmail)
-        .maybeSingle()
-      if (profile?.id) {
-        await assignPartnerToOrg(id, profile.id as string)
-        // Re-read so the returned record reflects the transformation_partner_id
-        // the assignment RPC just wrote.
-        const { data: fresh } = await supabase
-          .from('organizations')
-          .select('*')
-          .eq('id', id)
-          .single()
-        if (fresh) return mapOrg(fresh as Raw)
-      } else {
-        // No account yet: the partner stays a pending claim (claimed on signup),
-        // so assignPartnerToOrg - and its welcome email - never runs. Still send
-        // the partner invite email so they know they've been made partner and
-        // get the access code + signup link. Best-effort (fire-and-forget).
-        void dispatchWelcomeEmail({
-          to: partnerEmail,
-          name: null,
-          role: 'partner',
-          organizationName: input.name.trim(),
-        })
-      }
-    } catch (linkError) {
-      // Role conflicts must surface to the admin - do not silently create an
-      // org with a mismatched partner email.
-      if (
-        linkError instanceof Error &&
-        /already assigned as a|different role/i.test(linkError.message)
-      ) {
-        throw linkError
-      }
-      // Other link failures stay non-fatal: the org is created and the partner
-      // can be assigned later from the organizations list.
-      console.warn('[createOrganization] partner email auto-link skipped', linkError)
-    }
-  }
+ // If a partner email was supplied and it already belongs to a registered
+ // user, link them now (promote + set transformation_partner_id) so the org
+ // shows the partner instead of "Unassigned". If the email has no account yet,
+ // it stays a pending claim in settings.partnerEmail (claimed on signup).
+ if (partnerEmail) {
+ try {
+ const { data: profile } = await supabase
+ .from('profiles')
+ .select('id')
+ .ilike('email', partnerEmail)
+ .maybeSingle()
+ if (profile?.id) {
+ await assignPartnerToOrg(id, profile.id as string)
+ // Re-read so the returned record reflects the transformation_partner_id
+ // the assignment RPC just wrote.
+ const { data: fresh } = await supabase
+ .from('organizations')
+ .select('*')
+ .eq('id', id)
+ .single()
+ if (fresh) return mapOrg(fresh as Raw)
+ } else {
+ // No account yet: the partner stays a pending claim (claimed on signup),
+ // so assignPartnerToOrg - and its welcome email - never runs. Still send
+ // the partner invite email so they know they've been made partner and
+ // get the access code + signup link. Best-effort (fire-and-forget).
+ void dispatchWelcomeEmail({
+ to: partnerEmail,
+ name: null,
+ role: 'partner',
+ organizationName: input.name.trim(),
+ })
+ }
+ } catch (linkError) {
+ // Role conflicts must surface to the admin - do not silently create an
+ // org with a mismatched partner email.
+ if (
+ linkError instanceof Error &&
+ /already assigned as a|different role/i.test(linkError.message)
+ ) {
+ throw linkError
+ }
+ // Other link failures stay non-fatal: the org is created and the partner
+ // can be assigned later from the organizations list.
+ console.warn('[createOrganization] partner email auto-link skipped', linkError)
+ }
+ }
 
-  return mapOrg(data as Raw)
+ return mapOrg(data as Raw)
 }
 
 export interface OrgJourneyInfo {
-  journeyType: string | null
-  programDurationWeeks: number | null
-  programDurationMonths: number | null
-  cohortStartDate: string | null
+ journeyType: string | null
+ programDurationWeeks: number | null
+ programDurationMonths: number | null
+ cohortStartDate: string | null
 }
 
 /**
@@ -418,24 +418,24 @@ export interface OrgJourneyInfo {
  * the journey the join RPC stamped on the profile).
  */
 export const getOrganizationJourney = async (orgId: string): Promise<OrgJourneyInfo | null> => {
-  if (!orgId) return null
-  const { data, error } = await supabase
-    .from('organizations')
-    .select('journey_type, program_duration_weeks, cohort_start_date, settings')
-    .eq('id', orgId)
-    .maybeSingle()
-  if (error) {
-    console.warn('[supabaseOrgService] getOrganizationJourney failed', error)
-    return null
-  }
-  if (!data) return null
-  const settings = (data.settings as Record<string, unknown> | null) ?? {}
-  return {
-    journeyType: (data.journey_type as string) ?? null,
-    programDurationWeeks: (data.program_duration_weeks as number) ?? null,
-    programDurationMonths: (settings.programDurationMonths as number) ?? null,
-    cohortStartDate: (data.cohort_start_date as string) ?? null,
-  }
+ if (!orgId) return null
+ const { data, error } = await supabase
+ .from('organizations')
+ .select('journey_type, program_duration_weeks, cohort_start_date, settings')
+ .eq('id', orgId)
+ .maybeSingle()
+ if (error) {
+ console.warn('[supabaseOrgService] getOrganizationJourney failed', error)
+ return null
+ }
+ if (!data) return null
+ const settings = (data.settings as Record<string, unknown> | null) ?? {}
+ return {
+ journeyType: (data.journey_type as string) ?? null,
+ programDurationWeeks: (data.program_duration_weeks as number) ?? null,
+ programDurationMonths: (settings.programDurationMonths as number) ?? null,
+ cohortStartDate: (data.cohort_start_date as string) ?? null,
+ }
 }
 
 /**
@@ -447,184 +447,184 @@ export const getOrganizationJourney = async (orgId: string): Promise<OrgJourneyI
  * org is missing or the read fails.
  */
 export interface OrgProgramRaw {
-  journeyType: string | null
-  programDurationWeeks: number | null
-  programDuration: number | null
-  cohortStartDate: string | null
-  monthlyCourseAssignments: Record<string, string> | null
-  courseAssignments: string[] | null
-  courseAssignmentStructure: 'monthly' | 'array' | null
-  pillar: string | null
-  purchasedCoachSessions?: number | null
+ journeyType: string | null
+ programDurationWeeks: number | null
+ programDuration: number | null
+ cohortStartDate: string | null
+ monthlyCourseAssignments: Record<string, string> | null
+ courseAssignments: string[] | null
+ courseAssignmentStructure: 'monthly' | 'array' | null
+ pillar: string | null
+ purchasedCoachSessions?: number | null
 }
 
 export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramRaw | null> => {
-  if (!orgId) return null
-  const { data, error } = await supabase
-    .from('organizations')
-    .select('journey_type, program_duration_weeks, cohort_start_date, settings')
-    .eq('id', orgId)
-    .maybeSingle()
-  if (error) {
-    console.warn('[supabaseOrgService] getOrganizationProgram failed', error)
-    return null
-  }
-  if (!data) return null
-  const settings = (data.settings as Record<string, unknown> | null) ?? {}
-  const monthly = settings.monthlyCourseAssignments
-  const courses = settings.courseAssignments
-  const structure = settings.courseAssignmentStructure
-  return {
-    journeyType: (data.journey_type as string) ?? null,
-    programDurationWeeks: (data.program_duration_weeks as number) ?? null,
-    programDuration: (settings.programDurationMonths as number) ?? null,
-    cohortStartDate: (data.cohort_start_date as string) ?? null,
-    monthlyCourseAssignments:
-      monthly && typeof monthly === 'object' && !Array.isArray(monthly)
-        ? (monthly as Record<string, string>)
-        : null,
-    courseAssignments: Array.isArray(courses) ? (courses as string[]) : null,
-    courseAssignmentStructure:
-      structure === 'monthly' || structure === 'array' ? structure : null,
-    pillar: (settings.pillar as string) ?? null,
-    purchasedCoachSessions:
-      typeof settings.purchasedCoachSessions === 'number'
-        ? settings.purchasedCoachSessions
-        : typeof settings.purchasedCoachSessions === 'string'
-          ? Number(settings.purchasedCoachSessions)
-          : null,
-  }
+ if (!orgId) return null
+ const { data, error } = await supabase
+ .from('organizations')
+ .select('journey_type, program_duration_weeks, cohort_start_date, settings')
+ .eq('id', orgId)
+ .maybeSingle()
+ if (error) {
+ console.warn('[supabaseOrgService] getOrganizationProgram failed', error)
+ return null
+ }
+ if (!data) return null
+ const settings = (data.settings as Record<string, unknown> | null) ?? {}
+ const monthly = settings.monthlyCourseAssignments
+ const courses = settings.courseAssignments
+ const structure = settings.courseAssignmentStructure
+ return {
+ journeyType: (data.journey_type as string) ?? null,
+ programDurationWeeks: (data.program_duration_weeks as number) ?? null,
+ programDuration: (settings.programDurationMonths as number) ?? null,
+ cohortStartDate: (data.cohort_start_date as string) ?? null,
+ monthlyCourseAssignments:
+ monthly && typeof monthly === 'object' && !Array.isArray(monthly)
+ ? (monthly as Record<string, string>)
+ : null,
+ courseAssignments: Array.isArray(courses) ? (courses as string[]) : null,
+ courseAssignmentStructure:
+ structure === 'monthly' || structure === 'array' ? structure : null,
+ pillar: (settings.pillar as string) ?? null,
+ purchasedCoachSessions:
+ typeof settings.purchasedCoachSessions === 'number'
+ ? settings.purchasedCoachSessions
+ : typeof settings.purchasedCoachSessions === 'string'
+ ? Number(settings.purchasedCoachSessions)
+ : null,
+ }
 }
 
 export interface UpdateOrgInput extends OrgWriteExtras {
-  name?: string
-  /** @deprecated Codes are immutable after create. Ignored if passed; changes are rejected. */
-  code?: string
-  journeyType?: string | null
-  programDurationWeeks?: number | null
+ name?: string
+ /** @deprecated Codes are immutable after create. Ignored if passed; changes are rejected. */
+ code?: string
+ journeyType?: string | null
+ programDurationWeeks?: number | null
 }
 
 /** Update an organization's fields (RLS: is_partner_or_admin). Codes cannot change. */
 export const updateOrganization = async (id: string, patch: UpdateOrgInput): Promise<OrgRecord> => {
-  if (patch.code !== undefined) {
-    const { data: currentOrg, error: codeReadError } = await supabase
-      .from('organizations')
-      .select('code')
-      .eq('id', id)
-      .maybeSingle()
-    if (codeReadError) throw new Error(codeReadError.message)
-    const existing = String(currentOrg?.code ?? '')
-      .trim()
-      .toUpperCase()
-    const requested = patch.code.trim().toUpperCase()
-    if (requested && existing && requested !== existing) {
-      throw new Error('Organization code cannot be changed')
-    }
-  }
+ if (patch.code !== undefined) {
+ const { data: currentOrg, error: codeReadError } = await supabase
+ .from('organizations')
+ .select('code')
+ .eq('id', id)
+ .maybeSingle()
+ if (codeReadError) throw new Error(codeReadError.message)
+ const existing = String(currentOrg?.code ?? '')
+ .trim()
+ .toUpperCase()
+ const requested = patch.code.trim().toUpperCase()
+ if (requested && existing && requested !== existing) {
+ throw new Error('Organization code cannot be changed')
+ }
+ }
 
-  const updates: Record<string, unknown> = {}
-  if (patch.name !== undefined) updates.name = patch.name.trim()
-  // Never write `code` - organization codes are permanent after creation.
-  if (patch.status !== undefined) updates.status = patch.status
-  if (patch.journeyType !== undefined) updates.journey_type = patch.journeyType
-  if (patch.programDurationWeeks !== undefined) updates.program_duration_weeks = patch.programDurationWeeks
-  if (patch.cohortStartDate !== undefined) updates.cohort_start_date = patch.cohortStartDate || null
+ const updates: Record<string, unknown> = {}
+ if (patch.name !== undefined) updates.name = patch.name.trim()
+ // Never write `code` - organization codes are permanent after creation.
+ if (patch.status !== undefined) updates.status = patch.status
+ if (patch.journeyType !== undefined) updates.journey_type = patch.journeyType
+ if (patch.programDurationWeeks !== undefined) updates.program_duration_weeks = patch.programDurationWeeks
+ if (patch.cohortStartDate !== undefined) updates.cohort_start_date = patch.cohortStartDate || null
 
-  // Merge settings so we do not wipe unrelated keys (e.g. archived) when the
-  // edit modal only supplies a subset of OrgWriteExtras.
-  const { data: current, error: readError } = await supabase
-    .from('organizations')
-    .select('settings')
-    .eq('id', id)
-    .maybeSingle()
-  if (readError) throw new Error(readError.message)
-  const existingSettings = ((current?.settings as Record<string, unknown> | null) ?? {}) as Record<string, unknown>
-  const nextExtras: OrgWriteExtras = {
-    village: patch.village !== undefined ? patch.village : ((existingSettings.village as string | null) ?? null),
-    cluster: patch.cluster !== undefined ? patch.cluster : ((existingSettings.cluster as string | null) ?? null),
-    pillar: patch.pillar !== undefined ? patch.pillar : ((existingSettings.pillar as string | null) ?? null),
-    teamSize: patch.teamSize !== undefined ? patch.teamSize : ((existingSettings.teamSize as number | null) ?? null),
-    programDurationMonths:
-      patch.programDurationMonths !== undefined
-        ? patch.programDurationMonths
-        : ((existingSettings.programDurationMonths as number | null) ?? null),
-    partnerEmail:
-      patch.partnerEmail !== undefined
-        ? patch.partnerEmail
-        : ((existingSettings.partnerEmail as string | null) ?? null),
-    description:
-      patch.description !== undefined
-        ? patch.description
-        : ((existingSettings.description as string | null) ?? null),
-    monthlyCourseAssignments:
-      patch.monthlyCourseAssignments !== undefined
-        ? patch.monthlyCourseAssignments
-        : ((existingSettings.monthlyCourseAssignments as Record<string, string> | null) ?? null),
-    courseAssignments:
-      patch.courseAssignments !== undefined
-        ? patch.courseAssignments
-        : ((existingSettings.courseAssignments as string[] | null) ?? null),
-    courseAssignmentStructure:
-      patch.courseAssignmentStructure !== undefined
-        ? patch.courseAssignmentStructure
-        : ((existingSettings.courseAssignmentStructure as 'monthly' | 'array' | null) ?? null),
-    purchasedCoachSessions:
-      patch.purchasedCoachSessions !== undefined
-        ? patch.purchasedCoachSessions
-        : typeof existingSettings.purchasedCoachSessions === 'number'
-          ? existingSettings.purchasedCoachSessions
-          : typeof existingSettings.purchasedCoachSessions === 'string'
-            ? Number(existingSettings.purchasedCoachSessions)
-            : null,
-  }
-  updates.settings = { ...existingSettings, ...buildSettings(nextExtras) }
+ // Merge settings so we do not wipe unrelated keys (e.g. archived) when the
+ // edit modal only supplies a subset of OrgWriteExtras.
+ const { data: current, error: readError } = await supabase
+ .from('organizations')
+ .select('settings')
+ .eq('id', id)
+ .maybeSingle()
+ if (readError) throw new Error(readError.message)
+ const existingSettings = ((current?.settings as Record<string, unknown> | null) ?? {}) as Record<string, unknown>
+ const nextExtras: OrgWriteExtras = {
+ village: patch.village !== undefined ? patch.village : ((existingSettings.village as string | null) ?? null),
+ cluster: patch.cluster !== undefined ? patch.cluster : ((existingSettings.cluster as string | null) ?? null),
+ pillar: patch.pillar !== undefined ? patch.pillar : ((existingSettings.pillar as string | null) ?? null),
+ teamSize: patch.teamSize !== undefined ? patch.teamSize : ((existingSettings.teamSize as number | null) ?? null),
+ programDurationMonths:
+ patch.programDurationMonths !== undefined
+ ? patch.programDurationMonths
+ : ((existingSettings.programDurationMonths as number | null) ?? null),
+ partnerEmail:
+ patch.partnerEmail !== undefined
+ ? patch.partnerEmail
+ : ((existingSettings.partnerEmail as string | null) ?? null),
+ description:
+ patch.description !== undefined
+ ? patch.description
+ : ((existingSettings.description as string | null) ?? null),
+ monthlyCourseAssignments:
+ patch.monthlyCourseAssignments !== undefined
+ ? patch.monthlyCourseAssignments
+ : ((existingSettings.monthlyCourseAssignments as Record<string, string> | null) ?? null),
+ courseAssignments:
+ patch.courseAssignments !== undefined
+ ? patch.courseAssignments
+ : ((existingSettings.courseAssignments as string[] | null) ?? null),
+ courseAssignmentStructure:
+ patch.courseAssignmentStructure !== undefined
+ ? patch.courseAssignmentStructure
+ : ((existingSettings.courseAssignmentStructure as 'monthly' | 'array' | null) ?? null),
+ purchasedCoachSessions:
+ patch.purchasedCoachSessions !== undefined
+ ? patch.purchasedCoachSessions
+ : typeof existingSettings.purchasedCoachSessions === 'number'
+ ? existingSettings.purchasedCoachSessions
+ : typeof existingSettings.purchasedCoachSessions === 'string'
+ ? Number(existingSettings.purchasedCoachSessions)
+ : null,
+ }
+ updates.settings = { ...existingSettings, ...buildSettings(nextExtras) }
 
-  const { data, error } = await supabase
-    .from('organizations')
-    .update(updates)
-    .eq('id', id)
-    .select('*')
-    .single()
-  if (error) throw new Error(error.message)
+ const { data, error } = await supabase
+ .from('organizations')
+ .update(updates)
+ .eq('id', id)
+ .select('*')
+ .single()
+ if (error) throw new Error(error.message)
 
-  // Same partner auto-link behavior as createOrganization: if the partner email
-  // already has an account, promote + link them now so Edit can assign partners
-  // after the org already exists.
-  if (patch.partnerEmail !== undefined) {
-    const partnerEmail = patch.partnerEmail?.trim().toLowerCase() || ''
-    if (partnerEmail) {
-      await assertEmailAvailableForRole(partnerEmail, 'partner')
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('email', partnerEmail)
-          .maybeSingle()
-        if (profile?.id) {
-          await assignPartnerToOrg(id, profile.id as string)
-          const { data: fresh } = await supabase.from('organizations').select('*').eq('id', id).single()
-          if (fresh) return mapOrg(fresh as Raw)
-        } else {
-          void dispatchWelcomeEmail({
-            to: partnerEmail,
-            name: null,
-            role: 'partner',
-            organizationName: (data as Raw).name as string,
-          })
-        }
-      } catch (linkError) {
-        if (
-          linkError instanceof Error &&
-          /already assigned as a|different role/i.test(linkError.message)
-        ) {
-          throw linkError
-        }
-        console.warn('[updateOrganization] partner email auto-link skipped', linkError)
-      }
-    }
-  }
+ // Same partner auto-link behavior as createOrganization: if the partner email
+ // already has an account, promote + link them now so Edit can assign partners
+ // after the org already exists.
+ if (patch.partnerEmail !== undefined) {
+ const partnerEmail = patch.partnerEmail?.trim().toLowerCase() || ''
+ if (partnerEmail) {
+ await assertEmailAvailableForRole(partnerEmail, 'partner')
+ try {
+ const { data: profile } = await supabase
+ .from('profiles')
+ .select('id')
+ .ilike('email', partnerEmail)
+ .maybeSingle()
+ if (profile?.id) {
+ await assignPartnerToOrg(id, profile.id as string)
+ const { data: fresh } = await supabase.from('organizations').select('*').eq('id', id).single()
+ if (fresh) return mapOrg(fresh as Raw)
+ } else {
+ void dispatchWelcomeEmail({
+ to: partnerEmail,
+ name: null,
+ role: 'partner',
+ organizationName: (data as Raw).name as string,
+ })
+ }
+ } catch (linkError) {
+ if (
+ linkError instanceof Error &&
+ /already assigned as a|different role/i.test(linkError.message)
+ ) {
+ throw linkError
+ }
+ console.warn('[updateOrganization] partner email auto-link skipped', linkError)
+ }
+ }
+ }
 
-  return mapOrg(data as Raw)
+ return mapOrg(data as Raw)
 }
 
 /**
@@ -632,15 +632,15 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
  * to assign mentors/coaches who already have accounts.
  */
 export const findProfileIdByEmail = async (email: string): Promise<string | null> => {
-  const normalized = email.trim().toLowerCase()
-  if (!normalized) return null
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .ilike('email', normalized)
-    .maybeSingle()
-  if (error) throw new Error(error.message)
-  return (data?.id as string | undefined) ?? null
+ const normalized = email.trim().toLowerCase()
+ if (!normalized) return null
+ const { data, error } = await supabase
+ .from('profiles')
+ .select('id')
+ .ilike('email', normalized)
+ .maybeSingle()
+ if (error) throw new Error(error.message)
+ return (data?.id as string | undefined) ?? null
 }
 
 /**
@@ -651,26 +651,26 @@ export const findProfileIdByEmail = async (email: string): Promise<string | null
  * RLS: is_partner_or_admin (organizations_write).
  */
 export const setOrganizationArchived = async (
-  orgId: string,
-  archived: boolean,
+ orgId: string,
+ archived: boolean,
 ): Promise<void> => {
-  const { data: current, error: readError } = await supabase
-    .from('organizations')
-    .select('settings')
-    .eq('id', orgId)
-    .maybeSingle()
-  if (readError) throw new Error(readError.message)
+ const { data: current, error: readError } = await supabase
+ .from('organizations')
+ .select('settings')
+ .eq('id', orgId)
+ .maybeSingle()
+ if (readError) throw new Error(readError.message)
 
-  const settings = {
-    ...((current?.settings as Record<string, unknown> | null) ?? {}),
-    archived,
-    archivedAt: archived ? new Date().toISOString() : null,
-  }
-  const { error } = await supabase
-    .from('organizations')
-    .update({ settings, updated_at: new Date().toISOString() })
-    .eq('id', orgId)
-  if (error) throw new Error(error.message)
+ const settings = {
+ ...((current?.settings as Record<string, unknown> | null) ?? {}),
+ archived,
+ archivedAt: archived ? new Date().toISOString() : null,
+ }
+ const { error } = await supabase
+ .from('organizations')
+ .update({ settings, updated_at: new Date().toISOString() })
+ .eq('id', orgId)
+ if (error) throw new Error(error.message)
 }
 
 /**
@@ -681,91 +681,91 @@ export const setOrganizationArchived = async (
  * Best-effort: returns the count archived, or 0 on any failure.
  */
 export const archiveExpiredOrganizations = async (): Promise<number> => {
-  try {
-    const { data, error } = await supabase.rpc('archive_expired_organizations')
-    if (error) {
-      console.warn('[supabaseOrgService] archiveExpiredOrganizations failed', error.message)
-      return 0
-    }
-    return typeof data === 'number' ? data : 0
-  } catch (error) {
-    console.warn('[supabaseOrgService] archiveExpiredOrganizations threw', error)
-    return 0
-  }
+ try {
+ const { data, error } = await supabase.rpc('archive_expired_organizations')
+ if (error) {
+ console.warn('[supabaseOrgService] archiveExpiredOrganizations failed', error.message)
+ return 0
+ }
+ return typeof data === 'number' ? data : 0
+ } catch (error) {
+ console.warn('[supabaseOrgService] archiveExpiredOrganizations threw', error)
+ return 0
+ }
 }
 
 /** Candidate users for the partner picker (any user can be promoted). */
 export const listPartnerCandidates = async (): Promise<PartnerCandidate[]> => {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, email, role')
-    .order('full_name', { ascending: true })
-  if (error) throw new Error(error.message)
-  return (data ?? []).map((r) => {
-    const row = r as Raw
-    return {
-      id: row.id as string,
-      fullName: (row.full_name as string) ?? null,
-      email: (row.email as string) ?? null,
-      role: (row.role as string) ?? null,
-    }
-  })
+ const { data, error } = await supabase
+ .from('profiles')
+ .select('id, full_name, email, role')
+ .order('full_name', { ascending: true })
+ if (error) throw new Error(error.message)
+ return (data ?? []).map((r) => {
+ const row = r as Raw
+ return {
+ id: row.id as string,
+ fullName: (row.full_name as string) ?? null,
+ email: (row.email as string) ?? null,
+ role: (row.role as string) ?? null,
+ }
+ })
 }
 
 /** Assign (or change) an org's transformation partner. Promotes to partner + adds org to their list. */
 export const assignPartnerToOrg = async (
-  orgId: string,
-  partnerUid: string,
-  options?: { sendWelcome?: boolean },
+ orgId: string,
+ partnerUid: string,
+ options?: { sendWelcome?: boolean },
 ): Promise<void> => {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('email, role')
-    .eq('id', partnerUid)
-    .maybeSingle()
-  if (profileError) throw new Error(profileError.message)
-  if (profile?.email) {
-    await assertEmailAvailableForRole(String(profile.email), 'partner')
-  } else if (profile?.role) {
-    const currentBucket = roleConflictBucket(String(profile.role))
-    if (currentBucket !== 'partner') {
-      throw new Error(
-        `This account is already assigned as a ${formatRoleConflictLabel(String(profile.role))}. ` +
-          `Don't use it for a different role (Partner).`,
-      )
-    }
-  }
+ const { data: profile, error: profileError } = await supabase
+ .from('profiles')
+ .select('email, role')
+ .eq('id', partnerUid)
+ .maybeSingle()
+ if (profileError) throw new Error(profileError.message)
+ if (profile?.email) {
+ await assertEmailAvailableForRole(String(profile.email), 'partner')
+ } else if (profile?.role) {
+ const currentBucket = roleConflictBucket(String(profile.role))
+ if (currentBucket !== 'partner') {
+ throw new Error(
+ `This account is already assigned as a ${formatRoleConflictLabel(String(profile.role))}. ` +
+ `Don't use it for a different role (Partner).`,
+ )
+ }
+ }
 
-  const { data, error } = await supabase.rpc('admin_assign_partner', {
-    org_id: orgId,
-    partner_uid: partnerUid,
-  })
-  if (error) throw new Error(error.message)
-  if (data !== 'ok') throw new Error(`Assignment failed: ${data}`)
+ const { data, error } = await supabase.rpc('admin_assign_partner', {
+ org_id: orgId,
+ partner_uid: partnerUid,
+ })
+ if (error) throw new Error(error.message)
+ if (data !== 'ok') throw new Error(`Assignment failed: ${data}`)
 
-  // Welcome the newly assigned partner (best-effort). Runs for BOTH entry points:
-  // the "Assign partner" modal AND the create-org auto-link, so partners set at
-  // org creation are welcomed too. Callers that already notify on role change
-  // can pass sendWelcome: false to avoid a duplicate email.
-  if (options?.sendWelcome === false) return
+ // Welcome the newly assigned partner (best-effort). Runs for BOTH entry points:
+ // the "Assign partner" modal AND the create-org auto-link, so partners set at
+ // org creation are welcomed too. Callers that already notify on role change
+ // can pass sendWelcome: false to avoid a duplicate email.
+ if (options?.sendWelcome === false) return
 
-  const [{ email, name }, org] = await Promise.all([
-    fetchProfileContact(partnerUid),
-    fetchOrgSummary(orgId),
-  ])
-  void dispatchWelcomeEmail({
-    to: email,
-    name,
-    role: 'partner',
-    organizationName: org.name,
-    organizationCode: org.code,
-  })
+ const [{ email, name }, org] = await Promise.all([
+ fetchProfileContact(partnerUid),
+ fetchOrgSummary(orgId),
+ ])
+ void dispatchWelcomeEmail({
+ to: email,
+ name,
+ role: 'partner',
+ organizationName: org.name,
+ organizationCode: org.code,
+ })
 }
 
 export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
-  const { data, error } = await supabase.rpc('admin_remove_partner', { org_id: orgId })
-  if (error) throw new Error(error.message)
-  if (data !== 'ok') throw new Error(`Removal failed: ${data}`)
+ const { data, error } = await supabase.rpc('admin_remove_partner', { org_id: orgId })
+ if (error) throw new Error(error.message)
+ if (data !== 'ok') throw new Error(`Removal failed: ${data}`)
 }
 
 /**
@@ -775,11 +775,11 @@ export const removePartnerFromOrg = async (orgId: string): Promise<void> => {
  * partner's assignedOrganizations list before deleting the row.
  */
 export const deleteOrganization = async (orgId: string): Promise<void> => {
-  const { data, error } = await supabase.rpc('admin_delete_organization', { org_id: orgId })
-  if (error) throw new Error(error.message)
-  if (data === 'forbidden') throw new Error('You do not have permission to delete this organization.')
-  if (data === 'org_not_found') throw new Error('Organization not found.')
-  if (data !== 'ok') throw new Error(`Delete failed: ${data}`)
+ const { data, error } = await supabase.rpc('admin_delete_organization', { org_id: orgId })
+ if (error) throw new Error(error.message)
+ if (data === 'forbidden') throw new Error('You do not have permission to delete this organization.')
+ if (data === 'org_not_found') throw new Error('Organization not found.')
+ if (data !== 'ok') throw new Error(`Delete failed: ${data}`)
 }
 
 /**
@@ -791,79 +791,79 @@ export const deleteOrganization = async (orgId: string): Promise<void> => {
  * UPDATE policy on profiles (migration 0015).
  */
 export const assignLeadershipToOrg = async (
-  orgId: string,
-  userId: string,
-  role: 'mentor' | 'ambassador',
-  org?: { code?: string | null; name?: string | null },
-  options?: { sendWelcome?: boolean },
+ orgId: string,
+ userId: string,
+ role: 'mentor' | 'ambassador',
+ org?: { code?: string | null; name?: string | null },
+ options?: { sendWelcome?: boolean },
 ): Promise<void> => {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('email, role')
-    .eq('id', userId)
-    .maybeSingle()
-  if (profileError) throw new Error(profileError.message)
-  if (profile?.email) {
-    await assertEmailAvailableForRole(String(profile.email), role)
-  } else if (profile?.role) {
-    const currentBucket = roleConflictBucket(String(profile.role))
-    if (currentBucket !== role) {
-      throw new Error(
-        `This account is already assigned as a ${formatRoleConflictLabel(String(profile.role))}. ` +
-          `Don't use it for a different role (${formatRoleConflictLabel(role)}).`,
-      )
-    }
-  }
+ const { data: profile, error: profileError } = await supabase
+ .from('profiles')
+ .select('email, role')
+ .eq('id', userId)
+ .maybeSingle()
+ if (profileError) throw new Error(profileError.message)
+ if (profile?.email) {
+ await assertEmailAvailableForRole(String(profile.email), role)
+ } else if (profile?.role) {
+ const currentBucket = roleConflictBucket(String(profile.role))
+ if (currentBucket !== role) {
+ throw new Error(
+ `This account is already assigned as a ${formatRoleConflictLabel(String(profile.role))}. ` +
+ `Don't use it for a different role (${formatRoleConflictLabel(role)}).`,
+ )
+ }
+ }
 
-  // Unlink any other same-role holder currently attached to this org so the org
-  // has at most one mentor / one coach.
-  const { error: clearError } = await supabase
-    .from('profiles')
-    .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
-    .eq('organization_id', orgId)
-    .eq('role', role)
-    .neq('id', userId)
-  if (clearError) throw new Error(`Assignment failed: ${clearError.message}`)
+ // Unlink any other same-role holder currently attached to this org so the org
+ // has at most one mentor / one coach.
+ const { error: clearError } = await supabase
+ .from('profiles')
+ .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
+ .eq('organization_id', orgId)
+ .eq('role', role)
+ .neq('id', userId)
+ if (clearError) throw new Error(`Assignment failed: ${clearError.message}`)
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      role,
-      organization_id: orgId,
-      company_id: orgId,
-      company_code: org?.code ?? null,
-      company_name: org?.name ?? null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-  if (error) throw new Error(`Assignment failed: ${error.message}`)
+ const { error } = await supabase
+ .from('profiles')
+ .update({
+ role,
+ organization_id: orgId,
+ company_id: orgId,
+ company_code: org?.code ?? null,
+ company_name: org?.name ?? null,
+ updated_at: new Date().toISOString(),
+ })
+ .eq('id', userId)
+ if (error) throw new Error(`Assignment failed: ${error.message}`)
 
-  // Welcome the newly assigned mentor / coach (best-effort). Callers that already
-  // notify on role change can pass sendWelcome: false to avoid a duplicate email.
-  if (options?.sendWelcome === false) return
+ // Welcome the newly assigned mentor / coach (best-effort). Callers that already
+ // notify on role change can pass sendWelcome: false to avoid a duplicate email.
+ if (options?.sendWelcome === false) return
 
-  const summary = org?.name && org?.code ? null : await fetchOrgSummary(orgId)
-  const { email, name } = await fetchProfileContact(userId)
-  void dispatchWelcomeEmail({
-    to: email,
-    name,
-    role,
-    organizationName: org?.name ?? summary?.name ?? null,
-    organizationCode: org?.code ?? summary?.code ?? null,
-  })
+ const summary = org?.name && org?.code ? null : await fetchOrgSummary(orgId)
+ const { email, name } = await fetchProfileContact(userId)
+ void dispatchWelcomeEmail({
+ to: email,
+ name,
+ role,
+ organizationName: org?.name ?? summary?.name ?? null,
+ organizationCode: org?.code ?? summary?.code ?? null,
+ })
 }
 
 /** Unlink whoever currently holds the given leadership role for this org. */
 export const removeLeadershipFromOrg = async (
-  orgId: string,
-  role: 'mentor' | 'ambassador',
+ orgId: string,
+ role: 'mentor' | 'ambassador',
 ): Promise<void> => {
-  const { error } = await supabase
-    .from('profiles')
-    .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
-    .eq('organization_id', orgId)
-    .eq('role', role)
-  if (error) throw new Error(`Unassignment failed: ${error.message}`)
+ const { error } = await supabase
+ .from('profiles')
+ .update({ organization_id: null, company_id: null, company_code: null, company_name: null, updated_at: new Date().toISOString() })
+ .eq('organization_id', orgId)
+ .eq('role', role)
+ if (error) throw new Error(`Unassignment failed: ${error.message}`)
 }
 
 export type OrgMemberEditableRole = 'user' | 'partner' | 'mentor' | 'ambassador'
@@ -875,132 +875,132 @@ export type OrgMemberEditableRole = 'user' | 'partner' | 'mentor' | 'ambassador'
  * When the role changes, the member receives a role email for the new role.
  */
 export const updateOrganizationMember = async (params: {
-  orgId: string
-  userId: string
-  role: OrgMemberEditableRole
-  name?: string
-  org?: { code?: string | null; name?: string | null }
+ orgId: string
+ userId: string
+ role: OrgMemberEditableRole
+ name?: string
+ org?: { code?: string | null; name?: string | null }
 }): Promise<void> => {
-  const { orgId, userId, role, name, org } = params
-  const now = new Date().toISOString()
+ const { orgId, userId, role, name, org } = params
+ const now = new Date().toISOString()
 
-  const { data: existing, error: existingError } = await supabase
-    .from('profiles')
-    .select('role, email, full_name')
-    .eq('id', userId)
-    .maybeSingle()
-  if (existingError) throw new Error(existingError.message)
+ const { data: existing, error: existingError } = await supabase
+ .from('profiles')
+ .select('role, email, full_name')
+ .eq('id', userId)
+ .maybeSingle()
+ if (existingError) throw new Error(existingError.message)
 
-  const previousWelcomeRole = toWelcomeRole(existing?.role as string | null | undefined)
-  const nextWelcomeRole = toWelcomeRole(role)
-  const roleChanged = previousWelcomeRole !== nextWelcomeRole
+ const previousWelcomeRole = toWelcomeRole(existing?.role as string | null | undefined)
+ const nextWelcomeRole = toWelcomeRole(role)
+ const roleChanged = previousWelcomeRole !== nextWelcomeRole
 
-  if (typeof name === 'string') {
-    const trimmed = name.trim()
-    if (trimmed) {
-      const { error: nameError } = await supabase
-        .from('profiles')
-        .update({ full_name: trimmed, updated_at: now })
-        .eq('id', userId)
-      if (nameError) throw new Error(`Unable to update name: ${nameError.message}`)
-    }
-  }
+ if (typeof name === 'string') {
+ const trimmed = name.trim()
+ if (trimmed) {
+ const { error: nameError } = await supabase
+ .from('profiles')
+ .update({ full_name: trimmed, updated_at: now })
+ .eq('id', userId)
+ if (nameError) throw new Error(`Unable to update name: ${nameError.message}`)
+ }
+ }
 
-  if (role === 'partner') {
-    await assignPartnerToOrg(orgId, userId, { sendWelcome: false })
-  } else if (role === 'mentor' || role === 'ambassador') {
-    // Ensure the profile role matches, then bind them as the org's sole holder.
-    const { error: roleError } = await supabase
-      .from('profiles')
-      .update({ role, updated_at: now })
-      .eq('id', userId)
-    if (roleError) throw new Error(`Unable to update role: ${roleError.message}`)
-    await assignLeadershipToOrg(orgId, userId, role, org, { sendWelcome: false })
-  } else {
-    // Learner / plain member inside an org is a paid_member (never free_user).
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        role: 'paid_member',
-        membership_status: 'paid',
-        organization_id: orgId,
-        company_id: orgId,
-        company_code: org?.code ?? null,
-        company_name: org?.name ?? null,
-        updated_at: now,
-      })
-      .eq('id', userId)
-    if (error) throw new Error(`Unable to update member: ${error.message}`)
+ if (role === 'partner') {
+ await assignPartnerToOrg(orgId, userId, { sendWelcome: false })
+ } else if (role === 'mentor' || role === 'ambassador') {
+ // Ensure the profile role matches, then bind them as the org's sole holder.
+ const { error: roleError } = await supabase
+ .from('profiles')
+ .update({ role, updated_at: now })
+ .eq('id', userId)
+ if (roleError) throw new Error(`Unable to update role: ${roleError.message}`)
+ await assignLeadershipToOrg(orgId, userId, role, org, { sendWelcome: false })
+ } else {
+ // Learner / plain member inside an org is a paid_member (never free_user).
+ const { error } = await supabase
+ .from('profiles')
+ .update({
+ role: 'paid_member',
+ membership_status: 'paid',
+ organization_id: orgId,
+ company_id: orgId,
+ company_code: org?.code ?? null,
+ company_name: org?.name ?? null,
+ updated_at: now,
+ })
+ .eq('id', userId)
+ if (error) throw new Error(`Unable to update member: ${error.message}`)
 
-    // If they were the org's transformation partner, clear that link so the list
-    // does not keep showing a demoted user as the assigned partner.
-    const { data: orgRow } = await supabase
-      .from('organizations')
-      .select('transformation_partner_id')
-      .eq('id', orgId)
-      .maybeSingle()
-    if ((orgRow?.transformation_partner_id as string | null) === userId) {
-      await removePartnerFromOrg(orgId)
-    }
-  }
+ // If they were the org's transformation partner, clear that link so the list
+ // does not keep showing a demoted user as the assigned partner.
+ const { data: orgRow } = await supabase
+ .from('organizations')
+ .select('transformation_partner_id')
+ .eq('id', orgId)
+ .maybeSingle()
+ if ((orgRow?.transformation_partner_id as string | null) === userId) {
+ await removePartnerFromOrg(orgId)
+ }
+ }
 
-  if (roleChanged) {
-    const displayName =
-      (typeof name === 'string' && name.trim()) ||
-      (typeof existing?.full_name === 'string' ? existing.full_name : null) ||
-      (typeof existing?.email === 'string' ? existing.email : null)
-    void dispatchWelcomeEmail({
-      to: typeof existing?.email === 'string' ? existing.email : null,
-      name: displayName,
-      role: nextWelcomeRole,
-      organizationName: org?.name ?? null,
-      organizationCode: org?.code ?? null,
-    })
-  }
+ if (roleChanged) {
+ const displayName =
+ (typeof name === 'string' && name.trim()) ||
+ (typeof existing?.full_name === 'string' ? existing.full_name : null) ||
+ (typeof existing?.email === 'string' ? existing.email : null)
+ void dispatchWelcomeEmail({
+ to: typeof existing?.email === 'string' ? existing.email : null,
+ name: displayName,
+ role: nextWelcomeRole,
+ organizationName: org?.name ?? null,
+ organizationCode: org?.code ?? null,
+ })
+ }
 }
 
 /**
  * Remove a member from an organization without deleting their account.
  */
 export const removeOrganizationMember = async (orgId: string, userId: string): Promise<void> => {
-  const { data: orgRow } = await supabase
-    .from('organizations')
-    .select('transformation_partner_id, member_count')
-    .eq('id', orgId)
-    .maybeSingle()
+ const { data: orgRow } = await supabase
+ .from('organizations')
+ .select('transformation_partner_id, member_count')
+ .eq('id', orgId)
+ .maybeSingle()
 
-  if ((orgRow?.transformation_partner_id as string | null) === userId) {
-    await removePartnerFromOrg(orgId)
-  }
+ if ((orgRow?.transformation_partner_id as string | null) === userId) {
+ await removePartnerFromOrg(orgId)
+ }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({
-      organization_id: null,
-      company_id: null,
-      company_code: null,
-      company_name: null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', userId)
-  if (error) throw new Error(`Unable to remove member: ${error.message}`)
+ const { error } = await supabase
+ .from('profiles')
+ .update({
+ organization_id: null,
+ company_id: null,
+ company_code: null,
+ company_name: null,
+ updated_at: new Date().toISOString(),
+ })
+ .eq('id', userId)
+ if (error) throw new Error(`Unable to remove member: ${error.message}`)
 
-  const currentCount = typeof orgRow?.member_count === 'number' ? orgRow.member_count : 0
-  if (currentCount > 0) {
-    await supabase
-      .from('organizations')
-      .update({ member_count: currentCount - 1, updated_at: new Date().toISOString() })
-      .eq('id', orgId)
-  }
+ const currentCount = typeof orgRow?.member_count === 'number' ? orgRow.member_count : 0
+ if (currentCount > 0) {
+ await supabase
+ .from('organizations')
+ .update({ member_count: currentCount - 1, updated_at: new Date().toISOString() })
+ .eq('id', orgId)
+ }
 }
 
 export interface ClaimOrgResult {
-  ok: boolean
-  error?: string
-  organizationId?: string
-  organizationName?: string
-  code?: string
-  journeyType?: string
+ ok: boolean
+ error?: string
+ organizationId?: string
+ organizationName?: string
+ code?: string
+ journeyType?: string
 }
 
 /**
@@ -1011,26 +1011,26 @@ export interface ClaimOrgResult {
  * Returns the resolved org info; never throws (callers branch on `ok`).
  */
 export const claimOrganizationCode = async (code: string): Promise<ClaimOrgResult> => {
-  const { data, error } = await supabase.rpc('claim_organization_code', {
-    p_code: code.trim().toUpperCase(),
-  })
-  if (error) return { ok: false, error: error.message }
-  const result = (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
-  // Welcome the member into the org they just joined (best-effort, self-addressed).
-  // The code they just claimed is the org code - echo it back in the welcome.
-  if (result.ok) {
-    void dispatchSelfJoinWelcomeEmail(
-      result.organizationName ?? null,
-      result.code ?? code.trim().toUpperCase(),
-    )
-  }
-  return result
+ const { data, error } = await supabase.rpc('claim_organization_code', {
+ p_code: code.trim().toUpperCase(),
+ })
+ if (error) return { ok: false, error: error.message }
+ const result = (data ?? { ok: false, error: 'no_result' }) as ClaimOrgResult
+ // Welcome the member into the org they just joined (best-effort, self-addressed).
+ // The code they just claimed is the org code - echo it back in the welcome.
+ if (result.ok) {
+ void dispatchSelfJoinWelcomeEmail(
+ result.organizationName ?? null,
+ result.code ?? code.trim().toUpperCase(),
+ )
+ }
+ return result
 }
 
 export interface InviteMemberResult {
-  ok: boolean
-  status?: 'enrolled' | 'pending'
-  error?: string
+ ok: boolean
+ status?: 'enrolled' | 'pending'
+ error?: string
 }
 
 /**
@@ -1040,40 +1040,40 @@ export interface InviteMemberResult {
  * that email. Mirrors the org-code path for admin-driven adds. Never throws.
  */
 export const inviteOrgMember = async (
-  orgId: string,
-  email: string,
-  role: string = 'user',
+ orgId: string,
+ email: string,
+ role: string = 'user',
 ): Promise<InviteMemberResult> => {
-  const normalizedEmail = email.trim().toLowerCase()
-  try {
-    await assertEmailAvailableForRole(normalizedEmail, role || 'user')
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'email_role_conflict',
-    }
-  }
+ const normalizedEmail = email.trim().toLowerCase()
+ try {
+ await assertEmailAvailableForRole(normalizedEmail, role || 'user')
+ } catch (error) {
+ return {
+ ok: false,
+ error: error instanceof Error ? error.message : 'email_role_conflict',
+ }
+ }
 
-  const { data, error } = await supabase.rpc('admin_invite_org_member', {
-    p_org_id: orgId,
-    p_email: normalizedEmail,
-    p_role: role || 'user',
-  })
-  if (error) return { ok: false, error: error.message }
-  const result = (data ?? { ok: false, error: 'no_result' }) as InviteMemberResult
+ const { data, error } = await supabase.rpc('admin_invite_org_member', {
+ p_org_id: orgId,
+ p_email: normalizedEmail,
+ p_role: role || 'user',
+ })
+ if (error) return { ok: false, error: error.message }
+ const result = (data ?? { ok: false, error: 'no_result' }) as InviteMemberResult
 
-  // Welcome the added member (best-effort) whether enrolled now or pending signup.
-  if (result.ok) {
-    const org = await fetchOrgSummary(orgId)
-    void dispatchWelcomeEmail({
-      to: normalizedEmail,
-      name: null,
-      role: toWelcomeRole(role),
-      organizationName: org.name,
-      organizationCode: org.code,
-    })
-  }
-  return result
+ // Welcome the added member (best-effort) whether enrolled now or pending signup.
+ if (result.ok) {
+ const org = await fetchOrgSummary(orgId)
+ void dispatchWelcomeEmail({
+ to: normalizedEmail,
+ name: null,
+ role: toWelcomeRole(role),
+ organizationName: org.name,
+ organizationCode: org.code,
+ })
+ }
+ return result
 }
 
 /**
@@ -1082,31 +1082,31 @@ export const inviteOrgMember = async (
  * claimOrganizationCode). Never throws; callers branch on `ok`.
  */
 export const acceptOrgInvitations = async (): Promise<{ ok: boolean; error?: string }> => {
-  const { data, error } = await supabase.rpc('accept_org_invitations')
-  if (error) return { ok: false, error: error.message }
-  const result = (data ?? { ok: false, error: 'no_result' }) as { ok: boolean; error?: string }
-  // Only welcome the member if an org membership actually resulted - accept can
-  // be called on load for any org-less user, and we must not fire a spurious
-  // email when there was nothing to accept.
-  if (result.ok) {
-    try {
-      const { data: userData } = await supabase.auth.getUser()
-      const uid = userData?.user?.id
-      if (uid) {
-        const { data: prof } = await supabase
-          .from('profiles')
-          .select('organization_id, company_id')
-          .eq('id', uid)
-          .maybeSingle()
-        const orgId = (prof?.organization_id as string) || (prof?.company_id as string) || null
-        if (orgId) {
-          const org = await fetchOrgSummary(orgId)
-          void dispatchSelfJoinWelcomeEmail(org.name, org.code)
-        }
-      }
-    } catch (err) {
-      console.warn('[supabaseOrgService] accept-invite welcome email skipped', err)
-    }
-  }
-  return result
+ const { data, error } = await supabase.rpc('accept_org_invitations')
+ if (error) return { ok: false, error: error.message }
+ const result = (data ?? { ok: false, error: 'no_result' }) as { ok: boolean; error?: string }
+ // Only welcome the member if an org membership actually resulted - accept can
+ // be called on load for any org-less user, and we must not fire a spurious
+ // email when there was nothing to accept.
+ if (result.ok) {
+ try {
+ const { data: userData } = await supabase.auth.getUser()
+ const uid = userData?.user?.id
+ if (uid) {
+ const { data: prof } = await supabase
+ .from('profiles')
+ .select('organization_id, company_id')
+ .eq('id', uid)
+ .maybeSingle()
+ const orgId = (prof?.organization_id as string) || (prof?.company_id as string) || null
+ if (orgId) {
+ const org = await fetchOrgSummary(orgId)
+ void dispatchSelfJoinWelcomeEmail(org.name, org.code)
+ }
+ }
+ } catch (err) {
+ console.warn('[supabaseOrgService] accept-invite welcome email skipped', err)
+ }
+ }
+ return result
 }
