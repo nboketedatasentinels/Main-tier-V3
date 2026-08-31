@@ -296,14 +296,12 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
       errors.push('Please enter a valid verifier email address.')
     }
 
-    if (requirements.evidenceLink) {
-      if (!evidenceLink.trim()) {
-        errors.push('Evidence link is required for this verification tier.')
-      } else {
-        const urlValidation = isValidUrl(evidenceLink.trim())
-        if (!urlValidation.isValid) {
-          errors.push(urlValidation.message || 'The evidence link is not a valid URL.')
-        }
+    if (!evidenceLink.trim()) {
+      errors.push('Evidence link is required for ESG submissions.')
+    } else {
+      const urlValidation = isValidUrl(evidenceLink.trim())
+      if (!urlValidation.isValid) {
+        errors.push(urlValidation.message || 'The evidence link is not a valid URL.')
       }
     }
 
