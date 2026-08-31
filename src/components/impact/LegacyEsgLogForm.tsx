@@ -650,14 +650,18 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
           />
         </FormControl>
 
-        <FormControl>
-          <FormLabel>Evidence (Optional)</FormLabel>
+        <FormControl isRequired>
+          <FormLabel>
+            Evidence <Text as="span" color="red.500">*</Text>
+          </FormLabel>
           <Input
             placeholder="URL to supporting evidence (photo, document, etc.)"
             value={evidenceLink}
             onChange={(e) => setEvidenceLink(e.target.value)}
           />
-          <FormHelperText>Adding evidence makes this entry eligible for Tier 3 verification.</FormHelperText>
+          <FormHelperText>
+            A supporting evidence link is required for every ESG submission.
+          </FormHelperText>
         </FormControl>
 
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
