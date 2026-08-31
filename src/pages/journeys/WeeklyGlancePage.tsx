@@ -19,7 +19,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { format } from 'date-fns'
 import { motion, useReducedMotion } from 'framer-motion'
 import { FirestoreError } from 'firebase/firestore'
@@ -322,6 +322,7 @@ const ResultSelectSlot = ({
 
 export const WeeklyGlancePage = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const toast = useToast()
   const { profile, refreshProfile, updateProfile } = useAuth()
   const data = useWeeklyGlanceData()
@@ -576,6 +577,16 @@ export const WeeklyGlancePage = () => {
   const bothTestsCompleted = Boolean(
     profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
   )
+
+  // LIFT checklist CTA (and deep links) land here with a hash.
+  useEffect(() => {
+    const hash = location.hash.replace(/^#/, '')
+    if (!hash) return
+    const timer = window.setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 350)
+    return () => window.clearTimeout(timer)
+  }, [location.hash, assignedLoading, bothTestsCompleted])
 
   // Checklist stays hidden until the learner has entered both test results on
   // this page (type + all 5 values). Same gate as the result slots below.
@@ -1180,7 +1191,14 @@ export const WeeklyGlancePage = () => {
           </Box>
 
           {showAssignedCourses && (
-            <Stack flex={{ base: 'none', md: '1 1 0%' }} minW={0} w="full" spacing={4}>
+            <Stack
+              id="assigned-courses"
+              scrollMarginTop="96px"
+              flex={{ base: 'none', md: '1 1 0%' }}
+              minW={0}
+              w="full"
+              spacing={4}
+            >
               <AssignedCoursesCarousel
                 courses={assignedCourses}
                 loading={assignedLoading}

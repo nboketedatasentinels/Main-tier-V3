@@ -22,6 +22,7 @@ import {
   ShieldCheck,
 } from 'lucide-react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
 import type { ActivityState } from '@/hooks/useWeeklyChecklistViewModel'
 import { getNextWindowAvailabilityMessage } from '@/utils/activityStateManager'
 import { getWindowNumber, PARALLEL_WINDOW_SIZE_WEEKS } from '@/utils/windowCalculations'
@@ -188,6 +189,7 @@ export const ActivityRow = ({
 }: ActivityRowProps) => {
   const navigate = useNavigate()
   const toast = useToast()
+  const { profile } = useAuth()
 
   const programmeComponentType = PROGRAMME_COMPONENT_ACTIVITIES[activity.id]
   const isProgrammeComponent = Boolean(programmeComponentType)
@@ -431,6 +433,27 @@ export const ActivityRow = ({
     if (primaryActionDisabled) return
     if (activity.id === 'impact_log') {
       navigate('/app/impact')
+      return
+    }
+    // LIFT pillar course: go to the course cards on Weekly Glance.
+    // Personality + values tests must be on file before the course can open.
+    if (activity.id === 'lift_module') {
+      const bothTestsCompleted = Boolean(
+        profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
+      )
+      if (!bothTestsCompleted) {
+        toast({
+          status: 'info',
+          title: 'Complete your tests first',
+          description:
+            'Finish your personality test and values test before you take the LIFT course. We will take you there now.',
+          duration: 8000,
+          isClosable: true,
+        })
+        navigate('/app/weekly-glance#personality-profile-card')
+        return
+      }
+      navigate('/app/weekly-glance#assigned-courses')
       return
     }
     // Partner/mentor/coach assign marks after attendance - no learner upload.

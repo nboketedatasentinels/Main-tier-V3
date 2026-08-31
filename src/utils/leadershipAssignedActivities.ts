@@ -42,7 +42,7 @@ export function getLeadershipAssignedActionTitle(activity: ActivityLike): string
     case 'shameless_circle':
       return 'Attend Shameless Circle'
     case 'lift_module':
-      return 'Complete the LIFT module'
+      return 'Go to LIFT course'
     case 'mentor_meetup':
       return 'Attend your mentor session'
     case 'ambassador_session':
@@ -70,7 +70,7 @@ export function getLeadershipAssignedGuidance(activity: ActivityLike): string {
     case 'shameless_circle':
       return 'Attend Shameless Circle. Your partner assigns the points after they confirm you were there - if you don’t attend, you won’t get those points.'
     case 'lift_module':
-      return 'Complete the LIFT module. Your partner assigns the points after they confirm it’s done - if you don’t finish it, you won’t get those points.'
+      return 'Open the LIFT course on your dashboard. Complete your personality and values tests first if you have not already - then take the module. Your partner assigns the points after they confirm it is done.'
     case 'mentor_meetup':
       return 'Attend your mentorship session. Your mentor assigns +2,000 points after they confirm you were there - if you don’t attend, you won’t get those points.'
     case 'ambassador_session':
