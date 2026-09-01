@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   VStack,
@@ -34,6 +34,7 @@ interface ChallengeRecord {
   opponentPoints: number;
   status: 'pending' | 'active' | 'completed' | 'upcoming';
   result?: 'win' | 'loss' | 'draw';
+  isChallenger?: boolean;
 }
 
 interface ChallengesTabProps {
@@ -41,65 +42,92 @@ interface ChallengesTabProps {
   challengesLoaded: boolean;
   onStartChallenge: () => void;
   onCancelChallenge?: (id: string) => void;
+  onAcceptChallenge?: (id: string) => void;
+  onDeclineChallenge?: (id: string) => void;
+  respondingChallengeId?: string | null;
+  focusChallengeId?: string | null;
   leaderboardRank?: number;
 }
 
-export const ChallengesTab: React.FC<ChallengesTabProps> = ({
+export const ChallengesTab = ({
   challenges,
   challengesLoaded,
   onStartChallenge,
   onCancelChallenge,
+  onAcceptChallenge,
+  onDeclineChallenge,
+  respondingChallengeId,
+  focusChallengeId,
   leaderboardRank,
-}) => {
+}: ChallengesTabProps) => {
   const [sortBy, setSortBy] = useState<'date' | 'points'>('date');
+  const [innerTabIndex, setInnerTabIndex] = useState(0);
 
-  // Categorize challenges
   const { active, pending, completed, stats } = useMemo(() => {
     const now = new Date();
-    const active: ChallengeRecord[] = [];
-    const pending: ChallengeRecord[] = [];
-    const completed: ChallengeRecord[] = [];
+    const activeList: ChallengeRecord[] = [];
+    const pendingList: ChallengeRecord[] = [];
+    const completedList: ChallengeRecord[] = [];
 
     challenges.forEach((c) => {
-      const start = new Date(c.startDate);
       const end = new Date(c.endDate);
 
-      if (c.status === 'completed' || now > end) {
-        completed.push({ ...c, status: 'completed' });
-      } else if (now < start) {
-        pending.push({ ...c, status: 'pending' });
-      } else {
-        active.push({ ...c, status: 'active' });
+      // Status from the DB wins for pending (awaiting accept/decline).
+      if (c.status === 'pending') {
+        pendingList.push({ ...c, status: 'pending' });
+        return;
       }
+      if (c.status === 'completed' || now > end) {
+        completedList.push({ ...c, status: 'completed' });
+        return;
+      }
+      activeList.push({ ...c, status: 'active' });
     });
 
-    // Sort by selected criteria
-    const sortFn = sortBy === 'date'
-      ? (a: ChallengeRecord, b: ChallengeRecord) =>
-          new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
-      : (a: ChallengeRecord, b: ChallengeRecord) => b.yourPoints - a.yourPoints;
+    const sortFn =
+      sortBy === 'date'
+        ? (a: ChallengeRecord, b: ChallengeRecord) =>
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+        : (a: ChallengeRecord, b: ChallengeRecord) => b.yourPoints - a.yourPoints;
 
-    active.sort(sortFn);
-    pending.sort(sortFn);
-    completed.sort(sortFn);
+    activeList.sort(sortFn);
+    pendingList.sort(sortFn);
+    completedList.sort(sortFn);
 
-    // Calculate stats
-    const victories = completed.filter((c) => c.result === 'win').length;
+    const victories = completedList.filter((c) => c.result === 'win').length;
     const totalPoints = challenges.reduce((sum, c) => sum + c.yourPoints, 0);
 
     return {
-      active,
-      pending,
-      completed,
+      active: activeList,
+      pending: pendingList,
+      completed: completedList,
       stats: {
-        activeCount: active.length + pending.length,
+        activeCount: activeList.length + pendingList.length,
         victories,
         totalPoints,
       },
     };
   }, [challenges, sortBy]);
 
-  // Empty state component
+  // Deep-link: open the list that contains the focused challenge and scroll to it.
+  useEffect(() => {
+    if (!focusChallengeId) return;
+    if (pending.some((c) => c.id === focusChallengeId)) {
+      setInnerTabIndex(1);
+    } else if (active.some((c) => c.id === focusChallengeId)) {
+      setInnerTabIndex(0);
+    } else if (completed.some((c) => c.id === focusChallengeId)) {
+      setInnerTabIndex(2);
+    }
+    const t = window.setTimeout(() => {
+      document.getElementById(`challenge-${focusChallengeId}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }, 200);
+    return () => window.clearTimeout(t);
+  }, [focusChallengeId, pending, active, completed]);
+
   const EmptyState = ({ message }: { message: string }) => (
     <Center
       py={8}
@@ -125,7 +153,6 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
 
   return (
     <VStack spacing={6} align="stretch">
-      {/* Header Stats */}
       <Box
         bg="white"
         borderRadius="xl"
@@ -140,7 +167,13 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
               Challenge Arena
             </Text>
             <Text fontSize="xl" fontWeight="bold" color="gray.800">
-              Friendly competitions to spark growth
+              Who gains the most points this week?
+            </Text>
+            <Text fontSize="sm" color="gray.600" mt={1} maxW="640px">
+              A 7-day challenge. Only the winner earns Challenger checklist points. We count points
+              you gain during the challenge — not your lifetime total. Accepting alone does not award
+              points. Someone already in a challenge cannot be selected again until that challenge
+              ends.
             </Text>
           </Box>
           <Button
@@ -165,7 +198,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
             <StatNumber fontSize="2xl" color="gray.800">{stats.victories}</StatNumber>
           </Stat>
           <Stat>
-            <StatLabel color="gray.500" fontSize="xs">Points Earned</StatLabel>
+            <StatLabel color="gray.500" fontSize="xs">Pts gained (challenges)</StatLabel>
             <StatNumber fontSize="2xl" color="gray.800">{stats.totalPoints.toLocaleString()}</StatNumber>
           </Stat>
           <Stat>
@@ -175,7 +208,6 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
         </SimpleGrid>
       </Box>
 
-      {/* Challenge Lists */}
       <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
         <Flex justify="space-between" align="center" p={4} borderBottom="1px solid" borderColor="border.control">
           <Text fontWeight="semibold">Your Challenges</Text>
@@ -190,7 +222,12 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
           </Select>
         </Flex>
 
-        <Tabs variant="enclosed" colorScheme="purple">
+        <Tabs
+          variant="enclosed"
+          colorScheme="purple"
+          index={innerTabIndex}
+          onChange={setInnerTabIndex}
+        >
           <TabList px={4} pt={2}>
             <Tab fontSize="sm">
               <HStack spacing={2}>
@@ -228,7 +265,6 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
           </TabList>
 
           <TabPanels>
-            {/* Active Challenges */}
             <TabPanel>
               {active.length === 0 ? (
                 <EmptyState message="No active challenges. Start one to compete!" />
@@ -238,6 +274,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
                     <ChallengeCard
                       key={challenge.id}
                       challenge={challenge}
+                      highlighted={challenge.id === focusChallengeId}
                       onCancel={onCancelChallenge}
                     />
                   ))}
@@ -245,7 +282,6 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
               )}
             </TabPanel>
 
-            {/* Pending Challenges */}
             <TabPanel>
               {pending.length === 0 ? (
                 <EmptyState message="No pending challenges." />
@@ -255,14 +291,17 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
                     <ChallengeCard
                       key={challenge.id}
                       challenge={challenge}
+                      highlighted={challenge.id === focusChallengeId}
                       onCancel={onCancelChallenge}
+                      onAccept={onAcceptChallenge}
+                      onDecline={onDeclineChallenge}
+                      responding={respondingChallengeId === challenge.id}
                     />
                   ))}
                 </VStack>
               )}
             </TabPanel>
 
-            {/* Completed Challenges */}
             <TabPanel>
               {completed.length === 0 ? (
                 <EmptyState message="No completed challenges yet." />
@@ -272,6 +311,7 @@ export const ChallengesTab: React.FC<ChallengesTabProps> = ({
                     <ChallengeCard
                       key={challenge.id}
                       challenge={challenge}
+                      highlighted={challenge.id === focusChallengeId}
                     />
                   ))}
                 </VStack>

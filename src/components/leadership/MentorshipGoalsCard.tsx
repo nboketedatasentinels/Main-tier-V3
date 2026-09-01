@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react'
-import { Box, Button, Flex, Text, Textarea, useToast } from '@chakra-ui/react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Box, Button, Flex, Stack, Text, Textarea, useToast } from '@chakra-ui/react'
 import { Save } from 'lucide-react'
 import {
   MENTORSHIP_GOALS_MAX_LENGTH,
   useMentorshipGoals,
 } from '@/hooks/useMentorshipGoals'
+import { useSessionPrepLift } from '@/hooks/useSessionPrepLift'
+import { getArchetypeSessionPrompts } from '@/config/archetypeSessionPrompts'
+import type { Archetype } from '@/config/liftAssessment'
 
 type MentorshipGoalsCardProps = {
   learnerId: string
@@ -13,7 +16,9 @@ type MentorshipGoalsCardProps = {
   audience?: 'mentor' | 'coach'
 }
 
-/** Shared “I'm trying to achieve…” editor for mentor and coach surfaces. */
+const SPLIT = '\n\n'
+
+/** Shared “I'm trying to achieve…” editor — prompts vary by LIFT archetype. */
 export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   learnerId,
   mentorId = null,
@@ -21,7 +26,13 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
 }) => {
   const toast = useToast()
   const { goals, loading, saving, save } = useMentorshipGoals(learnerId, mentorId)
-  const [draft, setDraft] = useState('')
+  const { archetype, loading: liftLoading } = useSessionPrepLift(learnerId)
+  const prompts = useMemo(
+    () => getArchetypeSessionPrompts(archetype as Archetype | null),
+    [archetype],
+  )
+
+  const [answers, setAnswers] = useState<string[]>(['', '', ''])
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -29,19 +40,25 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   }, [learnerId])
 
   useEffect(() => {
-    if (!loading && !ready) {
-      setDraft(goals)
+    if (!loading && !liftLoading && !ready) {
+      const parts = goals.split(SPLIT)
+      setAnswers([
+        (parts[0] || '').trim(),
+        (parts[1] || '').trim(),
+        (parts[2] || '').trim(),
+      ])
       setReady(true)
     }
-  }, [loading, ready, goals])
+  }, [loading, liftLoading, ready, goals])
 
-  const dirty = ready && draft.trim() !== goals.trim()
-  const tooLong = draft.length > MENTORSHIP_GOALS_MAX_LENGTH
+  const combined = answers.map((a) => a.trim()).filter(Boolean).join(SPLIT)
+  const dirty = ready && combined !== goals.trim()
+  const tooLong = combined.length > MENTORSHIP_GOALS_MAX_LENGTH
 
   const handleSave = async () => {
     if (!dirty || tooLong || saving) return
     try {
-      await save(draft)
+      await save(combined)
       toast({
         title: 'Goal saved',
         description:
@@ -66,24 +83,40 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
         {audience === 'coach' ? 'COACHING GOAL' : 'MENTORSHIP GOAL'}
       </Text>
       <Text mt={1} fontSize="md" fontWeight="700" color="#27062e">
-        I&apos;m trying to achieve…
+        {archetype ? `${archetype} · session prep answers` : "I'm trying to achieve…"}
       </Text>
       <Text mt={1} fontSize="sm" color="gray.600" mb={3}>
-        Capture the outcome in their words
-        {audience === 'mentor' ? ' (optional for mentors - same prompt as coaching).' : '.'}
+        Answer the three prompts below. Your {audience === 'coach' ? 'coach' : 'mentor'} sees this in
+        Session Prep.
       </Text>
-      <Textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        minH="96px"
-        placeholder="e.g. Hold a direct conversation with my head of data without backing down."
-        borderColor="gray.300"
-        isDisabled={loading}
-        _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
-      />
+      <Stack spacing={4}>
+        {prompts.map((prompt, index) => (
+          <Box key={prompt.label}>
+            <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.06em" textTransform="uppercase">
+              {prompt.label}
+            </Text>
+            <Text fontSize="sm" color="gray.700" mt={1} mb={2}>
+              {prompt.question}
+            </Text>
+            <Textarea
+              value={answers[index] || ''}
+              onChange={(e) => {
+                const next = [...answers]
+                next[index] = e.target.value
+                setAnswers(next)
+              }}
+              minH="72px"
+              placeholder={prompt.placeholder}
+              borderColor="gray.300"
+              isDisabled={loading || liftLoading}
+              _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
+            />
+          </Box>
+        ))}
+      </Stack>
       <Flex mt={3} justify="space-between" align="center" gap={3} flexWrap="wrap">
         <Text fontSize="xs" color={tooLong ? 'red.500' : 'gray.500'}>
-          {draft.length}/{MENTORSHIP_GOALS_MAX_LENGTH}
+          {combined.length}/{MENTORSHIP_GOALS_MAX_LENGTH}
         </Text>
         <Button
           size="sm"
@@ -95,7 +128,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
           isDisabled={!dirty || tooLong}
           isLoading={saving}
         >
-          Save goal
+          Save answers
         </Button>
       </Flex>
     </Box>

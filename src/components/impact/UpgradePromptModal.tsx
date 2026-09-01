@@ -104,8 +104,8 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
         <ModalBody>
           <Stack spacing={4}>
             <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={3} borderColor="border.strong">
-              <Text fontWeight="semibold">Join 10,000+ Impact Leaders</Text>
-              <Text color="text.secondary">Starting at $29/month. 30-day money-back guarantee.</Text>
+              <Text fontWeight="semibold">Keep the evidence flowing</Text>
+              <Text color="text.secondary">Impact Log Pro from ~$5/month. Past entries stay readable forever.</Text>
             </Box>
             <List spacing={2}>
               {resolvedBenefits.map((benefit) => (

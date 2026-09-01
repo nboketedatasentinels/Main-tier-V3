@@ -117,15 +117,15 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     href: '/app/peer-connect',
   },
   peer_to_peer: {
-    label: 'Join Peer Session',
-    href: '/app/peer-connect?tab=sessions',
+    label: 'Open Practical',
+    href: '/app/courses',
   },
   challenger: {
     label: 'Challenge a Friend',
-    href: '/app/peer-connect?tab=sessions',
+    href: '/app/leaderboard?tab=challenges',
   },
   webinar_workbook: {
-    label: 'Register for webinar',
+    label: 'Attend webinar',
     href: '/app/events',
   },
   impact_log: {

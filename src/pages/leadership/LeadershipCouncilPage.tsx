@@ -72,6 +72,7 @@ import {
 import { LearnerAmbassadorBookings } from '@/components/learner/LearnerAmbassadorBookings'
 import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
 import { getDisplayName } from '@/utils/displayName'
+import { buildGoogleCalendarUrl, buildIcsCalendar, downloadIcsFile } from '@/utils/meetingInvite'
 import { getJourneyLabel, isLeadershipCouncilJourney, isPartnerVisibleJourney } from '@/utils/journeyType'
 import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
 import { hasCompletedLiftAssessment } from '@/services/liftAssessmentService'
@@ -372,26 +373,24 @@ export const LeadershipCouncilPage: React.FC = () => {
       return
     }
     const end = new Date(start.getTime() + 60 * 60 * 1000)
-    const ics = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      'BEGIN:VEVENT',
-      `SUMMARY:Mentorship session with ${mentorProfile ? displayNameForProfile(mentorProfile) : 'Mentor'}`,
-      `DTSTART:${format(start, "yyyyMMdd'T'HHmmss")}`,
-      `DTEND:${format(end, "yyyyMMdd'T'HHmmss")}`,
-      `DESCRIPTION:${session.topic}${session.requestMessage ? `\\n${session.requestMessage}` : ''}`,
-      session.meetingLink ? `LOCATION:${session.meetingLink}` : 'LOCATION:Virtual meeting',
-      'END:VEVENT',
-      'END:VCALENDAR',
-    ].join('\n')
-
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'mentorship-session.ics'
-    link.click()
-    URL.revokeObjectURL(url)
+    const title = `Mentorship session with ${mentorProfile ? displayNameForProfile(mentorProfile) : 'Mentor'}`
+    const ics = buildIcsCalendar({
+      title,
+      start,
+      end,
+      description: `${session.topic}${session.requestMessage ? `\n${session.requestMessage}` : ''}`,
+      location: session.meetingLink || 'Virtual meeting',
+      uid: `mentorship-${session.id}@t4leader.com`,
+    })
+    downloadIcsFile(ics, 'mentorship-session.ics')
+    const googleUrl = buildGoogleCalendarUrl({
+      title,
+      start,
+      end,
+      description: session.topic,
+      location: session.meetingLink || undefined,
+    })
+    window.open(googleUrl, '_blank', 'noopener,noreferrer')
   }
 
   const sessionStatusBadge = (status: MentorshipSession['status']): { label: string; scheme: string } => {

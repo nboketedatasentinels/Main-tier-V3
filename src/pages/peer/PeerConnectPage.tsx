@@ -279,7 +279,7 @@ type MatchPreferences = MatchPreferencesForWindow & {
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSessionDescription =
-  'Bring together at least two peers for a transformation dialogue that sparks shared insight and collaborative momentum.'
+  'Work through a practical with peers — shared insight, not a separate “peer session” activity.'
 const ACTIVE_SESSION_WINDOW_MS = 2 * 60 * 60 * 1000
 
 type WeeklyMatchDocument = Record<string, unknown>
@@ -1248,7 +1248,8 @@ export const PeerConnectPage: React.FC = () => {
                 Peer Connect
               </Heading>
               <Text fontSize="sm" color="gray.500">
-                Pick one to get started.
+                Peer Matching: both of you earn points when you meet. Challenges: only the winner earns
+                Challenger points (points gained that week).
               </Text>
             </Stack>
           </HStack>
@@ -1296,7 +1297,7 @@ export const PeerConnectPage: React.FC = () => {
                       1-on-1 match
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      Get paired with a peer this week
+                      10–15 min chat · both earn Peer Matching points when you connect
                     </Text>
                   </Stack>
                 </HStack>
@@ -1889,16 +1890,20 @@ export const PeerConnectPage: React.FC = () => {
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Stack spacing={1}>
                   <Heading size="md" color="gray.800">
-                    Peer sessions
+                    Practicals & challenges
                   </Heading>
-                  <Text color="gray.500">Create group sessions, challenge peers, and manage invitations in one place.</Text>
+                  <Text color="gray.500">
+                    Do a practical with peers, or start a 7-day challenge. Matching points go to both people who
+                    meet; challenge checklist points go to the winner only (based on points gained during the
+                    week).
+                  </Text>
                 </Stack>
                 <HStack spacing={2}>
                   <Button variant="outline" leftIcon={<Sword size={16} />} onClick={challengeModal.onOpen}>
                     Challenge a friend
                   </Button>
                   <Button colorScheme="primary" leftIcon={<Users size={16} />} onClick={sessionModal.onOpen}>
-                    Start Peer Session
+                    Start practical meetup
                   </Button>
                 </HStack>
               </Flex>

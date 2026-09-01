@@ -56,6 +56,31 @@ export const isFreeUser = (profile?: MembershipProfile): boolean => {
   )
 }
 
+/** Free users get this many Impact Log submits ever (survives deletes). */
+export const FREE_IMPACT_LOG_LIFETIME_LIMIT = 2
+
+type ImpactAccessProfile = MembershipProfile & {
+  impactLogPro?: boolean | null
+}
+
+/**
+ * Paid / staff / Impact Log Pro can log + export without the free-tier cap.
+ * Free users are capped at FREE_IMPACT_LOG_LIFETIME_LIMIT lifetime submits.
+ */
+export const hasUnlimitedImpactLogAccess = (profile?: ImpactAccessProfile): boolean => {
+  if (!profile) return false
+  if (profile.impactLogPro) return true
+  return !isFreeUser(profile)
+}
+
+export const isFreeImpactLogLimitReached = (
+  profile: ImpactAccessProfile | null | undefined,
+  lifetimeCount: number,
+): boolean => {
+  if (hasUnlimitedImpactLogAccess(profile ?? undefined)) return false
+  return lifetimeCount >= FREE_IMPACT_LOG_LIFETIME_LIMIT
+}
+
 export const canAccessCourse = (
   profile: MembershipProfile,
   courseTitle?: string | null,

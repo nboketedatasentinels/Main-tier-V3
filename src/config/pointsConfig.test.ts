@@ -47,7 +47,7 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('impact_log')?.activityPolicy?.maxTotal).toBe(2)
 
     expect(byId.get('webinar_workbook')?.points).toBe(3000)
-    expect(byId.get('webinar_workbook')?.title).toBe('Attend Webinar + Workbook')
+    expect(byId.get('webinar_workbook')?.title).toBe('Attend Webinar')
     expect(byId.get('webinar_workbook')?.approvalType).toBe('partner_approved')
     expect(byId.get('webinar_workbook')?.activityPolicy?.maxTotal).toBe(1)
 
@@ -202,7 +202,7 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('podcast_workbook')).toMatchObject({ frequency: 9, pointsEach: 2000, maxPoints: 18000 })
     expect(byId.get('weekly_session')).toMatchObject({ frequency: 12, pointsEach: 1500, maxPoints: 18000 })
     expect(byId.get('webinar_workbook')).toMatchObject({
-      title: 'Attend Webinar + Workbook',
+      title: 'Attend Webinar',
       frequency: 3,
       pointsEach: 4000,
       maxPoints: 12000,
@@ -245,7 +245,7 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('podcast_workbook')).toMatchObject({ frequency: 18, pointsEach: 2000, maxPoints: 36000 })
     expect(byId.get('weekly_session')).toMatchObject({ frequency: 24, pointsEach: 1500, maxPoints: 36000 })
     expect(byId.get('webinar_workbook')).toMatchObject({
-      title: 'Attend Webinar + Workbook',
+      title: 'Attend Webinar',
       frequency: 6,
       pointsEach: 4000,
       maxPoints: 24000,
@@ -287,7 +287,7 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('podcast_workbook')).toMatchObject({ frequency: 27, pointsEach: 2000, maxPoints: 54000 })
     expect(byId.get('weekly_session')).toMatchObject({ frequency: 36, pointsEach: 1500, maxPoints: 54000 })
     expect(byId.get('webinar_workbook')).toMatchObject({
-      title: 'Attend Webinar + Workbook',
+      title: 'Attend Webinar',
       frequency: 9,
       pointsEach: 4000,
       maxPoints: 36000,

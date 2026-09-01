@@ -9,6 +9,7 @@ import { assertMandatoryLiftComplete } from '@/services/liftAssessmentService'
 import {
   assertMentorMeetingAllowedThisMonth,
 } from '@/services/sessionMonthLimit'
+import { sendSessionCalendarInviteEmail } from '@/services/sessionCalendarInviteService'
 
 export type MentorshipSessionStatus =
   | 'requested'
@@ -258,7 +259,7 @@ When: ${whenLabel}${linkLine}
     title: 'New mentorship meeting scheduled',
     message: `${mentorName ?? 'Your mentor'} scheduled "${trimmedTopic}" for ${whenLabel}.${
       meetingLink?.trim() ? ' Meeting link included.' : ''
-    }`,
+    } Check your email for a calendar (.ics) invite.`,
     relatedId: sessionId,
     category: 'action_required',
     data: {
@@ -271,6 +272,18 @@ When: ${whenLabel}${linkLine}
       scheduledAt: scheduledAt.toISOString(),
     },
   }).catch((err) => console.warn('[MentorshipService] notify learner of schedule failed:', err))
+
+  if (learnerEmail) {
+    void sendSessionCalendarInviteEmail({
+      to: learnerEmail,
+      learnerName,
+      organizerName: mentorName,
+      title: trimmedTopic,
+      start: scheduledAt,
+      meetingLink: meetingLink?.trim() || null,
+      description: emailBody,
+    })
+  }
 
   return { sessionId, mailtoHref, learnerEmail }
 }

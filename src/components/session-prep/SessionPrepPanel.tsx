@@ -5,7 +5,6 @@ import {
   Flex,
   Grid,
   HStack,
-  SimpleGrid,
   Stack,
   Text,
   Wrap,
@@ -174,6 +173,49 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                     : 'Waiting on a completed LIFT Index for this leader. On 3M+ journeys it is compulsory before meaningful prep.'}
                 </Text>
               ) : null}
+              {model.pillars ? (
+                <HStack spacing={2} mt={3} flexWrap="wrap">
+                  {(['L', 'I', 'F', 'T'] as const).map((key) => (
+                    <Text
+                      key={key}
+                      fontFamily="mono"
+                      fontSize="11px"
+                      letterSpacing="0.04em"
+                      border="1px solid rgba(35,31,48,.22)"
+                      borderRadius="md"
+                      px={2}
+                      py={1}
+                      color="#2D2A3E"
+                    >
+                      {key} {Math.round(model.pillars![key])}
+                    </Text>
+                  ))}
+                </HStack>
+              ) : null}
+              {model.archetypeLabel || model.totalPointsLabel ? (
+                <HStack spacing={2} mt={2} flexWrap="wrap">
+                  {model.archetypeLabel ? (
+                    <Text
+                      fontFamily="mono"
+                      fontSize="11px"
+                      letterSpacing="0.06em"
+                      textTransform="uppercase"
+                      bg="rgba(212,160,23,.16)"
+                      color="#7A5C08"
+                      borderRadius="full"
+                      px={2.5}
+                      py={1}
+                    >
+                      {model.archetypeLabel}
+                    </Text>
+                  ) : null}
+                  {model.totalPointsLabel ? (
+                    <Text fontSize="12.5px" color="#6B6579" fontWeight="600">
+                      {model.totalPointsLabel}
+                    </Text>
+                  ) : null}
+                </HStack>
+              ) : null}
               {isLeader && model.pillars ? (
                 <Text fontSize="12px" color="#6B6579" mt={2} lineHeight="1.55">
                   You take the LIFT Index again near journey end. This shape is yours, and your mentor can see it.
@@ -240,7 +282,19 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
               </Box>
             ) : null}
 
-            {model.goalVerbatim ? (
+            {model.archetypeLabel ? (
+              <Box>
+                <MonoLabel>LIFT archetype</MonoLabel>
+                <Text fontSize="15px" fontWeight="700" lineHeight="1.4" m={0}>
+                  {model.archetypeLabel}
+                </Text>
+                {model.goalVerbatim ? (
+                  <Text fontSize="13.5px" lineHeight="1.65" mt={2} color="#6B6579">
+                    Goal in their words: {model.goalVerbatim}
+                  </Text>
+                ) : null}
+              </Box>
+            ) : model.goalVerbatim ? (
               <Box>
                 <MonoLabel>What they say they want</MonoLabel>
                 <Text fontSize="13.5px" lineHeight="1.65" m={0}>
@@ -453,35 +507,20 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
             </Box>
           ) : null}
 
-          {isLeader ? (
-            <SimpleGrid columns={{ base: 1, md: 2 }} gap={0} border="1px solid rgba(35,31,48,.28)" borderRadius="10px" overflow="hidden" mt={6}>
-              <Box p={4} borderRight={{ md: '1px solid' }} borderBottom={{ base: '1px solid', md: 'none' }} borderColor="rgba(35,31,48,.28)">
-                <MonoLabel>They can see</MonoLabel>
-                <Stack spacing={1}>
-                  {model.mentorCanSee.map((item) => (
-                    <Text key={item} fontSize="12.5px" lineHeight="1.7" color="#6B6579">
-                      <Text as="span" color="#D4A017" fontFamily="mono">
-                        +{' '}
-                      </Text>
-                      {item}
+          {isLeader && model.mentorCanSee.length > 0 ? (
+            <Box mt={6} border="1px solid rgba(35,31,48,.28)" borderRadius="10px" p={4}>
+              <MonoLabel>Your mentor can see</MonoLabel>
+              <Stack spacing={1}>
+                {model.mentorCanSee.map((item) => (
+                  <Text key={item} fontSize="12.5px" lineHeight="1.7" color="#6B6579">
+                    <Text as="span" color="#D4A017" fontFamily="mono">
+                      +{' '}
                     </Text>
-                  ))}
-                </Stack>
-              </Box>
-              <Box p={4}>
-                <MonoLabel>They cannot see</MonoLabel>
-                <Stack spacing={1}>
-                  {model.mentorCannotSee.map((item) => (
-                    <Text key={item} fontSize="12.5px" lineHeight="1.7" color="#6B6579">
-                      <Text as="span" color="#B33A3A" fontFamily="mono">
-                        -{' '}
-                      </Text>
-                      {item}
-                    </Text>
-                  ))}
-                </Stack>
-              </Box>
-            </SimpleGrid>
+                    {item}
+                  </Text>
+                ))}
+              </Stack>
+            </Box>
           ) : null}
 
           <HStack mt={6} spacing={2.5} flexWrap="wrap">

@@ -27,6 +27,9 @@ type Props = {
   rates: ImpactRateCard[]
   user?: unknown
   profile?: { companyName?: string | null; companyId?: string | null } | null
+  /** Free-tier: lock CSV/PDF until upgrade / Impact Log Pro. */
+  exportLocked?: boolean
+  onRequestUpgrade?: () => void
 }
 
 function csvEscape(v: unknown): string {
@@ -38,7 +41,13 @@ function csvEscape(v: unknown): string {
  * Learner/partner export: CSV for systems, PDF board pack (Template 1).
  * Kept to those two hand-offs so the tab is not a draft collage.
  */
-export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) => {
+export const ImpactExportPanel: React.FC<Props> = ({
+  entries,
+  rates,
+  profile,
+  exportLocked = false,
+  onRequestUpgrade,
+}) => {
   const toast = useToast()
   const [pdfBusy, setPdfBusy] = useState(false)
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -89,6 +98,10 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) 
   }, [entries, rates])
 
   const downloadCsv = () => {
+    if (exportLocked) {
+      onRequestUpgrade?.()
+      return
+    }
     try {
       const blob = new Blob([registerCsv], { type: 'text/csv;charset=utf-8' })
       const url = URL.createObjectURL(blob)
@@ -106,6 +119,10 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) 
   }
 
   const downloadPdf = async () => {
+    if (exportLocked) {
+      onRequestUpgrade?.()
+      return
+    }
     setPdfBusy(true)
     try {
       const name = await downloadImprovementValueReportPdf({
@@ -137,8 +154,25 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) 
         </Heading>
         <Text fontSize="sm" color="text.secondary" maxW="54ch">
           Two hand-offs only: a CSV for Excel or finance systems, and the Template 1 PDF board pack.
+          {exportLocked
+            ? ' Export unlocks with a paid membership or Impact Log Pro.'
+            : ''}
         </Text>
       </Box>
+
+      {exportLocked && (
+        <Box p={4} rounded="lg" bg="orange.50" border="1px solid" borderColor="orange.200">
+          <Text fontWeight="semibold" mb={1}>
+            Export is a paid feature
+          </Text>
+          <Text fontSize="sm" color="text.secondary" mb={3}>
+            Free accounts can log up to two Impact entries. Upgrade to download CSV/PDF reports.
+          </Text>
+          <Button size="sm" colorScheme="orange" onClick={() => onRequestUpgrade?.()}>
+            Upgrade to export
+          </Button>
+        </Box>
+      )}
 
       <Flex gap={4} flexWrap="wrap">
         <Box
@@ -161,7 +195,7 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) 
             colorScheme="primary"
             leftIcon={<Download size={16} />}
             onClick={downloadCsv}
-            isDisabled={entries.length === 0}
+            isDisabled={entries.length === 0 || exportLocked}
           >
             Download CSV
           </Button>
@@ -189,7 +223,7 @@ export const ImpactExportPanel: React.FC<Props> = ({ entries, rates, profile }) 
             onClick={() => void downloadPdf()}
             isLoading={pdfBusy}
             loadingText="Building PDF…"
-            isDisabled={entries.length === 0}
+            isDisabled={entries.length === 0 || exportLocked}
           >
             Download PDF
           </Button>

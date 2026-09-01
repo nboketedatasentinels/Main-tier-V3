@@ -41,3 +41,15 @@ verify_jwt = false
 # No user JWT; webhook calls with service path. See grade-submission/DEPLOY.md.
 [functions.grade-submission]
 verify_jwt = false
+
+# Stripe Checkout for Impact Log Pro (JWT checked inside the function).
+[functions.create-checkout-session]
+verify_jwt = false
+
+# Stripe webhook signature verification (no user JWT).
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Mentor/coach session calendar email with .ics attachment.
+[functions.send-session-calendar-invite]
+verify_jwt = false

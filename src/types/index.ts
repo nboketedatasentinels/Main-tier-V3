@@ -42,6 +42,12 @@ export interface UserProfile {
   fullName: string
   role: StandardRole
   membershipStatus?: 'free' | 'paid'
+  /** Impact Log–only Stripe subscription (unlocks unlimited log + export). */
+  impactLogPro?: boolean
+  /** Lifetime Impact Log submits; never decrements on delete. */
+  impactLogLifetimeCount?: number
+  stripeCustomerId?: string | null
+  stripeSubscriptionId?: string | null
   avatarUrl?: string
   photoURL?: string
   bio?: string

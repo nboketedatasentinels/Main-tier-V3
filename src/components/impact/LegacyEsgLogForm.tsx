@@ -42,7 +42,7 @@ import {
   toCanonicalActivityType,
 } from '@/config/impactLogMappings'
 import { computeEsgUsdValue, resolveEsgRate, VOLUNTEER_HOURLY_RATE } from '@/config/esgImpactRates'
-import { countMyImpactLogs, createImpactLog } from '@/services/impactLogService'
+import { countMyImpactLogs, createImpactLog, getMyImpactLogLifetimeCount } from '@/services/impactLogService'
 import {
   createImpactVerification,
   markImpactLogChecklistAwarded,
@@ -51,7 +51,7 @@ import {
 import { validateOrganizationPartner } from '@/services/organizationService'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { isValidUrl } from '@/utils/validation'
-import { isFreeUser } from '@/utils/membership'
+import { FREE_IMPACT_LOG_LIFETIME_LIMIT, isFreeImpactLogLimitReached, isFreeUser } from '@/utils/membership'
 import { awardBadge } from '@/services/badgeService'
 
 type VerificationTier =
@@ -104,9 +104,15 @@ const formatCurrency = (value: number) =>
 type LegacyEsgLogFormProps = {
   onCancel: () => void
   onSaved: () => void | Promise<void>
+  /** Open upgrade modal when free lifetime cap is hit. */
+  onFreeLimitReached?: () => void
 }
 
-export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, onSaved }) => {
+export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({
+  onCancel,
+  onSaved,
+  onFreeLimitReached,
+}) => {
   const { user, profile } = useAuth()
   const toast = useToast()
   const [submitting, setSubmitting] = useState(false)
@@ -260,6 +266,36 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
   const handleSubmit = async () => {
     if (!user?.uid) return
     setSubmitting(true)
+
+    let lifetime = 0
+    try {
+      lifetime = await getMyImpactLogLifetimeCount(user.uid)
+    } catch (err) {
+      console.warn('[LegacyEsgLogForm] lifetime count check failed', err)
+      toast({
+        title: 'Could not verify your free Impact Log allowance',
+        description: 'Please refresh and try again.',
+        status: 'error',
+        duration: 6000,
+        isClosable: true,
+      })
+      setSubmitting(false)
+      return
+    }
+
+    if (isFreeImpactLogLimitReached(profile, lifetime)) {
+      onFreeLimitReached?.()
+      toast({
+        title: 'Your free Impact Log is full',
+        description: `You've used both free entries. Upgrade to Impact Log Pro (~$5/mo) to keep your story going.`,
+        status: 'warning',
+        duration: 8000,
+        isClosable: true,
+      })
+      setSubmitting(false)
+      return
+    }
+
     const errors: string[] = []
 
     let effectiveActivityType = activityType
@@ -548,13 +584,26 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({ onCancel, on
 
       await onSaved()
     } catch (error) {
-      toast({
-        title: 'Unable to log ESG impact',
-        description: error instanceof Error ? error.message : 'Unknown error occurred',
-        status: 'error',
-        duration: 8000,
-        isClosable: true,
-      })
+      const message = error instanceof Error ? error.message : 'Unknown error occurred'
+      if (message.includes('impact_log_free_limit_reached')) {
+        onFreeLimitReached?.()
+        toast({
+          title: 'Your free Impact Log is full',
+          description:
+            "Two entries is your free chapter. Upgrade to Impact Log Pro (~$5/mo) so the story doesn't stop here.",
+          status: 'warning',
+          duration: 9000,
+          isClosable: true,
+        })
+      } else {
+        toast({
+          title: 'Unable to log ESG impact',
+          description: message,
+          status: 'error',
+          duration: 8000,
+          isClosable: true,
+        })
+      }
     } finally {
       setSubmitting(false)
     }

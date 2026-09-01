@@ -157,7 +157,13 @@ export const NotificationItem = ({
             mt={1}
             alignSelf="flex-start"
           >
-            {meeting ? 'OK → open email' : hasInbox ? 'Read message →' : 'View →'}
+            {meeting
+              ? 'OK → open email'
+              : hasAction
+                ? 'OK → review & accept'
+                : hasInbox
+                  ? 'Read message →'
+                  : 'View →'}
           </Text>
 
           {timestamp && (

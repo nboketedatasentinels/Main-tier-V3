@@ -67,11 +67,29 @@ export const createChallenge = async (
       learners_only: 'Only learners can start challenges.',
       opponent_not_found: 'That opponent is not available to challenge.',
       different_organization: 'You can only challenge members of your organization.',
+      you_already_in_challenge:
+        'You already have a pending or active challenge. Finish or cancel it before starting another.',
+      opponent_already_in_challenge:
+        'That person already has a challenge this week. Pick someone who is free.',
     }
     throw new Error(messages[code] || `Could not create challenge (${code}).`)
   }
   if (!result.id) throw new Error('Challenge created but no id returned.')
   return { id: result.id }
+}
+
+/** User ids currently in a pending or active challenge (either side). */
+export const listChallengeBusyUserIds = async (): Promise<Set<string>> => {
+  const { data, error } = await supabase.rpc('list_challenge_busy_user_ids')
+  if (error) {
+    console.warn('[Challenge] list_challenge_busy_user_ids failed', error)
+    return new Set()
+  }
+  const result = (data ?? {}) as { ok?: boolean; user_ids?: unknown }
+  if (!result.ok || !Array.isArray(result.user_ids)) return new Set()
+  return new Set(
+    result.user_ids.filter((id): id is string => typeof id === 'string' && id.length > 0),
+  )
 }
 
 export const respondToChallenge = async (
@@ -162,7 +180,8 @@ export const listMyChallenges = async (currentUserId: string): Promise<Challenge
 
 /**
  * After the challenge week ends and the challenge was accepted (active → completed),
- * award checklist "challenger" points to both participants once.
+ * award checklist "challenger" points to the winner only (most points gained in-window).
+ * Draws award nobody. Metrics are window deltas (start at 0), not lifetime totals.
  */
 export const finalizeExpiredChallengesAndAwardPoints = async (params: {
   currentUserId: string
@@ -191,12 +210,17 @@ export const finalizeExpiredChallengesAndAwardPoints = async (params: {
   for (const challenge of finalized) {
     // Only award when the challenge was actually done (accepted and ran to end).
     // Declined/cancelled never reach finalize_expired_challenges (status != active).
-    const participantIds = [challenge.challenger_id, challenge.challenged_id]
+    const challengerPts = challenge.metrics?.challenger?.total || 0
+    const challengedPts = challenge.metrics?.challenged?.total || 0
+    let winnerId: string | null = null
+    if (challengerPts > challengedPts) winnerId = challenge.challenger_id
+    else if (challengedPts > challengerPts) winnerId = challenge.challenged_id
+
     let allOk = true
-    for (const uid of participantIds) {
+    if (winnerId) {
       try {
         const award = await awardChecklistPoints({
-          uid,
+          uid: winnerId,
           journeyType: params.journeyType,
           weekNumber: params.weekNumber,
           activity,
@@ -208,7 +232,11 @@ export const finalizeExpiredChallengesAndAwardPoints = async (params: {
         }
       } catch (awardError) {
         allOk = false
-        console.warn('[Challenge] points award failed', { challengeId: challenge.id, uid, awardError })
+        console.warn('[Challenge] points award failed', {
+          challengeId: challenge.id,
+          uid: winnerId,
+          awardError,
+        })
       }
     }
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -9,6 +9,7 @@ import {
   Tag,
   Text,
   useDisclosure,
+  useToast,
 } from '@chakra-ui/react'
 import { Crown, Sparkles } from 'lucide-react'
 import { RequestUpgradeModal } from './RequestUpgradeModal'
@@ -17,21 +18,59 @@ import { UpgradeCtaCard } from './UpgradeCtaCard'
 import { useAuth } from '@/hooks/useAuth'
 import { usePendingUpgradeRequest } from '@/hooks/useUpgradeRequests'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { isFreeUser } from '@/utils/membership'
+import { hasUnlimitedImpactLogAccess, isFreeUser } from '@/utils/membership'
+import { openImpactLogProCheckout } from '@/services/paymentService'
 
 export const UpgradePage: React.FC = () => {
   const { profile } = useAuth()
+  const toast = useToast()
   const isPaid = useMemo(() => (profile ? !isFreeUser(profile) : false), [profile])
+  const hasImpactPro = useMemo(
+    () => Boolean(profile && hasUnlimitedImpactLogAccess(profile)),
+    [profile],
+  )
   const navigate = useNavigate()
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { pendingRequest } = usePendingUpgradeRequest(profile?.id)
   const [searchParams] = useSearchParams()
   const source = searchParams.get('source')
+  const impactProStatus = searchParams.get('impact_pro')
+  const [checkoutBusy, setCheckoutBusy] = useState(false)
+
+  const startImpactPro = async () => {
+    setCheckoutBusy(true)
+    try {
+      await openImpactLogProCheckout()
+    } catch (err) {
+      toast({
+        title: 'Could not start Impact Log Pro checkout',
+        description:
+          err instanceof Error
+            ? err.message
+            : 'Stripe may not be configured yet. Ask an admin to set STRIPE_IMPACT_LOG_PRICE_ID.',
+        status: 'error',
+        duration: 8000,
+        isClosable: true,
+      })
+      setCheckoutBusy(false)
+    }
+  }
 
   return (
     <Box bg="gray.50" minH={{ base: '100dvh', md: '100vh' }} py={12}>
       <Container maxW="6xl">
         <Stack spacing={8}>
+          {impactProStatus === 'success' && (
+            <Box bg="green.50" borderWidth="1px" borderColor="green.200" borderRadius="xl" p={5}>
+              <Heading size="sm" mb={1}>
+                Impact Log Pro checkout complete
+              </Heading>
+              <Text color="gray.600" fontSize="sm">
+                Stripe is confirming your subscription. Refresh in a few seconds if unlimited Impact Log is not
+                unlocked yet.
+              </Text>
+            </Box>
+          )}
           {isPaid && (
             <Box
               bg="white"
@@ -83,8 +122,19 @@ export const UpgradePage: React.FC = () => {
                 ) : (
                   <>
                     <Button colorScheme="purple" size="lg" onClick={onOpen} leftIcon={<Crown />}>
-                      Request Upgrade
+                      Request full upgrade
                     </Button>
+                    {!hasImpactPro && (
+                      <Button
+                        variant="solid"
+                        size="lg"
+                        colorScheme="orange"
+                        isLoading={checkoutBusy}
+                        onClick={() => void startImpactPro()}
+                      >
+                        Impact Log Pro · $5/mo
+                      </Button>
+                    )}
                     <Button variant="outline" size="lg" colorScheme="purple" onClick={() => navigate('/login')}>
                       Already upgraded? Sign In
                     </Button>
@@ -93,7 +143,7 @@ export const UpgradePage: React.FC = () => {
               </Stack>
               {!isPaid && (
                 <Text color="gray.600" fontSize="sm">
-                  30-day money-back guarantee • Starting at $29/month • Join 10,000+ impact leaders
+                  Full programme (mentor/coach) via custom upgrade · or Impact Log only for $5/month (cancel anytime)
                 </Text>
               )}
             </Stack>
@@ -101,10 +151,23 @@ export const UpgradePage: React.FC = () => {
 
           {pendingRequest && !isPaid && <RequestStatusView request={pendingRequest} />}
 
+          {!isPaid && !hasImpactPro && (
+            <UpgradeCtaCard
+              headline="Just need Impact Log?"
+              benefits={[
+                'Unlimited Impact Log entries after your 2 free ones',
+                'PDF and CSV export',
+                '$5/month — cancel anytime',
+              ]}
+              onClick={() => void startImpactPro()}
+              storageKey="upgrade-page-impact-pro-cta"
+            />
+          )}
+
           {!isPaid && (
             <UpgradeCtaCard
               headline="Unlock full access"
-              benefits={['Unlimited impact entries', 'Advanced analytics', 'Priority support']}
+              benefits={['Unlimited impact entries', 'Mentor & coach pathways', 'Priority support']}
               onClick={onOpen}
               storageKey="upgrade-page-cta"
             />

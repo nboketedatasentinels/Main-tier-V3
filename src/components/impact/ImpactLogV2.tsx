@@ -48,11 +48,14 @@ import type { ImpactHelpKey } from '@/config/impactHelp'
 import { CLAIM_FLOW_GROWTH, CLAIM_FLOW_WASTES } from '@/config/impactClaimFlowV4'
 import {
   createImpactLog,
+  getMyImpactLogLifetimeCount,
   listAllImpactLogs,
   listCompanyImpactLogs,
   listMyImpactLogs,
   type ImpactLogRecord,
 } from '@/services/impactLogService'
+import { FREE_IMPACT_LOG_LIFETIME_LIMIT, isFreeImpactLogLimitReached } from '@/utils/membership'
+import { ImpactUpgradePromptModal } from '@/components/impact/UpgradePromptModal'
 import { listImpactValueRates, getShowRatesToLearners } from '@/services/impactRatesService'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { ImpactHelpButton, ImpactHelpModal } from '@/components/impact/ImpactHelpModal'
@@ -111,22 +114,47 @@ export const ImpactLogV2: React.FC = () => {
   const [openClaim, setOpenClaim] = useState<ImpactLogRecord | null>(null)
   const [showJourney, setShowJourney] = useState(false)
   const [showRatesToLearners, setShowRatesToLearnersState] = useState(false)
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [lifetimeCount, setLifetimeCount] = useState(0)
 
   const displayName =
     [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') ||
     profile?.email?.split('@')[0] ||
     'You'
 
+  const impactGateReached = isFreeImpactLogLimitReached(profile, lifetimeCount)
+
+  const assertCanCreateImpactLog = async (): Promise<boolean> => {
+    if (!user?.uid) return false
+    // Always read live count — stale local state was letting free users open the form.
+    let live = lifetimeCount
+    try {
+      live = await getMyImpactLogLifetimeCount(user.uid)
+      setLifetimeCount(live)
+    } catch (err) {
+      console.warn('[ImpactLogV2] lifetime count check failed', err)
+      setUpgradeOpen(true)
+      return false
+    }
+    if (isFreeImpactLogLimitReached(profile, live)) {
+      setUpgradeOpen(true)
+      return false
+    }
+    return true
+  }
+
   const reload = async () => {
     if (!user?.uid) return
     setLoading(true)
     try {
-      const [mine, rateRows] = await Promise.all([
+      const [mine, rateRows, lifetime] = await Promise.all([
         listMyImpactLogs(user.uid),
         listImpactValueRates(profile?.companyId),
+        getMyImpactLogLifetimeCount(user.uid),
       ])
       setEntries(mine)
       setRates(rateRows)
+      setLifetimeCount(lifetime)
       if (profile?.companyId) {
         const org = await listCompanyImpactLogs(profile.companyId)
         setOrgEntries(org)
@@ -156,6 +184,15 @@ export const ImpactLogV2: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid, profile?.companyId])
 
+  // If they already burned the free allowance, open the upgrade prompt once loaded.
+  useEffect(() => {
+    if (!loading && impactGateReached && tab === 'log' && !entry) {
+      setUpgradeOpen(true)
+    }
+    // Only when gate flips true / first load — not every tab change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, impactGateReached])
+
   useEffect(() => {
     let cancelled = false
     void getShowRatesToLearners(profile?.companyId).then((v) => {
@@ -170,7 +207,8 @@ export const ImpactLogV2: React.FC = () => {
     if (tab === 'register' && !isAdmin) setTab('log')
   }, [tab, isAdmin])
 
-  const startEntry = (kind: ImpactEntryKind) => {
+  const startEntry = async (kind: ImpactEntryKind) => {
+    if (!(await assertCanCreateImpactLog())) return
     setEntry(kind)
     setTab('log')
   }
@@ -215,6 +253,7 @@ export const ImpactLogV2: React.FC = () => {
 
   const submitClaim = async (payload: ClaimWizardSubmitPayload) => {
     if (!user?.uid) return
+    if (!(await assertCanCreateImpactLog())) return
     const ownerEmail = payload.ownerEmail.trim().toLowerCase()
     const financeEmail = payload.financeEmail.trim().toLowerCase()
     const needsFinance = bandNeedsFinance(payload.calc.net)
@@ -356,11 +395,22 @@ export const ImpactLogV2: React.FC = () => {
       setTab('claims')
       await reload()
     } catch (err) {
-      toast({
-        status: 'error',
-        title: 'Could not submit claim',
-        description: err instanceof Error ? err.message : 'Try again',
-      })
+      const message = err instanceof Error ? err.message : 'Try again'
+      if (message.includes('impact_log_free_limit_reached')) {
+        setUpgradeOpen(true)
+        toast({
+          status: 'warning',
+          title: 'Your free Impact Log is full',
+          description:
+            "Two entries is your free chapter. Upgrade to Impact Log Pro (~$5/mo) so the story doesn't stop here.",
+        })
+      } else {
+        toast({
+          status: 'error',
+          title: 'Could not submit claim',
+          description: message,
+        })
+      }
     } finally {
       setSubmitting(false)
     }
@@ -587,13 +637,19 @@ export const ImpactLogV2: React.FC = () => {
                       </Text>
                       <Button
                         size="sm"
-                        colorScheme={featured ? 'primary' : undefined}
-                        variant={featured ? 'solid' : 'ghost'}
-                        bg={featured ? undefined : 'white'}
+                        colorScheme={featured ? 'primary' : impactGateReached ? 'orange' : undefined}
+                        variant={featured || impactGateReached ? 'solid' : 'ghost'}
+                        bg={featured || impactGateReached ? undefined : 'white'}
                         boxShadow={featured ? undefined : 'sm'}
-                        onClick={() => startEntry(card.k)}
+                        onClick={() => {
+                          void startEntry(card.k)
+                        }}
                       >
-                        {card.k === 'claim' ? 'Start a claim' : 'Log ESG'}
+                        {impactGateReached
+                          ? 'Upgrade to continue'
+                          : card.k === 'claim'
+                            ? 'Start a claim'
+                            : 'Log ESG'}
                       </Button>
                     </Box>
                   )
@@ -738,6 +794,10 @@ export const ImpactLogV2: React.FC = () => {
         {tab === 'log' && entry === 'esg' && (
           <LegacyEsgLogForm
             onCancel={resetEntry}
+            onFreeLimitReached={() => {
+              resetEntry()
+              setUpgradeOpen(true)
+            }}
             onSaved={async () => {
               resetEntry()
               await reload()
@@ -832,11 +892,29 @@ export const ImpactLogV2: React.FC = () => {
             rates={rates}
             user={user}
             profile={profile}
+            exportLocked={impactGateReached && lifetimeCount >= FREE_IMPACT_LOG_LIFETIME_LIMIT}
+            onRequestUpgrade={() => setUpgradeOpen(true)}
           />
         )}
       </Box>
 
-      {tab === 'log' && !entry && (
+      {impactGateReached && tab === 'log' && !entry && (
+        <Alert status="warning" rounded="lg" mb={2}>
+          <AlertIcon />
+          <Box>
+            <AlertTitle>Your free Impact Log chapter is complete</AlertTitle>
+            <AlertDescription>
+              You&apos;ve used both free entries. Keep the evidence flowing with Impact Log Pro —
+              about $5/mo — or unlock the full journey.
+            </AlertDescription>
+          </Box>
+          <Button ml={4} size="sm" colorScheme="orange" onClick={() => setUpgradeOpen(true)}>
+            Upgrade
+          </Button>
+        </Alert>
+      )}
+
+      {tab === 'log' && !entry && !impactGateReached && (
         <Menu placement="top-end">
           <Tooltip label="Quick actions" hasArrow>
             <MenuButton
@@ -858,6 +936,24 @@ export const ImpactLogV2: React.FC = () => {
             <MenuItem onClick={() => startEntry('esg')}>Log ESG</MenuItem>
           </MenuList>
         </Menu>
+      )}
+
+      {tab === 'log' && !entry && impactGateReached && (
+        <Tooltip label="Upgrade to add more Impact Log entries" hasArrow>
+          <IconButton
+            aria-label="Upgrade to continue logging"
+            icon={<Icon as={Plus} boxSize={6} />}
+            colorScheme="orange"
+            rounded="full"
+            size="lg"
+            position="fixed"
+            bottom={{ base: 6, md: 8 }}
+            right={{ base: 5, md: 8 }}
+            zIndex={20}
+            boxShadow="lg"
+            onClick={() => setUpgradeOpen(true)}
+          />
+        </Tooltip>
       )}
 
       <Box
@@ -902,6 +998,20 @@ export const ImpactLogV2: React.FC = () => {
       </Box>
 
       <ImpactHelpModal helpKey={helpKey} onClose={() => setHelpKey(null)} />
+      <ImpactUpgradePromptModal
+        isOpen={upgradeOpen}
+        onClose={() => setUpgradeOpen(false)}
+        feature="Impact Log Pro"
+        title="Your free chapter ends here — the story doesn't have to"
+        message={`You've logged your ${FREE_IMPACT_LOG_LIFETIME_LIMIT} free Impact Log entries. Past entries stay readable forever. Unlock Impact Log Pro (~$5/mo) to keep adding evidence, or upgrade the full journey.`}
+        benefits={[
+          'Unlimited Impact Log entries from here on',
+          'PDF and CSV export for stakeholders',
+          'Verifier workflow without the free-tier wall',
+          'Cancel anytime — your past logs stay yours',
+        ]}
+        ctaText="Unlock Impact Log Pro"
+      />
       <ImpactClaimDrawer
         entry={openClaim}
         rates={rates}

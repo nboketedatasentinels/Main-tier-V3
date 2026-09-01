@@ -29,7 +29,10 @@ import { Swords, Users, Trophy, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getOrgScope } from '@/utils/organizationScope';
 import { listOrgPeers } from '@/services/supabasePeerService';
-import { createChallenge } from '@/services/supabaseChallengeService';
+import {
+  createChallenge,
+  listChallengeBusyUserIds,
+} from '@/services/supabaseChallengeService';
 import { getDisplayName } from '@/utils/displayName';
 import { getVillageMembers } from '@/services/villageService';
 import type { UserProfile } from '@/types';
@@ -55,6 +58,8 @@ interface UserOption {
   email: string;
   points: number;
   recommended: boolean;
+  /** Already in a pending/active challenge — not selectable. */
+  busy: boolean;
 }
 
 type ChallengeType = 'competitive' | 'collaborative';
@@ -86,7 +91,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const { user, profile } = useAuth();
 
   // --- DATA FETCHING ---
-  const buildUserOptions = (members: Record<string, unknown>[]) => {
+  const buildUserOptions = (members: Record<string, unknown>[], busyIds: Set<string>) => {
     return members.map((member) => {
       const p = member as unknown as UserProfile;
       return {
@@ -95,6 +100,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         email: p.email,
         points: p.totalPoints || 0,
         recommended: false,
+        busy: busyIds.has(p.id),
       };
     });
   };
@@ -105,14 +111,18 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     setError(null);
     try {
       const orgScope = getOrgScope(profile);
+      const busyIds = await listChallengeBusyUserIds();
       let userOptions: UserOption[] = [];
 
       if (orgScope.isValid) {
         const members = await listOrgPeers();
-        userOptions = buildUserOptions(members);
+        userOptions = buildUserOptions(members, busyIds);
       } else if (profile?.villageId) {
         const villageMembers = await getVillageMembers(profile.villageId);
-        const villageOptions = buildUserOptions(villageMembers.filter((member) => member.id !== user.uid));
+        const villageOptions = buildUserOptions(
+          villageMembers.filter((member) => member.id !== user.uid),
+          busyIds,
+        );
         userOptions = villageOptions;
       } else {
         setUsers([]);
@@ -120,8 +130,11 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         return;
       }
 
+      const selectable = userOptions.filter((u) => !u.busy);
       if (userOptions.length === 0) {
         setError('No users available to challenge right now.');
+      } else if (selectable.length === 0) {
+        setError('Everyone available already has a challenge this week. Try again later.');
       }
       setUsers(userOptions);
     } catch (err) {
@@ -209,6 +222,15 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     if (isOpen) {
       if (preselectedUser) {
         setSelectedUserId(preselectedUser.id);
+        void (async () => {
+          const busyIds = await listChallengeBusyUserIds();
+          if (busyIds.has(preselectedUser.id)) {
+            setError(
+              'This person already has a challenge this week. Choose someone who is free.',
+            );
+            setSelectedUserId(null);
+          }
+        })();
       } else {
         fetchPotentialOpponents();
       }
@@ -261,6 +283,10 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
               Start a Challenge
             </Text>
           </HStack>
+          <Text mt={2} fontSize="sm" color="neutral.600" fontWeight="normal">
+            7 days. We count points each of you gains during the challenge — not lifetime totals. Only
+            the winner earns Challenger checklist points.
+          </Text>
         </ModalHeader>
         <ModalCloseButton />
         <ModalBody p={6}>
@@ -374,20 +400,37 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                           key={u.id}
                           p={4}
                           w="full"
-                          cursor="pointer"
+                          cursor={u.busy ? 'not-allowed' : 'pointer'}
+                          opacity={u.busy ? 0.55 : 1}
                           bg={selectedUserId === u.id ? 'brand.50' : 'transparent'}
-                          _hover={{ bg: 'neutral.50' }}
-                          onClick={() => setSelectedUserId(u.id)}
+                          _hover={u.busy ? undefined : { bg: 'neutral.50' }}
+                          onClick={() => {
+                            if (u.busy) return;
+                            setSelectedUserId(u.id);
+                          }}
                           justifyContent="space-between"
                         >
                           <HStack>
-                            <Radio isChecked={selectedUserId === u.id} readOnly />
+                            <Radio
+                              isChecked={selectedUserId === u.id}
+                              isDisabled={u.busy}
+                              readOnly
+                            />
                             <VStack align="flex-start" spacing={0} ml={3}>
                               <HStack>
                                 <Text fontWeight="medium" color="neutral.800">{u.name}</Text>
-                                {u.recommended && <Badge colorScheme="yellow">Recommended</Badge>}
+                                {u.recommended && !u.busy && (
+                                  <Badge colorScheme="yellow">Recommended</Badge>
+                                )}
+                                {u.busy && (
+                                  <Badge colorScheme="gray">In a challenge</Badge>
+                                )}
                               </HStack>
-                              <Text fontSize="xs" color="neutral.500">{u.email}</Text>
+                              <Text fontSize="xs" color="neutral.500">
+                                {u.busy
+                                  ? 'Already paired this week — pick someone free'
+                                  : u.email}
+                              </Text>
                             </VStack>
                           </HStack>
                           <VStack align="flex-end" spacing={0}>
@@ -474,7 +517,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
             colorScheme="brand"
             isLoading={loading}
             onClick={handleCreateChallenge}
-            isDisabled={!selectedUserId && !preselectedUser}
+            isDisabled={(!selectedUserId && !preselectedUser) || Boolean(error && preselectedUser && !selectedUserId)}
           >
             Send Challenge
           </Button>

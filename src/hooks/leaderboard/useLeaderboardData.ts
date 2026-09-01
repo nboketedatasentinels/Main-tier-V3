@@ -163,6 +163,7 @@ export const useLeaderboardData = ({
   const [profilesLoaded, setProfilesLoaded] = useState(false)
   const [transactionsLoaded, setTransactionsLoaded] = useState(false)
   const [challengesLoaded, setChallengesLoaded] = useState(false)
+  const [challengesRefreshKey, setChallengesRefreshKey] = useState(0)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [profilesRetry, setProfilesRetry] = useState(0)
   const [transactionsRetry, setTransactionsRetry] = useState(0)
@@ -538,7 +539,11 @@ export const useLeaderboardData = ({
     return () => {
       cancelled = true
     }
-  }, [profileId, profile?.journeyType, profile?.currentWeek])
+  }, [profileId, profile?.journeyType, profile?.currentWeek, challengesRefreshKey])
+
+  const reloadChallenges = useCallback(() => {
+    setChallengesRefreshKey((k) => k + 1)
+  }, [])
 
   return {
     profiles,
@@ -548,5 +553,6 @@ export const useLeaderboardData = ({
     transactionsLoaded,
     challengesLoaded,
     errorMessage,
+    reloadChallenges,
   }
 }

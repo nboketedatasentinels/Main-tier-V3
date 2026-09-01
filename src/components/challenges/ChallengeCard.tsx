@@ -11,6 +11,7 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  Button,
 } from '@chakra-ui/react';
 import { MoreVertical, Calendar, XCircle } from 'lucide-react';
 import { ChallengeProgressBar } from './ChallengeProgressBar';
@@ -27,14 +28,19 @@ interface ChallengeCardProps {
     opponentPoints: number;
     status: 'pending' | 'active' | 'completed' | 'upcoming';
     result?: 'win' | 'loss' | 'draw';
+    isChallenger?: boolean;
   };
+  highlighted?: boolean;
   onCancel?: (id: string) => void;
+  onAccept?: (id: string) => void;
+  onDecline?: (id: string) => void;
   onViewDetails?: (id: string) => void;
+  responding?: boolean;
 }
 
 const statusConfig = {
   pending: {
-    label: 'Starts Soon',
+    label: 'Awaiting response',
     colorScheme: 'yellow',
     bg: 'yellow.50',
     border: 'yellow.200',
@@ -59,11 +65,15 @@ const statusConfig = {
   },
 };
 
-export const ChallengeCard: React.FC<ChallengeCardProps> = ({
+export const ChallengeCard = ({
   challenge,
+  highlighted = false,
   onCancel,
+  onAccept,
+  onDecline,
   onViewDetails,
-}) => {
+  responding = false,
+}: ChallengeCardProps) => {
   const {
     id,
     opponentName,
@@ -73,23 +83,27 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
     opponentPoints,
     status,
     result,
+    isChallenger,
   } = challenge;
 
   const start = parseISO(startDate);
   const end = parseISO(endDate);
   const now = new Date();
 
-  // Determine actual status based on dates if status field is stale
+  // Prefer explicit DB status for pending (awaiting accept) — date logic alone
+  // mis-labels "starts today" invites as active.
   const computedStatus = (() => {
     if (status === 'completed') return 'completed';
+    if (status === 'pending') return 'pending';
     if (isBefore(now, start)) return 'pending';
     if (isAfter(now, end)) return 'completed';
     return 'active';
   })();
 
   const actualConfig = statusConfig[computedStatus];
+  const needsResponse = computedStatus === 'pending' && isChallenger === false;
+  const waitingOnOpponent = computedStatus === 'pending' && isChallenger === true;
 
-  // Result badge for completed challenges
   const resultBadge = result && (
     <Badge
       colorScheme={result === 'win' ? 'green' : result === 'loss' ? 'red' : 'gray'}
@@ -101,15 +115,17 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
 
   return (
     <Box
+      id={`challenge-${id}`}
       bg={actualConfig.bg}
-      border="1px solid"
-      borderColor={actualConfig.border}
+      border="2px solid"
+      borderColor={highlighted ? 'brand.primary' : actualConfig.border}
       borderRadius="lg"
       p={4}
       transition="all 0.2s"
-      _hover={{ shadow: 'sm', borderColor: 'purple.300' }}
+      _hover={{ shadow: 'sm', borderColor: highlighted ? 'brand.primary' : 'purple.300' }}
       cursor={onViewDetails ? 'pointer' : 'default'}
       onClick={() => onViewDetails?.(id)}
+      boxShadow={highlighted ? '0 0 0 3px rgba(53, 14, 111, 0.2)' : undefined}
     >
       <Flex justify="space-between" align="flex-start" mb={3}>
         <HStack spacing={3}>
@@ -133,12 +149,22 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
                 {format(start, 'MMM d')} - {format(end, 'MMM d')}
               </Text>
             </HStack>
+            {waitingOnOpponent && (
+              <Text fontSize="xs" color="orange.600" mt={1}>
+                Waiting for {opponentName} to accept
+              </Text>
+            )}
+            {needsResponse && (
+              <Text fontSize="xs" color="brand.primary" fontWeight="semibold" mt={1}>
+                {opponentName} challenged you — accept to start
+              </Text>
+            )}
           </VStack>
         </HStack>
 
         <HStack spacing={2}>
           <Badge colorScheme={actualConfig.colorScheme} fontSize="xs">
-            {actualConfig.label}
+            {needsResponse ? 'Your move' : actualConfig.label}
           </Badge>
 
           {computedStatus !== 'completed' && onCancel && (
@@ -167,6 +193,31 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
           )}
         </HStack>
       </Flex>
+
+      {needsResponse && (onAccept || onDecline) && (
+        <HStack spacing={2} mb={3} onClick={(e) => e.stopPropagation()}>
+          {onAccept && (
+            <Button
+              size="sm"
+              colorScheme="brand"
+              isLoading={responding}
+              onClick={() => onAccept(id)}
+            >
+              Accept
+            </Button>
+          )}
+          {onDecline && (
+            <Button
+              size="sm"
+              variant="outline"
+              isDisabled={responding}
+              onClick={() => onDecline(id)}
+            >
+              Decline
+            </Button>
+          )}
+        </HStack>
+      )}
 
       <ChallengeProgressBar
         yourPoints={yourPoints}

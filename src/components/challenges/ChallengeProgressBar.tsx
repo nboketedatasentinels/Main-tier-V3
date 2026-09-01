@@ -58,7 +58,7 @@ export const ChallengeProgressBar: React.FC<ChallengeProgressBarProps> = ({
           minW="60px"
           textAlign="right"
         >
-          {yourPoints.toLocaleString()}
+          {yourPoints.toLocaleString()} gained
         </Text>
       </Flex>
 
@@ -96,7 +96,7 @@ export const ChallengeProgressBar: React.FC<ChallengeProgressBarProps> = ({
           minW="60px"
           textAlign="right"
         >
-          {opponentPoints.toLocaleString()}
+          {opponentPoints.toLocaleString()} gained
         </Text>
       </Flex>
     </VStack>

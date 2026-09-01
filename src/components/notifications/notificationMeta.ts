@@ -42,6 +42,25 @@ export const resolveNotificationDestination = (
       : { kind: 'internal', url: actionUrl }
   }
 
+  // Challenge invites always open the Challenges tab focused on that request,
+  // even if older rows were written without actionUrl.
+  if (
+    notification.type === 'challenge_request' ||
+    notification.type === 'challenge_invite'
+  ) {
+    const challengeId =
+      (typeof md.challengeId === 'string' && md.challengeId) ||
+      notification.related_id ||
+      null
+    if (challengeId) {
+      return {
+        kind: 'internal',
+        url: `/app/leaderboard?tab=challenges&challengeId=${encodeURIComponent(challengeId)}`,
+      }
+    }
+    return { kind: 'internal', url: '/app/leaderboard?tab=challenges' }
+  }
+
   return null
 }
 

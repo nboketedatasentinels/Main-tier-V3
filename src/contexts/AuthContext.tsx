@@ -37,6 +37,10 @@ const COLUMN_BY_FIELD: Record<string, string> = {
   fullName: 'full_name',
   role: 'role',
   membershipStatus: 'membership_status',
+  impactLogPro: 'impact_log_pro',
+  impactLogLifetimeCount: 'impact_log_lifetime_count',
+  stripeCustomerId: 'stripe_customer_id',
+  stripeSubscriptionId: 'stripe_subscription_id',
   organizationId: 'organization_id',
   companyId: 'company_id',
   companyCode: 'company_code',
@@ -74,6 +78,13 @@ const mapRowToProfile = (row: ProfileRow): UserProfile => {
     fullName: row.full_name ?? data.fullName,
     role: normalizeRole(rawRole) as StandardRole,
     membershipStatus: row.membership_status ?? data.membershipStatus,
+    impactLogPro: Boolean(row.impact_log_pro ?? data.impactLogPro),
+    impactLogLifetimeCount:
+      typeof row.impact_log_lifetime_count === 'number'
+        ? row.impact_log_lifetime_count
+        : typeof data.impactLogLifetimeCount === 'number'
+          ? data.impactLogLifetimeCount
+          : 0,
     organizationId: row.organization_id ?? data.organizationId ?? null,
     companyId: row.company_id ?? data.companyId ?? null,
     companyCode: row.company_code ?? data.companyCode ?? null,

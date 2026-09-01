@@ -42,6 +42,8 @@ export interface SessionPrepInput {
   challengePreference?: string | null
   pillars?: Record<PillarKey, number> | null
   chosenPillar?: PillarKey | null
+  archetype?: string | null
+  totalPoints?: number | null
   windowStatus?: 'on_track' | 'warning' | 'alert' | 'recovery' | null
   sessionNumber?: number | null
   sessionTotal?: number | null
@@ -78,6 +80,8 @@ export interface SessionPrepModel {
   values: string[]
   offLimits: string | null
   goalVerbatim: string | null
+  archetypeLabel: string | null
+  totalPointsLabel: string | null
   challengeChips: string[]
   topics: SessionPrepTopic[]
   opener: { label: string; quote: string; note: string } | null
@@ -343,6 +347,11 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
       values: input.coreValues ?? [],
       offLimits: input.offLimits?.trim() || null,
       goalVerbatim: goal,
+      archetypeLabel: input.archetype?.trim() || null,
+      totalPointsLabel:
+        typeof input.totalPoints === 'number' && Number.isFinite(input.totalPoints)
+          ? `${Math.round(input.totalPoints).toLocaleString()} pts`
+          : null,
       challengeChips: [],
       topics: [],
       opener: goal
@@ -369,17 +378,12 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
       ],
       mentorCanSee: [
         'Your goal, in your words',
-        'Your LIFT Index shape',
+        'Your LIFT Index shape and archetype',
+        'Your journey points',
         'Your values',
-        'The topic suggestions',
         'What you asked them not to raise',
       ],
-      mentorCannotSee: [
-        'Your points or pace',
-        'Your assessment marks',
-        'Your module quiz scores',
-        'Anything from your coaching sessions',
-      ],
+      mentorCannotSee: [],
       primaryActionLabel: 'Join session',
       secondaryActionLabel: 'Request a different time',
     }
@@ -438,6 +442,11 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     values: input.coreValues ?? [],
     offLimits: input.offLimits?.trim() || null,
     goalVerbatim: goal,
+    archetypeLabel: input.archetype?.trim() || null,
+    totalPointsLabel:
+      typeof input.totalPoints === 'number' && Number.isFinite(input.totalPoints)
+        ? `${Math.round(input.totalPoints).toLocaleString()} pts`
+        : null,
     challengeChips: [input.challengePreference]
       .filter((v): v is string => Boolean(v && v.trim())),
     topics,

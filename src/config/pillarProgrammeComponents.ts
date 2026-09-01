@@ -11,8 +11,8 @@ import type { Pillar } from '@/types/pillar'
  *
  * All three render on the courses page (OrganizationCoursesPage), scoped
  * to the pillar the learner's org is on. They're shown as distinct,
- * type-aware cards so a learner sees "capstone + case study + practical"
- * - not three of the same thing.
+ * type-aware cards so a learner sees "case study → practical → capstone"
+ * - not three of the same thing, and not capstone first.
  *
  * The catalog starts as placeholders (status: 'coming_soon'). To activate
  * a component, replace its title/description with real content and set
@@ -51,30 +51,6 @@ export interface ProgrammeComponentEntry {
 
 export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry[]> = {
   leading_self: [
-    {
-      id: 'leading-self-capstone',
-      type: 'capstone',
-      title: 'Combined Capstone (2 parts)',
-      description:
-        'Two parts marked together: Mindset Action Plan (Course 1) and Resilience Action Plan (Course 2). Combined weight 50% of competence pass.',
-      status: 'available',
-      parts: [
-        {
-          id: 'leading-self-capstone-part-a',
-          title: 'Part A · Mindset Action Plan',
-          description:
-            'Closes Course 1 - Leading Under Pressure. Patterns, alternatives, calendar trigger, environmental design, and Digital Edge AI reflection.',
-          href: '/capstones/leading-self-capstone-part-a.html',
-        },
-        {
-          id: 'leading-self-capstone-part-b',
-          title: 'Part B · Resilience Action Plan',
-          description:
-            'Closes Course 2 and the Journey. Shame literacy, body as data, trigger map, accountability partner, three legs of the stool, and 90-day commitment.',
-          href: '/capstones/leading-self-capstone-part-b.html',
-        },
-      ],
-    },
     {
       id: 'leading-self-case-study',
       type: 'case_study',
@@ -145,17 +121,33 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         },
       ],
     },
+    {
+      id: 'leading-self-capstone',
+      type: 'capstone',
+      title: 'Combined Capstone (2 parts)',
+      description:
+        'Two parts marked together: Mindset Action Plan (Course 1) and Resilience Action Plan (Course 2). Combined weight 50% of competence pass.',
+      status: 'available',
+      parts: [
+        {
+          id: 'leading-self-capstone-part-a',
+          title: 'Part A · Mindset Action Plan',
+          description:
+            'Closes Course 1 - Leading Under Pressure. Patterns, alternatives, calendar trigger, environmental design, and Digital Edge AI reflection.',
+          href: '/capstones/leading-self-capstone-part-a.html',
+        },
+        {
+          id: 'leading-self-capstone-part-b',
+          title: 'Part B · Resilience Action Plan',
+          description:
+            'Closes Course 2 and the Journey. Shame literacy, body as data, trigger map, accountability partner, three legs of the stool, and 90-day commitment.',
+          href: '/capstones/leading-self-capstone-part-b.html',
+        },
+      ],
+    },
+
   ],
   innovation_technology: [
-    {
-      id: 'innovation-technology-capstone',
-      type: 'capstone',
-      title: 'The Transformation Operating Model',
-      description:
-        'Six-section integrated operating model for innovation and AI deployment decisions. 1500-2000 words.',
-      status: 'available',
-      href: '/capstones/innovation-capstone.html',
-    },
     {
       id: 'innovation-technology-case-study',
       type: 'case_study',
@@ -224,32 +216,18 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         },
       ],
     },
+    {
+      id: 'innovation-technology-capstone',
+      type: 'capstone',
+      title: 'The Transformation Operating Model',
+      description:
+        'Six-section integrated operating model for innovation and AI deployment decisions. 1500-2000 words.',
+      status: 'available',
+      href: '/capstones/innovation-capstone.html',
+    },
+
   ],
   transforming_business: [
-    {
-      id: 'transforming-business-capstone',
-      type: 'capstone',
-      title: 'Combined Capstone (2 parts)',
-      description:
-        'Two parts marked together: Connection Blueprint (Week 2) and Transformation Memo (Week 6). Combined weight 50% of competence pass.',
-      status: 'available',
-      parts: [
-        {
-          id: 'transforming-business-capstone-part-a',
-          title: 'Part A · The Connection Blueprint',
-          description:
-            'Week 2 - four-section persuasion artefact (Position, Now, Stake, Survival) for one named executive. 600-800 words.',
-          href: '/capstones/transforming-business-capstone-part-a.html',
-        },
-        {
-          id: 'transforming-business-capstone-part-b',
-          title: 'Part B · The Transformation Memo',
-          description:
-            'Week 6 - five-section sponsor memo (vision, resistance, reset, cadence, ask) plus AI Integration judgement. 800-1000 words.',
-          href: '/capstones/transforming-business-capstone-part-b.html',
-        },
-      ],
-    },
     {
       id: 'transforming-business-case-study',
       type: 'case_study',
@@ -326,32 +304,33 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         },
       ],
     },
-  ],
-  fostering: [
     {
-      id: 'fostering-capstone',
+      id: 'transforming-business-capstone',
       type: 'capstone',
       title: 'Combined Capstone (2 parts)',
       description:
-        'Two parts marked together: Heart-Centered Leader Blueprint (Week 2) and 90-Day Operating Plan (Week 6). Combined weight 50% of competence pass.',
+        'Two parts marked together: Connection Blueprint (Week 2) and Transformation Memo (Week 6). Combined weight 50% of competence pass.',
       status: 'available',
       parts: [
         {
-          id: 'fostering-capstone-part-a',
-          title: 'Part A · The Heart-Centered Leader Blueprint',
+          id: 'transforming-business-capstone-part-a',
+          title: 'Part A · The Connection Blueprint',
           description:
-            'Week 2 - five-section Blueprint: EQ pillar, alternative behaviour, three recurring moments, empathy in action, and a 30-day observable metric. 600-800 words.',
-          href: '/capstones/fostering-capstone-part-a.html',
+            'Week 2 - four-section persuasion artefact (Position, Now, Stake, Survival) for one named executive. 600-800 words.',
+          href: '/capstones/transforming-business-capstone-part-a.html',
         },
         {
-          id: 'fostering-capstone-part-b',
-          title: 'Part B · The 90-Day Operating Plan',
+          id: 'transforming-business-capstone-part-b',
+          title: 'Part B · The Transformation Memo',
           description:
-            'Week 6 - seven-section operating plan: team current state, heatmap, 30/60/90 conversations, system resets, leader cadence, success indicators, and AI integration. 800-1000 words.',
-          href: '/capstones/fostering-capstone-part-b.html',
+            'Week 6 - five-section sponsor memo (vision, resistance, reset, cadence, ask) plus AI Integration judgement. 800-1000 words.',
+          href: '/capstones/transforming-business-capstone-part-b.html',
         },
       ],
     },
+
+  ],
+  fostering: [
     {
       id: 'fostering-case-study',
       type: 'case_study',
@@ -428,38 +407,33 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         },
       ],
     },
-  ],
-  starter_kit: [
     {
-      id: 'starter-kit-capstone',
+      id: 'fostering-capstone',
       type: 'capstone',
-      title: 'Combined Capstone (3 parts)',
+      title: 'Combined Capstone (2 parts)',
       description:
-        'Three parts marked together: One-Page Proposal, Project Scope Document, and Status Report. All required.',
+        'Two parts marked together: Heart-Centered Leader Blueprint (Week 2) and 90-Day Operating Plan (Week 6). Combined weight 50% of competence pass.',
       status: 'available',
       parts: [
         {
-          id: 'starter-kit-capstone-part-a',
-          title: 'Part A · One-Page Proposal',
-          description: 'Closes Think Like an Owner (Week 2). Audience-matched pitch.',
-          href: '/capstones/starter-kit-capstone-part-a.html',
+          id: 'fostering-capstone-part-a',
+          title: 'Part A · The Heart-Centered Leader Blueprint',
+          description:
+            'Week 2 - five-section Blueprint: EQ pillar, alternative behaviour, three recurring moments, empathy in action, and a 30-day observable metric. 600-800 words.',
+          href: '/capstones/fostering-capstone-part-a.html',
         },
         {
-          id: 'starter-kit-capstone-part-b',
-          title: 'Part B · Project Scope Document',
+          id: 'fostering-capstone-part-b',
+          title: 'Part B · The 90-Day Operating Plan',
           description:
-            'Second Practitioner Capstone. Closes Lead Like a Pro (Week 6). Objectives, methodology, risks.',
-          href: '/capstones/starter-kit-capstone-part-b.html',
-        },
-        {
-          id: 'starter-kit-capstone-part-c',
-          title: 'Part C · Status Report',
-          description:
-            'Third Practitioner Capstone. Closes Project Leadership Discipline. Risk-led mid-flight report.',
-          href: '/capstones/starter-kit-capstone-part-c.html',
+            'Week 6 - seven-section operating plan: team current state, heatmap, 30/60/90 conversations, system resets, leader cadence, success indicators, and AI integration. 800-1000 words.',
+          href: '/capstones/fostering-capstone-part-b.html',
         },
       ],
     },
+
+  ],
+  starter_kit: [
     {
       id: 'starter-kit-case-study',
       type: 'case_study',
@@ -545,6 +519,37 @@ export const PILLAR_PROGRAMME_COMPONENTS: Record<Pillar, ProgrammeComponentEntry
         },
       ],
     },
+    {
+      id: 'starter-kit-capstone',
+      type: 'capstone',
+      title: 'Combined Capstone (3 parts)',
+      description:
+        'Three parts marked together: One-Page Proposal, Project Scope Document, and Status Report. All required.',
+      status: 'available',
+      parts: [
+        {
+          id: 'starter-kit-capstone-part-a',
+          title: 'Part A · One-Page Proposal',
+          description: 'Closes Think Like an Owner (Week 2). Audience-matched pitch.',
+          href: '/capstones/starter-kit-capstone-part-a.html',
+        },
+        {
+          id: 'starter-kit-capstone-part-b',
+          title: 'Part B · Project Scope Document',
+          description:
+            'Second Practitioner Capstone. Closes Lead Like a Pro (Week 6). Objectives, methodology, risks.',
+          href: '/capstones/starter-kit-capstone-part-b.html',
+        },
+        {
+          id: 'starter-kit-capstone-part-c',
+          title: 'Part C · Status Report',
+          description:
+            'Third Practitioner Capstone. Closes Project Leadership Discipline. Risk-led mid-flight report.',
+          href: '/capstones/starter-kit-capstone-part-c.html',
+        },
+      ],
+    },
+
   ],
 }
 

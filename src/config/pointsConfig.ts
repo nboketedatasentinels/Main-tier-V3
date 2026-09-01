@@ -253,8 +253,8 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "podcast_workbook",
     baseId: "podcast_workbook",
-    title: "Podcast + Submit Workbook",
-    description: "Listen to podcast and submit completed workbook for partner review.",
+    title: "Podcast",
+    description: "Listen to the podcast episode. Points stay pending until your partner confirms.",
     points: 2000,
     behaviorType: "ongoing",
     defaultMaxPerWindow: 3,
@@ -264,7 +264,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     week: 1,
     category: "Learning",
     flexibleWeeks: true,
-    frequencyNote: "Complete podcasts and submit workbooks at your own pace.",
+    frequencyNote: "Complete podcasts at your own pace.",
   },
   {
     id: "weekly_session",
@@ -300,16 +300,17 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "peer_to_peer",
     baseId: "peer_to_peer",
-    title: "Peer to Peer Session",
-    description: "Participate in a group peer-to-peer session.",
+    title: "Practical (with a peer)",
+    description:
+      "Complete a practical with someone else. Peer matching stays separate — this is the practical itself.",
     points: 1000,
     behaviorType: "window_limited",
-    // Not self-claimable from the checklist - points come from a real peer session.
+    // Not self-claimable from the checklist - points come from completing the practical with a peer.
     approvalType: "auto",
     week: 1,
     category: "Networking",
     flexibleWeeks: true,
-    frequencyNote: "Join a peer session on Peer Connect. Points unlock after the session is completed.",
+    frequencyNote: "Do the practical with a peer. Points unlock when the practical is completed.",
   },
   {
     id: "impact_log",
@@ -384,15 +385,16 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "challenger",
     baseId: "challenger",
-    title: "Challenger",
-    description: "Complete a challenge activity on the platform.",
+    title: "Win a Challenge",
+    description:
+      "Seven-day challenge: only the person who gains the most points during the challenge week earns these points. Accepting a challenge does not award points by itself.",
     points: 1000,
     behaviorType: "window_limited",
     approvalType: "auto",
     week: 3,
     category: "Learning",
     flexibleWeeks: true,
-    frequencyNote: "One challenge per window.",
+    frequencyNote: "Winner only. Counts points gained during the challenge week, not lifetime totals.",
   },
 
   // ── 3M+ activities (require mentor/coach) ──
@@ -503,7 +505,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       activityId: "webinar_workbook",
       totalFrequency: 1,
       pointsOverride: 3000,
-      titleOverride: "Attend Webinar + Workbook",
+      titleOverride: "Attend Webinar",
       approvalOverride: "partner_approved",
       requiresApprovalOverride: true,
     },
@@ -532,13 +534,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       titleOverride: "Submit an AI Tool for Review",
     },
     // Starter Kit programme components (same parts as My Courses). 0 pts so they
-    // do not affect the intro points table; content opens via the Week 1 cards.
-    {
-      activityId: "capstone",
-      totalFrequency: 3,
-      pointsOverride: 0,
-      titleOverride: "Combined Capstone",
-    },
+    // do not affect the intro points table; order: case study → practical → capstone.
     {
       activityId: "case_study",
       totalFrequency: 4,
@@ -551,6 +547,12 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       pointsOverride: 0,
       titleOverride: "Practicals Portfolio",
     },
+    {
+      activityId: "capstone",
+      totalFrequency: 3,
+      pointsOverride: 0,
+      titleOverride: "Combined Capstone",
+    },
   ],
   "6W": [
     { activityId: "podcast_workbook", totalFrequency: 3, pointsOverride: 1000 },
@@ -562,11 +564,11 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     { activityId: "linkedin", totalFrequency: 3 },
     { activityId: "peer_matching", totalFrequency: 3, pointsOverride: 500 },
     { activityId: "challenger", totalFrequency: 3, pointsOverride: 500 },
-    // Pillar components - two capstones, two case studies, six practicals.
+    // Pillar components - order: case study → practical → capstone.
     // Practicals are 0 pts so the journey max stays exactly 60,000.
-    { activityId: "capstone", totalFrequency: 2 },
     { activityId: "case_study", totalFrequency: 2 },
     { activityId: "practical", totalFrequency: 6 },
+    { activityId: "capstone", totalFrequency: 2 },
   ],
   "3M": [
     // 3-month weekly checklist (product sheet):
@@ -580,7 +582,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       activityId: "webinar_workbook",
       totalFrequency: 3,
       pointsOverride: 4000,
-      titleOverride: "Attend Webinar + Workbook",
+      titleOverride: "Attend Webinar",
       approvalOverride: "partner_approved",
       requiresApprovalOverride: true,
     },
@@ -604,12 +606,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
     },
     // Month-local programme components (0 pts - keep 113k max). Content pillar
     // follows that month's assigned course (see resolvePillarForMonth).
-    {
-      activityId: "capstone",
-      totalFrequency: 3,
-      pointsOverride: 0,
-      titleOverride: "Capstone",
-    },
+    // Order: case study → practical → capstone.
     {
       activityId: "case_study",
       totalFrequency: 3,
@@ -622,6 +619,12 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       pointsOverride: 0,
       titleOverride: "Practicals",
     },
+    {
+      activityId: "capstone",
+      totalFrequency: 3,
+      pointsOverride: 0,
+      titleOverride: "Capstone",
+    },
   ],
   "6M": [
     { activityId: "podcast_workbook", totalFrequency: 18 },
@@ -630,7 +633,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       activityId: "webinar_workbook",
       totalFrequency: 6,
       pointsOverride: 4000,
-      titleOverride: "Attend Webinar + Workbook",
+      titleOverride: "Attend Webinar",
       approvalOverride: "partner_approved",
       requiresApprovalOverride: true,
     },
@@ -648,12 +651,6 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       titleOverride: "Coach Session",
     },
     {
-      activityId: "capstone",
-      totalFrequency: 6,
-      pointsOverride: 0,
-      titleOverride: "Capstone",
-    },
-    {
       activityId: "case_study",
       totalFrequency: 6,
       pointsOverride: 0,
@@ -665,6 +662,12 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       pointsOverride: 0,
       titleOverride: "Practicals",
     },
+    {
+      activityId: "capstone",
+      totalFrequency: 6,
+      pointsOverride: 0,
+      titleOverride: "Capstone",
+    },
   ],
   "9M": [
     { activityId: "podcast_workbook", totalFrequency: 27 },
@@ -673,7 +676,7 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       activityId: "webinar_workbook",
       totalFrequency: 9,
       pointsOverride: 4000,
-      titleOverride: "Attend Webinar + Workbook",
+      titleOverride: "Attend Webinar",
       approvalOverride: "partner_approved",
       requiresApprovalOverride: true,
     },
@@ -691,12 +694,6 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       titleOverride: "Coach Session",
     },
     {
-      activityId: "capstone",
-      totalFrequency: 9,
-      pointsOverride: 0,
-      titleOverride: "Capstone",
-    },
-    {
       activityId: "case_study",
       totalFrequency: 9,
       pointsOverride: 0,
@@ -707,6 +704,12 @@ const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[
       totalFrequency: 9,
       pointsOverride: 0,
       titleOverride: "Practicals",
+    },
+    {
+      activityId: "capstone",
+      totalFrequency: 9,
+      pointsOverride: 0,
+      titleOverride: "Capstone",
     },
   ],
 };

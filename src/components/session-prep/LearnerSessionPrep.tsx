@@ -86,7 +86,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   primaryLoading,
 }) => {
   const learnerId = learner.id ?? null
-  const { pillars, developmentEdge, loading: liftLoading } = useSessionPrepLift(learnerId)
+  const { pillars, developmentEdge, archetype, loading: liftLoading } = useSessionPrepLift(learnerId)
   const { goals, loading: goalsLoading } = useMentorshipGoals(
     learnerId,
     typeof learner.mentorId === 'string' ? learner.mentorId : null,
@@ -300,6 +300,8 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       challengePreference: enrichment.challengePreference,
       pillars,
       chosenPillar: developmentEdge,
+      archetype,
+      totalPoints: typeof learner.totalPoints === 'number' ? learner.totalPoints : null,
       windowStatus,
       sessionNumber,
       sessionTotal: audience === 'mentor' ? mentorTotal || null : coachPurchased ?? null,
@@ -329,6 +331,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       goals,
       pillars,
       developmentEdge,
+      archetype,
       windowStatus,
       sessionNumber,
       mentorTotal,

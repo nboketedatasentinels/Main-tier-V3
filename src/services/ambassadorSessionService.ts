@@ -380,7 +380,7 @@ export async function bookCoachSlot(params: {
 
   const { data: slotRow, error: slotReadError } = await supabase
     .from('ambassador_slots')
-    .select('ambassador_id, title, scheduled_at')
+    .select('ambassador_id, title, scheduled_at, meeting_link')
     .eq('id', slotId)
     .maybeSingle()
   if (slotReadError) throw new Error(slotReadError.message)
@@ -415,6 +415,40 @@ export async function bookCoachSlot(params: {
       category: 'action_required',
       data: { priority: 'push', slotId, bookingId, learnerId, kind: 'ambassador_slot_booked' },
     }).catch((err) => console.warn('[CoachSessionService] notify booking failed:', err))
+  }
+
+  // Calendar invite to the learner (and coach if we have their email).
+  try {
+    const { data: learnerProf } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('id', learnerId)
+      .maybeSingle()
+    const learnerEmail =
+      typeof learnerProf?.email === 'string' ? learnerProf.email.trim() : ''
+    if (learnerEmail && sessionAt) {
+      const { sendSessionCalendarInviteEmail } = await import(
+        '@/services/sessionCalendarInviteService'
+      )
+      const { data: coachProf } = slotRow.ambassador_id
+        ? await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', slotRow.ambassador_id)
+            .maybeSingle()
+        : { data: null }
+      void sendSessionCalendarInviteEmail({
+        to: learnerEmail,
+        learnerName: learnerName || learnerProf?.full_name,
+        organizerName: coachProf?.full_name || 'Your coach',
+        title: slotRow.title || 'Coaching session',
+        start: sessionAt,
+        meetingLink: typeof slotRow.meeting_link === 'string' ? slotRow.meeting_link : null,
+        description: `Coaching session on Transformation Leader.`,
+      })
+    }
+  } catch (err) {
+    console.warn('[CoachSessionService] calendar invite skipped', err)
   }
 
   return bookingId

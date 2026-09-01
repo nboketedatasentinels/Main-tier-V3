@@ -4,7 +4,9 @@
  */
 import { supabase } from '@/services/supabase'
 import type { ItemScores, IntakeAnswers, LiftResult } from '@/utils/liftScoring'
+import { resolveArchetype } from '@/utils/liftScoring'
 import type { PillarKey, Archetype, LeadTier } from '@/config/liftAssessment'
+import { computeLiftIndex } from '@/config/liftAssessment'
 import { isJourneyType } from '@/utils/journeyType'
 import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
 import { sendLiftResultsEmail } from '@/services/liftResultsEmailService'
@@ -131,6 +133,7 @@ export const getSessionPrepLift = async (
   pillars: Record<PillarKey, number>
   liftIndex: number
   developmentEdge: PillarKey | null
+  archetype: Archetype | null
 } | null> => {
   const { data, error } = await supabase.rpc('get_session_prep_lift', {
     p_learner_id: learnerId,
@@ -155,6 +158,7 @@ export const getSessionPrepLift = async (
       pillars?: Record<PillarKey, number>
       liftIndex?: number
       developmentEdge?: PillarKey | null
+      archetype?: Archetype | null
     } | null
   }
   if (!payload.ok) {
@@ -162,10 +166,16 @@ export const getSessionPrepLift = async (
     throw new Error(payload.error || 'Failed to load session prep LIFT')
   }
   if (!payload.lift?.pillars) return null
+  const pillars = payload.lift.pillars
+  const liftIndex = payload.lift.liftIndex ?? computeLiftIndex(pillars)
+  const archetype =
+    payload.lift.archetype ??
+    resolveArchetype(pillars, liftIndex)
   return {
-    pillars: payload.lift.pillars,
-    liftIndex: payload.lift.liftIndex ?? 0,
+    pillars,
+    liftIndex,
     developmentEdge: payload.lift.developmentEdge ?? null,
+    archetype,
   }
 }
 

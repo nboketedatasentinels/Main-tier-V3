@@ -141,7 +141,14 @@ export async function createImpactLog(entry: CreateImpactLogInput): Promise<Impa
     .select('*')
     .single()
 
-  if (error) throw new Error(error.message)
+  if (error) {
+    const msg = error.message || ''
+    const hint = (error as { hint?: string }).hint || ''
+    if (msg.includes('impact_log_free_limit_reached') || hint.includes('2 Impact Log')) {
+      throw new Error('impact_log_free_limit_reached')
+    }
+    throw new Error(msg)
+  }
   return toRecord(data as ImpactLogRow)
 }
 
@@ -265,4 +272,22 @@ export async function countMyImpactLogs(userId: string): Promise<number> {
 
   if (error) throw new Error(error.message)
   return count ?? 0
+}
+
+/**
+ * Lifetime Impact Log submits (survives deletes). Falls back to live row count
+ * until migration 0082 is applied / backfilled.
+ */
+export async function getMyImpactLogLifetimeCount(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('impact_log_lifetime_count')
+    .eq('id', userId)
+    .maybeSingle()
+
+  if (!error && data && typeof (data as { impact_log_lifetime_count?: unknown }).impact_log_lifetime_count === 'number') {
+    return (data as { impact_log_lifetime_count: number }).impact_log_lifetime_count
+  }
+
+  return countMyImpactLogs(userId)
 }

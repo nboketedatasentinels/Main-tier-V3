@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Avatar,
   Badge,
@@ -77,6 +77,7 @@ import { getDisplayName } from '@/utils/displayName'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { ChallengesTab } from '@/components/leaderboard/ChallengesTab'
 import { cancelChallenge } from '@/services/challengeService'
+import { respondToChallenge } from '@/services/supabaseChallengeService'
 import { isFreeUser } from '@/utils/membership'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import { format } from 'date-fns'
@@ -159,6 +160,7 @@ const wrapLabel = (text: string, maxChars: number, maxLines: number): string[] =
 export const LeadershipBoardPage: React.FC = () => {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { profile: authProfile, refreshProfile } = useAuth()
   const toast = useToast()
   const { isOpen, onOpen, onClose } = useDisclosure()
@@ -170,12 +172,18 @@ export const LeadershipBoardPage: React.FC = () => {
   const { isOpen: isFiltersOpen, onToggle: onToggleFilters } = useDisclosure({ defaultIsOpen: false })
   const pointsColors = useToken('colors', [
     'brand.primary',
-    'brand.dark',
     'danger.DEFAULT',
     'success.500',
-    'purple.400',
-    'tint.brandPrimary',
+    'brand.dark',
+    'orange.400',
+    'teal.500',
+    'blue.500',
+    'yellow.600',
   ])
+  const initialTab = searchParams.get('tab') === 'challenges' ? 1 : 0
+  const focusChallengeId = searchParams.get('challengeId')
+  const [mainTabIndex, setMainTabIndex] = useState(initialTab)
+  const [respondingChallengeId, setRespondingChallengeId] = useState<string | null>(null)
   const [timeframe, setTimeframe] = useState<LeaderboardTimeframe>(LeaderboardTimeframe.ALL_TIME)
   const [sortField, setSortField] = useState<'points' | 'name'>('points')
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc')
@@ -244,10 +252,17 @@ export const LeadershipBoardPage: React.FC = () => {
     transactionsLoaded,
     challengesLoaded,
     errorMessage,
+    reloadChallenges,
   } = useLeaderboardData({
     context,
     profileId: profile?.id,
   })
+
+  useEffect(() => {
+    if (searchParams.get('tab') === 'challenges') {
+      setMainTabIndex(1)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (supportsSegmentTimeframes) return
@@ -368,14 +383,51 @@ export const LeadershipBoardPage: React.FC = () => {
   }, [profile?.id])
 
   const handleChallengeCreated = useCallback(() => {
+    reloadChallenges()
     toast({
       title: 'Challenge created',
-      description: 'Your opponent will receive a notification.',
+      description: 'Your opponent will receive a notification to accept.',
       status: 'success',
       duration: 2000,
       isClosable: true,
     })
-  }, [toast])
+  }, [reloadChallenges, toast])
+
+  const handleRespondToChallenge = useCallback(
+    async (challengeId: string, action: 'accepted' | 'declined') => {
+      setRespondingChallengeId(challengeId)
+      try {
+        await respondToChallenge(challengeId, action)
+        toast({
+          title: action === 'accepted' ? 'Challenge accepted' : 'Challenge declined',
+          description:
+            action === 'accepted'
+              ? 'The 7-day race is on — points gained from now count.'
+              : 'You declined this challenge.',
+          status: action === 'accepted' ? 'success' : 'info',
+          duration: 3000,
+          isClosable: true,
+        })
+        reloadChallenges()
+        if (focusChallengeId === challengeId) {
+          const next = new URLSearchParams(searchParams)
+          next.delete('challengeId')
+          setSearchParams(next, { replace: true })
+        }
+      } catch (err) {
+        toast({
+          title: 'Could not update challenge',
+          description: err instanceof Error ? err.message : 'Please try again.',
+          status: 'error',
+          duration: 4000,
+          isClosable: true,
+        })
+      } finally {
+        setRespondingChallengeId(null)
+      }
+    },
+    [focusChallengeId, reloadChallenges, searchParams, setSearchParams, toast],
+  )
 
   useEffect(() => {
     void fetchFeaturedBadges()
@@ -513,6 +565,7 @@ export const LeadershipBoardPage: React.FC = () => {
         status: 'success',
         duration: 3000,
       })
+      reloadChallenges()
     } else {
       toast({
         title: 'Failed to cancel',
@@ -861,7 +914,22 @@ export const LeadershipBoardPage: React.FC = () => {
         </Flex>
       </Box>
 
-      <Tabs variant="unstyled" colorScheme="primary">
+      <Tabs
+        variant="unstyled"
+        colorScheme="primary"
+        index={mainTabIndex}
+        onChange={(index) => {
+          setMainTabIndex(index)
+          const next = new URLSearchParams(searchParams)
+          if (index === 1) {
+            next.set('tab', 'challenges')
+          } else {
+            next.delete('tab')
+            next.delete('challengeId')
+          }
+          setSearchParams(next, { replace: true })
+        }}
+      >
         <TabList
           bg="white"
           border="1px solid"
@@ -931,38 +999,44 @@ export const LeadershipBoardPage: React.FC = () => {
                   </CardHeader>
                   <CardBody>
                     <Stack spacing={6}>
-                      <Grid templateColumns={{ base: '1fr', md: '1fr 1fr' }} gap={4}>
+                      <Grid templateColumns={{ base: '1fr', md: 'minmax(160px, 220px) 1fr' }} gap={4} alignItems="stretch">
                         <Box
-                          p={5}
+                          p={4}
                           bg="white"
                           borderRadius="xl"
                           border="1px solid"
-                          borderColor="purple.200"
+                          borderColor="border.subtle"
                           boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                          _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(139, 92, 246, 0.15)', borderColor: 'purple.300' }}
-                          transition="all 0.3s ease"
-                          position="relative"
-                          overflow="hidden"
+                          alignSelf="start"
                         >
-                          <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="purple.50" borderRadius="0 0 0 100%" />
-                          <Flex w={10} h={10} bg="#350e6f" borderRadius="xl" align="center" justify="center" mb={3} boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)">
-                            <Icon as={Trophy} boxSize={5} color="white" />
-                          </Flex>
-                          <Text fontSize="xs" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>
-                            Primary Focus
+                          <Text fontSize="xs" color="gray.600" fontWeight="semibold" textTransform="uppercase" letterSpacing="wide" mb={1}>
+                            Your rank
                           </Text>
-                          <Text fontSize="lg" fontWeight="bold" color="gray.800" mb={3}>
-                            Your Rank Right Now
+                          <Text fontSize="3xl" fontWeight="bold" color="gray.800" lineHeight="1.1">
+                            #{userRow?.rank || '-'}
                           </Text>
-                          <Text fontSize="4xl" fontWeight="bold" color="gray.800">
-                            #{userRow?.rank || '-'} out of {leaderboardRows.length || '-'}
+                          <Text fontSize="sm" color="gray.600" mt={1}>
+                            of {leaderboardRows.length || '-'} · {segmentScopeText}
                           </Text>
-                          <HStack spacing={2} mt={3} flexWrap="wrap">
-                            <Badge bg="gray.100" color="gray.600" borderRadius="full">{segmentScopeText}</Badge>
-                          </HStack>
                         </Box>
                         <Box id="points-breakdown" scrollMarginTop="120px">
-                          <Box h="320px">
+                          {isFreeTierUser && (
+                            <Box
+                              mb={3}
+                              px={3}
+                              py={2}
+                              rounded="md"
+                              bg="orange.50"
+                              border="1px solid"
+                              borderColor="orange.200"
+                            >
+                              <Text fontSize="sm" color="gray.700">
+                                Free accounts: your points and rank are visible to other learners on this
+                                leaderboard. Upgrade if you need private organisational reporting.
+                              </Text>
+                            </Box>
+                          )}
+                          <Box h={{ base: '360px', md: '420px' }}>
                               {activityHistoryLoading ? (
                                 <Flex h="full" align="center" justify="center">
                                   <Spinner size="lg" color="#350e6f" thickness="3px" />
@@ -1016,9 +1090,9 @@ export const LeadershipBoardPage: React.FC = () => {
                                       const labelLineHeight = isNarrow ? 13 : 16
                                       const valueFontSize = isNarrow ? 14 : 18
                                       const percentFontSize = isNarrow ? 10 : 11
-                                      const showLabel = width > 36 && height > 28
-                                      const showValue = width > 44 && height > 60
-                                      // ~0.58em per char is a safe average for this weight/size.
+                                      const showLabel = width > 72 && height > 48
+                                      const showValue = width > 80 && height > 70
+                                      // Tiny tiles: colour only; details stay in the hover tooltip.
                                       const maxChars = Math.max(4, Math.floor((width - padding * 2) / (labelFontSize * 0.58)))
                                       // Reserve room for value + percent when they're shown.
                                       const reservedForValue = showValue ? valueFontSize + percentFontSize + 12 : 0
@@ -1041,7 +1115,11 @@ export const LeadershipBoardPage: React.FC = () => {
                                             strokeWidth={2}
                                             rx={6}
                                             ry={6}
-                                          />
+                                          >
+                                            <title>
+                                              {`${name}: ${Number(value).toLocaleString()} pts (${Number(percent).toFixed(0)}%)`}
+                                            </title>
+                                          </rect>
                                           {labelLines.length > 0 && (
                                             <text
                                               x={x + padding}
@@ -1464,6 +1542,10 @@ export const LeadershipBoardPage: React.FC = () => {
               challengesLoaded={challengesLoaded}
               onStartChallenge={onOpen}
               onCancelChallenge={handleCancelChallenge}
+              onAcceptChallenge={(id) => void handleRespondToChallenge(id, 'accepted')}
+              onDeclineChallenge={(id) => void handleRespondToChallenge(id, 'declined')}
+              respondingChallengeId={respondingChallengeId}
+              focusChallengeId={focusChallengeId}
               leaderboardRank={userRow?.rank}
             />
           </TabPanel>
