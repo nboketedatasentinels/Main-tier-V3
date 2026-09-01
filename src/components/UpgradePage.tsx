@@ -259,9 +259,14 @@ export const UpgradePage: React.FC = () => {
                   <Text fontSize="sm" fontWeight="700" style={{ color: '#64748B' }}>
                     Full programme
                   </Text>
-                  <Text fontSize="2xl" fontWeight="800" letterSpacing="-0.03em" mt={2} style={{ color: '#111111' }}>
-                    Custom pricing
-                  </Text>
+                  <HStack align="baseline" spacing={1} mt={2}>
+                    <Text fontSize="4xl" fontWeight="800" letterSpacing="-0.04em" style={{ color: '#111111' }}>
+                      $50
+                    </Text>
+                    <Text fontSize="md" fontWeight="500" style={{ color: '#64748B' }}>
+                      /month
+                    </Text>
+                  </HStack>
                   <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
                     Mentor / coach pathways · we reply within 24 hours
                   </Text>
