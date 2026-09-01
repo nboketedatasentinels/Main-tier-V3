@@ -178,7 +178,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
                     borderRadius="full"
                     bg="#DBEAFE"
                   >
-                    <Icon as={Check} boxSize={3} style={{ color: '#2563EB' }} strokeWidth={3} />
+                    <Icon as={Check} boxSize={3} style={{ color: '#60A5FA' }} strokeWidth={3} />
                   </Flex>
                   <Text fontSize="sm" lineHeight="1.45" style={{ color: '#1e293b' }}>
                     {benefit}
