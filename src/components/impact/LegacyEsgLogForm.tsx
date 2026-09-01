@@ -51,7 +51,7 @@ import {
 import { validateOrganizationPartner } from '@/services/organizationService'
 import { removeUndefinedFields } from '@/utils/firestore'
 import { isValidUrl } from '@/utils/validation'
-import { FREE_IMPACT_LOG_LIFETIME_LIMIT, isFreeImpactLogLimitReached, isFreeUser } from '@/utils/membership'
+import { isFreeImpactLogLimitReached, isFreeUser } from '@/utils/membership'
 import { awardBadge } from '@/services/badgeService'
 
 type VerificationTier =

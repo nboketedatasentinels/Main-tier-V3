@@ -56,6 +56,7 @@ interface LeaderboardDataState {
   transactionsLoaded: boolean
   challengesLoaded: boolean
   errorMessage: string | null
+  reloadChallenges: () => void
 }
 
 const MAX_RETRY_ATTEMPTS = 3
