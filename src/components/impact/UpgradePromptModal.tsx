@@ -18,13 +18,13 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { Crown, Sparkles, CheckCircle2, LockKeyhole } from 'lucide-react'
+import { Crown, CheckCircle2, LockKeyhole } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface EnhancedUpgradePromptModalProps {
   feature: string
   title: string
-  message: string
+  message?: string
   benefits?: string[]
   ctaText?: string
   targetTier?: 'paid' | 'partner'
@@ -77,37 +77,23 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
     <Modal isOpen={isOpen} onClose={onClose} isCentered>
       <ModalOverlay />
       <ModalContent overflow="hidden" bg="white" color="#111111">
-        <Box
-          bg="#F7F7F8"
-          borderBottomWidth="1px"
-          borderColor="gray.200"
-          px={6}
-          py={5}
-          pr={12}
-        >
-          <Flex justify="space-between" align="flex-start" gap={4}>
-            <Stack spacing={2} flex={1} minW={0}>
-              <Flex align="center" gap={2}>
-                <Icon as={Crown} style={{ color: '#350e6f' }} />
-                <Badge bg="#eab130" style={{ color: '#111111' }}>
-                  Full Access
-                </Badge>
-              </Flex>
-              {/* Inline styles beat theme rules that force white on nested Text */}
-              <Text
-                as="h2"
-                fontSize="xl"
-                fontWeight="bold"
-                style={{ color: '#111111' }}
-              >
-                {title}
-              </Text>
+        <Box bg="#F7F7F8" borderBottomWidth="1px" borderColor="gray.200" px={6} py={5} pr={12}>
+          <Stack spacing={2}>
+            <Flex align="center" gap={2}>
+              <Icon as={Crown} style={{ color: '#350e6f' }} />
+              <Badge bg="#eab130" style={{ color: '#111111' }}>
+                Full Access
+              </Badge>
+            </Flex>
+            <Text as="h2" fontSize="xl" fontWeight="bold" style={{ color: '#111111' }}>
+              {title}
+            </Text>
+            {message ? (
               <Text as="p" fontSize="md" style={{ color: '#111111' }}>
                 {message}
               </Text>
-            </Stack>
-            <Icon as={Sparkles} boxSize={10} style={{ color: '#f4540c' }} flexShrink={0} />
-          </Flex>
+            ) : null}
+          </Stack>
         </Box>
         <ModalCloseButton style={{ color: '#111111' }} />
         <ModalHeader color="#111111">
@@ -123,7 +109,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
                 Keep the evidence flowing
               </Text>
               <Text style={{ color: '#334155' }}>
-                Impact Log Pro from ~$5/month. Past entries stay readable forever.
+                Impact Log Pro from $5/month. Past entries stay readable forever.
               </Text>
             </Box>
             <List spacing={2}>

@@ -904,8 +904,8 @@ export const ImpactLogV2: React.FC = () => {
           <Box>
             <AlertTitle>Your free Impact Log chapter is complete</AlertTitle>
             <AlertDescription>
-              You&apos;ve used both free entries. Keep the evidence flowing with Impact Log Pro —
-              about $5/mo — or unlock the full journey.
+              You&apos;ve used both free entries. Keep the evidence flowing with Impact Log Pro
+              (about $5/mo) or unlock the full journey.
             </AlertDescription>
           </Box>
           <Button ml={4} size="sm" colorScheme="orange" onClick={() => setUpgradeOpen(true)}>
@@ -1002,13 +1002,12 @@ export const ImpactLogV2: React.FC = () => {
         isOpen={upgradeOpen}
         onClose={() => setUpgradeOpen(false)}
         feature="Impact Log Pro"
-        title="Your free chapter ends here — the story doesn't have to"
-        message={`You've logged your ${FREE_IMPACT_LOG_LIFETIME_LIMIT} free Impact Log entries. Past entries stay readable forever. Unlock Impact Log Pro (~$5/mo) to keep adding evidence, or upgrade the full journey.`}
+        title="Your free chapter ends here. The story doesn't have to."
         benefits={[
           'Unlimited Impact Log entries from here on',
           'PDF and CSV export for stakeholders',
           'Verifier workflow without the free-tier wall',
-          'Cancel anytime — your past logs stay yours',
+          'Cancel anytime. Your past logs stay yours',
         ]}
         ctaText="Unlock Impact Log Pro"
       />
