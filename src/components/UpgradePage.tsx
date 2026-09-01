@@ -61,11 +61,11 @@ export const UpgradePage: React.FC = () => {
       <Container maxW="6xl">
         <Stack spacing={8}>
           {impactProStatus === 'success' && (
-            <Box bg="green.50" borderWidth="1px" borderColor="green.200" borderRadius="xl" p={5}>
-              <Heading size="sm" mb={1}>
+            <Box bg="green.50" borderWidth="1px" borderColor="green.200" borderRadius="xl" p={5} style={{ color: '#111111' }}>
+              <Heading size="sm" mb={1} style={{ color: '#111111' }}>
                 Impact Log Pro checkout complete
               </Heading>
-              <Text color="gray.600" fontSize="sm">
+              <Text fontSize="sm" style={{ color: '#334155' }}>
                 Stripe is confirming your subscription. Refresh in a few seconds if unlimited Impact Log is not
                 unlocked yet.
               </Text>
@@ -79,10 +79,13 @@ export const UpgradePage: React.FC = () => {
               borderRadius="xl"
               p={{ base: 5, md: 6 }}
               boxShadow="sm"
+              style={{ color: '#111111' }}
             >
               <Stack spacing={3}>
-                <Heading size="md">Your membership is active</Heading>
-                <Text color="gray.600">
+                <Heading size="md" style={{ color: '#111111' }}>
+                  Your membership is active
+                </Heading>
+                <Text style={{ color: '#334155' }}>
                   Full access is already unlocked for your account. Jump back into the dashboard to explore your
                   upgraded features.
                 </Text>
@@ -99,16 +102,17 @@ export const UpgradePage: React.FC = () => {
             boxShadow="lg"
             position="relative"
             overflow="hidden"
+            color="#111111"
           >
-            <Icon as={Sparkles} color="white" opacity={0.2} boxSize={28} position="absolute" right={-6} top={-6} />
-            <Stack spacing={4} maxW="3xl">
+            <Icon as={Sparkles} color="#350e6f" opacity={0.15} boxSize={28} position="absolute" right={-6} top={-6} />
+            <Stack spacing={4} maxW="3xl" style={{ color: '#111111' }}>
               <Tag size="lg" colorScheme="purple" w="fit-content">
                 Upgrade Journey
               </Tag>
-              <Heading size="2xl">
+              <Heading size="2xl" style={{ color: '#111111' }}>
                 {isPaid ? 'Full access confirmed' : 'Unlock your full leadership potential'}
               </Heading>
-              <Text fontSize="lg" color="gray.700">
+              <Text fontSize="lg" style={{ color: '#1e293b' }}>
                 {isPaid
                   ? 'You are already upgraded. Explore full-access features from your dashboard.'
                   : "Request a custom upgrade pathway. We'll respond within 24 hours."}
@@ -135,14 +139,21 @@ export const UpgradePage: React.FC = () => {
                         Impact Log Pro · $5/mo
                       </Button>
                     )}
-                    <Button variant="outline" size="lg" colorScheme="purple" onClick={() => navigate('/login')}>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      colorScheme="purple"
+                      borderColor="#350e6f"
+                      style={{ color: '#350e6f' }}
+                      onClick={() => navigate('/login')}
+                    >
                       Already upgraded? Sign In
                     </Button>
                   </>
                 )}
               </Stack>
               {!isPaid && (
-                <Text color="gray.600" fontSize="sm">
+                <Text fontSize="sm" style={{ color: '#334155' }}>
                   Full programme (mentor/coach) via custom upgrade · or Impact Log only for $5/month (cancel anytime)
                 </Text>
               )}
