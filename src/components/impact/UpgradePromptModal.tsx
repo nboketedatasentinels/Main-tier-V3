@@ -77,21 +77,23 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
     <Modal isOpen={isOpen} onClose={onClose} isCentered>
       <ModalOverlay />
       <ModalContent overflow="hidden">
-        <Box bgGradient="linear(to-r, purple.500, indigo.600)" color="white" px={6} py={5}>
-          <Flex justify="space-between" align="center">
-            <Stack spacing={1}>
+        <Box bg="gray.50" borderBottomWidth="1px" borderColor="border.subtle" px={6} py={5}>
+          <Flex justify="space-between" align="center" gap={4}>
+            <Stack spacing={2} flex={1} minW={0}>
               <Flex align="center" gap={2}>
-                <Icon as={Crown} color="white" />
-                <Badge colorScheme="yellow" bg="accent.warning" color="text.primary">
+                <Icon as={Crown} color="brand.primary" />
+                <Badge colorScheme="yellow" bg="accent.warning" color="black">
                   Full Access
                 </Badge>
               </Flex>
-              <Text fontSize="xl" fontWeight="bold" color="white">
+              <Text fontSize="xl" fontWeight="bold" color="black">
                 {title}
               </Text>
-              <Text color="whiteAlpha.800">{message}</Text>
+              <Text color="black" opacity={0.85}>
+                {message}
+              </Text>
             </Stack>
-            <Icon as={Sparkles} boxSize={10} color="yellow.300" />
+            <Icon as={Sparkles} boxSize={10} color="orange.400" flexShrink={0} />
           </Flex>
         </Box>
         <ModalHeader>
