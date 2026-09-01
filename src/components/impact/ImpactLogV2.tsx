@@ -1009,7 +1009,7 @@ export const ImpactLogV2: React.FC = () => {
           'Verifier workflow without the free-tier wall',
           'Cancel anytime. Your past logs stay yours',
         ]}
-        ctaText="Unlock Impact Log Pro"
+        ctaText="Continue with Impact Log Pro"
       />
       <ImpactClaimDrawer
         entry={openClaim}

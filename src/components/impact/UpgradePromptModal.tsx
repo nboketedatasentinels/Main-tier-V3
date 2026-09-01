@@ -1,24 +1,20 @@
 import React, { useMemo } from 'react'
 import {
-  Badge,
   Box,
   Button,
   Flex,
+  HStack,
   Icon,
-  List,
-  ListIcon,
-  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
   ModalContent,
-  ModalFooter,
-  ModalHeader,
   ModalOverlay,
   Stack,
   Text,
+  VStack,
 } from '@chakra-ui/react'
-import { CheckCircle2, LockKeyhole } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface EnhancedUpgradePromptModalProps {
@@ -36,7 +32,7 @@ const defaultBenefits: Record<'paid' | 'partner', string[]> = {
   paid: [
     'Unlimited impact entries per month',
     'Organization-level analytics and insights',
-    'Advanced verification tiers (Evidence & Third-Party)',
+    'Advanced verification tiers',
     'Export capabilities for stakeholder reports',
     'Access to Business impact tracking',
     'Priority support from our team',
@@ -62,7 +58,10 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
   onClose,
 }) => {
   const navigate = useNavigate()
-  const resolvedBenefits = useMemo(() => benefits ?? defaultBenefits[targetTier], [benefits, targetTier])
+  const resolvedBenefits = useMemo(
+    () => benefits ?? defaultBenefits[targetTier],
+    [benefits, targetTier],
+  )
 
   const handleCta = () => {
     if (targetTier === 'partner') {
@@ -74,59 +73,150 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent overflow="hidden" bg="white" color="#111111">
-        <Box bg="#F7F7F8" borderBottomWidth="1px" borderColor="gray.200" px={6} py={5} pr={12}>
-          <Stack spacing={2}>
-            <Badge bg="#eab130" style={{ color: '#111111' }} alignSelf="flex-start">
-              Full Access
-            </Badge>
-            <Text as="h2" fontSize="xl" fontWeight="bold" style={{ color: '#111111' }}>
-              {title}
-            </Text>
-            {message ? (
-              <Text as="p" fontSize="md" style={{ color: '#111111' }}>
-                {message}
+    <Modal isOpen={isOpen} onClose={onClose} isCentered size="md" motionPreset="slideInBottom">
+      <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
+      <ModalContent
+        overflow="hidden"
+        bg="white"
+        color="#111111"
+        borderRadius="2xl"
+        boxShadow="0 24px 64px rgba(39, 6, 46, 0.22)"
+        mx={4}
+      >
+        {/* Brand accent strip */}
+        <Box
+          h="4px"
+          bgGradient="linear(to-r, #27062e, #350e6f, #f4540c, #eab130)"
+        />
+
+        <ModalCloseButton
+          top={3}
+          right={3}
+          borderRadius="full"
+          style={{ color: '#475569' }}
+          _hover={{ bg: 'gray.100', color: '#111111' }}
+        />
+
+        <ModalBody px={{ base: 6, md: 8 }} pt={8} pb={4}>
+          <VStack align="stretch" spacing={6}>
+            <Stack spacing={3}>
+              <Text
+                fontSize="xs"
+                fontWeight="700"
+                letterSpacing="0.12em"
+                textTransform="uppercase"
+                style={{ color: '#350e6f' }}
+              >
+                {feature}
               </Text>
-            ) : null}
+              <Text
+                as="h2"
+                fontSize={{ base: '1.5rem', md: '1.65rem' }}
+                fontWeight="700"
+                lineHeight="1.25"
+                letterSpacing="-0.02em"
+                style={{ color: '#111111' }}
+              >
+                {title}
+              </Text>
+              {message ? (
+                <Text fontSize="md" lineHeight="1.55" style={{ color: '#334155' }}>
+                  {message}
+                </Text>
+              ) : null}
+            </Stack>
+
+            <Flex
+              align={{ base: 'flex-start', sm: 'center' }}
+              justify="space-between"
+              gap={3}
+              flexDir={{ base: 'column', sm: 'row' }}
+              bg="#FAF7FC"
+              borderWidth="1px"
+              borderColor="#E8DFF0"
+              borderRadius="xl"
+              px={5}
+              py={4}
+            >
+              <Box>
+                <Text fontSize="sm" fontWeight="600" style={{ color: '#111111' }}>
+                  Impact Log Pro
+                </Text>
+                <Text fontSize="sm" style={{ color: '#64748B' }}>
+                  Past entries stay readable forever
+                </Text>
+              </Box>
+              <HStack
+                spacing={1}
+                align="baseline"
+                bg="white"
+                borderRadius="lg"
+                px={3}
+                py={2}
+                borderWidth="1px"
+                borderColor="#E8DFF0"
+              >
+                <Text fontSize="2xl" fontWeight="800" letterSpacing="-0.03em" style={{ color: '#27062e' }}>
+                  $5
+                </Text>
+                <Text fontSize="sm" fontWeight="500" style={{ color: '#64748B' }}>
+                  /mo
+                </Text>
+              </HStack>
+            </Flex>
+
+            <Stack spacing={3}>
+              {resolvedBenefits.map((benefit) => (
+                <HStack key={benefit} align="flex-start" spacing={3}>
+                  <Flex
+                    align="center"
+                    justify="center"
+                    w={5}
+                    h={5}
+                    mt="1px"
+                    flexShrink={0}
+                    borderRadius="full"
+                    bg="#ECFDF5"
+                  >
+                    <Icon as={Check} boxSize={3} style={{ color: '#059669' }} strokeWidth={3} />
+                  </Flex>
+                  <Text fontSize="sm" lineHeight="1.45" style={{ color: '#1e293b' }}>
+                    {benefit}
+                  </Text>
+                </HStack>
+              ))}
+            </Stack>
+          </VStack>
+        </ModalBody>
+
+        <Box px={{ base: 6, md: 8 }} pb={7} pt={2}>
+          <Stack spacing={3}>
+            <Button
+              size="lg"
+              w="full"
+              bg="#350e6f"
+              color="white"
+              borderRadius="xl"
+              fontWeight="700"
+              _hover={{ bg: '#27062e' }}
+              _active={{ bg: '#1f0524' }}
+              onClick={handleCta}
+            >
+              {ctaText}
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              w="full"
+              fontWeight="500"
+              style={{ color: '#64748B' }}
+              _hover={{ bg: 'gray.50', color: '#111111' }}
+              onClick={onClose}
+            >
+              Maybe later
+            </Button>
           </Stack>
         </Box>
-        <ModalCloseButton style={{ color: '#111111' }} />
-        <ModalHeader color="#111111">
-          <Flex align="center" gap={2}>
-            <Icon as={LockKeyhole} style={{ color: '#111111' }} />
-            <Text style={{ color: '#111111' }}>Unlock {feature}</Text>
-          </Flex>
-        </ModalHeader>
-        <ModalBody>
-          <Stack spacing={4} color="#111111">
-            <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={3} borderColor="border.strong">
-              <Text fontWeight="semibold" style={{ color: '#111111' }}>
-                Keep the evidence flowing
-              </Text>
-              <Text style={{ color: '#334155' }}>
-                Impact Log Pro from $5/month. Past entries stay readable forever.
-              </Text>
-            </Box>
-            <List spacing={2}>
-              {resolvedBenefits.map((benefit) => (
-                <ListItem key={benefit} display="flex" alignItems="center" gap={2}>
-                  <ListIcon as={CheckCircle2} color="green.500" />
-                  <Text style={{ color: '#111111' }}>{benefit}</Text>
-                </ListItem>
-              ))}
-            </List>
-          </Stack>
-        </ModalBody>
-        <ModalFooter gap={3}>
-          <Button variant="ghost" onClick={onClose} style={{ color: '#111111' }}>
-            Maybe Later
-          </Button>
-          <Button colorScheme="purple" onClick={handleCta}>
-            {ctaText}
-          </Button>
-        </ModalFooter>
       </ModalContent>
     </Modal>
   )
