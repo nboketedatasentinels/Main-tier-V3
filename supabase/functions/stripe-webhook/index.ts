@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.25.0";
 
 /**
- * stripe-webhook — set impact_log_pro on profiles from subscription events.
+ * stripe-webhook — unlock Impact Log Pro or Full Programme from subscription events.
  * Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
  * Deploy with verify_jwt=false (Stripe signature verifies the caller).
  */
@@ -41,30 +41,57 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
-  const setPro = async (
+  const resolveUserId = async (
     userId: string | null | undefined,
     customerId: string | null | undefined,
-    pro: boolean,
-    subscriptionId?: string | null,
   ) => {
-    if (!userId && customerId) {
-      const { data } = await admin
-        .from("profiles")
-        .select("id")
-        .eq("stripe_customer_id", customerId)
-        .maybeSingle();
-      userId = data?.id as string | undefined;
-    }
+    if (userId) return userId;
+    if (!customerId) return null;
+    const { data } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .maybeSingle();
+    return (data?.id as string | undefined) ?? null;
+  };
+
+  const applyEntitlement = async (params: {
+    userId?: string | null;
+    customerId?: string | null;
+    product: string;
+    active: boolean;
+    subscriptionId?: string | null;
+  }) => {
+    const userId = await resolveUserId(params.userId, params.customerId);
     if (!userId) {
-      console.warn("[stripe-webhook] no user for event", event.type);
+      console.warn("[stripe-webhook] no user for event", event.type, params.product);
       return;
     }
+
     const patch: Record<string, unknown> = {
-      impact_log_pro: pro,
       updated_at: new Date().toISOString(),
     };
-    if (customerId) patch.stripe_customer_id = customerId;
-    if (subscriptionId) patch.stripe_subscription_id = subscriptionId;
+    if (params.customerId) patch.stripe_customer_id = params.customerId;
+    if (params.subscriptionId) patch.stripe_subscription_id = params.subscriptionId;
+
+    if (params.product === "full_programme") {
+      patch.impact_log_pro = params.active;
+      if (params.active) {
+        patch.membership_status = "paid";
+        patch.role = "paid_member";
+      } else {
+        // Downgrade to free; keep impact_log_pro false with cancelled full programme
+        patch.membership_status = "free";
+        patch.role = "free_user";
+        patch.impact_log_pro = false;
+      }
+    } else if (params.product === "impact_log_pro") {
+      patch.impact_log_pro = params.active;
+    } else {
+      console.warn("[stripe-webhook] unknown product", params.product);
+      return;
+    }
+
     const { error } = await admin.from("profiles").update(patch).eq("id", userId);
     if (error) console.error("[stripe-webhook] profile update failed", error);
   };
@@ -73,32 +100,38 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        if (session.metadata?.product !== "impact_log_pro") break;
+        const product = session.metadata?.product || "";
+        if (product !== "impact_log_pro" && product !== "full_programme") break;
         const userId =
           session.metadata?.supabase_user_id || session.client_reference_id;
         const subId =
           typeof session.subscription === "string"
             ? session.subscription
             : session.subscription?.id ?? null;
-        await setPro(
+        await applyEntitlement({
           userId,
-          typeof session.customer === "string" ? session.customer : null,
-          true,
-          subId,
-        );
+          customerId: typeof session.customer === "string" ? session.customer : null,
+          product,
+          active: true,
+          subscriptionId: subId,
+        });
         break;
       }
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as Stripe.Subscription;
-        if (sub.metadata?.product !== "impact_log_pro") break;
-        const active = ["active", "trialing"].includes(sub.status);
-        await setPro(
-          sub.metadata?.supabase_user_id,
-          typeof sub.customer === "string" ? sub.customer : null,
-          event.type === "customer.subscription.deleted" ? false : active,
-          sub.id,
-        );
+        const product = sub.metadata?.product || "";
+        if (product !== "impact_log_pro" && product !== "full_programme") break;
+        const active =
+          event.type !== "customer.subscription.deleted" &&
+          ["active", "trialing"].includes(sub.status);
+        await applyEntitlement({
+          userId: sub.metadata?.supabase_user_id,
+          customerId: typeof sub.customer === "string" ? sub.customer : null,
+          product,
+          active,
+          subscriptionId: sub.id,
+        });
         break;
       }
       default:

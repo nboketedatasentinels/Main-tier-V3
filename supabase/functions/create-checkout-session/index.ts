@@ -5,9 +5,11 @@ import Stripe from "npm:stripe@14.25.0";
 
 /**
  * create-checkout-session
- * Authenticated learner starts Stripe Checkout for Impact Log Pro ($5/mo).
- * Secrets: STRIPE_SECRET_KEY, STRIPE_IMPACT_LOG_PRICE_ID
- * Optional: APP_BASE_URL (fallback VITE_APP_BASE_URL style via request origin)
+ * Authenticated learner starts Stripe Checkout for:
+ *   - impact_log_pro ($5/mo) — STRIPE_IMPACT_LOG_PRICE_ID
+ *   - full_programme ($50/mo) — STRIPE_FULL_PROGRAMME_PRICE_ID
+ * Secrets: STRIPE_SECRET_KEY + the price id for the requested kind
+ * Optional: APP_BASE_URL
  */
 
 const CORS = {
@@ -16,6 +18,8 @@ const CORS = {
     "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+type CheckoutKind = "impact_log_pro" | "full_programme";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -29,12 +33,8 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-  const priceId = Deno.env.get("STRIPE_IMPACT_LOG_PRICE_ID");
-  if (!stripeKey || !priceId) {
-    return json({
-      error:
-        "Stripe is not configured. Set STRIPE_SECRET_KEY and STRIPE_IMPACT_LOG_PRICE_ID.",
-    }, 503);
+  if (!stripeKey) {
+    return json({ error: "Stripe is not configured. Set STRIPE_SECRET_KEY." }, 503);
   }
 
   const authHeader = req.headers.get("Authorization") || "";
@@ -57,8 +57,23 @@ Deno.serve(async (req) => {
   } catch {
     body = {};
   }
-  if (body.kind && body.kind !== "impact_log_pro") {
+
+  const kind = (body.kind || "impact_log_pro") as CheckoutKind;
+  if (kind !== "impact_log_pro" && kind !== "full_programme") {
     return json({ error: "unsupported_product" }, 400);
+  }
+
+  const priceId =
+    kind === "full_programme"
+      ? Deno.env.get("STRIPE_FULL_PROGRAMME_PRICE_ID")
+      : Deno.env.get("STRIPE_IMPACT_LOG_PRICE_ID");
+  if (!priceId) {
+    return json({
+      error:
+        kind === "full_programme"
+          ? "Stripe Full Programme price is not configured. Set STRIPE_FULL_PROGRAMME_PRICE_ID."
+          : "Stripe Impact Log Pro price is not configured. Set STRIPE_IMPACT_LOG_PRICE_ID.",
+    }, 503);
   }
 
   const admin = createClient(
@@ -71,7 +86,17 @@ Deno.serve(async (req) => {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.impact_log_pro || profile?.membership_status === "paid") {
+  const isPaid =
+    profile?.membership_status === "paid" ||
+    String(profile?.role || "").toLowerCase() === "paid_member";
+
+  if (kind === "full_programme" && isPaid) {
+    return json({ error: "already_entitled" }, 400);
+  }
+  if (
+    kind === "impact_log_pro" &&
+    (profile?.impact_log_pro || isPaid)
+  ) {
     return json({ error: "already_entitled" }, 400);
   }
 
@@ -97,12 +122,20 @@ Deno.serve(async (req) => {
     /\/$/,
     "",
   );
-  const successPath = (body.successPath || "/upgrade?impact_pro=success").startsWith("/")
-    ? body.successPath || "/upgrade?impact_pro=success"
-    : "/upgrade?impact_pro=success";
-  const cancelPath = (body.cancelPath || "/upgrade?impact_pro=cancel").startsWith("/")
-    ? body.cancelPath || "/upgrade?impact_pro=cancel"
-    : "/upgrade?impact_pro=cancel";
+  const defaultSuccess =
+    kind === "full_programme"
+      ? "/upgrade?full_programme=success"
+      : "/upgrade?impact_pro=success";
+  const defaultCancel =
+    kind === "full_programme"
+      ? "/upgrade?full_programme=cancel"
+      : "/upgrade?impact_pro=cancel";
+  const successPath = (body.successPath || defaultSuccess).startsWith("/")
+    ? body.successPath || defaultSuccess
+    : defaultSuccess;
+  const cancelPath = (body.cancelPath || defaultCancel).startsWith("/")
+    ? body.cancelPath || defaultCancel
+    : defaultCancel;
 
   const session = await stripe.checkout.sessions.create({
     mode: "subscription",
@@ -113,12 +146,12 @@ Deno.serve(async (req) => {
     client_reference_id: user.id,
     metadata: {
       supabase_user_id: user.id,
-      product: "impact_log_pro",
+      product: kind,
     },
     subscription_data: {
       metadata: {
         supabase_user_id: user.id,
-        product: "impact_log_pro",
+        product: kind,
       },
     },
   });

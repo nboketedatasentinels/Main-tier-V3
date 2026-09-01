@@ -10,18 +10,14 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  useDisclosure,
   useToast,
   VStack,
 } from '@chakra-ui/react'
 import { Check, CreditCard, Lock, ShieldCheck } from 'lucide-react'
-import { RequestUpgradeModal } from './RequestUpgradeModal'
-import { RequestStatusView } from './RequestStatusView'
 import { useAuth } from '@/hooks/useAuth'
-import { usePendingUpgradeRequest } from '@/hooks/useUpgradeRequests'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { hasUnlimitedImpactLogAccess, isFreeUser } from '@/utils/membership'
-import { openImpactLogProCheckout } from '@/services/paymentService'
+import { openFullProgrammeCheckout, openImpactLogProCheckout } from '@/services/paymentService'
 
 const impactProBenefits = [
   'Unlimited Impact Log entries',
@@ -46,14 +42,14 @@ export const UpgradePage: React.FC = () => {
     [profile],
   )
   const navigate = useNavigate()
-  const { isOpen, onOpen, onClose } = useDisclosure()
-  const { pendingRequest } = usePendingUpgradeRequest(profile?.id)
   const [searchParams] = useSearchParams()
   const impactProStatus = searchParams.get('impact_pro')
-  const [checkoutBusy, setCheckoutBusy] = useState(false)
+  const fullProgrammeStatus = searchParams.get('full_programme')
+  const [impactCheckoutBusy, setImpactCheckoutBusy] = useState(false)
+  const [fullCheckoutBusy, setFullCheckoutBusy] = useState(false)
 
   const startImpactPro = async () => {
-    setCheckoutBusy(true)
+    setImpactCheckoutBusy(true)
     try {
       await openImpactLogProCheckout()
     } catch (err) {
@@ -67,7 +63,26 @@ export const UpgradePage: React.FC = () => {
         duration: 8000,
         isClosable: true,
       })
-      setCheckoutBusy(false)
+      setImpactCheckoutBusy(false)
+    }
+  }
+
+  const startFullProgramme = async () => {
+    setFullCheckoutBusy(true)
+    try {
+      await openFullProgrammeCheckout()
+    } catch (err) {
+      toast({
+        title: 'Could not start checkout',
+        description:
+          err instanceof Error
+            ? err.message
+            : 'Stripe may not be configured yet. Ask an admin to set STRIPE_FULL_PROGRAMME_PRICE_ID.',
+        status: 'error',
+        duration: 8000,
+        isClosable: true,
+      })
+      setFullCheckoutBusy(false)
     }
   }
 
@@ -75,19 +90,18 @@ export const UpgradePage: React.FC = () => {
     <Box bg="#F7F5F9" minH={{ base: '100dvh', md: '100vh' }} py={{ base: 10, md: 14 }}>
       <Container maxW="4xl">
         <Stack spacing={8} style={{ color: '#111111' }}>
-          {impactProStatus === 'success' && (
+          {(impactProStatus === 'success' || fullProgrammeStatus === 'success') && (
             <Box bg="#ECFDF5" borderWidth="1px" borderColor="#A7F3D0" borderRadius="xl" p={5}>
               <Heading size="sm" mb={1} style={{ color: '#065F46' }}>
                 Payment received
               </Heading>
               <Text fontSize="sm" style={{ color: '#047857' }}>
-                Stripe is confirming Impact Log Pro. Refresh in a few seconds if unlimited logging is not
-                unlocked yet.
+                Stripe is confirming your subscription. Refresh in a few seconds if access is not unlocked yet.
               </Text>
             </Box>
           )}
 
-          {impactProStatus === 'cancel' && (
+          {(impactProStatus === 'cancel' || fullProgrammeStatus === 'cancel') && (
             <Box bg="#FFF7ED" borderWidth="1px" borderColor="#FED7AA" borderRadius="xl" p={5}>
               <Heading size="sm" mb={1} style={{ color: '#9A3412' }}>
                 Checkout cancelled
@@ -155,7 +169,6 @@ export const UpgradePage: React.FC = () => {
           </VStack>
 
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5} alignItems="stretch">
-            {/* Impact Log Pro — primary checkout card */}
             <Box
               bg="white"
               borderWidth="2px"
@@ -235,7 +248,7 @@ export const UpgradePage: React.FC = () => {
                     leftIcon={<Icon as={CreditCard} boxSize={4} />}
                     _hover={{ bg: '#27062e' }}
                     _active={{ bg: '#1f0524' }}
-                    isLoading={checkoutBusy}
+                    isLoading={impactCheckoutBusy}
                     loadingText="Redirecting to Stripe…"
                     onClick={() => void startImpactPro()}
                   >
@@ -245,7 +258,6 @@ export const UpgradePage: React.FC = () => {
               </Stack>
             </Box>
 
-            {/* Full programme — request path */}
             <Box
               bg="white"
               borderWidth="1px"
@@ -268,7 +280,7 @@ export const UpgradePage: React.FC = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
-                    Mentor / coach pathways · we reply within 24 hours
+                    Billed monthly · cancel anytime
                   </Text>
                 </Box>
 
@@ -303,14 +315,17 @@ export const UpgradePage: React.FC = () => {
                     size="lg"
                     w="full"
                     borderRadius="xl"
-                    variant="outline"
-                    borderColor="#350e6f"
-                    style={{ color: '#350e6f' }}
+                    bg="#350e6f"
+                    color="white"
                     fontWeight="700"
-                    _hover={{ bg: '#FAF7FC' }}
-                    onClick={onOpen}
+                    leftIcon={<Icon as={CreditCard} boxSize={4} />}
+                    _hover={{ bg: '#27062e' }}
+                    _active={{ bg: '#1f0524' }}
+                    isLoading={fullCheckoutBusy}
+                    loadingText="Redirecting to Stripe…"
+                    onClick={() => void startFullProgramme()}
                   >
-                    Request full upgrade
+                    Continue to checkout
                   </Button>
                 )}
               </Stack>
@@ -344,8 +359,6 @@ export const UpgradePage: React.FC = () => {
             </HStack>
           </HStack>
 
-          {pendingRequest && !isPaid && <RequestStatusView request={pendingRequest} />}
-
           {!profile && (
             <Text textAlign="center" fontSize="sm" style={{ color: '#64748B' }}>
               Already upgraded?{' '}
@@ -356,8 +369,6 @@ export const UpgradePage: React.FC = () => {
           )}
         </Stack>
       </Container>
-
-      <RequestUpgradeModal isOpen={isOpen} onClose={onClose} />
     </Box>
   )
 }
