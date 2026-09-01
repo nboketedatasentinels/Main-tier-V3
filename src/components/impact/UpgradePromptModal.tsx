@@ -18,7 +18,7 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { Crown, CheckCircle2, LockKeyhole } from 'lucide-react'
+import { CheckCircle2, LockKeyhole } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 interface EnhancedUpgradePromptModalProps {
@@ -79,12 +79,9 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
       <ModalContent overflow="hidden" bg="white" color="#111111">
         <Box bg="#F7F7F8" borderBottomWidth="1px" borderColor="gray.200" px={6} py={5} pr={12}>
           <Stack spacing={2}>
-            <Flex align="center" gap={2}>
-              <Icon as={Crown} style={{ color: '#350e6f' }} />
-              <Badge bg="#eab130" style={{ color: '#111111' }}>
-                Full Access
-              </Badge>
-            </Flex>
+            <Badge bg="#eab130" style={{ color: '#111111' }} alignSelf="flex-start">
+              Full Access
+            </Badge>
             <Text as="h2" fontSize="xl" fontWeight="bold" style={{ color: '#111111' }}>
               {title}
             </Text>
