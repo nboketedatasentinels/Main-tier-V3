@@ -131,9 +131,9 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
               justify="space-between"
               gap={3}
               flexDir={{ base: 'column', sm: 'row' }}
-              bg="#EFF6FF"
+              bg="#E0F2FE"
               borderWidth="1px"
-              borderColor="#DBEAFE"
+              borderColor="#BAE6FD"
               borderRadius="xl"
               px={5}
               py={4}
@@ -154,9 +154,9 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
                 px={3}
                 py={2}
                 borderWidth="1px"
-                borderColor="#DBEAFE"
+                borderColor="#BAE6FD"
               >
-                <Text fontSize="2xl" fontWeight="800" letterSpacing="-0.03em" style={{ color: '#27062e' }}>
+                <Text fontSize="2xl" fontWeight="800" letterSpacing="-0.03em" style={{ color: '#0C4A6E' }}>
                   $5
                 </Text>
                 <Text fontSize="sm" fontWeight="500" style={{ color: '#64748B' }}>
@@ -176,9 +176,9 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
                     mt="1px"
                     flexShrink={0}
                     borderRadius="full"
-                    bg="#F3EEF8"
+                    bg="#DBEAFE"
                   >
-                    <Icon as={Check} boxSize={3} style={{ color: '#350e6f' }} strokeWidth={3} />
+                    <Icon as={Check} boxSize={3} style={{ color: '#2563EB' }} strokeWidth={3} />
                   </Flex>
                   <Text fontSize="sm" lineHeight="1.45" style={{ color: '#1e293b' }}>
                     {benefit}

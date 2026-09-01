@@ -209,9 +209,9 @@ export const UpgradePage: React.FC = () => {
                         mt="1px"
                         flexShrink={0}
                         borderRadius="full"
-                        bg="#F3EEF8"
+                        bg="#DBEAFE"
                       >
-                        <Icon as={Check} boxSize={3} style={{ color: '#350e6f' }} strokeWidth={3} />
+                        <Icon as={Check} boxSize={3} style={{ color: '#2563EB' }} strokeWidth={3} />
                       </Flex>
                       <Text fontSize="sm" style={{ color: '#1e293b' }}>
                         {benefit}
