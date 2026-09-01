@@ -3,23 +3,39 @@ import {
   Box,
   Button,
   Container,
+  Flex,
   Heading,
+  HStack,
   Icon,
+  SimpleGrid,
   Stack,
-  Tag,
   Text,
   useDisclosure,
   useToast,
+  VStack,
 } from '@chakra-ui/react'
-import { Crown, Sparkles } from 'lucide-react'
+import { Check, CreditCard, Lock, ShieldCheck } from 'lucide-react'
 import { RequestUpgradeModal } from './RequestUpgradeModal'
 import { RequestStatusView } from './RequestStatusView'
-import { UpgradeCtaCard } from './UpgradeCtaCard'
 import { useAuth } from '@/hooks/useAuth'
 import { usePendingUpgradeRequest } from '@/hooks/useUpgradeRequests'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { hasUnlimitedImpactLogAccess, isFreeUser } from '@/utils/membership'
 import { openImpactLogProCheckout } from '@/services/paymentService'
+
+const impactProBenefits = [
+  'Unlimited Impact Log entries',
+  'PDF and CSV export for stakeholders',
+  'Verifier workflow without the free-tier wall',
+  'Cancel anytime — past logs stay yours',
+]
+
+const fullAccessBenefits = [
+  'Everything in Impact Log Pro',
+  'Mentor and coach pathways',
+  'Full programme access',
+  'Priority support',
+]
 
 export const UpgradePage: React.FC = () => {
   const { profile } = useAuth()
@@ -33,7 +49,6 @@ export const UpgradePage: React.FC = () => {
   const { isOpen, onOpen, onClose } = useDisclosure()
   const { pendingRequest } = usePendingUpgradeRequest(profile?.id)
   const [searchParams] = useSearchParams()
-  const source = searchParams.get('source')
   const impactProStatus = searchParams.get('impact_pro')
   const [checkoutBusy, setCheckoutBusy] = useState(false)
 
@@ -43,7 +58,7 @@ export const UpgradePage: React.FC = () => {
       await openImpactLogProCheckout()
     } catch (err) {
       toast({
-        title: 'Could not start Impact Log Pro checkout',
+        title: 'Could not start checkout',
         description:
           err instanceof Error
             ? err.message
@@ -57,131 +72,282 @@ export const UpgradePage: React.FC = () => {
   }
 
   return (
-    <Box bg="gray.50" minH={{ base: '100dvh', md: '100vh' }} py={12}>
-      <Container maxW="6xl">
-        <Stack spacing={8}>
+    <Box bg="#F7F5F9" minH={{ base: '100dvh', md: '100vh' }} py={{ base: 10, md: 14 }}>
+      <Container maxW="4xl">
+        <Stack spacing={8} style={{ color: '#111111' }}>
           {impactProStatus === 'success' && (
-            <Box bg="green.50" borderWidth="1px" borderColor="green.200" borderRadius="xl" p={5} style={{ color: '#111111' }}>
-              <Heading size="sm" mb={1} style={{ color: '#111111' }}>
-                Impact Log Pro checkout complete
+            <Box bg="#ECFDF5" borderWidth="1px" borderColor="#A7F3D0" borderRadius="xl" p={5}>
+              <Heading size="sm" mb={1} style={{ color: '#065F46' }}>
+                Payment received
               </Heading>
-              <Text fontSize="sm" style={{ color: '#334155' }}>
-                Stripe is confirming your subscription. Refresh in a few seconds if unlimited Impact Log is not
+              <Text fontSize="sm" style={{ color: '#047857' }}>
+                Stripe is confirming Impact Log Pro. Refresh in a few seconds if unlimited logging is not
                 unlocked yet.
               </Text>
             </Box>
           )}
-          {isPaid && (
+
+          {impactProStatus === 'cancel' && (
+            <Box bg="#FFF7ED" borderWidth="1px" borderColor="#FED7AA" borderRadius="xl" p={5}>
+              <Heading size="sm" mb={1} style={{ color: '#9A3412' }}>
+                Checkout cancelled
+              </Heading>
+              <Text fontSize="sm" style={{ color: '#C2410C' }}>
+                No charge was made. Pick a plan below when you are ready.
+              </Text>
+            </Box>
+          )}
+
+          {(isPaid || hasImpactPro) && (
             <Box
               bg="white"
               borderWidth="1px"
-              borderColor="green.200"
+              borderColor="#A7F3D0"
               borderRadius="xl"
               p={{ base: 5, md: 6 }}
               boxShadow="sm"
-              style={{ color: '#111111' }}
             >
               <Stack spacing={3}>
                 <Heading size="md" style={{ color: '#111111' }}>
-                  Your membership is active
+                  {isPaid ? 'Your membership is active' : 'Impact Log Pro is active'}
                 </Heading>
                 <Text style={{ color: '#334155' }}>
-                  Full access is already unlocked for your account. Jump back into the dashboard to explore your
-                  upgraded features.
+                  {isPaid
+                    ? 'Full access is unlocked. Jump back into the dashboard to keep going.'
+                    : 'Unlimited Impact Log is unlocked on your account.'}
                 </Text>
-                <Button alignSelf="flex-start" colorScheme="purple" onClick={() => navigate('/app/leaderboard')}>
+                <Button
+                  alignSelf="flex-start"
+                  bg="#350e6f"
+                  color="white"
+                  _hover={{ bg: '#27062e' }}
+                  onClick={() => navigate('/app/leaderboard')}
+                >
                   Go to Dashboard
                 </Button>
               </Stack>
             </Box>
           )}
-          <Box
-            bgGradient="linear(to-r, amber.200, pink.200)"
-            borderRadius="xl"
-            p={{ base: 6, md: 10 }}
-            boxShadow="lg"
-            position="relative"
-            overflow="hidden"
-            color="#111111"
-          >
-            <Icon as={Sparkles} color="#350e6f" opacity={0.15} boxSize={28} position="absolute" right={-6} top={-6} />
-            <Stack spacing={4} maxW="3xl" style={{ color: '#111111' }}>
-              <Tag size="lg" colorScheme="purple" w="fit-content">
-                Upgrade Journey
-              </Tag>
-              <Heading size="2xl" style={{ color: '#111111' }}>
-                {isPaid ? 'Full access confirmed' : 'Unlock your full leadership potential'}
-              </Heading>
-              <Text fontSize="lg" style={{ color: '#1e293b' }}>
-                {isPaid
-                  ? 'You are already upgraded. Explore full-access features from your dashboard.'
-                  : "Request a custom upgrade pathway. We'll respond within 24 hours."}
-                {source ? ` (via ${source})` : ''}
-              </Text>
-              <Stack direction={{ base: 'column', md: 'row' }} spacing={4}>
-                {isPaid ? (
-                  <Button colorScheme="purple" size="lg" onClick={() => navigate('/app/leaderboard')}>
-                    Go to Dashboard
+
+          <VStack spacing={3} textAlign="center" px={2}>
+            <Text
+              fontSize="xs"
+              fontWeight="700"
+              letterSpacing="0.14em"
+              textTransform="uppercase"
+              style={{ color: '#350e6f' }}
+            >
+              Checkout
+            </Text>
+            <Heading
+              as="h1"
+              fontSize={{ base: '2xl', md: '3xl' }}
+              fontWeight="800"
+              letterSpacing="-0.03em"
+              lineHeight="1.2"
+              style={{ color: '#111111' }}
+            >
+              Choose a plan
+            </Heading>
+            <Text fontSize="md" maxW="lg" style={{ color: '#475569' }}>
+              Secure Stripe checkout. Cancel anytime. Past Impact Log entries stay readable forever.
+            </Text>
+          </VStack>
+
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={5} alignItems="stretch">
+            {/* Impact Log Pro — primary checkout card */}
+            <Box
+              bg="white"
+              borderWidth="2px"
+              borderColor="#350e6f"
+              borderRadius="2xl"
+              overflow="hidden"
+              boxShadow="0 16px 40px rgba(53, 14, 111, 0.12)"
+              position="relative"
+            >
+              <Box h="4px" bgGradient="linear(to-r, #27062e, #350e6f, #f4540c, #eab130)" />
+              <Box
+                position="absolute"
+                top={4}
+                right={4}
+                bg="#eab130"
+                color="#111111"
+                fontSize="xs"
+                fontWeight="700"
+                px={3}
+                py={1}
+                borderRadius="full"
+              >
+                Most popular
+              </Box>
+              <Stack spacing={6} p={{ base: 6, md: 7 }}>
+                <Box>
+                  <Text fontSize="sm" fontWeight="700" style={{ color: '#350e6f' }}>
+                    Impact Log Pro
+                  </Text>
+                  <HStack align="baseline" spacing={1} mt={2}>
+                    <Text fontSize="4xl" fontWeight="800" letterSpacing="-0.04em" style={{ color: '#111111' }}>
+                      $5
+                    </Text>
+                    <Text fontSize="md" fontWeight="500" style={{ color: '#64748B' }}>
+                      /month
+                    </Text>
+                  </HStack>
+                  <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
+                    Billed monthly · cancel anytime
+                  </Text>
+                </Box>
+
+                <Stack spacing={3}>
+                  {impactProBenefits.map((benefit) => (
+                    <HStack key={benefit} align="flex-start" spacing={3}>
+                      <Flex
+                        align="center"
+                        justify="center"
+                        w={5}
+                        h={5}
+                        mt="1px"
+                        flexShrink={0}
+                        borderRadius="full"
+                        bg="#ECFDF5"
+                      >
+                        <Icon as={Check} boxSize={3} style={{ color: '#059669' }} strokeWidth={3} />
+                      </Flex>
+                      <Text fontSize="sm" style={{ color: '#1e293b' }}>
+                        {benefit}
+                      </Text>
+                    </HStack>
+                  ))}
+                </Stack>
+
+                {hasImpactPro || isPaid ? (
+                  <Button size="lg" w="full" borderRadius="xl" isDisabled>
+                    Already included
                   </Button>
                 ) : (
-                  <>
-                    <Button colorScheme="purple" size="lg" onClick={onOpen} leftIcon={<Crown />}>
-                      Request full upgrade
-                    </Button>
-                    {!hasImpactPro && (
-                      <Button
-                        variant="solid"
-                        size="lg"
-                        colorScheme="orange"
-                        isLoading={checkoutBusy}
-                        onClick={() => void startImpactPro()}
-                      >
-                        Impact Log Pro · $5/mo
-                      </Button>
-                    )}
-                    <Button
-                      variant="outline"
-                      size="lg"
-                      colorScheme="purple"
-                      borderColor="#350e6f"
-                      style={{ color: '#350e6f' }}
-                      onClick={() => navigate('/login')}
-                    >
-                      Already upgraded? Sign In
-                    </Button>
-                  </>
+                  <Button
+                    size="lg"
+                    w="full"
+                    borderRadius="xl"
+                    bg="#350e6f"
+                    color="white"
+                    fontWeight="700"
+                    leftIcon={<Icon as={CreditCard} boxSize={4} />}
+                    _hover={{ bg: '#27062e' }}
+                    _active={{ bg: '#1f0524' }}
+                    isLoading={checkoutBusy}
+                    loadingText="Redirecting to Stripe…"
+                    onClick={() => void startImpactPro()}
+                  >
+                    Continue to checkout
+                  </Button>
                 )}
               </Stack>
-              {!isPaid && (
-                <Text fontSize="sm" style={{ color: '#334155' }}>
-                  Full programme (mentor/coach) via custom upgrade · or Impact Log only for $5/month (cancel anytime)
-                </Text>
-              )}
-            </Stack>
-          </Box>
+            </Box>
+
+            {/* Full programme — request path */}
+            <Box
+              bg="white"
+              borderWidth="1px"
+              borderColor="#E8DFF0"
+              borderRadius="2xl"
+              overflow="hidden"
+              boxShadow="sm"
+            >
+              <Stack spacing={6} p={{ base: 6, md: 7 }} h="full">
+                <Box>
+                  <Text fontSize="sm" fontWeight="700" style={{ color: '#64748B' }}>
+                    Full programme
+                  </Text>
+                  <Text fontSize="2xl" fontWeight="800" letterSpacing="-0.03em" mt={2} style={{ color: '#111111' }}>
+                    Custom pricing
+                  </Text>
+                  <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
+                    Mentor / coach pathways · we reply within 24 hours
+                  </Text>
+                </Box>
+
+                <Stack spacing={3} flex="1">
+                  {fullAccessBenefits.map((benefit) => (
+                    <HStack key={benefit} align="flex-start" spacing={3}>
+                      <Flex
+                        align="center"
+                        justify="center"
+                        w={5}
+                        h={5}
+                        mt="1px"
+                        flexShrink={0}
+                        borderRadius="full"
+                        bg="#F1F5F9"
+                      >
+                        <Icon as={Check} boxSize={3} style={{ color: '#475569' }} strokeWidth={3} />
+                      </Flex>
+                      <Text fontSize="sm" style={{ color: '#1e293b' }}>
+                        {benefit}
+                      </Text>
+                    </HStack>
+                  ))}
+                </Stack>
+
+                {isPaid ? (
+                  <Button size="lg" w="full" borderRadius="xl" isDisabled>
+                    Already active
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    w="full"
+                    borderRadius="xl"
+                    variant="outline"
+                    borderColor="#350e6f"
+                    style={{ color: '#350e6f' }}
+                    fontWeight="700"
+                    _hover={{ bg: '#FAF7FC' }}
+                    onClick={onOpen}
+                  >
+                    Request full upgrade
+                  </Button>
+                )}
+              </Stack>
+            </Box>
+          </SimpleGrid>
+
+          <HStack
+            justify="center"
+            spacing={{ base: 4, md: 8 }}
+            flexWrap="wrap"
+            pt={1}
+            style={{ color: '#64748B' }}
+          >
+            <HStack spacing={2}>
+              <Icon as={Lock} boxSize={3.5} />
+              <Text fontSize="xs" fontWeight="500">
+                Secure Stripe checkout
+              </Text>
+            </HStack>
+            <HStack spacing={2}>
+              <Icon as={ShieldCheck} boxSize={3.5} />
+              <Text fontSize="xs" fontWeight="500">
+                Cancel anytime
+              </Text>
+            </HStack>
+            <HStack spacing={2}>
+              <Icon as={CreditCard} boxSize={3.5} />
+              <Text fontSize="xs" fontWeight="500">
+                Card payment · no invoice chase
+              </Text>
+            </HStack>
+          </HStack>
 
           {pendingRequest && !isPaid && <RequestStatusView request={pendingRequest} />}
 
-          {!isPaid && !hasImpactPro && (
-            <UpgradeCtaCard
-              headline="Just need Impact Log?"
-              benefits={[
-                'Unlimited Impact Log entries after your 2 free ones',
-                'PDF and CSV export',
-                '$5/month — cancel anytime',
-              ]}
-              onClick={() => void startImpactPro()}
-              storageKey="upgrade-page-impact-pro-cta"
-            />
-          )}
-
-          {!isPaid && (
-            <UpgradeCtaCard
-              headline="Unlock full access"
-              benefits={['Unlimited impact entries', 'Mentor & coach pathways', 'Priority support']}
-              onClick={onOpen}
-              storageKey="upgrade-page-cta"
-            />
+          {!profile && (
+            <Text textAlign="center" fontSize="sm" style={{ color: '#64748B' }}>
+              Already upgraded?{' '}
+              <Button variant="link" color="#350e6f" onClick={() => navigate('/login')}>
+                Sign in
+              </Button>
+            </Text>
           )}
         </Stack>
       </Container>
