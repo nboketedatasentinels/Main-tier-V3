@@ -131,9 +131,9 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
               justify="space-between"
               gap={3}
               flexDir={{ base: 'column', sm: 'row' }}
-              bg="#FAF7FC"
+              bg="#EFF6FF"
               borderWidth="1px"
-              borderColor="#E8DFF0"
+              borderColor="#DBEAFE"
               borderRadius="xl"
               px={5}
               py={4}
@@ -154,7 +154,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
                 px={3}
                 py={2}
                 borderWidth="1px"
-                borderColor="#E8DFF0"
+                borderColor="#DBEAFE"
               >
                 <Text fontSize="2xl" fontWeight="800" letterSpacing="-0.03em" style={{ color: '#27062e' }}>
                   $5
