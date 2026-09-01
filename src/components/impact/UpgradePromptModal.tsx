@@ -76,51 +76,68 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
   return (
     <Modal isOpen={isOpen} onClose={onClose} isCentered>
       <ModalOverlay />
-      <ModalContent overflow="hidden">
-        <Box bg="gray.50" borderBottomWidth="1px" borderColor="border.subtle" px={6} py={5}>
-          <Flex justify="space-between" align="center" gap={4}>
+      <ModalContent overflow="hidden" bg="white" color="#111111">
+        <Box
+          bg="#F7F7F8"
+          borderBottomWidth="1px"
+          borderColor="gray.200"
+          px={6}
+          py={5}
+          pr={12}
+        >
+          <Flex justify="space-between" align="flex-start" gap={4}>
             <Stack spacing={2} flex={1} minW={0}>
               <Flex align="center" gap={2}>
-                <Icon as={Crown} color="brand.primary" />
-                <Badge colorScheme="yellow" bg="accent.warning" color="black">
+                <Icon as={Crown} style={{ color: '#350e6f' }} />
+                <Badge bg="#eab130" style={{ color: '#111111' }}>
                   Full Access
                 </Badge>
               </Flex>
-              <Text fontSize="xl" fontWeight="bold" color="black">
+              {/* Inline styles beat theme rules that force white on nested Text */}
+              <Text
+                as="h2"
+                fontSize="xl"
+                fontWeight="bold"
+                style={{ color: '#111111' }}
+              >
                 {title}
               </Text>
-              <Text color="black" opacity={0.85}>
+              <Text as="p" fontSize="md" style={{ color: '#111111' }}>
                 {message}
               </Text>
             </Stack>
-            <Icon as={Sparkles} boxSize={10} color="orange.400" flexShrink={0} />
+            <Icon as={Sparkles} boxSize={10} style={{ color: '#f4540c' }} flexShrink={0} />
           </Flex>
         </Box>
-        <ModalHeader>
+        <ModalCloseButton style={{ color: '#111111' }} />
+        <ModalHeader color="#111111">
           <Flex align="center" gap={2}>
-            <Icon as={LockKeyhole} />
-            <Text>Unlock {feature}</Text>
+            <Icon as={LockKeyhole} style={{ color: '#111111' }} />
+            <Text style={{ color: '#111111' }}>Unlock {feature}</Text>
           </Flex>
         </ModalHeader>
-        <ModalCloseButton />
         <ModalBody>
-          <Stack spacing={4}>
+          <Stack spacing={4} color="#111111">
             <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={3} borderColor="border.strong">
-              <Text fontWeight="semibold">Keep the evidence flowing</Text>
-              <Text color="text.secondary">Impact Log Pro from ~$5/month. Past entries stay readable forever.</Text>
+              <Text fontWeight="semibold" style={{ color: '#111111' }}>
+                Keep the evidence flowing
+              </Text>
+              <Text style={{ color: '#334155' }}>
+                Impact Log Pro from ~$5/month. Past entries stay readable forever.
+              </Text>
             </Box>
             <List spacing={2}>
               {resolvedBenefits.map((benefit) => (
                 <ListItem key={benefit} display="flex" alignItems="center" gap={2}>
                   <ListIcon as={CheckCircle2} color="green.500" />
-                  <Text>{benefit}</Text>
+                  <Text style={{ color: '#111111' }}>{benefit}</Text>
                 </ListItem>
               ))}
             </List>
           </Stack>
         </ModalBody>
         <ModalFooter gap={3}>
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="ghost" onClick={onClose} style={{ color: '#111111' }}>
             Maybe Later
           </Button>
           <Button colorScheme="purple" onClick={handleCta}>
