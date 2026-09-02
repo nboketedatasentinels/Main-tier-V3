@@ -192,7 +192,7 @@ begin
     automated_match, created_at, last_refresh_at, updated_at
   ) values (
     v_uid, v_peer_id, v_key,
-    'Weekly points race — outscore your match for 1,000 points',
+    'Weekly points race. Outscore your match for 1,000 points',
     'new', v_pref, v_day, 0, true, now(), now(), now()
   )
   returning * into v_existing;
@@ -205,7 +205,7 @@ begin
     automated_match, created_at, last_refresh_at, updated_at
   ) values (
     v_peer_id, v_uid, v_key,
-    'Weekly points race — outscore your match for 1,000 points',
+    'Weekly points race. Outscore your match for 1,000 points',
     'new', v_pref, v_day, 0, true, now(), now(), now()
   )
   on conflict (uid, match_key) do nothing;
@@ -335,7 +335,7 @@ begin
     automated_match, created_at, last_refresh_at, updated_at
   ) values (
     v_uid, p_peer_uid, v_key,
-    'Weekly points race — outscore your match for 1,000 points',
+    'Weekly points race. Outscore your match for 1,000 points',
     'new', v_pref, v_day, 0, true, now(), now(), now()
   )
   returning * into v_existing;
@@ -348,7 +348,7 @@ begin
     automated_match, created_at, last_refresh_at, updated_at
   ) values (
     p_peer_uid, v_uid, v_key,
-    'Weekly points race — outscore your match for 1,000 points',
+    'Weekly points race. Outscore your match for 1,000 points',
     'new', v_pref, v_day, 0, true, now(), now(), now()
   )
   on conflict (uid, match_key) do nothing;

@@ -265,7 +265,7 @@ type MatchPreferences = MatchPreferencesForWindow & {
 }
 
 const defaultSessionDescription =
-  'Work through a practical together — shared insight on the same exercise, not a free-form chat.'
+  'Work through a practical together: shared insight on the same exercise, not a free-form chat.'
 const ACTIVE_SESSION_WINDOW_MS = 2 * 60 * 60 * 1000
 
 const buildWeeklyMatchFromRow = (row: PeerWeeklyMatchRow, peer: PeerProfile): WeeklyMatch => ({
@@ -748,19 +748,6 @@ export const PeerConnectPage: React.FC = () => {
     return labelMap[status]
   }, [weeklyMatch])
 
-  const matchStatusColor = useMemo(() => {
-    if (!weeklyMatch) return 'gray'
-    const status = weeklyMatch.matchStatus || 'new'
-    const colorMap: Record<MatchStatus, string> = {
-      new: 'purple',
-      viewed: 'blue',
-      contacted: 'teal',
-      completed: 'green',
-      expired: 'orange',
-    }
-    return colorMap[status]
-  }, [weeklyMatch])
-
   const matchAgeLabel = useMemo(() => {
     if (!weeklyMatch) return 'No match yet'
     if (!weeklyMatch.createdAt) return 'Match just created'
@@ -798,7 +785,7 @@ export const PeerConnectPage: React.FC = () => {
     if (matchPreferences.refreshPreference === 'on-demand') {
       return 'Request a new peer whenever you are ready. Matches stay active until you refresh manually.'
     }
-    return 'From the day you join, you are auto-matched every 7 days. Outscore your match that week to earn 1,000 points — otherwise you get nothing.'
+    return 'From the day you join, you are auto-matched every 7 days. Outscore your match that week to earn 1,000 points. Otherwise you get nothing.'
   }, [matchPreferences.refreshPreference])
 
   const peerDisplayName = useMemo(() => {
@@ -1205,7 +1192,7 @@ export const PeerConnectPage: React.FC = () => {
                       Weekly Peer Match
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      Auto-paired every 7 days · outscore them for 1,000 points
+                      Auto-paired every 7 days. Outscore them for 1,000 points
                     </Text>
                   </Stack>
                 </HStack>
@@ -1384,7 +1371,7 @@ export const PeerConnectPage: React.FC = () => {
                       >
                         {matchPreferences.refreshPreference === 'disabled'
                           ? 'Matching paused'
-                          : `Window · ${matchWindow.label}`}
+                          : `Window: ${matchWindow.label}`}
                       </Text>
                       <Heading size="lg" color="brand.dark" letterSpacing="-0.02em">
                         {matchPreferences.refreshPreference === 'disabled'
@@ -1457,7 +1444,6 @@ export const PeerConnectPage: React.FC = () => {
                                 <Icon as={Clock3} w={3.5} h={3.5} />
                                 <Text>{weeklyMatch.peer.timezone || 'Timezone not set'}</Text>
                               </HStack>
-                              <Text color="gray.300">·</Text>
                               <Text color="gray.600" fontWeight="medium">
                                 Status: {matchStatusLabel}
                               </Text>

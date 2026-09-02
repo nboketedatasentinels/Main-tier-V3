@@ -302,7 +302,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "peer_to_peer",
     title: "Practical (with a peer)",
     description:
-      "Complete a practical with someone else. Peer matching stays separate — this is the practical itself.",
+      "Complete a practical with someone else. Peer matching stays separate. This is the practical itself.",
     points: 1000,
     behaviorType: "window_limited",
     // Not self-claimable from the checklist - points come from completing the practical with a peer.
@@ -372,7 +372,7 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
     baseId: "peer_matching",
     title: "Peer Match Weekly Race",
     description:
-      "Every 7 days you are auto-matched with someone in your organisation. Gain more points than them that week to earn these points — if you don't outscore them, you get nothing.",
+      "Every 7 days you are auto-matched with someone in your organisation. Gain more points than them that week to earn these points. If you don't outscore them, you get nothing.",
     points: 1000,
     behaviorType: "ongoing",
     defaultMaxPerWindow: 2,
