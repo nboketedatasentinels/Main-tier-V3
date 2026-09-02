@@ -490,7 +490,17 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.error('[PeerMatch] Error in fetchWeeklyMatch:', error)
       setWeeklyMatch(null)
-      setMatchAvailabilityMessage('We could not load your peer match right now. Please refresh and try again.')
+      const detail =
+        error instanceof Error && error.message.trim()
+          ? error.message.trim()
+          : error && typeof error === 'object' && 'message' in error
+            ? String((error as { message?: unknown }).message ?? '')
+            : ''
+      setMatchAvailabilityMessage(
+        detail
+          ? `We could not load your peer match right now (${detail}). Please refresh and try again.`
+          : 'We could not load your peer match right now. Please refresh and try again.',
+      )
     }
   }, [
     attemptAutomaticRematch,
