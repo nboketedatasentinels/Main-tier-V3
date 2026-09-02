@@ -434,140 +434,145 @@ export const ImpactLogV2: React.FC = () => {
 
   return (
     <Box>
-      <Flex
-        gap={1}
-        overflowX="auto"
-        borderBottom="1px solid"
-        borderColor="border.subtle"
-        bg="surface.default"
-        px={2}
-        mb={0}
+      <Box
         position="sticky"
         top={0}
-        zIndex={10}
+        zIndex={20}
+        bg="surface.default"
+        boxShadow="sm"
       >
-        {navBtn('log', 'Log impact')}
-        {navBtn('dash', 'Value dashboard')}
-        {navBtn('waste', 'Where value comes from')}
-        {isAdmin && navBtn('register', 'Value register')}
-        {navBtn('claims', 'Claims ledger')}
-        {isSuperAdmin && navBtn('sector', 'By sector')}
-        {navBtn('export', 'Export')}
-      </Flex>
+        <Flex
+          gap={1}
+          overflowX="auto"
+          borderBottom="1px solid"
+          borderColor="border.subtle"
+          bg="surface.default"
+          px={2}
+          mb={0}
+        >
+          {navBtn('log', 'Log impact')}
+          {navBtn('dash', 'Value dashboard')}
+          {navBtn('waste', 'Where value comes from')}
+          {isAdmin && navBtn('register', 'Value register')}
+          {navBtn('claims', 'Claims ledger')}
+          {isSuperAdmin && navBtn('sector', 'By sector')}
+          {navBtn('export', 'Export')}
+        </Flex>
 
-      {tab === 'log' && !entry && (
-        <>
-          <Box
-            position="relative"
-            overflow="hidden"
-            bgGradient="linear(to-r, #350e6f, #8b5a3c)"
-            color="white"
-            px={{ base: 4, md: 6 }}
-            py={{ base: 4, md: 5 }}
-          >
+        {tab === 'log' && !entry && (
+          <>
             <Box
-              position="absolute"
-              top="-40%"
-              right="-8%"
-              w="280px"
-              h="280px"
-              borderRadius="full"
-              bg="whiteAlpha.100"
-              filter="blur(50px)"
-              pointerEvents="none"
-            />
-            <HStack spacing={2} mb={2} position="relative">
-              <Badge
-                bg="whiteAlpha.200"
-                color="white"
-                px={2.5}
-                py={0.5}
+              position="relative"
+              overflow="hidden"
+              bgGradient="linear(to-r, #350e6f, #8b5a3c)"
+              color="white"
+              px={{ base: 4, md: 6 }}
+              py={{ base: 4, md: 5 }}
+            >
+              <Box
+                position="absolute"
+                top="-40%"
+                right="-8%"
+                w="280px"
+                h="280px"
                 borderRadius="full"
-                fontSize="xs"
-                fontWeight="semibold"
-                textTransform="uppercase"
-                letterSpacing="wide"
-              >
-                Impact log
-              </Badge>
-              <ImpactHelpButton k="howvalued" onOpen={setHelpKey} />
-            </HStack>
-            <Heading size="md" mb={1} color="white" fontWeight="semibold" position="relative">
-              Log what changed, and what it added up to
-            </Heading>
-            <Text fontSize="sm" color="whiteAlpha.800" maxW="48ch" position="relative">
-              Organisation totals and your pipeline first. Points stay on your journey dashboard.
-            </Text>
-          </Box>
-
-          <SimpleGrid
-            columns={{ base: 1, md: 3 }}
-            spacing={0}
-            borderBottom="1px solid"
-            borderColor="border.subtle"
-            bg="surface.default"
-          >
-            <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
-              <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
-                You · {displayName.split(' ')[0]}
-              </Text>
-              <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
-                {formatMoney(meStats.money)}
-              </Text>
-              <Text fontSize="sm" color="text.secondary">
-                {meStats.claims} improvement claim{meStats.claims === 1 ? '' : 's'} · {meStats.esg}{' '}
-                ESG · {meStats.acts > 0 ? `${meStats.acts} activit${meStats.acts === 1 ? 'y' : 'ies'}` : `${meStats.validated} validated`}
-              </Text>
-              <Text fontSize="sm" color="text.secondary" mt={1}>
-                {meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs ·{' '}
-                {meStats.peopleReached.toLocaleString()} people reached
-              </Text>
-              <Progress
-                value={pctMe}
-                size="sm"
-                colorScheme="yellow"
-                mt={3}
-                borderRadius="full"
-                bg="blackAlpha.100"
+                bg="whiteAlpha.100"
+                filter="blur(50px)"
+                pointerEvents="none"
               />
-              <Text fontSize="xs" color="text.muted" mt={1}>
-                {pctMe.toFixed(0)}% of organisation validated value
+              <HStack spacing={2} mb={2} position="relative">
+                <Badge
+                  bg="whiteAlpha.200"
+                  color="white"
+                  px={2.5}
+                  py={0.5}
+                  borderRadius="full"
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                >
+                  Impact log
+                </Badge>
+                <ImpactHelpButton k="howvalued" onOpen={setHelpKey} />
+              </HStack>
+              <Heading size="md" mb={1} color="white" fontWeight="semibold" position="relative">
+                Log what changed, and what it added up to
+              </Heading>
+              <Text fontSize="sm" color="whiteAlpha.800" maxW="48ch" position="relative">
+                Organisation totals and your pipeline first. Points stay on your journey dashboard.
               </Text>
             </Box>
-            <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
-              <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
-                Organisation
-              </Text>
-              <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
-                {formatMoney(orgStats.money)}
-              </Text>
-              <Text fontSize="sm" color="text.secondary">
-                {orgStats.validated} validated · {orgStats.people} contributing ·{' '}
-                {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs
-              </Text>
-              <Text fontSize="sm" color="text.secondary" mt={1}>
-                {orgStats.claims} claims · {orgStats.esg} ESG ·{' '}
-                {orgStats.peopleReached.toLocaleString()} people reached
-              </Text>
-            </Box>
-            <Box p={{ base: 4, md: 5 }} bg="tint.brandPrimary">
-              <Text fontSize="xs" textTransform="uppercase" color="brand.primary" fontWeight="bold">
-                Pipeline (Tier 2)
-              </Text>
-              <Text fontSize="2xl" fontWeight="bold" lineHeight="1.15" my={1} color="brand.primary">
-                {formatMoney(
-                  entries
-                    .filter((e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2)
-                    .reduce((s, e) => s + Number(e.usdValue || 0), 0),
-                )}
-              </Text>
-              <Text fontSize="sm" color="text.secondary">
-                Indicative only, never inside the headline.
-              </Text>
-            </Box>
-          </SimpleGrid>
-        </>
-      )}
+
+            <SimpleGrid
+              columns={{ base: 1, md: 3 }}
+              spacing={0}
+              borderBottom="1px solid"
+              borderColor="border.subtle"
+              bg="surface.default"
+            >
+              <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
+                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
+                  You · {displayName.split(' ')[0]}
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
+                  {formatMoney(meStats.money)}
+                </Text>
+                <Text fontSize="sm" color="text.secondary">
+                  {meStats.claims} improvement claim{meStats.claims === 1 ? '' : 's'} · {meStats.esg}{' '}
+                  ESG · {meStats.acts > 0 ? `${meStats.acts} activit${meStats.acts === 1 ? 'y' : 'ies'}` : `${meStats.validated} validated`}
+                </Text>
+                <Text fontSize="sm" color="text.secondary" mt={1}>
+                  {meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs ·{' '}
+                  {meStats.peopleReached.toLocaleString()} people reached
+                </Text>
+                <Progress
+                  value={pctMe}
+                  size="sm"
+                  colorScheme="yellow"
+                  mt={3}
+                  borderRadius="full"
+                  bg="blackAlpha.100"
+                />
+                <Text fontSize="xs" color="text.muted" mt={1}>
+                  {pctMe.toFixed(0)}% of organisation validated value
+                </Text>
+              </Box>
+              <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
+                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
+                  Organisation
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
+                  {formatMoney(orgStats.money)}
+                </Text>
+                <Text fontSize="sm" color="text.secondary">
+                  {orgStats.validated} validated · {orgStats.people} contributing ·{' '}
+                  {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs
+                </Text>
+                <Text fontSize="sm" color="text.secondary" mt={1}>
+                  {orgStats.claims} claims · {orgStats.esg} ESG ·{' '}
+                  {orgStats.peopleReached.toLocaleString()} people reached
+                </Text>
+              </Box>
+              <Box p={{ base: 4, md: 5 }} bg="tint.brandPrimary">
+                <Text fontSize="xs" textTransform="uppercase" color="brand.primary" fontWeight="bold">
+                  Pipeline (Tier 2)
+                </Text>
+                <Text fontSize="2xl" fontWeight="bold" lineHeight="1.15" my={1} color="brand.primary">
+                  {formatMoney(
+                    entries
+                      .filter((e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2)
+                      .reduce((s, e) => s + Number(e.usdValue || 0), 0),
+                  )}
+                </Text>
+                <Text fontSize="sm" color="text.secondary">
+                  Indicative only, never inside the headline.
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </>
+        )}
+      </Box>
 
       <Box maxW="1140px" mx="auto" px={{ base: 4, md: 5 }} py={5}>
         {loading && (
