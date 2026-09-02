@@ -59,7 +59,6 @@ import {
   Video,
   X,
 } from 'lucide-react'
-import { auth } from '@/services/firebase'
 import { useAuth } from '@/hooks/useAuth'
 import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { getOrgScope } from '@/utils/organizationScope'
@@ -513,63 +512,39 @@ export const PeerConnectPage: React.FC = () => {
     }
   }, [user, profile?.timezone])
 
-  // Real-time subscription for sessions and invitations
+  // Live refresh for practicals and invitations (Supabase)
   useEffect(() => {
     if (!user || loading || profileLoading) return
 
-    let isActive = true
-    let unsubscribeSessions: (() => void) | null = null
-    let unsubscribeInvites: (() => void) | null = null
+    setLoadingSessions(true)
+    const unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
+      const mappedSessions: PeerSession[] = sessionData.map((session) =>
+        mapServiceSessionToPeerSession(session, {
+          currentUserId: user.uid,
+          timezoneFallback: profile?.timezone,
+        }),
+      )
+      setSessions(mappedSessions)
+      setLoadingSessions(false)
+    })
 
-    const startSubscriptions = async () => {
-      try {
-        await user.getIdToken()
-      } catch (error) {
-        console.warn('[PeerConnect] Unable to refresh auth token before subscribing', error)
-      }
-
-      if (!isActive) return
-      if (!auth.currentUser?.uid || auth.currentUser.uid !== user.uid) {
-        console.warn('[PeerConnect] Auth user mismatch; skipping session subscriptions', {
-          authUid: auth.currentUser?.uid ?? null,
-          userUid: user.uid,
-        })
-        return
-      }
-
-      setLoadingSessions(true)
-
-      unsubscribeSessions = subscribeToUserSessions(user.uid, (sessionData) => {
-        const mappedSessions: PeerSession[] = sessionData.map((session) =>
-          mapServiceSessionToPeerSession(session, {
-            currentUserId: user.uid,
-            timezoneFallback: profile?.timezone,
-          }),
-        )
-        setSessions(mappedSessions)
-        setLoadingSessions(false)
+    const unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
+      const mappedInvites: Invitation[] = inviteData.map((invite) => {
+        const email = typeof invite.fromEmail === 'string' ? invite.fromEmail : ''
+        return {
+          id: invite.id,
+          fromName: getDisplayName({ name: invite.fromName, email }, 'Peer'),
+          fromEmail: email || 'peer@example.com',
+        }
       })
+      setPendingInvites(mappedInvites)
+    })
 
-      unsubscribeInvites = subscribeToUserInvitations(user.uid, (inviteData) => {
-        const mappedInvites: Invitation[] = inviteData.map((invite) => {
-          const email = typeof invite.fromEmail === 'string' ? invite.fromEmail : ''
-          return {
-            id: invite.id,
-            fromName: getDisplayName({ name: invite.fromName, email }, 'Peer'),
-            fromEmail: email || 'peer@example.com',
-          }
-        })
-        setPendingInvites(mappedInvites)
-      })
-    }
-
-    void startSubscriptions()
     void loadSessionsAndInvites()
 
     return () => {
-      isActive = false
-      if (unsubscribeSessions) unsubscribeSessions()
-      if (unsubscribeInvites) unsubscribeInvites()
+      unsubscribeSessions()
+      unsubscribeInvites()
     }
   }, [loading, loadSessionsAndInvites, profile?.timezone, profileLoading, user])
 
@@ -681,7 +656,20 @@ export const PeerConnectPage: React.FC = () => {
         if (!openSessions.length) return
 
         const results = await Promise.allSettled(
-          openSessions.map((session) => processPeerSessionLifecycleForUser(session, user.uid)),
+          openSessions.map((session) =>
+            processPeerSessionLifecycleForUser(
+              {
+                id: session.id,
+                title: session.title,
+                status: session.status,
+                scheduledAt: session.scheduledAt,
+                timezone: session.timezone,
+                participants: session.participants,
+                createdBy: user.uid,
+              },
+              user.uid,
+            ),
+          ),
         )
 
         const markedMissedCount = results.reduce((count, result) => {
@@ -1051,7 +1039,7 @@ export const PeerConnectPage: React.FC = () => {
       console.error('Session creation failed:', error)
       toast({
         title: 'Could not create practical',
-        description: 'Please try again.',
+        description: error instanceof Error ? error.message : 'Please try again.',
         status: 'error',
         position: 'top',
       })
