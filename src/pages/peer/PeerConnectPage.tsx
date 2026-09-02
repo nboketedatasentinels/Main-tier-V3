@@ -35,7 +35,6 @@ import {
   TabPanel,
   TabPanels,
   Tabs,
-  Tag,
   Text,
   Textarea,
   useDisclosure,
@@ -1354,83 +1353,152 @@ export const PeerConnectPage: React.FC = () => {
         <TabPanels pt={4}>
           <TabPanel px={0} id="peer-matching" scrollMarginTop="80px">
             <Stack spacing={4}>
-              <Box bg="white" p={6} borderRadius="xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
-                    <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} mb={4} direction={{ base: 'column', md: 'row' }}>
-                      <Stack spacing={1}>
-                        <Text fontSize="xs" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold" color="gray.500">
-                          {matchPreferences.refreshPreference === 'disabled'
-                            ? 'Matching paused'
-                            : `Match window ${matchWindow.label}`}
-                        </Text>
-                        <Heading size="md" color="gray.800">
-                          {matchPreferences.refreshPreference === 'disabled' ? 'Peer Matching Paused' : 'Your Peer Match'}
-                        </Heading>
-                        <Text fontSize="sm" color="gray.500">{matchDescription}</Text>
-                      </Stack>
-                      <Badge colorScheme="purple" variant="subtle" alignSelf="flex-start">
-                        {refreshBadgeLabel}
-                      </Badge>
-                    </Flex>
+              <Box
+                bg="white"
+                borderRadius="2xl"
+                border="1px solid"
+                borderColor="gray.100"
+                boxShadow="0 1px 3px rgba(39, 6, 46, 0.06)"
+                overflow="hidden"
+              >
+                <Box
+                  px={{ base: 5, md: 7 }}
+                  pt={{ base: 5, md: 6 }}
+                  pb={4}
+                  borderBottom="1px solid"
+                  borderColor="gray.100"
+                >
+                  <Flex
+                    justify="space-between"
+                    align={{ base: 'flex-start', md: 'center' }}
+                    gap={4}
+                    direction={{ base: 'column', md: 'row' }}
+                  >
+                    <Stack spacing={1} maxW="3xl">
+                      <Text
+                        fontSize="xs"
+                        textTransform="uppercase"
+                        letterSpacing="0.08em"
+                        fontWeight="semibold"
+                        color="gray.500"
+                      >
+                        {matchPreferences.refreshPreference === 'disabled'
+                          ? 'Matching paused'
+                          : `Window · ${matchWindow.label}`}
+                      </Text>
+                      <Heading size="lg" color="brand.dark" letterSpacing="-0.02em">
+                        {matchPreferences.refreshPreference === 'disabled'
+                          ? 'Peer matching paused'
+                          : 'Your peer match'}
+                      </Heading>
+                      <Text fontSize="sm" color="gray.600" lineHeight="1.6">
+                        {matchDescription}
+                      </Text>
+                    </Stack>
+                    <Badge
+                      alignSelf="flex-start"
+                      px={3}
+                      py={1}
+                      borderRadius="full"
+                      bg="gray.50"
+                      color="gray.700"
+                      border="1px solid"
+                      borderColor="gray.200"
+                      fontWeight="medium"
+                      textTransform="none"
+                      letterSpacing="normal"
+                    >
+                      {refreshBadgeLabel}
+                    </Badge>
+                  </Flex>
+                </Box>
 
-                    {weeklyMatch ? (
-                      <Box>
-                        <Box
-                          mb={4}
-                          p={4}
-                          borderRadius="lg"
-                          border="1px solid"
-                          borderColor="purple.100"
-                          bg="purple.50"
-                        >
-                          <Text fontWeight="semibold" color="gray.800" mb={1}>
-                            This week’s race vs {peerDisplayName}
-                          </Text>
-                          <Text fontSize="sm" color="gray.700">
-                            Gain more points than {peerDisplayName} during this 7-day window to earn{' '}
-                            <Text as="span" fontWeight="bold">
-                              1,000 points
+                <Box px={{ base: 5, md: 7 }} py={{ base: 5, md: 6 }}>
+                  {weeklyMatch ? (
+                    <Stack spacing={6}>
+                      <Flex
+                        gap={{ base: 5, md: 8 }}
+                        align={{ base: 'stretch', md: 'center' }}
+                        direction={{ base: 'column', lg: 'row' }}
+                      >
+                        <HStack spacing={4} flex={1} minW={0} align="center">
+                          <Avatar
+                            name={peerDisplayName}
+                            src={weeklyMatch.peer.avatarUrl}
+                            size="xl"
+                            bg="brand.primary"
+                            color="white"
+                            flexShrink={0}
+                          />
+                          <Stack spacing={1} minW={0}>
+                            <Text
+                              fontSize="xs"
+                              textTransform="uppercase"
+                              letterSpacing="0.08em"
+                              fontWeight="semibold"
+                              color="gray.500"
+                            >
+                              Matched with
                             </Text>
-                            . If you don’t outscore them, you get nothing for Peer Match.
-                          </Text>
-                        </Box>
-                        <Flex gap={4} align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} mb={4}>
-                          <HStack spacing={3} flex={1} minW={0}>
-                            <Avatar name={peerDisplayName} src={weeklyMatch.peer.avatarUrl} size="md" flexShrink={0} />
-                            <Stack spacing={0} minW={0}>
-                              <Text fontSize="xs" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold" color="gray.500">
-                                You are matched with
-                              </Text>
-                              <Text fontWeight="semibold" color="gray.800" noOfLines={1}>
-                                {peerDisplayName}
-                              </Text>
-                              <Text fontSize="sm" color="gray.500" noOfLines={1}>
-                                {weeklyMatch.peer.email}
-                              </Text>
-                              <HStack spacing={2} pt={1} flexWrap="wrap">
-                                <Badge colorScheme="purple" variant="subtle" display="flex" alignItems="center" gap={1}>
-                                  <Icon as={Clock3} w={3} h={3} />
-                                  {weeklyMatch.peer.timezone || 'Timezone not set'}
-                                </Badge>
-                                <Badge colorScheme="orange" variant="solid">
-                                  1,000 pts if you win the week
-                                </Badge>
-                                <Badge colorScheme={matchStatusColor} variant="outline">
-                                  {matchStatusLabel}
-                                </Badge>
+                            <Text
+                              fontSize={{ base: 'xl', md: '2xl' }}
+                              fontWeight="bold"
+                              color="brand.dark"
+                              letterSpacing="-0.02em"
+                              noOfLines={1}
+                            >
+                              {peerDisplayName}
+                            </Text>
+                            <Text fontSize="sm" color="gray.500" noOfLines={1}>
+                              {weeklyMatch.peer.email}
+                            </Text>
+                            <HStack spacing={3} pt={1} color="gray.500" fontSize="sm" flexWrap="wrap">
+                              <HStack spacing={1.5}>
+                                <Icon as={Clock3} w={3.5} h={3.5} />
+                                <Text>{weeklyMatch.peer.timezone || 'Timezone not set'}</Text>
                               </HStack>
-                            </Stack>
-                          </HStack>
+                              <Text color="gray.300">·</Text>
+                              <Text color="gray.600" fontWeight="medium">
+                                Status: {matchStatusLabel}
+                              </Text>
+                            </HStack>
+                          </Stack>
+                        </HStack>
 
-                          <HStack spacing={2} flexShrink={0} flexWrap="wrap">
+                        <Stack
+                          spacing={3}
+                          flexShrink={0}
+                          minW={{ lg: '260px' }}
+                          align={{ base: 'stretch', lg: 'flex-end' }}
+                        >
+                          <Box
+                            px={4}
+                            py={3}
+                            borderRadius="xl"
+                            bg="brand.dark"
+                            color="white"
+                            textAlign={{ base: 'left', lg: 'right' }}
+                          >
+                            <Text fontSize="xs" opacity={0.75} textTransform="uppercase" letterSpacing="0.06em">
+                              This week’s stakes
+                            </Text>
+                            <Text fontWeight="bold" fontSize="lg" letterSpacing="-0.01em">
+                              1,000 pts if you outscore them
+                            </Text>
+                            <Text fontSize="xs" opacity={0.8} mt={0.5}>
+                              Otherwise you earn nothing from Peer Match
+                            </Text>
+                          </Box>
+                          <HStack spacing={2} justify={{ base: 'flex-start', lg: 'flex-end' }} flexWrap="wrap">
                             <Button
                               as="a"
                               href={`mailto:${weeklyMatch.peer.email}?subject=${encodeURIComponent(`Peer Match for ${matchWindow.label}`)}&body=${encodeURIComponent(
-                                `Hi ${peerDisplayName},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${senderDisplayName}`
+                                `Hi ${peerDisplayName},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${senderDisplayName}`,
                               )}`}
                               leftIcon={<Mail size={16} />}
-                              bg="#350e6f"
+                              bg="brand.primary"
                               color="white"
-                              _hover={{ bg: '#4a1499' }}
+                              _hover={{ bg: 'brand.dark' }}
                               size="sm"
                               target="_blank"
                               onClick={() => updateMatchStatus('contacted')}
@@ -1447,6 +1515,7 @@ export const PeerConnectPage: React.FC = () => {
                                 size="sm"
                                 variant="outline"
                                 borderColor="gray.200"
+                                color="gray.700"
                               >
                                 Calendar
                               </Button>
@@ -1454,104 +1523,124 @@ export const PeerConnectPage: React.FC = () => {
                             <Button
                               leftIcon={<Check size={14} />}
                               size="sm"
-                              variant="outline"
-                              borderColor="gray.200"
+                              variant="ghost"
+                              color="gray.600"
                               onClick={() => updateMatchStatus('completed')}
                               isDisabled={weeklyMatch.matchStatus === 'completed'}
                             >
                               Mark complete
                             </Button>
                           </HStack>
-                        </Flex>
-                      </Box>
-                    ) : (
-                      <Center py={10} flexDirection="column" gap={4} color="gray.500">
-                        <Icon as={AlertCircle} w={5} h={5} color="orange.400" />
-                        <Stack spacing={3} align="center" textAlign="center" maxW="md">
-                          <Text fontWeight="medium" color="gray.800" fontSize="lg">
-                            {matchPreferences.refreshPreference === 'disabled'
-                              ? 'Peer Matching Disabled'
-                              : loadingPeers || availablePeers.length > 0
-                                ? 'Finding your peer match…'
-                                : 'Waiting for company peers'}
-                          </Text>
-                          <Text fontSize="sm">
-                            {matchAvailabilityMessage
-                              ? matchAvailabilityMessage
-                              : matchPreferences.refreshPreference === 'disabled'
-                              ? 'Peer matching is currently disabled.'
-                              : loadingPeers || availablePeers.length > 0
-                                ? 'Anyone in your organisation is matched automatically for this 7-day window. Hang tight while we lock yours in.'
-                                : 'As soon as another learner joins your organisation or village, you will be matched automatically.'}
-                          </Text>
-                          {matchPreferences.refreshPreference === 'disabled' && (
-                            <Button
-                              as="a"
-                              href="/app/profile?tab=account"
-                              size="sm"
-                              colorScheme="purple"
-                              leftIcon={<Icon as={Users} w={4} h={4} />}
-                            >
-                              Enable in Account Settings
-                            </Button>
-                          )}
-                          {matchPreferences.refreshPreference !== 'disabled' && (
-                            <Text fontSize="xs" color="gray.500" fontStyle="italic">
-                              Matches refresh every 7 days. Opening Peer Connect assigns your current-week peer
-                              immediately when one is available.
-                              {availablePeers.length < 2 ? ' Invite teammates to expand your peer pool.' : ''}
-                            </Text>
-                          )}
                         </Stack>
-                      </Center>
-                    )}
+                      </Flex>
 
-                    <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mt={6}>
-                      <Box border="1px solid" borderColor="gray.100" rounded="lg" p={3}>
-                        <Text fontSize="xs" textTransform="uppercase" color="gray.500" mb={1}>
-                          Match age
-                        </Text>
-                        <Text fontWeight="semibold" color="gray.800">
-                          {matchAgeLabel}
-                        </Text>
-                        <Text fontSize="xs" color="gray.500">
-                          {weeklyMatch?.createdAt ? `Created ${matchAgeLabel}` : 'New match is being prepared'}
-                        </Text>
-                      </Box>
-                      <Box border="1px solid" borderColor="gray.100" rounded="lg" p={3}>
-                        <Text fontSize="xs" textTransform="uppercase" color="gray.500" mb={1}>
-                          Next refresh
-                        </Text>
-                        <Text fontWeight="semibold" color="gray.800">
-                          {nextRefreshLabel}
-                        </Text>
-                      </Box>
-                      <Box border="1px solid" borderColor="gray.100" rounded="lg" p={3}>
-                        <Text fontSize="xs" textTransform="uppercase" color="gray.500" mb={1}>
-                          Status
-                        </Text>
-                        <Tag colorScheme={matchStatusColor} size="md">
-                          {matchStatusLabel}
-                        </Tag>
-                        <Text fontSize="xs" color="gray.500" mt={1}>
-                          Track your progress with this connection.
-                        </Text>
-                      </Box>
-                    </SimpleGrid>
+                      <SimpleGrid
+                        columns={{ base: 1, md: 3 }}
+                        spacing={0}
+                        borderTop="1px solid"
+                        borderColor="gray.100"
+                        pt={5}
+                      >
+                        <Box px={{ base: 0, md: 4 }} py={2} borderRight={{ md: '1px solid' }} borderColor="gray.100">
+                          <Text fontSize="xs" color="gray.500" mb={1}>
+                            Matched
+                          </Text>
+                          <Text fontWeight="semibold" color="gray.800">
+                            {matchAgeLabel}
+                          </Text>
+                        </Box>
+                        <Box
+                          px={{ base: 0, md: 4 }}
+                          py={2}
+                          borderRight={{ md: '1px solid' }}
+                          borderColor="gray.100"
+                        >
+                          <Text fontSize="xs" color="gray.500" mb={1}>
+                            Next refresh
+                          </Text>
+                          <Text fontWeight="semibold" color="gray.800">
+                            {nextRefreshLabel}
+                          </Text>
+                        </Box>
+                        <Box px={{ base: 0, md: 4 }} py={2}>
+                          <Text fontSize="xs" color="gray.500" mb={1}>
+                            Window progress
+                          </Text>
+                          <Text fontWeight="semibold" color="gray.800">
+                            {matchWindow.durationDays ? `${matchWindow.durationDays}-day cycle` : 'Weekly'}
+                          </Text>
+                        </Box>
+                      </SimpleGrid>
 
-                    {matchTimelineProgress !== null && matchWindow.durationDays ? (
-                      <Box mt={4}>
-                        <HStack justify="space-between" mb={2}>
-                          <Text fontSize="xs" color="gray.500">
-                            Match timeline
-                          </Text>
-                          <Text fontSize="xs" color="gray.500">
-                            {matchWindow.durationDays} days
-                          </Text>
-                        </HStack>
-                        <Progress value={matchTimelineProgress} borderRadius="full" />
-                      </Box>
-                    ) : null}
+                      {matchTimelineProgress !== null && matchWindow.durationDays ? (
+                        <Box>
+                          <HStack justify="space-between" mb={2}>
+                            <Text fontSize="xs" color="gray.500">
+                              Week timeline
+                            </Text>
+                            <Text fontSize="xs" color="gray.500">
+                              {Math.round(matchTimelineProgress)}% elapsed
+                            </Text>
+                          </HStack>
+                          <Progress
+                            value={matchTimelineProgress}
+                            borderRadius="full"
+                            size="sm"
+                            bg="gray.100"
+                            sx={{ '& > div': { bg: 'brand.primary' } }}
+                          />
+                        </Box>
+                      ) : null}
+                    </Stack>
+                  ) : (
+                    <Center py={12} flexDirection="column" gap={4} color="gray.500">
+                      <Flex
+                        w={12}
+                        h={12}
+                        borderRadius="full"
+                        bg="gray.50"
+                        border="1px solid"
+                        borderColor="gray.100"
+                        align="center"
+                        justify="center"
+                      >
+                        <Icon as={AlertCircle} w={5} h={5} color="gray.400" />
+                      </Flex>
+                      <Stack spacing={2} align="center" textAlign="center" maxW="md">
+                        <Text fontWeight="semibold" color="brand.dark" fontSize="lg">
+                          {matchPreferences.refreshPreference === 'disabled'
+                            ? 'Peer matching disabled'
+                            : loadingPeers || availablePeers.length > 0
+                              ? 'Finding your peer match…'
+                              : 'Waiting for organisation peers'}
+                        </Text>
+                        <Text fontSize="sm" color="gray.600" lineHeight="1.6">
+                          {matchAvailabilityMessage
+                            ? matchAvailabilityMessage
+                            : matchPreferences.refreshPreference === 'disabled'
+                              ? 'Peer matching is currently disabled in your account settings.'
+                              : loadingPeers || availablePeers.length > 0
+                                ? 'Anyone in your organisation is matched automatically for this window.'
+                                : 'As soon as another learner joins your organisation or village, you will be matched automatically.'}
+                        </Text>
+                        {matchPreferences.refreshPreference === 'disabled' && (
+                          <Button
+                            as="a"
+                            href="/app/profile?tab=account"
+                            size="sm"
+                            bg="brand.primary"
+                            color="white"
+                            _hover={{ bg: 'brand.dark' }}
+                            leftIcon={<Icon as={Users} w={4} h={4} />}
+                            mt={1}
+                          >
+                            Enable in Account Settings
+                          </Button>
+                        )}
+                      </Stack>
+                    </Center>
+                  )}
+                </Box>
               </Box>
             </Stack>
           </TabPanel>
