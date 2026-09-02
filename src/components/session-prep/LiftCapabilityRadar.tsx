@@ -153,16 +153,6 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
                     {Math.round(pillars![p.key])}
                   </Text>
                 ) : null}
-                {chosen === p.key && (
-                  <Text as="span" ml={2} fontSize="9.5px" letterSpacing="0.08em" textTransform="uppercase" px={1.5} py={0.5} borderRadius="full" bg="rgba(212,160,23,.12)" color="#7A5C08" border="1px solid #D4A017">
-                    {showScores ? 'you chose this' : 'development edge'}
-                  </Text>
-                )}
-                {gap === p.key && (
-                  <Text as="span" ml={2} fontSize="9.5px" letterSpacing="0.08em" textTransform="uppercase" px={1.5} py={0.5} borderRadius="full" bg="rgba(179,58,58,.09)" color="#B33A3A" border="1px solid rgba(179,58,58,.5)">
-                    {showScores ? 'your lowest' : 'lowest pillar'}
-                  </Text>
-                )}
               </Text>
             </ListItem>
           ))}
