@@ -69,6 +69,7 @@ import {
   fetchSupabasePeerById,
   listOrgPeers,
   ensureCurrentPeerMatch,
+  assignCurrentPeerMatch,
   replaceCurrentPeerMatch,
   updatePeerMatchStatus,
   type PeerWeeklyMatchRow,
@@ -414,15 +415,28 @@ export const PeerConnectPage: React.FC = () => {
       setMatchAvailabilityMessage(null)
       return
     }
+    // Wait for the org peer list so we can force-assign if auto-select misses.
+    if (loadingPeers) return
 
     try {
       console.log('[PeerMatch] Ensuring match for window:', matchWindow.key)
 
-      const result = await ensureCurrentPeerMatch({
+      let result = await ensureCurrentPeerMatch({
         matchKey: matchWindow.key,
         refreshPreference: matchPreferences.refreshPreference,
         preferredMatchDay: matchPreferences.preferredMatchDay,
       })
+
+      if (!result.ok && result.error === 'no_eligible_peers' && availablePeers.length > 0) {
+        const fallbackPeer =
+          availablePeers[Math.floor(Math.random() * availablePeers.length)] ?? availablePeers[0]
+        result = await assignCurrentPeerMatch({
+          matchKey: matchWindow.key,
+          peerUid: fallbackPeer.id,
+          refreshPreference: matchPreferences.refreshPreference,
+          preferredMatchDay: matchPreferences.preferredMatchDay,
+        })
+      }
 
       if (!result.ok) {
         setWeeklyMatch(null)
@@ -430,7 +444,9 @@ export const PeerConnectPage: React.FC = () => {
           setMatchAvailabilityMessage('Peer matching is currently disabled.')
         } else if (result.error === 'no_eligible_peers') {
           setMatchAvailabilityMessage(
-            'No eligible peers are available in your organisation or village yet. As soon as another learner joins, you will be matched automatically.',
+            availablePeers.length > 0
+              ? 'We found peers in your organisation but could not lock a match yet. Refresh to try again.'
+              : 'No other learners are in your organisation or village yet. You will be matched the moment someone joins.',
           )
         } else {
           setMatchAvailabilityMessage('We could not create your peer match right now. Please refresh and try again.')
@@ -452,6 +468,23 @@ export const PeerConnectPage: React.FC = () => {
       })
       if (rematched) return
 
+      // Last resort: if we still have org peers, force a different known peer.
+      const alternate = availablePeers.find((peer) => peer.id !== result.match.peer_uid)
+      if (alternate) {
+        const forced = await replaceCurrentPeerMatch({
+          matchKey: matchWindow.key,
+          unavailablePeerId: result.match.peer_uid,
+        })
+        if (forced.ok) {
+          const forcedPeer = await resolvePeerForMatch(forced.match.peer_uid, availablePeers)
+          if (forcedPeer.status === 'ok') {
+            setWeeklyMatch(buildWeeklyMatchFromRow(forced.match, forcedPeer.profile))
+            setMatchAvailabilityMessage(null)
+            return
+          }
+        }
+      }
+
       setWeeklyMatch(null)
       setMatchAvailabilityMessage(getUnavailableMatchMessage(peerResult.status))
     } catch (error) {
@@ -462,6 +495,7 @@ export const PeerConnectPage: React.FC = () => {
   }, [
     attemptAutomaticRematch,
     availablePeers,
+    loadingPeers,
     matchDocId,
     matchPreferences.preferredMatchDay,
     matchPreferences.refreshPreference,
@@ -1409,18 +1443,18 @@ export const PeerConnectPage: React.FC = () => {
                           <Text fontWeight="medium" color="gray.800" fontSize="lg">
                             {matchPreferences.refreshPreference === 'disabled'
                               ? 'Peer Matching Disabled'
-                              : loadingPeers
+                              : loadingPeers || availablePeers.length > 0
                                 ? 'Finding your peer match…'
-                                : 'No Match This Week'}
+                                : 'Waiting for company peers'}
                           </Text>
                           <Text fontSize="sm">
                             {matchAvailabilityMessage
                               ? matchAvailabilityMessage
                               : matchPreferences.refreshPreference === 'disabled'
                               ? 'Peer matching is currently disabled.'
-                              : loadingPeers
-                                ? 'We assign you a random peer for this 7-day window as soon as you open Peer Connect.'
-                                : 'No eligible peers in your organisation or village yet. You will be matched automatically as soon as another learner joins.'}
+                              : loadingPeers || availablePeers.length > 0
+                                ? 'Anyone in your organisation is matched automatically for this 7-day window. Hang tight while we lock yours in.'
+                                : 'As soon as another learner joins your organisation or village, you will be matched automatically.'}
                           </Text>
                           {matchPreferences.refreshPreference === 'disabled' && (
                             <Button

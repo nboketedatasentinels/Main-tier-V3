@@ -289,6 +289,37 @@ export const ensureCurrentPeerMatch = async (params: {
   return { ok: true, created: Boolean(result.created), match }
 }
 
+/** Force-assign a known org peer when auto-select returned no candidates. */
+export const assignCurrentPeerMatch = async (params: {
+  matchKey: string
+  peerUid: string
+  refreshPreference?: string
+  preferredMatchDay?: number
+}): Promise<EnsurePeerMatchResult> => {
+  const { data, error } = await supabase.rpc('assign_my_peer_match', {
+    p_match_key: params.matchKey,
+    p_peer_uid: params.peerUid,
+    p_refresh_preference: params.refreshPreference ?? 'weekly',
+    p_preferred_match_day: params.preferredMatchDay ?? 1,
+  })
+  if (error) {
+    throw Object.assign(new Error(error.message), { code: error.code })
+  }
+
+  const result = (data ?? {}) as {
+    ok?: boolean
+    created?: boolean
+    error?: string
+    match?: unknown
+  }
+  if (!result.ok) {
+    return { ok: false, error: result.error || 'assign_failed' }
+  }
+  const match = asMatchRow(result.match)
+  if (!match) return { ok: false, error: 'invalid_match_payload' }
+  return { ok: true, created: Boolean(result.created), match }
+}
+
 export const replaceCurrentPeerMatch = async (params: {
   matchKey: string
   unavailablePeerId: string
