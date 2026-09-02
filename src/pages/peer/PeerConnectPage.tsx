@@ -459,6 +459,16 @@ export const PeerConnectPage: React.FC = () => {
         setWeeklyMatch(buildWeeklyMatchFromRow(result.match, peerResult.profile))
         setMatchAvailabilityMessage(null)
         unavailablePeerLogRef.current = null
+        if (result.created) {
+          toast({
+            title: `You're matched with ${peerResult.profile.name}`,
+            description:
+              'Gain more points than them this week to earn 1,000 points. If you don’t outscore them, you get nothing.',
+            status: 'success',
+            position: 'top',
+            duration: 8000,
+          })
+        }
         return
       }
 
@@ -501,6 +511,7 @@ export const PeerConnectPage: React.FC = () => {
     matchPreferences.refreshPreference,
     matchWindow.key,
     profile,
+    toast,
     user,
   ])
 
@@ -800,9 +811,7 @@ export const PeerConnectPage: React.FC = () => {
     if (matchPreferences.refreshPreference === 'on-demand') {
       return 'Request a new peer whenever you are ready. Matches stay active until you refresh manually.'
     }
-    return matchPreferences.refreshPreference === 'biweekly'
-      ? 'You are matched automatically with a random peer in your organisation or village for each 2-week window.'
-      : 'You are matched automatically with a random peer in your organisation or village for each 7-day window.'
+    return 'From the day you join, you are auto-matched every 7 days. Outscore your match that week to earn 1,000 points — otherwise you get nothing.'
   }, [matchPreferences.refreshPreference])
 
   const peerDisplayName = useMemo(() => {
@@ -1148,9 +1157,8 @@ export const PeerConnectPage: React.FC = () => {
                 Peer Connect
               </Heading>
               <Text fontSize="sm" color="gray.500">
-                Peer Matching is a short 10–15 min chat (both earn points). Practicals are course work you
-                do with someone else. Challenges: only the winner earns Challenger points from points
-                gained that week.
+                Weekly Peer Match is automatic: you race your match for 1,000 points. Practicals are
+                knowledge sessions you organise with friends you choose.
               </Text>
             </Stack>
           </HStack>
@@ -1195,10 +1203,10 @@ export const PeerConnectPage: React.FC = () => {
                   </Flex>
                   <Stack spacing={0}>
                     <Text fontWeight="bold" color="gray.800">
-                      1-on-1 match
+                      Weekly Peer Match
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      10–15 min chat · both earn Peer Matching points when you connect
+                      Auto-paired every 7 days · outscore them for 1,000 points
                     </Text>
                   </Stack>
                 </HStack>
@@ -1243,10 +1251,10 @@ export const PeerConnectPage: React.FC = () => {
                   </Flex>
                   <Stack spacing={0}>
                     <Text fontWeight="bold" color="gray.800">
-                      Practical
+                      Practical / knowledge session
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      Do a practical with peers · points come from completing the practical
+                      You choose friends and organise the session yourself
                     </Text>
                   </Stack>
                 </HStack>
@@ -1299,13 +1307,13 @@ export const PeerConnectPage: React.FC = () => {
                   Peer Learning
                 </Text>
                 <Heading size="sm" color="gray.800">
-                  Matching, practicals & challenges
+                  Two different tracks
                 </Heading>
               </Stack>
             </HStack>
             <Text fontSize="sm" color="gray.600" lineHeight="1.6">
-              How Peer Connect works: weekly 1-on-1 matches, practicals you do with someone else, and
-              short challenges. Watch this walkthrough so every connection counts toward your growth.
+              Peer Match pairs you automatically every week for a points race. Practicals are knowledge
+              sessions you set up with people you pick. Watch the walkthrough, then use the tabs below.
             </Text>
           </Stack>
 
@@ -1368,10 +1376,32 @@ export const PeerConnectPage: React.FC = () => {
 
                     {weeklyMatch ? (
                       <Box>
+                        <Box
+                          mb={4}
+                          p={4}
+                          borderRadius="lg"
+                          border="1px solid"
+                          borderColor="purple.100"
+                          bg="purple.50"
+                        >
+                          <Text fontWeight="semibold" color="gray.800" mb={1}>
+                            This week’s race vs {peerDisplayName}
+                          </Text>
+                          <Text fontSize="sm" color="gray.700">
+                            Gain more points than {peerDisplayName} during this 7-day window to earn{' '}
+                            <Text as="span" fontWeight="bold">
+                              1,000 points
+                            </Text>
+                            . If you don’t outscore them, you get nothing for Peer Match.
+                          </Text>
+                        </Box>
                         <Flex gap={4} align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} mb={4}>
                           <HStack spacing={3} flex={1} minW={0}>
                             <Avatar name={peerDisplayName} src={weeklyMatch.peer.avatarUrl} size="md" flexShrink={0} />
                             <Stack spacing={0} minW={0}>
+                              <Text fontSize="xs" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold" color="gray.500">
+                                You are matched with
+                              </Text>
                               <Text fontWeight="semibold" color="gray.800" noOfLines={1}>
                                 {peerDisplayName}
                               </Text>
@@ -1383,8 +1413,8 @@ export const PeerConnectPage: React.FC = () => {
                                   <Icon as={Clock3} w={3} h={3} />
                                   {weeklyMatch.peer.timezone || 'Timezone not set'}
                                 </Badge>
-                                <Badge colorScheme="purple" variant="solid">
-                                  {weeklyMatch.matchReason}
+                                <Badge colorScheme="orange" variant="solid">
+                                  1,000 pts if you win the week
                                 </Badge>
                                 <Badge colorScheme={matchStatusColor} variant="outline">
                                   {matchStatusLabel}
@@ -1771,12 +1801,11 @@ export const PeerConnectPage: React.FC = () => {
               <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} direction={{ base: 'column', md: 'row' }} gap={3}>
                 <Stack spacing={1}>
                   <Heading size="md" color="gray.800">
-                    Practicals & challenges
+                    Knowledge sessions (Practical)
                   </Heading>
                   <Text color="gray.500">
-                    Schedule a practical with peers, or start a 7-day challenge. Peer Matching points go to both
-                    people who meet; Challenger points go to the winner only (based on points gained during the
-                    challenge week).
+                    This is not auto-matching. Pick friends, schedule a practical / knowledge session, and
+                    work through it together. You can also start a separate 7-day challenge from here.
                   </Text>
                 </Stack>
                 <HStack spacing={2}>
@@ -1784,7 +1813,7 @@ export const PeerConnectPage: React.FC = () => {
                     Challenge a friend
                   </Button>
                   <Button colorScheme="primary" leftIcon={<Users size={16} />} onClick={sessionModal.onOpen}>
-                    Start practical meetup
+                    Organise a knowledge session
                   </Button>
                 </HStack>
               </Flex>

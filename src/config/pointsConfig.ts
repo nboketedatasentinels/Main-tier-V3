@@ -370,17 +370,19 @@ const BASE_ACTIVITY_DEFINITIONS: BaseActivityEntry[] = [
   {
     id: "peer_matching",
     baseId: "peer_matching",
-    title: "Peer Matching Session",
-    description: "Complete a one-on-one peer matching session.",
+    title: "Peer Match Weekly Race",
+    description:
+      "Every 7 days you are auto-matched with someone in your organisation. Gain more points than them that week to earn these points — if you don't outscore them, you get nothing.",
     points: 1000,
     behaviorType: "ongoing",
     defaultMaxPerWindow: 2,
-    // Not self-claimable from the checklist - points come from a real peer match.
+    // Not self-claimable from the checklist - settled from the weekly peer match race.
     approvalType: "auto",
     week: 3,
     category: "Networking",
     flexibleWeeks: true,
-    frequencyNote: "Find your peer match on Peer Connect. Points unlock after the match window.",
+    frequencyNote:
+      "Automatic weekly match. Winner (most points gained that week) earns the points; loser earns none.",
   },
   {
     id: "challenger",
