@@ -1462,16 +1462,20 @@ export const PeerConnectPage: React.FC = () => {
                             py={3}
                             borderRadius="xl"
                             bg="brand.dark"
-                            color="white"
                             textAlign={{ base: 'left', lg: 'right' }}
                           >
-                            <Text fontSize="xs" opacity={0.75} textTransform="uppercase" letterSpacing="0.06em">
+                            <Text
+                              fontSize="xs"
+                              color="whiteAlpha.800"
+                              textTransform="uppercase"
+                              letterSpacing="0.06em"
+                            >
                               This week’s stakes
                             </Text>
-                            <Text fontWeight="bold" fontSize="lg" letterSpacing="-0.01em">
+                            <Text fontWeight="bold" fontSize="lg" letterSpacing="-0.01em" color="white">
                               1,000 pts if you outscore them
                             </Text>
-                            <Text fontSize="xs" opacity={0.8} mt={0.5}>
+                            <Text fontSize="xs" color="whiteAlpha.800" mt={0.5}>
                               Otherwise you earn nothing from Peer Match
                             </Text>
                           </Box>
