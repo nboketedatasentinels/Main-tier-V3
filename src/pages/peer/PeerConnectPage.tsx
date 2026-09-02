@@ -337,6 +337,7 @@ export const PeerConnectPage: React.FC = () => {
     time: '',
   })
   const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const [creatingSession, setCreatingSession] = useState(false)
   const [participantFilter, setParticipantFilter] = useState('')
   const [loadingPeers, setLoadingPeers] = useState(false)
   const [loadingSessions, setLoadingSessions] = useState(false)
@@ -1007,9 +1008,8 @@ export const PeerConnectPage: React.FC = () => {
     if (!sessionForm.date) errors.date = 'Please select a date'
     if (!sessionForm.time) errors.time = 'Please select a time'
     if (!sessionForm.timezone) errors.timezone = 'Please select a time zone'
-    if (sessionForm.participants.length < 2)
-      errors.participants =
-        'Select at least 2 participants so you can host a practical with peers (three people including yourself).'
+    if (sessionForm.participants.length < 1)
+      errors.participants = 'Select at least 1 peer so you can host a practical together.'
 
     // Validate that date/time is in the future
     if (sessionForm.date && sessionForm.time && sessionForm.timezone) {
@@ -1023,11 +1023,22 @@ export const PeerConnectPage: React.FC = () => {
     return Object.keys(errors).length === 0
   }
 
+  const getCreateErrorMessage = (error: unknown) => {
+    if (error instanceof Error && error.message.trim()) return error.message
+    if (error && typeof error === 'object' && 'message' in error) {
+      const message = (error as { message?: unknown }).message
+      if (typeof message === 'string' && message.trim()) return message
+    }
+    if (typeof error === 'string' && error.trim()) return error
+    return 'Please try again.'
+  }
+
   const createSession = async () => {
-    if (!user || !profile) return
+    if (!user || !profile || creatingSession) return
     if (!validateSessionForm()) return
     if (!sessionForm.date) return
 
+    setCreatingSession(true)
     try {
       // Construct scheduled date from date, time, and timezone
       const scheduledAt = getScheduledAtFromForm(sessionForm.date, sessionForm.time, sessionForm.timezone)
@@ -1082,10 +1093,12 @@ export const PeerConnectPage: React.FC = () => {
       console.error('Session creation failed:', error)
       toast({
         title: 'Could not create practical',
-        description: error instanceof Error ? error.message : 'Please try again.',
+        description: getCreateErrorMessage(error),
         status: 'error',
         position: 'top',
       })
+    } finally {
+      setCreatingSession(false)
     }
   }
 
@@ -2018,7 +2031,7 @@ export const PeerConnectPage: React.FC = () => {
 
               <Stack spacing={3}>
                 <FormControl isInvalid={Boolean(formErrors.participants)}>
-                  <FormLabel>Select participants (minimum 2)</FormLabel>
+                  <FormLabel>Select participants (minimum 1)</FormLabel>
                   <InputGroup mb={2}>
                     <InputLeftElement pointerEvents="none">
                       <Search size={16} opacity={0.65} />
@@ -2075,8 +2088,7 @@ export const PeerConnectPage: React.FC = () => {
                   <HStack align="center" spacing={2}>
                     <Icon as={Target} w={4} h={4} color="brand.primary" />
                     <Text fontSize="sm" color="gray.500">
-                      At least 2 participants are required so you can host a practical with three or more people
-                      including yourself.
+                      Invite at least one peer so you can host a practical together (you plus your guests).
                     </Text>
                   </HStack>
                 </Box>
@@ -2084,10 +2096,16 @@ export const PeerConnectPage: React.FC = () => {
             </SimpleGrid>
           </ModalBody>
           <ModalFooter gap={3}>
-            <Button variant="ghost" onClick={sessionModal.onClose} leftIcon={<X size={16} />}>
+            <Button variant="ghost" onClick={sessionModal.onClose} leftIcon={<X size={16} />} isDisabled={creatingSession}>
               Cancel
             </Button>
-            <Button colorScheme="primary" leftIcon={<Check size={16} />} onClick={createSession}>
+            <Button
+              colorScheme="primary"
+              leftIcon={<Check size={16} />}
+              onClick={createSession}
+              isLoading={creatingSession}
+              loadingText="Creating…"
+            >
               Create practical
             </Button>
           </ModalFooter>

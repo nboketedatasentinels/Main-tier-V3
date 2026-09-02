@@ -183,10 +183,24 @@ const assertValidCreateParams = (params: CreateSessionParams): string[] => {
   const participants = Array.from(
     new Set(params.participants.filter((id) => isNonEmptyString(id) && id !== params.createdBy)),
   )
-  if (participants.length < 2) {
-    throw new Error('Select at least 2 participants so you can host a practical with peers')
+  if (participants.length < 1) {
+    throw new Error('Select at least 1 peer so you can host a practical together')
   }
   return participants
+}
+
+const parseCreateResult = (data: unknown): { ok?: boolean; error?: string; detail?: string; id?: string } => {
+  if (typeof data === 'string') {
+    try {
+      return JSON.parse(data) as { ok?: boolean; error?: string; detail?: string; id?: string }
+    } catch {
+      return {}
+    }
+  }
+  if (data && typeof data === 'object') {
+    return data as { ok?: boolean; error?: string; detail?: string; id?: string }
+  }
+  return {}
 }
 
 export async function createPeerSession(params: CreateSessionParams): Promise<string> {
@@ -205,21 +219,28 @@ export async function createPeerSession(params: CreateSessionParams): Promise<st
       creator_email: params.creatorEmail,
     },
   })
-  if (error) throw new Error(error.message)
+  if (error) {
+    throw new Error(error.message || error.code || 'Could not reach the server to create this practical.')
+  }
 
-  const result = (data ?? {}) as { ok?: boolean; error?: string; id?: string }
+  const result = parseCreateResult(data)
   if (!result.ok) {
     const messages: Record<string, string> = {
       not_authenticated: 'Please sign in again to create a practical.',
+      profile_not_found: 'Your profile could not be loaded. Please refresh and try again.',
       title_required: 'Please provide a practical title.',
       invalid_scheduled_at: 'Please choose a valid date and time.',
       scheduled_at_must_be_future: 'Practical must be scheduled in the future.',
-      participants_required: 'Select at least 2 participants.',
-      min_participants: 'Select at least 2 participants so you can host a practical with peers.',
+      participants_required: 'Select at least 1 peer to invite.',
+      min_participants: 'Select at least 1 peer so you can host a practical together.',
       participant_not_found: 'One of the selected peers is no longer available.',
       different_organization: 'You can only invite peers from your organisation or village.',
+      insert_failed: 'Could not save the practical. Please try again.',
+      unexpected: 'Something went wrong creating the practical. Please try again.',
     }
-    throw new Error(messages[result.error || ''] || `Could not create practical (${result.error || 'unknown'}).`)
+    const mapped = messages[result.error || '']
+    const detail = typeof result.detail === 'string' && result.detail.trim() ? ` (${result.detail})` : ''
+    throw new Error(mapped || `Could not create practical (${result.error || 'unknown'})${detail}.`)
   }
   if (!result.id) throw new Error('Practical created but no id returned.')
   return result.id
