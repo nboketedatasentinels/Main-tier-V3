@@ -333,10 +333,15 @@ export async function confirmMentorshipSession(params: {
   if (error) throw new Error(error.message)
 
   const mentorName = pickString(existing.mentor_name)
+  const learnerName = pickString(existing.learner_name)
+  const topic = pickString(existing.topic) || 'Mentorship session'
+  const resolvedMeetingLink =
+    (meetingLink && meetingLink.trim()) || pickString(existing.meeting_link) || null
+
   if (learnerId) {
     const whenLabel =
-      scheduledAt && !Number.isNaN(scheduledAt.getTime())
-        ? ` for ${scheduledAt.toLocaleString(undefined, {
+      meetingAt && !Number.isNaN(meetingAt.getTime())
+        ? ` for ${meetingAt.toLocaleString(undefined, {
             weekday: 'short',
             day: 'numeric',
             month: 'short',
@@ -348,11 +353,45 @@ export async function confirmMentorshipSession(params: {
       userId: learnerId,
       type: 'approval',
       title: 'Your mentorship session is confirmed',
-      message: `${mentorName ?? 'Your mentor'} accepted your session request${whenLabel}.`,
+      message: `${mentorName ?? 'Your mentor'} accepted your session request${whenLabel}. Check your email for a calendar (.ics) invite for Google or Outlook.`,
       relatedId: sessionId,
       category: 'important_updates',
-      data: { priority: 'push', sessionId, kind: 'mentorship_confirmed' },
+      data: {
+        priority: 'push',
+        sessionId,
+        kind: 'mentorship_confirmed',
+        meetingLink: resolvedMeetingLink,
+        scheduledAt: meetingAt.toISOString(),
+      },
     }).catch((err) => console.warn('[MentorshipService] notify confirm failed:', err))
+
+    const { data: learnerProfile } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', learnerId)
+      .maybeSingle()
+    const learnerEmail =
+      typeof learnerProfile?.email === 'string' && learnerProfile.email.trim()
+        ? learnerProfile.email.trim()
+        : null
+
+    if (learnerEmail && meetingAt && !Number.isNaN(meetingAt.getTime())) {
+      const linkLine = resolvedMeetingLink ? `\nMeeting link: ${resolvedMeetingLink}` : ''
+      void sendSessionCalendarInviteEmail({
+        to: learnerEmail,
+        learnerName,
+        organizerName: mentorName,
+        title: topic,
+        start: meetingAt,
+        meetingLink: resolvedMeetingLink,
+        description: `${mentorName ?? 'Your mentor'} confirmed your mentorship session.
+
+Topic: ${topic}
+When: ${whenLabel.replace(/^ for /, '') || meetingAt.toISOString()}${linkLine}
+
+ - Transformation Leader (T4L)`,
+      })
+    }
   }
 }
 

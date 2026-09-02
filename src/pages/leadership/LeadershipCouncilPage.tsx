@@ -390,10 +390,10 @@ export const LeadershipCouncilPage: React.FC = () => {
         leftIcon={<Calendar size={16} />}
         onClick={() => openGoogleCalendar(session)}
       >
-        Google Calendar
+        Add to Google
       </Button>
       <Button size="sm" variant="ghost" leftIcon={<Download size={16} />} onClick={() => downloadIcs(session)}>
-        Outlook / Apple (.ics)
+        Add to Outlook / Apple
       </Button>
     </>
   )
@@ -1193,6 +1193,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                               {mentorSessionsSummary}
                             </Text>
                           </HStack>
+                          <Text fontSize="xs" color="gray.500" mb={3}>
+                            After a session is confirmed, use Add to Google or Add to Outlook / Apple so it lands in your real calendar with a reminder.
+                          </Text>
 
                           {sessionsLoading && (
                             <Flex

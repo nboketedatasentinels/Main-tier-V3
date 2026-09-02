@@ -388,13 +388,8 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
           : null,
       challengeChips: [],
       topics: [],
-      opener: goal
-        ? {
-            label: 'If you only ask them one thing',
-            quote: `What would unblock "${goal}" fastest from your seat?`,
-            note: 'Lead with your written goal.',
-          }
-        : null,
+      // Leader view: no synthetic opener copy — keep arc + live goal/submissions only.
+      opener: null,
       stanceReminders: [],
       // Live programme submissions only — no static filler tips.
       bringItems: (input.programmeSubmissions || [])
