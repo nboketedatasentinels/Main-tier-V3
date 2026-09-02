@@ -343,6 +343,24 @@ export const LeadershipCouncilPage: React.FC = () => {
     }
   }
 
+  const openGoogleCalendar = (session: MentorshipSession) => {
+    const start = session.scheduledAt ?? session.proposedAt
+    if (!start) {
+      toast({ title: 'No session time set yet', status: 'warning' })
+      return
+    }
+    const end = new Date(start.getTime() + 60 * 60 * 1000)
+    const title = `Mentorship session with ${mentorProfile ? displayNameForProfile(mentorProfile) : 'Mentor'}`
+    const googleUrl = buildGoogleCalendarUrl({
+      title,
+      start,
+      end,
+      description: `${session.topic}${session.meetingLink ? `\nJoin: ${session.meetingLink}` : ''}`,
+      location: session.meetingLink || undefined,
+    })
+    window.open(googleUrl, '_blank', 'noopener,noreferrer')
+  }
+
   const downloadIcs = (session: MentorshipSession) => {
     const start = session.scheduledAt ?? session.proposedAt
     if (!start) {
@@ -355,20 +373,30 @@ export const LeadershipCouncilPage: React.FC = () => {
       title,
       start,
       end,
-      description: `${session.topic}${session.requestMessage ? `\n${session.requestMessage}` : ''}`,
+      description: `${session.topic}${session.requestMessage ? `\n${session.requestMessage}` : ''}${
+        session.meetingLink ? `\nJoin: ${session.meetingLink}` : ''
+      }`,
       location: session.meetingLink || 'Virtual meeting',
       uid: `mentorship-${session.id}@t4leader.com`,
     })
     downloadIcsFile(ics, 'mentorship-session.ics')
-    const googleUrl = buildGoogleCalendarUrl({
-      title,
-      start,
-      end,
-      description: session.topic,
-      location: session.meetingLink || undefined,
-    })
-    window.open(googleUrl, '_blank', 'noopener,noreferrer')
   }
+
+  const sessionCalendarActions = (session: MentorshipSession) => (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        leftIcon={<Calendar size={16} />}
+        onClick={() => openGoogleCalendar(session)}
+      >
+        Google Calendar
+      </Button>
+      <Button size="sm" variant="ghost" leftIcon={<Download size={16} />} onClick={() => downloadIcs(session)}>
+        Outlook / Apple (.ics)
+      </Button>
+    </>
+  )
 
   const sessionStatusBadge = (status: MentorshipSession['status']): { label: string; scheme: string } => {
     switch (status) {
@@ -1209,15 +1237,18 @@ export const LeadershipCouncilPage: React.FC = () => {
                                     {pendingRequests.map((session) =>
                                       renderSessionRow(
                                         session,
-                                        <Button
-                                          size="sm"
-                                          variant="outline"
-                                          colorScheme="red"
-                                          onClick={() => handleCancelSession(session)}
-                                          isLoading={cancellingSessionId === session.id}
-                                        >
-                                          Withdraw
-                                        </Button>,
+                                        <>
+                                          {(session.scheduledAt || session.proposedAt) && sessionCalendarActions(session)}
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            colorScheme="red"
+                                            onClick={() => handleCancelSession(session)}
+                                            isLoading={cancellingSessionId === session.id}
+                                          >
+                                            Withdraw
+                                          </Button>
+                                        </>,
                                       ),
                                     )}
                                   </Stack>
@@ -1240,14 +1271,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                                       renderSessionRow(
                                         session,
                                         <>
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            leftIcon={<Download size={16} />}
-                                            onClick={() => downloadIcs(session)}
-                                          >
-                                            ICS
-                                          </Button>
+                                          {sessionCalendarActions(session)}
                                           <Button
                                             size="sm"
                                             variant="outline"

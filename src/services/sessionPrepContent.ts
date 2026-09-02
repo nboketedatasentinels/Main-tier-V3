@@ -52,6 +52,16 @@ export interface SessionPrepInput {
   purchasedCoachSessions?: number | null
   /** Programme course titles - used for conversation suggestions. */
   courseTitles?: string[] | null
+  /**
+   * Recent programme component submissions (case study / practical / capstone).
+   * Prefer these over static tips for Session Prep.
+   */
+  programmeSubmissions?: Array<{
+    title: string
+    componentType?: string | null
+    status?: string | null
+    excerpt?: string | null
+  }> | null
   /** Minutes for the upcoming session when known from a live booking/slot. */
   durationMinutes?: number | null
   /** Topic from the next booked / scheduled meet-up. */
@@ -217,6 +227,31 @@ const buildTopics = (input: SessionPrepInput): SessionPrepTopic[] => {
     })
   }
 
+  const submissions = (input.programmeSubmissions || [])
+    .map((s) => ({
+      title: (s.title || '').trim(),
+      componentType: (s.componentType || '').trim() || null,
+      status: (s.status || '').trim() || null,
+      excerpt: (s.excerpt || '').trim() || null,
+    }))
+    .filter((s) => s.title.length > 0)
+
+  for (const submission of submissions.slice(0, 2)) {
+    const kind = submission.componentType?.replace(/_/g, ' ') || 'programme work'
+    topics.push({
+      pillarLabel: 'Programme submission',
+      signalSource: submission.status ? `${kind} · ${submission.status}` : kind,
+      title: submission.title,
+      why: submission.excerpt
+        ? `${name} submitted: "${submission.excerpt}". Open from their own words, not a generic tip.`
+        : `${name} has a live ${kind} submission. Use it instead of inventing a topic.`,
+      sayAloud: isCoach
+        ? `Looking at "${submission.title}", what still feels unresolved in the real work?`
+        : `On "${submission.title}", where did the work stall — and who still needs to be convinced?`,
+      sayLabel,
+    })
+  }
+
   for (const course of courses.slice(0, 2)) {
     topics.push({
       pillarLabel: 'Programme',
@@ -361,8 +396,24 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
           }
         : null,
       stanceReminders: [],
-      // Nana: remove static "Things you could bring" / "Your mentor can see" blocks.
-      bringItems: [],
+      // Live programme submissions only — no static filler tips.
+      bringItems: (input.programmeSubmissions || [])
+        .map((s) => {
+          const title = (s.title || '').trim()
+          if (!title) return null
+          const excerpt = (s.excerpt || '').trim()
+          const kind = (s.componentType || '').replace(/_/g, ' ').trim()
+          return {
+            title,
+            hint: excerpt
+              ? excerpt
+              : kind
+                ? `From your ${kind}${s.status ? ` (${s.status})` : ''}. Bring what still feels unfinished.`
+                : 'Bring what still feels unfinished from this submission.',
+          }
+        })
+        .filter((item): item is { title: string; hint: string } => Boolean(item))
+        .slice(0, 3),
       mentorCanSee: [],
       mentorCannotSee: [],
       primaryActionLabel: 'Join session',

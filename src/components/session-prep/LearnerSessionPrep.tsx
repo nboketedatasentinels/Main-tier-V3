@@ -15,6 +15,7 @@ import {
 } from '@/services/ambassadorSessionService'
 import { supabase } from '@/services/supabase'
 import { nextCoachSessionNumber } from '@/utils/purchasedCoachSessions'
+import { useLearnerProgrammeSubmissions } from '@/hooks/useLearnerProgrammeSubmissions'
 import type { UserProfile } from '@/types'
 
 interface LearnerSessionPrepProps {
@@ -87,6 +88,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
 }) => {
   const learnerId = learner.id ?? null
   const { pillars, developmentEdge, archetype, loading: liftLoading } = useSessionPrepLift(learnerId)
+  const { submissions, loading: submissionsLoading } = useLearnerProgrammeSubmissions(learnerId)
   const { goals, loading: goalsLoading } = useMentorshipGoals(
     learnerId,
     typeof learner.mentorId === 'string' ? learner.mentorId : null,
@@ -307,6 +309,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       sessionTotal: audience === 'mentor' ? mentorTotal || null : coachPurchased ?? null,
       purchasedCoachSessions: coachPurchased,
       courseTitles: courseTitles ?? null,
+      programmeSubmissions: submissions,
       durationMinutes,
       scheduledLabel,
       upcomingSessionTopic,
@@ -337,6 +340,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       mentorTotal,
       coachPurchased,
       courseTitles,
+      submissions,
       durationMinutes,
       scheduledLabel,
       upcomingSessionTopic,
@@ -349,6 +353,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
     liftLoading ||
     goalsLoading ||
     enrichmentLoading ||
+    submissionsLoading ||
     (audience === 'mentor' && mentorSessionsLoading) ||
     (audience === 'coach' && coachBookingsLoading)
 

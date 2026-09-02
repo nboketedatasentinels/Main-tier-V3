@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { Box, Skeleton } from '@chakra-ui/react'
 import { SessionPrepPanel } from '@/components/session-prep/SessionPrepPanel'
 import { useSessionPrepLift } from '@/hooks/useSessionPrepLift'
+import { useLearnerProgrammeSubmissions } from '@/hooks/useLearnerProgrammeSubmissions'
 import { getDisplayName } from '@/utils/displayName'
 import { mentorMeetupCountForJourney } from '@/services/sessionPrepContent'
 import type { UserProfile } from '@/types'
@@ -22,7 +23,8 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
   offLimits,
   sessionNumber = 1,
 }) => {
-  const { pillars, archetype, loading } = useSessionPrepLift(learner.id ?? null)
+  const { pillars, archetype, loading: liftLoading } = useSessionPrepLift(learner.id ?? null)
+  const { submissions, loading: submissionsLoading } = useLearnerProgrammeSubmissions(learner.id ?? null)
   const input = useMemo(
     () => ({
       audience: 'leader' as const,
@@ -46,6 +48,7 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
       archetype,
       totalPoints:
         typeof learner.totalPoints === 'number' ? learner.totalPoints : undefined,
+      programmeSubmissions: submissions,
       sessionNumber,
       sessionTotal: mentorMeetupCountForJourney(
         typeof learner.journeyType === 'string' ? learner.journeyType : null,
@@ -55,10 +58,10 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
         ? `You requested this. ${getDisplayName(mentor).split(' ')[0]} will meet you when the time is confirmed.`
         : 'Request a meet-up from your mentor card when you are ready.',
     }),
-    [learner, mentor, goals, offLimits, pillars, archetype, sessionNumber],
+    [learner, mentor, goals, offLimits, pillars, archetype, submissions, sessionNumber],
   )
 
-  if (loading) return <Skeleton height="360px" borderRadius="14px" />
+  if (liftLoading || submissionsLoading) return <Skeleton height="360px" borderRadius="14px" />
 
   return (
     <Box>

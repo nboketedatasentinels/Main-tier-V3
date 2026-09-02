@@ -52,7 +52,7 @@ describe('sessionPrepContent', () => {
     expect(model.headline).toMatch(/programme|Leading Transformation/i)
   })
 
-  it('builds leader prep with LIFT scores and without static tip panels', () => {
+  it('builds leader prep with LIFT scores and submission-backed bring items', () => {
     const leader = buildSessionPrepModel({
       audience: 'leader',
       leaderName: 'Thandiwe Moyo',
@@ -63,12 +63,41 @@ describe('sessionPrepContent', () => {
       journeyType: '6M',
       sessionNumber: 1,
       totalPoints: 12500,
+      programmeSubmissions: [
+        {
+          title: 'Case Study 1',
+          componentType: 'case_study',
+          status: 'submitted',
+          excerpt: 'The pattern that was costing the company',
+        },
+      ],
     })
     expect(leader.showScores).toBe(true)
     expect(leader.archetypeLabel).toBe('Architect')
     expect(leader.totalPointsLabel).toContain('12,500')
-    expect(leader.bringItems).toEqual([])
+    expect(leader.bringItems).toHaveLength(1)
+    expect(leader.bringItems[0].title).toBe('Case Study 1')
     expect(leader.mentorCanSee).toEqual([])
     expect(leader.mentorCannotSee).toEqual([])
+  })
+
+  it('prefers programme submissions in mentor topics', () => {
+    const mentor = buildSessionPrepModel({
+      audience: 'mentor',
+      leaderName: 'Thandiwe Moyo',
+      goals: 'Get exec approval',
+      pillars: { L: 64, I: 79, F: 48, T: 73 },
+      journeyType: '6M',
+      sessionNumber: 1,
+      programmeSubmissions: [
+        {
+          title: 'Practical: stakeholder map',
+          componentType: 'practical',
+          status: 'approved',
+          excerpt: 'Ops still escalate every exception to me',
+        },
+      ],
+    })
+    expect(mentor.topics.some((t) => t.title === 'Practical: stakeholder map')).toBe(true)
   })
 })

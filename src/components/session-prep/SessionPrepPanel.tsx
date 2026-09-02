@@ -445,6 +445,24 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
             </Box>
           ) : null}
 
+          {isLeader && model.bringItems.length > 0 ? (
+            <Box mt={7}>
+              <MonoLabel>From your programme submissions</MonoLabel>
+              <Stack spacing={0}>
+                {model.bringItems.map((item) => (
+                  <Box key={item.title} borderTop="1px solid" borderColor="rgba(35,31,48,.14)" py={4}>
+                    <Text fontSize="14.5px" lineHeight="1.55" fontWeight="500">
+                      {item.title}
+                    </Text>
+                    <Text fontSize="12.5px" color="#6B6579" mt={1} lineHeight="1.6">
+                      {item.hint}
+                    </Text>
+                  </Box>
+                ))}
+              </Stack>
+            </Box>
+          ) : null}
+
           {model.opener ? (
             <Box mt={6} bg="#2D2A3E" color="white" borderRadius="10px" p={5}>
               <MonoLabel color="#D4A017">{model.opener.label}</MonoLabel>

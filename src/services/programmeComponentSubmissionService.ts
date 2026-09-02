@@ -231,6 +231,29 @@ export function subscribeToSubmissionsByOrgIds(
   }
 }
 
+/**
+ * Learner's own programme submissions (case study / practical / capstone).
+ * Used by Session Prep so prep reflects real work instead of static tips.
+ */
+export async function listSubmissionsForLearner(
+  userId: string,
+): Promise<ProgrammeComponentSubmission[]> {
+  const uid = (userId || '').trim()
+  if (!uid) return []
+
+  const { data: rows, error } = await supabase
+    .from('programme_component_submissions')
+    .select('*')
+    .eq('user_id', uid)
+    .order('last_updated_at', { ascending: false })
+    .limit(20)
+
+  if (error) throw new Error(error.message)
+  const list = (rows ?? []) as Raw[]
+  const nameByUid = new Map<string, { email: string | null; fullName: string | null }>()
+  return list.map((row) => mapRow(row, nameByUid))
+}
+
 export interface ReviewUpdate {
   status: ProgrammeSubmissionStatus
   partnerNotes: string | null
