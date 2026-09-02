@@ -94,7 +94,7 @@ const RESTRICTED_FREE_FEATURES: RestrictedFeatureConfig[] = [
   {
     pathPrefix: '/app/peer-connect',
     featureName: 'Peer Connect',
-    tooltip: 'Upgrade required to access peer matching and session scheduling.',
+    tooltip: 'Upgrade required to access peer matching and practical meetups.',
     benefits: [
       'One-on-one peer matching',
       'Session scheduling and confirmations',

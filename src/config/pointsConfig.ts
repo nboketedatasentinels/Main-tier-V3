@@ -148,8 +148,8 @@ export const REFERRAL_ACTIVITY: ActivityDef = {
 export const PEER_SESSION_CONFIRMATION_ACTIVITY: ActivityDef = {
   id: "peer_session_confirmation",
   baseId: "peer_session_confirmation",
-  title: "Peer Session Confirmed",
-  description: "Both participants confirmed the scheduled peer session before the deadline.",
+  title: "Practical confirmed",
+  description: "Both participants confirmed the scheduled practical before the deadline.",
   points: 50,
   maxPerMonth: 20,
   activityPolicy: { type: "ongoing", maxPerWindow: 10 },

@@ -1127,7 +1127,7 @@ export function useWeeklyChecklistViewModel() {
           description:
             activity.id === 'peer_matching'
               ? 'Find your peer match first. Points unlock after you complete the match window.'
-              : 'Join a peer session first. Points unlock after the session is completed.',
+              : 'Complete a practical with a peer first. Points unlock when the practical is done.',
           status: 'info',
           duration: 6000,
         })

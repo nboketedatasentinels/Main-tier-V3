@@ -771,7 +771,7 @@ export const ActivityRow = ({
                         )
                       }}
                     >
-                      {activity.id === 'peer_to_peer' ? 'Join Peer Session' : 'Find Peer Match'}
+                      {activity.id === 'peer_to_peer' ? 'Open Practical' : 'Find Peer Match'}
                     </Button>
                   ) : (
                     <>

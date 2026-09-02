@@ -163,7 +163,7 @@ const parseSessionDoc = (docSnap: QueryDocumentSnapshot<DocumentData>): PeerSess
 
   return {
     id: docSnap.id,
-    title: data.title || 'Peer Session',
+    title: data.title || 'Practical meetup',
     description: data.description,
     platform: data.platform || 'Zoom',
     meetingLink: resolveMeetingLink(data),
@@ -1088,7 +1088,7 @@ export async function getSession(sessionId: string): Promise<PeerSession | null>
   const data = sessionSnap.data()
   return {
     id: sessionSnap.id,
-    title: data.title || 'Peer Session',
+    title: data.title || 'Practical meetup',
     description: data.description,
     platform: data.platform || 'Zoom',
     meetingLink: data.meetingLink,

@@ -279,7 +279,7 @@ type MatchPreferences = MatchPreferencesForWindow & {
 const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 const defaultSessionDescription =
-  'Work through a practical with peers — shared insight, not a separate “peer session” activity.'
+  'Work through a practical together — shared insight on the same exercise, not a free-form chat.'
 const ACTIVE_SESSION_WINDOW_MS = 2 * 60 * 60 * 1000
 
 type WeeklyMatchDocument = Record<string, unknown>
@@ -316,8 +316,9 @@ export const PeerConnectPage: React.FC = () => {
   const sessionModal = useDisclosure()
   const viewedMatchRef = useRef<string | null>(null)
 
-  // Determine initial tab from URL param (0 = Peer Matching, 1 = Peer Sessions)
-  const initialTabIndex = searchParams.get('tab') === 'sessions' ? 1 : 0
+  // Determine initial tab from URL param (0 = Peer Matching, 1 = Practical)
+  const initialTabIndex =
+    searchParams.get('tab') === 'sessions' || searchParams.get('tab') === 'practical' ? 1 : 0
   const [tabIndex, setTabIndex] = useState(initialTabIndex)
 
   const [availablePeers, setAvailablePeers] = useState<PeerProfile[]>([])
@@ -335,7 +336,7 @@ export const PeerConnectPage: React.FC = () => {
     date: Date | null
     time: string
   }>({
-    title: 'Group Transformation Session',
+    title: 'Practical meetup',
     description: defaultSessionDescription,
     platform: 'Zoom',
     meetingLink: 'https://zoom.us/',
@@ -1095,12 +1096,13 @@ export const PeerConnectPage: React.FC = () => {
 
   const validateSessionForm = () => {
     const errors: Record<string, string> = {}
-    if (!sessionForm.title.trim()) errors.title = 'Please provide a session title'
+    if (!sessionForm.title.trim()) errors.title = 'Please provide a practical title'
     if (!sessionForm.date) errors.date = 'Please select a date'
     if (!sessionForm.time) errors.time = 'Please select a time'
     if (!sessionForm.timezone) errors.timezone = 'Please select a time zone'
     if (sessionForm.participants.length < 2)
-      errors.participants = 'Select at least 2 participants for your group session so you can host a three-person conversation including yourself.'
+      errors.participants =
+        'Select at least 2 participants so you can host a practical with peers (three people including yourself).'
 
     // Validate that date/time is in the future
     if (sessionForm.date && sessionForm.time && sessionForm.timezone) {
@@ -1148,7 +1150,7 @@ export const PeerConnectPage: React.FC = () => {
       // Note: UI will update automatically via real-time listener
 
       toast({
-        title: 'Session Created!',
+        title: 'Practical created',
         description: 'Your peers will be notified.',
         status: 'success',
         position: 'top',
@@ -1157,7 +1159,7 @@ export const PeerConnectPage: React.FC = () => {
 
       // Reset form and close modal
       setSessionForm({
-        title: 'Group Transformation Session',
+        title: 'Practical meetup',
         description: defaultSessionDescription,
         platform: 'Zoom',
         meetingLink: 'https://zoom.us/',
@@ -1172,7 +1174,7 @@ export const PeerConnectPage: React.FC = () => {
     } catch (error) {
       console.error('Session creation failed:', error)
       toast({
-        title: 'Could not create session',
+        title: 'Could not create practical',
         description: 'Please try again.',
         status: 'error',
         position: 'top',
@@ -1248,8 +1250,9 @@ export const PeerConnectPage: React.FC = () => {
                 Peer Connect
               </Heading>
               <Text fontSize="sm" color="gray.500">
-                Peer Matching: both of you earn points when you meet. Challenges: only the winner earns
-                Challenger points (points gained that week).
+                Peer Matching is a short 10–15 min chat (both earn points). Practicals are course work you
+                do with someone else. Challenges: only the winner earns Challenger points from points
+                gained that week.
               </Text>
             </Stack>
           </HStack>
@@ -1342,10 +1345,10 @@ export const PeerConnectPage: React.FC = () => {
                   </Flex>
                   <Stack spacing={0}>
                     <Text fontWeight="bold" color="gray.800">
-                      Group session
+                      Practical
                     </Text>
                     <Text fontSize="xs" color="gray.600">
-                      Join a peer-to-peer session
+                      Do a practical with peers · points come from completing the practical
                     </Text>
                   </Stack>
                 </HStack>
@@ -1398,12 +1401,13 @@ export const PeerConnectPage: React.FC = () => {
                   Peer Learning
                 </Text>
                 <Heading size="sm" color="gray.800">
-                  Peer to Peer
+                  Matching, practicals & challenges
                 </Heading>
               </Stack>
             </HStack>
             <Text fontSize="sm" color="gray.600" lineHeight="1.6">
-              How peer learning works on the platform. Watch this walkthrough to understand weekly 1-on-1 matches, partner-supervised group sessions, and how to make every connection count toward your growth.
+              How Peer Connect works: weekly 1-on-1 matches, practicals you do with someone else, and
+              short challenges. Watch this walkthrough so every connection counts toward your growth.
             </Text>
           </Stack>
 
@@ -1436,7 +1440,7 @@ export const PeerConnectPage: React.FC = () => {
           <Tab>
             <HStack spacing={2}>
               <Icon as={Users} w={4} h={4} />
-              <Text>Peer Sessions</Text>
+              <Text>Practical</Text>
             </HStack>
           </Tab>
         </TabList>
@@ -1652,13 +1656,14 @@ export const PeerConnectPage: React.FC = () => {
                     <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} direction={{ base: 'column', md: 'row' }}>
                       <Stack spacing={1}>
                         <Text fontSize="xs" textTransform="uppercase" letterSpacing="wide" fontWeight="semibold" color="gray.500">
-                          Sessions
+                          Practical meetups
                         </Text>
                         <Heading size="sm" color="gray.800">
-                          Scheduled Peer Sessions
+                          Scheduled practicals
                         </Heading>
                         <Text fontSize="sm" color="gray.500">
-                          Your confirmed and upcoming sessions. Confirm early to unlock points. Report no-shows after the confirmation deadline.
+                          Confirmed and upcoming practical meetups. Confirm early to unlock points. Report
+                          no-shows after the confirmation deadline.
                         </Text>
                       </Stack>
                       <Badge colorScheme="green" variant="outline">
@@ -1731,7 +1736,7 @@ export const PeerConnectPage: React.FC = () => {
                                   color="white"
                                   _hover={{ bg: '#4a1499' }}
                                 >
-                                  Join Session
+                                  Join practical
                                 </Button>
                               )}
                               <Button
@@ -1767,8 +1772,10 @@ export const PeerConnectPage: React.FC = () => {
                       ) : (
                         <Center py={6} flexDirection="column" gap={2} color="gray.500" border="1px dashed" borderColor="gray.100" borderRadius="xl">
                           <Icon as={AlarmClockCheck} w={5} h={5} />
-                          <Text fontSize="sm">No scheduled sessions yet.</Text>
-                          <Text fontSize="xs">Accept an invitation from the sidebar or create a new peer session to get started.</Text>
+                          <Text fontSize="sm">No scheduled practicals yet.</Text>
+                          <Text fontSize="xs">
+                            Accept an invitation from the sidebar or start a practical meetup to get started.
+                          </Text>
                         </Center>
                       )}
                     </SimpleGrid>
@@ -1776,7 +1783,7 @@ export const PeerConnectPage: React.FC = () => {
                   <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm" mt={4}>
                     <Flex justify="space-between" align="center" mb={3}>
                       <Heading size="sm" color="gray.800">
-                        Past peer sessions
+                        Past practicals
                       </Heading>
                       <Badge colorScheme="primary" variant="outline">
                         {pastSessions.length} recorded
@@ -1821,7 +1828,7 @@ export const PeerConnectPage: React.FC = () => {
                                     alignSelf="flex-start"
                                     onClick={() => rescheduleSession(session)}
                                   >
-                                    Reschedule Session
+                                    Reschedule practical
                                   </Button>
                                 </>
                               )}
@@ -1831,7 +1838,7 @@ export const PeerConnectPage: React.FC = () => {
                       </Stack>
                     ) : (
                       <Text fontSize="sm" color="gray.500">
-                        No past sessions yet. Start one to build your history.
+                        No past practicals yet. Start one to build your history.
                       </Text>
                     )}
                   </Box>
@@ -1849,7 +1856,7 @@ export const PeerConnectPage: React.FC = () => {
                     </Badge>
                   </Flex>
                   <Text fontSize="xs" color="gray.500" mb={4}>
-                    Respond to session invitations from peers. Real-time updates.
+                    Respond to practical invitations from peers. Real-time updates.
                   </Text>
                   <Stack spacing={3}>
                     {pendingInvites.length ? (
@@ -1893,9 +1900,9 @@ export const PeerConnectPage: React.FC = () => {
                     Practicals & challenges
                   </Heading>
                   <Text color="gray.500">
-                    Do a practical with peers, or start a 7-day challenge. Matching points go to both people who
-                    meet; challenge checklist points go to the winner only (based on points gained during the
-                    week).
+                    Schedule a practical with peers, or start a 7-day challenge. Peer Matching points go to both
+                    people who meet; Challenger points go to the winner only (based on points gained during the
+                    challenge week).
                   </Text>
                 </Stack>
                 <HStack spacing={2}>
@@ -1962,7 +1969,8 @@ export const PeerConnectPage: React.FC = () => {
                           ))}
                           {!availablePeers.length && (
                             <Text fontSize="sm" color="gray.500">
-                              No peers found in your organisation yet. Invite teammates so you can start challenges and sessions.
+                              No peers found in your organisation yet. Invite teammates so you can start
+                              challenges and practicals.
                             </Text>
                           )}
                         </>
@@ -1975,7 +1983,7 @@ export const PeerConnectPage: React.FC = () => {
                     <Box bg="white" p={6} borderRadius="2xl" border="1px solid" borderColor="gray.100" boxShadow="sm">
                       <Flex justify="space-between" align="center" mb={3}>
                         <Heading size="sm" color="gray.800">
-                          Your sessions
+                          Your practicals
                         </Heading>
                         <Badge colorScheme="primary" variant="outline">
                           Active
@@ -2025,8 +2033,8 @@ export const PeerConnectPage: React.FC = () => {
                           ))
                         ) : (
                           <Stack spacing={1} color="gray.500">
-                            <Text fontSize="sm">No sessions yet.</Text>
-                            <Text fontSize="xs">Start a peer session to schedule your first group meetup.</Text>
+                            <Text fontSize="sm">No practicals scheduled yet.</Text>
+                            <Text fontSize="xs">Start a practical meetup to schedule your first group work session.</Text>
                           </Stack>
                         )}
                       </Stack>
@@ -2043,14 +2051,14 @@ export const PeerConnectPage: React.FC = () => {
         <ModalOverlay />
         <ModalContent>
           <ModalHeader display="flex" alignItems="center" gap={2}>
-            <Users size={18} /> Start a Group Transformation Session
+            <Users size={18} /> Start a practical meetup
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
               <Stack spacing={3}>
                 <FormControl isInvalid={Boolean(formErrors.title)}>
-                  <FormLabel>Session Title</FormLabel>
+                  <FormLabel>Practical title</FormLabel>
                   <Input value={sessionForm.title} onChange={(e) => setSessionForm((prev) => ({ ...prev, title: e.target.value }))} />
                   {formErrors.title && (
                     <Text fontSize="xs" color="red.500" mt={1}>
@@ -2101,7 +2109,7 @@ export const PeerConnectPage: React.FC = () => {
                   isChecked={sessionForm.rememberTimezone}
                   onChange={(e) => setSessionForm((prev) => ({ ...prev, rememberTimezone: e.target.checked }))}
                 >
-                  Remember this time zone for future sessions
+                  Remember this time zone for future practicals
                 </Checkbox>
               </Stack>
 
@@ -2154,8 +2162,8 @@ export const PeerConnectPage: React.FC = () => {
                   dateError={formErrors.date}
                   timeError={formErrors.time}
                   timezoneError={formErrors.timezone}
-                  dateLabel="Session Date"
-                  timeLabel="Session Time"
+                  dateLabel="Practical date"
+                  timeLabel="Practical time"
                   timezoneLabel="Time Zone"
                   isRequired
                 />
@@ -2164,7 +2172,8 @@ export const PeerConnectPage: React.FC = () => {
                   <HStack align="center" spacing={2}>
                     <Icon as={Target} w={4} h={4} color="brand.primary" />
                     <Text fontSize="sm" color="gray.500">
-                      At least 2 participants are required so you can host a session with three or more people including yourself.
+                      At least 2 participants are required so you can host a practical with three or more people
+                      including yourself.
                     </Text>
                   </HStack>
                 </Box>
@@ -2176,7 +2185,7 @@ export const PeerConnectPage: React.FC = () => {
               Cancel
             </Button>
             <Button colorScheme="primary" leftIcon={<Check size={16} />} onClick={createSession}>
-              Create Session
+              Create practical
             </Button>
           </ModalFooter>
         </ModalContent>
