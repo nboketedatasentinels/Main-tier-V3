@@ -682,7 +682,12 @@ export const LeadershipCouncilPage: React.FC = () => {
                 whiteSpace="nowrap"
                 fontWeight="semibold"
                 rounded="md"
-                _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                color="text.primary"
+                _selected={{
+                  bg: 'brand.primary',
+                  color: 'white',
+                  '& *': { color: 'white' },
+                }}
               >
                 Transformation Partner
               </Tab>
@@ -695,8 +700,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                   whiteSpace="nowrap"
                   fontWeight="semibold"
                   rounded="md"
+                  color="text.primary"
                   isDisabled={!isLeadershipEligible}
-                  _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                  _selected={{
+                    bg: 'brand.primary',
+                    color: 'white',
+                    '& *': { color: 'white' },
+                  }}
                   _disabled={{
                     color: 'text.muted',
                     bg: 'surface.subtle',
@@ -705,8 +715,10 @@ export const LeadershipCouncilPage: React.FC = () => {
                   }}
                 >
                   <HStack spacing={2}>
-                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
-                    <Text as="span">Coach</Text>
+                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} color="inherit" />}
+                    <Text as="span" color="inherit">
+                      Coach
+                    </Text>
                   </HStack>
                 </Tab>
               </Tooltip>
@@ -719,8 +731,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                   whiteSpace="nowrap"
                   fontWeight="semibold"
                   rounded="md"
+                  color="text.primary"
                   isDisabled={!isLeadershipEligible}
-                  _selected={{ bg: 'brand.primary', color: 'text.inverse' }}
+                  _selected={{
+                    bg: 'brand.primary',
+                    color: 'white',
+                    '& *': { color: 'white' },
+                  }}
                   _disabled={{
                     color: 'text.muted',
                     bg: 'surface.subtle',
@@ -729,8 +746,10 @@ export const LeadershipCouncilPage: React.FC = () => {
                   }}
                 >
                   <HStack spacing={2}>
-                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} />}
-                    <Text as="span">Mentor</Text>
+                    {!isLeadershipEligible && <Icon as={Lock} boxSize={3} color="inherit" />}
+                    <Text as="span" color="inherit">
+                      Mentor
+                    </Text>
                   </HStack>
                 </Tab>
               </Tooltip>
