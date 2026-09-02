@@ -214,3 +214,120 @@ export const fetchSupabasePeerById = async (peerId: string): Promise<PeerProfile
   if (!result.peer?.id) return { status: 'not_found' }
   return { status: 'ok', record: mapSupabasePeerToRecord(result.peer) }
 }
+
+export type PeerWeeklyMatchRow = {
+  id: string
+  uid: string
+  peer_uid: string
+  match_key: string
+  match_reason?: string | null
+  match_status: string
+  match_refresh_preference?: string | null
+  preferred_match_day?: number | null
+  refresh_count?: number | null
+  automated_match?: boolean | null
+  created_at?: string | null
+  last_refresh_at?: string | null
+}
+
+type EnsurePeerMatchResult =
+  | { ok: true; created: boolean; match: PeerWeeklyMatchRow }
+  | { ok: false; error: string }
+
+const asMatchRow = (value: unknown): PeerWeeklyMatchRow | null => {
+  if (!value || typeof value !== 'object') return null
+  const row = value as Record<string, unknown>
+  if (typeof row.id !== 'string' || typeof row.peer_uid !== 'string' || typeof row.match_key !== 'string') {
+    return null
+  }
+  return {
+    id: row.id,
+    uid: typeof row.uid === 'string' ? row.uid : '',
+    peer_uid: row.peer_uid,
+    match_key: row.match_key,
+    match_reason: typeof row.match_reason === 'string' ? row.match_reason : null,
+    match_status: typeof row.match_status === 'string' ? row.match_status : 'new',
+    match_refresh_preference:
+      typeof row.match_refresh_preference === 'string' ? row.match_refresh_preference : null,
+    preferred_match_day: typeof row.preferred_match_day === 'number' ? row.preferred_match_day : null,
+    refresh_count: typeof row.refresh_count === 'number' ? row.refresh_count : null,
+    automated_match: typeof row.automated_match === 'boolean' ? row.automated_match : null,
+    created_at: typeof row.created_at === 'string' ? row.created_at : null,
+    last_refresh_at: typeof row.last_refresh_at === 'string' ? row.last_refresh_at : null,
+  }
+}
+
+/**
+ * Ensures the signed-in learner has a peer match for the current window key.
+ * Creates one immediately when missing (random eligible org/village peer).
+ */
+export const ensureCurrentPeerMatch = async (params: {
+  matchKey: string
+  refreshPreference?: string
+  preferredMatchDay?: number
+}): Promise<EnsurePeerMatchResult> => {
+  const { data, error } = await supabase.rpc('ensure_my_current_peer_match', {
+    p_match_key: params.matchKey,
+    p_refresh_preference: params.refreshPreference ?? 'weekly',
+    p_preferred_match_day: params.preferredMatchDay ?? 1,
+  })
+  if (error) {
+    throw Object.assign(new Error(error.message), { code: error.code })
+  }
+
+  const result = (data ?? {}) as {
+    ok?: boolean
+    created?: boolean
+    error?: string
+    match?: unknown
+  }
+  if (!result.ok) {
+    return { ok: false, error: result.error || 'ensure_failed' }
+  }
+  const match = asMatchRow(result.match)
+  if (!match) return { ok: false, error: 'invalid_match_payload' }
+  return { ok: true, created: Boolean(result.created), match }
+}
+
+export const replaceCurrentPeerMatch = async (params: {
+  matchKey: string
+  unavailablePeerId: string
+}): Promise<EnsurePeerMatchResult> => {
+  const { data, error } = await supabase.rpc('replace_my_peer_match', {
+    p_match_key: params.matchKey,
+    p_unavailable_peer_id: params.unavailablePeerId,
+  })
+  if (error) {
+    throw Object.assign(new Error(error.message), { code: error.code })
+  }
+
+  const result = (data ?? {}) as {
+    ok?: boolean
+    created?: boolean
+    error?: string
+    match?: unknown
+  }
+  if (!result.ok) {
+    return { ok: false, error: result.error || 'replace_failed' }
+  }
+  const match = asMatchRow(result.match)
+  if (!match) return { ok: false, error: 'invalid_match_payload' }
+  return { ok: true, created: Boolean(result.created), match }
+}
+
+export const updatePeerMatchStatus = async (params: {
+  matchId: string
+  status: string
+}): Promise<void> => {
+  const { error } = await supabase
+    .from('peer_weekly_matches')
+    .update({
+      match_status: params.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', params.matchId)
+
+  if (error) {
+    throw Object.assign(new Error(error.message), { code: error.code })
+  }
+}
