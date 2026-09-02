@@ -1877,10 +1877,12 @@ export const PeerConnectPage: React.FC = () => {
                         </HStack>
                       </Center>
                     ) : upcomingSessions.length ? (
-                      <Stack spacing={3}>
+                      <Stack spacing={3} w="full">
                         {upcomingSessions.map((session) => (
                           <Box
                             key={session.id}
+                            w="full"
+                            maxW="100%"
                             p={{ base: 4, md: 5 }}
                             borderRadius="xl"
                             border="1px solid"
