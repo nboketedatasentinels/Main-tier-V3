@@ -52,15 +52,12 @@ import {
   Mail,
   MessageSquare,
   Search,
-  Sword,
   Target,
-  Trophy,
   Users,
   Video,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
-import { StartChallengeModal } from '@/components/modals/StartChallengeModal'
 import { getOrgScope } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
 import { normalizeEmail } from '@/utils/email'
@@ -201,12 +198,6 @@ const fetchPeerProfileById = async (peerId: string): Promise<PeerProfileLookupRe
   }
 }
 
-interface PreselectedUser {
-  id: string
-  name: string
-  email: string
-}
-
 type WeeklyMatch = {
   matchId: string
   peer: PeerProfile
@@ -302,7 +293,6 @@ export const PeerConnectPage: React.FC = () => {
   const { user, profile, loading, profileLoading, updateProfile } = useAuth()
   const toast = useToast()
   const [searchParams] = useSearchParams()
-  const challengeModal = useDisclosure()
   const sessionModal = useDisclosure()
   const viewedMatchRef = useRef<string | null>(null)
 
@@ -341,7 +331,6 @@ export const PeerConnectPage: React.FC = () => {
   const [participantFilter, setParticipantFilter] = useState('')
   const [loadingPeers, setLoadingPeers] = useState(false)
   const [loadingSessions, setLoadingSessions] = useState(false)
-  const [preselectedUser, setPreselectedUser] = useState<PreselectedUser | null>(null)
   const [matchAvailabilityMessage, setMatchAvailabilityMessage] = useState<string | null>(null)
   const unavailablePeerLogRef = useRef<string | null>(null)
   const rematchAttemptRef = useRef<Set<string>>(new Set())
@@ -593,18 +582,6 @@ export const PeerConnectPage: React.FC = () => {
       unsubscribeInvites()
     }
   }, [loading, loadSessionsAndInvites, profile?.timezone, profileLoading, user])
-
-  const onChallengeCreated = () => {
-    fetchWeeklyMatch()
-    // Sessions and invitations update automatically via real-time listeners
-    toast({
-      title: 'Challenge created',
-      description: `Your opponent will receive a Firebase-backed notification.`,
-      status: 'success',
-      position: 'top',
-      icon: <Trophy size={18} />,
-    })
-  }
 
   useEffect(() => {
     const fetchPeers = async () => {
@@ -1818,17 +1795,12 @@ export const PeerConnectPage: React.FC = () => {
                   </Heading>
                   <Text color="gray.500">
                     This is not auto-matching. Pick friends, schedule a practical / knowledge session, and
-                    work through it together. You can also start a separate 7-day challenge from here.
+                    work through it together.
                   </Text>
                 </Stack>
-                <HStack spacing={2}>
-                  <Button variant="outline" leftIcon={<Sword size={16} />} onClick={challengeModal.onOpen}>
-                    Challenge a friend
-                  </Button>
-                  <Button colorScheme="primary" leftIcon={<Users size={16} />} onClick={sessionModal.onOpen}>
-                    Organise a knowledge session
-                  </Button>
-                </HStack>
+                <Button colorScheme="primary" leftIcon={<Users size={16} />} onClick={sessionModal.onOpen}>
+                  Organise a knowledge session
+                </Button>
               </Flex>
 
               <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={4} alignItems="start">
@@ -1867,26 +1839,12 @@ export const PeerConnectPage: React.FC = () => {
                                   </Text>
                                 </Stack>
                               </HStack>
-                              <Button
-                                size="sm"
-                                bg="#350e6f"
-                                color="white"
-                                _hover={{ bg: '#4a1499' }}
-                                leftIcon={<Trophy size={14} />}
-                                flexShrink={0}
-                                onClick={() => {
-                                  setPreselectedUser(peer)
-                                  challengeModal.onOpen()
-                                }}
-                              >
-                                Challenge
-                              </Button>
                             </Flex>
                           ))}
                           {!availablePeers.length && (
                             <Text fontSize="sm" color="gray.500">
-                              No peers found in your organisation yet. Invite teammates so you can start
-                              challenges and practicals.
+                              No peers found in your organisation yet. Invite teammates so you can organise
+                              practicals together.
                             </Text>
                           )}
                         </>
@@ -2111,16 +2069,6 @@ export const PeerConnectPage: React.FC = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
-      <StartChallengeModal
-        isOpen={challengeModal.isOpen}
-        onClose={() => {
-          challengeModal.onClose()
-          setPreselectedUser(null)
-        }}
-        onChallengeCreated={onChallengeCreated}
-        preselectedUser={preselectedUser}
-      />
     </Stack>
   )
 }
