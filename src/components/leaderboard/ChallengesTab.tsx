@@ -167,12 +167,13 @@ export const ChallengesTab = ({
               Challenge Arena
             </Text>
             <Text fontSize="xl" fontWeight="bold" color="gray.800">
-              Team up for the week
+              Who gains the most points this week?
             </Text>
             <Text fontSize="sm" color="gray.600" mt={1} maxW="640px">
-              A collaborative 7-day challenge toward a shared goal. We count points you gain during
-              the challenge — not your lifetime total. Your partner must accept to start. Someone
-              already in a challenge cannot be selected again until that challenge ends.
+              An individual 7-day 1v1 challenge. Only the winner earns Challenger checklist points.
+              We count points you gain during the challenge — not your lifetime total. Accepting
+              alone does not award points. Someone already in a challenge cannot be selected again
+              until that challenge ends.
             </Text>
           </Box>
           <Button

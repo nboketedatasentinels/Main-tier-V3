@@ -15,7 +15,6 @@ export type CreateChallengeInput = {
   challengedId: string
   duration: 'weekly' | 'monthly'
   description?: string
-  customGoal?: string
 }
 
 type ChallengeRow = {
@@ -48,11 +47,11 @@ export const createChallenge = async (
   const { data, error } = await supabase.rpc('create_challenge', {
     p: {
       challenged_id: input.challengedId,
-      // Competitive challenges are retired — always create collaborative.
-      type: 'collaborative',
+      // Collaborative is retired — individual 1v1 only.
+      type: 'competitive',
       duration: input.duration,
       description: input.description ?? null,
-      custom_goal: input.customGoal ?? null,
+      custom_goal: null,
     },
   })
   if (error) throw new Error(error.message)
@@ -165,7 +164,7 @@ export const mapChallengeRow = (row: ChallengeRow, currentUserId: string): Chall
     opponentPoints,
     status,
     result,
-    type: (row.type as ChallengeRecord['type']) || 'collaborative',
+    type: (row.type as ChallengeRecord['type']) || 'competitive',
     isChallenger,
   }
 }
