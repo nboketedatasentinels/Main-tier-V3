@@ -61,6 +61,7 @@ import { getOrgScope } from '@/utils/organizationScope'
 import { getDisplayName } from '@/utils/displayName'
 import { normalizeEmail } from '@/utils/email'
 import { isLearnerRole } from '@/utils/role'
+import { buildMeetingMailtoHref, openMeetingMailto } from '@/utils/meetingInvite'
 import {
   fetchSupabasePeerById,
   listOrgPeers,
@@ -1481,17 +1482,27 @@ export const PeerConnectPage: React.FC = () => {
                           </Box>
                           <HStack spacing={2} justify={{ base: 'flex-start', lg: 'flex-end' }} flexWrap="wrap">
                             <Button
-                              as="a"
-                              href={`mailto:${weeklyMatch.peer.email}?subject=${encodeURIComponent(`Peer Match for ${matchWindow.label}`)}&body=${encodeURIComponent(
-                                `Hi ${peerDisplayName},%0D%0A%0D%0AWe were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.%0D%0A%0D%0A- ${senderDisplayName}`,
-                              )}`}
                               leftIcon={<Mail size={16} />}
                               bg="brand.primary"
                               color="white"
                               _hover={{ bg: 'brand.dark' }}
                               size="sm"
-                              target="_blank"
-                              onClick={() => updateMatchStatus('contacted')}
+                              isDisabled={!weeklyMatch.peer.email}
+                              onClick={() => {
+                                const href = buildMeetingMailtoHref({
+                                  to: weeklyMatch.peer.email,
+                                  subject: `Peer Match for ${matchWindow.label}`,
+                                  body: [
+                                    `Hi ${peerDisplayName},`,
+                                    '',
+                                    `We were paired for this match window (${matchWindow.label}). I'd love to lock in a time to connect. Feel free to grab a slot on my calendar or reply with your availability.`,
+                                    '',
+                                    `- ${senderDisplayName}`,
+                                  ].join('\n'),
+                                })
+                                openMeetingMailto(href)
+                                void updateMatchStatus('contacted')
+                              }}
                             >
                               Email peer
                             </Button>
