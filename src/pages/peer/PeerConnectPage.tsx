@@ -1826,289 +1826,303 @@ export const PeerConnectPage: React.FC = () => {
                       </Text>
                     )}
                   </Box>
+                </Stack>
+              </Box>
 
-                  <Box px={{ base: 5, md: 7 }} py={5}>
-                    <Flex
-                      justify="space-between"
-                      align={{ base: 'flex-start', md: 'center' }}
-                      gap={3}
-                      mb={4}
-                      direction={{ base: 'column', md: 'row' }}
+              <Box
+                bg="white"
+                borderRadius="2xl"
+                border="1px solid"
+                borderColor="gray.100"
+                boxShadow="0 1px 3px rgba(39, 6, 46, 0.06)"
+                px={{ base: 5, md: 7 }}
+                py={{ base: 5, md: 6 }}
+                w="full"
+              >
+                <Flex
+                  justify="space-between"
+                  align={{ base: 'flex-start', md: 'center' }}
+                  gap={3}
+                  mb={5}
+                  direction={{ base: 'column', md: 'row' }}
+                >
+                  <Stack spacing={1}>
+                    <Text
+                      fontSize="xs"
+                      textTransform="uppercase"
+                      letterSpacing="0.08em"
+                      fontWeight="semibold"
+                      color="gray.500"
                     >
-                      <Stack spacing={1}>
-                        <Text
-                          fontSize="xs"
-                          textTransform="uppercase"
-                          letterSpacing="0.08em"
-                          fontWeight="semibold"
-                          color="gray.500"
-                        >
-                          Upcoming
-                        </Text>
-                        <Heading size="sm" color="brand.dark">
-                          Scheduled practicals
-                        </Heading>
-                        <Text fontSize="sm" color="gray.600">
-                          Confirm early to unlock points. Report no-shows after the confirmation deadline.
-                        </Text>
-                      </Stack>
-                      <Badge
-                        px={3}
-                        py={1}
-                        borderRadius="full"
-                        bg="gray.50"
-                        color="gray.700"
-                        border="1px solid"
-                        borderColor="gray.200"
-                        textTransform="none"
-                        fontWeight="medium"
-                      >
-                        {upcomingSessions.length} scheduled
-                      </Badge>
-                    </Flex>
+                      Upcoming
+                    </Text>
+                    <Heading size="md" color="brand.dark" letterSpacing="-0.02em">
+                      Scheduled practicals
+                    </Heading>
+                    <Text fontSize="sm" color="gray.600">
+                      Confirm early to unlock points. Report no-shows after the confirmation deadline.
+                    </Text>
+                  </Stack>
+                  <Badge
+                    px={3}
+                    py={1}
+                    borderRadius="full"
+                    bg="gray.50"
+                    color="gray.700"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    textTransform="none"
+                    fontWeight="medium"
+                    alignSelf="flex-start"
+                  >
+                    {upcomingSessions.length} scheduled
+                  </Badge>
+                </Flex>
 
-                    {loadingSessions ? (
-                      <Center py={8}>
-                        <HStack spacing={2}>
-                          <Spinner size="sm" />
-                          <Text fontSize="sm" color="gray.500">
-                            Loading sessions...
-                          </Text>
-                        </HStack>
-                      </Center>
-                    ) : upcomingSessions.length ? (
-                      <Stack spacing={3} w="full">
-                        {upcomingSessions.map((session) => (
-                          <Box
-                            key={session.id}
-                            w="full"
-                            maxW="100%"
-                            p={{ base: 4, md: 5 }}
-                            borderRadius="xl"
-                            border="1px solid"
-                            borderColor="gray.100"
-                            bg="white"
-                          >
-                            <Flex
-                              justify="space-between"
-                              align={{ base: 'flex-start', md: 'center' }}
-                              gap={3}
-                              direction={{ base: 'column', md: 'row' }}
-                              mb={3}
-                            >
-                              <Stack spacing={1} minW={0}>
-                                <HStack spacing={2} flexWrap="wrap">
-                                  <Text fontWeight="bold" color="brand.dark" fontSize="lg">
-                                    {session.title}
-                                  </Text>
-                                  {renderStatusBadge(session.status)}
-                                </HStack>
-                                <Text fontSize="sm" color="gray.500">
-                                  {format(session.scheduledAt, 'EEE, MMM d')} at{' '}
-                                  {format(session.scheduledAt, 'p')} ({session.timezone})
-                                </Text>
-                              </Stack>
-                              <HStack spacing={2} flexShrink={0}>
-                                <Badge
-                                  colorScheme={session.youConfirmed ? 'green' : 'yellow'}
-                                  variant="subtle"
-                                >
-                                  {session.youConfirmed ? 'You confirmed' : 'Awaiting you'}
-                                </Badge>
-                                <Badge
-                                  colorScheme={session.peerConfirmed ? 'green' : 'yellow'}
-                                  variant="outline"
-                                >
-                                  {session.peerConfirmed ? 'Peer confirmed' : 'Peer pending'}
-                                </Badge>
-                              </HStack>
-                            </Flex>
-
-                            <Flex
-                              gap={4}
-                              align={{ base: 'stretch', md: 'center' }}
-                              direction={{ base: 'column', lg: 'row' }}
-                            >
-                              <Stack spacing={2} flex={1} minW={0}>
-                                <HStack spacing={2} color="gray.500" fontSize="sm">
-                                  <Icon as={Video} w={4} h={4} />
-                                  <Text>{session.platform}</Text>
-                                </HStack>
-                                {session.link ? (
-                                  <Box
-                                    px={3}
-                                    py={2}
-                                    borderRadius="lg"
-                                    bg="gray.50"
-                                    border="1px solid"
-                                    borderColor="gray.100"
-                                  >
-                                    <Text fontSize="xs" color="gray.500" mb={0.5}>
-                                      Meeting link
-                                    </Text>
-                                    <Link
-                                      href={session.link}
-                                      isExternal
-                                      color="brand.primary"
-                                      fontSize="sm"
-                                      wordBreak="break-all"
-                                    >
-                                      {session.link}
-                                    </Link>
-                                  </Box>
-                                ) : (
-                                  <Text fontSize="sm" color="gray.500">
-                                    Meeting link not added yet.
-                                  </Text>
-                                )}
-                                <Text fontSize="xs" color="gray.500">
-                                  Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
-                                </Text>
-                              </Stack>
-
-                              <HStack spacing={2} flexShrink={0} flexWrap="wrap" align="flex-start">
-                                {session.link && (
-                                  <Button
-                                    leftIcon={<Video size={14} />}
-                                    as="a"
-                                    href={session.link}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    size="sm"
-                                    bg="brand.primary"
-                                    color="white"
-                                    _hover={{ bg: 'brand.dark' }}
-                                  >
-                                    Join practical
-                                  </Button>
-                                )}
-                                <Button
-                                  leftIcon={<Check size={14} />}
-                                  size="sm"
-                                  variant={session.youConfirmed ? 'outline' : 'solid'}
-                                  bg={session.youConfirmed ? 'white' : 'brand.primary'}
-                                  color={session.youConfirmed ? 'gray.700' : 'white'}
-                                  borderColor="gray.200"
-                                  _hover={{ bg: session.youConfirmed ? 'gray.50' : 'brand.dark' }}
-                                  onClick={() => confirmMeeting(session.id)}
-                                  isDisabled={session.youConfirmed}
-                                >
-                                  {session.youConfirmed ? 'Confirmed' : 'Confirm meeting'}
-                                </Button>
-                                <Button
-                                  leftIcon={<AlarmClockOff size={14} />}
-                                  size="sm"
-                                  variant="ghost"
-                                  color="orange.600"
-                                  onClick={() => reportNoShow(session.id)}
-                                  isDisabled={disableNoShow(session)}
-                                >
-                                  Report no-show
-                                </Button>
-                              </HStack>
-                            </Flex>
-                          </Box>
-                        ))}
-                      </Stack>
-                    ) : (
-                      <Center
-                        py={10}
-                        flexDirection="column"
-                        gap={2}
-                        color="gray.500"
-                        border="1px dashed"
-                        borderColor="gray.200"
-                        borderRadius="xl"
-                        bg="gray.50"
-                      >
-                        <Icon as={AlarmClockCheck} w={5} h={5} color="gray.400" />
-                        <Text fontSize="sm" color="gray.700" fontWeight="medium">
-                          No scheduled practicals yet
-                        </Text>
-                        <Text fontSize="xs" color="gray.500">
-                          Accept an invitation or organise a knowledge session to get started.
-                        </Text>
-                      </Center>
-                    )}
-                  </Box>
-
-                  <Box px={{ base: 5, md: 7 }} py={5}>
-                    <Flex justify="space-between" align="center" mb={4}>
-                      <Stack spacing={0}>
-                        <Text
-                          fontSize="xs"
-                          textTransform="uppercase"
-                          letterSpacing="0.08em"
-                          fontWeight="semibold"
-                          color="gray.500"
-                        >
-                          History
-                        </Text>
-                        <Heading size="sm" color="brand.dark">
-                          Past practicals
-                        </Heading>
-                      </Stack>
+                {loadingSessions ? (
+                  <Center py={8}>
+                    <HStack spacing={2}>
+                      <Spinner size="sm" />
                       <Text fontSize="sm" color="gray.500">
-                        {pastSessions.length} recorded
+                        Loading sessions...
                       </Text>
-                    </Flex>
-                    {loadingSessions ? (
-                      <Center py={6}>
-                        <HStack spacing={2}>
-                          <Spinner size="sm" />
-                          <Text fontSize="sm" color="gray.500">
-                            Loading session history...
-                          </Text>
-                        </HStack>
-                      </Center>
-                    ) : pastSessions.length ? (
-                      <Stack spacing={3}>
-                        {pastSessions.map((session) => (
-                          <Flex
-                            key={session.id}
-                            p={4}
-                            borderRadius="xl"
-                            border="1px solid"
-                            borderColor="gray.100"
-                            bg="gray.50"
-                            justify="space-between"
-                            align={{ base: 'flex-start', md: 'center' }}
-                            gap={3}
-                            direction={{ base: 'column', md: 'row' }}
-                          >
-                            <Stack spacing={1} minW={0}>
-                              <HStack spacing={2}>
-                                <Text fontWeight="semibold" color="brand.dark">
-                                  {session.title}
-                                </Text>
-                                {renderStatusBadge(session.status)}
-                              </HStack>
-                              <Text fontSize="sm" color="gray.500">
-                                {format(session.scheduledAt, 'EEE, MMM d')} at {format(session.scheduledAt, 'p')}{' '}
-                                ({session.timezone})
+                    </HStack>
+                  </Center>
+                ) : upcomingSessions.length ? (
+                  <Stack spacing={3} w="full">
+                    {upcomingSessions.map((session) => (
+                      <Box
+                        key={session.id}
+                        w="full"
+                        maxW="100%"
+                        p={{ base: 4, md: 5 }}
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="gray.100"
+                        bg="gray.50"
+                      >
+                        <Flex
+                          justify="space-between"
+                          align={{ base: 'flex-start', md: 'center' }}
+                          gap={3}
+                          direction={{ base: 'column', md: 'row' }}
+                          mb={3}
+                        >
+                          <Stack spacing={1} minW={0}>
+                            <HStack spacing={2} flexWrap="wrap">
+                              <Text fontWeight="bold" color="brand.dark" fontSize="lg">
+                                {session.title}
                               </Text>
-                            </Stack>
-                            {session.status === 'no_show' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                borderColor="gray.200"
-                                leftIcon={<Calendar size={14} />}
-                                onClick={() => rescheduleSession(session)}
+                              {renderStatusBadge(session.status)}
+                            </HStack>
+                            <Text fontSize="sm" color="gray.500">
+                              {format(session.scheduledAt, 'EEE, MMM d')} at {format(session.scheduledAt, 'p')} (
+                              {session.timezone})
+                            </Text>
+                          </Stack>
+                          <HStack spacing={2} flexShrink={0}>
+                            <Badge colorScheme={session.youConfirmed ? 'green' : 'yellow'} variant="subtle">
+                              {session.youConfirmed ? 'You confirmed' : 'Awaiting you'}
+                            </Badge>
+                            <Badge colorScheme={session.peerConfirmed ? 'green' : 'yellow'} variant="outline">
+                              {session.peerConfirmed ? 'Peer confirmed' : 'Peer pending'}
+                            </Badge>
+                          </HStack>
+                        </Flex>
+
+                        <Flex
+                          gap={4}
+                          align={{ base: 'stretch', md: 'center' }}
+                          direction={{ base: 'column', lg: 'row' }}
+                        >
+                          <Stack spacing={2} flex={1} minW={0}>
+                            <HStack spacing={2} color="gray.500" fontSize="sm">
+                              <Icon as={Video} w={4} h={4} />
+                              <Text>{session.platform}</Text>
+                            </HStack>
+                            {session.link ? (
+                              <Box
+                                px={3}
+                                py={2}
+                                borderRadius="lg"
+                                bg="white"
+                                border="1px solid"
+                                borderColor="gray.100"
                               >
-                                Reschedule
+                                <Text fontSize="xs" color="gray.500" mb={0.5}>
+                                  Meeting link
+                                </Text>
+                                <Link
+                                  href={session.link}
+                                  isExternal
+                                  color="brand.primary"
+                                  fontSize="sm"
+                                  wordBreak="break-all"
+                                >
+                                  {session.link}
+                                </Link>
+                              </Box>
+                            ) : (
+                              <Text fontSize="sm" color="gray.500">
+                                Meeting link not added yet.
+                              </Text>
+                            )}
+                            <Text fontSize="xs" color="gray.500">
+                              Confirmation deadline: {format(session.confirmationDeadline, 'MMM d, p')}
+                            </Text>
+                          </Stack>
+
+                          <HStack spacing={2} flexShrink={0} flexWrap="wrap" align="flex-start">
+                            {session.link && (
+                              <Button
+                                leftIcon={<Video size={14} />}
+                                as="a"
+                                href={session.link}
+                                target="_blank"
+                                rel="noreferrer"
+                                size="sm"
+                                bg="brand.primary"
+                                color="white"
+                                _hover={{ bg: 'brand.dark' }}
+                              >
+                                Join practical
                               </Button>
                             )}
-                          </Flex>
-                        ))}
-                      </Stack>
-                    ) : (
+                            <Button
+                              leftIcon={<Check size={14} />}
+                              size="sm"
+                              variant={session.youConfirmed ? 'outline' : 'solid'}
+                              bg={session.youConfirmed ? 'white' : 'brand.primary'}
+                              color={session.youConfirmed ? 'gray.700' : 'white'}
+                              borderColor="gray.200"
+                              _hover={{ bg: session.youConfirmed ? 'gray.50' : 'brand.dark' }}
+                              onClick={() => confirmMeeting(session.id)}
+                              isDisabled={session.youConfirmed}
+                            >
+                              {session.youConfirmed ? 'Confirmed' : 'Confirm meeting'}
+                            </Button>
+                            <Button
+                              leftIcon={<AlarmClockOff size={14} />}
+                              size="sm"
+                              variant="ghost"
+                              color="orange.600"
+                              onClick={() => reportNoShow(session.id)}
+                              isDisabled={disableNoShow(session)}
+                            >
+                              Report no-show
+                            </Button>
+                          </HStack>
+                        </Flex>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Center
+                    py={10}
+                    flexDirection="column"
+                    gap={2}
+                    color="gray.500"
+                    border="1px dashed"
+                    borderColor="gray.200"
+                    borderRadius="xl"
+                    bg="gray.50"
+                  >
+                    <Icon as={AlarmClockCheck} w={5} h={5} color="gray.400" />
+                    <Text fontSize="sm" color="gray.700" fontWeight="medium">
+                      No scheduled practicals yet
+                    </Text>
+                    <Text fontSize="xs" color="gray.500">
+                      Accept an invitation or organise a knowledge session to get started.
+                    </Text>
+                  </Center>
+                )}
+              </Box>
+
+              <Box
+                bg="white"
+                borderRadius="2xl"
+                border="1px solid"
+                borderColor="gray.100"
+                boxShadow="0 1px 3px rgba(39, 6, 46, 0.06)"
+                px={{ base: 5, md: 7 }}
+                py={{ base: 5, md: 6 }}
+                w="full"
+              >
+                <Flex justify="space-between" align="center" mb={4}>
+                  <Stack spacing={0}>
+                    <Text
+                      fontSize="xs"
+                      textTransform="uppercase"
+                      letterSpacing="0.08em"
+                      fontWeight="semibold"
+                      color="gray.500"
+                    >
+                      History
+                    </Text>
+                    <Heading size="md" color="brand.dark" letterSpacing="-0.02em">
+                      Past practicals
+                    </Heading>
+                  </Stack>
+                  <Text fontSize="sm" color="gray.500">
+                    {pastSessions.length} recorded
+                  </Text>
+                </Flex>
+                {loadingSessions ? (
+                  <Center py={6}>
+                    <HStack spacing={2}>
+                      <Spinner size="sm" />
                       <Text fontSize="sm" color="gray.500">
-                        No past practicals yet. Start one to build your history.
+                        Loading session history...
                       </Text>
-                    )}
-                  </Box>
-                </Stack>
+                    </HStack>
+                  </Center>
+                ) : pastSessions.length ? (
+                  <Stack spacing={3} w="full">
+                    {pastSessions.map((session) => (
+                      <Flex
+                        key={session.id}
+                        w="full"
+                        p={4}
+                        borderRadius="xl"
+                        border="1px solid"
+                        borderColor="gray.100"
+                        bg="gray.50"
+                        justify="space-between"
+                        align={{ base: 'flex-start', md: 'center' }}
+                        gap={3}
+                        direction={{ base: 'column', md: 'row' }}
+                      >
+                        <Stack spacing={1} minW={0}>
+                          <HStack spacing={2}>
+                            <Text fontWeight="semibold" color="brand.dark">
+                              {session.title}
+                            </Text>
+                            {renderStatusBadge(session.status)}
+                          </HStack>
+                          <Text fontSize="sm" color="gray.500">
+                            {format(session.scheduledAt, 'EEE, MMM d')} at {format(session.scheduledAt, 'p')} (
+                            {session.timezone})
+                          </Text>
+                        </Stack>
+                        {session.status === 'no_show' && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            borderColor="gray.200"
+                            leftIcon={<Calendar size={14} />}
+                            onClick={() => rescheduleSession(session)}
+                          >
+                            Reschedule
+                          </Button>
+                        )}
+                      </Flex>
+                    ))}
+                  </Stack>
+                ) : (
+                  <Text fontSize="sm" color="gray.500">
+                    No past practicals yet. Start one to build your history.
+                  </Text>
+                )}
               </Box>
             </Stack>
           </TabPanel>
