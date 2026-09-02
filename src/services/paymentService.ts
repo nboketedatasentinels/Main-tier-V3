@@ -2,8 +2,8 @@
  * Stripe checkout helpers.
  * Requires edge functions `create-checkout-session` + `stripe-webhook` and secrets:
  *   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
- *   STRIPE_IMPACT_LOG_PRICE_ID ($5/mo),
- *   STRIPE_FULL_PROGRAMME_PRICE_ID ($50/mo)
+ *   STRIPE_IMPACT_LOG_PRICE_ID ($5/mo · 1 month access),
+ *   STRIPE_FULL_PROGRAMME_PRICE_ID ($50/year · 12 months access)
  */
 import { supabase } from '@/services/supabase'
 

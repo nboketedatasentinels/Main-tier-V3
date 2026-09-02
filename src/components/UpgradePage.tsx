@@ -207,7 +207,7 @@ export const UpgradePage: React.FC = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
-                    Billed monthly · cancel anytime
+                    1 month of Impact Log Pro · renews monthly · cancel anytime
                   </Text>
                 </Box>
 
@@ -276,11 +276,11 @@ export const UpgradePage: React.FC = () => {
                       $50
                     </Text>
                     <Text fontSize="md" fontWeight="500" style={{ color: '#64748B' }}>
-                      /month
+                      /12 months
                     </Text>
                   </HStack>
                   <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
-                    Billed monthly · cancel anytime
+                    Full programme for one year · billed annually · cancel anytime
                   </Text>
                 </Box>
 

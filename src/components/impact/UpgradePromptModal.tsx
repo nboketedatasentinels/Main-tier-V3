@@ -143,7 +143,7 @@ export const ImpactUpgradePromptModal: React.FC<EnhancedUpgradePromptModalProps>
                   Impact Log Pro
                 </Text>
                 <Text fontSize="sm" style={{ color: '#64748B' }}>
-                  Past entries stay readable forever
+                  1 month of unlimited logging · past entries stay readable
                 </Text>
               </Box>
               <HStack
