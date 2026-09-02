@@ -12,7 +12,6 @@ import {
   VStack,
   HStack,
   Box,
-  Grid,
   Textarea,
   Select,
   Spinner,
@@ -25,7 +24,7 @@ import {
   Divider,
   Badge,
 } from '@chakra-ui/react';
-import { Swords, Users, Trophy, User, Lock } from 'lucide-react';
+import { Users, Trophy, User, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { getOrgScope } from '@/utils/organizationScope';
 import { listOrgPeers } from '@/services/supabasePeerService';
@@ -62,7 +61,6 @@ interface UserOption {
   busy: boolean;
 }
 
-type ChallengeType = 'competitive' | 'collaborative';
 type OpponentFilter = 'suggested' | 'all';
 type DurationPreset = 'weekly' | 'monthly';
 
@@ -74,7 +72,6 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   preselectedUser,
 }) => {
   // --- STATE MANAGEMENT ---
-  const [challengeType, setChallengeType] = useState<ChallengeType>('competitive');
   const [customGoal, setCustomGoal] = useState('');
   const [opponentFilter, setOpponentFilter] = useState<OpponentFilter>('suggested');
   const [durationPreset, setDurationPreset] = useState<DurationPreset>('weekly');
@@ -163,14 +160,13 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       return false;
     }
     if (!preselectedUser && !selectedUserId) {
-      setError('Please select a user to challenge.');
+      setError('Please select a partner for this challenge.');
       return false;
     }
     return true;
   };
 
   const resetForm = () => {
-    setChallengeType('competitive');
     setCustomGoal('');
     setOpponentFilter('suggested');
     setDurationPreset('weekly');
@@ -181,8 +177,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   };
 
   // --- SUBMISSION LOGIC ---
-  // Creates via Supabase RPC (0040). Points are NOT awarded here - they land
-  // only after the challenge week ends and the challenge was accepted/completed.
+  // Creates via Supabase RPC. Challenges are collaborative only.
   const handleCreateChallenge = async () => {
     if (!validateForm()) return;
 
@@ -197,10 +192,9 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
 
       await createChallenge({
         challengedId: challengedUserId,
-        type: challengeType,
         duration: durationPreset,
         description: description.trim() || undefined,
-        customGoal: challengeType === 'collaborative' ? customGoal.trim() || undefined : undefined,
+        customGoal: customGoal.trim() || undefined,
       });
 
       setSuccess(true);
@@ -277,15 +271,15 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
         <ModalHeader borderBottomWidth="1px" borderColor="neutral.200">
           <HStack>
             <Box bg="brand.100" p="2" borderRadius="full">
-              <Swords size={20} color="var(--chakra-colors-brand-600)" />
+              <Users size={20} color="var(--chakra-colors-brand-600)" />
             </Box>
             <Text fontSize="xl" fontWeight="semibold" color="neutral.900">
               Start a Challenge
             </Text>
           </HStack>
           <Text mt={2} fontSize="sm" color="neutral.600" fontWeight="normal">
-            7 days. We count points each of you gains during the challenge — not lifetime totals. Only
-            the winner earns Challenger checklist points.
+            Team up for 7 days toward a shared goal. We count points each of you gains during the
+            challenge — not lifetime totals.
           </Text>
         </ModalHeader>
         <ModalCloseButton />
@@ -304,57 +298,19 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                 </Alert>
               )}
 
-              {/* Challenge Type Selector */}
               <FormControl>
-                <FormLabel>Challenge Type</FormLabel>
-                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  <Box
-                    p={4}
-                    borderWidth="1px"
-                    borderRadius="lg"
-                    cursor="pointer"
-                    borderColor={challengeType === 'competitive' ? 'brand.500' : 'neutral.200'}
-                    bg={challengeType === 'competitive' ? 'brand.50' : 'transparent'}
-                    onClick={() => setChallengeType('competitive')}
-                    textAlign="center"
-                  >
-                    <Swords size={24} style={{ margin: 'auto' }} />
-                    <Text fontWeight="medium" mt={2}>Competitive</Text>
-                    <Text fontSize="xs">1v1 points battle</Text>
-                  </Box>
-                  <Box
-                    p={4}
-                    borderWidth="1px"
-                    borderRadius="lg"
-                    cursor="pointer"
-                    borderColor={challengeType === 'collaborative' ? 'brand.500' : 'neutral.200'}
-                    bg={challengeType === 'collaborative' ? 'brand.50' : 'transparent'}
-                    onClick={() => setChallengeType('collaborative')}
-                    textAlign="center"
-                  >
-                    <Users size={24} style={{ margin: 'auto' }} />
-                    <Text fontWeight="medium" mt={2}>Collaborative</Text>
-                    <Text fontSize="xs">Team towards goal</Text>
-                  </Box>
-                </Grid>
+                <FormLabel>Challenge Goal</FormLabel>
+                <Textarea
+                  placeholder="e.g., Complete 50 modules together"
+                  value={customGoal}
+                  onChange={(e) => setCustomGoal(e.target.value)}
+                />
               </FormControl>
 
-              {/* Collaborative Goal Input */}
-              {challengeType === 'collaborative' && (
-                <FormControl>
-                  <FormLabel>Challenge Goal</FormLabel>
-                  <Textarea
-                    placeholder="e.g., Complete 50 modules together"
-                    value={customGoal}
-                    onChange={(e) => setCustomGoal(e.target.value)}
-                  />
-                </FormControl>
-              )}
-
-              {/* Opponent Selection */}
+              {/* Partner Selection */}
               {!preselectedUser ? (
                 <FormControl>
-                  <FormLabel>Select Opponent</FormLabel>
+                  <FormLabel>Select partner</FormLabel>
                   <HStack spacing={2} mb={4}>
                     <Button
                       leftIcon={<Trophy size={16} />}
@@ -443,7 +399,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                 </FormControl>
               ) : (
                 <FormControl>
-                    <FormLabel>Opponent</FormLabel>
+                    <FormLabel>Partner</FormLabel>
                     <HStack borderWidth="1px" borderColor="neutral.200" borderRadius="lg" p={4} justifyContent="space-between">
                         <VStack align="flex-start" spacing={0}>
                             <Text fontWeight="medium" color="neutral.800">{preselectedUser.name}</Text>
@@ -478,19 +434,10 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
                   <Text fontWeight="semibold" color="brand.800">How Challenges Work</Text>
                 </HStack>
                 <VStack align="stretch" spacing={1} fontSize="sm" color="brand.700">
-                  {challengeType === 'competitive' ? (
-                    <>
-                      <Text>• The person with the most points at the end wins.</Text>
-                      <Text>• Winners receive bonus XP and bragging rights.</Text>
-                    </>
-                  ) : (
-                    <>
-                      <Text>• Work together towards a shared goal.</Text>
-                      <Text>• Both participants earn bonus XP if the goal is reached.</Text>
-                    </>
-                  )}
+                  <Text>• Work together towards a shared goal.</Text>
+                  <Text>• Both participants earn bonus XP if the goal is reached.</Text>
                   <Text>• Earn points by completing your Weekly Checklist.</Text>
-                  <Text>• The challenged person must accept to start.</Text>
+                  <Text>• Your partner must accept to start.</Text>
                 </VStack>
               </Box>
 
