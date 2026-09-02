@@ -187,38 +187,14 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                       py={1}
                       color="#2D2A3E"
                     >
-                      {key} {Math.round(model.pillars![key])}
+                      {key} is {Math.round(model.pillars![key])}
                     </Text>
                   ))}
                 </HStack>
               ) : null}
-              {model.archetypeLabel || model.totalPointsLabel ? (
-                <HStack spacing={2} mt={2} flexWrap="wrap">
-                  {model.archetypeLabel ? (
-                    <Text
-                      fontFamily="mono"
-                      fontSize="11px"
-                      letterSpacing="0.06em"
-                      textTransform="uppercase"
-                      bg="rgba(212,160,23,.16)"
-                      color="#7A5C08"
-                      borderRadius="full"
-                      px={2.5}
-                      py={1}
-                    >
-                      {model.archetypeLabel}
-                    </Text>
-                  ) : null}
-                  {model.totalPointsLabel ? (
-                    <Text fontSize="12.5px" color="#6B6579" fontWeight="600">
-                      {model.totalPointsLabel}
-                    </Text>
-                  ) : null}
-                </HStack>
-              ) : null}
-              {isLeader && model.pillars ? (
-                <Text fontSize="12px" color="#6B6579" mt={2} lineHeight="1.55">
-                  You take the LIFT Index again near journey end. This shape is yours, and your mentor can see it.
+              {model.totalPointsLabel ? (
+                <Text fontSize="12.5px" color="#6B6579" fontWeight="600" mt={2}>
+                  Journey points · {model.totalPointsLabel}
                 </Text>
               ) : null}
             </Box>
@@ -284,19 +260,31 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
 
             {model.archetypeLabel ? (
               <Box>
-                <MonoLabel>LIFT archetype</MonoLabel>
-                <Text fontSize="15px" fontWeight="700" lineHeight="1.4" m={0}>
+                <MonoLabel>Your LIFT archetype</MonoLabel>
+                <Text
+                  fontFamily="mono"
+                  fontSize="12px"
+                  letterSpacing="0.08em"
+                  textTransform="uppercase"
+                  bg="rgba(212,160,23,.16)"
+                  color="#7A5C08"
+                  borderRadius="full"
+                  px={2.5}
+                  py={1}
+                  display="inline-block"
+                  mb={2}
+                >
                   {model.archetypeLabel}
                 </Text>
                 {model.goalVerbatim ? (
-                  <Text fontSize="13.5px" lineHeight="1.65" mt={2} color="#6B6579">
-                    Goal in their words: {model.goalVerbatim}
+                  <Text fontSize="13.5px" lineHeight="1.65" mt={1} color="#6B6579">
+                    Session focus: {model.goalVerbatim}
                   </Text>
                 ) : null}
               </Box>
             ) : model.goalVerbatim ? (
               <Box>
-                <MonoLabel>What they say they want</MonoLabel>
+                <MonoLabel>Session focus</MonoLabel>
                 <Text fontSize="13.5px" lineHeight="1.65" m={0}>
                   {model.goalVerbatim}
                 </Text>
@@ -376,7 +364,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
               p={5}
               bg="rgba(212,160,23,.12)"
             >
-              <MonoLabel>What you said you wanted</MonoLabel>
+              <MonoLabel>What you are working on</MonoLabel>
               <Text
                 as="q"
                 display="block"
@@ -387,7 +375,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 {model.goalVerbatim}
               </Text>
               <Text fontSize="12.5px" color="#6B6579" mt={3} lineHeight="1.6" m={0}>
-                If it has changed, update it before the meet-up so your mentor works on the right thing.
+                Update your answers above if this has changed, so your mentor works on the right thing.
               </Text>
             </Box>
           ) : null}
@@ -457,24 +445,6 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
             </Box>
           ) : null}
 
-          {isLeader && model.bringItems.length > 0 ? (
-            <Box mt={7}>
-              <MonoLabel>Things you could bring</MonoLabel>
-              <Stack spacing={0}>
-                {model.bringItems.map((item) => (
-                  <Box key={item.title} borderTop="1px solid" borderColor="rgba(35,31,48,.14)" py={4}>
-                    <Text fontSize="14.5px" lineHeight="1.55" fontWeight="500">
-                      {item.title}
-                    </Text>
-                    <Text fontSize="12.5px" color="#6B6579" mt={1} lineHeight="1.6">
-                      {item.hint}
-                    </Text>
-                  </Box>
-                ))}
-              </Stack>
-            </Box>
-          ) : null}
-
           {model.opener ? (
             <Box mt={6} bg="#2D2A3E" color="white" borderRadius="10px" p={5}>
               <MonoLabel color="#D4A017">{model.opener.label}</MonoLabel>
@@ -501,22 +471,6 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 {model.stanceReminders.map((line) => (
                   <Text key={line} fontSize="13px" lineHeight="1.65" color="#6B6579" m={0}>
                     {line}
-                  </Text>
-                ))}
-              </Stack>
-            </Box>
-          ) : null}
-
-          {isLeader && model.mentorCanSee.length > 0 ? (
-            <Box mt={6} border="1px solid rgba(35,31,48,.28)" borderRadius="10px" p={4}>
-              <MonoLabel>Your mentor can see</MonoLabel>
-              <Stack spacing={1}>
-                {model.mentorCanSee.map((item) => (
-                  <Text key={item} fontSize="12.5px" lineHeight="1.7" color="#6B6579">
-                    <Text as="span" color="#D4A017" fontFamily="mono">
-                      +{' '}
-                    </Text>
-                    {item}
                   </Text>
                 ))}
               </Stack>

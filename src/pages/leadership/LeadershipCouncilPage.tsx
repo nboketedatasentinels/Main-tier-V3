@@ -54,14 +54,13 @@ import {
   Lock,
   RefreshCcw,
   Shield,
-  Target,
   User,
   UserCircle2,
 } from 'lucide-react'
 import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
-import { MENTORSHIP_GOALS_MAX_LENGTH, useMentorshipGoals } from '@/hooks/useMentorshipGoals'
+import { useMentorshipGoals } from '@/hooks/useMentorshipGoals'
 import { LeaderSessionPrep } from '@/components/session-prep/LeaderSessionPrep'
 import { useLearnerMentorshipSessions } from '@/hooks/useMentorshipSessions'
 import {
@@ -251,14 +250,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                 ? 'A mentor must be assigned before scheduling.'
                 : null
 
-  const {
-    goals: savedGoals,
-    updatedAt: goalsUpdatedAt,
-    loading: goalsLoading,
-    saving: goalsSaving,
-    error: goalsError,
-    save: saveGoals,
-  } = useMentorshipGoals(
+  const { goals: savedGoals, loading: goalsLoading } = useMentorshipGoals(
     isLeadershipEligible ? profile?.id ?? null : null,
     mentorProfile?.id ?? null,
   )
@@ -279,25 +271,10 @@ export const LeadershipCouncilPage: React.FC = () => {
     }
   }, [isLeadershipEligible, goalsLoading, goalsInitialized, savedGoals])
 
-  const goalsDirty = isLeadershipEligible && goalsInitialized && goalsDraft.trim() !== savedGoals.trim()
-  const goalsTooLong = goalsDraft.length > MENTORSHIP_GOALS_MAX_LENGTH
-
-  const handleSaveGoals = async () => {
-    if (!goalsDirty || goalsTooLong || goalsSaving) return
-    try {
-      await saveGoals(goalsDraft)
-      toast({
-        title: 'Goals saved',
-        description: ambassadorProfile
-          ? 'Your coach and mentor can see what you want to achieve.'
-          : 'Your mentor can now see what you want to achieve.',
-        status: 'success',
-      })
-    } catch (err) {
-      const description = err instanceof Error ? err.message : 'Try again in a moment.'
-      toast({ title: 'Could not save your goals', description, status: 'error' })
-    }
-  }
+  const handleGoalsSaved = useCallback((next: string) => {
+    setGoalsDraft(next)
+    setGoalsInitialized(true)
+  }, [])
 
   const handleRequestSession = async () => {
     if (!mentorProfile?.id || !profile?.id) {
@@ -1112,7 +1089,7 @@ export const LeadershipCouncilPage: React.FC = () => {
                       </Flex>
                     )}
 
-                    {mentorProfile && (
+                    {mentorProfile && profile?.id && (
                       <Stack spacing={4}>
                         <Box
                           p={4}
@@ -1121,86 +1098,19 @@ export const LeadershipCouncilPage: React.FC = () => {
                           rounded="lg"
                           bg="gray.50"
                         >
-                          <HStack justify="space-between" align="center" mb={3} flexWrap="wrap" spacing={3}>
-                            <HStack spacing={2}>
-                              <Icon as={Target} color="#350e6f" boxSize={4} />
-                              <Text fontWeight="bold" color="#27062e">
-                                I&apos;m trying to achieve…
-                              </Text>
-                            </HStack>
-                            {goalsUpdatedAt && (
-                              <Badge variant="subtle" colorScheme="purple">
-                                Updated {formatDistanceToNow(goalsUpdatedAt, { addSuffix: true })}
-                              </Badge>
-                            )}
-                          </HStack>
-                          {goalsLoading ? (
-                            <Flex
-                              align="center"
-                              gap={3}
-                              p={4}
-                              border="1px dashed"
-                              borderColor="border.subtle"
-                              rounded="lg"
-                              bg="surface.default"
-                            >
-                              <Spinner size="sm" />
-                              <Text color="text.secondary">Loading your saved goals...</Text>
-                            </Flex>
-                          ) : (
-                            <>
-                              {goalsError && (
-                                <Alert status="warning" rounded="lg" mb={3}>
-                                  <AlertIcon />
-                                  <Box>
-                                    <AlertTitle>We couldn&apos;t sync your goals.</AlertTitle>
-                                    <AlertDescription>{goalsError}</AlertDescription>
-                                  </Box>
-                                </Alert>
-                              )}
-                              <FormControl isInvalid={goalsTooLong}>
-                                <Textarea
-                                  placeholder="I'm trying to achieve… (an observable outcome your coach or mentor can work with)"
-                                  value={goalsDraft}
-                                  onChange={(event) => setGoalsDraft(event.target.value)}
-                                  rows={5}
-                                  bg="surface.default"
-                                />
-                                <FormHelperText>
-                                  {goalsDraft.length}/{MENTORSHIP_GOALS_MAX_LENGTH} characters
-                                  {goalsTooLong ? ' - please shorten your goals to save.' : ''}
-                                </FormHelperText>
-                              </FormControl>
-                              <HStack justify="flex-end" mt={3} spacing={2}>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setGoalsDraft(savedGoals)}
-                                  isDisabled={!goalsDirty || goalsSaving}
-                                >
-                                  Reset
-                                </Button>
-                                <Button
-                                  colorScheme="primary"
-                                  size="sm"
-                                  onClick={handleSaveGoals}
-                                  isLoading={goalsSaving}
-                                  isDisabled={!goalsDirty || goalsTooLong}
-                                >
-                                  Save goals
-                                </Button>
-                              </HStack>
-                            </>
-                          )}
+                          <MentorshipGoalsCard
+                            learnerId={profile.id}
+                            mentorId={mentorProfile.id}
+                            audience="mentor"
+                            onSaved={handleGoalsSaved}
+                          />
                         </Box>
 
-                        {profile ? (
-                          <LeaderSessionPrep
-                            learner={profile}
-                            mentor={mentorProfile}
-                            goals={savedGoals || goalsDraft}
-                          />
-                        ) : null}
+                        <LeaderSessionPrep
+                          learner={profile}
+                          mentor={mentorProfile}
+                          goals={goalsDraft || savedGoals}
+                        />
 
                         <HStack spacing={3} flexWrap="wrap">
                           <Tooltip

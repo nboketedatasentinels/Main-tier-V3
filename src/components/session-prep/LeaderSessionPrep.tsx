@@ -22,7 +22,7 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
   offLimits,
   sessionNumber = 1,
 }) => {
-  const { pillars, loading } = useSessionPrepLift(learner.id ?? null)
+  const { pillars, archetype, loading } = useSessionPrepLift(learner.id ?? null)
   const input = useMemo(
     () => ({
       audience: 'leader' as const,
@@ -43,6 +43,9 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
       goals: goals ?? null,
       offLimits: offLimits ?? null,
       pillars,
+      archetype,
+      totalPoints:
+        typeof learner.totalPoints === 'number' ? learner.totalPoints : undefined,
       sessionNumber,
       sessionTotal: mentorMeetupCountForJourney(
         typeof learner.journeyType === 'string' ? learner.journeyType : null,
@@ -52,7 +55,7 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
         ? `You requested this. ${getDisplayName(mentor).split(' ')[0]} will meet you when the time is confirmed.`
         : 'Request a meet-up from your mentor card when you are ready.',
     }),
-    [learner, mentor, goals, offLimits, pillars, sessionNumber],
+    [learner, mentor, goals, offLimits, pillars, archetype, sessionNumber],
   )
 
   if (loading) return <Skeleton height="360px" borderRadius="14px" />

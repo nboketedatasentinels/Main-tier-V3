@@ -14,6 +14,8 @@ type MentorshipGoalsCardProps = {
   mentorId?: string | null
   /** Label variant */
   audience?: 'mentor' | 'coach'
+  /** Fired after a successful save so parent Session Prep can refresh. */
+  onSaved?: (goals: string) => void
 }
 
 const SPLIT = '\n\n'
@@ -23,6 +25,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   learnerId,
   mentorId = null,
   audience = 'mentor',
+  onSaved,
 }) => {
   const toast = useToast()
   const { goals, loading, saving, save } = useMentorshipGoals(learnerId, mentorId)
@@ -59,6 +62,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
     if (!dirty || tooLong || saving) return
     try {
       await save(combined)
+      onSaved?.(combined)
       toast({
         title: 'Goal saved',
         description:

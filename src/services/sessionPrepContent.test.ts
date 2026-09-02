@@ -52,21 +52,23 @@ describe('sessionPrepContent', () => {
     expect(model.headline).toMatch(/programme|Leading Transformation/i)
   })
 
-  it('builds leader prep with can-see panel and scores', () => {
+  it('builds leader prep with LIFT scores and without static tip panels', () => {
     const leader = buildSessionPrepModel({
       audience: 'leader',
       leaderName: 'Thandiwe Moyo',
       mentorName: 'Grace Adjei',
       goals: 'Get exec approval',
       pillars: { L: 64, I: 79, F: 48, T: 73 },
+      archetype: 'Architect',
       journeyType: '6M',
       sessionNumber: 1,
+      totalPoints: 12500,
     })
     expect(leader.showScores).toBe(true)
-    expect(leader.mentorCanSee.length).toBeGreaterThan(0)
-    expect(leader.mentorCannotSee).toEqual(
-      expect.arrayContaining([expect.stringMatching(/points/i)]),
-    )
-    expect(leader.bringItems.length).toBe(3)
+    expect(leader.archetypeLabel).toBe('Architect')
+    expect(leader.totalPointsLabel).toContain('12,500')
+    expect(leader.bringItems).toEqual([])
+    expect(leader.mentorCanSee).toEqual([])
+    expect(leader.mentorCannotSee).toEqual([])
   })
 })

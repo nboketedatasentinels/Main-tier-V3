@@ -316,7 +316,6 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
   const personalityCosts = costLines(first, input.personalityType, input.coreValues)
 
   if (input.audience === 'leader') {
-    const mentorFirst = (input.mentorName || 'your mentor').split(' ')[0]
     const total = Math.max(1, mentorTotal || 1)
     return {
       audience: 'leader',
@@ -362,27 +361,9 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
           }
         : null,
       stanceReminders: [],
-      bringItems: [
-        {
-          title: 'The moment the work stalled',
-          hint: `${mentorFirst} has likely seen this. Ask what actually restarted it.`,
-        },
-        {
-          title: 'Who you have not yet convinced',
-          hint: 'You may have the case. The question is who needed to hear it before the meeting.',
-        },
-        {
-          title: 'What this is costing you',
-          hint: 'Worth saying out loud to someone outside the pressure.',
-        },
-      ],
-      mentorCanSee: [
-        'Your goal, in your words',
-        'Your LIFT Index shape and archetype',
-        'Your journey points',
-        'Your values',
-        'What you asked them not to raise',
-      ],
+      // Nana: remove static "Things you could bring" / "Your mentor can see" blocks.
+      bringItems: [],
+      mentorCanSee: [],
       mentorCannotSee: [],
       primaryActionLabel: 'Join session',
       secondaryActionLabel: 'Request a different time',
