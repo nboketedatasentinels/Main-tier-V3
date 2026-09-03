@@ -1266,7 +1266,7 @@ export const PeerConnectPage: React.FC = () => {
             w="100%"
             borderRadius="lg"
             bg="black"
-            sx={{ aspectRatio: '16 / 9' }}
+            sx={{ aspectRatio: '16 / 3', objectFit: 'contain' }}
             boxShadow="0 4px 16px rgba(0,0,0,0.08)"
           />
         </Box>
