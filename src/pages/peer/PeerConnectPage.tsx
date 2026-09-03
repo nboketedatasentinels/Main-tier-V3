@@ -30,8 +30,6 @@ import {
   SimpleGrid,
   Spinner,
   Stack,
-  Tab,
-  TabList,
   TabPanel,
   TabPanels,
   Tabs,
@@ -1300,7 +1298,7 @@ export const PeerConnectPage: React.FC = () => {
             </HStack>
             <Text fontSize="sm" color="gray.600" lineHeight="1.6">
               Peer Match pairs you automatically every week for a points race. Practicals are knowledge
-              sessions you set up with people you pick. Watch the walkthrough, then use the tabs below.
+              sessions you set up with people you pick. Watch the walkthrough, then use the cards above.
             </Text>
           </Stack>
 
@@ -1322,23 +1320,8 @@ export const PeerConnectPage: React.FC = () => {
       </Box>
 
       <Box id="peer-tracks" sx={{ scrollMarginTop: '24px' }}>
-      <Tabs variant="soft-rounded" colorScheme="primary" index={tabIndex} onChange={setTabIndex} isFitted>
-        <TabList bg="white" p={2} borderRadius="full" border="1px solid" borderColor="gray.100">
-          <Tab>
-            <HStack spacing={2}>
-              <Icon as={MessageSquare} w={4} h={4} />
-              <Text>Peer Matching</Text>
-            </HStack>
-          </Tab>
-          <Tab>
-            <HStack spacing={2}>
-              <Icon as={Users} w={4} h={4} />
-              <Text>Practical</Text>
-            </HStack>
-          </Tab>
-        </TabList>
-
-        <TabPanels pt={4}>
+      <Tabs variant="unstyled" index={tabIndex} onChange={setTabIndex}>
+        <TabPanels pt={0}>
           <TabPanel px={0} id="peer-matching" scrollMarginTop="80px">
             <Stack spacing={4}>
               <Box
