@@ -1249,26 +1249,28 @@ export const PeerConnectPage: React.FC = () => {
         </Stack>
       </Box>
 
-      <Box
-        bg="white"
-        p={{ base: 3, md: 4 }}
-        borderRadius="xl"
-        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-        overflow="hidden"
-      >
+      {tabIndex === 1 ? (
         <Box
-          as="video"
-          controls
-          preload="metadata"
-          playsInline
-          src="/media/peer-to-peer.mp4"
-          w="100%"
-          borderRadius="lg"
-          bg="black"
-          sx={{ aspectRatio: '16 / 9' }}
-          boxShadow="0 4px 16px rgba(0,0,0,0.08)"
-        />
-      </Box>
+          bg="white"
+          p={{ base: 3, md: 4 }}
+          borderRadius="xl"
+          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+          overflow="hidden"
+        >
+          <Box
+            as="video"
+            controls
+            preload="metadata"
+            playsInline
+            src="/media/peer-to-peer.mp4"
+            w="100%"
+            borderRadius="lg"
+            bg="black"
+            sx={{ aspectRatio: '16 / 9' }}
+            boxShadow="0 4px 16px rgba(0,0,0,0.08)"
+          />
+        </Box>
+      ) : null}
 
       <Box id="peer-tracks" sx={{ scrollMarginTop: '24px' }}>
       <Tabs variant="unstyled" index={tabIndex} onChange={setTabIndex}>
