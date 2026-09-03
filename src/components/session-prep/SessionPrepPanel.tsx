@@ -276,13 +276,13 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 >
                   {model.archetypeLabel}
                 </Text>
-                {model.goalVerbatim ? (
+                {model.goalVerbatim && !isLeader ? (
                   <Text fontSize="13.5px" lineHeight="1.65" mt={1} color="#6B6579">
                     Session focus: {model.goalVerbatim}
                   </Text>
                 ) : null}
               </Box>
-            ) : model.goalVerbatim ? (
+            ) : model.goalVerbatim && !isLeader ? (
               <Box>
                 <MonoLabel>Session focus</MonoLabel>
                 <Text fontSize="13.5px" lineHeight="1.65" m={0}>
@@ -355,30 +355,6 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
         <Box p={{ base: 5, md: 6 }} minW={0}>
           <MonoLabel>{isLeader ? 'Your meet-ups' : model.audience === 'coach' ? 'The sessions' : 'Your meet-ups'}</MonoLabel>
           <SessionArc labels={model.arcLabels} currentIndex={model.arcCurrentIndex} note={model.arcNote} />
-
-          {isLeader && model.goalVerbatim ? (
-            <Box
-              mt={7}
-              border="1px solid rgba(35,31,48,.28)"
-              borderRadius="10px"
-              p={5}
-              bg="rgba(212,160,23,.12)"
-            >
-              <MonoLabel>What you are working on</MonoLabel>
-              <Text
-                as="q"
-                display="block"
-                fontFamily="'DM Serif Display', Georgia, serif"
-                fontSize="19px"
-                lineHeight="1.42"
-              >
-                {model.goalVerbatim}
-              </Text>
-              <Text fontSize="12.5px" color="#6B6579" mt={3} lineHeight="1.6" m={0}>
-                Update your answers above if this has changed, so your mentor works on the right thing.
-              </Text>
-            </Box>
-          ) : null}
 
           {!isLeader && model.headline ? (
             <Box mt={7}>
