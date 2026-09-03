@@ -847,17 +847,29 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
-      <SimpleGrid columns={[2, 3, 3, 6]} spacing={4}>
-        <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
-        <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
-        <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
-        <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
-        <MetricCard label="Coaches" value={roleCounts.coaches} icon={ShieldCheck} helper="Coach role access." />
-        <MetricCard label="Pending Invites" value={pendingInvites} icon={ShieldCheck} helper="Invited, not yet signed up." />
-      </SimpleGrid>
+      <Box
+        position="sticky"
+        top={{ base: '48px', md: '52px' }}
+        zIndex={11}
+        bg="white"
+        mx={{ base: -1, md: 0 }}
+        px={{ base: 1, md: 0 }}
+        pt={2}
+        pb={4}
+        borderBottom="1px solid"
+        borderColor="gray.100"
+        boxShadow="0 8px 16px -12px rgba(39, 6, 46, 0.35)"
+      >
+        <SimpleGrid columns={[2, 3, 3, 6]} spacing={4} mb={4}>
+          <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
+          <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />
+          <MetricCard label="Partners" value={roleCounts.partners} icon={ShieldCheck} helper="Organization-scoped access." />
+          <MetricCard label="Mentors" value={roleCounts.mentors} icon={ShieldCheck} helper="Mentor role access." />
+          <MetricCard label="Coaches" value={roleCounts.coaches} icon={ShieldCheck} helper="Coach role access." />
+          <MetricCard label="Pending Invites" value={pendingInvites} icon={ShieldCheck} helper="Invited, not yet signed up." />
+        </SimpleGrid>
 
-      <Stack spacing={4}>
-            <Stack spacing={3}>
+        <Stack spacing={3}>
               <InputGroup maxW={{ base: '100%', lg: '360px' }}>
                 <InputLeftElement pointerEvents="none">
                   <Icon as={Search} color="text.muted" />
@@ -866,11 +878,12 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                   placeholder="Search by name, email, or code"
                   value={filters.search}
                   onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+                  bg="white"
                 />
               </InputGroup>
 
               <Flex gap={3} flexWrap="wrap" align="center">
-                <Select maxW="190px" value={filters.role} onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))}>
+                <Select maxW="190px" bg="white" value={filters.role} onChange={(e) => setFilters((prev) => ({ ...prev, role: e.target.value }))}>
                   <option value="all">All roles</option>
                   {roleOptions.map((role) => (
                     <option key={role} value={role}>
@@ -881,6 +894,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
                 <Select
                   maxW="190px"
+                  bg="white"
                   value={filters.membershipStatus}
                   onChange={(e) => setFilters((prev) => ({ ...prev, membershipStatus: e.target.value }))}
                 >
@@ -894,6 +908,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
                 <Select
                   maxW="220px"
+                  bg="white"
                   value={filters.organization}
                   onChange={(e) => setFilters((prev) => ({ ...prev, organization: e.target.value }))}
                 >
@@ -908,6 +923,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                 {visibleTimeframeFilter && (
                   <Select
                     maxW="180px"
+                    bg="white"
                     value={filters.timeframe}
                     onChange={(e) => setFilters((prev) => ({ ...prev, timeframe: e.target.value }))}
                   >
@@ -918,8 +934,10 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
                   </Select>
                 )}
               </Flex>
-            </Stack>
+        </Stack>
+      </Box>
 
+      <Stack spacing={4}>
             {selectedIds.length > 0 && (
               <Flex align="center" justify="space-between" bg="purple.50" border="1px solid" borderColor="purple.100" borderRadius="lg" p={3}>
                 <Text fontWeight="medium" color="purple.700">

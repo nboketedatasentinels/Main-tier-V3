@@ -187,24 +187,36 @@ export const UserManagementWithTabs = () => {
         isLazy
         lazyBehavior="keepMounted"
       >
-        <TabList overflowX="auto" pb={2}>
-          <Tab whiteSpace="nowrap">
-            Users Management
-            <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
-          </Tab>
-          <Tab whiteSpace="nowrap">
-            Leadership Council
-            <Badge ml={2} colorScheme="gray" fontSize="xs">{leadershipCount}</Badge>
-          </Tab>
-        </TabList>
+        <Box
+          position="sticky"
+          top={0}
+          zIndex={12}
+          bg="white"
+          pt={1}
+          pb={2}
+          mb={1}
+          borderBottom="1px solid"
+          borderColor="gray.100"
+        >
+          <TabList overflowX="auto" pb={0}>
+            <Tab whiteSpace="nowrap">
+              Users Management
+              <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
+            </Tab>
+            <Tab whiteSpace="nowrap">
+              Leadership Council
+              <Badge ml={2} colorScheme="gray" fontSize="xs">{leadershipCount}</Badge>
+            </Tab>
+          </TabList>
+        </Box>
 
         <TabPanels>
-          <TabPanel px={0}>
+          <TabPanel px={0} pt={3}>
             {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
             <UsersManagementTab users={memo.managedUsers} loading={loading} />
           </TabPanel>
 
-          <TabPanel px={0}>
+          <TabPanel px={0} pt={3}>
             <LeadershipCouncil users={memo.users} organizations={memo.organizations} loadingUsers={loading || loadingOrgs} />
           </TabPanel>
         </TabPanels>
