@@ -6,8 +6,8 @@ import Stripe from "npm:stripe@14.25.0";
 /**
  * create-checkout-session
  * Authenticated learner starts Stripe Checkout for:
- *   - impact_log_pro ($5/mo, 1-month access cycle) — STRIPE_IMPACT_LOG_PRICE_ID
- *   - full_programme ($50/year, 12-month access) — STRIPE_FULL_PROGRAMME_PRICE_ID
+ *   - impact_log_pro ($5/month · Impact Log Pro — Monthly) — STRIPE_IMPACT_LOG_PRICE_ID
+ *   - full_programme ($50/year · Impact Log Pro — Annual) — STRIPE_FULL_PROGRAMME_PRICE_ID
  * Secrets: STRIPE_SECRET_KEY + the price id for the requested kind
  * Optional: APP_BASE_URL
  */
@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     return json({
       error:
         kind === "full_programme"
-          ? "Stripe Full Programme price is not configured. Set STRIPE_FULL_PROGRAMME_PRICE_ID."
+          ? "Stripe Impact Log Pro — Annual price is not configured. Set STRIPE_FULL_PROGRAMME_PRICE_ID."
           : "Stripe Impact Log Pro price is not configured. Set STRIPE_IMPACT_LOG_PRICE_ID.",
     }, 503);
   }
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
   const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
   // Hard-guard billing periods so misconfigured secrets cannot charge customers wrong.
-  // Impact Log Pro = 1 month. Full programme = 12 months (yearly).
+  // Impact Log Pro — Monthly = 1 month. Impact Log Pro — Annual = 12 months (yearly).
   const expectedInterval = kind === "full_programme" ? "year" : "month";
   const expectedAmount = kind === "full_programme" ? 5000 : 500; // cents
   const price = await stripe.prices.retrieve(priceId);
@@ -127,7 +127,7 @@ Deno.serve(async (req) => {
     return json({
       error:
         kind === "full_programme"
-          ? "Full Programme checkout is misconfigured. Expected $50 USD billed yearly (12 months)."
+          ? "Impact Log Pro — Annual checkout is misconfigured. Expected $50 USD billed yearly (12 months)."
           : "Impact Log Pro checkout is misconfigured. Expected $5 USD billed monthly (1 month).",
     }, 503);
   }

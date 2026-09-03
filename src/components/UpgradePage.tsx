@@ -27,9 +27,9 @@ const impactProBenefits = [
 ]
 
 const fullAccessBenefits = [
-  'Everything in Impact Log Pro',
+  'Everything in Impact Log Pro (monthly)',
   'Mentor and coach pathways',
-  'Full programme access',
+  '12 months of journey access',
   'Priority support',
 ]
 
@@ -196,7 +196,7 @@ export const UpgradePage: React.FC = () => {
               <Stack spacing={6} p={{ base: 6, md: 7 }}>
                 <Box>
                   <Text fontSize="sm" fontWeight="700" style={{ color: '#350e6f' }}>
-                    Impact Log Pro
+                    Impact Log Pro — Monthly
                   </Text>
                   <HStack align="baseline" spacing={1} mt={2}>
                     <Text fontSize="4xl" fontWeight="800" letterSpacing="-0.04em" style={{ color: '#111111' }}>
@@ -269,7 +269,7 @@ export const UpgradePage: React.FC = () => {
               <Stack spacing={6} p={{ base: 6, md: 7 }} h="full">
                 <Box>
                   <Text fontSize="sm" fontWeight="700" style={{ color: '#64748B' }}>
-                    Full programme
+                    Impact Log Pro — Annual
                   </Text>
                   <HStack align="baseline" spacing={1} mt={2}>
                     <Text fontSize="4xl" fontWeight="800" letterSpacing="-0.04em" style={{ color: '#111111' }}>
@@ -280,7 +280,7 @@ export const UpgradePage: React.FC = () => {
                     </Text>
                   </HStack>
                   <Text fontSize="sm" mt={1} style={{ color: '#64748B' }}>
-                    Full programme for one year · billed annually · cancel anytime
+                    Impact Log Pro for one year · billed annually · cancel anytime
                   </Text>
                 </Box>
 

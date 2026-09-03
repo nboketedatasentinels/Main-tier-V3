@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import Stripe from "npm:stripe@14.25.0";
 
 /**
- * stripe-webhook — unlock Impact Log Pro or Full Programme from subscription events.
+ * stripe-webhook — unlock Impact Log Pro (monthly) or Impact Log Pro — Annual from subscription events.
  * Secrets: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
  * Deploy with verify_jwt=false (Stripe signature verifies the caller).
  */
