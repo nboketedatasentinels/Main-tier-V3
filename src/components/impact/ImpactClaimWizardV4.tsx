@@ -85,6 +85,10 @@ export type ClaimWizardDraft = {
   locked: boolean
   evidenceRef: string
   evidence: string
+  /** Learner estimate of USD gained/saved per month from this change. */
+  moneyGained: string
+  /** Optional link to how they worked the money figure out. */
+  valueEvidenceLink: string
   target: string
   /** Desired movement from baseline: increase (up) or decrease (down). */
   goalDir: GoalDirection | null
@@ -116,6 +120,8 @@ export type ClaimWizardSubmitPayload = {
   locked: boolean
   evidenceRef: string
   evidence: string
+  moneyGained: number
+  valueEvidenceLink: string
   target: number
   goalDir: GoalDirection
   intervention: string
@@ -172,6 +178,8 @@ export function blankClaimWizardDraft(): ClaimWizardDraft {
     locked: false,
     evidenceRef: '',
     evidence: '',
+    moneyGained: '',
+    valueEvidenceLink: '',
     target: '',
     goalDir: null,
     intervention: '',
@@ -419,8 +427,13 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       if (!draft.goalDir) return 'Say whether you were trying to increase or decrease from baseline.'
       return nn(draft.target) ? `Goal: ${f1(draft.target)} ${draft.unit}` : 'Set the goal you aimed for.'
     }
-    if (draft.step === 5) return nn(draft.after) ? `After: ${f1(draft.after)} ${draft.unit}` : 'Enter the after number.'
-    return `~${formatMoneyFlow(calc.net)} / month after checking.`
+    if (draft.step === 5) {
+      if (!nn(draft.after)) return 'Enter the after number.'
+      if (nn(draft.moneyGained))
+        return `After: ${f1(draft.after)} ${draft.unit} · ~${formatMoneyFlow(nn(draft.moneyGained))}/mo`
+      return `After: ${f1(draft.after)} ${draft.unit}`
+    }
+    return `~${formatMoneyFlow(nn(draft.moneyGained) || calc.net)} / month after checking.`
   }, [calc.net, draft, isCustom, preset])
 
   const guard = (): string | null => {
@@ -474,6 +487,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
     const windowFrom = format(subMonths(new Date(), periods), 'yyyy-MM-dd')
     const windowLabel = `${format(new Date(windowFrom), 'MMM yyyy')} to ${format(new Date(windowTo), 'MMM yyyy')}`
     const goalDir = resolveGoalDirection(draft.goalDir, preset)
+    const claimedNet = nn(draft.moneyGained) || Math.round(calc.net)
     return {
       cat: draft.cat,
       waste: draft.waste,
@@ -491,6 +505,8 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       locked: draft.locked,
       evidenceRef: draft.evidenceRef.trim(),
       evidence: draft.evidence.trim(),
+      moneyGained: claimedNet,
+      valueEvidenceLink: draft.valueEvidenceLink.trim(),
       target: nn(draft.target),
       goalDir,
       intervention: draft.intervention.trim(),
@@ -501,7 +517,13 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       realized: draft.realized,
       attest: draft.attest,
       sustained: draft.sustained,
-      calc: { net: calc.net, gross: calc.gross, bucket: calc.bucket, basis: calc.basis, fam: calc.fam },
+      calc: {
+        net: claimedNet,
+        gross: Math.max(claimedNet, Math.round(calc.gross)),
+        bucket: calc.bucket,
+        basis: calc.basis,
+        fam: calc.fam,
+      },
       windowFrom,
       windowTo,
       windowLabel,
@@ -527,7 +549,8 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       })
       return
     }
-    if (calc.net >= 1000) {
+    const claimUsd = nn(draft.moneyGained) || calc.net
+    if (claimUsd >= 1000) {
       if (!draft.financeName.trim() || !EMAIL_RE.test(draft.financeEmail.trim())) {
         toast({
           status: 'warning',
@@ -557,6 +580,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
     !nn(draft.after) || !nn(draft.before) || !goalDir
       ? true
       : isAfterInGoalDirection(nn(draft.before), nn(draft.after), goalDir)
+  const claimUsd = nn(draft.moneyGained) || calc.net
   const m = nn(draft.months)
 
   return (
@@ -1146,6 +1170,75 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
               programme than a number that was massaged.
             </Note>
           )}
+
+          <Box borderWidth="1px" borderColor="border.subtle" rounded="lg" p={4} bg="gray.50">
+            <Heading size="sm" mb={1}>
+              How much money do you think you&apos;ve{' '}
+              {goalDir === 'up' ? 'gained' : goalDir === 'down' ? 'saved' : 'gained or saved'}
+            </Heading>
+            <Text fontSize="sm" color="text.secondary" mb={3}>
+              So your reviewer can verify the value of this change
+              {goalDir === 'up'
+                ? ' (increase from baseline).'
+                : goalDir === 'down'
+                  ? ' (decrease from baseline).'
+                  : '.'}{' '}
+              Per month, in USD.
+            </Text>
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+              <FormControl>
+                <FormLabel fontSize="sm">
+                  {goalDir === 'up'
+                    ? 'Money gained / month'
+                    : goalDir === 'down'
+                      ? 'Money saved / month'
+                      : 'Money gained or saved / month'}
+                </FormLabel>
+                <Flex>
+                  <Input
+                    borderRightRadius={0}
+                    maxW="48px"
+                    textAlign="center"
+                    value="$"
+                    isReadOnly
+                    bg="white"
+                  />
+                  <Input
+                    borderLeftRadius={0}
+                    inputMode="decimal"
+                    value={draft.moneyGained}
+                    placeholder={calc.net > 0 ? String(Math.round(calc.net)) : 'e.g. 500'}
+                    bg={!nn(draft.moneyGained) ? 'yellow.50' : 'white'}
+                    onChange={(e) => patch({ moneyGained: e.target.value })}
+                    onFocus={() => {
+                      if (!draft.moneyGained && calc.net > 0) {
+                        patch({ moneyGained: String(Math.round(calc.net)) })
+                      }
+                    }}
+                  />
+                </Flex>
+                <FormHelperText>
+                  {calc.net > 0
+                    ? `From your before/after we estimate about ${formatMoneyFlow(calc.net)} / month. Edit if your figure is different.`
+                    : 'Enter what you believe this change is worth in money each month.'}
+                </FormHelperText>
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">Link to evidence of this figure (optional)</FormLabel>
+                <Input
+                  type="url"
+                  value={draft.valueEvidenceLink}
+                  placeholder="e.g. https://drive.google.com/…"
+                  bg="white"
+                  onChange={(e) => patch({ valueEvidenceLink: e.target.value })}
+                />
+                <FormHelperText>
+                  Optional. Share a cloud link to how you worked it out — no file upload needed.
+                </FormHelperText>
+              </FormControl>
+            </SimpleGrid>
+          </Box>
+
           <Checkbox
             isChecked={draft.sustained}
             onChange={(e) => patch({ sustained: e.target.checked })}
@@ -1163,7 +1256,8 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
         <Stack spacing={3}>
           <Heading size="md">What it is worth, and who checks it</Heading>
           <Text color="text.secondary" fontSize="sm">
-            You do not type the money. We work it out from your numbers and the figures your finance team gave us.
+            Your money figure from the last step is what gets verified. We also show how the platform
+            estimated it from your before and after numbers.
           </Text>
           {!nn(draft.before) || !nn(draft.after) ? (
             <Note variant="warn" title="Not enough yet">
@@ -1176,7 +1270,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   What you are claiming
                 </Text>
                 <Text fontSize="2xl" fontWeight="600" color="yellow.800" my={1}>
-                  {formatMoneyFlow(calc.net)}
+                  {formatMoneyFlow(nn(draft.moneyGained) || calc.net)}
                 </Text>
                 <Text fontSize="xs" color="gray.500">
                   a month, unverified until it is checked
@@ -1263,9 +1357,9 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 </Text>
               ) : null}
             </FormControl>
-            <FormControl isRequired={calc.net >= 1000}>
+            <FormControl isRequired={claimUsd >= 1000}>
               <FormLabel fontSize="sm">
-                Finance validator {calc.net >= 1000 ? '(needed at this size)' : '(optional at this size)'}
+                Finance validator {claimUsd >= 1000 ? '(needed at this size)' : '(optional at this size)'}
               </FormLabel>
               {orgMembersLoading ? (
                 <Flex align="center" gap={2} py={2}>
@@ -1297,7 +1391,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 </Text>
               ) : null}
               <FormHelperText>
-                {calc.net >= 1000
+                {claimUsd >= 1000
                   ? 'Anything worth $1,000 a month or more needs finance in your organisation to sign it off.'
                   : 'Optional. Pick someone in your organisation if you want finance to verify the figure.'}
               </FormHelperText>
