@@ -94,23 +94,23 @@ const RESTRICTED_FREE_FEATURES: RestrictedFeatureConfig[] = [
   {
     pathPrefix: '/app/peer-connect',
     featureName: 'Peer Connect',
-    tooltip: 'Upgrade required to access peer matching and practical meetups.',
+    tooltip: 'Email info@ to join the next guided Peer Connect cohort.',
     benefits: [
-      'One-on-one peer matching',
-      'Session scheduling and confirmations',
-      'Progress accountability workflows',
-      'Access to networking tools',
+      'Guided peer matching with a partner, not self-study',
+      'Practical / knowledge sessions',
+      'Accountability with someone on the same journey',
+      'Placed on the next monthly cohort after we reply',
     ],
   },
   {
     pathPrefix: '/app/leadership-council',
     featureName: 'Leadership Council',
-    tooltip: 'Upgrade required to join leadership council sessions.',
+    tooltip: 'Email info@ to join Leadership Council with a partner.',
     benefits: [
-      'Leadership council live sessions',
-      'Advanced facilitation playbooks',
-      'Discussion circles',
-      'Leadership growth tracking',
+      'Guided sessions with your assigned partner',
+      'Session prep and goals that stick',
+      'Mentor and coach pathways where your journey includes them',
+      'Placed on the next monthly cohort after we reply',
     ],
   },
 ]
@@ -318,8 +318,8 @@ export const MainLayout: React.FC = () => {
       setSelectedRestrictedFeature(feature)
       onUpgradeModalOpen()
       toast({
-        title: 'Upgrade required',
-        description: `${feature.featureName} is available after you upgrade.`,
+        title: 'Want to be upgraded?',
+        description: `${feature.featureName} is guided — email info@t4leader.com and we will place you on the next cohort.`,
         status: 'info',
         duration: 3500,
         isClosable: true,
@@ -462,8 +462,8 @@ export const MainLayout: React.FC = () => {
                           <item.icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                         </Box>
                         <Text color="inherit" fontFamily="body">{item.label}</Text>
-                        {isRestrictedForFreeUser && item.label !== 'Leadership Council' ? (
-                          <Badge colorScheme="orange" variant="subtle" fontSize="2xs">
+                        {isRestrictedForFreeUser ? (
+                          <Badge colorScheme="purple" variant="subtle" fontSize="2xs">
                             Pro
                           </Badge>
                         ) : null}
