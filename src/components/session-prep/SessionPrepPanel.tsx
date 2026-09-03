@@ -19,6 +19,7 @@ import {
 
 export interface SessionPrepPanelProps {
   input: SessionPrepInput
+  leaderGoalEditor?: React.ReactNode
   onPrimary?: () => void
   onSecondary?: () => void
   primaryLoading?: boolean
@@ -47,6 +48,7 @@ const MonoLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({
  */
 export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
   input,
+  leaderGoalEditor,
   onPrimary,
   onSecondary,
   primaryLoading,
@@ -355,6 +357,8 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
         <Box p={{ base: 5, md: 6 }} minW={0}>
           <MonoLabel>{isLeader ? 'Your meet-ups' : model.audience === 'coach' ? 'The sessions' : 'Your meet-ups'}</MonoLabel>
           <SessionArc labels={model.arcLabels} currentIndex={model.arcCurrentIndex} note={model.arcNote} />
+
+          {isLeader && leaderGoalEditor ? <Box mt={6}>{leaderGoalEditor}</Box> : null}
 
           {!isLeader && model.headline ? (
             <Box mt={7}>

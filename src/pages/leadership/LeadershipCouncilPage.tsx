@@ -1138,25 +1138,18 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {mentorProfile && profile?.id && (
                       <Stack spacing={4}>
-                        <Box
-                          p={4}
-                          border="1px solid"
-                          borderColor="gray.200"
-                          rounded="lg"
-                          bg="gray.50"
-                        >
-                          <MentorshipGoalsCard
-                            learnerId={profile.id}
-                            mentorId={mentorProfile.id}
-                            audience="mentor"
-                            onSaved={handleGoalsSaved}
-                          />
-                        </Box>
-
                         <LeaderSessionPrep
                           learner={profile}
                           mentor={mentorProfile}
                           goals={goalsDraft || savedGoals}
+                          goalEditor={
+                            <MentorshipGoalsCard
+                              learnerId={profile.id}
+                              mentorId={mentorProfile.id}
+                              audience="mentor"
+                              onSaved={handleGoalsSaved}
+                            />
+                          }
                         />
 
                         <HStack spacing={3} flexWrap="wrap">

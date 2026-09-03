@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { Box, Skeleton } from '@chakra-ui/react'
 import { SessionPrepPanel } from '@/components/session-prep/SessionPrepPanel'
 import { useSessionPrepLift } from '@/hooks/useSessionPrepLift'
@@ -11,6 +12,7 @@ interface LeaderSessionPrepProps {
   learner: UserProfile
   mentor: UserProfile | null
   goals?: string | null
+  goalEditor?: ReactNode
   offLimits?: string | null
   sessionNumber?: number
 }
@@ -20,6 +22,7 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
   learner,
   mentor,
   goals,
+  goalEditor,
   offLimits,
   sessionNumber = 1,
 }) => {
@@ -65,7 +68,7 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
 
   return (
     <Box>
-      <SessionPrepPanel input={input} />
+      <SessionPrepPanel input={input} leaderGoalEditor={goalEditor} />
     </Box>
   )
 }
