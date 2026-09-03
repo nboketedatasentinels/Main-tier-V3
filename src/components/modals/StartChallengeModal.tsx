@@ -82,6 +82,8 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  /** Current user already has a pending/active challenge — cannot start another. */
+  const [iAmBusy, setIAmBusy] = useState(false);
 
   const { user, profile } = useAuth();
 
@@ -103,9 +105,21 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     if (!user) return;
     setLoading(true);
     setError(null);
+    setIAmBusy(false);
     try {
       const orgScope = getOrgScope(profile);
       const busyIds = await listChallengeBusyUserIds();
+      const selfBusy = busyIds.has(user.uid);
+      setIAmBusy(selfBusy);
+      if (selfBusy) {
+        setUsers([]);
+        setSelectedUserId(null);
+        setError(
+          'You already have a pending or active challenge. Finish or cancel it before challenging someone else.',
+        );
+        return;
+      }
+
       let userOptions: UserOption[] = [];
 
       if (orgScope.isValid) {
@@ -154,8 +168,20 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       setError('You must be logged in to create a challenge.');
       return false;
     }
+    if (iAmBusy) {
+      setError(
+        'You already have a pending or active challenge. Finish or cancel it before challenging someone else.',
+      );
+      return false;
+    }
     if (!preselectedUser && !selectedUserId) {
       setError('Please select someone to challenge.');
+      return false;
+    }
+    const targetId = preselectedUser?.id ?? selectedUserId;
+    const target = users.find((u) => u.id === targetId);
+    if (target?.busy) {
+      setError('That person already has a challenge this week. Pick someone who is free.');
       return false;
     }
     return true;
@@ -168,6 +194,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     setSelectedUserId(null);
     setError(null);
     setSuccess(false);
+    setIAmBusy(false);
   };
 
   const handleCreateChallenge = async () => {
@@ -180,6 +207,22 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       const challengedUserId = preselectedUser ? preselectedUser.id : selectedUserId;
       if (!challengedUserId || !user) {
         throw new Error('User data is missing.');
+      }
+
+      // Re-check busy set right before create so a race cannot double-book.
+      const busyIds = await listChallengeBusyUserIds();
+      if (busyIds.has(user.uid)) {
+        setIAmBusy(true);
+        throw new Error(
+          'You already have a pending or active challenge. Finish or cancel it before challenging someone else.',
+        );
+      }
+      if (busyIds.has(challengedUserId)) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === challengedUserId ? { ...u, busy: true } : u)),
+        );
+        setSelectedUserId(null);
+        throw new Error('That person already has a challenge this week. Pick someone who is free.');
       }
 
       await createChallenge({
@@ -207,7 +250,16 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
       if (preselectedUser) {
         setSelectedUserId(preselectedUser.id);
         void (async () => {
+          if (!user) return;
           const busyIds = await listChallengeBusyUserIds();
+          if (busyIds.has(user.uid)) {
+            setIAmBusy(true);
+            setSelectedUserId(null);
+            setError(
+              'You already have a pending or active challenge. Finish or cancel it before challenging someone else.',
+            );
+            return;
+          }
           if (busyIds.has(preselectedUser.id)) {
             setError(
               'This person already has a challenge this week. Choose someone who is free.',
@@ -221,7 +273,7 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
     } else {
       setTimeout(() => resetForm(), 300);
     }
-  }, [isOpen, preselectedUser, fetchPotentialOpponents]);
+  }, [isOpen, preselectedUser, fetchPotentialOpponents, user]);
 
   useEffect(() => {
     applyOpponentFilter();
@@ -438,7 +490,11 @@ export const StartChallengeModal: React.FC<StartChallengeModalProps> = ({
             colorScheme="brand"
             isLoading={loading}
             onClick={handleCreateChallenge}
-            isDisabled={(!selectedUserId && !preselectedUser) || Boolean(error && preselectedUser && !selectedUserId)}
+            isDisabled={
+              iAmBusy ||
+              (!selectedUserId && !preselectedUser) ||
+              Boolean(error && preselectedUser && !selectedUserId)
+            }
           >
             Send Challenge
           </Button>

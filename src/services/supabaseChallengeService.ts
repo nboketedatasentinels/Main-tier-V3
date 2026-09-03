@@ -85,9 +85,27 @@ export const listChallengeBusyUserIds = async (): Promise<Set<string>> => {
     return new Set()
   }
   const result = (data ?? {}) as { ok?: boolean; user_ids?: unknown }
-  if (!result.ok || !Array.isArray(result.user_ids)) return new Set()
+  if (!result.ok) return new Set()
+
+  const raw = result.user_ids
+  const list = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+      ? (() => {
+          try {
+            const parsed = JSON.parse(raw) as unknown
+            return Array.isArray(parsed) ? parsed : []
+          } catch {
+            return []
+          }
+        })()
+      : []
+
   return new Set(
-    result.user_ids.filter((id): id is string => typeof id === 'string' && id.length > 0),
+    list
+      .map((id) => (typeof id === 'string' ? id : id != null ? String(id) : ''))
+      .map((id) => id.trim())
+      .filter((id) => id.length > 0),
   )
 }
 

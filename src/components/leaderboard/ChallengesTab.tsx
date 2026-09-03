@@ -183,6 +183,12 @@ export const ChallengesTab = ({
             _hover={{ bg: '#4a1499' }}
             size="sm"
             onClick={onStartChallenge}
+            isDisabled={stats.activeCount > 0}
+            title={
+              stats.activeCount > 0
+                ? 'Finish or cancel your current challenge before starting another'
+                : undefined
+            }
           >
             New Challenge
           </Button>
