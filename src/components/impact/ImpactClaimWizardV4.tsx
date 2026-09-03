@@ -38,13 +38,18 @@ import {
   CLAIM_FLOW_UNITS,
   CLAIM_FLOW_WASTES,
   calcClaimFlow,
+  defaultGoalDirection,
   formatMoneyFlow,
+  goalSuggestion,
+  isAfterInGoalDirection,
   presetOf,
   presetsFor,
+  resolveGoalDirection,
   suggestedGoal,
   type ClaimFlowCat,
   type ClaimFlowFam,
   type ClaimFlowHelpKey,
+  type GoalDirection,
   type ClaimPreset,
 } from '@/config/impactClaimFlowV4'
 import { listOrgPeers } from '@/services/supabasePeerService'
@@ -82,6 +87,8 @@ export type ClaimWizardDraft = {
   evidenceRef: string
   evidence: string
   target: string
+  /** Desired movement from baseline: increase (up) or decrease (down). */
+  goalDir: GoalDirection | null
   intervention: string
   periods: number
   ownerName: string
@@ -111,6 +118,7 @@ export type ClaimWizardSubmitPayload = {
   evidenceRef: string
   evidence: string
   target: number
+  goalDir: GoalDirection
   intervention: string
   ownerName: string
   ownerEmail: string
@@ -166,6 +174,7 @@ export function blankClaimWizardDraft(): ClaimWizardDraft {
     evidenceRef: '',
     evidence: '',
     target: '',
+    goalDir: null,
     intervention: '',
     periods: 3,
     ownerName: '',
@@ -407,8 +416,10 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       return preset ? `Measure: ${preset.name}` : isCustom ? 'Custom measure' : 'Select a measure to continue.'
     if (draft.step === 3)
       return nn(draft.before) ? `Before: ${f1(draft.before)} ${draft.unit}` : 'Enter the before number.'
-    if (draft.step === 4)
+    if (draft.step === 4) {
+      if (!draft.goalDir) return 'Say whether you were trying to increase or decrease from baseline.'
       return nn(draft.target) ? `Goal: ${f1(draft.target)} ${draft.unit}` : 'Set the goal you aimed for.'
+    }
     if (draft.step === 5) return nn(draft.after) ? `After: ${f1(draft.after)} ${draft.unit}` : 'Enter the after number.'
     return `~${formatMoneyFlow(calc.net)} / month after checking.`
   }, [calc.net, draft, isCustom, preset])
@@ -419,6 +430,8 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
     if (draft.step === 3 && !nn(draft.before)) return 'Enter the before number.'
     if (draft.step === 3 && !draft.locked)
       return 'Tick the box to lock the before number. Locking is what makes it believable later.'
+    if (draft.step === 4 && !draft.goalDir)
+      return 'Choose whether your goal was to increase or decrease from the baseline.'
     if (draft.step === 5 && !nn(draft.after)) return 'Enter the after number.'
     if (draft.step === 5 && preset && preset.count !== 'none' && !nn(draft.count))
       return preset.countQ || 'Enter how often, or how many people.'
@@ -436,8 +449,20 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
 
   const pickPreset = (id: string) => {
     const p = presetOf(id)
-    if (p) patch({ preset: id, unit: p.unit, fam: p.fam })
-    else patch({ preset: 'CUSTOM', unit: draft.unit || CLAIM_FLOW_UNITS[draft.fam].opts[0] })
+    if (p) {
+      patch({
+        preset: id,
+        unit: p.unit,
+        fam: p.fam,
+        goalDir: defaultGoalDirection(p),
+      })
+    } else {
+      patch({
+        preset: 'CUSTOM',
+        unit: draft.unit || CLAIM_FLOW_UNITS[draft.fam].opts[0],
+        goalDir: null,
+      })
+    }
   }
 
   const buildPayload = (): ClaimWizardSubmitPayload => {
@@ -445,6 +470,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
     const windowTo = format(new Date(), 'yyyy-MM-dd')
     const windowFrom = format(subMonths(new Date(), periods), 'yyyy-MM-dd')
     const windowLabel = `${format(new Date(windowFrom), 'MMM yyyy')} to ${format(new Date(windowTo), 'MMM yyyy')}`
+    const goalDir = resolveGoalDirection(draft.goalDir, preset)
     return {
       cat: draft.cat,
       waste: draft.waste,
@@ -463,6 +489,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       evidenceRef: draft.evidenceRef.trim(),
       evidence: draft.evidence.trim(),
       target: nn(draft.target),
+      goalDir,
       intervention: draft.intervention.trim(),
       ownerName: draft.ownerName.trim(),
       ownerEmail: draft.ownerEmail.trim().toLowerCase(),
@@ -521,13 +548,12 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
   const rev = draft.cat === 'rev'
   const chipList = rev ? CLAIM_FLOW_GROWTH : CLAIM_FLOW_WASTES
   const chipSel = rev ? draft.growth : draft.waste
-  const sug = suggestedGoal(preset, nn(draft.before))
+  const goalDir = draft.goalDir
+  const sug = suggestedGoal(preset, nn(draft.before), goalDir)
   const dirGood =
-    !nn(draft.after) || !nn(draft.before)
+    !nn(draft.after) || !nn(draft.before) || !goalDir
       ? true
-      : preset?.dir === 'up'
-        ? nn(draft.after) > nn(draft.before)
-        : nn(draft.after) < nn(draft.before)
+      : isAfterInGoalDirection(nn(draft.before), nn(draft.after), goalDir)
   const m = nn(draft.months)
 
   return (
@@ -583,7 +609,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
               <CardPick
                 key={c.k}
                 on={draft.cat === c.k}
-                onClick={() => patch({ cat: c.k, preset: null, unit: '' })}
+                onClick={() => patch({ cat: c.k, preset: null, unit: '', goalDir: null })}
               >
                 <Text fontWeight="600" mb={1}>
                   {c.n}
@@ -605,7 +631,11 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   <Chip
                     on={chipSel === w.k}
                     onClick={() =>
-                      patch(rev ? { growth: w.k, preset: null, unit: '' } : { waste: w.k, preset: null, unit: '' })
+                      patch(
+                        rev
+                          ? { growth: w.k, preset: null, unit: '', goalDir: null }
+                          : { waste: w.k, preset: null, unit: '', goalDir: null },
+                      )
                     }
                   >
                     {w.n}
@@ -898,8 +928,31 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
             <HelpBtn k="goal" onOpen={setHelpKey} />
           </Heading>
           <Text color="text.secondary" fontSize="sm">
-            The goal you set before you started. Same units as your before number, so we can compare like with like.
+            First say whether you wanted the number to go up or down from your baseline. Then set the goal. Same units
+            as your before number.
           </Text>
+          <FormControl>
+            <FormLabel fontSize="sm">Compared to the baseline, my goal was to</FormLabel>
+            <Wrap spacing={2}>
+              <WrapItem>
+                <Chip on={goalDir === 'up'} onClick={() => patch({ goalDir: 'up' })}>
+                  Increase it
+                </Chip>
+              </WrapItem>
+              <WrapItem>
+                <Chip on={goalDir === 'down'} onClick={() => patch({ goalDir: 'down' })}>
+                  Decrease it
+                </Chip>
+              </WrapItem>
+            </Wrap>
+            <FormHelperText>
+              {goalDir === 'up'
+                ? 'Suggestions will aim above your before number (e.g. revenue, conversion, retention).'
+                : goalDir === 'down'
+                  ? 'Suggestions will aim below your before number (e.g. cycle time, errors, cost).'
+                  : 'Pick a direction so Modest / Typical / Ambitious make sense for your measure.'}
+            </FormHelperText>
+          </FormControl>
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
             <FormControl>
               <FormLabel fontSize="sm">My goal was to get it to</FormLabel>
@@ -910,6 +963,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                   value={draft.target}
                   placeholder={sug != null ? f1(sug) : ''}
                   onChange={(e) => patch({ target: e.target.value })}
+                  isDisabled={!goalDir}
                 />
                 <Input borderLeftRadius={0} maxW="110px" textAlign="center" value={draft.unit} isReadOnly bg="gray.50" />
               </Flex>
@@ -922,27 +976,31 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
               <Wrap spacing={2}>
                 {(
                   [
-                    ['Modest', 0.85],
-                    ['Typical', 1 - (preset?.typical || 30) / 100],
-                    ['Ambitious', 0.5],
+                    ['Modest', 'modest'],
+                    ['Typical', 'typical'],
+                    ['Ambitious', 'ambitious'],
                   ] as const
-                ).map(([lab, factor]) => {
+                ).map(([lab, level]) => {
                   const before = nn(draft.before)
                   const v =
-                    before <= 0
-                      ? 0
-                      : preset?.dir === 'up'
-                        ? before * (2 - factor)
-                        : before * factor
+                    before > 0 && goalDir
+                      ? goalSuggestion(before, goalDir, level, preset?.typical || 30)
+                      : 0
                   return (
                     <WrapItem key={lab}>
-                      <Chip onClick={() => before > 0 && patch({ target: v.toFixed(2) })}>
+                      <Chip
+                        onClick={() => before > 0 && goalDir && patch({ target: v.toFixed(2) })}
+                      >
                         <Box color="black">
                           <Text fontSize="xs" fontWeight="700" color="black">
                             {lab}
                           </Text>
                           <Text fontWeight="500" fontSize="11px" color="black" opacity={0.75}>
-                            {before > 0 ? `${f1(v)} ${draft.unit}` : 'Enter before first'}
+                            {!goalDir
+                              ? 'Pick direction first'
+                              : before > 0
+                                ? `${f1(v)} ${draft.unit}`
+                                : 'Enter before first'}
                           </Text>
                         </Box>
                       </Chip>
@@ -951,7 +1009,8 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
                 })}
               </Wrap>
               <Text fontSize="xs" color="gray.500" mt={2}>
-                Typical improvement for this measure is about {preset?.typical || 30}%. Click a chip to fill the goal.
+                Typical {goalDir === 'up' ? 'increase' : goalDir === 'down' ? 'reduction' : 'change'} for this measure
+                is about {preset?.typical || 30}%. Click a chip to fill the goal.
               </Text>
             </Box>
           </SimpleGrid>
@@ -1053,8 +1112,9 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
           </SimpleGrid>
           {nn(draft.after) && !dirGood && (
             <Note variant="bad" title="That went the wrong way">
-              Your before was {f1(draft.before)} and your after is {f1(draft.after)}. You can still send it. An honest
-              result that did not work is worth more to the programme than a number that was massaged.
+              You aimed to {goalDir === 'up' ? 'increase' : 'decrease'} from a before of {f1(draft.before)}, but your
+              after is {f1(draft.after)}. You can still send it. An honest result that did not work is worth more to the
+              programme than a number that was massaged.
             </Note>
           )}
           <Checkbox

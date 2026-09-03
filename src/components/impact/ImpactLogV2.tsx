@@ -347,6 +347,7 @@ export const ImpactLogV2: React.FC = () => {
             window: payload.windowLabel,
             intervention: payload.intervention,
             target: payload.target,
+            goalDir: payload.goalDir,
             evidenceType: payload.evidence,
             presetId: payload.presetId,
             industry,

@@ -15,6 +15,8 @@ export const CLAIM_FLOW_STEPS = [
 
 export type ClaimFlowCat = 'cost' | 'eff' | 'rev'
 export type ClaimFlowFam = 'time' | 'people' | 'money' | 'items' | 'revenue'
+/** Desired movement of the after/goal number relative to baseline. */
+export type GoalDirection = 'up' | 'down'
 export type ClaimFlowNeeds =
   | 'hourly'
   | 'annual'
@@ -379,7 +381,7 @@ export const CLAIM_FLOW_HELP: Record<ClaimFlowHelpKey, { t: string; b: string }>
   },
   goal: {
     t: 'The goal',
-    b: 'What you were aiming for, set before you measured the result. We record when you set it. Setting it afterwards is allowed but your reviewer sees that it happened, and it weakens the claim.',
+    b: 'First say whether you were trying to increase or decrease from your baseline. Then set the number you aimed for. Modest / typical / ambitious suggestions follow that direction. We record when you set the goal. Setting it afterwards is allowed but your reviewer sees that, and it weakens the claim.',
   },
   after: {
     t: 'The after number',
@@ -537,13 +539,55 @@ export function calcClaimFlow(
   return { gross, net, basis, real, fam, delta, cnt, bucket, rateLabel, rateSupplied }
 }
 
+export function defaultGoalDirection(preset: ClaimPreset | null | undefined): GoalDirection {
+  return preset?.dir === 'up' ? 'up' : 'down'
+}
+
+export function resolveGoalDirection(
+  explicit: GoalDirection | null | undefined,
+  preset: ClaimPreset | null | undefined,
+): GoalDirection {
+  if (explicit === 'up' || explicit === 'down') return explicit
+  return defaultGoalDirection(preset)
+}
+
+/** Modest / typical / ambitious target from a baseline, given desired direction. */
+export function goalSuggestion(
+  before: number,
+  dir: GoalDirection,
+  level: 'modest' | 'typical' | 'ambitious',
+  typicalPct = 30,
+): number {
+  if (!(before > 0)) return 0
+  const pct = Math.max(1, Math.min(90, typicalPct || 30))
+  if (dir === 'up') {
+    if (level === 'modest') return before * 1.15
+    if (level === 'typical') return before * (1 + pct / 100)
+    return before * 1.5
+  }
+  if (level === 'modest') return before * 0.85
+  if (level === 'typical') return before * (1 - pct / 100)
+  return before * 0.5
+}
+
 export function suggestedGoal(
   preset: ClaimPreset | null,
   before: number,
+  dir?: GoalDirection | null,
 ): number | null {
-  if (!preset || !before) return null
-  if (preset.dir === 'up') return before * 1.25
-  return before * (1 - (preset.typical || 30) / 100)
+  if (!before) return null
+  const direction = resolveGoalDirection(dir, preset)
+  return goalSuggestion(before, direction, 'typical', preset?.typical || 30)
+}
+
+/** True when after moved from baseline in the intended direction. */
+export function isAfterInGoalDirection(
+  before: number,
+  after: number,
+  dir: GoalDirection,
+): boolean {
+  if (!(before > 0) || !(after > 0)) return true
+  return dir === 'up' ? after > before : after < before
 }
 
 export function formatMoneyFlow(n: number): string {
