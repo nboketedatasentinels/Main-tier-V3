@@ -1252,10 +1252,12 @@ export const PeerConnectPage: React.FC = () => {
       {tabIndex === 1 ? (
         <Box
           bg="white"
-          p={{ base: 3, md: 4 }}
+          px={{ base: 2, md: 3 }}
+          py={1}
           borderRadius="xl"
           boxShadow="0 2px 8px rgba(0,0,0,0.04)"
           overflow="hidden"
+          sx={{ marginTop: '0.5rem !important', marginBottom: '0.25rem !important' }}
         >
           <Box
             as="video"
@@ -1264,10 +1266,9 @@ export const PeerConnectPage: React.FC = () => {
             playsInline
             src="/media/peer-to-peer.mp4"
             w="100%"
-            borderRadius="lg"
+            borderRadius="md"
             bg="black"
             sx={{ aspectRatio: '16 / 3', objectFit: 'contain' }}
-            boxShadow="0 4px 16px rgba(0,0,0,0.08)"
           />
         </Box>
       ) : null}
