@@ -38,7 +38,6 @@ import {
   CLAIM_FLOW_UNITS,
   CLAIM_FLOW_WASTES,
   calcClaimFlow,
-  defaultGoalDirection,
   formatMoneyFlow,
   goalSuggestion,
   isAfterInGoalDirection,
@@ -450,17 +449,21 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
   const pickPreset = (id: string) => {
     const p = presetOf(id)
     if (p) {
+      // Do not auto-pick direction — Nana: suggestions only make sense after
+      // the learner says increase vs decrease from baseline.
       patch({
         preset: id,
         unit: p.unit,
         fam: p.fam,
-        goalDir: defaultGoalDirection(p),
+        goalDir: null,
+        target: '',
       })
     } else {
       patch({
         preset: 'CUSTOM',
         unit: draft.unit || CLAIM_FLOW_UNITS[draft.fam].opts[0],
         goalDir: null,
+        target: '',
       })
     }
   }
@@ -928,29 +931,55 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
             <HelpBtn k="goal" onOpen={setHelpKey} />
           </Heading>
           <Text color="text.secondary" fontSize="sm">
-            First say whether you wanted the number to go up or down from your baseline. Then set the goal. Same units
-            as your before number.
+            Modest / typical / ambitious only work after you say whether the goal was to{' '}
+            <Bold>increase</Bold> or <Bold>decrease</Bold> from your baseline.
           </Text>
-          <FormControl>
-            <FormLabel fontSize="sm">Compared to the baseline, my goal was to</FormLabel>
-            <Wrap spacing={2}>
-              <WrapItem>
-                <Chip on={goalDir === 'up'} onClick={() => patch({ goalDir: 'up' })}>
-                  Increase it
-                </Chip>
-              </WrapItem>
-              <WrapItem>
-                <Chip on={goalDir === 'down'} onClick={() => patch({ goalDir: 'down' })}>
-                  Decrease it
-                </Chip>
-              </WrapItem>
-            </Wrap>
+          <FormControl isRequired>
+            <FormLabel fontSize="sm">From the baseline, my goal was to</FormLabel>
+            <SimpleGrid columns={2} gap={2} maxW="420px">
+              <Chip
+                on={goalDir === 'up'}
+                onClick={() =>
+                  patch({
+                    goalDir: 'up',
+                    target: '',
+                  })
+                }
+              >
+                <Box>
+                  <Text fontSize="sm" fontWeight="700">
+                    Increase it
+                  </Text>
+                  <Text fontSize="11px" opacity={0.8}>
+                    Aim above baseline
+                  </Text>
+                </Box>
+              </Chip>
+              <Chip
+                on={goalDir === 'down'}
+                onClick={() =>
+                  patch({
+                    goalDir: 'down',
+                    target: '',
+                  })
+                }
+              >
+                <Box>
+                  <Text fontSize="sm" fontWeight="700">
+                    Decrease it
+                  </Text>
+                  <Text fontSize="11px" opacity={0.8}>
+                    Aim below baseline
+                  </Text>
+                </Box>
+              </Chip>
+            </SimpleGrid>
             <FormHelperText>
-              {goalDir === 'up'
-                ? 'Suggestions will aim above your before number (e.g. revenue, conversion, retention).'
-                : goalDir === 'down'
-                  ? 'Suggestions will aim below your before number (e.g. cycle time, errors, cost).'
-                  : 'Pick a direction so Modest / Typical / Ambitious make sense for your measure.'}
+              {!goalDir
+                ? 'Pick one first — then the suggestion chips will fill the right way.'
+                : goalDir === 'up'
+                  ? 'Chips will suggest numbers above your before number.'
+                  : 'Chips will suggest numbers below your before number.'}
             </FormHelperText>
           </FormControl>
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
