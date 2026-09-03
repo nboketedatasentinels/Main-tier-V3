@@ -1,7 +1,7 @@
 /**
  * Impact claim wizard v4 - Chakra port of Desktop/T4L_Claim_Flow_v4.html.
  */
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import {
   ModalOverlay,
   Select,
   SimpleGrid,
+  Spinner,
   Stack,
   Text,
   Textarea,
@@ -46,6 +47,10 @@ import {
   type ClaimFlowHelpKey,
   type ClaimPreset,
 } from '@/config/impactClaimFlowV4'
+import { listOrgPeers } from '@/services/supabasePeerService'
+import { getDisplayName } from '@/utils/displayName'
+import { normalizeEmail } from '@/utils/email'
+import { useAuth } from '@/hooks/useAuth'
 
 const PURPLE = '#350e6f'
 const EMAIL_RE = /^[^@\s]+@[^@\s.]+\.[^@\s]{2,}$/
@@ -298,11 +303,83 @@ function CardPick({
   )
 }
 
+type OrgMemberOption = {
+  id: string
+  name: string
+  email: string
+}
+
 export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCancel, onSubmit }) => {
   const toast = useToast()
+  const { user } = useAuth()
   const [draft, setDraft] = useState<ClaimWizardDraft>(blankClaimWizardDraft)
   const [helpKey, setHelpKey] = useState<ClaimFlowHelpKey | null>(null)
+  const [orgMembers, setOrgMembers] = useState<OrgMemberOption[]>([])
+  const [orgMembersLoading, setOrgMembersLoading] = useState(true)
+  const [orgMembersError, setOrgMembersError] = useState<string | null>(null)
   const patch = (partial: Partial<ClaimWizardDraft>) => setDraft((d) => ({ ...d, ...partial }))
+
+  useEffect(() => {
+    let cancelled = false
+    setOrgMembersLoading(true)
+    setOrgMembersError(null)
+    void (async () => {
+      try {
+        const peers = await listOrgPeers({ includeSelf: false })
+        if (cancelled) return
+        const myEmail = normalizeEmail(user?.email || '')
+        const options = peers
+          .map((peer) => {
+            const email = normalizeEmail(String(peer.email || ''))
+            if (!email || (myEmail && email === myEmail)) return null
+            return {
+              id: String(peer.id || email),
+              name: getDisplayName(
+                {
+                  fullName: peer.fullName as string | undefined,
+                  full_name: peer.full_name as string | undefined,
+                  firstName: peer.firstName as string | undefined,
+                  lastName: peer.lastName as string | undefined,
+                  email,
+                },
+                email,
+              ),
+              email,
+            }
+          })
+          .filter((row): row is OrgMemberOption => Boolean(row))
+          .sort((a, b) => a.name.localeCompare(b.name))
+        setOrgMembers(options)
+      } catch (err) {
+        if (cancelled) return
+        console.warn('[ImpactClaimWizard] failed to load org members', err)
+        setOrgMembers([])
+        setOrgMembersError('Could not load people from your organisation. Ask your admin to check membership.')
+      } finally {
+        if (!cancelled) setOrgMembersLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.email])
+
+  const orgEmailSet = useMemo(
+    () => new Set(orgMembers.map((m) => m.email)),
+    [orgMembers],
+  )
+
+  const selectOrgMember = (
+    email: string,
+    fields: { nameKey: 'ownerName' | 'financeName'; emailKey: 'ownerEmail' | 'financeEmail' },
+  ) => {
+    const member = orgMembers.find((m) => m.email === email)
+    if (!member) {
+      patch({ [fields.nameKey]: '', [fields.emailKey]: '' })
+      return
+    }
+    patch({ [fields.nameKey]: member.name, [fields.emailKey]: member.email })
+  }
 
   const preset: ClaimPreset | null = useMemo(() => presetOf(draft.preset), [draft.preset])
   const isCustom = draft.preset === 'CUSTOM'
@@ -406,21 +483,33 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
       toast({ status: 'warning', title: 'Tick the last box to confirm where the numbers came from.' })
       return
     }
-    if (!draft.ownerName.trim()) {
-      toast({ status: 'warning', title: 'Enter who can confirm this is right.' })
+    if (!draft.ownerName.trim() || !EMAIL_RE.test(draft.ownerEmail.trim())) {
+      toast({
+        status: 'warning',
+        title: 'Pick who confirms this from your organisation (name and email).',
+      })
       return
     }
-    if (!EMAIL_RE.test(draft.ownerEmail.trim())) {
-      toast({ status: 'warning', title: 'Enter a valid email for the measure owner.' })
+    if (!orgEmailSet.has(normalizeEmail(draft.ownerEmail))) {
+      toast({
+        status: 'warning',
+        title: 'Measure owner must be someone in your organisation.',
+      })
       return
     }
     if (calc.net >= 1000) {
-      if (!draft.financeName.trim()) {
-        toast({ status: 'warning', title: 'Finance name is required for claims of $1,000 a month or more.' })
+      if (!draft.financeName.trim() || !EMAIL_RE.test(draft.financeEmail.trim())) {
+        toast({
+          status: 'warning',
+          title: 'Pick a finance validator from your organisation (name and email).',
+        })
         return
       }
-      if (!EMAIL_RE.test(draft.financeEmail.trim())) {
-        toast({ status: 'warning', title: 'Enter a valid finance email.' })
+      if (!orgEmailSet.has(normalizeEmail(draft.financeEmail))) {
+        toast({
+          status: 'warning',
+          title: 'Finance validator must be someone in your organisation.',
+        })
         return
       }
     }
@@ -1039,40 +1128,89 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCanc
           <SimpleGrid columns={{ base: 1, md: 2 }} gap={3} mt={2}>
             <FormControl isRequired>
               <FormLabel fontSize="sm">
-                Who can confirm this is right
+                Who confirms the number
                 <HelpBtn k="who" onOpen={setHelpKey} />
               </FormLabel>
-              <Input
-                mb={2}
-                value={draft.ownerName}
-                placeholder="Name"
-                bg={!draft.ownerName ? 'yellow.50' : undefined}
-                onChange={(e) => patch({ ownerName: e.target.value })}
-              />
-              <Input
-                type="email"
-                value={draft.ownerEmail}
-                placeholder="Email"
-                bg={!draft.ownerEmail ? 'yellow.50' : undefined}
-                onChange={(e) => patch({ ownerEmail: e.target.value })}
-              />
-              <FormHelperText>Usually your manager, or whoever owns the number. It cannot be you.</FormHelperText>
+              {orgMembersLoading ? (
+                <Flex align="center" gap={2} py={2}>
+                  <Spinner size="sm" />
+                  <Text fontSize="sm" color="gray.600">
+                    Loading people in your organisation…
+                  </Text>
+                </Flex>
+              ) : (
+                <Select
+                  value={normalizeEmail(draft.ownerEmail)}
+                  placeholder="Name and email · same organisation"
+                  bg={!draft.ownerEmail ? 'yellow.50' : undefined}
+                  onChange={(e) =>
+                    selectOrgMember(e.target.value, { nameKey: 'ownerName', emailKey: 'ownerEmail' })
+                  }
+                >
+                  {orgMembers.map((member) => (
+                    <option key={member.id} value={member.email}>
+                      {member.name} · {member.email}
+                    </option>
+                  ))}
+                </Select>
+              )}
+              {draft.ownerEmail ? (
+                <Text fontSize="xs" color="gray.600" mt={2}>
+                  Selected: <Bold>{draft.ownerName}</Bold> ({draft.ownerEmail})
+                </Text>
+              ) : null}
+              <FormHelperText>
+                Name and email of a user in your organisation. Usually your manager or whoever owns
+                the number. It cannot be you.
+              </FormHelperText>
+              {orgMembersError ? (
+                <Text fontSize="xs" color="red.600" mt={1}>
+                  {orgMembersError}
+                </Text>
+              ) : null}
+              {!orgMembersLoading && !orgMembersError && orgMembers.length === 0 ? (
+                <Text fontSize="xs" color="orange.700" mt={1}>
+                  No other organisation members found to confirm this claim.
+                </Text>
+              ) : null}
             </FormControl>
             <FormControl isRequired={calc.net >= 1000}>
               <FormLabel fontSize="sm">
-                Finance check {calc.net >= 1000 ? '(needed at this size)' : '(optional at this size)'}
+                Finance validator {calc.net >= 1000 ? '(needed at this size)' : '(optional at this size)'}
               </FormLabel>
-              <Input mb={2} value={draft.financeName} placeholder="Name" onChange={(e) => patch({ financeName: e.target.value })} />
-              <Input
-                type="email"
-                value={draft.financeEmail}
-                placeholder="Email"
-                onChange={(e) => patch({ financeEmail: e.target.value })}
-              />
+              {orgMembersLoading ? (
+                <Flex align="center" gap={2} py={2}>
+                  <Spinner size="sm" />
+                  <Text fontSize="sm" color="gray.600">
+                    Loading people in your organisation…
+                  </Text>
+                </Flex>
+              ) : (
+                <Select
+                  value={normalizeEmail(draft.financeEmail)}
+                  placeholder="Name and email · same organisation"
+                  onChange={(e) =>
+                    selectOrgMember(e.target.value, { nameKey: 'financeName', emailKey: 'financeEmail' })
+                  }
+                >
+                  {orgMembers
+                    .filter((member) => member.email !== normalizeEmail(draft.ownerEmail))
+                    .map((member) => (
+                      <option key={member.id} value={member.email}>
+                        {member.name} · {member.email}
+                      </option>
+                    ))}
+                </Select>
+              )}
+              {draft.financeEmail ? (
+                <Text fontSize="xs" color="gray.600" mt={2}>
+                  Selected: <Bold>{draft.financeName}</Bold> ({draft.financeEmail})
+                </Text>
+              ) : null}
               <FormHelperText>
                 {calc.net >= 1000
-                  ? 'Anything worth $1,000 a month or more needs finance to sign it off before it counts.'
-                  : 'Not required, but adding finance is what turns it from an estimate into a verified number.'}
+                  ? 'Anything worth $1,000 a month or more needs finance in your organisation to sign it off.'
+                  : 'Optional. Pick someone in your organisation if you want finance to verify the figure.'}
               </FormHelperText>
             </FormControl>
           </SimpleGrid>
