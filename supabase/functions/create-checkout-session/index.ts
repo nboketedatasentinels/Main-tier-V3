@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
 
   const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
   if (!stripeKey) {
-    return json({ error: "Stripe is not configured. Set STRIPE_SECRET_KEY." }, 503);
+    return json({ error: "Checkout is not configured yet. Please try again later." }, 503);
   }
 
   const authHeader = req.headers.get("Authorization") || "";
@@ -71,8 +71,8 @@ Deno.serve(async (req) => {
     return json({
       error:
         kind === "full_programme"
-          ? "Stripe Impact Log Pro — Annual price is not configured. Set STRIPE_FULL_PROGRAMME_PRICE_ID."
-          : "Stripe Impact Log Pro price is not configured. Set STRIPE_IMPACT_LOG_PRICE_ID.",
+          ? "Annual checkout is not configured yet. Please try again later."
+          : "Monthly checkout is not configured yet. Please try again later.",
     }, 503);
   }
 
@@ -127,8 +127,8 @@ Deno.serve(async (req) => {
     return json({
       error:
         kind === "full_programme"
-          ? "Impact Log Pro — Annual checkout is misconfigured. Expected $50 USD billed yearly (12 months)."
-          : "Impact Log Pro checkout is misconfigured. Expected $5 USD billed monthly (1 month).",
+          ? "Annual checkout is misconfigured. Please contact support."
+          : "Monthly checkout is misconfigured. Please contact support.",
     }, 503);
   }
 

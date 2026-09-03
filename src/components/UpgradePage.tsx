@@ -58,7 +58,7 @@ export const UpgradePage: React.FC = () => {
         description:
           err instanceof Error
             ? err.message
-            : 'Stripe may not be configured yet. Ask an admin to set STRIPE_IMPACT_LOG_PRICE_ID.',
+            : 'Checkout may not be configured yet. Ask an admin to check payment setup.',
         status: 'error',
         duration: 8000,
         isClosable: true,
@@ -77,7 +77,7 @@ export const UpgradePage: React.FC = () => {
         description:
           err instanceof Error
             ? err.message
-            : 'Stripe may not be configured yet. Ask an admin to set STRIPE_FULL_PROGRAMME_PRICE_ID.',
+            : 'Checkout may not be configured yet. Ask an admin to check payment setup.',
         status: 'error',
         duration: 8000,
         isClosable: true,
@@ -96,7 +96,7 @@ export const UpgradePage: React.FC = () => {
                 Payment received
               </Heading>
               <Text fontSize="sm" style={{ color: '#047857' }}>
-                Stripe is confirming your subscription. Refresh in a few seconds if access is not unlocked yet.
+                Your payment is confirming. Refresh in a few seconds if access is not unlocked yet.
               </Text>
             </Box>
           )}
@@ -164,7 +164,7 @@ export const UpgradePage: React.FC = () => {
               Choose a plan
             </Heading>
             <Text fontSize="md" maxW="lg" style={{ color: '#475569' }}>
-              Secure Stripe checkout. Cancel anytime. Past Impact Log entries stay readable forever.
+              Secure checkout. Cancel anytime. Past Impact Log entries stay readable forever.
             </Text>
           </VStack>
 
@@ -249,7 +249,7 @@ export const UpgradePage: React.FC = () => {
                     _hover={{ bg: '#27062e' }}
                     _active={{ bg: '#1f0524' }}
                     isLoading={impactCheckoutBusy}
-                    loadingText="Redirecting to Stripe…"
+                    loadingText="Redirecting to checkout…"
                     onClick={() => void startImpactPro()}
                   >
                     Continue to checkout
@@ -322,7 +322,7 @@ export const UpgradePage: React.FC = () => {
                     _hover={{ bg: '#27062e' }}
                     _active={{ bg: '#1f0524' }}
                     isLoading={fullCheckoutBusy}
-                    loadingText="Redirecting to Stripe…"
+                    loadingText="Redirecting to checkout…"
                     onClick={() => void startFullProgramme()}
                   >
                     Continue to checkout
@@ -342,7 +342,7 @@ export const UpgradePage: React.FC = () => {
             <HStack spacing={2}>
               <Icon as={Lock} boxSize={3.5} />
               <Text fontSize="xs" fontWeight="500">
-                Secure Stripe checkout
+                Secure checkout
               </Text>
             </HStack>
             <HStack spacing={2}>
