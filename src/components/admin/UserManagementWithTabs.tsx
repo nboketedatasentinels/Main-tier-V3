@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge } from '@chakra-ui/react'
+import { Tab, TabList, TabPanel, TabPanels, Tabs, Alert, AlertIcon, Badge, Box } from '@chakra-ui/react'
 import { UsersManagementTab } from './tabs/UsersManagementTab'
 import { LeadershipCouncil } from './LeadershipCouncil'
 import { listenToUsers, listenToOrganizations } from '@/services/supabaseSuperAdminService'
