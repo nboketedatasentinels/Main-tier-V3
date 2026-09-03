@@ -1251,13 +1251,11 @@ export const PeerConnectPage: React.FC = () => {
 
       {tabIndex === 1 ? (
         <Box
-          bg="white"
-          px={{ base: 2, md: 3 }}
-          py={1}
+          bg="black"
           borderRadius="xl"
-          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
           overflow="hidden"
-          sx={{ marginTop: '0.5rem !important', marginBottom: '0 !important' }}
+          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+          sx={{ marginTop: '0.35rem !important', marginBottom: '0 !important' }}
         >
           <Box
             as="video"
@@ -1266,7 +1264,7 @@ export const PeerConnectPage: React.FC = () => {
             playsInline
             src="/media/peer-to-peer.mp4"
             w="100%"
-            borderRadius="md"
+            display="block"
             bg="black"
             sx={{ aspectRatio: '16 / 3', objectFit: 'contain' }}
           />
@@ -1276,8 +1274,8 @@ export const PeerConnectPage: React.FC = () => {
       <Box
         id="peer-tracks"
         sx={{
-          scrollMarginTop: '16px',
-          ...(tabIndex === 1 ? { marginTop: '0.35rem !important' } : {}),
+          scrollMarginTop: '8px',
+          ...(tabIndex === 1 ? { marginTop: '0.25rem !important' } : {}),
         }}
       >
       <Tabs variant="unstyled" index={tabIndex} onChange={setTabIndex}>
@@ -1589,8 +1587,8 @@ export const PeerConnectPage: React.FC = () => {
             </Stack>
           </TabPanel>
 
-          <TabPanel px={0} id="peer-sessions" scrollMarginTop="80px">
-            <Stack spacing={4}>
+          <TabPanel px={0} py={0} id="peer-sessions" scrollMarginTop="80px">
+            <Stack spacing={3}>
               <Box
                 bg="white"
                 borderRadius="2xl"
