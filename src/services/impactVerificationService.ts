@@ -2,6 +2,7 @@ import { supabase } from '@/services/supabase'
 import { upsertChecklistActivity } from '@/services/checklistService'
 import { awardChecklistPoints } from '@/services/pointsService'
 import type { ActivityDef, JourneyType } from '@/config/pointsConfig'
+import { APP_BASE_URL } from '@/config/app'
 
 const SEND_FN = 'send-impact-verification-email'
 const RESOLVE_FN = 'resolve-impact-verification'
@@ -95,7 +96,7 @@ export async function sendImpactVerificationEmail(params: {
   sections?: ImpactVerificationEmailSection[]
   summaryLines?: string[]
 }): Promise<{ success: boolean; error?: string }> {
-  const appBaseUrl = (import.meta.env.VITE_APP_BASE_URL as string | undefined)?.replace(/\/$/, '')
+  const appBaseUrl = APP_BASE_URL.replace(/\/$/, '')
   try {
     const { data, error } = await supabase.functions.invoke<{ success?: boolean; error?: string }>(
       SEND_FN,
@@ -111,7 +112,7 @@ export async function sendImpactVerificationEmail(params: {
           organizationName: params.organizationName ?? undefined,
           sections: params.sections ?? [],
           summaryLines: params.summaryLines ?? [],
-          ...(appBaseUrl ? { appBaseUrl } : {}),
+          appBaseUrl,
         },
       },
     )
@@ -244,9 +245,7 @@ async function invokeResolve(params: {
   decision: 'preview' | 'approve' | 'reject'
   rejectionReason?: string
 }) {
-  const appBaseUrl =
-    (import.meta.env.VITE_APP_BASE_URL as string | undefined)?.replace(/\/$/, '') ||
-    (typeof window !== 'undefined' ? window.location.origin : undefined)
+  const appBaseUrl = APP_BASE_URL.replace(/\/$/, '')
   const { data, error } = await supabase.functions.invoke<{
     success: boolean
     verification?: ImpactVerificationRecord
@@ -263,7 +262,7 @@ async function invokeResolve(params: {
       token: params.token,
       decision: params.decision,
       rejectionReason: params.rejectionReason,
-      ...(appBaseUrl ? { appBaseUrl } : {}),
+      appBaseUrl,
     },
   })
   if (error) throw new Error(error.message)

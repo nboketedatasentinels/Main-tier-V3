@@ -272,8 +272,22 @@ Deno.serve(async (req) => {
             console.error("[resolve-impact-verification] finance token failed", createErr);
           } else {
             const financeToken = (created as { token?: string })?.token;
-            const appBase = (body.appBaseUrl || Deno.env.get("APP_BASE_URL") ||
-              "https://app.t4leader.com").replace(/\/$/, "");
+            const appBase = (() => {
+              const fallback = "https://app.t4leader.com";
+              const candidate = (body.appBaseUrl || Deno.env.get("APP_BASE_URL") || fallback)
+                .trim()
+                .replace(/\/$/, "");
+              try {
+                const url = new URL(candidate);
+                const host = url.hostname.toLowerCase();
+                if (host === "tier.t4leader.com" || host === "www.tier.t4leader.com") {
+                  return fallback;
+                }
+                return `${url.protocol}//${url.host}`;
+              } catch {
+                return fallback;
+              }
+            })();
             if (financeToken) {
               try {
                 await sendFinanceFollowUpEmail({

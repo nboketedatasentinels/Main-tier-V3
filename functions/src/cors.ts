@@ -1,6 +1,7 @@
 const RAW_ALLOWED_ORIGINS = [
   "https://ambassadors.t4leader.com",
   "https://t4l-ambassador-platform.vercel.app",
+  "https://app.t4leader.com",
   "https://tier.t4leader.com",
 ];
 

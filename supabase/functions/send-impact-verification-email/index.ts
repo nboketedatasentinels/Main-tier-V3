@@ -51,6 +51,22 @@ interface Payload {
   appBaseUrl?: string;
 }
 
+/** Canonical app host. Legacy tier.t4leader.com no longer resolves in DNS. */
+function resolveAppBaseUrl(raw?: string | null): string {
+  const fallback = "https://app.t4leader.com";
+  const candidate = (raw || Deno.env.get("APP_BASE_URL") || fallback).trim().replace(/\/$/, "");
+  try {
+    const url = new URL(candidate);
+    const host = url.hostname.toLowerCase();
+    if (host === "tier.t4leader.com" || host === "www.tier.t4leader.com") {
+      return fallback;
+    }
+    return `${url.protocol}//${url.host}`;
+  } catch {
+    return fallback;
+  }
+}
+
 function json(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -375,10 +391,7 @@ Deno.serve(async (req) => {
     const submittedAt = (body.submittedAt || "").trim();
     const organizationName = (body.organizationName || "").trim();
     const sections = normalizeSections(body);
-    const base =
-      (body.appBaseUrl || Deno.env.get("APP_BASE_URL") || "https://app.t4leader.com")
-        .trim()
-        .replace(/\/$/, "");
+    const base = resolveAppBaseUrl(body.appBaseUrl);
 
     if (!to || !verifierName || !token) {
       return json(400, { error: "invalid_argument" });
