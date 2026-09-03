@@ -512,19 +512,47 @@ export const ImpactLogV2: React.FC = () => {
               bg="surface.default"
             >
               <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
-                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
+                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold" letterSpacing="0.06em">
                   You · {displayName.split(' ')[0]}
                 </Text>
-                <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
-                  {formatMoney(meStats.money)}
-                </Text>
-                <Text fontSize="sm" color="text.secondary">
+                <SimpleGrid columns={3} spacing={3} mt={3} mb={3}>
+                  <Box>
+                    <Text fontSize="2xl" fontWeight="800" color="#27062e" lineHeight="1.1" letterSpacing="-0.02em">
+                      {meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="semibold" color="gray.600" mt={0.5}>
+                      hours invested
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="2xl" fontWeight="800" color="#27062e" lineHeight="1.1" letterSpacing="-0.02em">
+                      {meStats.peopleReached.toLocaleString()}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="semibold" color="gray.600" mt={0.5}>
+                      people reached
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Text
+                      fontSize="2xl"
+                      fontWeight="800"
+                      color={meStats.money > 0 ? '#27062e' : 'gray.500'}
+                      lineHeight="1.1"
+                      letterSpacing="-0.02em"
+                    >
+                      {formatMoney(meStats.money)}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="semibold" color="gray.600" mt={0.5}>
+                      validated value
+                    </Text>
+                  </Box>
+                </SimpleGrid>
+                <Text fontSize="sm" color="gray.700" fontWeight="medium">
                   {meStats.claims} improvement claim{meStats.claims === 1 ? '' : 's'} · {meStats.esg}{' '}
-                  ESG · {meStats.acts > 0 ? `${meStats.acts} activit${meStats.acts === 1 ? 'y' : 'ies'}` : `${meStats.validated} validated`}
-                </Text>
-                <Text fontSize="sm" color="text.secondary" mt={1}>
-                  {meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs ·{' '}
-                  {meStats.peopleReached.toLocaleString()} people reached
+                  ESG ·{' '}
+                  {meStats.acts > 0
+                    ? `${meStats.acts} activit${meStats.acts === 1 ? 'y' : 'ies'}`
+                    : `${meStats.validated} validated`}
                 </Text>
                 <Progress
                   value={pctMe}
@@ -539,35 +567,108 @@ export const ImpactLogV2: React.FC = () => {
                 </Text>
               </Box>
               <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
-                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold">
+                <Text fontSize="xs" textTransform="uppercase" color="text.muted" fontWeight="bold" letterSpacing="0.06em">
                   Organisation
                 </Text>
-                <Text fontSize="2xl" fontWeight="bold" color="black" lineHeight="1.15" my={1}>
-                  {formatMoney(orgStats.money)}
-                </Text>
-                <Text fontSize="sm" color="text.secondary">
-                  {orgStats.validated} validated · {orgStats.people} contributing ·{' '}
-                  {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs
-                </Text>
-                <Text fontSize="sm" color="text.secondary" mt={1}>
-                  {orgStats.claims} claims · {orgStats.esg} ESG ·{' '}
-                  {orgStats.peopleReached.toLocaleString()} people reached
+                <SimpleGrid columns={3} spacing={3} mt={3} mb={3}>
+                  <Box>
+                    <Text fontSize="2xl" fontWeight="800" color="#27062e" lineHeight="1.1" letterSpacing="-0.02em">
+                      {orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="semibold" color="gray.600" mt={0.5}>
+                      hours invested
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Text fontSize="2xl" fontWeight="800" color="#27062e" lineHeight="1.1" letterSpacing="-0.02em">
+                      {orgStats.peopleReached.toLocaleString()}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="semibold" color="gray.600" mt={0.5}>
+                      people reached
+                    </Text>
+                  </Box>
+                  <Box>
+                    <Text
+                      fontSize="2xl"
+                      fontWeight="800"
+                      color={orgStats.money > 0 ? '#27062e' : 'gray.500'}
+                      lineHeight="1.1"
+                      letterSpacing="-0.02em"
+                    >
+                      {formatMoney(orgStats.money)}
+                    </Text>
+                    <Text fontSize="xs" fontWeight="semibold" color="gray.600" mt={0.5}>
+                      validated value
+                    </Text>
+                  </Box>
+                </SimpleGrid>
+                <Text fontSize="sm" color="gray.700" fontWeight="medium">
+                  {orgStats.validated} validated · {orgStats.people} contributing · {orgStats.claims}{' '}
+                  claims · {orgStats.esg} ESG
                 </Text>
               </Box>
               <Box p={{ base: 4, md: 5 }} bg="tint.brandPrimary">
-                <Text fontSize="xs" textTransform="uppercase" color="brand.primary" fontWeight="bold">
+                <Text fontSize="xs" textTransform="uppercase" color="brand.primary" fontWeight="bold" letterSpacing="0.06em">
                   Pipeline (Tier 2)
                 </Text>
-                <Text fontSize="2xl" fontWeight="bold" lineHeight="1.15" my={1} color="brand.primary">
-                  {formatMoney(
-                    entries
-                      .filter((e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2)
-                      .reduce((s, e) => s + Number(e.usdValue || 0), 0),
-                  )}
-                </Text>
-                <Text fontSize="sm" color="text.secondary">
-                  Indicative only, never inside the headline.
-                </Text>
+                {(() => {
+                  const pipelineEntries = entries.filter(
+                    (e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2,
+                  )
+                  const pipelineMoney = pipelineEntries.reduce(
+                    (s, e) => s + Number(e.usdValue || 0),
+                    0,
+                  )
+                  const pipelineHours = pipelineEntries.reduce(
+                    (s, e) => s + Number(e.hours || 0),
+                    0,
+                  )
+                  const pipelinePeople = pipelineEntries.reduce(
+                    (s, e) => s + Number(e.peopleImpacted || 0),
+                    0,
+                  )
+                  return (
+                    <>
+                      <SimpleGrid columns={3} spacing={3} mt={3} mb={3}>
+                        <Box>
+                          <Text fontSize="2xl" fontWeight="800" color="brand.primary" lineHeight="1.1" letterSpacing="-0.02em">
+                            {pipelineHours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                          </Text>
+                          <Text fontSize="xs" fontWeight="semibold" color="purple.700" mt={0.5}>
+                            hours in pipeline
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text fontSize="2xl" fontWeight="800" color="brand.primary" lineHeight="1.1" letterSpacing="-0.02em">
+                            {pipelinePeople.toLocaleString()}
+                          </Text>
+                          <Text fontSize="xs" fontWeight="semibold" color="purple.700" mt={0.5}>
+                            people reached
+                          </Text>
+                        </Box>
+                        <Box>
+                          <Text
+                            fontSize="2xl"
+                            fontWeight="800"
+                            color={pipelineMoney > 0 ? 'brand.primary' : 'purple.400'}
+                            lineHeight="1.1"
+                            letterSpacing="-0.02em"
+                          >
+                            {formatMoney(pipelineMoney)}
+                          </Text>
+                          <Text fontSize="xs" fontWeight="semibold" color="purple.700" mt={0.5}>
+                            indicative $
+                          </Text>
+                        </Box>
+                      </SimpleGrid>
+                      <Text fontSize="sm" color="purple.800" fontWeight="medium">
+                        {pipelineEntries.length} Tier 2 claim
+                        {pipelineEntries.length === 1 ? '' : 's'} · indicative only, never inside the
+                        headline
+                      </Text>
+                    </>
+                  )
+                })()}
               </Box>
             </SimpleGrid>
           </>
