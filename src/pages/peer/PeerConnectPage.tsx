@@ -1257,7 +1257,7 @@ export const PeerConnectPage: React.FC = () => {
           borderRadius="xl"
           boxShadow="0 2px 8px rgba(0,0,0,0.04)"
           overflow="hidden"
-          sx={{ marginTop: '0.5rem !important', marginBottom: '0.25rem !important' }}
+          sx={{ marginTop: '0.5rem !important', marginBottom: '0 !important' }}
         >
           <Box
             as="video"
@@ -1273,10 +1273,16 @@ export const PeerConnectPage: React.FC = () => {
         </Box>
       ) : null}
 
-      <Box id="peer-tracks" sx={{ scrollMarginTop: '24px' }}>
+      <Box
+        id="peer-tracks"
+        sx={{
+          scrollMarginTop: '16px',
+          ...(tabIndex === 1 ? { marginTop: '0.35rem !important' } : {}),
+        }}
+      >
       <Tabs variant="unstyled" index={tabIndex} onChange={setTabIndex}>
         <TabPanels pt={0}>
-          <TabPanel px={0} id="peer-matching" scrollMarginTop="80px">
+          <TabPanel px={0} py={0} id="peer-matching" scrollMarginTop="80px">
             <Stack spacing={4}>
               <Box
                 bg="white"
