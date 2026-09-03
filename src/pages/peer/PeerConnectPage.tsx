@@ -1251,72 +1251,23 @@ export const PeerConnectPage: React.FC = () => {
 
       <Box
         bg="white"
-        p={{ base: 5, md: 6 }}
+        p={{ base: 3, md: 4 }}
         borderRadius="xl"
         boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-        _hover={{ transform: 'translateY(-2px)', boxShadow: '0 8px 25px rgba(244, 84, 12, 0.15)' }}
-        transition="all 0.3s ease"
-        position="relative"
         overflow="hidden"
       >
-        <Box position="absolute" top={0} right={0} w="90px" h="90px" bg="orange.50" borderRadius="0 0 0 100%" />
-        <Flex
-          direction={{ base: 'column', md: 'row' }}
-          gap={{ base: 5, md: 8 }}
-          align={{ base: 'stretch', md: 'center' }}
-          position="relative"
-          zIndex={1}
-        >
-          <Stack spacing={3} flex={2} minW={0}>
-            <HStack spacing={3} align="center">
-              <Flex
-                w={10}
-                h={10}
-                bg="linear-gradient(135deg, #f4540c 0%, #c2410c 100%)"
-                borderRadius="xl"
-                align="center"
-                justify="center"
-                boxShadow="0 4px 12px rgba(244, 84, 12, 0.3)"
-                flexShrink={0}
-              >
-                <Icon as={Video} w={5} h={5} color="white" />
-              </Flex>
-              <Stack spacing={0}>
-                <Text
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                  letterSpacing="wide"
-                  color="gray.500"
-                >
-                  Peer Learning
-                </Text>
-                <Heading size="sm" color="gray.800">
-                  Two different tracks
-                </Heading>
-              </Stack>
-            </HStack>
-            <Text fontSize="sm" color="gray.600" lineHeight="1.6">
-              Peer Match pairs you automatically every week for a points race. Practicals are knowledge
-              sessions you set up with people you pick. Watch the walkthrough, then use the cards above.
-            </Text>
-          </Stack>
-
-          <Box flex={3} w={{ base: '100%', md: 'auto' }} maxW={{ base: 'none', md: '560px' }}>
-            <Box
-              as="video"
-              controls
-              preload="metadata"
-              playsInline
-              src="/media/peer-to-peer.mp4"
-              w="100%"
-              borderRadius="lg"
-              bg="black"
-              sx={{ aspectRatio: '16 / 9' }}
-              boxShadow="0 4px 16px rgba(0,0,0,0.08)"
-            />
-          </Box>
-        </Flex>
+        <Box
+          as="video"
+          controls
+          preload="metadata"
+          playsInline
+          src="/media/peer-to-peer.mp4"
+          w="100%"
+          borderRadius="lg"
+          bg="black"
+          sx={{ aspectRatio: '16 / 9' }}
+          boxShadow="0 4px 16px rgba(0,0,0,0.08)"
+        />
       </Box>
 
       <Box id="peer-tracks" sx={{ scrollMarginTop: '24px' }}>
