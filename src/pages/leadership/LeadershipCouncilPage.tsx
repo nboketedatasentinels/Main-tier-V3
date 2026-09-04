@@ -23,6 +23,7 @@ import {
   HStack,
   Heading,
   Icon,
+  IconButton,
   Input,
   Link,
   Modal,
@@ -554,55 +555,30 @@ export const LeadershipCouncilPage: React.FC = () => {
 
   return (
     <Stack spacing={4}>
-      <Card
-        bgGradient="linear(to-r, #350e6f, #8b5a3c)"
-        border="none"
-        boxShadow="sm"
-        borderRadius="2xl"
-        overflow="hidden"
-      >
-        <CardBody px={{ base: 4, md: 6 }} py={{ base: 3, md: 4 }}>
-          <Flex align="center" gap={3} justify="space-between" flexWrap="wrap">
-            <Box minW={0}>
-              <Text
-                color="whiteAlpha.900"
-                textTransform="uppercase"
-                letterSpacing="0.14em"
-                fontSize="xs"
-                fontWeight="bold"
-              >
-                Leadership Council
-                {profile?.companyName ? ` · ${profile.companyName}` : ''}
-              </Text>
-              <Heading size="md" color="white" letterSpacing="-0.02em" mt={0.5} lineHeight="1.2">
-                Prep your goal, then meet your mentor
-              </Heading>
-            </Box>
-            <Button
-              size="sm"
-              flexShrink={0}
-              leftIcon={<RefreshCcw size={14} />}
-              bg="whiteAlpha.200"
-              color="white"
-              border="1px solid"
-              borderColor="whiteAlpha.300"
-              _hover={{ bg: 'whiteAlpha.300' }}
-              onClick={retryAssignments}
-              isLoading={assignmentsLoading}
-            >
-              Refresh
-            </Button>
-          </Flex>
-          {showOrgDebug && (
-            <HStack spacing={3} mt={2} flexWrap="wrap">
-              <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '-'}</Text>
-              <Text fontSize="xs" color="whiteAlpha.700">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
-              <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '-'}</Text>
-              <Text fontSize="xs" color="whiteAlpha.700">Coach: {assignmentSources.ambassador ?? '-'}</Text>
-            </HStack>
-          )}
-        </CardBody>
-      </Card>
+      {showOrgDebug && (
+        <HStack spacing={3} flexWrap="wrap" px={1}>
+          <Text fontSize="xs" color="gray.500">ID: {organization.id ?? '-'}</Text>
+          <Text fontSize="xs" color="gray.500">
+            Assignments:{' '}
+            {supportAssignmentStatus.loaded
+              ? supportAssignmentStatus.exists
+                ? 'Loaded'
+                : 'None'
+              : '…'}
+          </Text>
+          <Text fontSize="xs" color="gray.500">Mentor: {assignmentSources.mentor ?? '-'}</Text>
+          <Text fontSize="xs" color="gray.500">Coach: {assignmentSources.ambassador ?? '-'}</Text>
+          <Button
+            size="xs"
+            variant="ghost"
+            leftIcon={<RefreshCcw size={12} />}
+            onClick={retryAssignments}
+            isLoading={assignmentsLoading}
+          >
+            Refresh
+          </Button>
+        </HStack>
+      )}
 
       {!isLeadershipEligible && (
         <HStack
@@ -1033,43 +1009,101 @@ export const LeadershipCouncilPage: React.FC = () => {
                   renderJourneyLockedTab('Mentor Assignment')
                 ) : (
                 <Card borderColor="rgba(53, 14, 111, 0.16)" borderWidth="1px" bg="white" borderRadius="2xl">
-                  <CardHeader pb={0} pt={2.5} px={{ base: 4, md: 5 }}>
-                    <HStack spacing={2} align="center" flexWrap="wrap" minW={0}>
-                      <Text
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        color="#350e6f"
-                        fontWeight="bold"
-                        letterSpacing="0.14em"
-                        flexShrink={0}
-                      >
-                        {isSamePerson ? 'Mentor & Coach' : 'Mentor'}
-                      </Text>
-                      <Heading size="sm" color="#27062e" letterSpacing="-0.01em" noOfLines={1}>
-                        {mentorProfile
-                          ? displayNameForProfile(mentorProfile)
-                          : pendingMentorEmail
-                            ? pendingMentorEmail
-                            : 'No mentor assigned'}
-                      </Heading>
-                      {mentorProfile?.availabilityStatus && (
-                        <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
-                          {mentorProfile.availabilityStatus}
-                        </Badge>
+                  <CardHeader pb={2} pt={3} px={{ base: 4, md: 5 }}>
+                    <Flex
+                      justify="space-between"
+                      align={{ base: 'stretch', md: 'center' }}
+                      gap={3}
+                      direction={{ base: 'column', md: 'row' }}
+                    >
+                      <HStack spacing={2} align="center" flexWrap="wrap" minW={0}>
+                        <Text
+                          fontSize="xs"
+                          textTransform="uppercase"
+                          color="#350e6f"
+                          fontWeight="bold"
+                          letterSpacing="0.14em"
+                          flexShrink={0}
+                        >
+                          {isSamePerson ? 'Mentor & Coach' : 'Mentor'}
+                        </Text>
+                        <Heading size="sm" color="#27062e" letterSpacing="-0.01em" noOfLines={1}>
+                          {mentorProfile
+                            ? displayNameForProfile(mentorProfile)
+                            : pendingMentorEmail
+                              ? pendingMentorEmail
+                              : 'No mentor assigned'}
+                        </Heading>
+                        {mentorProfile?.availabilityStatus && (
+                          <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
+                            {mentorProfile.availabilityStatus}
+                          </Badge>
+                        )}
+                        {!mentorProfile && pendingMentorEmail && (
+                          <Badge colorScheme="orange" variant="subtle">
+                            Pending signup
+                          </Badge>
+                        )}
+                        {mentorSourceLabel && (
+                          <Badge colorScheme="purple" variant="subtle">
+                            {mentorSourceLabel}
+                          </Badge>
+                        )}
+                      </HStack>
+
+                      {mentorProfile && profile?.id && (
+                        <HStack spacing={2} flexWrap="wrap" flexShrink={0}>
+                          <Tooltip
+                            label={scheduleDisabledReason || 'Send a request to your mentor'}
+                            placement="top"
+                          >
+                            <Button
+                              size="sm"
+                              leftIcon={<Calendar size={16} />}
+                              colorScheme="primary"
+                              isDisabled={!canScheduleSession || scheduleSubmitting}
+                              onClick={scheduleModal.onOpen}
+                            >
+                              Request a session
+                            </Button>
+                          </Tooltip>
+                          {hasAnySessions && (
+                            <Button
+                              size="sm"
+                              leftIcon={<Eye size={16} />}
+                              variant="outline"
+                              borderColor="rgba(53, 14, 111, 0.28)"
+                              color="#350e6f"
+                              onClick={sessionsModal.onOpen}
+                            >
+                              View all ({sessions.length})
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            color="gray.600"
+                            onClick={() => setShowSessionContext((v) => !v)}
+                            aria-expanded={showSessionContext}
+                          >
+                            {showSessionContext ? 'Hide context' : 'Show context'}
+                          </Button>
+                          {!showOrgDebug && (
+                            <IconButton
+                              size="sm"
+                              variant="ghost"
+                              color="gray.500"
+                              icon={<RefreshCcw size={14} />}
+                              onClick={retryAssignments}
+                              isLoading={assignmentsLoading}
+                              aria-label="Refresh"
+                            />
+                          )}
+                        </HStack>
                       )}
-                      {!mentorProfile && pendingMentorEmail && (
-                        <Badge colorScheme="orange" variant="subtle">
-                          Pending signup
-                        </Badge>
-                      )}
-                      {mentorSourceLabel && (
-                        <Badge colorScheme="purple" variant="subtle">
-                          {mentorSourceLabel}
-                        </Badge>
-                      )}
-                    </HStack>
+                    </Flex>
                   </CardHeader>
-                  <CardBody pt={2} px={{ base: 4, md: 5 }} pb={4}>
+                  <CardBody pt={1} px={{ base: 4, md: 5 }} pb={4}>
                     {assignmentsLoading && (
                       <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
                         <Spinner />
@@ -1118,44 +1152,6 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {mentorProfile && profile?.id && (
                       <Stack spacing={3}>
-                        <HStack spacing={2} flexWrap="wrap">
-                          <Tooltip
-                            label={scheduleDisabledReason || 'Send a request to your mentor'}
-                            placement="top"
-                          >
-                            <Button
-                              size="sm"
-                              leftIcon={<Calendar size={16} />}
-                              colorScheme="primary"
-                              isDisabled={!canScheduleSession || scheduleSubmitting}
-                              onClick={scheduleModal.onOpen}
-                            >
-                              Request a session
-                            </Button>
-                          </Tooltip>
-                          {hasAnySessions && (
-                            <Button
-                              size="sm"
-                              leftIcon={<Eye size={16} />}
-                              variant="outline"
-                              borderColor="rgba(53, 14, 111, 0.28)"
-                              color="#350e6f"
-                              onClick={sessionsModal.onOpen}
-                            >
-                              View all ({sessions.length})
-                            </Button>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            color="gray.600"
-                            onClick={() => setShowSessionContext((v) => !v)}
-                            aria-expanded={showSessionContext}
-                          >
-                            {showSessionContext ? 'Hide context' : 'Show context'}
-                          </Button>
-                        </HStack>
-
                         <MentorshipGoalsCard
                           learnerId={profile.id}
                           mentorId={mentorProfile.id}
