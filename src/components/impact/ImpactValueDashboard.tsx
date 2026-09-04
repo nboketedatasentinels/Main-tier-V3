@@ -145,73 +145,124 @@ export const ImpactValueDashboard: React.FC<Props> = ({
 
   return (
     <Stack spacing={5}>
-      {/* Hero: your savings */}
+      {/* Hero: your savings — light surface for contrast */}
       <Box
         p={{ base: 4, md: 6 }}
         rounded="2xl"
-        bgGradient="linear(135deg, #27062e 0%, #350e6f 55%, #5a1a4a 100%)"
-        color="white"
+        border="1px solid"
+        borderColor="gray.200"
+        boxShadow="sm"
         overflow="hidden"
         position="relative"
+        bgGradient="linear(135deg, #FFFFFF 0%, #FBF8FC 45%, #F7F0FA 100%)"
       >
-        <Text fontSize="xs" textTransform="uppercase" letterSpacing="0.08em" opacity={0.75} mb={1}>
-          Your savings
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          h="4px"
+          bgGradient="linear(to-r, #350e6f, #f4540c, #eab130)"
+        />
+        <Flex align="center" gap={1} mb={2}>
+          <Text
+            fontSize="xs"
+            textTransform="uppercase"
+            letterSpacing="0.1em"
+            fontWeight="bold"
+            color="#350e6f"
+          >
+            Your savings
+          </Text>
           <ImpactHelpButton k="buckets" onOpen={onHelp} />
-        </Text>
+        </Flex>
         <Flex
           direction={{ base: 'column', md: 'row' }}
           align={{ base: 'stretch', md: 'center' }}
           gap={{ base: 4, md: 8 }}
         >
           <Box flex="1">
-            <Text fontSize={{ base: '3xl', md: '4xl' }} fontWeight="bold" lineHeight="1.1">
+            <Text
+              fontSize={{ base: '3xl', md: '4xl' }}
+              fontWeight="800"
+              lineHeight="1.1"
+              color="#27062e"
+              letterSpacing="-0.02em"
+            >
               {formatMoney(headline)}
             </Text>
-            <Text fontSize="sm" opacity={0.85} mt={2} maxW="420px">
+            <Text fontSize="sm" color="gray.600" mt={2} maxW="440px" lineHeight="1.5">
               Approved cash + cost avoidance. Annual run-rate{' '}
-              <Box as="span" fontWeight="semibold" color="#f9db59">
+              <Box as="span" fontWeight="bold" color="#b45309">
                 {formatMoney(annualRun)}
               </Box>
               .
             </Text>
-            <SimpleGrid columns={3} spacing={3} mt={5} maxW="420px">
-              <Box>
-                <Text fontSize="10px" textTransform="uppercase" opacity={0.7}>
+            <SimpleGrid columns={3} spacing={3} mt={5} maxW="440px">
+              <Box
+                p={3}
+                rounded="lg"
+                bg="white"
+                border="1px solid"
+                borderColor="orange.100"
+              >
+                <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
                   Cash
                 </Text>
-                <Text fontSize="md" fontWeight="bold">
+                <Text fontSize="md" fontWeight="800" color="#f4540c" mt={0.5}>
                   {formatMoneyK(cash)}
                 </Text>
               </Box>
-              <Box>
-                <Text fontSize="10px" textTransform="uppercase" opacity={0.7}>
+              <Box
+                p={3}
+                rounded="lg"
+                bg="white"
+                border="1px solid"
+                borderColor="purple.100"
+              >
+                <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
                   Avoidance
                 </Text>
-                <Text fontSize="md" fontWeight="bold">
+                <Text fontSize="md" fontWeight="800" color="#350e6f" mt={0.5}>
                   {formatMoneyK(avoid)}
                 </Text>
               </Box>
-              <Box>
-                <Text fontSize="10px" textTransform="uppercase" opacity={0.7}>
+              <Box
+                p={3}
+                rounded="lg"
+                bg="white"
+                border="1px solid"
+                borderColor="yellow.200"
+              >
+                <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
                   Capacity
                 </Text>
-                <Text fontSize="md" fontWeight="bold">
+                <Text fontSize="md" fontWeight="800" color="#92600a" mt={0.5}>
                   {capHours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs
                 </Text>
-                <Text fontSize="10px" opacity={0.65}>
+                <Text fontSize="10px" color="gray.500" mt={0.5}>
                   ~{formatMoneyK(capacity$)} indicative
                 </Text>
               </Box>
             </SimpleGrid>
           </Box>
 
-          <Box w={{ base: '100%', md: '220px' }} h="180px" flexShrink={0}>
+          <Box
+            w={{ base: '100%', md: '220px' }}
+            h="180px"
+            flexShrink={0}
+            rounded="xl"
+            bg="white"
+            border="1px solid"
+            borderColor="gray.100"
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+          >
             {pieData.length === 0 ? (
-              <Flex h="100%" align="center" justify="center">
-                <Text fontSize="sm" opacity={0.7} textAlign="center">
-                  No approved savings yet
-                </Text>
-              </Flex>
+              <Text fontSize="sm" color="gray.500" textAlign="center" px={4}>
+                No approved savings yet
+              </Text>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -224,7 +275,8 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                     innerRadius={48}
                     outerRadius={72}
                     paddingAngle={2}
-                    stroke="none"
+                    stroke="#fff"
+                    strokeWidth={2}
                   >
                     {pieData.map((d) => (
                       <Cell key={d.key} fill={PIE_COLORS[d.key]} />
@@ -234,8 +286,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                     formatter={(value: number) => formatMoney(value)}
                     contentStyle={{
                       borderRadius: 8,
-                      border: 'none',
+                      border: '1px solid #e5e7eb',
                       fontSize: 12,
+                      color: '#27062e',
                     }}
                   />
                 </PieChart>
