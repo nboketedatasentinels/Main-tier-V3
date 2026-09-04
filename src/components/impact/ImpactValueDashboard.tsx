@@ -37,209 +37,154 @@ type Props = {
 }
 
 const PIE_COLORS = {
-  cash: '#f4540c',
-  avoidance: '#350e6f',
-  capacity: '#eab130',
+  cash: '#350e6f',
+  avoidance: '#6b7280',
+  capacity: '#c4a574',
 } as const
 
-type TileTheme = {
-  iconBg: string
-  iconShadow: string
-  ornamentBg: string
-  hoverShadow: string
-  hoverBorder: string
-}
-
-const tileThemes = {
-  purple: {
-    iconBg: '#350e6f',
-    iconShadow: '0 4px 12px rgba(53, 14, 111, 0.3)',
-    ornamentBg: 'purple.50',
-    hoverShadow: '0 8px 25px rgba(139, 92, 246, 0.15)',
-    hoverBorder: 'purple.200',
-  },
-  orange: {
-    iconBg: 'linear-gradient(135deg, #f4540c 0%, #c2410c 100%)',
-    iconShadow: '0 4px 12px rgba(244, 84, 12, 0.3)',
-    ornamentBg: 'orange.50',
-    hoverShadow: '0 8px 25px rgba(244, 84, 12, 0.15)',
-    hoverBorder: 'orange.200',
-  },
-  green: {
-    iconBg: 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
-    iconShadow: '0 4px 12px rgba(4, 120, 87, 0.3)',
-    ornamentBg: 'green.50',
-    hoverShadow: '0 8px 25px rgba(16, 185, 129, 0.15)',
-    hoverBorder: 'green.200',
-  },
-  yellow: {
-    iconBg: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-    iconShadow: '0 4px 12px rgba(217, 119, 6, 0.3)',
-    ornamentBg: 'yellow.50',
-    hoverShadow: '0 8px 25px rgba(217, 119, 6, 0.15)',
-    hoverBorder: 'yellow.200',
-  },
-} as const satisfies Record<string, TileTheme>
-
+/** Professional shell — white, gray border, soft shadow, deep-plum icon only */
 const DashCard = ({
   label,
   icon,
-  theme,
   help,
   children,
 }: {
   label: string
   icon: LucideIcon
-  theme: keyof typeof tileThemes
   help?: React.ReactNode
   children: React.ReactNode
-}) => {
-  const styles = tileThemes[theme]
-  return (
+}) => (
+  <Box
+    p={5}
+    bg="white"
+    borderRadius="xl"
+    border="1px solid"
+    borderColor="gray.100"
+    boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+    _hover={{
+      transform: 'translateY(-2px)',
+      boxShadow: '0 8px 20px rgba(39,6,46,0.08)',
+      borderColor: 'gray.200',
+    }}
+    transition="all 0.3s ease"
+    position="relative"
+    overflow="hidden"
+  >
     <Box
-      p={5}
-      bgGradient={`linear(135deg, white 0%, ${
-        theme === 'orange'
-          ? '#FFF8F5'
-          : theme === 'purple'
-            ? '#FBF7FC'
-            : theme === 'green'
-              ? '#F5FBF8'
-              : '#FFFBF0'
-      } 100%)`}
+      position="absolute"
+      top={0}
+      right={0}
+      w="60px"
+      h="60px"
+      bg="gray.50"
+      borderRadius="0 0 0 100%"
+      pointerEvents="none"
+    />
+    <Flex
+      w={10}
+      h={10}
+      bg="#350e6f"
       borderRadius="xl"
-      border="1px solid"
-      borderColor="gray.100"
-      boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-      _hover={{
-        transform: 'translateY(-2px)',
-        boxShadow: styles.hoverShadow,
-        borderColor: styles.hoverBorder,
-      }}
-      transition="all 0.3s ease"
+      align="center"
+      justify="center"
+      mb={3}
+      boxShadow="0 4px 12px rgba(53, 14, 111, 0.22)"
       position="relative"
-      overflow="hidden"
     >
-      <Box
-        position="absolute"
-        top="-24px"
-        right="-20px"
-        w="96px"
-        h="96px"
-        borderRadius="full"
-        bg={styles.ornamentBg}
-        opacity={0.9}
-        pointerEvents="none"
-      />
-      <Flex w={10} h={10} bg={styles.iconBg} borderRadius="xl" align="center" justify="center" mb={3} boxShadow={styles.iconShadow} position="relative">
-        <Icon as={icon} boxSize={5} color="white" />
-      </Flex>
-      <Flex align="center" gap={1} mb={3} position="relative">
-        <Text
-          fontSize="xs"
-          color="gray.500"
-          fontWeight="semibold"
-          textTransform="uppercase"
-          letterSpacing="wide"
-        >
-          {label}
-        </Text>
-        {help}
-      </Flex>
-      <Box position="relative">{children}</Box>
-    </Box>
-  )
-}
-
-const VALUE_COLORS: Record<keyof typeof tileThemes, string> = {
-  purple: '#350e6f',
-  orange: '#f4540c',
-  green: '#047857',
-  yellow: '#b45309',
-}
+      <Icon as={icon} boxSize={5} color="white" />
+    </Flex>
+    <Flex align="center" gap={1} mb={3} position="relative">
+      <Text
+        fontSize="xs"
+        color="gray.500"
+        fontWeight="semibold"
+        textTransform="uppercase"
+        letterSpacing="wide"
+      >
+        {label}
+      </Text>
+      {help}
+    </Flex>
+    <Box position="relative">{children}</Box>
+  </Box>
+)
 
 const MiniStat = ({
   label,
   value,
   sub,
-  theme,
   icon,
 }: {
   label: string
   value: string
   sub?: string
-  theme: keyof typeof tileThemes
   icon: LucideIcon
-}) => {
-  const styles = tileThemes[theme]
-  return (
+}) => (
+  <Box
+    p={3.5}
+    bg="white"
+    borderRadius="xl"
+    border="1px solid"
+    borderColor="gray.100"
+    boxShadow="0 1px 4px rgba(0,0,0,0.03)"
+    position="relative"
+    overflow="hidden"
+    _hover={{
+      transform: 'translateY(-1px)',
+      boxShadow: '0 6px 16px rgba(39,6,46,0.07)',
+      borderColor: 'gray.200',
+    }}
+    transition="all 0.3s ease"
+  >
     <Box
-      p={3.5}
-      bg={styles.ornamentBg}
-      borderRadius="xl"
-      border="1px solid"
-      borderColor={styles.hoverBorder}
-      boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-      position="relative"
-      overflow="hidden"
-      _hover={{
-        transform: 'translateY(-2px)',
-        boxShadow: styles.hoverShadow,
-      }}
-      transition="all 0.3s ease"
-    >
-      <Box
-        position="absolute"
-        top="-10px"
-        right="-10px"
-        w="56px"
-        h="56px"
-        borderRadius="full"
-        bg="white"
-        opacity={0.55}
-        pointerEvents="none"
-      />
-      <Flex align="center" gap={2} mb={2} position="relative">
-        <Flex
-          w="28px"
-          h="28px"
-          borderRadius="lg"
-          align="center"
-          justify="center"
-          bg={styles.iconBg}
-          boxShadow={styles.iconShadow}
-          flexShrink={0}
-        >
-          <Icon as={icon} boxSize={3.5} color="white" />
-        </Flex>
-        <Text
-          fontSize="10px"
-          textTransform="uppercase"
-          fontWeight="bold"
-          color="gray.600"
-          letterSpacing="0.06em"
-        >
-          {label}
-        </Text>
+      position="absolute"
+      top={0}
+      right={0}
+      w="40px"
+      h="40px"
+      bg="gray.50"
+      borderRadius="0 0 0 100%"
+      pointerEvents="none"
+    />
+    <Flex align="center" gap={2} mb={2} position="relative">
+      <Flex
+        w="28px"
+        h="28px"
+        borderRadius="lg"
+        align="center"
+        justify="center"
+        bg="gray.100"
+        flexShrink={0}
+      >
+        <Icon as={icon} boxSize={3.5} color="#350e6f" />
       </Flex>
       <Text
-        fontSize={{ base: 'lg', md: 'xl' }}
-        fontWeight="800"
-        color={VALUE_COLORS[theme]}
-        position="relative"
-        lineHeight="1.15"
-        letterSpacing="-0.02em"
+        fontSize="10px"
+        textTransform="uppercase"
+        fontWeight="bold"
+        color="gray.500"
+        letterSpacing="0.06em"
       >
-        {value}
+        {label}
       </Text>
-      {sub ? (
-        <Text fontSize="10px" color="gray.600" mt={1} position="relative" fontWeight="medium">
-          {sub}
-        </Text>
-      ) : null}
-    </Box>
-  )
-}
+    </Flex>
+    <Text
+      fontSize={{ base: 'lg', md: 'xl' }}
+      fontWeight="800"
+      color="#27062e"
+      position="relative"
+      lineHeight="1.15"
+      letterSpacing="-0.02em"
+    >
+      {value}
+    </Text>
+    {sub ? (
+      <Text fontSize="10px" color="gray.500" mt={1} position="relative">
+        {sub}
+      </Text>
+    ) : null}
+  </Box>
+)
 
 const isClaim = (e: ImpactLogRecord) =>
   e.entryKind === 'claim' || (!e.entryKind && e.categoryGroup === 'business')
@@ -357,51 +302,30 @@ export const ImpactValueDashboard: React.FC<Props> = ({
 
   return (
     <Stack spacing={5}>
-      {/* Hero — richer surface so it doesn’t read blank */}
       <Box
         p={{ base: 4, md: 6 }}
         borderRadius="xl"
         border="1px solid"
-        borderColor="purple.100"
-        boxShadow="0 10px 30px rgba(39,6,46,0.08)"
+        borderColor="gray.100"
+        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
         position="relative"
         overflow="hidden"
-        bgGradient="linear(135deg, #FFFFFF 0%, #FBF7FC 40%, #FFF6F0 100%)"
+        bg="white"
         transition="all 0.3s ease"
         _hover={{
           transform: 'translateY(-2px)',
-          boxShadow: '0 14px 34px rgba(39,6,46,0.12)',
-          borderColor: 'purple.200',
+          boxShadow: '0 8px 20px rgba(39,6,46,0.08)',
+          borderColor: 'gray.200',
         }}
       >
         <Box
           position="absolute"
           top={0}
-          left={0}
           right={0}
-          h="5px"
-          bgGradient="linear(to-r, #350e6f, #f4540c, #eab130)"
-        />
-        <Box
-          position="absolute"
-          top="-40px"
-          right="-30px"
-          w="160px"
-          h="160px"
-          borderRadius="full"
-          bg="orange.100"
-          opacity={0.45}
-          pointerEvents="none"
-        />
-        <Box
-          position="absolute"
-          bottom="-50px"
-          left="-20px"
-          w="140px"
-          h="140px"
-          borderRadius="full"
-          bg="purple.100"
-          opacity={0.4}
+          w="72px"
+          h="72px"
+          bg="gray.50"
+          borderRadius="0 0 0 100%"
           pointerEvents="none"
         />
 
@@ -413,7 +337,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             borderRadius="xl"
             align="center"
             justify="center"
-            boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+            boxShadow="0 4px 12px rgba(53, 14, 111, 0.22)"
             flexShrink={0}
           >
             <Icon as={PieChartIcon} boxSize={5} color="white" />
@@ -442,13 +366,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             px={3}
             py={1.5}
             rounded="full"
-            bg="white"
+            bg="gray.50"
             border="1px solid"
-            borderColor="orange.100"
-            boxShadow="sm"
+            borderColor="gray.100"
           >
-            <Icon as={Sparkles} boxSize={3.5} color="#f4540c" />
-            <Text fontSize="xs" fontWeight="bold" color="#b45309">
+            <Icon as={Sparkles} boxSize={3.5} color="#350e6f" />
+            <Text fontSize="xs" fontWeight="semibold" color="gray.700">
               {approvedCount} approved
             </Text>
           </Flex>
@@ -471,28 +394,22 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               {formatMoney(headline)}
             </Text>
 
-            <Flex
-              mt={3}
-              align="center"
-              gap={2}
-              flexWrap="wrap"
-            >
+            <Flex mt={3} align="center" gap={2} flexWrap="wrap">
               <Flex
                 align="center"
                 gap={2}
                 px={3}
                 py={2}
                 rounded="lg"
-                bg="white"
+                bg="gray.50"
                 border="1px solid"
-                borderColor="orange.100"
-                boxShadow="0 2px 8px rgba(244,84,12,0.08)"
+                borderColor="gray.100"
               >
-                <Icon as={Clock3} boxSize={3.5} color="#f4540c" />
+                <Icon as={Clock3} boxSize={3.5} color="gray.500" />
                 <Text fontSize="xs" color="gray.600">
                   Annual run-rate
                 </Text>
-                <Text fontSize="sm" fontWeight="800" color="#f4540c">
+                <Text fontSize="sm" fontWeight="800" color="#27062e">
                   {formatMoney(annualRun)}
                 </Text>
               </Flex>
@@ -503,14 +420,14 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                   px={3}
                   py={2}
                   rounded="lg"
-                  bg="purple.50"
+                  bg="gray.50"
                   border="1px solid"
-                  borderColor="purple.100"
+                  borderColor="gray.100"
                 >
                   <Text fontSize="xs" color="gray.600">
                     In pipeline
                   </Text>
-                  <Text fontSize="sm" fontWeight="800" color="#350e6f">
+                  <Text fontSize="sm" fontWeight="800" color="#27062e">
                     {formatMoneyK(awaitingApproval)}
                   </Text>
                 </Flex>
@@ -518,13 +435,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             </Flex>
 
             <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mt={5}>
-              <MiniStat label="Cash" value={formatMoneyK(cash)} theme="orange" icon={Banknote} />
-              <MiniStat label="Avoidance" value={formatMoneyK(avoid)} theme="purple" icon={Shield} />
+              <MiniStat label="Cash" value={formatMoneyK(cash)} icon={Banknote} />
+              <MiniStat label="Avoidance" value={formatMoneyK(avoid)} icon={Shield} />
               <MiniStat
                 label="Capacity"
                 value={`${capHours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs`}
                 sub={`~${formatMoneyK(capacity$)} indicative`}
-                theme="yellow"
                 icon={Clock3}
               />
             </SimpleGrid>
@@ -534,24 +450,13 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             w={{ base: '100%', md: '240px' }}
             flexShrink={0}
             rounded="xl"
-            bg="white"
+            bg="gray.50"
             border="1px solid"
-            borderColor="orange.100"
-            boxShadow="0 8px 24px rgba(244,84,12,0.1)"
+            borderColor="gray.100"
             p={3}
             position="relative"
             overflow="hidden"
           >
-            <Box
-              position="absolute"
-              top="-16px"
-              right="-16px"
-              w="72px"
-              h="72px"
-              borderRadius="full"
-              bg="orange.50"
-              pointerEvents="none"
-            />
             <Text
               fontSize="10px"
               fontWeight="bold"
@@ -639,10 +544,10 @@ export const ImpactValueDashboard: React.FC<Props> = ({
       </Box>
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-        <DashCard label="Claims · submitted vs approved" icon={CheckCircle2} theme="orange">
+        <DashCard label="Claims · submitted vs approved" icon={CheckCircle2}>
           <Flex justify="space-between" mb={2}>
             <Box>
-              <Text fontSize="2xl" fontWeight="bold" color="gray.800" lineHeight="1.1">
+              <Text fontSize="2xl" fontWeight="bold" color="#27062e" lineHeight="1.1">
                 {submittedCount}
               </Text>
               <Text fontSize="xs" color="gray.500">
@@ -650,7 +555,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               </Text>
             </Box>
             <Box textAlign="right">
-              <Text fontSize="2xl" fontWeight="bold" color="#f4540c" lineHeight="1.1">
+              <Text fontSize="2xl" fontWeight="bold" color="#350e6f" lineHeight="1.1">
                 {approvedCount}
               </Text>
               <Text fontSize="xs" color="gray.500">
@@ -658,14 +563,14 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               </Text>
             </Box>
           </Flex>
-          <Progress value={approvalPct} size="md" rounded="full" colorScheme="orange" bg="gray.100" />
+          <Progress value={approvalPct} size="md" rounded="full" colorScheme="purple" bg="gray.100" />
           <Text fontSize="xs" color="gray.500" mt={2}>
             {approvalPct}% of submitted claims approved
             {awaitingApproval > 0 ? ` · ${formatMoneyK(awaitingApproval)} awaiting approval` : ''}
           </Text>
         </DashCard>
 
-        <DashCard label="Savings by month" icon={BarChart3} theme="purple">
+        <DashCard label="Savings by month" icon={BarChart3}>
           {months.length === 0 ? (
             <Flex h="120px" align="center" justify="center">
               <Text fontSize="sm" color="gray.500">
@@ -699,7 +604,6 @@ export const ImpactValueDashboard: React.FC<Props> = ({
       <DashCard
         label="Where your savings come from"
         icon={Leaf}
-        theme="green"
         help={<ImpactHelpButton k="waste" onOpen={onHelp} />}
       >
         <Text fontSize="sm" color="gray.500" mb={4}>
@@ -755,7 +659,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
         )}
       </DashCard>
 
-      <DashCard label="By category" icon={FolderTree} theme="orange">
+      <DashCard label="By category" icon={FolderTree}>
         <Stack spacing={3}>
           {byCat.map((c) => (
             <Box key={c.k}>
@@ -763,13 +667,13 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                 <Text>{c.n}</Text>
                 <Text fontFamily="mono">{formatMoneyK(c.v)}</Text>
               </Flex>
-              <Progress value={(c.v / maxCat) * 100} size="sm" colorScheme="orange" rounded="full" />
+              <Progress value={(c.v / maxCat) * 100} size="sm" colorScheme="purple" rounded="full" />
             </Box>
           ))}
         </Stack>
       </DashCard>
 
-      <DashCard label="Top approved claims" icon={Trophy} theme="yellow">
+      <DashCard label="Top approved claims" icon={Trophy}>
         <Stack spacing={2}>
           {validated
             .slice()
