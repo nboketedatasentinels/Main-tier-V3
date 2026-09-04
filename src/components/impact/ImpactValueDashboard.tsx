@@ -10,7 +10,6 @@ import {
   Leaf,
   PieChart as PieChartIcon,
   Shield,
-  Sparkles,
   Trophy,
 } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
