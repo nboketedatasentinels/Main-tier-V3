@@ -32,9 +32,9 @@ export const SessionArc: React.FC<SessionArcProps> = ({ labels, currentIndex, no
               mx="auto"
               mb="7px"
               border="1.5px solid"
-              borderColor={now || done ? (now ? '#D4A017' : '#2D2A3E') : 'rgba(35,31,48,.28)'}
-              bg={now ? '#D4A017' : done ? '#2D2A3E' : '#FDF8EF'}
-              boxShadow={now ? '0 0 0 4px rgba(212,160,23,.12)' : undefined}
+              borderColor={now || done ? '#350e6f' : 'rgba(53, 14, 111, 0.22)'}
+              bg={now ? '#350e6f' : done ? '#350e6f' : 'white'}
+              boxShadow={now ? '0 0 0 4px rgba(53, 14, 111, 0.12)' : undefined}
               position="relative"
               zIndex={1}
             />
@@ -43,7 +43,7 @@ export const SessionArc: React.FC<SessionArcProps> = ({ labels, currentIndex, no
               fontSize="9px"
               letterSpacing="0.05em"
               textTransform="uppercase"
-              color={now ? '#7A5C08' : '#6B6579'}
+              color={now ? '#350e6f' : 'gray.500'}
               noOfLines={1}
             >
               {label}
