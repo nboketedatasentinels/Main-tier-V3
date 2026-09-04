@@ -47,7 +47,6 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import {
-  Building2,
   Calendar,
   Download,
   Eye,
