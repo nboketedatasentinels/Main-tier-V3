@@ -1046,41 +1046,51 @@ export const LeadershipCouncilPage: React.FC = () => {
                 <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={0}>
                     <HStack justify="space-between" align="start" spacing={4}>
-                      <Stack spacing={2} flex="1" minW={0}>
+                      <HStack
+                        spacing={{ base: 2, md: 3 }}
+                        flex="1"
+                        minW={0}
+                        align="center"
+                        flexWrap="wrap"
+                      >
                         <Text
                           fontSize="xs"
                           textTransform="uppercase"
                           color="#350e6f"
                           fontWeight="bold"
                           letterSpacing="0.14em"
+                          flexShrink={0}
                         >
                           {isSamePerson ? 'Mentor & Coach' : 'Mentor'}
                         </Text>
-                        <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                        <Heading
+                          size="md"
+                          color="#27062e"
+                          letterSpacing="-0.01em"
+                          noOfLines={1}
+                        >
                           {mentorProfile
                             ? displayNameForProfile(mentorProfile)
                             : pendingMentorEmail
                               ? pendingMentorEmail
                               : 'No mentor assigned'}
                         </Heading>
-                        <HStack spacing={2} flexWrap="wrap">
-                          {mentorProfile?.availabilityStatus && (
-                            <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
-                              {mentorProfile.availabilityStatus}
-                            </Badge>
-                          )}
-                          {!mentorProfile && pendingMentorEmail && (
-                            <Badge colorScheme="orange" variant="subtle">
-                              Pending signup
-                            </Badge>
-                          )}
-                          {mentorSourceLabel && (
-                            <Badge colorScheme="purple" variant="subtle">
-                              {mentorSourceLabel}
-                            </Badge>
-                          )}
-                        </HStack>
-                      </Stack>
+                        {mentorProfile?.availabilityStatus && (
+                          <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
+                            {mentorProfile.availabilityStatus}
+                          </Badge>
+                        )}
+                        {!mentorProfile && pendingMentorEmail && (
+                          <Badge colorScheme="orange" variant="subtle">
+                            Pending signup
+                          </Badge>
+                        )}
+                        {mentorSourceLabel && (
+                          <Badge colorScheme="purple" variant="subtle">
+                            {mentorSourceLabel}
+                          </Badge>
+                        )}
+                      </HStack>
                       <Avatar
                         size="lg"
                         name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
