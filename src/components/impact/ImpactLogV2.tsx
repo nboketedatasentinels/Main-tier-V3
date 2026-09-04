@@ -549,11 +549,14 @@ export const ImpactLogV2: React.FC = () => {
                   p={{ base: 4, md: 5 }}
                   rounded="xl"
                   bg="white"
-                  border="2px solid"
-                  borderColor="#350e6f"
-                  boxShadow="none"
+                  border="none"
+                  boxShadow="0 4px 14px rgba(39, 6, 46, 0.1)"
                   transition="transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease"
-                  _hover={{ transform: 'translateY(-1px)', boxShadow: 'sm', bg: 'purple.50' }}
+                  _hover={{
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 22px rgba(53, 14, 111, 0.16)',
+                    bg: 'purple.50',
+                  }}
                   _active={{ transform: 'translateY(0)' }}
                   onClick={() => {
                     void startEntry('claim')
@@ -589,11 +592,14 @@ export const ImpactLogV2: React.FC = () => {
                   p={{ base: 4, md: 5 }}
                   rounded="xl"
                   bg="white"
-                  border="2px solid"
-                  borderColor="#f4540c"
-                  boxShadow="none"
+                  border="none"
+                  boxShadow="0 4px 14px rgba(39, 6, 46, 0.1)"
                   transition="transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease"
-                  _hover={{ transform: 'translateY(-1px)', boxShadow: 'sm', bg: 'orange.50' }}
+                  _hover={{
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 22px rgba(244, 84, 12, 0.16)',
+                    bg: 'orange.50',
+                  }}
                   _active={{ transform: 'translateY(0)' }}
                   onClick={() => {
                     void startEntry('esg')
