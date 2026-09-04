@@ -94,26 +94,6 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       py={{ base: 4, md: 5 }}
       boxShadow={primary ? '0 8px 24px rgba(53, 14, 111, 0.1)' : '0 1px 3px rgba(0,0,0,0.03)'}
     >
-      {primary ? (
-        <Box
-          mb={4}
-          px={3}
-          py={2}
-          rounded="lg"
-          bg="rgba(53, 14, 111, 0.06)"
-          borderWidth="1px"
-          borderStyle="solid"
-          borderColor={cardBorder}
-        >
-          <Text fontSize="xs" fontWeight="bold" color="#350e6f" letterSpacing="0.06em" textTransform="uppercase">
-            Start here
-          </Text>
-          <Text fontSize="sm" color="gray.700" mt={0.5} lineHeight="1.45">
-            Answer this before your meet-up — one question at a time, then save.
-          </Text>
-        </Box>
-      ) : null}
-
       <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
         <Box>
           <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500" textTransform="uppercase">
