@@ -1118,26 +1118,13 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {mentorProfile && profile?.id && (
                       <Stack spacing={3}>
-                        <MentorshipGoalsCard
-                          learnerId={profile.id}
-                          mentorId={mentorProfile.id}
-                          audience="mentor"
-                          primary
-                          onSaved={handleGoalsSaved}
-                        />
-
-                        <Flex
-                          justify="space-between"
-                          align={{ base: 'stretch', sm: 'center' }}
-                          gap={2}
-                          flexWrap="wrap"
-                        >
+                        <HStack spacing={2} flexWrap="wrap">
                           <Tooltip
                             label={scheduleDisabledReason || 'Send a request to your mentor'}
                             placement="top"
                           >
                             <Button
-                              size="md"
+                              size="sm"
                               leftIcon={<Calendar size={16} />}
                               colorScheme="primary"
                               isDisabled={!canScheduleSession || scheduleSubmitting}
@@ -1146,30 +1133,36 @@ export const LeadershipCouncilPage: React.FC = () => {
                               Request a session
                             </Button>
                           </Tooltip>
-                          <HStack spacing={2} flexWrap="wrap">
-                            {hasAnySessions && (
-                              <Button
-                                size="md"
-                                leftIcon={<Eye size={16} />}
-                                variant="outline"
-                                borderColor="rgba(53, 14, 111, 0.28)"
-                                color="#350e6f"
-                                onClick={sessionsModal.onOpen}
-                              >
-                                View all ({sessions.length})
-                              </Button>
-                            )}
+                          {hasAnySessions && (
                             <Button
-                              size="md"
-                              variant="ghost"
-                              color="gray.600"
-                              onClick={() => setShowSessionContext((v) => !v)}
-                              aria-expanded={showSessionContext}
+                              size="sm"
+                              leftIcon={<Eye size={16} />}
+                              variant="outline"
+                              borderColor="rgba(53, 14, 111, 0.28)"
+                              color="#350e6f"
+                              onClick={sessionsModal.onOpen}
                             >
-                              {showSessionContext ? 'Hide session context' : 'Show session context'}
+                              View all ({sessions.length})
                             </Button>
-                          </HStack>
-                        </Flex>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            color="gray.600"
+                            onClick={() => setShowSessionContext((v) => !v)}
+                            aria-expanded={showSessionContext}
+                          >
+                            {showSessionContext ? 'Hide context' : 'Show context'}
+                          </Button>
+                        </HStack>
+
+                        <MentorshipGoalsCard
+                          learnerId={profile.id}
+                          mentorId={mentorProfile.id}
+                          audience="mentor"
+                          primary
+                          onSaved={handleGoalsSaved}
+                        />
 
                         <Collapse in={showSessionContext} animateOpacity>
                           <LeaderSessionPrep
