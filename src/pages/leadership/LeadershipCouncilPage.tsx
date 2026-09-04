@@ -276,6 +276,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const handleGoalsSaved = useCallback((next: string) => {
     setGoalsDraft(next)
     setGoalsInitialized(true)
+    setShowSessionContext(true)
   }, [])
 
   const handleRequestSession = async () => {

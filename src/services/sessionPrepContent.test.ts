@@ -74,6 +74,7 @@ describe('sessionPrepContent', () => {
     })
     expect(leader.showScores).toBe(true)
     expect(leader.archetypeLabel).toBe('Architect')
+    expect(leader.goalVerbatim).toBe('Get exec approval')
     expect(leader.totalPointsLabel).toContain('12,500')
     expect(leader.bringItems).toHaveLength(1)
     expect(leader.bringItems[0].title).toBe('Case Study 1')

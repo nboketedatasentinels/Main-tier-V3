@@ -372,6 +372,25 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
 
           {isLeader && leaderGoalEditor ? <Box mt={3}>{leaderGoalEditor}</Box> : null}
 
+          {isLeader && model.goalVerbatim ? (
+            <Box mt={7}>
+              <MonoLabel>Your session prep answers</MonoLabel>
+              <Stack spacing={0}>
+                {model.goalVerbatim
+                  .split(/\n\n+/)
+                  .map((part) => part.trim())
+                  .filter(Boolean)
+                  .map((part) => (
+                    <Box key={part.slice(0, 48)} borderTop="1px solid" borderColor="rgba(35,31,48,.14)" py={4}>
+                      <Text fontSize="14.5px" lineHeight="1.55" fontWeight="500" whiteSpace="pre-wrap">
+                        {part}
+                      </Text>
+                    </Box>
+                  ))}
+              </Stack>
+            </Box>
+          ) : null}
+
           {!isLeader && model.headline ? (
             <Box mt={7}>
               <MonoLabel>
