@@ -12,6 +12,7 @@ import {
   Card,
   CardBody,
   CardHeader,
+  Collapse,
   Divider,
   Flex,
   FormControl,
@@ -176,6 +177,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   const [scheduleMessage, setScheduleMessage] = useState('')
   const [scheduleSubmitting, setScheduleSubmitting] = useState(false)
 
+  const [showSessionContext, setShowSessionContext] = useState(false)
   const [goalsDraft, setGoalsDraft] = useState('')
   const [goalsInitialized, setGoalsInitialized] = useState(false)
   const [liftCompleted, setLiftCompleted] = useState<boolean | null>(null)
@@ -552,7 +554,7 @@ export const LeadershipCouncilPage: React.FC = () => {
   }
 
   return (
-    <Stack spacing={6}>
+    <Stack spacing={4}>
       <Card
         bgGradient="linear(to-r, #350e6f, #8b5a3c)"
         border="none"
@@ -560,48 +562,22 @@ export const LeadershipCouncilPage: React.FC = () => {
         borderRadius="2xl"
         overflow="hidden"
       >
-        <CardBody px={{ base: 5, md: 7 }} py={{ base: 5, md: 6 }}>
-          <Flex align={{ base: 'flex-start', md: 'center' }} gap={4} direction={{ base: 'column', md: 'row' }}>
-            <Box flex={1} minW={0}>
-              <HStack spacing={2} mb={2} flexWrap="wrap">
-                <Text
-                  color="whiteAlpha.900"
-                  textTransform="uppercase"
-                  letterSpacing="0.16em"
-                  fontSize="xs"
-                  fontWeight="bold"
-                >
-                  Leadership Council
-                </Text>
-                {profile?.companyName && (
-                  <>
-                    <Box boxSize={1} borderRadius="full" bg="whiteAlpha.500" />
-                    <HStack spacing={1} color="whiteAlpha.900">
-                      <Icon as={Building2} boxSize={3} />
-                      <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.04em">
-                        {profile.companyName}
-                      </Text>
-                    </HStack>
-                  </>
-                )}
-              </HStack>
-              <Heading
-                size="lg"
-                color="white"
-                letterSpacing="-0.02em"
+        <CardBody px={{ base: 4, md: 6 }} py={{ base: 3, md: 4 }}>
+          <Flex align="center" gap={3} justify="space-between" flexWrap="wrap">
+            <Box minW={0}>
+              <Text
+                color="whiteAlpha.900"
+                textTransform="uppercase"
+                letterSpacing="0.14em"
+                fontSize="xs"
                 fontWeight="bold"
-                lineHeight="1.15"
               >
-                Your support team
+                Leadership Council
+                {profile?.companyName ? ` · ${profile.companyName}` : ''}
+              </Text>
+              <Heading size="md" color="white" letterSpacing="-0.02em" mt={0.5} lineHeight="1.2">
+                Prep your goal, then meet your mentor
               </Heading>
-              {showOrgDebug && (
-                <HStack spacing={3} mt={2} flexWrap="wrap">
-                  <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '-'}</Text>
-                  <Text fontSize="xs" color="whiteAlpha.700">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
-                  <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '-'}</Text>
-                  <Text fontSize="xs" color="whiteAlpha.700">Coach: {assignmentSources.ambassador ?? '-'}</Text>
-                </HStack>
-              )}
             </Box>
             <Button
               size="sm"
@@ -618,6 +594,14 @@ export const LeadershipCouncilPage: React.FC = () => {
               Refresh
             </Button>
           </Flex>
+          {showOrgDebug && (
+            <HStack spacing={3} mt={2} flexWrap="wrap">
+              <Text fontSize="xs" color="whiteAlpha.700">ID: {organization.id ?? '-'}</Text>
+              <Text fontSize="xs" color="whiteAlpha.700">Assignments: {supportAssignmentStatus.loaded ? (supportAssignmentStatus.exists ? 'Loaded' : 'None') : '…'}</Text>
+              <Text fontSize="xs" color="whiteAlpha.700">Mentor: {assignmentSources.mentor ?? '-'}</Text>
+              <Text fontSize="xs" color="whiteAlpha.700">Coach: {assignmentSources.ambassador ?? '-'}</Text>
+            </HStack>
+          )}
         </CardBody>
       </Card>
 
@@ -1045,13 +1029,13 @@ export const LeadershipCouncilPage: React.FC = () => {
                 )}
               </TabPanel>
 
-              <TabPanel px={0} pt={4}>
+              <TabPanel px={0} pt={2}>
                 {!isLeadershipEligible ? (
                   renderJourneyLockedTab('Mentor Assignment')
                 ) : (
-                <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
-                  <CardHeader pb={2} pt={4}>
-                    <HStack justify="space-between" align="center" spacing={4}>
+                <Card borderColor="rgba(53, 14, 111, 0.16)" borderWidth="1px" bg="white" borderRadius="2xl">
+                  <CardHeader pb={1} pt={3} px={{ base: 4, md: 5 }}>
+                    <HStack justify="space-between" align="center" spacing={3}>
                       <HStack
                         spacing={{ base: 2, md: 3 }}
                         flex="1"
@@ -1098,14 +1082,14 @@ export const LeadershipCouncilPage: React.FC = () => {
                         )}
                       </HStack>
                       <Avatar
-                        size="md"
+                        size="sm"
                         name={mentorProfile ? displayNameForProfile(mentorProfile) : undefined}
                         src={mentorProfile?.avatarUrl}
                         bg="#350e6f"
                       />
                     </HStack>
                   </CardHeader>
-                  <CardBody pt={2}>
+                  <CardBody pt={2} px={{ base: 4, md: 5 }} pb={4}>
                     {assignmentsLoading && (
                       <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
                         <Spinner />
@@ -1154,6 +1138,14 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {mentorProfile && profile?.id && (
                       <Stack spacing={3}>
+                        <MentorshipGoalsCard
+                          learnerId={profile.id}
+                          mentorId={mentorProfile.id}
+                          audience="mentor"
+                          primary
+                          onSaved={handleGoalsSaved}
+                        />
+
                         <Flex
                           justify="space-between"
                           align={{ base: 'stretch', sm: 'center' }}
@@ -1174,33 +1166,38 @@ export const LeadershipCouncilPage: React.FC = () => {
                               Request a session
                             </Button>
                           </Tooltip>
-                          {hasAnySessions && (
+                          <HStack spacing={2} flexWrap="wrap">
+                            {hasAnySessions && (
+                              <Button
+                                size="md"
+                                leftIcon={<Eye size={16} />}
+                                variant="outline"
+                                borderColor="rgba(53, 14, 111, 0.28)"
+                                color="#350e6f"
+                                onClick={sessionsModal.onOpen}
+                              >
+                                View all ({sessions.length})
+                              </Button>
+                            )}
                             <Button
                               size="md"
-                              leftIcon={<Eye size={16} />}
-                              variant="outline"
-                              borderColor="rgba(53, 14, 111, 0.28)"
-                              color="#350e6f"
-                              onClick={sessionsModal.onOpen}
+                              variant="ghost"
+                              color="gray.600"
+                              onClick={() => setShowSessionContext((v) => !v)}
+                              aria-expanded={showSessionContext}
                             >
-                              View all ({sessions.length})
+                              {showSessionContext ? 'Hide session context' : 'Show session context'}
                             </Button>
-                          )}
+                          </HStack>
                         </Flex>
 
-                        <LeaderSessionPrep
-                          learner={profile}
-                          mentor={mentorProfile}
-                          goals={goalsDraft || savedGoals}
-                          goalEditor={
-                            <MentorshipGoalsCard
-                              learnerId={profile.id}
-                              mentorId={mentorProfile.id}
-                              audience="mentor"
-                              onSaved={handleGoalsSaved}
-                            />
-                          }
-                        />
+                        <Collapse in={showSessionContext} animateOpacity>
+                          <LeaderSessionPrep
+                            learner={profile}
+                            mentor={mentorProfile}
+                            goals={goalsDraft || savedGoals}
+                          />
+                        </Collapse>
 
                         <Box
                           p={4}

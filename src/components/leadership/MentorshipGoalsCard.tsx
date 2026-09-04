@@ -16,9 +16,12 @@ type MentorshipGoalsCardProps = {
   audience?: 'mentor' | 'coach'
   /** Fired after a successful save so parent Session Prep can refresh. */
   onSaved?: (goals: string) => void
+  /** Emphasise this as the primary action on the page. */
+  primary?: boolean
 }
 
 const SPLIT = '\n\n'
+const cardBorder = 'rgba(53, 14, 111, 0.16)'
 
 /** Shared “I'm trying to achieve…” editor — one prompt at a time to reduce scroll. */
 export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
@@ -26,6 +29,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   mentorId = null,
   audience = 'mentor',
   onSaved,
+  primary = false,
 }) => {
   const toast = useToast()
   const { goals, loading, saving, save } = useMentorshipGoals(learnerId, mentorId)
@@ -80,22 +84,51 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   }
 
   return (
-    <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" px={5} py={4}>
+    <Box
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor={primary ? 'rgba(53, 14, 111, 0.32)' : cardBorder}
+      borderRadius="xl"
+      bg="white"
+      px={{ base: 4, md: 6 }}
+      py={{ base: 4, md: 5 }}
+      boxShadow={primary ? '0 8px 24px rgba(53, 14, 111, 0.1)' : '0 1px 3px rgba(0,0,0,0.03)'}
+    >
+      {primary ? (
+        <Box
+          mb={4}
+          px={3}
+          py={2}
+          rounded="lg"
+          bg="rgba(53, 14, 111, 0.06)"
+          borderWidth="1px"
+          borderStyle="solid"
+          borderColor={cardBorder}
+        >
+          <Text fontSize="xs" fontWeight="bold" color="#350e6f" letterSpacing="0.06em" textTransform="uppercase">
+            Start here
+          </Text>
+          <Text fontSize="sm" color="gray.700" mt={0.5} lineHeight="1.45">
+            Answer this before your meet-up — one question at a time, then save.
+          </Text>
+        </Box>
+      ) : null}
+
       <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
         <Box>
-          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500">
-            {audience === 'coach' ? 'COACHING GOAL' : 'MENTORSHIP GOAL'}
+          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500" textTransform="uppercase">
+            {audience === 'coach' ? 'Coaching goal' : 'Mentorship goal'}
           </Text>
-          <Text mt={1} fontSize="md" fontWeight="700" color="#27062e">
+          <Text mt={1} fontSize={primary ? 'lg' : 'md'} fontWeight="700" color="#27062e">
             {archetype ? `${archetype} · session prep` : "I'm trying to achieve…"}
           </Text>
         </Box>
-        <HStack spacing={1}>
+        <HStack spacing={1.5} pt={1}>
           {prompts.map((_, i) => (
             <Box
               key={i}
-              w="8px"
-              h="8px"
+              w="9px"
+              h="9px"
               rounded="full"
               bg={i === step ? '#f4540c' : i < step || (answers[i] || '').trim() ? '#350e6f' : 'gray.200'}
             />
@@ -108,7 +141,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
           <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.06em" textTransform="uppercase">
             {step + 1}/{prompts.length} · {prompt.label}
           </Text>
-          <Text fontSize="sm" color="gray.700" mt={1} mb={2}>
+          <Text fontSize={primary ? 'md' : 'sm'} color="gray.800" mt={1} mb={3} fontWeight="medium" lineHeight="1.45">
             {prompt.question}
           </Text>
           <Textarea
@@ -118,22 +151,24 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
               next[step] = e.target.value
               setAnswers(next)
             }}
-            minH="88px"
+            minH={primary ? '120px' : '88px'}
             placeholder={prompt.placeholder}
             borderColor="gray.300"
+            fontSize="md"
             isDisabled={loading || liftLoading}
+            autoFocus={primary}
             _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
           />
         </Box>
       )}
 
-      <Flex mt={3} justify="space-between" align="center" gap={3} flexWrap="wrap">
+      <Flex mt={4} justify="space-between" align="center" gap={3} flexWrap="wrap">
         <Text fontSize="xs" color={tooLong ? 'red.500' : 'gray.500'}>
           {combined.length}/{MENTORSHIP_GOALS_MAX_LENGTH}
         </Text>
         <HStack spacing={2}>
           <Button
-            size="sm"
+            size={primary ? 'md' : 'sm'}
             variant="ghost"
             leftIcon={<ChevronLeft size={14} />}
             onClick={() => setStep((s) => Math.max(0, s - 1))}
@@ -143,7 +178,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
           </Button>
           {!lastStep ? (
             <Button
-              size="sm"
+              size={primary ? 'md' : 'sm'}
               bg="#350e6f"
               color="white"
               rightIcon={<ChevronRight size={14} />}
@@ -155,7 +190,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
             </Button>
           ) : (
             <Button
-              size="sm"
+              size={primary ? 'md' : 'sm'}
               leftIcon={<Save size={14} />}
               bg="#350e6f"
               color="white"
