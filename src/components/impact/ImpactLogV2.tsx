@@ -29,7 +29,7 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react'
-import { Info, Leaf, TrendingUp } from 'lucide-react'
+import { Building2, Clock3, Info, Leaf, TrendingUp, User } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -700,218 +700,195 @@ export const ImpactLogV2: React.FC = () => {
               </Alert>
             )}
 
-            <SimpleGrid
-              columns={{ base: 1, md: 3 }}
-              spacing={0}
-              borderBottom="1px solid"
-              borderColor="border.subtle"
-              bg="surface.default"
-            >
-              {(() => {
-                const pipelineEntries = entries.filter(
-                  (e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2,
-                )
-                const pipelineMoney = pipelineEntries.reduce(
-                  (s, e) => s + Number(e.usdValue || 0),
-                  0,
-                )
-                const pipelineHours = pipelineEntries.reduce((s, e) => s + Number(e.hours || 0), 0)
-                const pipelinePeople = pipelineEntries.reduce(
-                  (s, e) => s + Number(e.peopleImpacted || 0),
-                  0,
-                )
-                const Metric = ({
-                  value,
-                  label,
-                  muted,
-                  accent,
-                }: {
-                  value: string
-                  label: string
-                  muted?: boolean
-                  accent?: boolean
-                }) => (
-                  <Box minW={0}>
-                    <Text
-                      fontSize={{ base: 'lg', md: 'xl' }}
-                      fontWeight="800"
-                      color={accent ? 'brand.primary' : muted ? 'gray.400' : '#27062e'}
-                      lineHeight="1.1"
-                      letterSpacing="-0.02em"
-                      noOfLines={1}
-                    >
-                      {value}
-                    </Text>
-                    <Text
-                      fontSize="xs"
-                      fontWeight="600"
-                      color={accent ? 'purple.700' : 'gray.500'}
-                      mt={0.5}
-                    >
-                      {label}
-                    </Text>
-                  </Box>
-                )
-                return (
-                  <>
-                    <Box
-                      p={{ base: 3, md: 4 }}
-                      borderRight={{ md: '1px solid' }}
-                      borderColor="border.subtle"
-                    >
-                      <Text
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        color="text.muted"
-                        fontWeight="bold"
-                        letterSpacing="0.06em"
-                      >
-                        You · {displayName.split(' ')[0]}
-                      </Text>
-                      <SimpleGrid columns={3} spacing={2} mt={2}>
-                        <Metric
-                          value={meStats.hours.toLocaleString(undefined, {
-                            maximumFractionDigits: 1,
-                          })}
-                          label="hrs"
-                        />
-                        <Metric value={meStats.peopleReached.toLocaleString()} label="people" />
-                        <Metric
-                          value={formatMoney(meStats.money)}
-                          label="value"
-                          muted={meStats.money <= 0}
-                        />
-                      </SimpleGrid>
-                      <Text fontSize="xs" color="gray.600" mt={2}>
-                        {meStats.claims} claim{meStats.claims === 1 ? '' : 's'}
-                        {meStats.esg ? ` · ${meStats.esg} ESG` : ''}
-                        {pctMe > 0 ? ` · ${pctMe.toFixed(0)}% of org` : ''}
-                      </Text>
-                    </Box>
+            <Box px={{ base: 3, md: 4 }} py={3} borderBottom="1px solid" borderColor="border.subtle" bg="surface.default">
+              <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                {(() => {
+                  const pipelineEntries = entries.filter(
+                    (e) => entryKindOf(e) === 'claim' && Number(e.claim?.tier) === 2,
+                  )
+                  const pipelineMoney = pipelineEntries.reduce(
+                    (s, e) => s + Number(e.usdValue || 0),
+                    0,
+                  )
+                  const pipelineHours = pipelineEntries.reduce((s, e) => s + Number(e.hours || 0), 0)
+                  const pipelinePeople = pipelineEntries.reduce(
+                    (s, e) => s + Number(e.peopleImpacted || 0),
+                    0,
+                  )
 
-                    <Popover trigger="hover" placement="bottom" openDelay={200} gutter={8}>
-                      <PopoverTrigger>
+                  const tiles = [
+                    {
+                      k: 'you' as const,
+                      label: `You · ${displayName.split(' ')[0]}`,
+                      value: formatMoney(meStats.money),
+                      sub: `${meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs · ${meStats.peopleReached.toLocaleString()} people · ${meStats.claims} claim${meStats.claims === 1 ? '' : 's'}${meStats.esg ? ` · ${meStats.esg} ESG` : ''}${pctMe > 0 ? ` · ${pctMe.toFixed(0)}% of org` : ''}`,
+                      icon: User,
+                      iconBg: '#350e6f',
+                      iconShadow: '0 4px 12px rgba(53, 14, 111, 0.3)',
+                      ornamentBg: 'purple.50',
+                      hoverShadow: '0 8px 25px rgba(139, 92, 246, 0.15)',
+                      hoverBorder: 'purple.200',
+                    },
+                    {
+                      k: 'org' as const,
+                      label: 'Organisation',
+                      value: formatMoney(orgStats.money),
+                      sub: `${orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs · ${orgStats.peopleReached.toLocaleString()} people · ${orgStats.claims} claim${orgStats.claims === 1 ? '' : 's'}${orgStats.esg ? ` · ${orgStats.esg} ESG` : ''}`,
+                      icon: Building2,
+                      iconBg: 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
+                      iconShadow: '0 4px 12px rgba(4, 120, 87, 0.3)',
+                      ornamentBg: 'green.50',
+                      hoverShadow: '0 8px 25px rgba(16, 185, 129, 0.15)',
+                      hoverBorder: 'green.200',
+                    },
+                    {
+                      k: 'pipeline' as const,
+                      label: 'Pipeline',
+                      value: formatMoney(pipelineMoney),
+                      sub: `Indicative only · awaiting approval · ${pipelineHours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs · ${pipelinePeople.toLocaleString()} people`,
+                      icon: Clock3,
+                      iconBg: 'linear-gradient(135deg, #f4540c 0%, #c2410c 100%)',
+                      iconShadow: '0 4px 12px rgba(244, 84, 12, 0.3)',
+                      ornamentBg: 'orange.50',
+                      hoverShadow: '0 8px 25px rgba(244, 84, 12, 0.15)',
+                      hoverBorder: 'orange.200',
+                    },
+                  ]
+
+                  return tiles.map((tile) => {
+                    const cardBody = (
+                      <>
                         <Box
-                          as="button"
-                          type="button"
-                          textAlign="left"
-                          w="100%"
-                          p={{ base: 3, md: 4 }}
-                          borderRight={{ md: '1px solid' }}
-                          borderColor="border.subtle"
-                          cursor="pointer"
-                          _hover={{ bg: 'orange.50' }}
-                          transition="background 0.15s ease"
+                          position="absolute"
+                          top={0}
+                          right={0}
+                          w="60px"
+                          h="60px"
+                          bg={tile.ornamentBg}
+                          borderRadius="0 0 0 100%"
+                          pointerEvents="none"
+                        />
+                        <Flex
+                          w={10}
+                          h={10}
+                          bg={tile.iconBg}
+                          borderRadius="xl"
+                          align="center"
+                          justify="center"
+                          mb={3}
+                          boxShadow={tile.iconShadow}
+                          position="relative"
                         >
-                          <Flex justify="space-between" align="center">
-                            <Text
-                              fontSize="xs"
-                              textTransform="uppercase"
-                              color="text.muted"
-                              fontWeight="bold"
-                              letterSpacing="0.06em"
-                            >
-                              Organisation
+                          <Icon as={tile.icon} boxSize={5} color="white" />
+                        </Flex>
+                        <Text
+                          fontSize="xs"
+                          color="gray.500"
+                          fontWeight="semibold"
+                          textTransform="uppercase"
+                          letterSpacing="wide"
+                          mb={1}
+                          position="relative"
+                        >
+                          {tile.label}
+                          {tile.k === 'org' ? (
+                            <Text as="span" ml={2} fontSize="10px" color="#350e6f" fontWeight="bold">
+                              · hover chart
                             </Text>
-                            <Text fontSize="10px" color="brand.accent" fontWeight="semibold">
-                              Hover for chart
-                            </Text>
-                          </Flex>
-                          <SimpleGrid columns={3} spacing={2} mt={2}>
-                            <Metric
-                              value={orgStats.hours.toLocaleString(undefined, {
-                                maximumFractionDigits: 1,
-                              })}
-                              label="hrs"
-                            />
-                            <Metric
-                              value={orgStats.peopleReached.toLocaleString()}
-                              label="people"
-                            />
-                            <Metric
-                              value={formatMoney(orgStats.money)}
-                              label="value"
-                              muted={orgStats.money <= 0}
-                            />
-                          </SimpleGrid>
-                          <Text fontSize="xs" color="gray.600" mt={2}>
-                            {orgStats.claims} claim{orgStats.claims === 1 ? '' : 's'}
-                            {orgStats.esg ? ` · ${orgStats.esg} ESG` : ''}
-                            {orgStats.people ? ` · ${orgStats.people} people` : ''}
-                          </Text>
-                        </Box>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        w="280px"
-                        borderColor="border.subtle"
-                        boxShadow="lg"
-                        _focus={{ outline: 'none' }}
-                      >
-                        <PopoverArrow />
-                        <PopoverHeader fontSize="xs" fontWeight="bold" border="0" pb={1}>
-                          Org value by category
-                        </PopoverHeader>
-                        <PopoverBody pt={1} pb={3}>
-                          {orgByCat.every((c) => c.v <= 0) ? (
-                            <Text fontSize="sm" color="text.secondary">
-                              No approved org value yet.
-                            </Text>
-                          ) : (
-                            <Stack spacing={2.5}>
-                              {orgByCat.map((c) => (
-                                <Box key={c.k}>
-                                  <Flex justify="space-between" fontSize="xs" mb={1}>
-                                    <Text fontWeight="medium">{c.n}</Text>
-                                    <Text fontFamily="mono">{formatMoneyK(c.v)}</Text>
-                                  </Flex>
-                                  <Progress
-                                    value={(c.v / orgCatMax) * 100}
-                                    size="sm"
-                                    colorScheme="purple"
-                                    rounded="full"
-                                  />
-                                </Box>
-                              ))}
-                            </Stack>
-                          )}
-                        </PopoverBody>
-                      </PopoverContent>
-                    </Popover>
+                          ) : null}
+                        </Text>
+                        <Text
+                          fontWeight="bold"
+                          fontSize={{ base: '2xl', md: '3xl' }}
+                          color="gray.800"
+                          lineHeight="1.1"
+                          letterSpacing="-0.02em"
+                          position="relative"
+                          noOfLines={1}
+                        >
+                          {tile.value}
+                        </Text>
+                        <Text fontSize="xs" color="gray.500" mt={1} position="relative" lineHeight="1.45">
+                          {tile.sub}
+                        </Text>
+                      </>
+                    )
 
-                    <Box p={{ base: 3, md: 4 }} bg="tint.brandPrimary">
-                      <Text
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        color="brand.primary"
-                        fontWeight="bold"
-                        letterSpacing="0.06em"
-                      >
-                        Pipeline
-                      </Text>
-                      <SimpleGrid columns={3} spacing={2} mt={2}>
-                        <Metric
-                          value={pipelineHours.toLocaleString(undefined, {
-                            maximumFractionDigits: 1,
-                          })}
-                          label="hrs"
-                          accent
-                        />
-                        <Metric value={pipelinePeople.toLocaleString()} label="people" accent />
-                        <Metric
-                          value={formatMoney(pipelineMoney)}
-                          label="indicative"
-                          accent
-                          muted={pipelineMoney <= 0}
-                        />
-                      </SimpleGrid>
-                      <Text fontSize="xs" color="purple.800" mt={2}>
-                        Indicative only · awaiting approval
-                      </Text>
-                    </Box>
-                  </>
-                )
-              })()}
-            </SimpleGrid>
+                    const cardShell = {
+                      textAlign: 'left' as const,
+                      w: '100%' as const,
+                      p: 5,
+                      bg: 'white',
+                      borderRadius: 'xl' as const,
+                      border: '1px solid',
+                      borderColor: 'gray.100',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      _hover: {
+                        transform: 'translateY(-2px)',
+                        boxShadow: tile.hoverShadow,
+                        borderColor: tile.hoverBorder,
+                      },
+                      transition: 'all 0.3s ease',
+                      position: 'relative' as const,
+                      overflow: 'hidden' as const,
+                    }
+
+                    if (tile.k === 'org') {
+                      return (
+                        <Popover key={tile.k} trigger="hover" placement="bottom" openDelay={200} gutter={8}>
+                          <PopoverTrigger>
+                            <Box as="button" type="button" cursor="pointer" {...cardShell}>
+                              {cardBody}
+                            </Box>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            w="280px"
+                            borderColor="border.subtle"
+                            boxShadow="lg"
+                            _focus={{ outline: 'none' }}
+                          >
+                            <PopoverArrow />
+                            <PopoverHeader fontSize="xs" fontWeight="bold" border="0" pb={1}>
+                              Org value by category
+                            </PopoverHeader>
+                            <PopoverBody pt={1} pb={3}>
+                              {orgByCat.every((c) => c.v <= 0) ? (
+                                <Text fontSize="sm" color="text.secondary">
+                                  No approved org value yet.
+                                </Text>
+                              ) : (
+                                <Stack spacing={2.5}>
+                                  {orgByCat.map((c) => (
+                                    <Box key={c.k}>
+                                      <Flex justify="space-between" fontSize="xs" mb={1}>
+                                        <Text fontWeight="medium">{c.n}</Text>
+                                        <Text fontFamily="mono">{formatMoneyK(c.v)}</Text>
+                                      </Flex>
+                                      <Progress
+                                        value={(c.v / orgCatMax) * 100}
+                                        size="sm"
+                                        colorScheme="purple"
+                                        rounded="full"
+                                      />
+                                    </Box>
+                                  ))}
+                                </Stack>
+                              )}
+                            </PopoverBody>
+                          </PopoverContent>
+                        </Popover>
+                      )
+                    }
+
+                    return (
+                      <Box key={tile.k} {...cardShell}>
+                        {cardBody}
+                      </Box>
+                    )
+                  })
+                })()}
+              </SimpleGrid>
+            </Box>
           </>
         )}
       </Box>
