@@ -579,15 +579,16 @@ export const ImpactLogV2: React.FC = () => {
                     p={5}
                     bg="white"
                     borderRadius="xl"
-                    border="1px solid"
-                    borderColor="gray.100"
-                    boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+                    borderWidth="1px"
+                    borderStyle="solid"
+                    borderColor="rgba(53, 14, 111, 0.16)"
+                    boxShadow="0 1px 3px rgba(0,0,0,0.03)"
                     _hover={{
                       transform: 'translateY(-2px)',
-                      boxShadow: card.hoverShadow,
-                      borderColor: card.hoverBorder,
+                      boxShadow: '0 8px 22px rgba(53, 14, 111, 0.09)',
+                      borderColor: 'rgba(53, 14, 111, 0.38)',
                     }}
-                    transition="all 0.3s ease"
+                    transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
                     position="relative"
                     overflow="hidden"
                     onClick={() => {
@@ -820,15 +821,16 @@ export const ImpactLogV2: React.FC = () => {
                       p: 5,
                       bg: 'white',
                       borderRadius: 'xl' as const,
-                      border: '1px solid',
-                      borderColor: 'gray.100',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      borderWidth: '1px',
+                      borderStyle: 'solid' as const,
+                      borderColor: 'rgba(53, 14, 111, 0.16)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
                       _hover: {
                         transform: 'translateY(-2px)',
-                        boxShadow: tile.hoverShadow,
-                        borderColor: tile.hoverBorder,
+                        boxShadow: '0 8px 22px rgba(53, 14, 111, 0.09)',
+                        borderColor: 'rgba(53, 14, 111, 0.38)',
                       },
-                      transition: 'all 0.3s ease',
+                      transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
                       position: 'relative' as const,
                       overflow: 'hidden' as const,
                     }
@@ -964,9 +966,16 @@ export const ImpactLogV2: React.FC = () => {
                 p={4}
                 bg="white"
                 borderRadius="xl"
-                border="1px solid"
-                borderColor="gray.200"
-                boxShadow="0 1px 3px rgba(0,0,0,0.04)"
+                borderWidth="1px"
+                borderStyle="solid"
+                borderColor="rgba(53, 14, 111, 0.16)"
+                boxShadow="0 1px 3px rgba(0,0,0,0.03)"
+                transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
+                _hover={{
+                  transform: 'translateY(-2px)',
+                  borderColor: 'rgba(53, 14, 111, 0.38)',
+                  boxShadow: '0 8px 22px rgba(53, 14, 111, 0.09)',
+                }}
               >
                 <Text
                   fontSize="xs"

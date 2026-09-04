@@ -39,7 +39,15 @@ type Props = {
 const isApproved = (e: ImpactLogRecord) =>
   e.claimStatus === 'Recognized' || e.verificationStatus === 'approved'
 
-/** Same white card shell as Your savings */
+/** Same white card shell as Your savings — thin plum border, subtle hover */
+const cardBorder = 'rgba(53, 14, 111, 0.16)'
+const cardBorderHover = 'rgba(53, 14, 111, 0.38)'
+const cardHover = {
+  transform: 'translateY(-2px)',
+  borderColor: cardBorderHover,
+  boxShadow: '0 8px 22px rgba(53, 14, 111, 0.09)',
+} as const
+
 const DashCard = ({
   label,
   icon,
@@ -57,14 +65,12 @@ const DashCard = ({
     p={5}
     bg="white"
     borderRadius="xl"
-    border="1px solid"
-    borderColor="gray.200"
-    boxShadow="0 1px 3px rgba(0,0,0,0.04)"
-    _hover={{
-      boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
-      borderColor: 'gray.300',
-    }}
-    transition="all 0.2s ease"
+    borderWidth="1px"
+    borderStyle="solid"
+    borderColor={cardBorder}
+    boxShadow="0 1px 3px rgba(0,0,0,0.03)"
+    _hover={cardHover}
+    transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
   >
     <Flex align="center" gap={3} mb={4}>
       <Flex
@@ -114,9 +120,12 @@ const MiniStat = ({
     p={3.5}
     bg="white"
     borderRadius="xl"
-    border="1px solid"
-    borderColor="gray.200"
-    boxShadow="0 1px 2px rgba(0,0,0,0.03)"
+    borderWidth="1px"
+    borderStyle="solid"
+    borderColor={cardBorder}
+    boxShadow="0 1px 2px rgba(0,0,0,0.02)"
+    _hover={cardHover}
+    transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
   >
     <Flex align="center" gap={2} mb={2}>
       <Flex
@@ -206,8 +215,9 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
             py={1.5}
             rounded="full"
             bg="white"
-            border="1px solid"
-            borderColor="gray.200"
+            borderWidth="1px"
+            borderStyle="solid"
+            borderColor={cardBorder}
           >
             <Text fontSize="xs" fontWeight="semibold" color="gray.700">
               {rows.length} of {entries.length} shown
@@ -264,8 +274,10 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
                 bg="white"
-                borderColor="gray.200"
+                borderColor="rgba(53, 14, 111, 0.16)"
                 borderRadius="lg"
+                _hover={{ borderColor: 'rgba(53, 14, 111, 0.38)' }}
+                transition="border-color 0.2s ease"
               >
                 {statuses.map((s) => (
                   <option key={s} value={s}>
@@ -283,8 +295,10 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                 value={approval}
                 onChange={(e) => setApproval(e.target.value)}
                 bg="white"
-                borderColor="gray.200"
+                borderColor="rgba(53, 14, 111, 0.16)"
                 borderRadius="lg"
+                _hover={{ borderColor: 'rgba(53, 14, 111, 0.38)' }}
+                transition="border-color 0.2s ease"
               >
                 {['All', 'Approved', 'Awaiting', 'Reversed'].map((t) => (
                   <option key={t} value={t}>
@@ -302,8 +316,10 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                 value={kind}
                 onChange={(e) => setKind(e.target.value)}
                 bg="white"
-                borderColor="gray.200"
+                borderColor="rgba(53, 14, 111, 0.16)"
                 borderRadius="lg"
+                _hover={{ borderColor: 'rgba(53, 14, 111, 0.38)' }}
+                transition="border-color 0.2s ease"
               >
                 {['All', 'claim', 'activity', 'esg'].map((t) => (
                   <option key={t} value={t}>
@@ -362,16 +378,13 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                 textAlign="left"
                 p={4}
                 bg="white"
-                border="1px solid"
-                borderColor="gray.200"
+                borderWidth="1px"
+                borderStyle="solid"
+                borderColor={cardBorder}
                 borderRadius="xl"
-                boxShadow="0 1px 2px rgba(0,0,0,0.03)"
-                transition="all 0.2s ease"
-                _hover={{
-                  borderColor: 'gray.300',
-                  boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
-                  transform: 'translateY(-1px)',
-                }}
+                boxShadow="0 1px 2px rgba(0,0,0,0.02)"
+                transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
+                _hover={cardHover}
                 onClick={() => onOpenClaim(e)}
               >
                 <Flex justify="space-between" gap={4} align="flex-start">

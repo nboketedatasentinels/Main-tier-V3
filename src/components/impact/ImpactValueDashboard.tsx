@@ -41,7 +41,15 @@ const PIE_COLORS = {
   capacity: '#9ca3af',
 } as const
 
-/** White cards, gray borders, deep-plum icons — no orange outside the donut */
+/** White cards, thin plum border, subtle hover — orange only on the donut */
+const cardBorder = 'rgba(53, 14, 111, 0.16)'
+const cardBorderHover = 'rgba(53, 14, 111, 0.38)'
+const cardHover = {
+  transform: 'translateY(-2px)',
+  borderColor: cardBorderHover,
+  boxShadow: '0 8px 22px rgba(53, 14, 111, 0.09)',
+} as const
+
 const DashCard = ({
   label,
   icon,
@@ -57,17 +65,12 @@ const DashCard = ({
     p={5}
     bg="white"
     borderRadius="xl"
-    border="1px solid"
-    borderColor="gray.200"
-    boxShadow="0 1px 3px rgba(0,0,0,0.04)"
-    _hover={{
-      transform: 'translateY(-1px)',
-      boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
-      borderColor: 'gray.300',
-    }}
-    transition="all 0.2s ease"
-    position="relative"
-    overflow="hidden"
+    borderWidth="1px"
+    borderStyle="solid"
+    borderColor={cardBorder}
+    boxShadow="0 1px 3px rgba(0,0,0,0.03)"
+    _hover={cardHover}
+    transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
   >
     <Flex
       w={10}
@@ -112,14 +115,12 @@ const MiniStat = ({
     p={3.5}
     bg="white"
     borderRadius="xl"
-    border="1px solid"
-    borderColor="gray.200"
-    boxShadow="0 1px 2px rgba(0,0,0,0.03)"
-    _hover={{
-      borderColor: 'gray.300',
-      boxShadow: '0 4px 12px rgba(39,6,46,0.05)',
-    }}
-    transition="all 0.2s ease"
+    borderWidth="1px"
+    borderStyle="solid"
+    borderColor={cardBorder}
+    boxShadow="0 1px 2px rgba(0,0,0,0.02)"
+    _hover={cardHover}
+    transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
   >
     <Flex align="center" gap={2} mb={2}>
       <Flex
@@ -279,17 +280,15 @@ export const ImpactValueDashboard: React.FC<Props> = ({
       <Box
         p={{ base: 4, md: 6 }}
         borderRadius="xl"
-        border="1px solid"
-        borderColor="gray.200"
-        boxShadow="0 1px 3px rgba(0,0,0,0.04)"
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor={cardBorder}
+        boxShadow="0 1px 3px rgba(0,0,0,0.03)"
         position="relative"
         overflow="hidden"
         bg="white"
-        transition="all 0.2s ease"
-        _hover={{
-          boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
-          borderColor: 'gray.300',
-        }}
+        transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
+        _hover={cardHover}
       >
         <Flex align="center" gap={3} mb={4}>
           <Flex
@@ -328,8 +327,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             py={1.5}
             rounded="full"
             bg="white"
-            border="1px solid"
-            borderColor="gray.200"
+            borderWidth="1px"
+            borderStyle="solid"
+            borderColor={cardBorder}
           >
             <Text fontSize="xs" fontWeight="semibold" color="gray.700">
               {approvedCount} approved
@@ -361,8 +361,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                 py={2}
                 rounded="lg"
                 bg="white"
-                border="1px solid"
-                borderColor="gray.200"
+                borderWidth="1px"
+                borderStyle="solid"
+                borderColor={cardBorder}
               >
                 <Icon as={Clock3} boxSize={3.5} color="gray.500" />
                 <Text fontSize="xs" color="gray.600">
@@ -380,8 +381,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                   py={2}
                   rounded="lg"
                   bg="white"
-                  border="1px solid"
-                  borderColor="gray.200"
+                  borderWidth="1px"
+                  borderStyle="solid"
+                  borderColor={cardBorder}
                 >
                   <Text fontSize="xs" color="gray.600">
                     In pipeline
@@ -410,9 +412,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             flexShrink={0}
             rounded="xl"
             bg="white"
-            border="1px solid"
-            borderColor="gray.200"
+            borderWidth="1px"
+            borderStyle="solid"
+            borderColor={cardBorder}
             p={3}
+            transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
+            _hover={cardHover}
           >
             <Text
               fontSize="10px"
