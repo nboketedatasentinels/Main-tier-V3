@@ -12,7 +12,8 @@ import {
   Stack,
   Text,
 } from '@chakra-ui/react'
-import { CheckCircle2, ClipboardList, Clock3, Filter } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
+import { CheckCircle2, ClipboardList, Clock3, ListFilter } from 'lucide-react'
 import {
   CLAIM_STATE_ORDER,
   IMPACT_CATS,
@@ -38,18 +39,19 @@ type Props = {
 const isApproved = (e: ImpactLogRecord) =>
   e.claimStatus === 'Recognized' || e.verificationStatus === 'approved'
 
-const Shell = ({
+/** Same white card shell as Your savings */
+const DashCard = ({
   label,
   icon,
   help,
-  children,
   right,
+  children,
 }: {
   label: string
-  icon: React.ElementType
+  icon: LucideIcon
   help?: React.ReactNode
-  children: React.ReactNode
   right?: React.ReactNode
+  children: React.ReactNode
 }) => (
   <Box
     p={5}
@@ -58,8 +60,13 @@ const Shell = ({
     border="1px solid"
     borderColor="gray.200"
     boxShadow="0 1px 3px rgba(0,0,0,0.04)"
+    _hover={{
+      boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
+      borderColor: 'gray.300',
+    }}
+    transition="all 0.2s ease"
   >
-    <Flex align="flex-start" gap={3} mb={4}>
+    <Flex align="center" gap={3} mb={4}>
       <Flex
         w={10}
         h={10}
@@ -89,6 +96,64 @@ const Shell = ({
       {right}
     </Flex>
     {children}
+  </Box>
+)
+
+const MiniStat = ({
+  label,
+  value,
+  sub,
+  icon,
+}: {
+  label: string
+  value: string
+  sub?: string
+  icon: LucideIcon
+}) => (
+  <Box
+    p={3.5}
+    bg="white"
+    borderRadius="xl"
+    border="1px solid"
+    borderColor="gray.200"
+    boxShadow="0 1px 2px rgba(0,0,0,0.03)"
+  >
+    <Flex align="center" gap={2} mb={2}>
+      <Flex
+        w="28px"
+        h="28px"
+        borderRadius="lg"
+        align="center"
+        justify="center"
+        bg="gray.100"
+        flexShrink={0}
+      >
+        <Icon as={icon} boxSize={3.5} color="#350e6f" />
+      </Flex>
+      <Text
+        fontSize="10px"
+        textTransform="uppercase"
+        fontWeight="bold"
+        color="gray.500"
+        letterSpacing="0.06em"
+      >
+        {label}
+      </Text>
+    </Flex>
+    <Text
+      fontSize={{ base: 'lg', md: 'xl' }}
+      fontWeight="800"
+      color="#27062e"
+      lineHeight="1.15"
+      letterSpacing="-0.02em"
+    >
+      {value}
+    </Text>
+    {sub ? (
+      <Text fontSize="10px" color="gray.500" mt={1}>
+        {sub}
+      </Text>
+    ) : null}
   </Box>
 )
 
@@ -128,15 +193,26 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
     }, 0)
 
   return (
-    <Stack spacing={4}>
-      <Shell
+    <Stack spacing={5}>
+      <DashCard
         label="Claims ledger"
         icon={ClipboardList}
         help={<ImpactHelpButton k="journey" onOpen={onHelp} />}
         right={
-          <Text fontSize="xs" color="gray.500" display={{ base: 'none', md: 'block' }}>
-            {rows.length} of {entries.length} shown
-          </Text>
+          <Flex
+            display={{ base: 'none', sm: 'flex' }}
+            align="center"
+            px={3}
+            py={1.5}
+            rounded="full"
+            bg="white"
+            border="1px solid"
+            borderColor="gray.200"
+          >
+            <Text fontSize="xs" fontWeight="semibold" color="gray.700">
+              {rows.length} of {entries.length} shown
+            </Text>
+          </Flex>
         }
       >
         <Text fontSize="sm" color="gray.600" mb={5} maxW="640px" lineHeight="1.5">
@@ -144,118 +220,103 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
           status — or duplicate it for a new impact.
         </Text>
 
-        <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={1}>
-          <Box p={3.5} bg="white" border="1px solid" borderColor="gray.200" borderRadius="xl">
-            <Flex align="center" gap={2} mb={1}>
-              <Flex w="28px" h="28px" borderRadius="lg" align="center" justify="center" bg="gray.100">
-                <Icon as={CheckCircle2} boxSize={3.5} color="#350e6f" />
-              </Flex>
-              <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
-                Approved
-              </Text>
-            </Flex>
-            <Text fontSize="xl" fontWeight="800" color="#27062e" letterSpacing="-0.02em">
-              {approvedCount}
-            </Text>
-            <Text fontSize="xs" color="gray.500" mt={0.5}>
-              {formatMoneyK(approvedValue)} valued
-            </Text>
-          </Box>
-          <Box p={3.5} bg="white" border="1px solid" borderColor="gray.200" borderRadius="xl">
-            <Flex align="center" gap={2} mb={1}>
-              <Flex w="28px" h="28px" borderRadius="lg" align="center" justify="center" bg="gray.100">
-                <Icon as={Clock3} boxSize={3.5} color="#350e6f" />
-              </Flex>
-              <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
-                Awaiting
-              </Text>
-            </Flex>
-            <Text fontSize="xl" fontWeight="800" color="#27062e" letterSpacing="-0.02em">
-              {awaitingCount}
-            </Text>
-            <Text fontSize="xs" color="gray.500" mt={0.5}>
-              Pending confirmation
-            </Text>
-          </Box>
-          <Box p={3.5} bg="white" border="1px solid" borderColor="gray.200" borderRadius="xl">
-            <Flex align="center" gap={2} mb={1}>
-              <Flex w="28px" h="28px" borderRadius="lg" align="center" justify="center" bg="gray.100">
-                <Icon as={ClipboardList} boxSize={3.5} color="#350e6f" />
-              </Flex>
-              <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
-                Total entries
-              </Text>
-            </Flex>
-            <Text fontSize="xl" fontWeight="800" color="#27062e" letterSpacing="-0.02em">
-              {entries.length}
-            </Text>
-            <Text fontSize="xs" color="gray.500" mt={0.5}>
-              Claims + ESG
-            </Text>
-          </Box>
+        <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={5}>
+          <MiniStat
+            label="Approved"
+            value={String(approvedCount)}
+            sub={`${formatMoneyK(approvedValue)} valued`}
+            icon={CheckCircle2}
+          />
+          <MiniStat
+            label="Awaiting"
+            value={String(awaitingCount)}
+            sub="Pending confirmation"
+            icon={Clock3}
+          />
+          <MiniStat
+            label="Total entries"
+            value={String(entries.length)}
+            sub="Claims + ESG"
+            icon={ClipboardList}
+          />
         </SimpleGrid>
-      </Shell>
 
-      <Shell label="Filters" icon={Filter}>
-        <HStack spacing={3} flexWrap="wrap" align="flex-end">
-          <FormControl maxW="200px">
-            <FormLabel fontSize="xs" color="gray.500" mb={1}>
-              Status
-            </FormLabel>
-            <Select
-              size="sm"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              bg="white"
-              borderColor="gray.200"
+        <Box pt={1} borderTop="1px solid" borderColor="gray.100">
+          <Flex align="center" gap={2} mb={3} mt={4}>
+            <Icon as={ListFilter} boxSize={3.5} color="gray.500" />
+            <Text
+              fontSize="10px"
+              fontWeight="bold"
+              textTransform="uppercase"
+              letterSpacing="0.08em"
+              color="gray.500"
             >
-              {statuses.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl maxW="160px">
-            <FormLabel fontSize="xs" color="gray.500" mb={1}>
-              Approval
-            </FormLabel>
-            <Select
-              size="sm"
-              value={approval}
-              onChange={(e) => setApproval(e.target.value)}
-              bg="white"
-              borderColor="gray.200"
-            >
-              {['All', 'Approved', 'Awaiting', 'Reversed'].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl maxW="160px">
-            <FormLabel fontSize="xs" color="gray.500" mb={1}>
-              Type
-            </FormLabel>
-            <Select
-              size="sm"
-              value={kind}
-              onChange={(e) => setKind(e.target.value)}
-              bg="white"
-              borderColor="gray.200"
-            >
-              {['All', 'claim', 'activity', 'esg'].map((t) => (
-                <option key={t} value={t}>
-                  {t === 'claim' ? 'improvement' : t}
-                </option>
-              ))}
-            </Select>
-          </FormControl>
-        </HStack>
-      </Shell>
+              Filters
+            </Text>
+          </Flex>
+          <HStack spacing={3} flexWrap="wrap" align="flex-end">
+            <FormControl maxW="200px">
+              <FormLabel fontSize="xs" color="gray.500" mb={1}>
+                Status
+              </FormLabel>
+              <Select
+                size="sm"
+                value={status}
+                onChange={(e) => setStatus(e.target.value)}
+                bg="white"
+                borderColor="gray.200"
+                borderRadius="lg"
+              >
+                {statuses.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl maxW="160px">
+              <FormLabel fontSize="xs" color="gray.500" mb={1}>
+                Approval
+              </FormLabel>
+              <Select
+                size="sm"
+                value={approval}
+                onChange={(e) => setApproval(e.target.value)}
+                bg="white"
+                borderColor="gray.200"
+                borderRadius="lg"
+              >
+                {['All', 'Approved', 'Awaiting', 'Reversed'].map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl maxW="160px">
+              <FormLabel fontSize="xs" color="gray.500" mb={1}>
+                Type
+              </FormLabel>
+              <Select
+                size="sm"
+                value={kind}
+                onChange={(e) => setKind(e.target.value)}
+                bg="white"
+                borderColor="gray.200"
+                borderRadius="lg"
+              >
+                {['All', 'claim', 'activity', 'esg'].map((t) => (
+                  <option key={t} value={t}>
+                    {t === 'claim' ? 'improvement' : t}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+          </HStack>
+        </Box>
+      </DashCard>
 
-      <Shell
+      <DashCard
         label="Entries"
         icon={ClipboardList}
         right={
@@ -264,7 +325,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
           </Text>
         }
       >
-        <Stack spacing={2.5}>
+        <Stack spacing={3}>
           {rows.map((e) => {
             const k = e.entryKind || (e.categoryGroup === 'esg' ? 'esg' : 'claim')
             const inputs = claimInputsFromRecord(e)
@@ -286,8 +347,14 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                     ? 'not valued'
                     : '—'
 
+            const statusLabel = approved
+              ? 'Approved'
+              : st === 'Submitted'
+                ? 'Awaiting confirmation'
+                : st || 'Pending'
+
             return (
-              <Flex
+              <Box
                 key={e.id}
                 as="button"
                 type="button"
@@ -298,98 +365,105 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                 border="1px solid"
                 borderColor="gray.200"
                 borderRadius="xl"
-                justify="space-between"
-                gap={3}
-                flexWrap="wrap"
-                align="flex-start"
+                boxShadow="0 1px 2px rgba(0,0,0,0.03)"
                 transition="all 0.2s ease"
                 _hover={{
                   borderColor: 'gray.300',
-                  boxShadow: '0 4px 12px rgba(39,6,46,0.06)',
+                  boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
                   transform: 'translateY(-1px)',
                 }}
                 onClick={() => onOpenClaim(e)}
               >
-                <Box minW={0} flex="1">
-                  <HStack spacing={2} mb={1.5} flexWrap="wrap">
-                    <Text fontFamily="mono" fontSize="xs" color="gray.400">
-                      {e.id.slice(0, 8)}
-                    </Text>
-                    <Badge
-                      bg="gray.100"
-                      color="gray.700"
-                      textTransform="uppercase"
-                      fontSize="9px"
-                      letterSpacing="0.04em"
-                      px={2}
-                      py={0.5}
-                      borderRadius="md"
+                <Flex justify="space-between" gap={4} align="flex-start">
+                  <Box minW={0} flex="1">
+                    <Text
                       fontWeight="bold"
+                      fontSize="md"
+                      color="#27062e"
+                      noOfLines={1}
+                      letterSpacing="-0.01em"
+                      mb={1}
                     >
-                      {k === 'claim' ? 'improvement' : k}
-                    </Badge>
-                    <Badge
-                      bg={approved ? '#350e6f' : st === 'Reversed' ? 'gray.500' : 'gray.100'}
-                      color={approved || st === 'Reversed' ? 'white' : 'gray.700'}
-                      textTransform="none"
-                      fontSize="10px"
-                      px={2}
-                      py={0.5}
-                      borderRadius="md"
-                      fontWeight="semibold"
-                    >
-                      {approved
-                        ? 'Approved'
-                        : st === 'Submitted'
-                          ? 'Awaiting confirmation'
-                          : st || 'Pending'}
-                    </Badge>
-                  </HStack>
-                  <Text fontWeight="semibold" color="#27062e" noOfLines={1}>
-                    {e.title}
-                  </Text>
-                  <Text fontSize="xs" color="gray.500" noOfLines={2} mt={0.5} lineHeight="1.45">
-                    {e.date}
-                    {cat ? ` · ${cat.n}` : ''}
-                    {sub ? ` · ${sub}` : ''}
-                    {e.description ? ` · ${e.description}` : ''}
-                  </Text>
-                  {k === 'claim' && at >= 0 && (
-                    <HStack spacing={1} mt={2.5}>
-                      {CLAIM_STATE_ORDER.map((s, i) => (
-                        <Box
-                          key={s}
-                          title={s}
-                          w="16px"
-                          h="4px"
-                          rounded="full"
-                          bg={i < at ? '#350e6f' : i === at ? '#9ca3af' : 'gray.200'}
-                        />
-                      ))}
+                      {e.title || 'Untitled'}
+                    </Text>
+                    <Text fontSize="xs" color="gray.500" noOfLines={2} lineHeight="1.45" mb={2.5}>
+                      {e.date}
+                      {cat ? ` · ${cat.n}` : ''}
+                      {sub ? ` · ${sub}` : ''}
+                      {e.description ? ` · ${e.description}` : ''}
+                    </Text>
+                    <HStack spacing={2} flexWrap="wrap">
+                      <Badge
+                        bg="gray.100"
+                        color="gray.600"
+                        textTransform="uppercase"
+                        fontSize="9px"
+                        letterSpacing="0.04em"
+                        px={2}
+                        py={0.5}
+                        borderRadius="md"
+                        fontWeight="bold"
+                      >
+                        {k === 'claim' ? 'improvement' : k}
+                      </Badge>
+                      <Badge
+                        bg={approved ? '#350e6f' : 'gray.100'}
+                        color={approved ? 'white' : 'gray.700'}
+                        textTransform="none"
+                        fontSize="10px"
+                        px={2}
+                        py={0.5}
+                        borderRadius="md"
+                        fontWeight="semibold"
+                      >
+                        {statusLabel}
+                      </Badge>
+                      <Text fontFamily="mono" fontSize="10px" color="gray.400">
+                        {e.id.slice(0, 8)}
+                      </Text>
                     </HStack>
-                  )}
-                </Box>
-                <Text
-                  fontFamily="mono"
-                  fontSize="sm"
-                  fontWeight="bold"
-                  color="#27062e"
-                  flexShrink={0}
-                  pt={0.5}
-                >
-                  {amount}
-                </Text>
-              </Flex>
+                    {k === 'claim' && at >= 0 && (
+                      <HStack spacing={1} mt={3}>
+                        {CLAIM_STATE_ORDER.map((s, i) => (
+                          <Box
+                            key={s}
+                            title={s}
+                            w="18px"
+                            h="4px"
+                            rounded="full"
+                            bg={i < at ? '#350e6f' : i === at ? '#9ca3af' : 'gray.200'}
+                          />
+                        ))}
+                      </HStack>
+                    )}
+                  </Box>
+                  <Box textAlign="right" flexShrink={0} minW="88px">
+                    <Text
+                      fontSize={{ base: 'lg', md: 'xl' }}
+                      fontWeight="800"
+                      color="#27062e"
+                      letterSpacing="-0.02em"
+                      lineHeight="1.1"
+                    >
+                      {amount}
+                    </Text>
+                    <Text fontSize="10px" color="gray.500" mt={1} textTransform="uppercase" letterSpacing="0.04em">
+                      {approved ? 'Approved $' : k === 'esg' ? 'ESG' : 'Indicative'}
+                    </Text>
+                  </Box>
+                </Flex>
+              </Box>
             )
           })}
           {rows.length === 0 && (
             <Flex
-              py={10}
+              py={12}
               align="center"
               justify="center"
               border="1px dashed"
               borderColor="gray.200"
               borderRadius="xl"
+              bg="white"
             >
               <Text fontSize="sm" color="gray.500">
                 No rows match these filters.
@@ -397,7 +471,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
             </Flex>
           )}
         </Stack>
-      </Shell>
+      </DashCard>
     </Stack>
   )
 }

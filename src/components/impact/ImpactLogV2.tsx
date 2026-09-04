@@ -959,17 +959,31 @@ export const ImpactLogV2: React.FC = () => {
         {tab === 'claims' && (
           <>
             {isAdmin && (
-              <Alert status="info" rounded="lg" mb={4}>
-                <AlertIcon />
-                <Box>
-                  <AlertTitle>Partner review</AlertTitle>
-                  <AlertDescription fontSize="sm">
-                    Open any Submitted claim to review answers and advance status. Measure owners in
-                    your organisation also get an email confirm link - both paths update the same
-                    journey.
-                  </AlertDescription>
-                </Box>
-              </Alert>
+              <Box
+                mb={4}
+                p={4}
+                bg="white"
+                borderRadius="xl"
+                border="1px solid"
+                borderColor="gray.200"
+                boxShadow="0 1px 3px rgba(0,0,0,0.04)"
+              >
+                <Text
+                  fontSize="xs"
+                  fontWeight="semibold"
+                  textTransform="uppercase"
+                  letterSpacing="wide"
+                  color="gray.500"
+                  mb={1}
+                >
+                  Partner review
+                </Text>
+                <Text fontSize="sm" color="gray.600" lineHeight="1.5">
+                  Open any Submitted claim to review answers and advance status. Measure owners in
+                  your organisation also get an email confirm link — both paths update the same
+                  journey.
+                </Text>
+              </Box>
             )}
             <ImpactRegisterPanel
               entries={isAdmin && orgEntries.length ? orgEntries : entries}
