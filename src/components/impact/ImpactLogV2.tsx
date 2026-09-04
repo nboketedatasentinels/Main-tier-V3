@@ -29,7 +29,7 @@ import {
   Text,
   useToast,
 } from '@chakra-ui/react'
-import { Info } from 'lucide-react'
+import { Info, Leaf, TrendingUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -533,7 +533,7 @@ export const ImpactLogV2: React.FC = () => {
               </Heading>
             </Box>
 
-            {/* Primary actions — big cards */}
+            {/* Primary actions — stats-card style */}
             <Box
               px={{ base: 3, md: 4 }}
               py={3}
@@ -542,77 +542,111 @@ export const ImpactLogV2: React.FC = () => {
               bg="surface.default"
             >
               <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
-                <Box
-                  as="button"
-                  type="button"
-                  textAlign="left"
-                  p={{ base: 4, md: 5 }}
-                  rounded="xl"
-                  bg="white"
-                  border="2px solid"
-                  borderColor="#350e6f"
-                  color="#27062e"
-                  boxShadow="sm"
-                  transition="transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease"
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'md', bg: 'purple.50' }}
-                  _active={{ transform: 'translateY(0)' }}
-                  onClick={() => {
-                    void startEntry('claim')
-                  }}
-                >
-                  <Text
-                    fontSize="10px"
-                    fontWeight="bold"
-                    textTransform="uppercase"
-                    letterSpacing="0.1em"
-                    color="#350e6f"
-                    mb={1}
+                {(
+                  [
+                    {
+                      k: 'claim' as const,
+                      label: 'Improvement claim',
+                      title: impactGateReached ? 'Upgrade · Log improvement' : 'Log improvement',
+                      body: 'Before / after with evidence. Measure owner confirms before approved $.',
+                      icon: TrendingUp,
+                      iconBg: '#350e6f',
+                      blob: 'rgba(53, 14, 111, 0.12)',
+                      border: '#350e6f',
+                    },
+                    {
+                      k: 'esg' as const,
+                      label: 'ESG contribution',
+                      title: impactGateReached ? 'Upgrade · Log ESG' : 'Log ESG',
+                      body: 'Env / social / governance in its own bucket — separate from dollar claims.',
+                      icon: Leaf,
+                      iconBg: '#f4540c',
+                      blob: 'rgba(244, 84, 12, 0.12)',
+                      border: '#f4540c',
+                    },
+                  ] as const
+                ).map((card) => (
+                  <Box
+                    key={card.k}
+                    as="button"
+                    type="button"
+                    textAlign="left"
+                    position="relative"
+                    overflow="hidden"
+                    p={{ base: 5, md: 6 }}
+                    minH={{ base: '140px', md: '156px' }}
+                    rounded="2xl"
+                    bg="white"
+                    border="2px solid"
+                    borderColor={card.border}
+                    boxShadow="0 1px 2px rgba(39, 6, 46, 0.04)"
+                    transition="transform 0.15s ease, box-shadow 0.15s ease"
+                    _hover={{
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 8px 20px rgba(39, 6, 46, 0.1)',
+                    }}
+                    _active={{ transform: 'translateY(0)' }}
+                    onClick={() => {
+                      void startEntry(card.k)
+                    }}
                   >
-                    Improvement claim
-                  </Text>
-                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em" color="#27062e">
-                    {impactGateReached ? 'Upgrade · Log improvement' : 'Log improvement'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600" mt={2} lineHeight="1.45" maxW="36ch">
-                    Before / after with evidence. Measure owner confirms before approved $.
-                  </Text>
-                </Box>
-
-                <Box
-                  as="button"
-                  type="button"
-                  textAlign="left"
-                  p={{ base: 4, md: 5 }}
-                  rounded="xl"
-                  bg="white"
-                  border="2px solid"
-                  borderColor="#f4540c"
-                  color="#27062e"
-                  boxShadow="sm"
-                  transition="transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease"
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'md', bg: 'orange.50' }}
-                  _active={{ transform: 'translateY(0)' }}
-                  onClick={() => {
-                    void startEntry('esg')
-                  }}
-                >
-                  <Text
-                    fontSize="10px"
-                    fontWeight="bold"
-                    textTransform="uppercase"
-                    letterSpacing="0.1em"
-                    color="#f4540c"
-                    mb={1}
-                  >
-                    ESG contribution
-                  </Text>
-                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em" color="#27062e">
-                    {impactGateReached ? 'Upgrade · Log ESG' : 'Log ESG'}
-                  </Text>
-                  <Text fontSize="sm" color="gray.600" mt={2} lineHeight="1.45" maxW="36ch">
-                    Env / social / governance in its own bucket — separate from dollar claims.
-                  </Text>
-                </Box>
+                    <Box
+                      position="absolute"
+                      top="-36px"
+                      right="-36px"
+                      w="120px"
+                      h="120px"
+                      borderRadius="full"
+                      bg={card.blob}
+                      pointerEvents="none"
+                    />
+                    <Flex
+                      w="40px"
+                      h="40px"
+                      align="center"
+                      justify="center"
+                      rounded="xl"
+                      bg={card.iconBg}
+                      color="white"
+                      boxShadow="0 4px 10px rgba(39, 6, 46, 0.18)"
+                      mb={4}
+                      position="relative"
+                    >
+                      <Icon as={card.icon} boxSize={5} strokeWidth={2.25} />
+                    </Flex>
+                    <Text
+                      fontSize="11px"
+                      fontWeight="600"
+                      textTransform="uppercase"
+                      letterSpacing="0.08em"
+                      color="gray.500"
+                      position="relative"
+                      mb={1}
+                    >
+                      {card.label}
+                    </Text>
+                    <Text
+                      fontSize={{ base: 'xl', md: '2xl' }}
+                      fontWeight="800"
+                      letterSpacing="-0.03em"
+                      color="#1a1625"
+                      lineHeight="1.15"
+                      position="relative"
+                    >
+                      {card.title}
+                    </Text>
+                    <Text
+                      fontSize="sm"
+                      color="gray.500"
+                      mt={2}
+                      lineHeight="1.45"
+                      maxW="34ch"
+                      position="relative"
+                    >
+                      {card.body}
+                    </Text>
+                  </Box>
+                ))}
               </SimpleGrid>
 
               <Flex justify="flex-end" mt={2}>
