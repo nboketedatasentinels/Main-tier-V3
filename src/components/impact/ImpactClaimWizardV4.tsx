@@ -1386,6 +1386,32 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
               </Box>
             </SimpleGrid>
           )}
+
+          {nn(draft.before) && nn(draft.after) && (
+            <Box borderWidth="1px" borderColor="purple.100" bg="purple.50" rounded="lg" p={3}>
+              <Text fontSize="10px" textTransform="uppercase" letterSpacing="0.08em" color="purple.800" fontWeight="700">
+                How this is classified · you do not pick this
+              </Text>
+              <Text fontSize="sm" fontWeight="700" color="#27062e" mt={1}>
+                {calc.bucket === 'cash'
+                  ? 'Cash impact'
+                  : calc.bucket === 'avoidance'
+                    ? 'Cost avoidance'
+                    : 'Capacity released'}
+              </Text>
+              <Text fontSize="xs" color="gray.700" mt={1.5} lineHeight="1.55">
+                {calc.bucket === 'cash'
+                  ? 'Traceable to a P&L or budget line — e.g. revenue up, or spend that actually left the books.'
+                  : calc.bucket === 'avoidance'
+                    ? 'Spend that would have happened and did not — e.g. fewer defects, scrap, rework, or over-drawn PPE stopped by a control.'
+                    : 'Hours freed with no cash movement yet. Tick “turned into real money” below only if overtime, contractors, or an unfilled post actually changed.'}
+              </Text>
+              <Text fontSize="xs" color="gray.600" mt={2} lineHeight="1.5">
+                What you input: before / after numbers (+ money estimate). We classify from the measure type
+                (money / items / time) and whether time saved became real cash.
+              </Text>
+            </Box>
+          )}
           {!calc.rateSupplied && nn(draft.before) && nn(draft.after) && (
             <Note variant="warn" title="Using a default figure">
               Your finance team has not given us this one yet, so we are using a standard figure. Your claim can still be

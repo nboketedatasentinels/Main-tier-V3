@@ -1137,7 +1137,39 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
 
                     {mentorProfile && profile?.id && (
-                      <Stack spacing={4}>
+                      <Stack spacing={3}>
+                        <Flex
+                          justify="space-between"
+                          align={{ base: 'stretch', sm: 'center' }}
+                          gap={2}
+                          flexWrap="wrap"
+                        >
+                          <Tooltip
+                            label={scheduleDisabledReason || 'Send a request to your mentor'}
+                            placement="top"
+                          >
+                            <Button
+                              size="sm"
+                              leftIcon={<Calendar size={16} />}
+                              colorScheme="primary"
+                              isDisabled={!canScheduleSession || scheduleSubmitting}
+                              onClick={scheduleModal.onOpen}
+                            >
+                              Request a session
+                            </Button>
+                          </Tooltip>
+                          {hasAnySessions && (
+                            <Button
+                              size="sm"
+                              leftIcon={<Eye size={16} />}
+                              variant="outline"
+                              onClick={sessionsModal.onOpen}
+                            >
+                              View all ({sessions.length})
+                            </Button>
+                          )}
+                        </Flex>
+
                         <LeaderSessionPrep
                           learner={profile}
                           mentor={mentorProfile}
@@ -1152,35 +1184,10 @@ export const LeadershipCouncilPage: React.FC = () => {
                           }
                         />
 
-                        <HStack spacing={3} flexWrap="wrap">
-                          <Tooltip
-                            label={scheduleDisabledReason || 'Send a request to your mentor'}
-                            placement="top"
-                          >
-                            <Button
-                              leftIcon={<Calendar size={18} />}
-                              colorScheme="primary"
-                              isDisabled={!canScheduleSession || scheduleSubmitting}
-                              onClick={scheduleModal.onOpen}
-                            >
-                              Request a session
-                            </Button>
-                          </Tooltip>
-                          {hasAnySessions && (
-                            <Button
-                              leftIcon={<Eye size={18} />}
-                              variant="outline"
-                              onClick={sessionsModal.onOpen}
-                            >
-                              View all ({sessions.length})
-                            </Button>
-                          )}
-                        </HStack>
-
-                        <Box p={4} border="1px solid" borderColor="gray.200" rounded="lg" bg="gray.50">
-                          <HStack justify="space-between" align="center" mb={3} flexWrap="wrap" spacing={3}>
-                            <Text fontWeight="bold" color="#27062e">
-                              Sessions
+                        <Box p={3} border="1px solid" borderColor="gray.200" rounded="lg" bg="gray.50">
+                          <HStack justify="space-between" align="center" mb={2} flexWrap="wrap" spacing={3}>
+                            <Text fontWeight="bold" color="#27062e" fontSize="sm">
+                              Upcoming sessions
                             </Text>
                             <Text fontSize="xs" color="gray.600">
                               {mentorSessionsSummary}

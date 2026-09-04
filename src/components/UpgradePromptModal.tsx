@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Box,
   Button,
@@ -25,38 +25,13 @@ import { openMeetingMailto, buildMeetingMailtoHref } from '@/utils/meetingInvite
 
 const UPGRADE_INBOX = 'info@t4leader.com'
 
-const JOURNEY_OPTIONS = [
-  {
-    id: '4W',
-    name: '4-Week Intro',
-    detail: 'Transformation Starter · the free starter journey',
-    starter: true,
-  },
-  {
-    id: '6W',
-    name: '6-Week Power',
-    detail: 'Guided 6 weeks with mentor and coach pathways',
-    starter: false,
-  },
-  {
-    id: '3M',
-    name: '3-Month Journey',
-    detail: 'Deeper transformation over 12 weeks',
-    starter: false,
-  },
-  {
-    id: '6M',
-    name: '6-Month Journey',
-    detail: 'Sustained leadership practice over 6 months',
-    starter: false,
-  },
-  {
-    id: '9M',
-    name: '9-Month Journey',
-    detail: 'Full programme arc over 9 months',
-    starter: false,
-  },
-] as const
+/** Free starter journey — show this only; cohort placement is handled by the team. */
+const STARTER_JOURNEY = {
+  id: '4W',
+  name: '4-Week Intro',
+  detail:
+    'Transformation Starter — the free journey you are on now. Upgrading moves you onto the next guided cohort with a partner (not self-study).',
+} as const
 
 interface UpgradePromptModalProps {
   featureName: string
@@ -76,7 +51,6 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [organisation, setOrganisation] = useState('')
-  const [journeyId, setJourneyId] = useState<string>('4W')
   const [note, setNote] = useState('')
 
   useEffect(() => {
@@ -84,14 +58,8 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
     setFullName(getDisplayName(profile) || profile?.fullName || '')
     setEmail((profile?.email || user?.email || '').trim())
     setOrganisation((profile?.companyName || profile?.companyCode || '').trim())
-    setJourneyId('4W')
     setNote('')
   }, [isOpen, profile, user?.email])
-
-  const selectedJourney = useMemo(
-    () => JOURNEY_OPTIONS.find((j) => j.id === journeyId) || JOURNEY_OPTIONS[0],
-    [journeyId],
-  )
 
   const canSend = fullName.trim().length > 1 && email.includes('@')
 
@@ -115,8 +83,7 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
       `Name: ${fullName.trim()}`,
       `Email: ${email.trim()}`,
       organisation.trim() ? `Organisation: ${organisation.trim()}` : null,
-      `Journey interest: ${selectedJourney.name} (${selectedJourney.id})`,
-      `Journey detail: ${selectedJourney.detail}`,
+      `Current journey: ${STARTER_JOURNEY.name} (${STARTER_JOURNEY.id}) — Transformation Starter`,
       note.trim() ? `Note: ${note.trim()}` : null,
       '',
       'Please contact me about the next cohort.',
@@ -163,7 +130,13 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
         <ModalBody>
           <Stack spacing={4}>
             <Box bg="purple.50" borderWidth="1px" borderColor="purple.100" rounded="xl" p={3}>
-              <Text fontSize="xs" fontWeight="700" color="purple.800" textTransform="uppercase" letterSpacing="0.06em">
+              <Text
+                fontSize="xs"
+                fontWeight="700"
+                color="purple.800"
+                textTransform="uppercase"
+                letterSpacing="0.06em"
+              >
                 Upgrading for
               </Text>
               <Text fontWeight="700" color="#27062e" mt={1}>
@@ -176,6 +149,24 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
                   </Text>
                 ))}
               </Stack>
+            </Box>
+
+            <Box borderWidth="1px" borderColor="gray.200" rounded="xl" p={3} bg="gray.50">
+              <Text
+                fontSize="xs"
+                fontWeight="700"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="0.06em"
+              >
+                Your current journey
+              </Text>
+              <Text fontWeight="700" color="#27062e" mt={1} fontSize="sm">
+                {STARTER_JOURNEY.name} · Transformation Starter
+              </Text>
+              <Text fontSize="xs" color="gray.600" mt={1} lineHeight="1.5">
+                {STARTER_JOURNEY.detail}
+              </Text>
             </Box>
 
             <SimpleGrid columns={{ base: 1, sm: 2 }} gap={3}>
@@ -206,47 +197,6 @@ export const UpgradePromptModal: React.FC<UpgradePromptModalProps> = ({
                 placeholder="Company or team"
               />
             </FormControl>
-
-            <Box>
-              <Text fontSize="sm" fontWeight="600" mb={2} color="black">
-                Which journey are you interested in?
-              </Text>
-              <Text fontSize="xs" color="gray.600" mb={2}>
-                Free accounts start on the 4-Week Intro. Pick what you want next — we will confirm cohort dates by email.
-              </Text>
-              <Stack spacing={2}>
-                {JOURNEY_OPTIONS.map((journey) => {
-                  const selected = journeyId === journey.id
-                  return (
-                    <Button
-                      key={journey.id}
-                      onClick={() => setJourneyId(journey.id)}
-                      variant="outline"
-                      justifyContent="flex-start"
-                      h="auto"
-                      py={3}
-                      px={3}
-                      whiteSpace="normal"
-                      textAlign="left"
-                      borderWidth="2px"
-                      borderColor={selected ? '#350e6f' : 'gray.200'}
-                      bg={selected ? 'purple.50' : 'white'}
-                      _hover={{ borderColor: '#350e6f', bg: 'purple.50' }}
-                    >
-                      <Box>
-                        <Text fontWeight="700" color="#27062e" fontSize="sm">
-                          {journey.name}
-                          {journey.starter ? ' · current starter' : ''}
-                        </Text>
-                        <Text fontSize="xs" color="gray.600" fontWeight="500">
-                          {journey.detail}
-                        </Text>
-                      </Box>
-                    </Button>
-                  )
-                })}
-              </Stack>
-            </Box>
 
             <FormControl>
               <FormLabel fontSize="sm">Anything else? (optional)</FormLabel>

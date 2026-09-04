@@ -120,13 +120,16 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
 
       <Grid templateColumns={{ base: '1fr', lg: '318px 1fr' }}>
         <Box
-          p={{ base: 5, md: 6 }}
+          p={{ base: isLeader ? 4 : 5, md: isLeader ? 4 : 6 }}
           borderRight={{ lg: '1px solid' }}
           borderBottom={{ base: '1px solid', lg: 'none' }}
           borderColor="rgba(35,31,48,.14)"
           bg="rgba(35,31,48,.025)"
         >
-          <Stack spacing={6} divider={<Box borderTop="1px solid" borderColor="rgba(35,31,48,.14)" />}>
+          <Stack
+            spacing={isLeader ? 3 : 6}
+            divider={<Box borderTop="1px solid" borderColor="rgba(35,31,48,.14)" />}
+          >
             <Box>
               <MonoLabel>{isLeader ? 'Your mentor' : 'Who you are meeting'}</MonoLabel>
               <Flex gap={3} align="flex-start">
@@ -354,11 +357,11 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
           </Stack>
         </Box>
 
-        <Box p={{ base: 5, md: 6 }} minW={0}>
+        <Box p={{ base: isLeader ? 4 : 5, md: isLeader ? 4 : 6 }} minW={0}>
           <MonoLabel>{isLeader ? 'Your meet-ups' : model.audience === 'coach' ? 'The sessions' : 'Your meet-ups'}</MonoLabel>
           <SessionArc labels={model.arcLabels} currentIndex={model.arcCurrentIndex} note={model.arcNote} />
 
-          {isLeader && leaderGoalEditor ? <Box mt={6}>{leaderGoalEditor}</Box> : null}
+          {isLeader && leaderGoalEditor ? <Box mt={3}>{leaderGoalEditor}</Box> : null}
 
           {!isLeader && model.headline ? (
             <Box mt={7}>

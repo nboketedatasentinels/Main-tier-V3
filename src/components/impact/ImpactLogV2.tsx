@@ -408,6 +408,7 @@ export const ImpactLogV2: React.FC = () => {
         learnerEmail: profile?.email || user.email || null,
         organizationName: profile?.companyName || null,
         evidenceRef: payload.evidenceRef || undefined,
+        valueEvidenceLink: payload.valueEvidenceLink || undefined,
         source: payload.evidence || undefined,
         window: payload.windowLabel,
       })

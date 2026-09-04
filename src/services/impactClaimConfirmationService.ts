@@ -64,12 +64,16 @@ export async function requestClaimConfirmations(params: {
   learnerEmail?: string | null
   organizationName?: string | null
   evidenceRef?: string
+  valueEvidenceLink?: string
   source?: string
   window?: string
 }): Promise<{ ownerEmailed: boolean; needsFinance: boolean; warning?: string }> {
   const band = bandOf(params.net)
   const needsFinance =
     bandNeedsFinance(params.net) && Boolean(params.financeEmail?.trim())
+
+  const evidencePrimary =
+    (params.valueEvidenceLink || '').trim() || (params.evidenceRef || '').trim() || ''
 
   const created = await createImpactClaimConfirmation({
     impactLogId: params.impactLogId,
@@ -89,10 +93,19 @@ export async function requestClaimConfirmations(params: {
       financeEmail: params.financeEmail?.trim().toLowerCase() || '',
       source: params.source || '',
       window: params.window || '',
-      evidence: params.evidenceRef || '',
+      evidence: evidencePrimary,
       valueLabel: params.tier === 1 ? 'No currency value yet' : formatMoney(params.net),
     },
   })
+
+  const bucketLabel =
+    params.bucket === 'cash'
+      ? 'Cash impact'
+      : params.bucket === 'avoidance'
+        ? 'Cost avoidance'
+        : params.bucket === 'capacity'
+          ? 'Capacity released'
+          : params.bucket
 
   const emailed = await sendImpactVerificationEmail({
     to: created.verifierEmail,
@@ -108,8 +121,11 @@ export async function requestClaimConfirmations(params: {
         rows: [
           { label: 'Claim', value: params.measureTitle },
           { label: 'Learner', value: params.learnerName },
-          { label: 'Indicative net / period', value: params.tier === 1 ? 'None at Tier 1' : formatMoney(params.net) },
-          { label: 'Bucket', value: params.bucket },
+          {
+            label: 'Indicative net / period',
+            value: params.tier === 1 ? 'Awaiting confirmation' : formatMoney(params.net),
+          },
+          { label: 'Bucket', value: bucketLabel },
           { label: 'Your role', value: 'Measure owner' },
           {
             label: 'Next step',
@@ -124,7 +140,7 @@ export async function requestClaimConfirmations(params: {
         rows: [
           { label: 'Source', value: params.source || '-' },
           { label: 'Window', value: params.window || '-' },
-          { label: 'Evidence ref', value: params.evidenceRef || '-' },
+          { label: 'Evidence link / ref', value: evidencePrimary || '-' },
         ],
       },
     ],

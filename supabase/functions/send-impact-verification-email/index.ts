@@ -82,6 +82,26 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Escape text and wrap http(s) URLs as clickable links for the email HTML. */
+function formatValueHtml(raw: string): string {
+  const value = String(raw ?? "");
+  if (!value) return "-";
+  const urlRe = /(https?:\/\/[^\s<>"']+)/gi;
+  let html = "";
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = urlRe.exec(value)) !== null) {
+    html += escapeHtml(value.slice(last, match.index));
+    const full = match[1];
+    const url = full.replace(/[.,);]+$/g, "");
+    const trailing = full.slice(url.length);
+    html += `<a href="${escapeHtml(url)}" style="color:#350e6f;text-decoration:underline;word-break:break-all;" target="_blank" rel="noopener noreferrer">${escapeHtml(url)}</a>${escapeHtml(trailing)}`;
+    last = match.index + full.length;
+  }
+  html += escapeHtml(value.slice(last));
+  return html || escapeHtml(value);
+}
+
 function formatDisplayValue(value: unknown): string {
   if (value == null) return "-";
   if (Array.isArray(value)) {
@@ -176,8 +196,8 @@ function buildSectionsHtml(sections: DetailSection[]): string {
           const border = index === section.rows.length - 1 ? "0" : `1px solid ${HAIR}`;
           const isLong = row.value.length > 120 || row.value.includes("\n");
           const valueHtml = isLong
-            ? `<div style="margin:0;font-size:14px;line-height:1.65;color:${INK};white-space:pre-wrap;">${escapeHtml(row.value)}</div>`
-            : `<div style="margin:0;font-size:14px;line-height:1.5;color:${INK};word-break:break-word;">${escapeHtml(row.value)}</div>`;
+            ? `<div style="margin:0;font-size:14px;line-height:1.65;color:${INK};white-space:pre-wrap;">${formatValueHtml(row.value)}</div>`
+            : `<div style="margin:0;font-size:14px;line-height:1.5;color:${INK};word-break:break-word;">${formatValueHtml(row.value)}</div>`;
           return `<tr>
             <td style="padding:12px 14px;border-bottom:${border};width:38%;vertical-align:top;">
               <div style="margin:0;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:${MUTE};">${escapeHtml(row.label)}</div>
