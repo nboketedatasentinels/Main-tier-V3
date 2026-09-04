@@ -44,7 +44,7 @@ const MonoLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({
 
 /**
  * Session Prep screen - mentor / coach / leader readings of one profile.
- * Visual language follows the T4L Session Prep mockup (cream / charcoal / gold).
+ * Professional white / plum palette (aligned with Impact Log cards).
  */
 export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
   input,
@@ -62,29 +62,33 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
     .map((p) => p[0]?.toUpperCase() ?? '')
     .join('')
 
+  const hairline = 'rgba(53, 14, 111, 0.16)'
+
   return (
     <Box
-      bg="#FDF8EF"
-      borderRadius="14px"
+      bg="white"
+      borderRadius="xl"
       overflow="hidden"
-      border="1px solid"
-      borderColor="rgba(35,31,48,.14)"
-      color="#231F30"
+      borderWidth="1px"
+      borderStyle="solid"
+      borderColor={hairline}
+      color="#27062e"
+      boxShadow="0 1px 3px rgba(0,0,0,0.03)"
       fontFamily="'DM Sans', system-ui, sans-serif"
     >
       <Flex
         px={{ base: 4, md: 6 }}
         py={4}
         borderBottom="1px solid"
-        borderColor="rgba(35,31,48,.14)"
+        borderColor={hairline}
         justify="space-between"
         align={{ base: 'flex-start', md: 'flex-end' }}
         gap={4}
         flexWrap="wrap"
-        bgGradient="linear(180deg, rgba(212,160,23,.07), transparent)"
+        bg="gray.50"
       >
         <Box>
-          <Text fontFamily="mono" fontSize="11px" letterSpacing="0.1em" textTransform="uppercase" color="#6B6579" m={0}>
+          <Text fontFamily="mono" fontSize="11px" letterSpacing="0.1em" textTransform="uppercase" color="gray.500" m={0}>
             {model.scheduledLabel}
           </Text>
           <Text
@@ -94,10 +98,11 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
             mt={1}
             mb={1}
             lineHeight="1.2"
+            color="#27062e"
           >
             {isLeader ? `Before you meet ${model.personTitle.split(' ')[0]}` : `Session with ${model.personTitle.split(' ')[0]}`}
           </Text>
-          <Text fontSize="12.5px" color="#6B6579" m={0}>
+          <Text fontSize="12.5px" color="gray.600" m={0}>
             {model.originLine}
           </Text>
         </Box>
@@ -106,9 +111,11 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
           fontSize="10px"
           letterSpacing="0.11em"
           textTransform="uppercase"
-          border="1px solid #D4A017"
-          color="#7A5C08"
-          bg="rgba(212,160,23,.12)"
+          borderWidth="1px"
+          borderStyle="solid"
+          borderColor="rgba(53, 14, 111, 0.28)"
+          color="#350e6f"
+          bg="rgba(53, 14, 111, 0.06)"
           px={2.5}
           py={1}
           borderRadius="full"
@@ -123,12 +130,12 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
           p={{ base: isLeader ? 4 : 5, md: isLeader ? 4 : 6 }}
           borderRight={{ lg: '1px solid' }}
           borderBottom={{ base: '1px solid', lg: 'none' }}
-          borderColor="rgba(35,31,48,.14)"
-          bg="rgba(35,31,48,.025)"
+          borderColor={hairline}
+          bg="white"
         >
           <Stack
             spacing={isLeader ? 3 : 6}
-            divider={<Box borderTop="1px solid" borderColor="rgba(35,31,48,.14)" />}
+            divider={<Box borderTop="1px solid" borderColor={hairline} />}
           >
             <Box>
               <MonoLabel>{isLeader ? 'Your mentor' : 'Who you are meeting'}</MonoLabel>
@@ -137,8 +144,8 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                   w="46px"
                   h="46px"
                   borderRadius="full"
-                  bg="#2D2A3E"
-                  color="#FDF8EF"
+                  bg="#350e6f"
+                  color="white"
                   align="center"
                   justify="center"
                   fontFamily="mono"
@@ -148,16 +155,16 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                   {initials || '?'}
                 </Flex>
                 <Box>
-                  <Text fontSize="17px" fontWeight="700" lineHeight="1.25" m={0}>
+                  <Text fontSize="17px" fontWeight="700" lineHeight="1.25" m={0} color="#27062e">
                     {model.personTitle}
                   </Text>
-                  <Text fontSize="13px" color="#6B6579" whiteSpace="pre-line" mt={1} m={0}>
+                  <Text fontSize="13px" color="gray.600" whiteSpace="pre-line" mt={1} m={0}>
                     {model.personSubtitle}
                   </Text>
                 </Box>
               </Flex>
               {model.journeyLine ? (
-                <Text fontSize="12.5px" color="#6B6579" mt={3} lineHeight="1.55">
+                <Text fontSize="12.5px" color="gray.600" mt={3} lineHeight="1.55">
                   {model.journeyLine}
                 </Text>
               ) : null}
@@ -172,7 +179,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 showScores={model.showScores}
               />
               {model.liftPending ? (
-                <Text fontSize="12px" color="#6B6579" mt={2} lineHeight="1.55">
+                <Text fontSize="12px" color="gray.600" mt={2} lineHeight="1.55">
                   {isLeader
                     ? 'LIFT is required on 3-month and longer journeys. Complete it to unlock full Session Prep for you and your mentor/coach.'
                     : 'Waiting on a completed LIFT Index for this leader. On 3M+ journeys it is compulsory before meaningful prep.'}
@@ -186,11 +193,13 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                       fontFamily="mono"
                       fontSize="11px"
                       letterSpacing="0.04em"
-                      border="1px solid rgba(35,31,48,.22)"
+                      borderWidth="1px"
+                      borderStyle="solid"
+                      borderColor={hairline}
                       borderRadius="md"
                       px={2}
                       py={1}
-                      color="#2D2A3E"
+                      color="#350e6f"
                     >
                       {key} is {Math.round(model.pillars![key])}
                     </Text>
@@ -198,7 +207,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 </HStack>
               ) : null}
               {model.totalPointsLabel ? (
-                <Text fontSize="12.5px" color="#6B6579" fontWeight="600" mt={2}>
+                <Text fontSize="12.5px" color="gray.600" fontWeight="600" mt={2}>
                   Journey points · {model.totalPointsLabel}
                 </Text>
               ) : null}
@@ -224,7 +233,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                         w: '5px',
                         h: '5px',
                         borderRadius: 'full',
-                        bg: '#D4A017',
+                        bg: '#350e6f',
                       }}
                     >
                       {line}
@@ -271,8 +280,8 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                   fontSize="12px"
                   letterSpacing="0.08em"
                   textTransform="uppercase"
-                  bg="rgba(212,160,23,.16)"
-                  color="#7A5C08"
+                  bg="rgba(53, 14, 111, 0.08)"
+                  color="#350e6f"
                   borderRadius="full"
                   px={2.5}
                   py={1}
@@ -410,7 +419,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                     <Text fontSize="13.5px" lineHeight="1.65" color="#6B6579" maxW="64ch" mb={4}>
                       {topic.why}
                     </Text>
-                    <Box borderLeft="3px solid #D4A017" pl={4}>
+                    <Box borderLeft="3px solid #350e6f" pl={4}>
                       <MonoLabel>{topic.sayLabel}</MonoLabel>
                       <Text
                         as="q"
@@ -447,8 +456,8 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
           ) : null}
 
           {model.opener ? (
-            <Box mt={6} bg="#2D2A3E" color="white" borderRadius="10px" p={5}>
-              <MonoLabel color="#D4A017">{model.opener.label}</MonoLabel>
+            <Box mt={6} bg="#350e6f" color="white" borderRadius="xl" p={5}>
+              <MonoLabel color="rgba(255,255,255,0.7)">{model.opener.label}</MonoLabel>
               <Text
                 as="q"
                 display="block"
@@ -481,14 +490,14 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
           <HStack mt={6} spacing={2.5} flexWrap="wrap">
             {onPrimary ? (
               <Button
-                bg="#2D2A3E"
-                color="#FDF8EF"
-                borderRadius="7px"
+                bg="#350e6f"
+                color="white"
+                borderRadius="lg"
                 px={4}
                 h="42px"
                 fontSize="13px"
                 fontWeight="500"
-                _hover={{ bg: '#1A1726' }}
+                _hover={{ bg: '#27062e' }}
                 isLoading={primaryLoading}
                 onClick={onPrimary}
               >
@@ -498,15 +507,15 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
             {onSecondary ? (
               <Button
                 variant="outline"
-                borderColor="#2D2A3E"
-                color="#2D2A3E"
-                borderRadius="7px"
+                borderColor="rgba(53, 14, 111, 0.28)"
+                color="#350e6f"
+                borderRadius="lg"
                 px={4}
                 h="42px"
                 fontSize="13px"
                 fontWeight="500"
                 bg="transparent"
-                _hover={{ bg: 'rgba(35,31,48,.04)' }}
+                _hover={{ bg: 'rgba(53, 14, 111, 0.06)' }}
                 onClick={onSecondary}
               >
                 {model.secondaryActionLabel}

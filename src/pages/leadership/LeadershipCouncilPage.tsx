@@ -905,17 +905,24 @@ export const LeadershipCouncilPage: React.FC = () => {
                 <Card borderColor="gray.200" borderWidth="1px" bg="white" borderRadius="2xl">
                   <CardHeader pb={0}>
                     <HStack justify="space-between" align="start" spacing={4}>
-                      <Stack spacing={2} flex="1" minW={0}>
+                      <HStack
+                        spacing={{ base: 2, md: 3 }}
+                        flex="1"
+                        minW={0}
+                        align="center"
+                        flexWrap="wrap"
+                      >
                         <Text
                           fontSize="xs"
                           textTransform="uppercase"
                           color="#350e6f"
                           fontWeight="bold"
                           letterSpacing="0.14em"
+                          flexShrink={0}
                         >
                           Coach
                         </Text>
-                        <Heading size="md" color="#27062e" letterSpacing="-0.01em">
+                        <Heading size="md" color="#27062e" letterSpacing="-0.01em" noOfLines={1}>
                           {ambassadorProfile
                             ? displayNameForProfile(ambassadorProfile)
                             : pendingAmbassadorEmail
@@ -931,12 +938,11 @@ export const LeadershipCouncilPage: React.FC = () => {
                                 : 'orange'
                             }
                             variant="subtle"
-                            alignSelf="flex-start"
                           >
                             {ambassadorProfile?.availabilityStatus || 'Pending signup'}
                           </Badge>
                         )}
-                      </Stack>
+                      </HStack>
                       {ambassadorProfile && (
                         <Avatar
                           size="lg"
@@ -1147,19 +1153,80 @@ export const LeadershipCouncilPage: React.FC = () => {
                     )}
 
                     {mentorProfile && profile?.id && (
-                      <Stack spacing={3}>
+                      <Stack spacing={4}>
+                        <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+                          {(
+                            [
+                              {
+                                n: '1',
+                                title: 'Request a session',
+                                sub: 'Pick a time your mentor can confirm',
+                              },
+                              {
+                                n: '2',
+                                title: 'Prep your goal',
+                                sub: 'One clear aim for the meet-up',
+                              },
+                              {
+                                n: '3',
+                                title: 'Show up ready',
+                                sub: 'Add confirmed sessions to your calendar',
+                              },
+                            ] as const
+                          ).map((step) => (
+                            <Box
+                              key={step.n}
+                              p={3}
+                              bg="white"
+                              borderWidth="1px"
+                              borderStyle="solid"
+                              borderColor="rgba(53, 14, 111, 0.16)"
+                              borderRadius="xl"
+                            >
+                              <HStack spacing={2} mb={1}>
+                                <Flex
+                                  w="22px"
+                                  h="22px"
+                                  borderRadius="full"
+                                  bg="#350e6f"
+                                  color="white"
+                                  align="center"
+                                  justify="center"
+                                  fontSize="11px"
+                                  fontWeight="bold"
+                                  flexShrink={0}
+                                >
+                                  {step.n}
+                                </Flex>
+                                <Text fontSize="sm" fontWeight="bold" color="#27062e">
+                                  {step.title}
+                                </Text>
+                              </HStack>
+                              <Text fontSize="xs" color="gray.600" pl={7}>
+                                {step.sub}
+                              </Text>
+                            </Box>
+                          ))}
+                        </SimpleGrid>
+
                         <Flex
                           justify="space-between"
                           align={{ base: 'stretch', sm: 'center' }}
                           gap={2}
                           flexWrap="wrap"
+                          p={3}
+                          bg="white"
+                          borderWidth="1px"
+                          borderStyle="solid"
+                          borderColor="rgba(53, 14, 111, 0.16)"
+                          borderRadius="xl"
                         >
                           <Tooltip
                             label={scheduleDisabledReason || 'Send a request to your mentor'}
                             placement="top"
                           >
                             <Button
-                              size="sm"
+                              size="md"
                               leftIcon={<Calendar size={16} />}
                               colorScheme="primary"
                               isDisabled={!canScheduleSession || scheduleSubmitting}
@@ -1170,9 +1237,11 @@ export const LeadershipCouncilPage: React.FC = () => {
                           </Tooltip>
                           {hasAnySessions && (
                             <Button
-                              size="sm"
+                              size="md"
                               leftIcon={<Eye size={16} />}
                               variant="outline"
+                              borderColor="rgba(53, 14, 111, 0.28)"
+                              color="#350e6f"
                               onClick={sessionsModal.onOpen}
                             >
                               View all ({sessions.length})
@@ -1180,24 +1249,17 @@ export const LeadershipCouncilPage: React.FC = () => {
                           )}
                         </Flex>
 
-                        <LeaderSessionPrep
-                          learner={profile}
-                          mentor={mentorProfile}
-                          goals={goalsDraft || savedGoals}
-                          goalEditor={
-                            <MentorshipGoalsCard
-                              learnerId={profile.id}
-                              mentorId={mentorProfile.id}
-                              audience="mentor"
-                              onSaved={handleGoalsSaved}
-                            />
-                          }
-                        />
-
-                        <Box p={3} border="1px solid" borderColor="gray.200" rounded="lg" bg="gray.50">
+                        <Box
+                          p={4}
+                          borderWidth="1px"
+                          borderStyle="solid"
+                          borderColor="rgba(53, 14, 111, 0.16)"
+                          borderRadius="xl"
+                          bg="white"
+                        >
                           <HStack justify="space-between" align="center" mb={2} flexWrap="wrap" spacing={3}>
                             <Text fontWeight="bold" color="#27062e" fontSize="sm">
-                              Upcoming sessions
+                              Step 1 · Upcoming sessions
                             </Text>
                             <Text fontSize="xs" color="gray.600">
                               {mentorSessionsSummary}
@@ -1344,6 +1406,32 @@ export const LeadershipCouncilPage: React.FC = () => {
                               Last interaction: {mentorLastInteraction}
                             </Text>
                           )}
+                        </Box>
+
+                        <Box>
+                          <Text
+                            fontSize="xs"
+                            fontWeight="semibold"
+                            textTransform="uppercase"
+                            letterSpacing="wide"
+                            color="gray.500"
+                            mb={2}
+                          >
+                            Step 2 · Session prep
+                          </Text>
+                          <LeaderSessionPrep
+                            learner={profile}
+                            mentor={mentorProfile}
+                            goals={goalsDraft || savedGoals}
+                            goalEditor={
+                              <MentorshipGoalsCard
+                                learnerId={profile.id}
+                                mentorId={mentorProfile.id}
+                                audience="mentor"
+                                onSaved={handleGoalsSaved}
+                              />
+                            }
+                          />
                         </Box>
                       </Stack>
                     )}
