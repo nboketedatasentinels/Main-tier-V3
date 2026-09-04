@@ -533,48 +533,99 @@ export const ImpactLogV2: React.FC = () => {
               </Heading>
             </Box>
 
-            {/* Primary actions — first thing to do */}
-            <Flex
-              gap={2}
+            {/* Primary actions — big cards */}
+            <Box
               px={{ base: 3, md: 4 }}
-              py={2.5}
+              py={3}
               borderBottom="1px solid"
               borderColor="border.subtle"
               bg="surface.default"
-              flexWrap="wrap"
-              align="center"
             >
-              <Button
-                size="sm"
-                colorScheme="primary"
-                flex={{ base: '1 1 140px', md: '0 0 auto' }}
-                onClick={() => {
-                  void startEntry('claim')
-                }}
-              >
-                {impactGateReached ? 'Upgrade · Log improvement' : 'Log improvement'}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                colorScheme="orange"
-                flex={{ base: '1 1 140px', md: '0 0 auto' }}
-                onClick={() => {
-                  void startEntry('esg')
-                }}
-              >
-                {impactGateReached ? 'Upgrade · Log ESG' : 'Log ESG'}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                leftIcon={<Icon as={Info} boxSize={3.5} />}
-                onClick={() => setShowJourney((v) => !v)}
-                aria-expanded={showJourney}
-              >
-                {showJourney ? 'Hide steps' : 'How a claim moves'}
-              </Button>
-            </Flex>
+              <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={3}>
+                <Box
+                  as="button"
+                  type="button"
+                  textAlign="left"
+                  p={{ base: 4, md: 5 }}
+                  rounded="xl"
+                  bg="#350e6f"
+                  color="white"
+                  boxShadow="md"
+                  transition="transform 0.15s ease, box-shadow 0.15s ease"
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg', bg: '#27062e' }}
+                  _active={{ transform: 'translateY(0)' }}
+                  onClick={() => {
+                    void startEntry('claim')
+                  }}
+                >
+                  <Text
+                    fontSize="10px"
+                    fontWeight="bold"
+                    textTransform="uppercase"
+                    letterSpacing="0.1em"
+                    color="whiteAlpha.800"
+                    mb={1}
+                  >
+                    Improvement claim
+                  </Text>
+                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em">
+                    {impactGateReached ? 'Upgrade · Log improvement' : 'Log improvement'}
+                  </Text>
+                  <Text fontSize="sm" color="whiteAlpha.850" mt={2} lineHeight="1.45" maxW="36ch">
+                    Before / after with evidence. Measure owner confirms before approved $.
+                  </Text>
+                </Box>
+
+                <Box
+                  as="button"
+                  type="button"
+                  textAlign="left"
+                  p={{ base: 4, md: 5 }}
+                  rounded="xl"
+                  bg="white"
+                  border="2px solid"
+                  borderColor="#f4540c"
+                  color="#27062e"
+                  boxShadow="sm"
+                  transition="transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease"
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'md', bg: 'orange.50' }}
+                  _active={{ transform: 'translateY(0)' }}
+                  onClick={() => {
+                    void startEntry('esg')
+                  }}
+                >
+                  <Text
+                    fontSize="10px"
+                    fontWeight="bold"
+                    textTransform="uppercase"
+                    letterSpacing="0.1em"
+                    color="#f4540c"
+                    mb={1}
+                  >
+                    ESG contribution
+                  </Text>
+                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em">
+                    {impactGateReached ? 'Upgrade · Log ESG' : 'Log ESG'}
+                  </Text>
+                  <Text fontSize="sm" color="gray.600" mt={2} lineHeight="1.45" maxW="36ch">
+                    Env / social / governance in its own bucket — separate from dollar claims.
+                  </Text>
+                </Box>
+              </SimpleGrid>
+
+              <Flex justify="flex-end" mt={2}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  color="gray.600"
+                  leftIcon={<Icon as={Info} boxSize={3.5} />}
+                  onClick={() => setShowJourney((v) => !v)}
+                  aria-expanded={showJourney}
+                >
+                  {showJourney ? 'Hide steps' : 'How a claim moves'}
+                </Button>
+              </Flex>
+            </Box>
 
             <Collapse in={showJourney} animateOpacity>
               <SimpleGrid
