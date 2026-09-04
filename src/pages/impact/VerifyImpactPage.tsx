@@ -40,6 +40,21 @@ export function VerifyImpactPage() {
   const [resultMessage, setResultMessage] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
 
+  // Browser tab should say Verification - not the default LIFT Index title.
+  useEffect(() => {
+    const previous = document.title
+    const action =
+      decisionHint === 'approve'
+        ? 'Approve Impact Log'
+        : decisionHint === 'reject'
+          ? 'Reject Impact Log'
+          : 'Impact Verification'
+    document.title = `${action} · Verification`
+    return () => {
+      document.title = previous
+    }
+  }, [decisionHint])
+
   useEffect(() => {
     let active = true
     const run = async () => {
