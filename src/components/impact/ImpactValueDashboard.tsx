@@ -369,7 +369,6 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             border="1px solid"
             borderColor="gray.100"
           >
-            <Icon as={Sparkles} boxSize={3.5} color="#350e6f" />
             <Text fontSize="xs" fontWeight="semibold" color="gray.700">
               {approvedCount} approved
             </Text>
