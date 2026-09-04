@@ -548,11 +548,13 @@ export const ImpactLogV2: React.FC = () => {
                   textAlign="left"
                   p={{ base: 4, md: 5 }}
                   rounded="xl"
-                  bg="#350e6f"
-                  color="white"
-                  boxShadow="md"
-                  transition="transform 0.15s ease, box-shadow 0.15s ease"
-                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'lg', bg: '#27062e' }}
+                  bg="white"
+                  border="2px solid"
+                  borderColor="#350e6f"
+                  color="#27062e"
+                  boxShadow="sm"
+                  transition="transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease"
+                  _hover={{ transform: 'translateY(-2px)', boxShadow: 'md', bg: 'purple.50' }}
                   _active={{ transform: 'translateY(0)' }}
                   onClick={() => {
                     void startEntry('claim')
@@ -563,15 +565,15 @@ export const ImpactLogV2: React.FC = () => {
                     fontWeight="bold"
                     textTransform="uppercase"
                     letterSpacing="0.1em"
-                    color="whiteAlpha.800"
+                    color="#350e6f"
                     mb={1}
                   >
                     Improvement claim
                   </Text>
-                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em">
+                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em" color="#27062e">
                     {impactGateReached ? 'Upgrade · Log improvement' : 'Log improvement'}
                   </Text>
-                  <Text fontSize="sm" color="whiteAlpha.850" mt={2} lineHeight="1.45" maxW="36ch">
+                  <Text fontSize="sm" color="gray.600" mt={2} lineHeight="1.45" maxW="36ch">
                     Before / after with evidence. Measure owner confirms before approved $.
                   </Text>
                 </Box>
@@ -604,7 +606,7 @@ export const ImpactLogV2: React.FC = () => {
                   >
                     ESG contribution
                   </Text>
-                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em">
+                  <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="800" letterSpacing="-0.02em" color="#27062e">
                     {impactGateReached ? 'Upgrade · Log ESG' : 'Log ESG'}
                   </Text>
                   <Text fontSize="sm" color="gray.600" mt={2} lineHeight="1.45" maxW="36ch">
