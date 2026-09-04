@@ -190,15 +190,16 @@ export const UserManagementWithTabs = () => {
         <Box
           position="sticky"
           top={0}
-          zIndex={12}
+          zIndex={20}
           bg="white"
           pt={1}
           pb={2}
-          mb={1}
           borderBottom="1px solid"
-          borderColor="gray.100"
+          borderColor="gray.200"
+          boxShadow="0 1px 0 rgba(255,255,255,1), 0 8px 16px -12px rgba(39, 6, 46, 0.45)"
+          style={{ isolation: 'isolate' }}
         >
-          <TabList overflowX="auto" pb={0}>
+          <TabList overflowX="auto" pb={0} bg="white">
             <Tab whiteSpace="nowrap">
               Users Management
               <Badge ml={2} colorScheme="gray" fontSize="xs">{userCount}</Badge>
@@ -211,12 +212,12 @@ export const UserManagementWithTabs = () => {
         </Box>
 
         <TabPanels>
-          <TabPanel px={0} pt={3}>
+          <TabPanel px={0} pt={4}>
             {/* ✅ Pass shared data down so tabs don't fight over fetching/listeners */}
             <UsersManagementTab users={memo.managedUsers} loading={loading} />
           </TabPanel>
 
-          <TabPanel px={0} pt={3}>
+          <TabPanel px={0} pt={4}>
             <LeadershipCouncil users={memo.users} organizations={memo.organizations} loadingUsers={loading || loadingOrgs} />
           </TabPanel>
         </TabPanels>

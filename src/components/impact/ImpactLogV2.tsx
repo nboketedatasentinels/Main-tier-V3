@@ -16,29 +16,34 @@ import {
   Heading,
   HStack,
   Icon,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
+  Popover,
+  PopoverArrow,
+  PopoverBody,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTrigger,
+  Progress,
   SimpleGrid,
   Spinner,
   Stack,
   Text,
-  Tooltip,
   useToast,
 } from '@chakra-ui/react'
-import { Info, Plus } from 'lucide-react'
+import { Info } from 'lucide-react'
 import { format } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
   CLAIM_JOURNEY_STEPS,
   DEFAULT_IMPACT_RATES,
+  IMPACT_CATS,
   IMPACT_GROWTH,
   IMPACT_WASTES,
   bandNeedsFinance,
+  claimInputsFromRecord,
   formatMoney,
+  formatMoneyK,
   gradeFromBaseline,
+  valuation,
   type ImpactEntryKind,
   type ImpactFamilyKey,
   type ImpactRateCard,
@@ -61,10 +66,11 @@ import { ImpactHelpButton, ImpactHelpModal } from '@/components/impact/ImpactHel
 import { ImpactClaimDrawer } from '@/components/impact/ImpactClaimDrawer'
 import {
   ImpactClaimWizardV4,
+  draftFromImpactRecord,
+  type ClaimWizardDraft,
   type ClaimWizardSubmitPayload,
 } from '@/components/impact/ImpactClaimWizardV4'
 import { ImpactValueDashboard } from '@/components/impact/ImpactValueDashboard'
-import { ImpactWastePanel } from '@/components/impact/ImpactWastePanel'
 import { ImpactRegisterPanel } from '@/components/impact/ImpactRegisterPanel'
 import { ImpactRatesAdmin } from '@/components/impact/ImpactRatesAdmin'
 import { ImpactRatesViewer } from '@/components/impact/ImpactRatesViewer'
@@ -73,7 +79,7 @@ import { ImpactSectorRollup } from '@/components/impact/ImpactSectorRollup'
 import { requestClaimConfirmations } from '@/services/impactClaimConfirmationService'
 import { LegacyEsgLogForm } from '@/components/impact/LegacyEsgLogForm'
 
-type ViewTab = 'log' | 'dash' | 'waste' | 'register' | 'claims' | 'sector' | 'export'
+type ViewTab = 'log' | 'dash' | 'register' | 'claims' | 'sector' | 'export'
 
 function familyFromClaimFam(fam: ClaimWizardSubmitPayload['calc']['fam']): ImpactFamilyKey {
   if (fam === 'time') return 'time'
@@ -111,6 +117,7 @@ export const ImpactLogV2: React.FC = () => {
   const [submitting, setSubmitting] = useState(false)
   const [helpKey, setHelpKey] = useState<ImpactHelpKey | null>(null)
   const [openClaim, setOpenClaim] = useState<ImpactLogRecord | null>(null)
+  const [claimDraft, setClaimDraft] = useState<ClaimWizardDraft | null>(null)
   const [showJourney, setShowJourney] = useState(false)
   const [showRatesToLearners, setShowRatesToLearnersState] = useState(false)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
@@ -206,12 +213,6 @@ export const ImpactLogV2: React.FC = () => {
     if (tab === 'register' && !isAdmin) setTab('log')
   }, [tab, isAdmin])
 
-  const startEntry = async (kind: ImpactEntryKind) => {
-    if (!(await assertCanCreateImpactLog())) return
-    setEntry(kind)
-    setTab('log')
-  }
-
   const statsFor = (list: ImpactLogRecord[]) => {
     const claims = list.filter((e) => entryKindOf(e) === 'claim')
     const validated = claims.filter(isValidatedClaim)
@@ -243,11 +244,40 @@ export const ImpactLogV2: React.FC = () => {
     () => statsFor(orgEntries.length ? orgEntries : entries),
     [orgEntries, entries],
   )
+  const orgByCat = useMemo(() => {
+    const pool = (orgEntries.length ? orgEntries : entries).filter(isValidatedClaim)
+    return IMPACT_CATS.map((c) => {
+      const v = pool
+        .filter((e) => e.claim?.cat === c.k && (e.claim?.bucket as string) !== 'capacity')
+        .reduce((s, e) => {
+          const inputs = claimInputsFromRecord(e)
+          return s + (inputs ? valuation(inputs, rates).net : Number(e.usdValue || 0))
+        }, 0)
+      return { ...c, v }
+    })
+  }, [orgEntries, entries, rates])
+  const orgCatMax = Math.max(1, ...orgByCat.map((c) => c.v))
   const cohortMoney = orgStats.money
   const pctMe = cohortMoney ? (meStats.money / cohortMoney) * 100 : 0
 
   const resetEntry = () => {
     setEntry(null)
+    setClaimDraft(null)
+  }
+
+  const startEntry = async (kind: ImpactEntryKind) => {
+    if (!(await assertCanCreateImpactLog())) return
+    setClaimDraft(null)
+    setEntry(kind)
+    setTab('log')
+  }
+
+  const duplicateClaim = async (record: ImpactLogRecord) => {
+    if (!(await assertCanCreateImpactLog())) return
+    setOpenClaim(null)
+    setClaimDraft(draftFromImpactRecord(record))
+    setEntry('claim')
+    setTab('log')
   }
 
   const submitClaim = async (payload: ClaimWizardSubmitPayload) => {
@@ -453,8 +483,7 @@ export const ImpactLogV2: React.FC = () => {
           mb={0}
         >
           {navBtn('log', 'Log impact')}
-          {navBtn('dash', 'Value dashboard')}
-          {navBtn('waste', 'Where value comes from')}
+          {navBtn('dash', 'Your savings')}
           {isAdmin && navBtn('register', 'Value register')}
           {navBtn('claims', 'Claims ledger')}
           {isSuperAdmin && navBtn('sector', 'By sector')}
@@ -469,7 +498,7 @@ export const ImpactLogV2: React.FC = () => {
               bgGradient="linear(to-r, #350e6f, #8b5a3c)"
               color="white"
               px={{ base: 4, md: 6 }}
-              py={{ base: 4, md: 5 }}
+              py={{ base: 3, md: 4 }}
             >
               <Box
                 position="absolute"
@@ -482,7 +511,7 @@ export const ImpactLogV2: React.FC = () => {
                 filter="blur(50px)"
                 pointerEvents="none"
               />
-              <HStack spacing={2} mb={2} position="relative">
+              <HStack spacing={2} mb={1} position="relative">
                 <Badge
                   bg="whiteAlpha.200"
                   color="white"
@@ -498,13 +527,94 @@ export const ImpactLogV2: React.FC = () => {
                 </Badge>
                 <ImpactHelpButton k="howvalued" onOpen={setHelpKey} />
               </HStack>
-              <Heading size="md" mb={1} color="white" fontWeight="semibold" position="relative">
+              <Heading size="sm" mb={0} color="white" fontWeight="semibold" position="relative">
                 Log what changed, and what it added up to
               </Heading>
-              <Text fontSize="sm" color="whiteAlpha.800" maxW="48ch" position="relative">
-                Organisation totals and your pipeline first. Points stay on your journey dashboard.
-              </Text>
             </Box>
+
+            {/* Primary actions — first thing to do */}
+            <Flex
+              gap={2}
+              px={{ base: 3, md: 4 }}
+              py={2.5}
+              borderBottom="1px solid"
+              borderColor="border.subtle"
+              bg="surface.default"
+              flexWrap="wrap"
+              align="center"
+            >
+              <Button
+                size="sm"
+                colorScheme="primary"
+                flex={{ base: '1 1 140px', md: '0 0 auto' }}
+                onClick={() => {
+                  void startEntry('claim')
+                }}
+              >
+                {impactGateReached ? 'Upgrade · Log improvement' : 'Log improvement'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                colorScheme="orange"
+                flex={{ base: '1 1 140px', md: '0 0 auto' }}
+                onClick={() => {
+                  void startEntry('esg')
+                }}
+              >
+                {impactGateReached ? 'Upgrade · Log ESG' : 'Log ESG'}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                leftIcon={<Icon as={Info} boxSize={3.5} />}
+                onClick={() => setShowJourney((v) => !v)}
+                aria-expanded={showJourney}
+              >
+                {showJourney ? 'Hide steps' : 'How a claim moves'}
+              </Button>
+            </Flex>
+
+            <Collapse in={showJourney} animateOpacity>
+              <SimpleGrid
+                columns={{ base: 1, sm: 2, md: 3 }}
+                spacing={2}
+                px={{ base: 3, md: 4 }}
+                py={3}
+                bg="surface.subtle"
+                borderBottom="1px solid"
+                borderColor="border.subtle"
+              >
+                {CLAIM_JOURNEY_STEPS.map(([num, title, desc]) => (
+                  <Box key={num} p={2.5} rounded="md" bg="surface.default">
+                    <Text fontSize="xs" color="brand.accent" fontWeight="bold" mb={0.5}>
+                      {num}
+                    </Text>
+                    <Text fontWeight="semibold" fontSize="sm" mb={0.5}>
+                      {title}
+                    </Text>
+                    <Text fontSize="xs" color="text.secondary" lineHeight="1.4">
+                      {desc}
+                    </Text>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            </Collapse>
+
+            {impactGateReached && (
+              <Alert status="warning" borderRadius={0} py={2}>
+                <AlertIcon />
+                <Box flex="1">
+                  <AlertTitle fontSize="sm">Free chapter complete</AlertTitle>
+                  <AlertDescription fontSize="xs">
+                    Both free entries used. Upgrade to Impact Log Pro (~$5/mo) to keep logging.
+                  </AlertDescription>
+                </Box>
+                <Button size="sm" colorScheme="orange" onClick={() => setUpgradeOpen(true)}>
+                  Upgrade
+                </Button>
+              </Alert>
+            )}
 
             <SimpleGrid
               columns={{ base: 1, md: 3 }}
@@ -539,7 +649,7 @@ export const ImpactLogV2: React.FC = () => {
                 }) => (
                   <Box minW={0}>
                     <Text
-                      fontSize={{ base: 'xl', md: '2xl' }}
+                      fontSize={{ base: 'lg', md: 'xl' }}
                       fontWeight="800"
                       color={accent ? 'brand.primary' : muted ? 'gray.400' : '#27062e'}
                       lineHeight="1.1"
@@ -560,7 +670,11 @@ export const ImpactLogV2: React.FC = () => {
                 )
                 return (
                   <>
-                    <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
+                    <Box
+                      p={{ base: 3, md: 4 }}
+                      borderRight={{ md: '1px solid' }}
+                      borderColor="border.subtle"
+                    >
                       <Text
                         fontSize="xs"
                         textTransform="uppercase"
@@ -570,9 +684,11 @@ export const ImpactLogV2: React.FC = () => {
                       >
                         You · {displayName.split(' ')[0]}
                       </Text>
-                      <SimpleGrid columns={3} spacing={2} mt={3}>
+                      <SimpleGrid columns={3} spacing={2} mt={2}>
                         <Metric
-                          value={meStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                          value={meStats.hours.toLocaleString(undefined, {
+                            maximumFractionDigits: 1,
+                          })}
                           label="hrs"
                         />
                         <Metric value={meStats.peopleReached.toLocaleString()} label="people" />
@@ -582,43 +698,103 @@ export const ImpactLogV2: React.FC = () => {
                           muted={meStats.money <= 0}
                         />
                       </SimpleGrid>
-                      <Text fontSize="xs" color="gray.600" mt={3}>
+                      <Text fontSize="xs" color="gray.600" mt={2}>
                         {meStats.claims} claim{meStats.claims === 1 ? '' : 's'}
                         {meStats.esg ? ` · ${meStats.esg} ESG` : ''}
                         {pctMe > 0 ? ` · ${pctMe.toFixed(0)}% of org` : ''}
                       </Text>
                     </Box>
 
-                    <Box p={{ base: 4, md: 5 }} borderRight={{ md: '1px solid' }} borderColor="border.subtle">
-                      <Text
-                        fontSize="xs"
-                        textTransform="uppercase"
-                        color="text.muted"
-                        fontWeight="bold"
-                        letterSpacing="0.06em"
+                    <Popover trigger="hover" placement="bottom" openDelay={200} gutter={8}>
+                      <PopoverTrigger>
+                        <Box
+                          as="button"
+                          type="button"
+                          textAlign="left"
+                          w="100%"
+                          p={{ base: 3, md: 4 }}
+                          borderRight={{ md: '1px solid' }}
+                          borderColor="border.subtle"
+                          cursor="pointer"
+                          _hover={{ bg: 'orange.50' }}
+                          transition="background 0.15s ease"
+                        >
+                          <Flex justify="space-between" align="center">
+                            <Text
+                              fontSize="xs"
+                              textTransform="uppercase"
+                              color="text.muted"
+                              fontWeight="bold"
+                              letterSpacing="0.06em"
+                            >
+                              Organisation
+                            </Text>
+                            <Text fontSize="10px" color="brand.accent" fontWeight="semibold">
+                              Hover for chart
+                            </Text>
+                          </Flex>
+                          <SimpleGrid columns={3} spacing={2} mt={2}>
+                            <Metric
+                              value={orgStats.hours.toLocaleString(undefined, {
+                                maximumFractionDigits: 1,
+                              })}
+                              label="hrs"
+                            />
+                            <Metric
+                              value={orgStats.peopleReached.toLocaleString()}
+                              label="people"
+                            />
+                            <Metric
+                              value={formatMoney(orgStats.money)}
+                              label="value"
+                              muted={orgStats.money <= 0}
+                            />
+                          </SimpleGrid>
+                          <Text fontSize="xs" color="gray.600" mt={2}>
+                            {orgStats.claims} claim{orgStats.claims === 1 ? '' : 's'}
+                            {orgStats.esg ? ` · ${orgStats.esg} ESG` : ''}
+                            {orgStats.people ? ` · ${orgStats.people} people` : ''}
+                          </Text>
+                        </Box>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        w="280px"
+                        borderColor="border.subtle"
+                        boxShadow="lg"
+                        _focus={{ outline: 'none' }}
                       >
-                        Organisation
-                      </Text>
-                      <SimpleGrid columns={3} spacing={2} mt={3}>
-                        <Metric
-                          value={orgStats.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}
-                          label="hrs"
-                        />
-                        <Metric value={orgStats.peopleReached.toLocaleString()} label="people" />
-                        <Metric
-                          value={formatMoney(orgStats.money)}
-                          label="value"
-                          muted={orgStats.money <= 0}
-                        />
-                      </SimpleGrid>
-                      <Text fontSize="xs" color="gray.600" mt={3}>
-                        {orgStats.claims} claim{orgStats.claims === 1 ? '' : 's'}
-                        {orgStats.esg ? ` · ${orgStats.esg} ESG` : ''}
-                        {orgStats.people ? ` · ${orgStats.people} people` : ''}
-                      </Text>
-                    </Box>
+                        <PopoverArrow />
+                        <PopoverHeader fontSize="xs" fontWeight="bold" border="0" pb={1}>
+                          Org value by category
+                        </PopoverHeader>
+                        <PopoverBody pt={1} pb={3}>
+                          {orgByCat.every((c) => c.v <= 0) ? (
+                            <Text fontSize="sm" color="text.secondary">
+                              No approved org value yet.
+                            </Text>
+                          ) : (
+                            <Stack spacing={2.5}>
+                              {orgByCat.map((c) => (
+                                <Box key={c.k}>
+                                  <Flex justify="space-between" fontSize="xs" mb={1}>
+                                    <Text fontWeight="medium">{c.n}</Text>
+                                    <Text fontFamily="mono">{formatMoneyK(c.v)}</Text>
+                                  </Flex>
+                                  <Progress
+                                    value={(c.v / orgCatMax) * 100}
+                                    size="sm"
+                                    colorScheme="purple"
+                                    rounded="full"
+                                  />
+                                </Box>
+                              ))}
+                            </Stack>
+                          )}
+                        </PopoverBody>
+                      </PopoverContent>
+                    </Popover>
 
-                    <Box p={{ base: 4, md: 5 }} bg="tint.brandPrimary">
+                    <Box p={{ base: 3, md: 4 }} bg="tint.brandPrimary">
                       <Text
                         fontSize="xs"
                         textTransform="uppercase"
@@ -628,7 +804,7 @@ export const ImpactLogV2: React.FC = () => {
                       >
                         Pipeline
                       </Text>
-                      <SimpleGrid columns={3} spacing={2} mt={3}>
+                      <SimpleGrid columns={3} spacing={2} mt={2}>
                         <Metric
                           value={pipelineHours.toLocaleString(undefined, {
                             maximumFractionDigits: 1,
@@ -636,11 +812,7 @@ export const ImpactLogV2: React.FC = () => {
                           label="hrs"
                           accent
                         />
-                        <Metric
-                          value={pipelinePeople.toLocaleString()}
-                          label="people"
-                          accent
-                        />
+                        <Metric value={pipelinePeople.toLocaleString()} label="people" accent />
                         <Metric
                           value={formatMoney(pipelineMoney)}
                           label="indicative"
@@ -648,7 +820,7 @@ export const ImpactLogV2: React.FC = () => {
                           muted={pipelineMoney <= 0}
                         />
                       </SimpleGrid>
-                      <Text fontSize="xs" color="purple.800" mt={3}>
+                      <Text fontSize="xs" color="purple.800" mt={2}>
                         Indicative only · awaiting approval
                       </Text>
                     </Box>
@@ -660,226 +832,17 @@ export const ImpactLogV2: React.FC = () => {
         )}
       </Box>
 
-      <Box maxW="1140px" mx="auto" px={{ base: 4, md: 5 }} py={5}>
+      <Box
+        maxW="1140px"
+        mx="auto"
+        px={{ base: 4, md: 5 }}
+        py={tab === 'log' && !entry ? 0 : 4}
+      >
         {loading && (
           <Flex align="center" gap={3} py={8}>
             <Spinner size="sm" />
             <Text color="text.secondary">Loading impact log…</Text>
           </Flex>
-        )}
-
-        {tab === 'log' && !entry && !loading && (
-          <Stack spacing={6}>
-            <Box
-              p={{ base: 5, md: 6 }}
-              rounded="2xl"
-              bg="surface.default"
-              boxShadow="card"
-            >
-              <Text
-                fontSize="xs"
-                letterSpacing="0.14em"
-                textTransform="uppercase"
-                color="brand.accent"
-                fontWeight="bold"
-                mb={1}
-              >
-                Two kinds of entry
-              </Text>
-              <Heading size="md" mb={1} letterSpacing="-0.02em">
-                Log your impact
-              </Heading>
-              <Text fontSize="sm" color="text.secondary" mb={5} maxW="54ch">
-                Improvement claims put verified dollars on the organisation register. ESG uses the
-                previous verifier + tier flow. They stay in separate buckets.
-              </Text>
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                {[
-                  {
-                    k: 'claim' as const,
-                    title: 'Log improvement',
-                    body: 'Measured before/after with baseline and evidence. Measure owner confirms by email before headline $.',
-                  },
-                  {
-                    k: 'esg' as const,
-                    title: 'Log ESG',
-                    body: 'Env / social / governance with verifier email, verification tiers, and auto USD - same as before.',
-                  },
-                ].map((card) => {
-                  const featured = card.k === 'claim'
-                  return (
-                    <Box
-                      key={card.k}
-                      p={5}
-                      rounded="2xl"
-                      bg={featured ? 'tint.brandPrimary' : 'surface.subtle'}
-                      boxShadow={featured ? 'md' : 'sm'}
-                      transition="box-shadow 0.2s ease, transform 0.2s ease"
-                      _hover={{
-                        boxShadow: featured ? 'card-elevated' : 'md',
-                        transform: 'translateY(-2px)',
-                      }}
-                    >
-                      <Text fontWeight="bold" mb={1.5} color="text.primary">
-                        {card.title}
-                      </Text>
-                      <Text fontSize="sm" color="text.secondary" mb={5} lineHeight="1.5">
-                        {card.body}
-                      </Text>
-                      <Button
-                        size="sm"
-                        colorScheme={featured ? 'primary' : impactGateReached ? 'orange' : undefined}
-                        variant={featured || impactGateReached ? 'solid' : 'ghost'}
-                        bg={featured || impactGateReached ? undefined : 'white'}
-                        boxShadow={featured ? undefined : 'sm'}
-                        onClick={() => {
-                          void startEntry(card.k)
-                        }}
-                      >
-                        {impactGateReached
-                          ? 'Upgrade to continue'
-                          : card.k === 'claim'
-                            ? 'Start a claim'
-                            : 'Log ESG'}
-                      </Button>
-                    </Box>
-                  )
-                })}
-              </SimpleGrid>
-            </Box>
-
-            <Box
-              px={{ base: 4, md: 5 }}
-              py={4}
-              rounded="2xl"
-              bg="surface.default"
-              boxShadow="sm"
-            >
-              <Flex align="center" justify="space-between" gap={3} flexWrap="wrap">
-                <Box>
-                  <Text
-                    fontSize="xs"
-                    letterSpacing="0.14em"
-                    textTransform="uppercase"
-                    color="brand.accent"
-                    fontWeight="bold"
-                    mb={1}
-                  >
-                    The claim journey
-                  </Text>
-                  <Heading size="sm" letterSpacing="-0.01em">
-                    How a claim moves once you submit it
-                  </Heading>
-                </Box>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  bg="surface.subtle"
-                  leftIcon={<Icon as={Info} boxSize={3.5} />}
-                  onClick={() => setShowJourney((v) => !v)}
-                  aria-expanded={showJourney}
-                >
-                  {showJourney ? 'Hide info' : 'Info'}
-                </Button>
-              </Flex>
-              <Collapse in={showJourney} animateOpacity>
-                <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={3} mt={4}>
-                  {CLAIM_JOURNEY_STEPS.map(([num, title, desc]) => (
-                    <Box
-                      key={num}
-                      p={3.5}
-                      rounded="xl"
-                      bg="surface.subtle"
-                      boxShadow="xs"
-                    >
-                      <Text fontSize="xs" color="brand.accent" fontWeight="bold" mb={0.5}>
-                        {num}
-                      </Text>
-                      <Text fontWeight="semibold" fontSize="sm" mb={1}>
-                        {title}
-                      </Text>
-                      <Text fontSize="xs" color="text.secondary" lineHeight="1.45">
-                        {desc}
-                      </Text>
-                    </Box>
-                  ))}
-                </SimpleGrid>
-              </Collapse>
-            </Box>
-
-            <Box
-              p={{ base: 5, md: 6 }}
-              rounded="2xl"
-              bg="surface.default"
-              boxShadow="sm"
-            >
-              <Text
-                fontSize="xs"
-                letterSpacing="0.14em"
-                textTransform="uppercase"
-                color="brand.accent"
-                fontWeight="bold"
-                mb={3}
-              >
-                Your entries
-              </Text>
-              {entries.length === 0 ? (
-                <Text fontSize="sm" color="text.secondary">
-                  Nothing logged yet. Start with an improvement claim or ESG contribution.
-                </Text>
-              ) : (
-                <Stack spacing={2.5}>
-                  {entries.slice(0, 12).map((e) => {
-                    const kind = entryKindOf(e)
-                    return (
-                      <Flex
-                        key={e.id}
-                        as="button"
-                        w="100%"
-                        textAlign="left"
-                        justify="space-between"
-                        gap={3}
-                        p={3.5}
-                        rounded="xl"
-                        bg="surface.subtle"
-                        boxShadow="xs"
-                        flexWrap="wrap"
-                        transition="background 0.15s ease, box-shadow 0.15s ease"
-                        _hover={{ bg: 'orange.50', boxShadow: 'sm' }}
-                        onClick={() => setOpenClaim(e)}
-                      >
-                        <Box>
-                          <HStack spacing={2} mb={0.5}>
-                            <Text fontWeight="semibold">{e.title}</Text>
-                            <Badge>{kind === 'claim' ? 'improvement' : kind}</Badge>
-                            {kind === 'claim' && e.claim?.tier != null && (
-                              <Badge colorScheme="purple">Tier {String(e.claim.tier)}</Badge>
-                            )}
-                            {kind === 'claim' && e.claimStatus === 'Submitted' && (
-                              <Badge colorScheme="blue">Awaiting confirmation</Badge>
-                            )}
-                          </HStack>
-                          <Text fontSize="xs" color="text.muted">
-                            {e.date} · {e.claimStatus || e.verificationStatus || 'pending'}
-                            {kind === 'esg' && e.esgQty != null
-                              ? ` · ${e.esgQty} ${e.esgMetric || 'units'}`
-                              : ''}
-                          </Text>
-                        </Box>
-                        <Text fontFamily="mono" fontSize="sm" color="black">
-                          {Number(e.usdValue)
-                            ? formatMoney(Number(e.usdValue))
-                            : kind === 'claim'
-                              ? '$0'
-                              : '-'}
-                        </Text>
-                      </Flex>
-                    )
-                  })}
-                </Stack>
-              )}
-            </Box>
-          </Stack>
         )}
 
         {tab === 'log' && entry === 'esg' && (
@@ -900,6 +863,7 @@ export const ImpactLogV2: React.FC = () => {
           <ImpactClaimWizardV4
             rates={rates}
             submitting={submitting}
+            initialDraft={claimDraft}
             onCancel={resetEntry}
             onSubmit={submitClaim}
           />
@@ -909,15 +873,6 @@ export const ImpactLogV2: React.FC = () => {
           <ImpactValueDashboard
             entries={entries}
             orgEntries={orgEntries}
-            rates={rates}
-            onHelp={setHelpKey}
-            onOpenClaim={setOpenClaim}
-          />
-        )}
-
-        {tab === 'waste' && (
-          <ImpactWastePanel
-            entries={orgEntries.length ? orgEntries : entries}
             rates={rates}
             onHelp={setHelpKey}
             onOpenClaim={setOpenClaim}
@@ -989,64 +944,6 @@ export const ImpactLogV2: React.FC = () => {
         )}
       </Box>
 
-      {impactGateReached && tab === 'log' && !entry && (
-        <Alert status="warning" rounded="lg" mb={2}>
-          <AlertIcon />
-          <Box>
-            <AlertTitle>Your free Impact Log chapter is complete</AlertTitle>
-            <AlertDescription>
-              You&apos;ve used both free entries. Keep the evidence flowing with Impact Log Pro
-              (about $5/mo) or unlock the full journey.
-            </AlertDescription>
-          </Box>
-          <Button ml={4} size="sm" colorScheme="orange" onClick={() => setUpgradeOpen(true)}>
-            Upgrade
-          </Button>
-        </Alert>
-      )}
-
-      {tab === 'log' && !entry && !impactGateReached && (
-        <Menu placement="top-end">
-          <Tooltip label="Quick actions" hasArrow>
-            <MenuButton
-              as={IconButton}
-              aria-label="Quick actions"
-              icon={<Icon as={Plus} boxSize={6} />}
-              colorScheme="primary"
-              rounded="full"
-              size="lg"
-              position="fixed"
-              bottom={{ base: 6, md: 8 }}
-              right={{ base: 5, md: 8 }}
-              zIndex={20}
-              boxShadow="lg"
-            />
-          </Tooltip>
-          <MenuList zIndex={21}>
-            <MenuItem onClick={() => startEntry('claim')}>Log improvement</MenuItem>
-            <MenuItem onClick={() => startEntry('esg')}>Log ESG</MenuItem>
-          </MenuList>
-        </Menu>
-      )}
-
-      {tab === 'log' && !entry && impactGateReached && (
-        <Tooltip label="Upgrade to add more Impact Log entries" hasArrow>
-          <IconButton
-            aria-label="Upgrade to continue logging"
-            icon={<Icon as={Plus} boxSize={6} />}
-            colorScheme="orange"
-            rounded="full"
-            size="lg"
-            position="fixed"
-            bottom={{ base: 6, md: 8 }}
-            right={{ base: 5, md: 8 }}
-            zIndex={20}
-            boxShadow="lg"
-            onClick={() => setUpgradeOpen(true)}
-          />
-        </Tooltip>
-      )}
-
       <Box
         borderTop="1px solid"
         borderColor="border.subtle"
@@ -1110,6 +1007,9 @@ export const ImpactLogV2: React.FC = () => {
         onChanged={() => {
           void reload()
           setOpenClaim(null)
+        }}
+        onDuplicate={(record) => {
+          void duplicateClaim(record)
         }}
       />
     </Box>

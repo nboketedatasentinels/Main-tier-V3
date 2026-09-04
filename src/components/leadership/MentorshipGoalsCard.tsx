@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Box, Button, Flex, Stack, Text, Textarea, useToast } from '@chakra-ui/react'
-import { Save } from 'lucide-react'
+import { Box, Button, Flex, HStack, Text, Textarea, useToast } from '@chakra-ui/react'
+import { ChevronLeft, ChevronRight, Save } from 'lucide-react'
 import {
   MENTORSHIP_GOALS_MAX_LENGTH,
   useMentorshipGoals,
@@ -20,7 +20,7 @@ type MentorshipGoalsCardProps = {
 
 const SPLIT = '\n\n'
 
-/** Shared “I'm trying to achieve…” editor — prompts vary by LIFT archetype. */
+/** Shared “I'm trying to achieve…” editor — one prompt at a time to reduce scroll. */
 export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   learnerId,
   mentorId = null,
@@ -37,19 +37,17 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
 
   const [answers, setAnswers] = useState<string[]>(['', '', ''])
   const [ready, setReady] = useState(false)
+  const [step, setStep] = useState(0)
 
   useEffect(() => {
     setReady(false)
+    setStep(0)
   }, [learnerId])
 
   useEffect(() => {
     if (!loading && !liftLoading && !ready) {
       const parts = goals.split(SPLIT)
-      setAnswers([
-        (parts[0] || '').trim(),
-        (parts[1] || '').trim(),
-        (parts[2] || '').trim(),
-      ])
+      setAnswers([(parts[0] || '').trim(), (parts[1] || '').trim(), (parts[2] || '').trim()])
       setReady(true)
     }
   }, [loading, liftLoading, ready, goals])
@@ -57,6 +55,9 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   const combined = answers.map((a) => a.trim()).filter(Boolean).join(SPLIT)
   const dirty = ready && combined !== goals.trim()
   const tooLong = combined.length > MENTORSHIP_GOALS_MAX_LENGTH
+  const prompt = prompts[step] || prompts[0]
+  const lastStep = step >= prompts.length - 1
+  const canAdvance = Boolean((answers[step] || '').trim())
 
   const handleSave = async () => {
     if (!dirty || tooLong || saving) return
@@ -65,10 +66,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       onSaved?.(combined)
       toast({
         title: 'Goal saved',
-        description:
-          audience === 'coach'
-            ? 'Learner notified. Also visible in Session Prep and Leadership Council.'
-            : 'Learner notified. Also visible in Session Prep and Leadership Council.',
+        description: 'Also visible in Session Prep and Leadership Council.',
         status: 'success',
         duration: 3200,
       })
@@ -83,57 +81,93 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
 
   return (
     <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" px={5} py={4}>
-      <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500">
-        {audience === 'coach' ? 'COACHING GOAL' : 'MENTORSHIP GOAL'}
-      </Text>
-      <Text mt={1} fontSize="md" fontWeight="700" color="#27062e">
-        {archetype ? `${archetype} · session prep answers` : "I'm trying to achieve…"}
-      </Text>
-      <Text mt={1} fontSize="sm" color="gray.600" mb={3}>
-        Answer the three prompts below. Your {audience === 'coach' ? 'coach' : 'mentor'} sees this in
-        Session Prep.
-      </Text>
-      <Stack spacing={4}>
-        {prompts.map((prompt, index) => (
-          <Box key={prompt.label}>
-            <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.06em" textTransform="uppercase">
-              {prompt.label}
-            </Text>
-            <Text fontSize="sm" color="gray.700" mt={1} mb={2}>
-              {prompt.question}
-            </Text>
-            <Textarea
-              value={answers[index] || ''}
-              onChange={(e) => {
-                const next = [...answers]
-                next[index] = e.target.value
-                setAnswers(next)
-              }}
-              minH="72px"
-              placeholder={prompt.placeholder}
-              borderColor="gray.300"
-              isDisabled={loading || liftLoading}
-              _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
+      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
+        <Box>
+          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500">
+            {audience === 'coach' ? 'COACHING GOAL' : 'MENTORSHIP GOAL'}
+          </Text>
+          <Text mt={1} fontSize="md" fontWeight="700" color="#27062e">
+            {archetype ? `${archetype} · session prep` : "I'm trying to achieve…"}
+          </Text>
+        </Box>
+        <HStack spacing={1}>
+          {prompts.map((_, i) => (
+            <Box
+              key={i}
+              w="8px"
+              h="8px"
+              rounded="full"
+              bg={i === step ? '#f4540c' : i < step || (answers[i] || '').trim() ? '#350e6f' : 'gray.200'}
             />
-          </Box>
-        ))}
-      </Stack>
+          ))}
+        </HStack>
+      </Flex>
+
+      {prompt && (
+        <Box>
+          <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.06em" textTransform="uppercase">
+            {step + 1}/{prompts.length} · {prompt.label}
+          </Text>
+          <Text fontSize="sm" color="gray.700" mt={1} mb={2}>
+            {prompt.question}
+          </Text>
+          <Textarea
+            value={answers[step] || ''}
+            onChange={(e) => {
+              const next = [...answers]
+              next[step] = e.target.value
+              setAnswers(next)
+            }}
+            minH="88px"
+            placeholder={prompt.placeholder}
+            borderColor="gray.300"
+            isDisabled={loading || liftLoading}
+            _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
+          />
+        </Box>
+      )}
+
       <Flex mt={3} justify="space-between" align="center" gap={3} flexWrap="wrap">
         <Text fontSize="xs" color={tooLong ? 'red.500' : 'gray.500'}>
           {combined.length}/{MENTORSHIP_GOALS_MAX_LENGTH}
         </Text>
-        <Button
-          size="sm"
-          leftIcon={<Save size={14} />}
-          bg="#350e6f"
-          color="white"
-          _hover={{ bg: '#27062e' }}
-          onClick={() => void handleSave()}
-          isDisabled={!dirty || tooLong}
-          isLoading={saving}
-        >
-          Save answers
-        </Button>
+        <HStack spacing={2}>
+          <Button
+            size="sm"
+            variant="ghost"
+            leftIcon={<ChevronLeft size={14} />}
+            onClick={() => setStep((s) => Math.max(0, s - 1))}
+            isDisabled={step === 0}
+          >
+            Back
+          </Button>
+          {!lastStep ? (
+            <Button
+              size="sm"
+              bg="#350e6f"
+              color="white"
+              rightIcon={<ChevronRight size={14} />}
+              _hover={{ bg: '#27062e' }}
+              onClick={() => setStep((s) => Math.min(prompts.length - 1, s + 1))}
+              isDisabled={!canAdvance}
+            >
+              Next
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              leftIcon={<Save size={14} />}
+              bg="#350e6f"
+              color="white"
+              _hover={{ bg: '#27062e' }}
+              onClick={() => void handleSave()}
+              isDisabled={!dirty || tooLong}
+              isLoading={saving}
+            >
+              Save answers
+            </Button>
+          )}
+        </HStack>
       </Flex>
     </Box>
   )

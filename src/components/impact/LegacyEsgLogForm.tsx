@@ -67,6 +67,14 @@ const VERIFICATION_MULTIPLIERS: Record<VerificationTier, number> = {
   'Tier 4: Third-Party Verified': 2.5,
 }
 
+/** Learner-facing labels — no “Tier N” wording. */
+const VERIFICATION_LABELS: Record<VerificationTier, string> = {
+  'Tier 1: Self-Reported': 'Self-reported',
+  'Tier 2: Partner Verified': 'Partner verified',
+  'Tier 3: Evidence Uploaded': 'Evidence uploaded',
+  'Tier 4: Third-Party Verified': 'Third-party verified',
+}
+
 const VERIFICATION_REQUIREMENTS: Record<
   VerificationTier,
   { evidenceLink: boolean; description: string }
@@ -185,14 +193,16 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({
     ? partnerValidation.partnerName
       ? `Partner verified with ${partnerValidation.partnerName}.`
       : 'Partner verification is available for your organization.'
-    : partnerValidation.message || 'Tier 2 verification requires partner program enrollment.'
+    : partnerValidation.message ||
+      'Partner verification requires partner program enrollment.'
 
   useEffect(() => {
     let mounted = true
     if (!profile?.companyId) {
       setPartnerValidation({
         status: 'invalid',
-        message: 'Tier 2 verification is available only for organizations enrolled in the partner program.',
+        message:
+          'Partner verification is available only for organizations enrolled in the partner program.',
       })
       return () => {
         mounted = false
@@ -493,7 +503,7 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({
           {
             title: 'Verification',
             rows: [
-              detail('Verification tier', verificationLevel),
+              detail('Verification level', VERIFICATION_LABELS[verificationLevel]),
               detail('Verification status', 'Pending verifier approval'),
               detail('Verifier name', trimmedVerifierName),
               detail('Verifier email', trimmedVerifierEmail),
@@ -785,7 +795,7 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({
         </Box>
 
         <FormControl>
-          <FormLabel>Verification tier</FormLabel>
+          <FormLabel>Verification level</FormLabel>
           <Select
             value={verificationLevel}
             onChange={(e) => setVerificationLevel(e.target.value as VerificationTier)}
@@ -796,13 +806,15 @@ export const LegacyEsgLogForm: React.FC<LegacyEsgLogFormProps> = ({
                 value={tier}
                 disabled={tier === 'Tier 2: Partner Verified' && !isTier2Eligible}
               >
-                {tier}
+                {VERIFICATION_LABELS[tier]}
               </option>
             ))}
           </Select>
           <FormHelperText>
             {VERIFICATION_REQUIREMENTS[verificationLevel].description}
-            {verificationLevel === 'Tier 2: Partner Verified' ? ` ${tier2HelperText}` : ''}
+            {verificationLevel === 'Tier 2: Partner Verified'
+              ? ` ${tier2HelperText.replace(/Tier 2 verification/gi, 'Partner verification')}`
+              : ''}
           </FormHelperText>
         </FormControl>
 

@@ -149,6 +149,8 @@ type Props = {
   submitting: boolean
   onCancel: () => void
   onSubmit: (payload: ClaimWizardSubmitPayload) => Promise<void>
+  /** Prefill from an existing claim (duplicate for new impact). */
+  initialDraft?: ClaimWizardDraft | null
 }
 
 const nn = (v: string | number | null | undefined) => {
@@ -184,6 +186,76 @@ export function blankClaimWizardDraft(): ClaimWizardDraft {
     goalDir: null,
     intervention: '',
     periods: 3,
+    ownerName: '',
+    ownerEmail: '',
+    financeName: '',
+    financeEmail: '',
+    realized: false,
+    attest: false,
+    sustained: true,
+  }
+}
+
+/** Build a wizard draft from a saved claim so the learner can duplicate and tweak. */
+// eslint-disable-next-line react-refresh/only-export-components -- helper for Impact Log parent
+export function draftFromImpactRecord(entry: {
+  title?: string
+  description?: string
+  evidenceLink?: string
+  claim?: Record<string, unknown> | null
+}): ClaimWizardDraft {
+  const c = entry.claim || {}
+  const cat = (c.cat as ClaimFlowCat) || 'eff'
+  const storedFamily = String(c.family || '')
+  const fam: ClaimFlowFam =
+    storedFamily === 'volume' || storedFamily === 'people'
+      ? 'people'
+      : storedFamily === 'cost' || storedFamily === 'money'
+        ? 'money'
+        : storedFamily === 'quality' || storedFamily === 'items'
+          ? 'items'
+          : storedFamily === 'revenue'
+            ? 'revenue'
+            : storedFamily === 'time'
+              ? 'time'
+              : 'time'
+  const goalRaw = c.goalDir
+  const goalDir: GoalDirection | null =
+    goalRaw === 'up' || goalRaw === 'down'
+      ? goalRaw
+      : goalRaw === 'increase'
+        ? 'up'
+        : goalRaw === 'decrease'
+          ? 'down'
+          : null
+  const presetId = typeof c.presetId === 'string' && c.presetId ? c.presetId : 'CUSTOM'
+
+  return {
+    ...blankClaimWizardDraft(),
+    step: 2,
+    cat,
+    waste: String(c.waste || 'waiting'),
+    growth: String(c.growth || 'retain'),
+    preset: presetId,
+    name: String(entry.title || c.measure || '').trim(),
+    where: String(c.scope || ''),
+    unit: String(c.unit || ''),
+    fam,
+    before: c.base != null ? String(c.base) : '',
+    after: c.post != null ? String(c.post) : '',
+    count: c.occ != null ? String(c.occ) : '',
+    months: Number(c.months || 12) || 12,
+    lockedBefore: c.lockedBefore !== false,
+    locked: Boolean(c.locked),
+    evidenceRef: String(c.evidence || entry.evidenceLink || ''),
+    evidence: String(c.source || c.evidenceType || ''),
+    moneyGained: c.moneyGained != null && Number(c.moneyGained) ? String(c.moneyGained) : '',
+    valueEvidenceLink: String(c.valueEvidenceLink || entry.evidenceLink || ''),
+    target: c.target != null ? String(c.target) : '',
+    goalDir,
+    intervention: String(c.intervention || entry.description || ''),
+    periods: Number(c.windowP || 3) || 3,
+    // Fresh confirmation contacts for the new claim
     ownerName: '',
     ownerEmail: '',
     financeName: '',
@@ -325,15 +397,27 @@ type OrgMemberOption = {
   email: string
 }
 
-export const ImpactClaimWizardV4: React.FC<Props> = ({ rates, submitting, onCancel, onSubmit }) => {
+export const ImpactClaimWizardV4: React.FC<Props> = ({
+  rates,
+  submitting,
+  onCancel,
+  onSubmit,
+  initialDraft = null,
+}) => {
   const toast = useToast()
   const { user } = useAuth()
-  const [draft, setDraft] = useState<ClaimWizardDraft>(blankClaimWizardDraft)
+  const [draft, setDraft] = useState<ClaimWizardDraft>(() =>
+    initialDraft ? { ...initialDraft } : blankClaimWizardDraft(),
+  )
   const [helpKey, setHelpKey] = useState<ClaimFlowHelpKey | null>(null)
   const [orgMembers, setOrgMembers] = useState<OrgMemberOption[]>([])
   const [orgMembersLoading, setOrgMembersLoading] = useState(true)
   const [orgMembersError, setOrgMembersError] = useState<string | null>(null)
   const patch = (partial: Partial<ClaimWizardDraft>) => setDraft((d) => ({ ...d, ...partial }))
+
+  useEffect(() => {
+    if (initialDraft) setDraft({ ...initialDraft })
+  }, [initialDraft])
 
   useEffect(() => {
     let cancelled = false

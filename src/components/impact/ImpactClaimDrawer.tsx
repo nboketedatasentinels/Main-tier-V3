@@ -8,11 +8,13 @@ import {
   DrawerBody,
   DrawerCloseButton,
   DrawerContent,
+  DrawerFooter,
   DrawerHeader,
   DrawerOverlay,
   Flex,
   Heading,
   HStack,
+  Link,
   Stack,
   Text,
   Textarea,
@@ -38,6 +40,22 @@ type Props = {
   canModerate: boolean
   onClose: () => void
   onChanged: () => void
+  /** Start a new claim prefilled from this one. */
+  onDuplicate?: (entry: ImpactLogRecord) => void
+}
+
+const isHttpUrl = (s: string) => /^https?:\/\//i.test(s.trim())
+
+const approvalLabel = (entry: ImpactLogRecord, tier: number | null) => {
+  const st = String(entry.claimStatus || entry.verificationStatus || '')
+  if (st === 'Reversed') return { label: 'Reversed', color: 'red' as const }
+  if (st === 'Returned for Revision') return { label: 'Needs revision', color: 'orange' as const }
+  if (st === 'Recognized' || entry.verificationStatus === 'approved' || tier === 3) {
+    return { label: 'Approved', color: 'green' as const }
+  }
+  if (st === 'Submitted') return { label: 'Awaiting confirmation', color: 'blue' as const }
+  if (st) return { label: st, color: 'purple' as const }
+  return { label: 'Pending', color: 'gray' as const }
 }
 
 export const ImpactClaimDrawer: React.FC<Props> = ({
@@ -46,6 +64,7 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
   canModerate,
   onClose,
   onChanged,
+  onDuplicate,
 }) => {
   const toast = useToast()
   const [busy, setBusy] = useState(false)
@@ -66,6 +85,16 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
     entry.claim?.cat === 'rev'
       ? IMPACT_GROWTH.find((g) => g.k === entry.claim?.growth)?.n
       : IMPACT_WASTES.find((w) => w.k === entry.claim?.waste)?.n
+  const approval = approvalLabel(entry, v?.tier ?? (Number(entry.claim?.tier ?? 0) || null))
+  const intervention = String(entry.claim?.intervention || entry.description || '').trim()
+  const evidenceType = String(entry.claim?.source || entry.claim?.evidenceType || '').trim()
+  const evidenceRef = String(entry.claim?.evidence || entry.evidenceLink || '').trim()
+  const valueLink = String(entry.claim?.valueEvidenceLink || '').trim()
+  const moneyGained = Number(entry.claim?.moneyGained || 0)
+  const goalDir = String(entry.claim?.goalDir || '')
+  const where = String(entry.claim?.scope || '').trim()
+  const isClaim =
+    entry.entryKind === 'claim' || (!entry.entryKind && entry.categoryGroup === 'business')
 
   const run = async (fn: () => Promise<void>, ok: string) => {
     setBusy(true)
@@ -177,6 +206,17 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
 
   const at = CLAIM_STATE_ORDER.indexOf(status as (typeof CLAIM_STATE_ORDER)[number])
 
+  const DetailRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <Box py={2} borderBottom="1px solid" borderColor="border.subtle">
+      <Text fontSize="xs" color="text.muted" fontWeight="bold" textTransform="uppercase" mb={0.5}>
+        {label}
+      </Text>
+      <Text fontSize="sm" whiteSpace="pre-wrap">
+        {children}
+      </Text>
+    </Box>
+  )
+
   return (
     <Drawer isOpen={Boolean(entry)} placement="right" size="md" onClose={onClose}>
       <DrawerOverlay />
@@ -192,9 +232,11 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
         </DrawerHeader>
         <DrawerBody>
           <HStack spacing={2} flexWrap="wrap" mb={4}>
-            {v && <Badge colorScheme="purple">Tier {Number(entry.claim?.tier ?? v.tier)}</Badge>}
+            <Badge colorScheme={approval.color}>{approval.label}</Badge>
             {v && <Badge>Baseline {v.grade}</Badge>}
-            {entry.claim?.bucket != null && <Badge colorScheme="green">{String(entry.claim.bucket)}</Badge>}
+            {entry.claim?.bucket != null && (
+              <Badge colorScheme="green">{String(entry.claim.bucket)}</Badge>
+            )}
             <Badge variant="outline">
               {cat?.n || '-'} · {sub || '-'}
             </Badge>
@@ -221,6 +263,60 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
               <Text fontSize="sm">{String(entry.claim.reverseReason)}</Text>
             </Box>
           )}
+
+          <Text fontSize="xs" fontWeight="bold" color="brand.accent" mb={1} letterSpacing="0.06em">
+            WHAT YOU WROTE
+          </Text>
+          <Box mb={4} p={3} bg="surface.subtle" rounded="lg">
+            {intervention ? (
+              <DetailRow label="What changed">{intervention}</DetailRow>
+            ) : (
+              <Text fontSize="sm" color="text.secondary" mb={2}>
+                No written description on this entry.
+              </Text>
+            )}
+            {where ? <DetailRow label="Where">{where}</DetailRow> : null}
+            {goalDir ? (
+              <DetailRow label="Goal direction">
+                {goalDir === 'up' || goalDir === 'increase'
+                  ? 'Increase from baseline'
+                  : 'Decrease from baseline'}
+              </DetailRow>
+            ) : null}
+            {moneyGained > 0 ? (
+              <DetailRow label="Money gained / saved (your estimate)">
+                {formatMoney(moneyGained)} / month
+              </DetailRow>
+            ) : null}
+            {evidenceType ? <DetailRow label="Evidence type">{evidenceType}</DetailRow> : null}
+            {evidenceRef ? (
+              <DetailRow label="Evidence reference">
+                {isHttpUrl(evidenceRef) ? (
+                  <Link href={evidenceRef.trim()} isExternal color="brand.primary">
+                    {evidenceRef}
+                  </Link>
+                ) : (
+                  evidenceRef
+                )}
+              </DetailRow>
+            ) : null}
+            {valueLink ? (
+              <DetailRow label="Value evidence link">
+                {isHttpUrl(valueLink) ? (
+                  <Link href={valueLink.trim()} isExternal color="brand.primary">
+                    {valueLink}
+                  </Link>
+                ) : (
+                  valueLink
+                )}
+              </DetailRow>
+            ) : null}
+            {(entry.verifierName || entry.ownerEmail) && (
+              <DetailRow label="Measure owner">
+                {[entry.verifierName, entry.ownerEmail].filter(Boolean).join(' · ')}
+              </DetailRow>
+            )}
+          </Box>
 
           {inputs && (
             <Box mb={4}>
@@ -249,7 +345,7 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
                     Net / period
                   </Text>
                   <Text fontWeight="bold" color="brand.primary">
-                    {v && v.tier > 1 ? formatMoney(v.net) : '-'}
+                    {approval.label === 'Approved' && v ? formatMoney(v.net) : '—'}
                   </Text>
                 </Box>
               </Flex>
@@ -280,13 +376,13 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
           {v && (
             <Box mb={4} p={3} border="1px solid" borderColor="border.subtle" rounded="lg">
               <Text fontSize="xs" fontWeight="bold" color="text.muted" mb={2}>
-                WATERFALL
+                VALUE BREAKDOWN
               </Text>
               {[
                 ['Gross', v.gross],
                 [`After attribution ${inputs?.attribution ?? 100}%`, v.afterA],
                 [`After realisation`, v.afterR],
-                [`After confidence (Tier ${v.tier})`, v.afterC],
+                [`After confidence`, v.afterC],
                 ['Less cost to deliver', -v.cost],
                 ['Net', v.net],
               ].map(([label, val]) => (
@@ -301,7 +397,15 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
           <Text fontSize="xs" fontWeight="bold" color="text.muted" mb={2}>
             AUDIT TRAIL
           </Text>
-          <Box fontSize="xs" fontFamily="mono" color="text.secondary" pl={3} borderLeft="2px solid" borderColor="border.subtle" mb={4}>
+          <Box
+            fontSize="xs"
+            fontFamily="mono"
+            color="text.secondary"
+            pl={3}
+            borderLeft="2px solid"
+            borderColor="border.subtle"
+            mb={4}
+          >
             {audit.length === 0 ? (
               <Text>No audit lines yet.</Text>
             ) : (
@@ -332,7 +436,13 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
                     <Button size="sm" colorScheme="primary" isLoading={busy} onClick={() => void advance()}>
                       Advance status
                     </Button>
-                    <Button size="sm" variant="outline" colorScheme="orange" isLoading={busy} onClick={() => void sendBack()}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorScheme="orange"
+                      isLoading={busy}
+                      onClick={() => void sendBack()}
+                    >
                       Send back
                     </Button>
                   </>
@@ -347,7 +457,13 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
                     <Button size="sm" colorScheme="green" isLoading={busy} onClick={() => void check90(true)}>
                       90 day: holding
                     </Button>
-                    <Button size="sm" colorScheme="red" variant="outline" isLoading={busy} onClick={() => void check90(false)}>
+                    <Button
+                      size="sm"
+                      colorScheme="red"
+                      variant="outline"
+                      isLoading={busy}
+                      onClick={() => void check90(false)}
+                    >
                       90 day: not holding
                     </Button>
                   </>
@@ -356,6 +472,18 @@ export const ImpactClaimDrawer: React.FC<Props> = ({
             </>
           )}
         </DrawerBody>
+        {isClaim && onDuplicate && (
+          <DrawerFooter borderTopWidth="1px">
+            <Button
+              w="100%"
+              colorScheme="primary"
+              variant="outline"
+              onClick={() => onDuplicate(entry)}
+            >
+              Duplicate for new impact
+            </Button>
+          </DrawerFooter>
+        )}
       </DrawerContent>
     </Drawer>
   )

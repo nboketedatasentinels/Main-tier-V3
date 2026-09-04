@@ -847,19 +847,7 @@ export const UsersManagementTab = ({ users: propUsers, loading: propLoading }: U
 
   return (
     <Stack spacing={6}>
-      <Box
-        position="sticky"
-        top={{ base: '48px', md: '52px' }}
-        zIndex={11}
-        bg="white"
-        mx={{ base: -1, md: 0 }}
-        px={{ base: 1, md: 0 }}
-        pt={2}
-        pb={4}
-        borderBottom="1px solid"
-        borderColor="gray.100"
-        boxShadow="0 8px 16px -12px rgba(39, 6, 46, 0.35)"
-      >
+      <Box>
         <SimpleGrid columns={[2, 3, 3, 6]} spacing={4} mb={4}>
           <MetricCard label="Free Users" value={roleCounts.free} icon={ShieldCheck} helper="Learners on the free tier." />
           <MetricCard label="Paid Users" value={roleCounts.paid} icon={ShieldCheck} helper="Learners on a paid membership." />

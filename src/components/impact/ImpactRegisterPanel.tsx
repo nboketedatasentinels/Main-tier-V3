@@ -32,9 +32,12 @@ type Props = {
   onOpenClaim: (e: ImpactLogRecord) => void
 }
 
+const isApproved = (e: ImpactLogRecord) =>
+  e.claimStatus === 'Recognized' || e.verificationStatus === 'approved'
+
 export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, onOpenClaim }) => {
   const [status, setStatus] = useState('All')
-  const [tier, setTier] = useState('All')
+  const [approval, setApproval] = useState('All')
   const [kind, setKind] = useState('All')
 
   const rows = useMemo(() => {
@@ -43,14 +46,12 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
       if (kind !== 'All' && k !== kind) return false
       const st = e.claimStatus || e.verificationStatus || ''
       if (status !== 'All' && st !== status) return false
-      if (tier !== 'All') {
-        const inputs = claimInputsFromRecord(e)
-        const t = inputs ? valuation(inputs, rates).tier : Number(e.claim?.tier || 0)
-        if (String(t) !== tier) return false
-      }
+      if (approval === 'Approved' && !isApproved(e)) return false
+      if (approval === 'Awaiting' && (isApproved(e) || st === 'Reversed')) return false
+      if (approval === 'Reversed' && st !== 'Reversed') return false
       return true
     })
-  }, [entries, status, tier, kind, rates])
+  }, [entries, status, approval, kind])
 
   const statuses = [
     'All',
@@ -65,8 +66,8 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
           <ImpactHelpButton k="journey" onOpen={onHelp} />
         </Heading>
         <Text fontSize="sm" color="text.secondary">
-          Every improvement claim and ESG entry. Open a claim to review answers, advance status, or
-          send it back. Measure owners also confirm by email via the link sent on submit.
+          Every improvement claim and ESG entry. Click a row to see what you wrote, evidence, and
+          status — or duplicate it for a new impact.
         </Text>
       </Box>
 
@@ -81,10 +82,10 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
             ))}
           </Select>
         </FormControl>
-        <FormControl maxW="140px">
-          <FormLabel fontSize="xs">Tier</FormLabel>
-          <Select size="sm" value={tier} onChange={(e) => setTier(e.target.value)}>
-            {['All', '3', '2', '1'].map((t) => (
+        <FormControl maxW="160px">
+          <FormLabel fontSize="xs">Approval</FormLabel>
+          <Select size="sm" value={approval} onChange={(e) => setApproval(e.target.value)}>
+            {['All', 'Approved', 'Awaiting', 'Reversed'].map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
@@ -96,7 +97,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
           <Select size="sm" value={kind} onChange={(e) => setKind(e.target.value)}>
             {['All', 'claim', 'activity', 'esg'].map((t) => (
               <option key={t} value={t}>
-                {t}
+                {t === 'claim' ? 'improvement' : t}
               </option>
             ))}
           </Select>
@@ -115,6 +116,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
               : IMPACT_WASTES.find((w) => w.k === e.claim?.waste)?.n
           const st = String(e.claimStatus || e.verificationStatus || '')
           const at = CLAIM_STATE_ORDER.indexOf(st as (typeof CLAIM_STATE_ORDER)[number])
+          const approved = isApproved(e)
 
           return (
             <Flex
@@ -137,15 +139,17 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                   <Text fontFamily="mono" fontSize="xs" color="text.muted">
                     {e.id.slice(0, 8)}
                   </Text>
-                  <Badge>{k}</Badge>
-                  {v && <Badge colorScheme="purple">Tier {v.tier}</Badge>}
-                  <Badge variant="outline">{st || '-'}</Badge>
+                  <Badge>{k === 'claim' ? 'improvement' : k}</Badge>
+                  <Badge colorScheme={approved ? 'green' : st === 'Reversed' ? 'red' : 'blue'}>
+                    {approved ? 'Approved' : st === 'Submitted' ? 'Awaiting confirmation' : st || 'Pending'}
+                  </Badge>
                 </HStack>
                 <Text fontWeight="semibold">{e.title}</Text>
-                <Text fontSize="xs" color="text.muted">
+                <Text fontSize="xs" color="text.muted" noOfLines={2}>
                   {e.date}
                   {cat ? ` · ${cat.n}` : ''}
                   {sub ? ` · ${sub}` : ''}
+                  {e.description ? ` · ${e.description}` : ''}
                 </Text>
                 {k === 'claim' && at >= 0 && (
                   <HStack spacing={1} mt={2}>
@@ -163,11 +167,13 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
                 )}
               </Box>
               <Text fontFamily="mono" fontSize="sm">
-                {k === 'claim' && v && v.tier > 1 && st !== 'Reversed'
+                {k === 'claim' && approved && v
                   ? formatMoney(v.net)
-                  : k === 'esg'
-                    ? 'not valued'
-                    : '-'}
+                  : k === 'claim' && Number(e.usdValue || e.claim?.net || 0)
+                    ? `~${formatMoney(Number(e.usdValue || e.claim?.net || 0))}`
+                    : k === 'esg'
+                      ? 'not valued'
+                      : '—'}
               </Text>
             </Flex>
           )
@@ -179,8 +185,7 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
         )}
       </Stack>
       <Text fontSize="xs" color="text.muted">
-        {rows.length} of {entries.length} entries. Click a row for the record, waterfall, and audit
-        trail.
+        {rows.length} of {entries.length} entries. Click a row to open what you submitted.
       </Text>
     </Stack>
   )
