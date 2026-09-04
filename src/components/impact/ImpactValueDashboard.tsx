@@ -1,5 +1,14 @@
 import React, { useMemo } from 'react'
-import { Box, Flex, Progress, SimpleGrid, Stack, Text } from '@chakra-ui/react'
+import { Box, Flex, Icon, Progress, SimpleGrid, Stack, Text } from '@chakra-ui/react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  BarChart3,
+  CheckCircle2,
+  FolderTree,
+  Leaf,
+  PieChart as PieChartIcon,
+  Trophy,
+} from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
 import {
   IMPACT_CATS,
@@ -28,6 +37,167 @@ const PIE_COLORS = {
   avoidance: '#350e6f',
   capacity: '#eab130',
 } as const
+
+type TileTheme = {
+  iconBg: string
+  iconShadow: string
+  ornamentBg: string
+  hoverShadow: string
+  hoverBorder: string
+}
+
+const tileThemes = {
+  purple: {
+    iconBg: '#350e6f',
+    iconShadow: '0 4px 12px rgba(53, 14, 111, 0.3)',
+    ornamentBg: 'purple.50',
+    hoverShadow: '0 8px 25px rgba(139, 92, 246, 0.15)',
+    hoverBorder: 'purple.200',
+  },
+  orange: {
+    iconBg: 'linear-gradient(135deg, #f4540c 0%, #c2410c 100%)',
+    iconShadow: '0 4px 12px rgba(244, 84, 12, 0.3)',
+    ornamentBg: 'orange.50',
+    hoverShadow: '0 8px 25px rgba(244, 84, 12, 0.15)',
+    hoverBorder: 'orange.200',
+  },
+  green: {
+    iconBg: 'linear-gradient(135deg, #047857 0%, #065f46 100%)',
+    iconShadow: '0 4px 12px rgba(4, 120, 87, 0.3)',
+    ornamentBg: 'green.50',
+    hoverShadow: '0 8px 25px rgba(16, 185, 129, 0.15)',
+    hoverBorder: 'green.200',
+  },
+  yellow: {
+    iconBg: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+    iconShadow: '0 4px 12px rgba(217, 119, 6, 0.3)',
+    ornamentBg: 'yellow.50',
+    hoverShadow: '0 8px 25px rgba(217, 119, 6, 0.15)',
+    hoverBorder: 'yellow.200',
+  },
+} as const satisfies Record<string, TileTheme>
+
+const DashCard = ({
+  label,
+  icon,
+  theme,
+  help,
+  children,
+}: {
+  label: string
+  icon: LucideIcon
+  theme: keyof typeof tileThemes
+  help?: React.ReactNode
+  children: React.ReactNode
+}) => {
+  const styles = tileThemes[theme]
+  return (
+    <Box
+      p={5}
+      bg="white"
+      borderRadius="xl"
+      border="1px solid"
+      borderColor="gray.100"
+      boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+      _hover={{
+        transform: 'translateY(-2px)',
+        boxShadow: styles.hoverShadow,
+        borderColor: styles.hoverBorder,
+      }}
+      transition="all 0.3s ease"
+      position="relative"
+      overflow="hidden"
+    >
+      <Box
+        position="absolute"
+        top={0}
+        right={0}
+        w="60px"
+        h="60px"
+        bg={styles.ornamentBg}
+        borderRadius="0 0 0 100%"
+        pointerEvents="none"
+      />
+      <Flex w={10} h={10} bg={styles.iconBg} borderRadius="xl" align="center" justify="center" mb={3} boxShadow={styles.iconShadow} position="relative">
+        <Icon as={icon} boxSize={5} color="white" />
+      </Flex>
+      <Flex align="center" gap={1} mb={3} position="relative">
+        <Text
+          fontSize="xs"
+          color="gray.500"
+          fontWeight="semibold"
+          textTransform="uppercase"
+          letterSpacing="wide"
+        >
+          {label}
+        </Text>
+        {help}
+      </Flex>
+      <Box position="relative">{children}</Box>
+    </Box>
+  )
+}
+
+const MiniStat = ({
+  label,
+  value,
+  sub,
+  theme,
+}: {
+  label: string
+  value: string
+  sub?: string
+  theme: keyof typeof tileThemes
+}) => {
+  const styles = tileThemes[theme]
+  return (
+    <Box
+      p={3}
+      bg="white"
+      borderRadius="xl"
+      border="1px solid"
+      borderColor="gray.100"
+      boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+      position="relative"
+      overflow="hidden"
+      _hover={{
+        transform: 'translateY(-1px)',
+        boxShadow: styles.hoverShadow,
+        borderColor: styles.hoverBorder,
+      }}
+      transition="all 0.3s ease"
+    >
+      <Box
+        position="absolute"
+        top={0}
+        right={0}
+        w="36px"
+        h="36px"
+        bg={styles.ornamentBg}
+        borderRadius="0 0 0 100%"
+        pointerEvents="none"
+      />
+      <Text
+        fontSize="10px"
+        textTransform="uppercase"
+        fontWeight="bold"
+        color="gray.500"
+        letterSpacing="0.06em"
+        position="relative"
+      >
+        {label}
+      </Text>
+      <Text fontSize="md" fontWeight="800" color="gray.800" mt={0.5} position="relative" lineHeight="1.2">
+        {value}
+      </Text>
+      {sub ? (
+        <Text fontSize="10px" color="gray.500" mt={0.5} position="relative">
+          {sub}
+        </Text>
+      ) : null}
+    </Box>
+  )
+}
 
 const isClaim = (e: ImpactLogRecord) =>
   e.entryKind === 'claim' || (!e.entryKind && e.categoryGroup === 'business')
@@ -145,37 +315,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
 
   return (
     <Stack spacing={5}>
-      {/* Hero: your savings — light surface for contrast */}
-      <Box
-        p={{ base: 4, md: 6 }}
-        rounded="2xl"
-        border="1px solid"
-        borderColor="gray.200"
-        boxShadow="sm"
-        overflow="hidden"
-        position="relative"
-        bgGradient="linear(135deg, #FFFFFF 0%, #FBF8FC 45%, #F7F0FA 100%)"
+      <DashCard
+        label="Your savings"
+        icon={PieChartIcon}
+        theme="purple"
+        help={<ImpactHelpButton k="buckets" onOpen={onHelp} />}
       >
-        <Box
-          position="absolute"
-          top={0}
-          left={0}
-          right={0}
-          h="4px"
-          bgGradient="linear(to-r, #350e6f, #f4540c, #eab130)"
-        />
-        <Flex align="center" gap={1} mb={2}>
-          <Text
-            fontSize="xs"
-            textTransform="uppercase"
-            letterSpacing="0.1em"
-            fontWeight="bold"
-            color="#350e6f"
-          >
-            Your savings
-          </Text>
-          <ImpactHelpButton k="buckets" onOpen={onHelp} />
-        </Flex>
         <Flex
           direction={{ base: 'column', md: 'row' }}
           align={{ base: 'stretch', md: 'center' }}
@@ -186,12 +331,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               fontSize={{ base: '3xl', md: '4xl' }}
               fontWeight="800"
               lineHeight="1.1"
-              color="#27062e"
+              color="gray.800"
               letterSpacing="-0.02em"
             >
               {formatMoney(headline)}
             </Text>
-            <Text fontSize="sm" color="gray.600" mt={2} maxW="440px" lineHeight="1.5">
+            <Text fontSize="sm" color="gray.500" mt={2} maxW="440px" lineHeight="1.5">
               Approved cash + cost avoidance. Annual run-rate{' '}
               <Box as="span" fontWeight="bold" color="#b45309">
                 {formatMoney(annualRun)}
@@ -199,51 +344,14 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               .
             </Text>
             <SimpleGrid columns={3} spacing={3} mt={5} maxW="440px">
-              <Box
-                p={3}
-                rounded="lg"
-                bg="white"
-                border="1px solid"
-                borderColor="orange.100"
-              >
-                <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
-                  Cash
-                </Text>
-                <Text fontSize="md" fontWeight="800" color="#f4540c" mt={0.5}>
-                  {formatMoneyK(cash)}
-                </Text>
-              </Box>
-              <Box
-                p={3}
-                rounded="lg"
-                bg="white"
-                border="1px solid"
-                borderColor="purple.100"
-              >
-                <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
-                  Avoidance
-                </Text>
-                <Text fontSize="md" fontWeight="800" color="#350e6f" mt={0.5}>
-                  {formatMoneyK(avoid)}
-                </Text>
-              </Box>
-              <Box
-                p={3}
-                rounded="lg"
-                bg="white"
-                border="1px solid"
-                borderColor="yellow.200"
-              >
-                <Text fontSize="10px" textTransform="uppercase" fontWeight="bold" color="gray.500" letterSpacing="0.06em">
-                  Capacity
-                </Text>
-                <Text fontSize="md" fontWeight="800" color="#92600a" mt={0.5}>
-                  {capHours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs
-                </Text>
-                <Text fontSize="10px" color="gray.500" mt={0.5}>
-                  ~{formatMoneyK(capacity$)} indicative
-                </Text>
-              </Box>
+              <MiniStat label="Cash" value={formatMoneyK(cash)} theme="orange" />
+              <MiniStat label="Avoidance" value={formatMoneyK(avoid)} theme="purple" />
+              <MiniStat
+                label="Capacity"
+                value={`${capHours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs`}
+                sub={`~${formatMoneyK(capacity$)} indicative`}
+                theme="yellow"
+              />
             </SimpleGrid>
           </Box>
 
@@ -255,10 +363,23 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             bg="white"
             border="1px solid"
             borderColor="gray.100"
+            boxShadow="0 2px 8px rgba(0,0,0,0.04)"
             display="flex"
             alignItems="center"
             justifyContent="center"
+            position="relative"
+            overflow="hidden"
           >
+            <Box
+              position="absolute"
+              top={0}
+              right={0}
+              w="48px"
+              h="48px"
+              bg="orange.50"
+              borderRadius="0 0 0 100%"
+              pointerEvents="none"
+            />
             {pieData.length === 0 ? (
               <Text fontSize="sm" color="gray.500" textAlign="center" px={4}>
                 No approved savings yet
@@ -296,54 +417,39 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             )}
           </Box>
         </Flex>
-      </Box>
+      </DashCard>
 
-      {/* Submitted vs approved */}
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-        <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
-          <Text fontSize="xs" fontWeight="bold" color="brand.accent" mb={3}>
-            CLAIMS · SUBMITTED VS APPROVED
-          </Text>
+        <DashCard label="Claims · submitted vs approved" icon={CheckCircle2} theme="orange">
           <Flex justify="space-between" mb={2}>
             <Box>
-              <Text fontSize="2xl" fontWeight="bold">
+              <Text fontSize="2xl" fontWeight="bold" color="gray.800" lineHeight="1.1">
                 {submittedCount}
               </Text>
-              <Text fontSize="xs" color="text.muted">
+              <Text fontSize="xs" color="gray.500">
                 Submitted
               </Text>
             </Box>
             <Box textAlign="right">
-              <Text fontSize="2xl" fontWeight="bold" color="brand.accent">
+              <Text fontSize="2xl" fontWeight="bold" color="#f4540c" lineHeight="1.1">
                 {approvedCount}
               </Text>
-              <Text fontSize="xs" color="text.muted">
+              <Text fontSize="xs" color="gray.500">
                 Approved
               </Text>
             </Box>
           </Flex>
-          <Progress
-            value={approvalPct}
-            size="md"
-            rounded="full"
-            colorScheme="orange"
-            bg="gray.100"
-          />
-          <Text fontSize="xs" color="text.secondary" mt={2}>
+          <Progress value={approvalPct} size="md" rounded="full" colorScheme="orange" bg="gray.100" />
+          <Text fontSize="xs" color="gray.500" mt={2}>
             {approvalPct}% of submitted claims approved
-            {awaitingApproval > 0
-              ? ` · ${formatMoneyK(awaitingApproval)} awaiting approval`
-              : ''}
+            {awaitingApproval > 0 ? ` · ${formatMoneyK(awaitingApproval)} awaiting approval` : ''}
           </Text>
-        </Box>
+        </DashCard>
 
-        <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl" bg="surface.default">
-          <Text fontSize="xs" fontWeight="bold" color="brand.accent" mb={2}>
-            SAVINGS BY MONTH
-          </Text>
+        <DashCard label="Savings by month" icon={BarChart3} theme="purple">
           {months.length === 0 ? (
             <Flex h="120px" align="center" justify="center">
-              <Text fontSize="sm" color="text.secondary">
+              <Text fontSize="sm" color="gray.500">
                 No monthly savings yet.
               </Text>
             </Flex>
@@ -351,46 +457,44 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             <Flex align="flex-end" gap={2} h="120px">
               {months.map(([m, v]) => (
                 <Flex key={m} flex={1} direction="column" align="center" h="100%" justify="flex-end">
-                  <Text fontSize="10px" color="text.muted" mb={1}>
+                  <Text fontSize="10px" color="gray.500" mb={1}>
                     {v ? formatMoneyK(v) : ''}
                   </Text>
                   <Box
                     w="100%"
                     h={`${Math.max(6, (v / maxMonth) * 100)}px`}
-                    bg="brand.primary"
+                    bg="#350e6f"
                     rounded="sm"
                     transition="height 0.3s ease"
                   />
-                  <Text fontSize="10px" color="text.muted" mt={1}>
+                  <Text fontSize="10px" color="gray.500" mt={1}>
                     {m.slice(5)}
                   </Text>
                 </Flex>
               ))}
             </Flex>
           )}
-        </Box>
+        </DashCard>
       </SimpleGrid>
 
-      {/* Where savings come from */}
-      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl">
-        <Flex align="center" mb={1} gap={1}>
-          <Text fontSize="xs" fontWeight="bold" color="brand.accent">
-            WHERE YOUR SAVINGS COME FROM
-          </Text>
-          <ImpactHelpButton k="waste" onOpen={onHelp} />
-        </Flex>
-        <Text fontSize="sm" color="text.secondary" mb={4}>
+      <DashCard
+        label="Where your savings come from"
+        icon={Leaf}
+        theme="green"
+        help={<ImpactHelpButton k="waste" onOpen={onHelp} />}
+      >
+        <Text fontSize="sm" color="gray.500" mb={4}>
           Approved claims by waste type and growth type.
         </Text>
 
         {wasteWithValue.length === 0 && sumGrowth.every((g) => !g.count) ? (
-          <Text fontSize="sm" color="text.secondary">
+          <Text fontSize="sm" color="gray.500">
             Log claims with a waste or growth type to see the breakdown here.
           </Text>
         ) : (
           <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
             <Stack spacing={3}>
-              <Text fontSize="sm" fontWeight="semibold">
+              <Text fontSize="sm" fontWeight="semibold" color="gray.800">
                 Waste removed
               </Text>
               {(wasteWithValue.length ? wasteWithValue : sumWaste.slice(0, 4)).map((w) => (
@@ -398,36 +502,31 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                   <Flex justify="space-between" fontSize="sm" mb={1}>
                     <Text>
                       {w.n}{' '}
-                      <Text as="span" fontSize="xs" color="text.muted">
+                      <Text as="span" fontSize="xs" color="gray.500">
                         · {w.count}
                       </Text>
                     </Text>
                     <Text fontFamily="mono">{w.v ? formatMoneyK(w.v) : '—'}</Text>
                   </Flex>
-                  <Progress
-                    value={(w.v / maxWaste) * 100}
-                    size="sm"
-                    colorScheme="purple"
-                    rounded="full"
-                  />
+                  <Progress value={(w.v / maxWaste) * 100} size="sm" colorScheme="purple" rounded="full" />
                 </Box>
               ))}
             </Stack>
             <Stack spacing={2}>
-              <Text fontSize="sm" fontWeight="semibold">
+              <Text fontSize="sm" fontWeight="semibold" color="gray.800">
                 Revenue growth
               </Text>
               {sumGrowth.map((g) => (
                 <Flex key={g.k} justify="space-between" fontSize="sm" py={1}>
-                  <Text color={g.count ? undefined : 'text.muted'}>
+                  <Text color={g.count ? 'gray.800' : 'gray.400'}>
                     {g.n}
                     {g.count > 0 ? (
-                      <Text as="span" fontSize="xs" color="text.muted" ml={1}>
+                      <Text as="span" fontSize="xs" color="gray.500" ml={1}>
                         · {g.count}
                       </Text>
                     ) : null}
                   </Text>
-                  <Text fontFamily="mono" color={g.v ? undefined : 'text.muted'}>
+                  <Text fontFamily="mono" color={g.v ? 'gray.800' : 'gray.400'}>
                     {g.v ? formatMoneyK(g.v) : '—'}
                   </Text>
                 </Flex>
@@ -435,12 +534,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             </Stack>
           </SimpleGrid>
         )}
-      </Box>
+      </DashCard>
 
-      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl">
-        <Text fontSize="xs" fontWeight="bold" color="brand.accent" mb={3}>
-          BY CATEGORY
-        </Text>
+      <DashCard label="By category" icon={FolderTree} theme="orange">
         <Stack spacing={3}>
           {byCat.map((c) => (
             <Box key={c.k}>
@@ -452,12 +548,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             </Box>
           ))}
         </Stack>
-      </Box>
+      </DashCard>
 
-      <Box p={4} border="1px solid" borderColor="border.subtle" rounded="xl">
-        <Text fontSize="xs" fontWeight="bold" color="brand.accent" mb={3}>
-          TOP APPROVED CLAIMS
-        </Text>
+      <DashCard label="Top approved claims" icon={Trophy} theme="yellow">
         <Stack spacing={2}>
           {validated
             .slice()
@@ -467,12 +560,13 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               <Flex
                 key={e.id}
                 as="button"
+                type="button"
                 textAlign="left"
                 w="100%"
                 justify="space-between"
                 p={2}
                 rounded="md"
-                _hover={{ bg: 'surface.subtle' }}
+                _hover={{ bg: 'gray.50' }}
                 onClick={() => onOpenClaim(e)}
               >
                 <Text fontSize="sm" fontWeight="medium" noOfLines={1} pr={3}>
@@ -484,12 +578,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               </Flex>
             ))}
           {validated.length === 0 && (
-            <Text fontSize="sm" color="text.secondary">
+            <Text fontSize="sm" color="gray.500">
               No approved claims yet.
             </Text>
           )}
         </Stack>
-      </Box>
+      </DashCard>
     </Stack>
   )
 }
