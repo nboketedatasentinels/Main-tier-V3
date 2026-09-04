@@ -649,8 +649,7 @@ export const ImpactLogV2: React.FC = () => {
                         />
                       </SimpleGrid>
                       <Text fontSize="xs" color="purple.800" mt={3}>
-                        {pipelineEntries.length} awaiting check
-                        {pipelineEntries.length ? ' · not in headline' : ''}
+                        Indicative only · awaiting approval
                       </Text>
                     </Box>
                   </>

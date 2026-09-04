@@ -107,7 +107,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
           Value dashboard
         </Heading>
         <Text fontSize="sm" color="text.secondary">
-          Headline is Tier 3 / recognised claims only.
+          Approved claims only.
           <ImpactHelpButton k="tier" onOpen={onHelp} />
         </Text>
       </Box>
@@ -257,7 +257,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             ))}
           {validated.length === 0 && (
             <Text fontSize="sm" color="text.secondary">
-              No recognised Tier 3 claims yet.
+              No approved claims yet.
             </Text>
           )}
         </Stack>
