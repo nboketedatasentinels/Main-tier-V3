@@ -36,12 +36,12 @@ type Props = {
 }
 
 const PIE_COLORS = {
-  cash: '#350e6f',
-  avoidance: '#6b7280',
-  capacity: '#c4a574',
+  cash: '#f4540c', // orange only on the donut / mix legend
+  avoidance: '#350e6f',
+  capacity: '#9ca3af',
 } as const
 
-/** Professional shell — white, gray border, soft shadow, deep-plum icon only */
+/** White cards, gray borders, deep-plum icons — no orange outside the donut */
 const DashCard = ({
   label,
   icon,
@@ -58,27 +58,17 @@ const DashCard = ({
     bg="white"
     borderRadius="xl"
     border="1px solid"
-    borderColor="gray.100"
-    boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+    borderColor="gray.200"
+    boxShadow="0 1px 3px rgba(0,0,0,0.04)"
     _hover={{
-      transform: 'translateY(-2px)',
-      boxShadow: '0 8px 20px rgba(39,6,46,0.08)',
-      borderColor: 'gray.200',
+      transform: 'translateY(-1px)',
+      boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
+      borderColor: 'gray.300',
     }}
-    transition="all 0.3s ease"
+    transition="all 0.2s ease"
     position="relative"
     overflow="hidden"
   >
-    <Box
-      position="absolute"
-      top={0}
-      right={0}
-      w="60px"
-      h="60px"
-      bg="gray.50"
-      borderRadius="0 0 0 100%"
-      pointerEvents="none"
-    />
     <Flex
       w={10}
       h={10}
@@ -87,12 +77,11 @@ const DashCard = ({
       align="center"
       justify="center"
       mb={3}
-      boxShadow="0 4px 12px rgba(53, 14, 111, 0.22)"
-      position="relative"
+      boxShadow="0 4px 12px rgba(53, 14, 111, 0.18)"
     >
       <Icon as={icon} boxSize={5} color="white" />
     </Flex>
-    <Flex align="center" gap={1} mb={3} position="relative">
+    <Flex align="center" gap={1} mb={3}>
       <Text
         fontSize="xs"
         color="gray.500"
@@ -104,7 +93,7 @@ const DashCard = ({
       </Text>
       {help}
     </Flex>
-    <Box position="relative">{children}</Box>
+    <Box>{children}</Box>
   </Box>
 )
 
@@ -124,28 +113,15 @@ const MiniStat = ({
     bg="white"
     borderRadius="xl"
     border="1px solid"
-    borderColor="gray.100"
-    boxShadow="0 1px 4px rgba(0,0,0,0.03)"
-    position="relative"
-    overflow="hidden"
+    borderColor="gray.200"
+    boxShadow="0 1px 2px rgba(0,0,0,0.03)"
     _hover={{
-      transform: 'translateY(-1px)',
-      boxShadow: '0 6px 16px rgba(39,6,46,0.07)',
-      borderColor: 'gray.200',
+      borderColor: 'gray.300',
+      boxShadow: '0 4px 12px rgba(39,6,46,0.05)',
     }}
-    transition="all 0.3s ease"
+    transition="all 0.2s ease"
   >
-    <Box
-      position="absolute"
-      top={0}
-      right={0}
-      w="40px"
-      h="40px"
-      bg="gray.50"
-      borderRadius="0 0 0 100%"
-      pointerEvents="none"
-    />
-    <Flex align="center" gap={2} mb={2} position="relative">
+    <Flex align="center" gap={2} mb={2}>
       <Flex
         w="28px"
         h="28px"
@@ -171,14 +147,13 @@ const MiniStat = ({
       fontSize={{ base: 'lg', md: 'xl' }}
       fontWeight="800"
       color="#27062e"
-      position="relative"
       lineHeight="1.15"
       letterSpacing="-0.02em"
     >
       {value}
     </Text>
     {sub ? (
-      <Text fontSize="10px" color="gray.500" mt={1} position="relative">
+      <Text fontSize="10px" color="gray.500" mt={1}>
         {sub}
       </Text>
     ) : null}
@@ -305,30 +280,18 @@ export const ImpactValueDashboard: React.FC<Props> = ({
         p={{ base: 4, md: 6 }}
         borderRadius="xl"
         border="1px solid"
-        borderColor="gray.100"
-        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+        borderColor="gray.200"
+        boxShadow="0 1px 3px rgba(0,0,0,0.04)"
         position="relative"
         overflow="hidden"
         bg="white"
-        transition="all 0.3s ease"
+        transition="all 0.2s ease"
         _hover={{
-          transform: 'translateY(-2px)',
-          boxShadow: '0 8px 20px rgba(39,6,46,0.08)',
-          borderColor: 'gray.200',
+          boxShadow: '0 6px 16px rgba(39,6,46,0.06)',
+          borderColor: 'gray.300',
         }}
       >
-        <Box
-          position="absolute"
-          top={0}
-          right={0}
-          w="72px"
-          h="72px"
-          bg="gray.50"
-          borderRadius="0 0 0 100%"
-          pointerEvents="none"
-        />
-
-        <Flex align="center" gap={3} mb={4} position="relative">
+        <Flex align="center" gap={3} mb={4}>
           <Flex
             w={10}
             h={10}
@@ -336,7 +299,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             borderRadius="xl"
             align="center"
             justify="center"
-            boxShadow="0 4px 12px rgba(53, 14, 111, 0.22)"
+            boxShadow="0 4px 12px rgba(53, 14, 111, 0.18)"
             flexShrink={0}
           >
             <Icon as={PieChartIcon} boxSize={5} color="white" />
@@ -361,13 +324,12 @@ export const ImpactValueDashboard: React.FC<Props> = ({
           <Flex
             display={{ base: 'none', sm: 'flex' }}
             align="center"
-            gap={1.5}
             px={3}
             py={1.5}
             rounded="full"
-            bg="gray.50"
+            bg="white"
             border="1px solid"
-            borderColor="gray.100"
+            borderColor="gray.200"
           >
             <Text fontSize="xs" fontWeight="semibold" color="gray.700">
               {approvedCount} approved
@@ -379,7 +341,6 @@ export const ImpactValueDashboard: React.FC<Props> = ({
           direction={{ base: 'column', md: 'row' }}
           align={{ base: 'stretch', md: 'center' }}
           gap={{ base: 5, md: 8 }}
-          position="relative"
         >
           <Box flex="1">
             <Text
@@ -399,9 +360,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                 px={3}
                 py={2}
                 rounded="lg"
-                bg="gray.50"
+                bg="white"
                 border="1px solid"
-                borderColor="gray.100"
+                borderColor="gray.200"
               >
                 <Icon as={Clock3} boxSize={3.5} color="gray.500" />
                 <Text fontSize="xs" color="gray.600">
@@ -418,9 +379,9 @@ export const ImpactValueDashboard: React.FC<Props> = ({
                   px={3}
                   py={2}
                   rounded="lg"
-                  bg="gray.50"
+                  bg="white"
                   border="1px solid"
-                  borderColor="gray.100"
+                  borderColor="gray.200"
                 >
                   <Text fontSize="xs" color="gray.600">
                     In pipeline
@@ -448,12 +409,10 @@ export const ImpactValueDashboard: React.FC<Props> = ({
             w={{ base: '100%', md: '240px' }}
             flexShrink={0}
             rounded="xl"
-            bg="gray.50"
+            bg="white"
             border="1px solid"
-            borderColor="gray.100"
+            borderColor="gray.200"
             p={3}
-            position="relative"
-            overflow="hidden"
           >
             <Text
               fontSize="10px"
@@ -462,7 +421,6 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               letterSpacing="0.08em"
               color="gray.500"
               mb={1}
-              position="relative"
             >
               Mix
             </Text>
@@ -523,7 +481,7 @@ export const ImpactValueDashboard: React.FC<Props> = ({
               )}
             </Box>
             {pieData.length > 0 ? (
-              <Stack spacing={1.5} mt={1} position="relative">
+              <Stack spacing={1.5} mt={1}>
                 {pieData.map((d) => (
                   <Flex key={d.key} align="center" justify="space-between" fontSize="xs">
                     <Flex align="center" gap={2}>
