@@ -2,11 +2,15 @@ import React, { useMemo } from 'react'
 import { Box, Flex, Icon, Progress, SimpleGrid, Stack, Text } from '@chakra-ui/react'
 import type { LucideIcon } from 'lucide-react'
 import {
+  Banknote,
   BarChart3,
   CheckCircle2,
+  Clock3,
   FolderTree,
   Leaf,
   PieChart as PieChartIcon,
+  Shield,
+  Sparkles,
   Trophy,
 } from 'lucide-react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts'
@@ -94,7 +98,15 @@ const DashCard = ({
   return (
     <Box
       p={5}
-      bg="white"
+      bgGradient={`linear(135deg, white 0%, ${
+        theme === 'orange'
+          ? '#FFF8F5'
+          : theme === 'purple'
+            ? '#FBF7FC'
+            : theme === 'green'
+              ? '#F5FBF8'
+              : '#FFFBF0'
+      } 100%)`}
       borderRadius="xl"
       border="1px solid"
       borderColor="gray.100"
@@ -110,12 +122,13 @@ const DashCard = ({
     >
       <Box
         position="absolute"
-        top={0}
-        right={0}
-        w="60px"
-        h="60px"
+        top="-24px"
+        right="-20px"
+        w="96px"
+        h="96px"
+        borderRadius="full"
         bg={styles.ornamentBg}
-        borderRadius="0 0 0 100%"
+        opacity={0.9}
         pointerEvents="none"
       />
       <Flex w={10} h={10} bg={styles.iconBg} borderRadius="xl" align="center" justify="center" mb={3} boxShadow={styles.iconShadow} position="relative">
@@ -138,60 +151,89 @@ const DashCard = ({
   )
 }
 
+const VALUE_COLORS: Record<keyof typeof tileThemes, string> = {
+  purple: '#350e6f',
+  orange: '#f4540c',
+  green: '#047857',
+  yellow: '#b45309',
+}
+
 const MiniStat = ({
   label,
   value,
   sub,
   theme,
+  icon,
 }: {
   label: string
   value: string
   sub?: string
   theme: keyof typeof tileThemes
+  icon: LucideIcon
 }) => {
   const styles = tileThemes[theme]
   return (
     <Box
-      p={3}
-      bg="white"
+      p={3.5}
+      bg={styles.ornamentBg}
       borderRadius="xl"
       border="1px solid"
-      borderColor="gray.100"
+      borderColor={styles.hoverBorder}
       boxShadow="0 2px 8px rgba(0,0,0,0.04)"
       position="relative"
       overflow="hidden"
       _hover={{
-        transform: 'translateY(-1px)',
+        transform: 'translateY(-2px)',
         boxShadow: styles.hoverShadow,
-        borderColor: styles.hoverBorder,
       }}
       transition="all 0.3s ease"
     >
       <Box
         position="absolute"
-        top={0}
-        right={0}
-        w="36px"
-        h="36px"
-        bg={styles.ornamentBg}
-        borderRadius="0 0 0 100%"
+        top="-10px"
+        right="-10px"
+        w="56px"
+        h="56px"
+        borderRadius="full"
+        bg="white"
+        opacity={0.55}
         pointerEvents="none"
       />
+      <Flex align="center" gap={2} mb={2} position="relative">
+        <Flex
+          w="28px"
+          h="28px"
+          borderRadius="lg"
+          align="center"
+          justify="center"
+          bg={styles.iconBg}
+          boxShadow={styles.iconShadow}
+          flexShrink={0}
+        >
+          <Icon as={icon} boxSize={3.5} color="white" />
+        </Flex>
+        <Text
+          fontSize="10px"
+          textTransform="uppercase"
+          fontWeight="bold"
+          color="gray.600"
+          letterSpacing="0.06em"
+        >
+          {label}
+        </Text>
+      </Flex>
       <Text
-        fontSize="10px"
-        textTransform="uppercase"
-        fontWeight="bold"
-        color="gray.500"
-        letterSpacing="0.06em"
+        fontSize={{ base: 'lg', md: 'xl' }}
+        fontWeight="800"
+        color={VALUE_COLORS[theme]}
         position="relative"
+        lineHeight="1.15"
+        letterSpacing="-0.02em"
       >
-        {label}
-      </Text>
-      <Text fontSize="md" fontWeight="800" color="gray.800" mt={0.5} position="relative" lineHeight="1.2">
         {value}
       </Text>
       {sub ? (
-        <Text fontSize="10px" color="gray.500" mt={0.5} position="relative">
+        <Text fontSize="10px" color="gray.600" mt={1} position="relative" fontWeight="medium">
           {sub}
         </Text>
       ) : null}
@@ -315,109 +357,286 @@ export const ImpactValueDashboard: React.FC<Props> = ({
 
   return (
     <Stack spacing={5}>
-      <DashCard
-        label="Your savings"
-        icon={PieChartIcon}
-        theme="purple"
-        help={<ImpactHelpButton k="buckets" onOpen={onHelp} />}
+      {/* Hero — richer surface so it doesn’t read blank */}
+      <Box
+        p={{ base: 4, md: 6 }}
+        borderRadius="xl"
+        border="1px solid"
+        borderColor="purple.100"
+        boxShadow="0 10px 30px rgba(39,6,46,0.08)"
+        position="relative"
+        overflow="hidden"
+        bgGradient="linear(135deg, #FFFFFF 0%, #FBF7FC 40%, #FFF6F0 100%)"
+        transition="all 0.3s ease"
+        _hover={{
+          transform: 'translateY(-2px)',
+          boxShadow: '0 14px 34px rgba(39,6,46,0.12)',
+          borderColor: 'purple.200',
+        }}
       >
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          h="5px"
+          bgGradient="linear(to-r, #350e6f, #f4540c, #eab130)"
+        />
+        <Box
+          position="absolute"
+          top="-40px"
+          right="-30px"
+          w="160px"
+          h="160px"
+          borderRadius="full"
+          bg="orange.100"
+          opacity={0.45}
+          pointerEvents="none"
+        />
+        <Box
+          position="absolute"
+          bottom="-50px"
+          left="-20px"
+          w="140px"
+          h="140px"
+          borderRadius="full"
+          bg="purple.100"
+          opacity={0.4}
+          pointerEvents="none"
+        />
+
+        <Flex align="center" gap={3} mb={4} position="relative">
+          <Flex
+            w={10}
+            h={10}
+            bg="#350e6f"
+            borderRadius="xl"
+            align="center"
+            justify="center"
+            boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
+            flexShrink={0}
+          >
+            <Icon as={PieChartIcon} boxSize={5} color="white" />
+          </Flex>
+          <Box flex="1" minW={0}>
+            <Flex align="center" gap={1}>
+              <Text
+                fontSize="xs"
+                color="gray.500"
+                fontWeight="semibold"
+                textTransform="uppercase"
+                letterSpacing="wide"
+              >
+                Your savings
+              </Text>
+              <ImpactHelpButton k="buckets" onOpen={onHelp} />
+            </Flex>
+            <Text fontSize="sm" color="gray.600" mt={0.5}>
+              Approved cash + cost avoidance only
+            </Text>
+          </Box>
+          <Flex
+            display={{ base: 'none', sm: 'flex' }}
+            align="center"
+            gap={1.5}
+            px={3}
+            py={1.5}
+            rounded="full"
+            bg="white"
+            border="1px solid"
+            borderColor="orange.100"
+            boxShadow="sm"
+          >
+            <Icon as={Sparkles} boxSize={3.5} color="#f4540c" />
+            <Text fontSize="xs" fontWeight="bold" color="#b45309">
+              {approvedCount} approved
+            </Text>
+          </Flex>
+        </Flex>
+
         <Flex
           direction={{ base: 'column', md: 'row' }}
           align={{ base: 'stretch', md: 'center' }}
-          gap={{ base: 4, md: 8 }}
+          gap={{ base: 5, md: 8 }}
+          position="relative"
         >
           <Box flex="1">
             <Text
-              fontSize={{ base: '3xl', md: '4xl' }}
+              fontSize={{ base: '4xl', md: '5xl' }}
               fontWeight="800"
-              lineHeight="1.1"
-              color="gray.800"
-              letterSpacing="-0.02em"
+              lineHeight="1"
+              color="#27062e"
+              letterSpacing="-0.03em"
             >
               {formatMoney(headline)}
             </Text>
-            <Text fontSize="sm" color="gray.500" mt={2} maxW="440px" lineHeight="1.5">
-              Approved cash + cost avoidance. Annual run-rate{' '}
-              <Box as="span" fontWeight="bold" color="#b45309">
-                {formatMoney(annualRun)}
-              </Box>
-              .
-            </Text>
-            <SimpleGrid columns={3} spacing={3} mt={5} maxW="440px">
-              <MiniStat label="Cash" value={formatMoneyK(cash)} theme="orange" />
-              <MiniStat label="Avoidance" value={formatMoneyK(avoid)} theme="purple" />
+
+            <Flex
+              mt={3}
+              align="center"
+              gap={2}
+              flexWrap="wrap"
+            >
+              <Flex
+                align="center"
+                gap={2}
+                px={3}
+                py={2}
+                rounded="lg"
+                bg="white"
+                border="1px solid"
+                borderColor="orange.100"
+                boxShadow="0 2px 8px rgba(244,84,12,0.08)"
+              >
+                <Icon as={Clock3} boxSize={3.5} color="#f4540c" />
+                <Text fontSize="xs" color="gray.600">
+                  Annual run-rate
+                </Text>
+                <Text fontSize="sm" fontWeight="800" color="#f4540c">
+                  {formatMoney(annualRun)}
+                </Text>
+              </Flex>
+              {awaitingApproval > 0 ? (
+                <Flex
+                  align="center"
+                  gap={2}
+                  px={3}
+                  py={2}
+                  rounded="lg"
+                  bg="purple.50"
+                  border="1px solid"
+                  borderColor="purple.100"
+                >
+                  <Text fontSize="xs" color="gray.600">
+                    In pipeline
+                  </Text>
+                  <Text fontSize="sm" fontWeight="800" color="#350e6f">
+                    {formatMoneyK(awaitingApproval)}
+                  </Text>
+                </Flex>
+              ) : null}
+            </Flex>
+
+            <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mt={5}>
+              <MiniStat label="Cash" value={formatMoneyK(cash)} theme="orange" icon={Banknote} />
+              <MiniStat label="Avoidance" value={formatMoneyK(avoid)} theme="purple" icon={Shield} />
               <MiniStat
                 label="Capacity"
                 value={`${capHours.toLocaleString(undefined, { maximumFractionDigits: 1 })} hrs`}
                 sub={`~${formatMoneyK(capacity$)} indicative`}
                 theme="yellow"
+                icon={Clock3}
               />
             </SimpleGrid>
           </Box>
 
           <Box
-            w={{ base: '100%', md: '220px' }}
-            h="180px"
+            w={{ base: '100%', md: '240px' }}
             flexShrink={0}
             rounded="xl"
             bg="white"
             border="1px solid"
-            borderColor="gray.100"
-            boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-            display="flex"
-            alignItems="center"
-            justifyContent="center"
+            borderColor="orange.100"
+            boxShadow="0 8px 24px rgba(244,84,12,0.1)"
+            p={3}
             position="relative"
             overflow="hidden"
           >
             <Box
               position="absolute"
-              top={0}
-              right={0}
-              w="48px"
-              h="48px"
+              top="-16px"
+              right="-16px"
+              w="72px"
+              h="72px"
+              borderRadius="full"
               bg="orange.50"
-              borderRadius="0 0 0 100%"
               pointerEvents="none"
             />
-            {pieData.length === 0 ? (
-              <Text fontSize="sm" color="gray.500" textAlign="center" px={4}>
-                No approved savings yet
-              </Text>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={48}
-                    outerRadius={72}
-                    paddingAngle={2}
-                    stroke="#fff"
-                    strokeWidth={2}
+            <Text
+              fontSize="10px"
+              fontWeight="bold"
+              textTransform="uppercase"
+              letterSpacing="0.08em"
+              color="gray.500"
+              mb={1}
+              position="relative"
+            >
+              Mix
+            </Text>
+            <Box h="150px" position="relative">
+              {pieData.length === 0 ? (
+                <Flex h="100%" align="center" justify="center">
+                  <Text fontSize="sm" color="gray.500" textAlign="center" px={4}>
+                    No approved savings yet
+                  </Text>
+                </Flex>
+              ) : (
+                <>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={46}
+                        outerRadius={68}
+                        paddingAngle={3}
+                        stroke="#fff"
+                        strokeWidth={3}
+                      >
+                        {pieData.map((d) => (
+                          <Cell key={d.key} fill={PIE_COLORS[d.key]} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value: number) => formatMoney(value)}
+                        contentStyle={{
+                          borderRadius: 8,
+                          border: '1px solid #e5e7eb',
+                          fontSize: 12,
+                          color: '#27062e',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <Flex
+                    position="absolute"
+                    inset={0}
+                    align="center"
+                    justify="center"
+                    pointerEvents="none"
+                    direction="column"
                   >
-                    {pieData.map((d) => (
-                      <Cell key={d.key} fill={PIE_COLORS[d.key]} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    formatter={(value: number) => formatMoney(value)}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: '1px solid #e5e7eb',
-                      fontSize: 12,
-                      color: '#27062e',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+                    <Text fontSize="10px" color="gray.500" fontWeight="semibold" textTransform="uppercase">
+                      Total
+                    </Text>
+                    <Text fontSize="sm" fontWeight="800" color="#27062e" lineHeight="1.1">
+                      {formatMoneyK(headline + capacity$)}
+                    </Text>
+                  </Flex>
+                </>
+              )}
+            </Box>
+            {pieData.length > 0 ? (
+              <Stack spacing={1.5} mt={1} position="relative">
+                {pieData.map((d) => (
+                  <Flex key={d.key} align="center" justify="space-between" fontSize="xs">
+                    <Flex align="center" gap={2}>
+                      <Box w="8px" h="8px" borderRadius="full" bg={PIE_COLORS[d.key]} />
+                      <Text color="gray.600">{d.name.replace(' (indicative)', '')}</Text>
+                    </Flex>
+                    <Text fontWeight="bold" color="gray.800">
+                      {formatMoneyK(d.value)}
+                    </Text>
+                  </Flex>
+                ))}
+              </Stack>
+            ) : null}
           </Box>
         </Flex>
-      </DashCard>
+      </Box>
 
       <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
         <DashCard label="Claims · submitted vs approved" icon={CheckCircle2} theme="orange">
