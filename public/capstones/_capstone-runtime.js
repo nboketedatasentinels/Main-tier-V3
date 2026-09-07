@@ -410,7 +410,7 @@ window.t4lSubmitProgrammeComponent = submit
  */
 function resolveSubmitInvoker() {
   const top = document.querySelector(
-    '.print-bar-actions .print-btn-primary, .print-bar .print-btn-primary',
+    '.print-bar-actions .print-btn-primary, .print-bar .print-btn-primary, .print-bar-actions button[onclick*="submit"], .print-bar button[onclick*="submit"]',
   )
   const onclick = (top?.getAttribute('onclick') || '').toLowerCase()
   if (onclick.includes('submitcasestudy')) {
@@ -439,9 +439,10 @@ function resolveSubmitInvoker() {
 
 function mountBottomActions() {
   if (document.getElementById('__t4l_bottom_actions')) return
-  if (!document.querySelector('.print-bar .print-btn-primary, .print-bar-actions .print-btn-primary')) {
-    return
-  }
+  const hasTopSubmit = document.querySelector(
+    '.print-bar .print-btn-primary, .print-bar-actions .print-btn-primary, .print-bar button[onclick*="submit"], .print-bar-actions button[onclick*="submit"]',
+  )
+  if (!hasTopSubmit) return
   const invokeSubmit = resolveSubmitInvoker()
   if (!invokeSubmit) return
 
