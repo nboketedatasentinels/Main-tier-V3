@@ -72,7 +72,7 @@ const DashCard = ({
     _hover={cardHover}
     transition="transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease"
   >
-    <Flex align="center" gap={3} mb={4}>
+    <Flex align={{ base: 'flex-start', md: 'center' }} gap={3} mb={4} flexWrap="wrap">
       <Flex
         w={10}
         h={10}
@@ -208,29 +208,86 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
         icon={ClipboardList}
         help={<ImpactHelpButton k="journey" onOpen={onHelp} />}
         right={
-          <Flex
-            display={{ base: 'none', sm: 'flex' }}
-            align="center"
-            px={3}
-            py={1.5}
-            rounded="full"
-            bg="white"
-            borderWidth="1px"
-            borderStyle="solid"
-            borderColor={cardBorder}
-          >
-            <Text fontSize="xs" fontWeight="semibold" color="gray.700">
-              {rows.length} of {entries.length} shown
-            </Text>
-          </Flex>
+          <HStack spacing={2} flexWrap="wrap" justify="flex-end" maxW={{ base: '100%', md: '520px' }}>
+            <Select
+              size="sm"
+              w={{ base: '100%', sm: '120px' }}
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              bg="white"
+              borderColor={cardBorder}
+              borderRadius="lg"
+              aria-label="Filter by status"
+              title="Status"
+              _hover={{ borderColor: cardBorderHover }}
+            >
+              {statuses.map((s) => (
+                <option key={s} value={s}>
+                  {s === 'All' ? 'Status · All' : s}
+                </option>
+              ))}
+            </Select>
+            <Select
+              size="sm"
+              w={{ base: '100%', sm: '118px' }}
+              value={approval}
+              onChange={(e) => setApproval(e.target.value)}
+              bg="white"
+              borderColor={cardBorder}
+              borderRadius="lg"
+              aria-label="Filter by approval"
+              title="Approval"
+              _hover={{ borderColor: cardBorderHover }}
+            >
+              {['All', 'Approved', 'Awaiting', 'Reversed'].map((t) => (
+                <option key={t} value={t}>
+                  {t === 'All' ? 'Approval · All' : t}
+                </option>
+              ))}
+            </Select>
+            <Select
+              size="sm"
+              w={{ base: '100%', sm: '118px' }}
+              value={kind}
+              onChange={(e) => setKind(e.target.value)}
+              bg="white"
+              borderColor={cardBorder}
+              borderRadius="lg"
+              aria-label="Filter by type"
+              title="Type"
+              _hover={{ borderColor: cardBorderHover }}
+            >
+              {['All', 'claim', 'activity', 'esg'].map((t) => (
+                <option key={t} value={t}>
+                  {t === 'All' ? 'Type · All' : t === 'claim' ? 'improvement' : t}
+                </option>
+              ))}
+            </Select>
+            <Flex
+              display={{ base: 'none', md: 'flex' }}
+              align="center"
+              px={3}
+              py={1.5}
+              rounded="full"
+              bg="white"
+              borderWidth="1px"
+              borderStyle="solid"
+              borderColor={cardBorder}
+              flexShrink={0}
+            >
+              <Text fontSize="xs" fontWeight="semibold" color="gray.700" whiteSpace="nowrap">
+                {rows.length} of {entries.length}
+              </Text>
+            </Flex>
+          </HStack>
         }
       >
-        <Text fontSize="sm" color="gray.600" mb={5} maxW="640px" lineHeight="1.5">
+        <Text fontSize="sm" color="gray.600" mb={4} maxW="640px" lineHeight="1.5">
           Every improvement claim and ESG entry. Click a row to see what you wrote, evidence, and
           status — or duplicate it for a new impact.
         </Text>
 
-        <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3} mb={5}>
+        <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={3}>
           <MiniStat
             label="Approved"
             value={String(approvedCount)}
@@ -250,86 +307,6 @@ export const ImpactRegisterPanel: React.FC<Props> = ({ entries, rates, onHelp, o
             icon={ClipboardList}
           />
         </SimpleGrid>
-
-        <Box pt={1} borderTop="1px solid" borderColor="gray.100">
-          <Flex align="center" gap={2} mb={3} mt={4}>
-            <Icon as={ListFilter} boxSize={3.5} color="gray.500" />
-            <Text
-              fontSize="10px"
-              fontWeight="bold"
-              textTransform="uppercase"
-              letterSpacing="0.08em"
-              color="gray.500"
-            >
-              Filters
-            </Text>
-          </Flex>
-          <HStack spacing={3} flexWrap="wrap" align="flex-end">
-            <FormControl maxW="200px">
-              <FormLabel fontSize="xs" color="gray.500" mb={1}>
-                Status
-              </FormLabel>
-              <Select
-                size="sm"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                bg="white"
-                borderColor="rgba(53, 14, 111, 0.16)"
-                borderRadius="lg"
-                _hover={{ borderColor: 'rgba(53, 14, 111, 0.38)' }}
-                transition="border-color 0.2s ease"
-              >
-                {statuses.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl maxW="160px">
-              <FormLabel fontSize="xs" color="gray.500" mb={1}>
-                Approval
-              </FormLabel>
-              <Select
-                size="sm"
-                value={approval}
-                onChange={(e) => setApproval(e.target.value)}
-                bg="white"
-                borderColor="rgba(53, 14, 111, 0.16)"
-                borderRadius="lg"
-                _hover={{ borderColor: 'rgba(53, 14, 111, 0.38)' }}
-                transition="border-color 0.2s ease"
-              >
-                {['All', 'Approved', 'Awaiting', 'Reversed'].map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl maxW="160px">
-              <FormLabel fontSize="xs" color="gray.500" mb={1}>
-                Type
-              </FormLabel>
-              <Select
-                size="sm"
-                value={kind}
-                onChange={(e) => setKind(e.target.value)}
-                bg="white"
-                borderColor="rgba(53, 14, 111, 0.16)"
-                borderRadius="lg"
-                _hover={{ borderColor: 'rgba(53, 14, 111, 0.38)' }}
-                transition="border-color 0.2s ease"
-              >
-                {['All', 'claim', 'activity', 'esg'].map((t) => (
-                  <option key={t} value={t}>
-                    {t === 'claim' ? 'improvement' : t}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-          </HStack>
-        </Box>
       </DashCard>
 
       <DashCard
