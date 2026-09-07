@@ -1740,7 +1740,7 @@ export const PeerConnectPage: React.FC = () => {
                         </HStack>
                       </Center>
                     ) : availablePeers.length ? (
-                      <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, xl: 4 }} spacing={3}>
+                      <Flex direction="row" flexWrap="wrap" gap={3} align="stretch">
                         {availablePeers.map((peer) => (
                           <HStack
                             key={peer.id}
@@ -1750,7 +1750,9 @@ export const PeerConnectPage: React.FC = () => {
                             border="1px solid"
                             borderColor="gray.100"
                             bg="gray.50"
-                            minW={0}
+                            minW={{ base: '100%', sm: '240px' }}
+                            maxW={{ base: '100%', sm: '320px' }}
+                            flex={{ base: '1 1 100%', sm: '1 1 240px' }}
                           >
                             <Avatar
                               name={peer.name}
@@ -1770,7 +1772,7 @@ export const PeerConnectPage: React.FC = () => {
                             </Stack>
                           </HStack>
                         ))}
-                      </SimpleGrid>
+                      </Flex>
                     ) : (
                       <Text fontSize="sm" color="gray.500">
                         No peers found in your organisation yet. Invite teammates so you can organise
