@@ -16,6 +16,10 @@ type MentorshipGoalsCardProps = {
   audience?: 'mentor' | 'coach'
   /** Fired after a successful save so parent Session Prep can refresh. */
   onSaved?: (goals: string) => void
+  /** When parent reopens the form to edit existing answers. */
+  startInEditMode?: boolean
+  /** Fired when user cancels editing existing answers (parent can hide the form). */
+  onCancelEdit?: () => void
   /** Emphasise this as the primary action on the page. */
   primary?: boolean
 }
@@ -38,6 +42,8 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   mentorId = null,
   audience = 'mentor',
   onSaved,
+  startInEditMode = false,
+  onCancelEdit,
   primary = false,
 }) => {
   const toast = useToast()
@@ -51,22 +57,21 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   const [answers, setAnswers] = useState<string[]>(['', '', ''])
   const [ready, setReady] = useState(false)
   const [step, setStep] = useState(0)
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(Boolean(startInEditMode))
 
   useEffect(() => {
     setReady(false)
     setStep(0)
-    setEditing(false)
-  }, [learnerId])
+    setEditing(Boolean(startInEditMode))
+  }, [learnerId, startInEditMode])
 
   useEffect(() => {
     if (!loading && !liftLoading && !ready) {
       setAnswers(splitAnswers(goals))
       setReady(true)
-      // Show saved summary when answers already exist (unless user chose Edit).
-      setEditing(!goals.trim())
+      setEditing(startInEditMode || !goals.trim())
     }
-  }, [loading, liftLoading, ready, goals])
+  }, [loading, liftLoading, ready, goals, startInEditMode])
 
   const combined = joinAnswers(answers)
   const dirty = ready && combined !== goals.trim()
@@ -84,9 +89,9 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       setEditing(false)
       toast({
         title: 'Answers saved',
-        description: 'They now show in Session Prep below (Show context).',
+        description: 'Your session prep is ready below.',
         status: 'success',
-        duration: 3600,
+        duration: 3200,
       })
     } catch (err) {
       toast({
@@ -205,6 +210,7 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
                     setAnswers(splitAnswers(goals))
                     setEditing(false)
                     setStep(0)
+                    onCancelEdit?.()
                   }}
                 >
                   Cancel

@@ -180,6 +180,8 @@ export const LeadershipCouncilPage: React.FC = () => {
   const [showSessionContext, setShowSessionContext] = useState(false)
   const [goalsDraft, setGoalsDraft] = useState('')
   const [goalsInitialized, setGoalsInitialized] = useState(false)
+  /** After save, hide the form and keep Session Prep. Edit flips this back on. */
+  const [editingGoals, setEditingGoals] = useState(false)
   const [liftCompleted, setLiftCompleted] = useState<boolean | null>(null)
 
   const liftRequired = requiresMandatoryLiftAssessment({
@@ -265,11 +267,16 @@ export const LeadershipCouncilPage: React.FC = () => {
     if (!isLeadershipEligible) {
       setGoalsDraft('')
       setGoalsInitialized(false)
+      setEditingGoals(false)
       return
     }
     if (!goalsLoading && !goalsInitialized) {
       setGoalsDraft(savedGoals)
       setGoalsInitialized(true)
+      if (savedGoals.trim()) {
+        setShowSessionContext(true)
+        setEditingGoals(false)
+      }
     }
   }, [isLeadershipEligible, goalsLoading, goalsInitialized, savedGoals])
 
@@ -277,7 +284,13 @@ export const LeadershipCouncilPage: React.FC = () => {
     setGoalsDraft(next)
     setGoalsInitialized(true)
     setShowSessionContext(true)
+    setEditingGoals(false)
   }, [])
+
+  const effectiveGoals = (goalsDraft || savedGoals).trim()
+  const hasSavedGoals = Boolean(effectiveGoals)
+  const showGoalsEditor = !hasSavedGoals || editingGoals
+  const showPrepPanel = showSessionContext || hasSavedGoals
 
   const handleRequestSession = async () => {
     if (!mentorProfile?.id || !profile?.id) {
@@ -1153,19 +1166,34 @@ export const LeadershipCouncilPage: React.FC = () => {
 
                     {mentorProfile && profile?.id && (
                       <Stack spacing={3}>
-                        <MentorshipGoalsCard
-                          learnerId={profile.id}
-                          mentorId={mentorProfile.id}
-                          audience="mentor"
-                          primary
-                          onSaved={handleGoalsSaved}
-                        />
+                        {showGoalsEditor ? (
+                          <MentorshipGoalsCard
+                            learnerId={profile.id}
+                            mentorId={mentorProfile.id}
+                            audience="mentor"
+                            primary
+                            startInEditMode={editingGoals && hasSavedGoals}
+                            onSaved={handleGoalsSaved}
+                            onCancelEdit={() => setEditingGoals(false)}
+                          />
+                        ) : (
+                          <Flex justify="flex-end">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              color="gray.600"
+                              onClick={() => setEditingGoals(true)}
+                            >
+                              Edit session prep answers
+                            </Button>
+                          </Flex>
+                        )}
 
-                        <Collapse in={showSessionContext} animateOpacity>
+                        <Collapse in={showPrepPanel} animateOpacity>
                           <LeaderSessionPrep
                             learner={profile}
                             mentor={mentorProfile}
-                            goals={goalsDraft || savedGoals}
+                            goals={effectiveGoals || null}
                           />
                         </Collapse>
 
