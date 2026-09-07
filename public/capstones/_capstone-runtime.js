@@ -402,6 +402,122 @@ window.submitCaseStudy = submit
 window.submitPractical = submit
 window.t4lSubmitProgrammeComponent = submit
 
+/**
+ * Bottom Save / Print + Submit so learners finishing the last section don't
+ * have to scroll back to the sticky header. Mirrors the top print-bar actions
+ * and calls the same handler the page's top Submit button uses (including any
+ * page-level validation wrappers that redefine submit*).
+ */
+function resolveSubmitInvoker() {
+  const top = document.querySelector(
+    '.print-bar-actions .print-btn-primary, .print-bar .print-btn-primary',
+  )
+  const onclick = (top?.getAttribute('onclick') || '').toLowerCase()
+  if (onclick.includes('submitcasestudy')) {
+    return () => {
+      if (typeof window.submitCaseStudy === 'function') window.submitCaseStudy()
+    }
+  }
+  if (onclick.includes('submitpractical')) {
+    return () => {
+      if (typeof window.submitPractical === 'function') window.submitPractical()
+    }
+  }
+  if (onclick.includes('submitcapstone')) {
+    return () => {
+      if (typeof window.submitCapstone === 'function') window.submitCapstone()
+    }
+  }
+  if (typeof window.t4lSubmitProgrammeComponent === 'function') {
+    return () => window.t4lSubmitProgrammeComponent()
+  }
+  if (typeof window.submitCaseStudy === 'function') return () => window.submitCaseStudy()
+  if (typeof window.submitPractical === 'function') return () => window.submitPractical()
+  if (typeof window.submitCapstone === 'function') return () => window.submitCapstone()
+  return null
+}
+
+function mountBottomActions() {
+  if (document.getElementById('__t4l_bottom_actions')) return
+  if (!document.querySelector('.print-bar .print-btn-primary, .print-bar-actions .print-btn-primary')) {
+    return
+  }
+  const invokeSubmit = resolveSubmitInvoker()
+  if (!invokeSubmit) return
+
+  if (!document.getElementById('__t4l_bottom_actions_style')) {
+    const style = document.createElement('style')
+    style.id = '__t4l_bottom_actions_style'
+    style.textContent = [
+      '#__t4l_bottom_actions{',
+      'max-width:880px;margin:8px auto 48px;padding:20px 24px;',
+      'display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px;',
+      'background:#fff;border:1.5px solid #E8E3DA;border-radius:16px;',
+      "font-family:'DM Sans',system-ui,sans-serif;",
+      '}',
+      '#__t4l_bottom_actions .t4l-bottom-hint{',
+      'margin-right:auto;font-size:12px;color:#666;line-height:1.45;max-width:42ch;',
+      '}',
+      '#__t4l_bottom_actions .print-btn{',
+      'background:#F5C842;color:#1A1726;border:none;border-radius:8px;',
+      'padding:10px 20px;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;',
+      '}',
+      '#__t4l_bottom_actions .print-btn:hover{background:#C9A020;}',
+      '#__t4l_bottom_actions .print-btn-secondary{',
+      'background:transparent;color:#1A1726;border:1.5px solid #1A1726;',
+      '}',
+      '#__t4l_bottom_actions .print-btn-secondary:hover{background:rgba(26,23,38,0.06);}',
+      '@media print{#__t4l_bottom_actions{display:none!important;}}',
+      '@media (max-width:600px){',
+      '#__t4l_bottom_actions{margin:8px 14px 40px;padding:16px 18px;}',
+      '#__t4l_bottom_actions .t4l-bottom-hint{flex:1 1 100%;margin-right:0;margin-bottom:4px;}',
+      '}',
+    ].join('')
+    document.head.appendChild(style)
+  }
+
+  const bar = document.createElement('div')
+  bar.id = '__t4l_bottom_actions'
+  bar.setAttribute('role', 'region')
+  bar.setAttribute('aria-label', 'Submit your work')
+
+  const hint = document.createElement('p')
+  hint.className = 't4l-bottom-hint'
+  hint.textContent = 'Finished the last section? Submit here — no need to scroll back to the top.'
+  bar.appendChild(hint)
+
+  const printBtn = document.createElement('button')
+  printBtn.type = 'button'
+  printBtn.className = 'print-btn print-btn-secondary'
+  printBtn.textContent = 'Save / Print'
+  printBtn.addEventListener('click', () => window.print())
+  bar.appendChild(printBtn)
+
+  const submitBtn = document.createElement('button')
+  submitBtn.type = 'button'
+  submitBtn.className = 'print-btn print-btn-primary'
+  submitBtn.textContent = 'Submit'
+  submitBtn.addEventListener('click', () => invokeSubmit())
+  bar.appendChild(submitBtn)
+
+  const content = document.querySelector('.content')
+  if (content && content.parentNode) {
+    content.parentNode.insertBefore(bar, content.nextSibling)
+  } else {
+    document.body.appendChild(bar)
+  }
+}
+
+// Defer so page-specific modules that wrap submit* run first.
+const scheduleBottomActions = () => {
+  window.setTimeout(mountBottomActions, 0)
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', scheduleBottomActions)
+} else {
+  scheduleBottomActions()
+}
+
 // Surface a small hint that work isn't auto-saved (one-time per session).
 try {
   const HINT_KEY = 't4l_capstone_hint_shown'
