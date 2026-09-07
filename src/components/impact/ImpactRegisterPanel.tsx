@@ -3,8 +3,6 @@ import {
   Badge,
   Box,
   Flex,
-  FormControl,
-  FormLabel,
   HStack,
   Icon,
   Select,
@@ -13,7 +11,7 @@ import {
   Text,
 } from '@chakra-ui/react'
 import type { LucideIcon } from 'lucide-react'
-import { CheckCircle2, ClipboardList, Clock3, ListFilter } from 'lucide-react'
+import { CheckCircle2, ClipboardList, Clock3 } from 'lucide-react'
 import {
   CLAIM_STATE_ORDER,
   IMPACT_CATS,
