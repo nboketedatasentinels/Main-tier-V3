@@ -17,6 +17,9 @@ export type ProgrammeSubmissionStatus =
   | 'approved'
   | 'needs_revision'
 
+/** Partner decision on the AI advisory grade (human-in-the-loop). */
+export type ProgrammeAiDecision = 'accept' | 'edit' | 'reject'
+
 /** Advisory Gemini grade written by `grade-submission` (never awards points alone). */
 export type ProgrammeAiGrade = {
   status: 'pending' | 'completed' | 'error' | string
@@ -64,6 +67,11 @@ export interface ProgrammeComponentSubmission {
   partnerScore50: number | null
   /** Combined final 0-100 when both banks are set. */
   finalScore: number | null
+  /** Partner accept / edit / reject of the AI grade. */
+  aiDecision: ProgrammeAiDecision | null
+  aiDecisionAt: Date | null
+  reviewOpenedAt: Date | null
+  reviewDurationMs: number | null
 }
 
 /**
@@ -157,6 +165,13 @@ const mapRow = (
     aiGrade: mapAiGrade(row.ai_grade),
     partnerScore50: toFiniteNumber(row.partner_score_50),
     finalScore: toFiniteNumber(row.final_score),
+    aiDecision:
+      row.ai_decision === 'accept' || row.ai_decision === 'edit' || row.ai_decision === 'reject'
+        ? row.ai_decision
+        : null,
+    aiDecisionAt: toDate(row.ai_decision_at),
+    reviewOpenedAt: toDate(row.review_opened_at),
+    reviewDurationMs: toFiniteNumber(row.review_duration_ms),
   }
 }
 
@@ -263,6 +278,10 @@ export interface ReviewUpdate {
   finalScore?: number | null
   reviewerId: string
   reviewerName: string
+  /** Required when an AI grade exists: accept | edit | reject. */
+  aiDecision?: ProgrammeAiDecision | null
+  reviewOpenedAt?: Date | null
+  reviewDurationMs?: number | null
 }
 
 export async function updateSubmissionReview(
@@ -284,6 +303,18 @@ export async function updateSubmissionReview(
   }
   if (update.finalScore !== undefined) {
     patch.final_score = update.finalScore
+  }
+  if (update.aiDecision !== undefined) {
+    patch.ai_decision = update.aiDecision
+    patch.ai_decision_at = update.aiDecision ? nowIso : null
+  }
+  if (update.reviewOpenedAt !== undefined) {
+    patch.review_opened_at = update.reviewOpenedAt
+      ? update.reviewOpenedAt.toISOString()
+      : null
+  }
+  if (update.reviewDurationMs !== undefined) {
+    patch.review_duration_ms = update.reviewDurationMs
   }
   const { error } = await supabase
     .from('programme_component_submissions')
@@ -335,6 +366,9 @@ export async function approveSubmissionAndAward(params: {
   score: number | null
   partnerScore50?: number | null
   finalScore?: number | null
+  aiDecision?: ProgrammeAiDecision | null
+  reviewOpenedAt?: Date | null
+  reviewDurationMs?: number | null
 }): Promise<ApproveAndAwardResult> {
   const {
     submission,
@@ -344,6 +378,9 @@ export async function approveSubmissionAndAward(params: {
     score,
     partnerScore50,
     finalScore,
+    aiDecision,
+    reviewOpenedAt,
+    reviewDurationMs,
   } = params
 
   if (!submission.uid) throw new Error('Submission is missing the learner id.')
@@ -364,16 +401,23 @@ export async function approveSubmissionAndAward(params: {
     getActivityDefinitionById({ activityId: submission.componentType, journeyType }) ??
     getActivityDefinitionById({ activityId: submission.componentType, journeyType: '6W' })
 
+  const reviewFields = {
+    partnerNotes,
+    score,
+    partnerScore50,
+    finalScore,
+    reviewerId,
+    reviewerName,
+    aiDecision,
+    reviewOpenedAt,
+    reviewDurationMs,
+  }
+
   // Unknown component type: still record the review, but skip awarding.
   if (!activity) {
     await updateSubmissionReview(submission.id, {
       status: 'approved',
-      partnerNotes,
-      score,
-      partnerScore50,
-      finalScore,
-      reviewerId,
-      reviewerName,
+      ...reviewFields,
     })
     return { awarded: false, points: 0, alreadyAwarded: false, pointsEligible: false }
   }
@@ -392,12 +436,7 @@ export async function approveSubmissionAndAward(params: {
   // Record the partner's decision either way (status/notes/score/reviewer).
   await updateSubmissionReview(submission.id, {
     status: 'approved',
-    partnerNotes,
-    score,
-    partnerScore50,
-    finalScore,
-    reviewerId,
-    reviewerName,
+    ...reviewFields,
   })
 
   // Notify the learner: points when earned, otherwise a Pass mark (3M/6M/9M).

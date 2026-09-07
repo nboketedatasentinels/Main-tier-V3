@@ -8,6 +8,7 @@ import {
   Badge,
   Box,
   Button,
+  Collapse,
   Drawer,
   DrawerBody,
   DrawerCloseButton,
@@ -17,6 +18,7 @@ import {
   DrawerOverlay,
   Flex,
   FormControl,
+  FormHelperText,
   FormLabel,
   HStack,
   Heading,
@@ -24,6 +26,8 @@ import {
   Input,
   NumberInput,
   NumberInputField,
+  Radio,
+  RadioGroup,
   Select,
   SimpleGrid,
   Spinner,
@@ -42,6 +46,8 @@ import {
 import {
   Award,
   BookMarked,
+  ChevronDown,
+  ChevronUp,
   ClipboardList,
   ExternalLink,
   FileText,
@@ -60,10 +66,12 @@ import {
   approveSubmissionAndAward,
   getComponentPoints,
   getAiBankAScore,
+  type ProgrammeAiDecision,
   type ProgrammeComponentSubmission,
   type ProgrammeComponentType,
   type ProgrammeSubmissionStatus,
 } from '@/services/programmeComponentSubmissionService'
+import { fetchWhatGoodLooksLike } from '@/services/programmeWhatGoodLooksLike'
 import { getDisplayName } from '@/utils/displayName'
 import { isJourneyType, isMonthBasedJourney } from '@/utils/journeyType'
 import type { JourneyType } from '@/config/pointsConfig'
@@ -240,7 +248,8 @@ const ProgrammeSubmissionsPage: React.FC = () => {
             </HStack>
             <Text color="gray.600" fontSize="sm">
               Capstone, case study, and practical work from learners in your organisations.
-              Gemini pre-grades each submission; you confirm, add Bank B judgment, and approve.
+              Gemini pre-grades each submission. You must accept, edit, or reject that estimate —
+              AI never awards points alone.
             </Text>
           </Box>
         </Flex>
@@ -578,23 +587,35 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const [notes, setNotes] = useState('')
   const [score, setScore] = useState<string>('')
   const [partnerBankB, setPartnerBankB] = useState<string>('')
+  const [aiDecision, setAiDecision] = useState<ProgrammeAiDecision | ''>('')
   const [saving, setSaving] = useState(false)
   const [learnerJourneyType, setLearnerJourneyType] = useState<JourneyType | null>(null)
+  const [criteriaOpen, setCriteriaOpen] = useState(true)
+  const [criteriaTitle, setCriteriaTitle] = useState<string | null>(null)
+  const [criteriaItems, setCriteriaItems] = useState<string[]>([])
+  const [criteriaLoading, setCriteriaLoading] = useState(false)
+  const reviewOpenedAtRef = React.useRef<Date | null>(null)
 
   useEffect(() => {
-    if (!submission) return
+    if (!submission || !isOpen) return
+    reviewOpenedAtRef.current = new Date()
     setStatus(submission.status === 'submitted' ? 'in_review' : submission.status)
     setNotes(submission.partnerNotes ?? '')
+    setAiDecision(submission.aiDecision ?? '')
     const aiScore =
       submission.aiGrade?.status === 'completed' && submission.aiGrade.score != null
         ? Math.round(submission.aiGrade.score)
         : null
-    const initialScore = submission.finalScore ?? submission.score ?? aiScore
+    // Do not pre-fill AI score until partner chooses accept/edit (bias mitigation).
+    const initialScore =
+      submission.finalScore ??
+      submission.score ??
+      (submission.aiDecision === 'accept' || submission.aiDecision === 'edit' ? aiScore : null)
     setScore(initialScore !== null ? String(initialScore) : '')
     setPartnerBankB(
       submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : '',
     )
-  }, [submission])
+  }, [submission, isOpen])
 
   useEffect(() => {
     if (!submission?.uid) {
@@ -621,6 +642,31 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     }
   }, [submission?.uid])
 
+  useEffect(() => {
+    if (!isOpen || !submission) {
+      setCriteriaItems([])
+      setCriteriaTitle(null)
+      return
+    }
+    let cancelled = false
+    setCriteriaLoading(true)
+    void fetchWhatGoodLooksLike({
+      sourcePage: submission.sourcePage,
+      componentId: submission.componentId,
+    })
+      .then((result) => {
+        if (cancelled) return
+        setCriteriaTitle(result.title)
+        setCriteriaItems(result.items)
+      })
+      .finally(() => {
+        if (!cancelled) setCriteriaLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, submission?.id, submission?.sourcePage, submission?.componentId])
+
   if (!submission) return null
 
   const typeMeta = submission.componentType ? TYPE_META[submission.componentType] : null
@@ -631,17 +677,33 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) ||
     componentPoints === 0
   const ai = submission.aiGrade
+  const aiCompleted = ai?.status === 'completed'
   const aiBankA = getAiBankAScore(ai)
+  const aiOverall =
+    ai?.score != null && Number.isFinite(ai.score)
+      ? Math.round(ai.score)
+      : aiBankA != null
+        ? aiBankA * 2
+        : null
   const aiFeedback =
     (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
 
-  const applyAiSuggestion = () => {
-    if (ai?.status !== 'completed') return
-    if (ai.score != null) setScore(String(Math.round(ai.score)))
-    else if (aiBankA != null) setScore(String(aiBankA * 2))
-    if (aiFeedback && !notes.trim()) setNotes(aiFeedback)
-    if (ai.pass === false) setStatus('needs_revision')
-    else if (ai.pass === true) setStatus('approved')
+  const applyAiScoreToFields = () => {
+    if (aiOverall != null) setScore(String(aiOverall))
+    if (ai?.pass === false) setStatus('needs_revision')
+    else if (ai?.pass === true && status === 'submitted') setStatus('in_review')
+  }
+
+  const handleAiDecisionChange = (next: ProgrammeAiDecision) => {
+    setAiDecision(next)
+    if (next === 'accept') {
+      applyAiScoreToFields()
+    } else if (next === 'edit') {
+      applyAiScoreToFields()
+    } else if (next === 'reject') {
+      setScore('')
+      setPartnerBankB('')
+    }
   }
 
   const handleSave = async () => {
@@ -649,6 +711,37 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
       onSaved({ status: 'error', title: 'You need to be signed in to save.' })
       return
     }
+    if (aiCompleted && !aiDecision) {
+      onSaved({
+        status: 'warning',
+        title: 'Decide on the AI score first',
+        description: 'Accept it, accept with changes, or reject it — then save.',
+      })
+      return
+    }
+    if (aiCompleted && aiDecision === 'edit' && aiOverall != null) {
+      const n = Number(score)
+      if (!Number.isFinite(n) || Math.round(n) === aiOverall) {
+        onSaved({
+          status: 'warning',
+          title: 'Change the score to use “with changes”',
+          description: `AI suggested ${aiOverall}. Enter your own score (e.g. 85) or choose Accept.`,
+        })
+        return
+      }
+    }
+    if (aiCompleted && aiDecision === 'reject') {
+      const n = Number(score)
+      if (!Number.isFinite(n)) {
+        onSaved({
+          status: 'warning',
+          title: 'Enter your own score',
+          description: 'You rejected the AI estimate — set the score you believe is fair.',
+        })
+        return
+      }
+    }
+
     setSaving(true)
     try {
       const scoreNum = score.trim() === '' ? null : Number(score)
@@ -659,17 +752,29 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           ? Math.max(0, Math.min(50, Math.round(bankBRaw)))
           : null
       let finalScore: number | null = cleanScore
-      if (aiBankA != null && partnerScore50 != null) {
+
+      if (aiDecision === 'reject') {
+        // Partner owns the full score; do not fold AI Bank A into final.
+        finalScore = cleanScore
+        partnerScore50 = null
+      } else if (aiBankA != null && partnerScore50 != null) {
         finalScore = Math.max(0, Math.min(100, aiBankA + partnerScore50))
       } else if (cleanScore != null && aiBankA != null && partnerScore50 == null) {
-        // Treat overall score as final; derive Bank B from remainder.
         partnerScore50 = Math.max(0, Math.min(50, Math.round(cleanScore) - aiBankA))
         finalScore = Math.max(0, Math.min(100, Math.round(cleanScore)))
       }
+
       const cleanNotes = notes.trim() === '' ? null : notes.trim()
+      const openedAt = reviewOpenedAtRef.current
+      const durationMs =
+        openedAt != null ? Math.max(0, Date.now() - openedAt.getTime()) : null
+      const hitl = {
+        aiDecision: aiCompleted ? (aiDecision as ProgrammeAiDecision) : null,
+        reviewOpenedAt: openedAt,
+        reviewDurationMs: durationMs,
+      }
 
       if (status === 'approved') {
-        // Approving awards points on 6W; on month journeys this is a Pass mark.
         const result = await approveSubmissionAndAward({
           submission,
           reviewerId,
@@ -678,6 +783,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           score: finalScore ?? cleanScore,
           partnerScore50,
           finalScore,
+          ...hitl,
         })
         const isPassMark = passFailMode || result.points === 0
         onSaved({
@@ -712,6 +818,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           finalScore,
           reviewerId,
           reviewerName,
+          ...hitl,
         })
         onSaved({
           status: 'success',
@@ -831,6 +938,64 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
               p={4}
               bg="white"
               border="1px solid"
+              borderColor="gray.200"
+              rounded="lg"
+            >
+              <Button
+                variant="ghost"
+                size="sm"
+                w="100%"
+                justifyContent="space-between"
+                px={0}
+                onClick={() => setCriteriaOpen((v) => !v)}
+                rightIcon={<Icon as={criteriaOpen ? ChevronUp : ChevronDown} boxSize={4} />}
+              >
+                <Text fontSize="sm" fontWeight="bold" color={PLUM}>
+                  What good looks like
+                </Text>
+              </Button>
+              <Collapse in={criteriaOpen} animateOpacity>
+                <Box pt={2}>
+                  {criteriaLoading ? (
+                    <HStack spacing={2} py={2}>
+                      <Spinner size="sm" />
+                      <Text fontSize="sm" color="gray.600">
+                        Loading criteria…
+                      </Text>
+                    </HStack>
+                  ) : criteriaItems.length === 0 ? (
+                    <Text fontSize="sm" color="gray.600">
+                      Criteria for this artefact are not available here. Open the original form to
+                      review the standard.
+                    </Text>
+                  ) : (
+                    <Stack spacing={2}>
+                      {criteriaTitle ? (
+                        <Text fontSize="sm" fontWeight="semibold" color="gray.800">
+                          {criteriaTitle}
+                        </Text>
+                      ) : null}
+                      <Stack as="ul" spacing={2} pl={4} m={0} style={{ listStyle: 'disc' }}>
+                        {criteriaItems.map((item) => (
+                          <Text as="li" key={item.slice(0, 48)} fontSize="sm" color="gray.700" lineHeight="1.5">
+                            {item}
+                          </Text>
+                        ))}
+                      </Stack>
+                      <Text fontSize="xs" color="gray.500">
+                        Read this before accepting or changing the AI estimate — so the machine does
+                        not decide for you.
+                      </Text>
+                    </Stack>
+                  )}
+                </Box>
+              </Collapse>
+            </Box>
+
+            <Box
+              p={4}
+              bg="white"
+              border="1px solid"
               borderColor={
                 ai?.status === 'error'
                   ? 'red.200'
@@ -843,7 +1008,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
               <Stack spacing={3}>
                 <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
                   <Text fontSize="sm" fontWeight="bold" color={PLUM}>
-                    AI advisory grade
+                    AI estimate
                   </Text>
                   <AiGradeBadge submission={submission} />
                 </Flex>
@@ -861,14 +1026,14 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     </AlertDescription>
                   </Alert>
                 )}
-                {ai?.status === 'completed' && (
+                {aiCompleted && (
                   <>
                     <HStack spacing={4} flexWrap="wrap">
-                      {ai.score != null && (
+                      {aiOverall != null && (
                         <Text fontSize="sm" color="gray.700">
-                          Score{' '}
+                          Suggested{' '}
                           <Text as="span" fontWeight="bold">
-                            {Math.round(ai.score)}/100
+                            {aiOverall}/100
                           </Text>
                         </Text>
                       )}
@@ -880,7 +1045,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                           </Text>
                         </Text>
                       )}
-                      {ai.pass != null && (
+                      {ai?.pass != null && (
                         <Badge colorScheme={ai.pass ? 'green' : 'orange'} textTransform="none">
                           AI {ai.pass ? 'Pass' : 'Fail'}
                         </Badge>
@@ -902,12 +1067,31 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         </Text>
                       </Box>
                     )}
-                    <Button size="xs" variant="outline" colorScheme="purple" onClick={applyAiSuggestion}>
-                      Apply AI suggestion to my review
-                    </Button>
-                    <Text fontSize="xs" color="gray.500">
-                      Advisory only - AI never awards points. You remain the gate.
-                    </Text>
+
+                    <FormControl isRequired>
+                      <FormLabel fontSize="xs" color="gray.600" mb={2}>
+                        Do you accept what the AI scored?
+                      </FormLabel>
+                      <RadioGroup
+                        value={aiDecision}
+                        onChange={(v) => handleAiDecisionChange(v as ProgrammeAiDecision)}
+                      >
+                        <Stack spacing={2}>
+                          <Radio value="accept" colorScheme="purple">
+                            Yes — accept the AI estimate
+                          </Radio>
+                          <Radio value="edit" colorScheme="purple">
+                            Yes, with changes — I will adjust the score
+                          </Radio>
+                          <Radio value="reject" colorScheme="purple">
+                            No — reject the AI estimate; I will score myself
+                          </Radio>
+                        </Stack>
+                      </RadioGroup>
+                      <FormHelperText>
+                        AI never awards points alone. Your choice is saved as proof a human reviewed.
+                      </FormHelperText>
+                    </FormControl>
                   </>
                 )}
               </Stack>
@@ -997,7 +1181,8 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 </FormControl>
                 <FormControl>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    {passFailMode ? 'Optional score note (0-100)' : 'Final score (optional, 0-100)'}
+                    {passFailMode ? 'Score note (0-100)' : 'Final score (0-100)'}
+                    {aiDecision === 'edit' || aiDecision === 'reject' ? ' *' : ''}
                   </FormLabel>
                   <NumberInput
                     size="sm"
@@ -1006,11 +1191,23 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     value={score}
                     onChange={(v) => setScore(v)}
                     bg="white"
+                    isDisabled={aiCompleted && !aiDecision}
                   >
-                    <NumberInputField placeholder="-" />
+                    <NumberInputField
+                      placeholder={
+                        aiDecision === 'edit' && aiOverall != null
+                          ? `AI suggested ${aiOverall} — enter your score`
+                          : aiDecision === 'reject'
+                            ? 'Your score (AI rejected)'
+                            : '-'
+                      }
+                    />
                   </NumberInput>
+                  {aiDecision === 'accept' && aiOverall != null ? (
+                    <FormHelperText>Using AI estimate {aiOverall}/100 unless you change Bank B.</FormHelperText>
+                  ) : null}
                 </FormControl>
-                {aiBankA != null && (
+                {aiBankA != null && aiDecision !== 'reject' && (
                   <FormControl>
                     <FormLabel fontSize="xs" color="gray.600" mb={1}>
                       Your Bank B judgment (0-50)
@@ -1028,14 +1225,20 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         }
                       }}
                       bg="white"
+                      isDisabled={aiCompleted && !aiDecision}
                     >
                       <NumberInputField placeholder={`AI Bank A is ${aiBankA}/50`} />
                     </NumberInput>
                     <Text fontSize="xs" color="gray.500" mt={1}>
-                      Final = AI Bank A ({aiBankA}) + your Bank B.
+                      Final = AI Bank A ({aiBankA}) + your Bank B. This is your judgment layer.
                     </Text>
                   </FormControl>
                 )}
+                {aiDecision === 'reject' ? (
+                  <Text fontSize="xs" color="orange.700">
+                    You rejected the AI estimate. Final score is yours alone — Bank A is not added.
+                  </Text>
+                ) : null}
                 <FormControl>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
                     Feedback for the learner
