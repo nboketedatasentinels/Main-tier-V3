@@ -405,13 +405,15 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
   initialDraft = null,
 }) => {
   const toast = useToast()
-  const { user } = useAuth()
+  const { user, isPaid } = useAuth()
+  /** Free users have no org roster — allow any external name/email. Paid stay org-only. */
+  const allowExternalConfirmers = !isPaid
   const [draft, setDraft] = useState<ClaimWizardDraft>(() =>
     initialDraft ? { ...initialDraft } : blankClaimWizardDraft(),
   )
   const [helpKey, setHelpKey] = useState<ClaimFlowHelpKey | null>(null)
   const [orgMembers, setOrgMembers] = useState<OrgMemberOption[]>([])
-  const [orgMembersLoading, setOrgMembersLoading] = useState(true)
+  const [orgMembersLoading, setOrgMembersLoading] = useState(!allowExternalConfirmers)
   const [orgMembersError, setOrgMembersError] = useState<string | null>(null)
   const patch = (partial: Partial<ClaimWizardDraft>) => setDraft((d) => ({ ...d, ...partial }))
 
@@ -420,6 +422,13 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
   }, [initialDraft])
 
   useEffect(() => {
+    if (allowExternalConfirmers) {
+      setOrgMembers([])
+      setOrgMembersError(null)
+      setOrgMembersLoading(false)
+      return
+    }
+
     let cancelled = false
     setOrgMembersLoading(true)
     setOrgMembersError(null)
@@ -462,7 +471,7 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
     return () => {
       cancelled = true
     }
-  }, [user?.email])
+  }, [user?.email, allowExternalConfirmers])
 
   const orgEmailSet = useMemo(
     () => new Set(orgMembers.map((m) => m.email)),
@@ -619,14 +628,25 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
       toast({ status: 'warning', title: 'Tick the last box to confirm where the numbers came from.' })
       return
     }
+    const myEmail = normalizeEmail(user?.email || '')
+    const ownerEmail = normalizeEmail(draft.ownerEmail)
     if (!draft.ownerName.trim() || !EMAIL_RE.test(draft.ownerEmail.trim())) {
       toast({
         status: 'warning',
-        title: 'Pick who confirms this from your organisation (name and email).',
+        title: allowExternalConfirmers
+          ? 'Enter who confirms this (name and email).'
+          : 'Pick who confirms this from your organisation (name and email).',
       })
       return
     }
-    if (!orgEmailSet.has(normalizeEmail(draft.ownerEmail))) {
+    if (myEmail && ownerEmail === myEmail) {
+      toast({
+        status: 'warning',
+        title: 'Someone else must confirm the number — it cannot be you.',
+      })
+      return
+    }
+    if (!allowExternalConfirmers && !orgEmailSet.has(ownerEmail)) {
       toast({
         status: 'warning',
         title: 'Measure owner must be someone in your organisation.',
@@ -635,14 +655,31 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
     }
     const claimUsd = nn(draft.moneyGained) || calc.net
     if (claimUsd >= 1000) {
+      const financeEmail = normalizeEmail(draft.financeEmail)
       if (!draft.financeName.trim() || !EMAIL_RE.test(draft.financeEmail.trim())) {
         toast({
           status: 'warning',
-          title: 'Pick a finance validator from your organisation (name and email).',
+          title: allowExternalConfirmers
+            ? 'Enter a finance validator (name and email).'
+            : 'Pick a finance validator from your organisation (name and email).',
         })
         return
       }
-      if (!orgEmailSet.has(normalizeEmail(draft.financeEmail))) {
+      if (myEmail && financeEmail === myEmail) {
+        toast({
+          status: 'warning',
+          title: 'Finance validator must be someone else — it cannot be you.',
+        })
+        return
+      }
+      if (financeEmail === ownerEmail) {
+        toast({
+          status: 'warning',
+          title: 'Finance validator must be a different person from who confirms the number.',
+        })
+        return
+      }
+      if (!allowExternalConfirmers && !orgEmailSet.has(financeEmail)) {
         toast({
           status: 'warning',
           title: 'Finance validator must be someone in your organisation.',
@@ -1424,7 +1461,23 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
                 Who confirms the number
                 <HelpBtn k="who" onOpen={setHelpKey} />
               </FormLabel>
-              {orgMembersLoading ? (
+              {allowExternalConfirmers ? (
+                <Stack spacing={2}>
+                  <Input
+                    placeholder="Full name"
+                    value={draft.ownerName}
+                    bg={!draft.ownerName ? 'yellow.50' : undefined}
+                    onChange={(e) => patch({ ownerName: e.target.value })}
+                  />
+                  <Input
+                    type="email"
+                    placeholder="Email · anyone, even outside the app"
+                    value={draft.ownerEmail}
+                    bg={!draft.ownerEmail ? 'yellow.50' : undefined}
+                    onChange={(e) => patch({ ownerEmail: e.target.value })}
+                  />
+                </Stack>
+              ) : orgMembersLoading ? (
                 <Flex align="center" gap={2} py={2}>
                   <Spinner size="sm" />
                   <Text fontSize="sm" color="gray.600">
@@ -1453,15 +1506,19 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
                 </Text>
               ) : null}
               <FormHelperText>
-                Name and email of a user in your organisation. Usually your manager or whoever owns
-                the number. It cannot be you.
+                {allowExternalConfirmers
+                  ? 'Name and email of someone who can confirm the number — they do not need a T4L account or organisation. It cannot be you.'
+                  : 'Name and email of a user in your organisation. Usually your manager or whoever owns the number. It cannot be you.'}
               </FormHelperText>
-              {orgMembersError ? (
+              {!allowExternalConfirmers && orgMembersError ? (
                 <Text fontSize="xs" color="red.600" mt={1}>
                   {orgMembersError}
                 </Text>
               ) : null}
-              {!orgMembersLoading && !orgMembersError && orgMembers.length === 0 ? (
+              {!allowExternalConfirmers &&
+              !orgMembersLoading &&
+              !orgMembersError &&
+              orgMembers.length === 0 ? (
                 <Text fontSize="xs" color="orange.700" mt={1}>
                   No other organisation members found to confirm this claim.
                 </Text>
@@ -1471,7 +1528,21 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
               <FormLabel fontSize="sm">
                 Finance validator {claimUsd >= 1000 ? '(needed at this size)' : '(optional at this size)'}
               </FormLabel>
-              {orgMembersLoading ? (
+              {allowExternalConfirmers ? (
+                <Stack spacing={2}>
+                  <Input
+                    placeholder="Full name"
+                    value={draft.financeName}
+                    onChange={(e) => patch({ financeName: e.target.value })}
+                  />
+                  <Input
+                    type="email"
+                    placeholder="Email · anyone, even outside the app"
+                    value={draft.financeEmail}
+                    onChange={(e) => patch({ financeEmail: e.target.value })}
+                  />
+                </Stack>
+              ) : orgMembersLoading ? (
                 <Flex align="center" gap={2} py={2}>
                   <Spinner size="sm" />
                   <Text fontSize="sm" color="gray.600">
@@ -1501,9 +1572,13 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
                 </Text>
               ) : null}
               <FormHelperText>
-                {claimUsd >= 1000
-                  ? 'Anything worth $1,000 a month or more needs finance in your organisation to sign it off.'
-                  : 'Optional. Pick someone in your organisation if you want finance to verify the figure.'}
+                {allowExternalConfirmers
+                  ? claimUsd >= 1000
+                    ? 'Anything worth $1,000 a month or more needs a finance person to sign it off. They do not need a T4L account.'
+                    : 'Optional. Enter anyone who can verify the figure — they do not need a T4L account.'
+                  : claimUsd >= 1000
+                    ? 'Anything worth $1,000 a month or more needs finance in your organisation to sign it off.'
+                    : 'Optional. Pick someone in your organisation if you want finance to verify the figure.'}
               </FormHelperText>
             </FormControl>
           </SimpleGrid>
