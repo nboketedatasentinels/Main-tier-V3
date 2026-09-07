@@ -16,6 +16,8 @@ import {
   buildSessionPrepModel,
   type SessionPrepInput,
 } from '@/services/sessionPrepContent'
+import { getArchetypeSessionPrompts } from '@/config/archetypeSessionPrompts'
+import type { Archetype } from '@/config/liftAssessment'
 
 export interface SessionPrepPanelProps {
   input: SessionPrepInput
@@ -55,6 +57,15 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
 }) => {
   const model = useMemo(() => buildSessionPrepModel(input), [input])
   const isLeader = model.audience === 'leader'
+  const goalParts = useMemo(() => {
+    const raw = (model.goalVerbatim || '').split(/\n\n+/).map((p) => p.trim())
+    while (raw.length < 3) raw.push('')
+    return raw.slice(0, 3)
+  }, [model.goalVerbatim])
+  const goalPrompts = useMemo(
+    () => getArchetypeSessionPrompts((model.archetypeLabel as Archetype | null) || null),
+    [model.archetypeLabel],
+  )
   const initials = model.personTitle
     .split(/\s+/)
     .filter(Boolean)
@@ -172,6 +183,11 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
 
             <Box>
               <MonoLabel>{isLeader ? 'Where you were in week 1' : 'Capability shape'}</MonoLabel>
+              {model.liftAssessedLabel ? (
+                <Text fontSize="12px" color="gray.600" mb={2} mt={-1}>
+                  LIFT assessment · {model.liftAssessedLabel}
+                </Text>
+              ) : null}
               <LiftCapabilityRadar
                 pillars={model.pillars}
                 chosenPillar={model.chosenPillar}
@@ -372,22 +388,38 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
 
           {isLeader && leaderGoalEditor ? <Box mt={3}>{leaderGoalEditor}</Box> : null}
 
-          {isLeader && model.goalVerbatim ? (
+          {isLeader ? (
             <Box mt={7}>
               <MonoLabel>Your session prep answers</MonoLabel>
-              <Stack spacing={0}>
-                {model.goalVerbatim
-                  .split(/\n\n+/)
-                  .map((part) => part.trim())
-                  .filter(Boolean)
-                  .map((part) => (
-                    <Box key={part.slice(0, 48)} borderTop="1px solid" borderColor="rgba(35,31,48,.14)" py={4}>
-                      <Text fontSize="14.5px" lineHeight="1.55" fontWeight="500" whiteSpace="pre-wrap">
-                        {part}
-                      </Text>
-                    </Box>
-                  ))}
-              </Stack>
+              {model.goalVerbatim ? (
+                <Stack spacing={0}>
+                  {goalParts.map((part, i) => {
+                    if (!part) return null
+                    const label = goalPrompts[i]?.label || `Answer ${i + 1}`
+                    return (
+                      <Box key={`${label}-${i}`} borderTop="1px solid" borderColor="rgba(35,31,48,.14)" py={4}>
+                        <Text
+                          fontSize="10px"
+                          fontWeight="bold"
+                          letterSpacing="0.08em"
+                          textTransform="uppercase"
+                          color="gray.500"
+                          mb={1}
+                        >
+                          {label}
+                        </Text>
+                        <Text fontSize="14.5px" lineHeight="1.55" fontWeight="500" whiteSpace="pre-wrap">
+                          {part}
+                        </Text>
+                      </Box>
+                    )
+                  })}
+                </Stack>
+              ) : (
+                <Text fontSize="13px" color="gray.600" lineHeight="1.55" mt={1}>
+                  Save your mentorship goal answers above — they will show here for your meet-up.
+                </Text>
+              )}
             </Box>
           ) : null}
 

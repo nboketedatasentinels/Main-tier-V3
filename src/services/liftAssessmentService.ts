@@ -134,6 +134,7 @@ export const getSessionPrepLift = async (
   liftIndex: number
   developmentEdge: PillarKey | null
   archetype: Archetype | null
+  assessedAt: string | null
 } | null> => {
   const { data, error } = await supabase.rpc('get_session_prep_lift', {
     p_learner_id: learnerId,
@@ -159,6 +160,8 @@ export const getSessionPrepLift = async (
       liftIndex?: number
       developmentEdge?: PillarKey | null
       archetype?: Archetype | null
+      assessedAt?: string | null
+      created_at?: string | null
     } | null
   }
   if (!payload.ok) {
@@ -171,11 +174,28 @@ export const getSessionPrepLift = async (
   const archetype =
     payload.lift.archetype ??
     resolveArchetype(pillars, liftIndex)
+
+  let assessedAt =
+    (typeof payload.lift.assessedAt === 'string' && payload.lift.assessedAt) ||
+    (typeof payload.lift.created_at === 'string' && payload.lift.created_at) ||
+    null
+
+  // Fallback when RPC predates assessedAt (learner can read own row).
+  if (!assessedAt) {
+    const { data: row } = await supabase
+      .from('lift_assessments')
+      .select('created_at')
+      .eq('uid', learnerId)
+      .maybeSingle()
+    if (typeof row?.created_at === 'string') assessedAt = row.created_at
+  }
+
   return {
     pillars,
     liftIndex,
     developmentEdge: payload.lift.developmentEdge ?? null,
     archetype,
+    assessedAt,
   }
 }
 

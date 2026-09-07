@@ -7,6 +7,7 @@ export const useSessionPrepLift = (learnerId?: string | null) => {
   const [developmentEdge, setDevelopmentEdge] = useState<PillarKey | null>(null)
   const [liftIndex, setLiftIndex] = useState<number | null>(null)
   const [archetype, setArchetype] = useState<import('@/config/liftAssessment').Archetype | null>(null)
+  const [assessedAt, setAssessedAt] = useState<string | null>(null)
   const [loading, setLoading] = useState(Boolean(learnerId))
 
   useEffect(() => {
@@ -15,6 +16,7 @@ export const useSessionPrepLift = (learnerId?: string | null) => {
       setDevelopmentEdge(null)
       setLiftIndex(null)
       setArchetype(null)
+      setAssessedAt(null)
       setLoading(false)
       return
     }
@@ -27,6 +29,7 @@ export const useSessionPrepLift = (learnerId?: string | null) => {
         setDevelopmentEdge(row?.developmentEdge ?? null)
         setLiftIndex(row?.liftIndex ?? null)
         setArchetype(row?.archetype ?? null)
+        setAssessedAt(row?.assessedAt ?? null)
       })
       .catch(() => {
         if (!cancelled) {
@@ -34,6 +37,7 @@ export const useSessionPrepLift = (learnerId?: string | null) => {
           setDevelopmentEdge(null)
           setLiftIndex(null)
           setArchetype(null)
+          setAssessedAt(null)
         }
       })
       .finally(() => {
@@ -44,5 +48,5 @@ export const useSessionPrepLift = (learnerId?: string | null) => {
     }
   }, [learnerId])
 
-  return { pillars, developmentEdge, liftIndex, archetype, loading }
+  return { pillars, developmentEdge, liftIndex, archetype, assessedAt, loading }
 }

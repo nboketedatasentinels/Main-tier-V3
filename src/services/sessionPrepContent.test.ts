@@ -75,11 +75,26 @@ describe('sessionPrepContent', () => {
     expect(leader.showScores).toBe(true)
     expect(leader.archetypeLabel).toBe('Architect')
     expect(leader.goalVerbatim).toBe('Get exec approval')
+    expect(leader.liftAssessedLabel).toBeNull()
     expect(leader.totalPointsLabel).toContain('12,500')
     expect(leader.bringItems).toHaveLength(1)
     expect(leader.bringItems[0].title).toBe('Case Study 1')
     expect(leader.mentorCanSee).toEqual([])
     expect(leader.mentorCannotSee).toEqual([])
+  })
+
+  it('formats LIFT assessment date for session prep', () => {
+    const leader = buildSessionPrepModel({
+      audience: 'leader',
+      leaderName: 'Thandiwe Moyo',
+      mentorName: 'Grace Adjei',
+      pillars: { L: 64, I: 79, F: 48, T: 73 },
+      liftAssessedAt: '2026-03-15T10:00:00.000Z',
+      journeyType: '3M',
+      sessionNumber: 1,
+    })
+    expect(leader.liftAssessedLabel).toMatch(/15/)
+    expect(leader.liftAssessedLabel).toMatch(/2026/)
   })
 
   it('prefers programme submissions in mentor topics', () => {

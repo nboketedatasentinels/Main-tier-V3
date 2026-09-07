@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { Box, Skeleton } from '@chakra-ui/react'
 import { SessionPrepPanel } from '@/components/session-prep/SessionPrepPanel'
 import { useSessionPrepLift } from '@/hooks/useSessionPrepLift'
+import { useMentorshipGoals } from '@/hooks/useMentorshipGoals'
 import { useLearnerProgrammeSubmissions } from '@/hooks/useLearnerProgrammeSubmissions'
 import { getDisplayName } from '@/utils/displayName'
 import { mentorMeetupCountForJourney } from '@/services/sessionPrepContent'
@@ -21,13 +22,18 @@ interface LeaderSessionPrepProps {
 export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
   learner,
   mentor,
-  goals,
+  goals: goalsProp,
   goalEditor,
   offLimits,
   sessionNumber = 1,
 }) => {
-  const { pillars, archetype, loading: liftLoading } = useSessionPrepLift(learner.id ?? null)
+  const { pillars, archetype, assessedAt, loading: liftLoading } = useSessionPrepLift(learner.id ?? null)
+  const { goals: loadedGoals, loading: goalsLoading } = useMentorshipGoals(
+    learner.id ?? null,
+    mentor?.id ?? null,
+  )
   const { submissions, loading: submissionsLoading } = useLearnerProgrammeSubmissions(learner.id ?? null)
+  const goals = (goalsProp && goalsProp.trim()) || loadedGoals || null
   const input = useMemo(
     () => ({
       audience: 'leader' as const,
@@ -45,10 +51,11 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
       coreValues: learner.coreValues,
       journeyType: typeof learner.journeyType === 'string' ? learner.journeyType : null,
       currentWeek: learner.currentWeek ?? null,
-      goals: goals ?? null,
+      goals,
       offLimits: offLimits ?? null,
       pillars,
       archetype,
+      liftAssessedAt: assessedAt,
       totalPoints:
         typeof learner.totalPoints === 'number' ? learner.totalPoints : undefined,
       programmeSubmissions: submissions,
@@ -61,10 +68,12 @@ export const LeaderSessionPrep: React.FC<LeaderSessionPrepProps> = ({
         ? `You requested this. ${getDisplayName(mentor).split(' ')[0]} will meet you when the time is confirmed.`
         : 'Request a meet-up from your mentor card when you are ready.',
     }),
-    [learner, mentor, goals, offLimits, pillars, archetype, submissions, sessionNumber],
+    [learner, mentor, goals, offLimits, pillars, archetype, assessedAt, submissions, sessionNumber],
   )
 
-  if (liftLoading || submissionsLoading) return <Skeleton height="360px" borderRadius="14px" />
+  if (liftLoading || submissionsLoading || goalsLoading) {
+    return <Skeleton height="360px" borderRadius="14px" />
+  }
 
   return (
     <Box>

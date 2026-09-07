@@ -43,6 +43,8 @@ export interface SessionPrepInput {
   pillars?: Record<PillarKey, number> | null
   chosenPillar?: PillarKey | null
   archetype?: string | null
+  /** ISO timestamp when the learner completed LIFT. */
+  liftAssessedAt?: string | null
   totalPoints?: number | null
   windowStatus?: 'on_track' | 'warning' | 'alert' | 'recovery' | null
   sessionNumber?: number | null
@@ -85,6 +87,8 @@ export interface SessionPrepModel {
   gapPillar: PillarKey | null
   showScores: boolean
   liftPending: boolean
+  /** Formatted LIFT assessment date for display, when known. */
+  liftAssessedLabel: string | null
   tendencies: string[]
   costs: string[]
   values: string[]
@@ -332,6 +336,21 @@ const buildHeadline = (input: SessionPrepInput, first: string, goal: string | nu
   return `Limited prep data for ${first} yet. Contract the outcome before you explore.`
 }
 
+const formatLiftAssessedLabel = (raw?: string | null): string | null => {
+  if (!raw || !String(raw).trim()) return null
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return null
+  try {
+    return d.toLocaleDateString(undefined, {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return null
+  }
+}
+
 export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel => {
   const first = input.leaderName.split(' ')[0] || input.leaderName
   const journeyType = input.journeyType && isJourneyType(input.journeyType) ? input.journeyType : null
@@ -349,6 +368,7 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
   const goal = input.goals?.trim() || null
   const personalityTendencies = tendencyLines(first, input.personalityType)
   const personalityCosts = costLines(first, input.personalityType, input.coreValues)
+  const liftAssessedLabel = formatLiftAssessedLabel(input.liftAssessedAt)
 
   if (input.audience === 'leader') {
     const total = Math.max(1, mentorTotal || 1)
@@ -376,6 +396,7 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
       gapPillar,
       showScores: Boolean(pillars),
       liftPending: !pillars,
+      liftAssessedLabel,
       tendencies: [],
       costs: [],
       values: input.coreValues ?? [],
@@ -464,6 +485,7 @@ export const buildSessionPrepModel = (input: SessionPrepInput): SessionPrepModel
     gapPillar,
     showScores: Boolean(pillars),
     liftPending: !pillars,
+    liftAssessedLabel,
     tendencies: personalityTendencies,
     costs: personalityCosts,
     values: input.coreValues ?? [],
