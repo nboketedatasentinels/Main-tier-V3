@@ -72,6 +72,9 @@ export interface ProgrammeComponentSubmission {
   aiDecisionAt: Date | null
   reviewOpenedAt: Date | null
   reviewDurationMs: number | null
+  /** Partner confirmed they read What good looks like before deciding. */
+  criteriaAcknowledged: boolean
+  criteriaAcknowledgedAt: Date | null
 }
 
 /**
@@ -172,6 +175,8 @@ const mapRow = (
     aiDecisionAt: toDate(row.ai_decision_at),
     reviewOpenedAt: toDate(row.review_opened_at),
     reviewDurationMs: toFiniteNumber(row.review_duration_ms),
+    criteriaAcknowledged: row.criteria_acknowledged === true,
+    criteriaAcknowledgedAt: toDate(row.criteria_acknowledged_at),
   }
 }
 
@@ -282,6 +287,9 @@ export interface ReviewUpdate {
   aiDecision?: ProgrammeAiDecision | null
   reviewOpenedAt?: Date | null
   reviewDurationMs?: number | null
+  /** Partner confirmed they compared answers to What good looks like. */
+  criteriaAcknowledged?: boolean
+  criteriaAcknowledgedAt?: Date | null
 }
 
 export async function updateSubmissionReview(
@@ -315,6 +323,14 @@ export async function updateSubmissionReview(
   }
   if (update.reviewDurationMs !== undefined) {
     patch.review_duration_ms = update.reviewDurationMs
+  }
+  if (update.criteriaAcknowledged !== undefined) {
+    patch.criteria_acknowledged = Boolean(update.criteriaAcknowledged)
+  }
+  if (update.criteriaAcknowledgedAt !== undefined) {
+    patch.criteria_acknowledged_at = update.criteriaAcknowledgedAt
+      ? update.criteriaAcknowledgedAt.toISOString()
+      : null
   }
   const { error } = await supabase
     .from('programme_component_submissions')
@@ -369,6 +385,8 @@ export async function approveSubmissionAndAward(params: {
   aiDecision?: ProgrammeAiDecision | null
   reviewOpenedAt?: Date | null
   reviewDurationMs?: number | null
+  criteriaAcknowledged?: boolean
+  criteriaAcknowledgedAt?: Date | null
 }): Promise<ApproveAndAwardResult> {
   const {
     submission,
@@ -381,6 +399,8 @@ export async function approveSubmissionAndAward(params: {
     aiDecision,
     reviewOpenedAt,
     reviewDurationMs,
+    criteriaAcknowledged,
+    criteriaAcknowledgedAt,
   } = params
 
   if (!submission.uid) throw new Error('Submission is missing the learner id.')
@@ -411,6 +431,8 @@ export async function approveSubmissionAndAward(params: {
     aiDecision,
     reviewOpenedAt,
     reviewDurationMs,
+    criteriaAcknowledged,
+    criteriaAcknowledgedAt,
   }
 
   // Unknown component type: still record the review, but skip awarding.

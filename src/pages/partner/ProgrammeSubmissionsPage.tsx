@@ -8,6 +8,7 @@ import {
   Badge,
   Box,
   Button,
+  Checkbox,
   Collapse,
   Drawer,
   DrawerBody,
@@ -575,6 +576,9 @@ interface DrawerProps {
   onSaved: (toast: Parameters<ReturnType<typeof useToast>>[0]) => void
 }
 
+/** Seconds a partner must spend in the drawer before Accept is allowed (anti-rubber-stamp). */
+const ACCEPT_MIN_DWELL_SEC = 25
+
 const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   isOpen,
   onClose,
@@ -594,14 +598,23 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const [criteriaTitle, setCriteriaTitle] = useState<string | null>(null)
   const [criteriaItems, setCriteriaItems] = useState<string[]>([])
   const [criteriaLoading, setCriteriaLoading] = useState(false)
+  const [criteriaAcknowledged, setCriteriaAcknowledged] = useState(false)
+  const [criteriaAcknowledgedAt, setCriteriaAcknowledgedAt] = useState<Date | null>(null)
+  const [dwellSec, setDwellSec] = useState(0)
   const reviewOpenedAtRef = React.useRef<Date | null>(null)
 
   useEffect(() => {
     if (!submission || !isOpen) return
     reviewOpenedAtRef.current = new Date()
+    setDwellSec(0)
     setStatus(submission.status === 'submitted' ? 'in_review' : submission.status)
     setNotes(submission.partnerNotes ?? '')
     setAiDecision(submission.aiDecision ?? '')
+    const alreadyReviewed =
+      Boolean(submission.criteriaAcknowledged) || Boolean(submission.aiDecision)
+    setCriteriaAcknowledged(alreadyReviewed)
+    setCriteriaAcknowledgedAt(submission.criteriaAcknowledgedAt)
+    setCriteriaOpen(true)
     const aiScore =
       submission.aiGrade?.status === 'completed' && submission.aiGrade.score != null
         ? Math.round(submission.aiGrade.score)
@@ -616,6 +629,16 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
       submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : '',
     )
   }, [submission, isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+    const tick = window.setInterval(() => {
+      const opened = reviewOpenedAtRef.current
+      if (!opened) return
+      setDwellSec(Math.floor((Date.now() - opened.getTime()) / 1000))
+    }, 500)
+    return () => window.clearInterval(tick)
+  }, [isOpen])
 
   useEffect(() => {
     if (!submission?.uid) {
@@ -687,6 +710,11 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         : null
   const aiFeedback =
     (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
+  const alreadyHadDecision = Boolean(submission.aiDecision)
+  const acceptDwellReady = alreadyHadDecision || dwellSec >= ACCEPT_MIN_DWELL_SEC
+  const acceptWaitSec = Math.max(0, ACCEPT_MIN_DWELL_SEC - dwellSec)
+  const canDecideOnAi = !aiCompleted || criteriaAcknowledged
+  const canAcceptAi = canDecideOnAi && acceptDwellReady
 
   const applyAiScoreToFields = () => {
     if (aiOverall != null) setScore(String(aiOverall))
@@ -695,6 +723,8 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   }
 
   const handleAiDecisionChange = (next: ProgrammeAiDecision) => {
+    if (next === 'accept' && !canAcceptAi) return
+    if (!canDecideOnAi) return
     setAiDecision(next)
     if (next === 'accept') {
       applyAiScoreToFields()
@@ -706,9 +736,29 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
     }
   }
 
+  const handleCriteriaAck = (checked: boolean) => {
+    setCriteriaAcknowledged(checked)
+    if (checked) {
+      setCriteriaAcknowledgedAt(new Date())
+      setCriteriaOpen(true)
+    } else {
+      setCriteriaAcknowledgedAt(null)
+      if (aiDecision === 'accept') setAiDecision('')
+    }
+  }
+
   const handleSave = async () => {
     if (!reviewerId) {
       onSaved({ status: 'error', title: 'You need to be signed in to save.' })
+      return
+    }
+    if (aiCompleted && !criteriaAcknowledged) {
+      onSaved({
+        status: 'warning',
+        title: 'Review the criteria first',
+        description:
+          'Confirm you compared this submission to What good looks like before deciding on the AI score.',
+      })
       return
     }
     if (aiCompleted && !aiDecision) {
@@ -716,6 +766,14 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         status: 'warning',
         title: 'Decide on the AI score first',
         description: 'Accept it, accept with changes, or reject it — then save.',
+      })
+      return
+    }
+    if (aiCompleted && aiDecision === 'accept' && !acceptDwellReady) {
+      onSaved({
+        status: 'warning',
+        title: 'Take a moment before accepting',
+        description: `Spend at least ${ACCEPT_MIN_DWELL_SEC} seconds with the answers and criteria before accepting the AI estimate.`,
       })
       return
     }
@@ -772,6 +830,10 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         aiDecision: aiCompleted ? (aiDecision as ProgrammeAiDecision) : null,
         reviewOpenedAt: openedAt,
         reviewDurationMs: durationMs,
+        criteriaAcknowledged: aiCompleted ? criteriaAcknowledged : undefined,
+        criteriaAcknowledgedAt: aiCompleted
+          ? criteriaAcknowledgedAt ?? (criteriaAcknowledged ? new Date() : null)
+          : undefined,
       }
 
       if (status === 'approved') {
@@ -938,7 +1000,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
               p={4}
               bg="white"
               border="1px solid"
-              borderColor="gray.200"
+              borderColor={aiCompleted && !criteriaAcknowledged ? 'orange.200' : 'gray.200'}
               rounded="lg"
             >
               <Button
@@ -947,11 +1009,15 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 w="100%"
                 justifyContent="space-between"
                 px={0}
-                onClick={() => setCriteriaOpen((v) => !v)}
+                onClick={() => {
+                  if (aiCompleted && !criteriaAcknowledged) return
+                  setCriteriaOpen((v) => !v)
+                }}
                 rightIcon={<Icon as={criteriaOpen ? ChevronUp : ChevronDown} boxSize={4} />}
+                isDisabled={aiCompleted && !criteriaAcknowledged}
               >
                 <Text fontSize="sm" fontWeight="bold" color={PLUM}>
-                  What good looks like
+                  1. What good looks like
                 </Text>
               </Button>
               <Collapse in={criteriaOpen} animateOpacity>
@@ -966,7 +1032,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                   ) : criteriaItems.length === 0 ? (
                     <Text fontSize="sm" color="gray.600">
                       Criteria for this artefact are not available here. Open the original form to
-                      review the standard.
+                      review the standard, then confirm below.
                     </Text>
                   ) : (
                     <Stack spacing={2}>
@@ -982,11 +1048,21 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                           </Text>
                         ))}
                       </Stack>
-                      <Text fontSize="xs" color="gray.500">
-                        Read this before accepting or changing the AI estimate — so the machine does
-                        not decide for you.
-                      </Text>
                     </Stack>
+                  )}
+                  {aiCompleted && (
+                    <Checkbox
+                      mt={4}
+                      alignItems="flex-start"
+                      colorScheme="purple"
+                      isChecked={criteriaAcknowledged}
+                      onChange={(e) => handleCriteriaAck(e.target.checked)}
+                    >
+                      <Text fontSize="sm" color="gray.800" lineHeight="1.45">
+                        I compared this learner&apos;s answers to What good looks like before deciding
+                        on the AI estimate.
+                      </Text>
+                    </Checkbox>
                   )}
                 </Box>
               </Collapse>
@@ -1000,7 +1076,9 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 ai?.status === 'error'
                   ? 'red.200'
                   : ai?.status === 'completed'
-                    ? 'green.200'
+                    ? criteriaAcknowledged
+                      ? 'green.200'
+                      : 'gray.200'
                     : 'gray.200'
               }
               rounded="lg"
@@ -1008,9 +1086,15 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
               <Stack spacing={3}>
                 <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
                   <Text fontSize="sm" fontWeight="bold" color={PLUM}>
-                    AI estimate
+                    2. AI estimate
                   </Text>
-                  <AiGradeBadge submission={submission} />
+                  {criteriaAcknowledged || !aiCompleted ? (
+                    <AiGradeBadge submission={submission} />
+                  ) : (
+                    <Badge colorScheme="orange" textTransform="none">
+                      Hidden until criteria reviewed
+                    </Badge>
+                  )}
                 </Flex>
                 {!ai && (
                   <Text fontSize="sm" color="gray.600">
@@ -1026,7 +1110,16 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     </AlertDescription>
                   </Alert>
                 )}
-                {aiCompleted && (
+                {aiCompleted && !criteriaAcknowledged && (
+                  <Alert status="info" rounded="md" py={2} variant="left-accent">
+                    <AlertIcon />
+                    <AlertDescription fontSize="sm">
+                      The AI score stays hidden until you finish step 1. That stops us defaulting to
+                      the machine without reading the standard.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                {aiCompleted && criteriaAcknowledged && (
                   <>
                     <HStack spacing={4} flexWrap="wrap">
                       {aiOverall != null && (
@@ -1077,19 +1170,25 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         onChange={(v) => handleAiDecisionChange(v as ProgrammeAiDecision)}
                       >
                         <Stack spacing={2}>
-                          <Radio value="accept" colorScheme="purple">
+                          <Radio value="accept" colorScheme="purple" isDisabled={!canAcceptAi}>
                             Yes — accept the AI estimate
+                            {!canAcceptAi && acceptWaitSec > 0 ? (
+                              <Text as="span" fontSize="xs" color="gray.500" ml={1}>
+                                (available in {acceptWaitSec}s)
+                              </Text>
+                            ) : null}
                           </Radio>
-                          <Radio value="edit" colorScheme="purple">
+                          <Radio value="edit" colorScheme="purple" isDisabled={!canDecideOnAi}>
                             Yes, with changes — I will adjust the score
                           </Radio>
-                          <Radio value="reject" colorScheme="purple">
+                          <Radio value="reject" colorScheme="purple" isDisabled={!canDecideOnAi}>
                             No — reject the AI estimate; I will score myself
                           </Radio>
                         </Stack>
                       </RadioGroup>
                       <FormHelperText>
-                        AI never awards points alone. Your choice is saved as proof a human reviewed.
+                        AI never awards points alone. Accept is delayed on purpose so you judge the
+                        work first — your choice and review time are saved as human-in-the-loop proof.
                       </FormHelperText>
                     </FormControl>
                   </>
@@ -1106,7 +1205,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
             >
               <Stack spacing={4}>
                 <Text fontSize="sm" fontWeight="bold" color={PLUM}>
-                  Your review
+                  3. Your review
                 </Text>
                 {submission.componentType && (
                   <HStack
