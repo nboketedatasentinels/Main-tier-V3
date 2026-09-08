@@ -266,7 +266,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
             {!isMobile && (
               <Flex justify="flex-end" align="center" gap={3} minW={0} w="full">
                 {headerLeading ? (
-                  <Box flex="1" minW={0} maxW={{ md: '360px', lg: '420px' }}>
+                  <Box minW={0} w={{ base: 'full', md: '320px' }} maxW="420px" flexShrink={1}>
                     {headerLeading}
                   </Box>
                 ) : null}

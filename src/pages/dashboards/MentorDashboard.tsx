@@ -221,34 +221,38 @@ export const MentorDashboard: React.FC = () => {
       mentorRoleLabel="Mentor"
       navSections={navSections}
       headerLeading={
-        activeSection === 'mentees' ? (
-          <HStack spacing={2} w="full" minW={0}>
-            <InputGroup flex="1" minW={0}>
-              <InputLeftElement pointerEvents="none">
-                <Search size={16} color="#9CA3AF" />
-              </InputLeftElement>
-              <Input
-                placeholder="Search mentees…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                bg="white"
-                borderColor="gray.200"
-                borderRadius="md"
-              />
-            </InputGroup>
-            <Button
-              leftIcon={<RefreshCw size={14} />}
-              size="sm"
-              variant="outline"
-              borderColor="gray.300"
-              onClick={() => void loadMentees()}
-              isLoading={loading}
-              flexShrink={0}
-            >
-              Refresh
-            </Button>
-          </HStack>
-        ) : undefined
+        <HStack spacing={2} w="full" minW={0}>
+          <InputGroup flex="1" minW={0}>
+            <InputLeftElement pointerEvents="none">
+              <Search size={16} color="#9CA3AF" />
+            </InputLeftElement>
+            <Input
+              placeholder="Search mentees…"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                if (activeSection !== 'mentees') setActiveSection('mentees')
+              }}
+              onFocus={() => {
+                if (activeSection !== 'mentees') setActiveSection('mentees')
+              }}
+              bg="white"
+              borderColor="gray.200"
+              borderRadius="md"
+            />
+          </InputGroup>
+          <Button
+            leftIcon={<RefreshCw size={14} />}
+            size="sm"
+            variant="outline"
+            borderColor="gray.300"
+            onClick={() => void loadMentees()}
+            isLoading={loading}
+            flexShrink={0}
+          >
+            Refresh
+          </Button>
+        </HStack>
       }
     >
       <Box minH="100%" bg="white" mx={{ base: -4, md: -6 }} px={{ base: 4, md: 6 }} py={6}>
