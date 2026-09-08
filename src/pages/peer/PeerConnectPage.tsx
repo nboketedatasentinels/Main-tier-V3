@@ -1573,6 +1573,32 @@ export const PeerConnectPage: React.FC = () => {
               w="100%"
             >
               <Box
+                flex={{ base: 'none', md: '0 0 360px' }}
+                w={{ base: '100%', md: '360px' }}
+                maxW={{ base: '100%', md: '360px' }}
+                flexShrink={0}
+                bg="black"
+                borderRadius="2xl"
+                overflow="hidden"
+                boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+                alignSelf="stretch"
+              >
+                <Box
+                  as="video"
+                  controls
+                  preload="metadata"
+                  playsInline
+                  src="/media/peer-to-peer.mp4"
+                  w="100%"
+                  h={{ base: 'auto', md: '100%' }}
+                  minH={{ base: '200px', md: '280px' }}
+                  display="block"
+                  bg="black"
+                  objectFit="cover"
+                />
+              </Box>
+
+              <Box
                 flex={{ base: 'none', md: '1 1 0%' }}
                 minW={0}
                 w={{ base: '100%', md: 'auto' }}
@@ -1767,32 +1793,6 @@ export const PeerConnectPage: React.FC = () => {
                     )}
                   </Box>
                 </Stack>
-              </Box>
-
-              <Box
-                flex={{ base: 'none', md: '0 0 360px' }}
-                w={{ base: '100%', md: '360px' }}
-                maxW={{ base: '100%', md: '360px' }}
-                flexShrink={0}
-                bg="black"
-                borderRadius="2xl"
-                overflow="hidden"
-                boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-                alignSelf="stretch"
-              >
-                <Box
-                  as="video"
-                  controls
-                  preload="metadata"
-                  playsInline
-                  src="/media/peer-to-peer.mp4"
-                  w="100%"
-                  h={{ base: 'auto', md: '100%' }}
-                  minH={{ base: '200px', md: '280px' }}
-                  display="block"
-                  bg="black"
-                  objectFit="cover"
-                />
               </Box>
             </Box>
 
