@@ -1,18 +1,10 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import {
   Box,
-  HStack,
-  Icon,
   SimpleGrid,
   Stack,
   Text,
-  VStack,
 } from '@chakra-ui/react'
-import { Sparkles } from 'lucide-react'
-import {
-  buildAiInference,
-  buildStrengthsWeaknessesWriteUp,
-} from '@/services/mentorCoachingInsights'
 import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
 import { LiftProfileStrip } from '@/components/leadership/LiftProfileStrip'
 import { getDisplayName } from '@/utils/displayName'
@@ -20,7 +12,6 @@ import { PERSONALITY_TYPES } from '@/config/personality-data'
 import type { UserProfile } from '@/types'
 
 const PLUM = '#27062e'
-const GOLD = '#eab130'
 
 const personalityLabel = (type?: string | null): string | null => {
   if (!type) return null
@@ -34,28 +25,13 @@ type MentorLearnerPanelProps = {
 }
 
 /**
- * Mentor mentee profile surface - values, age, personality, LIFT, AI notes, goals.
+ * Mentor mentee profile surface - values, age, personality, LIFT, goals.
  * Session topics live under Session prep (collapsed) to avoid a long duplicate stack.
  */
 export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
   learner,
   mentorId,
 }) => {
-  const insightInput = useMemo(
-    () => ({
-      name: getDisplayName(learner),
-      personalityType: learner.personalityType,
-      coreValues: learner.coreValues,
-      ageRange: (learner as { ageRange?: string | null }).ageRange ?? null,
-      journeyType: typeof learner.journeyType === 'string' ? learner.journeyType : null,
-      currentWeek: learner.currentWeek ?? null,
-    }),
-    [learner],
-  )
-
-  const aiNotes = useMemo(() => buildAiInference(insightInput), [insightInput])
-  const strengths = useMemo(() => buildStrengthsWeaknessesWriteUp(insightInput), [insightInput])
-
   const values = (learner.coreValues || []).filter(Boolean)
   const ageRange = (learner as { ageRange?: string | null }).ageRange
 
@@ -106,39 +82,6 @@ export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
           </Box>
         </SimpleGrid>
         <LiftProfileStrip learnerId={learner.id} />
-      </Box>
-
-      <Box
-        border="1px solid"
-        borderColor="gray.200"
-        borderLeftWidth="3px"
-        borderLeftColor={GOLD}
-        borderRadius="xl"
-        bg="white"
-        px={5}
-        py={4}
-      >
-        <HStack spacing={2} mb={2}>
-          <Icon as={Sparkles} color="gray.600" boxSize={4} />
-          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500">
-            {aiNotes.label.toUpperCase()} NOTES
-          </Text>
-        </HStack>
-        <VStack align="stretch" spacing={2}>
-          {aiNotes.lines.map((line) => (
-            <Text key={line.slice(0, 48)} fontSize="sm" color="gray.700" lineHeight="1.65">
-              {line}
-            </Text>
-          ))}
-        </VStack>
-        <Text mt={3} fontSize="xs" color="gray.500" fontStyle="italic">
-          {aiNotes.disclaimer}
-        </Text>
-        {strengths.summary ? (
-          <Text mt={3} fontSize="sm" color="gray.600" lineHeight="1.6">
-            {strengths.summary}
-          </Text>
-        ) : null}
       </Box>
 
       <MentorshipGoalsCard

@@ -4,7 +4,6 @@ import {
   Button,
   Flex,
   HStack,
-  Icon,
   Input,
   Select,
   SimpleGrid,
@@ -12,14 +11,9 @@ import {
   Text,
   Textarea,
   useToast,
-  VStack,
 } from '@chakra-ui/react'
-import { Save, Sparkles } from 'lucide-react'
-import {
-  buildAiInference,
-  buildCoachingSessionPlan,
-  buildStrengthsWeaknessesWriteUp,
-} from '@/services/mentorCoachingInsights'
+import { Save } from 'lucide-react'
+import { buildCoachingSessionPlan } from '@/services/mentorCoachingInsights'
 import { useAuth } from '@/hooks/useAuth'
 import { getDisplayName } from '@/utils/displayName'
 import {
@@ -95,8 +89,6 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
     [learner, purchasedSessions, courseTitles],
   )
 
-  const aiNotes = useMemo(() => buildAiInference(insightInput), [insightInput])
-  const strengths = useMemo(() => buildStrengthsWeaknessesWriteUp(insightInput), [insightInput])
   const defaultPlan = useMemo(
     () => buildCoachingSessionPlan(insightInput),
     [insightInput],
@@ -304,40 +296,6 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
           </Box>
         </SimpleGrid>
         <LiftProfileStrip learnerId={learner.id} />
-      </Box>
-
-      {/* AI notes */}
-      <Box
-        border="1px solid"
-        borderColor="gray.200"
-        borderLeftWidth="3px"
-        borderLeftColor={GOLD}
-        borderRadius="xl"
-        bg="white"
-        px={5}
-        py={4}
-      >
-        <HStack spacing={2} mb={2}>
-          <Icon as={Sparkles} color="gray.600" boxSize={4} />
-          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500">
-            {aiNotes.label.toUpperCase()} NOTES
-          </Text>
-        </HStack>
-        <VStack align="stretch" spacing={2}>
-          {aiNotes.lines.map((line) => (
-            <Text key={line.slice(0, 40)} fontSize="sm" color="gray.700" lineHeight="1.65">
-              {line}
-            </Text>
-          ))}
-        </VStack>
-        <Text mt={3} fontSize="xs" color="gray.500" fontStyle="italic">
-          {aiNotes.disclaimer}
-        </Text>
-        {strengths.summary ? (
-          <Text mt={3} fontSize="sm" color="gray.600" lineHeight="1.6">
-            {strengths.summary}
-          </Text>
-        ) : null}
       </Box>
 
       {/* Goals — same MentorshipGoalsCard as learner / mentor (wraps after save). */}
