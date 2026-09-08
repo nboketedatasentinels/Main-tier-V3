@@ -275,7 +275,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
 
           <HStack spacing={3} align="center" flex="1" minW={0} justify="flex-end">
             {headerLeading ? (
-              <Box flex="1" minW={0} maxW={{ base: '100%', md: '420px' }} mr="auto">
+              <Box minW={0} maxW={{ base: '100%', md: '360px', lg: '420px' }} w={{ base: 'full', md: '360px' }}>
                 {headerLeading}
               </Box>
             ) : null}

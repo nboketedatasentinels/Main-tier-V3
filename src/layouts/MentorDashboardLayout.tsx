@@ -264,10 +264,12 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         >
           <Stack spacing={6} maxW="1600px" mx="auto">
             {!isMobile && (
-              <Flex justify="space-between" align="center" gap={3} minW={0}>
-                <Box flex="1" minW={0} maxW={{ md: '420px', lg: '480px' }}>
-                  {headerLeading}
-                </Box>
+              <Flex justify="flex-end" align="center" gap={3} minW={0} w="full">
+                {headerLeading ? (
+                  <Box flex="1" minW={0} maxW={{ md: '360px', lg: '420px' }}>
+                    {headerLeading}
+                  </Box>
+                ) : null}
                 <HStack spacing={3} flexShrink={0}>
                   <NotificationDropdown />
                   <Avatar size="sm" name={mentorName} src={avatarUrl} />
