@@ -253,6 +253,63 @@ export function PodcastAssessmentModal({
                   <Text as="span" fontWeight="bold" color="gray.900">{totalQuestions}</Text> correct.
                 </Text>
               </Stack>
+
+              <Box w="full" textAlign="left">
+                <Text
+                  fontSize="xs"
+                  fontWeight="bold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="0.06em"
+                  mb={2}
+                >
+                  How we scored this (no human grader — the quiz explains itself)
+                </Text>
+                <Stack spacing={2}>
+                  {questions.map((q, qi) => {
+                    const chosen = answers[q.id]
+                    const correct = chosen === q.correctIndex
+                    return (
+                      <Box
+                        key={q.id}
+                        p={3}
+                        border="1px solid"
+                        borderColor={correct ? 'green.100' : 'red.100'}
+                        bg={correct ? 'green.50' : 'red.50'}
+                        rounded="md"
+                      >
+                        <HStack spacing={2} mb={1} align="flex-start">
+                          <Icon
+                            as={correct ? CheckCircle2 : XCircle}
+                            boxSize={4}
+                            color={correct ? 'green.600' : 'red.500'}
+                            mt="2px"
+                            flexShrink={0}
+                          />
+                          <Text fontSize="sm" fontWeight="semibold" color="gray.800">
+                            Q{qi + 1}. {q.prompt}
+                          </Text>
+                        </HStack>
+                        <Text fontSize="xs" color="gray.600" pl={6}>
+                          Your answer:{' '}
+                          <Text as="span" fontWeight="medium" color="gray.800">
+                            {chosen != null ? q.options[chosen] : '—'}
+                          </Text>
+                        </Text>
+                        {!correct && (
+                          <Text fontSize="xs" color="gray.700" pl={6} mt={1}>
+                            Correct answer:{' '}
+                            <Text as="span" fontWeight="semibold">
+                              {q.options[q.correctIndex]}
+                            </Text>
+                          </Text>
+                        )}
+                      </Box>
+                    )
+                  })}
+                </Stack>
+              </Box>
+
               <Box
                 p={3}
                 bg={

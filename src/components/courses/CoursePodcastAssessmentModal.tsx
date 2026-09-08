@@ -129,7 +129,7 @@ export function CoursePodcastAssessmentModal({
               ))}
             </Stack>
           ) : (
-            <Stack spacing={3}>
+            <Stack spacing={4}>
               {saveFailed ? (
                 <Text color="red.600" fontSize="sm">
                   Could not save your answers. Close and try again.
@@ -143,6 +143,64 @@ export function CoursePodcastAssessmentModal({
                   Saving…
                 </Text>
               )}
+
+              <Box
+                p={4}
+                bg="#f7f3fb"
+                border="1px solid"
+                borderColor="#e4d9f2"
+                borderLeftWidth="3px"
+                borderLeftColor="#350e6f"
+                rounded="md"
+              >
+                <Text
+                  fontSize="xs"
+                  fontWeight="bold"
+                  color="#350e6f"
+                  letterSpacing="0.08em"
+                  textTransform="uppercase"
+                >
+                  Standard used (no human grader yet — the rubric explains the bar)
+                </Text>
+                <Text mt={2} fontSize="sm" color="gray.700" lineHeight="1.6">
+                  {episode.what_will_be_assessed}
+                </Text>
+              </Box>
+
+              <Box>
+                <Text
+                  fontSize="xs"
+                  fontWeight="bold"
+                  color="gray.500"
+                  textTransform="uppercase"
+                  letterSpacing="0.06em"
+                  mb={2}
+                >
+                  Your answers on record
+                </Text>
+                <Stack spacing={2}>
+                  {questions.map((q, index) => (
+                    <Box
+                      key={`${episode.slot}-result-q${index}`}
+                      p={3}
+                      border="1px solid"
+                      borderColor="gray.200"
+                      bg="gray.50"
+                      rounded="md"
+                    >
+                      <Text fontSize="xs" fontWeight="semibold" color="gray.600" mb={1}>
+                        <Text as="span" color="#350e6f" textTransform="capitalize" mr={1}>
+                          {q.type}.
+                        </Text>
+                        {q.question}
+                      </Text>
+                      <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.5">
+                        {(answers[index] || '').trim() || '—'}
+                      </Text>
+                    </Box>
+                  ))}
+                </Stack>
+              </Box>
             </Stack>
           )}
         </ModalBody>

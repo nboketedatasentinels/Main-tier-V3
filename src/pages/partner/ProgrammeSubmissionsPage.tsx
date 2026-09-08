@@ -50,6 +50,7 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardList,
+  Download,
   ExternalLink,
   FileText,
   Search,
@@ -75,6 +76,12 @@ import {
 import { fetchWhatGoodLooksLike } from '@/services/programmeWhatGoodLooksLike'
 import { getDisplayName } from '@/utils/displayName'
 import { isJourneyType, isMonthBasedJourney } from '@/utils/journeyType'
+import {
+  computeProgrammeAiHitlStats,
+  downloadProgrammeAiHitlCsv,
+  formatDwell,
+  getHitlDecision,
+} from '@/utils/programmeAiHitl'
 import type { JourneyType } from '@/config/pointsConfig'
 import { supabase } from '@/services/supabase'
 
@@ -214,6 +221,8 @@ const ProgrammeSubmissionsPage: React.FC = () => {
     return next
   }, [submissions])
 
+  const hitlStats = useMemo(() => computeProgrammeAiHitlStats(submissions), [submissions])
+
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selectedSubmission = useMemo(
     () => submissions.find((s) => s.id === selectedId) ?? null,
@@ -253,6 +262,18 @@ const ProgrammeSubmissionsPage: React.FC = () => {
               AI never awards points alone.
             </Text>
           </Box>
+          {orgOptions.length > 0 && submissions.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              borderColor="gray.300"
+              color={ROYAL}
+              leftIcon={<Icon as={Download} boxSize={4} />}
+              onClick={() => downloadProgrammeAiHitlCsv(submissions)}
+            >
+              Export AI vs human CSV
+            </Button>
+          )}
         </Flex>
 
         {!orgOptions.length && !orgsLoading && (
@@ -275,6 +296,59 @@ const ProgrammeSubmissionsPage: React.FC = () => {
             <StatTile label="Approved" value={counts.approved} color="#0f6c2e" />
             <StatTile label="Needs revision" value={counts.needs_revision} color="#9a3412" />
           </SimpleGrid>
+        )}
+
+        {orgOptions.length > 0 && hitlStats.aiCompleted > 0 && (
+          <Box
+            bg="white"
+            border="1px solid"
+            borderColor="gray.200"
+            rounded="lg"
+            p={{ base: 4, md: 5 }}
+          >
+            <Flex justify="space-between" align="flex-start" gap={3} flexWrap="wrap" mb={3}>
+              <Box>
+                <Text fontSize="sm" fontWeight="bold" color={PLUM}>
+                  Human-in-the-loop evidence
+                </Text>
+                <Text fontSize="xs" color="gray.500" mt={0.5}>
+                  Proof partners are reviewing AI estimates — not rubber-stamping. Export the CSV for
+                  model-drift analysis.
+                </Text>
+              </Box>
+            </Flex>
+            <SimpleGrid columns={{ base: 2, md: 4, lg: 7 }} spacing={3}>
+              <StatTile label="AI graded" value={hitlStats.aiCompleted} color="gray.700" />
+              <StatTile label="Awaiting human" value={hitlStats.awaitingHuman} color="#9a3412" />
+              <StatTile label="Accepted" value={hitlStats.accepted} color="#0f6c2e" />
+              <StatTile label="Edited" value={hitlStats.edited} color="#1e3a8a" />
+              <StatTile label="Rejected" value={hitlStats.rejected} color="#9a3412" />
+              <StatTile
+                label="Criteria checked"
+                value={hitlStats.criteriaAcknowledged}
+                color={ROYAL}
+              />
+              <Box
+                bg="gray.50"
+                border="1px solid"
+                borderColor="gray.200"
+                rounded="lg"
+                px={4}
+                py={3}
+              >
+                <Text fontSize="xs" color="gray.500" mb={1}>
+                  Avg review time
+                </Text>
+                <Text fontSize="xl" fontWeight="bold" color="gray.800" lineHeight="1.1">
+                  {formatDwell(hitlStats.avgDwellMs)}
+                </Text>
+                <Text fontSize="2xs" color="gray.500" mt={1}>
+                  {hitlStats.dwellSamples} timed · Δ score avg{' '}
+                  {hitlStats.avgAbsScoreDelta != null ? hitlStats.avgAbsScoreDelta : '—'}
+                </Text>
+              </Box>
+            </SimpleGrid>
+          </Box>
         )}
 
         {orgOptions.length > 0 && (
@@ -365,6 +439,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                       <Th>Component</Th>
                       <Th>Type</Th>
                       <Th>AI grade</Th>
+                      <Th>Human review</Th>
                       <Th>Submitted</Th>
                       <Th>Status</Th>
                       <Th width="100px">Action</Th>
@@ -426,6 +501,9 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                           </Td>
                           <Td>
                             <AiGradeBadge submission={row} />
+                          </Td>
+                          <Td>
+                            <HitlBadge submission={row} />
                           </Td>
                           <Td>
                             <Text fontSize="xs" color="gray.600">
@@ -564,6 +642,38 @@ const AiGradeBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ 
         </Text>
       )}
     </HStack>
+  )
+}
+
+const HitlBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ submission }) => {
+  const decision = getHitlDecision(submission)
+  if (decision === 'none') {
+    return (
+      <Text fontSize="xs" color="gray.400">
+        —
+      </Text>
+    )
+  }
+  if (decision === 'pending') {
+    return (
+      <Badge colorScheme="orange" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+        Awaiting human
+      </Badge>
+    )
+  }
+  const label =
+    decision === 'accept' ? 'Accepted' : decision === 'edit' ? 'Edited' : 'Rejected'
+  const scheme = decision === 'accept' ? 'green' : decision === 'edit' ? 'blue' : 'red'
+  return (
+    <Stack spacing={0.5}>
+      <Badge colorScheme={scheme} variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+        {label}
+      </Badge>
+      <Text fontSize="2xs" color="gray.500">
+        {formatDwell(submission.reviewDurationMs)}
+        {submission.criteriaAcknowledged ? ' · criteria ✓' : ''}
+      </Text>
+    </Stack>
   )
 }
 
