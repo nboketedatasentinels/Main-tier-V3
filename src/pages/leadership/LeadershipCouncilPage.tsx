@@ -34,7 +34,9 @@ import {
   ModalHeader,
   ModalOverlay,
   SimpleGrid,
-  Spinner,
+  Skeleton,
+  SkeletonCircle,
+  SkeletonText,
   Stack,
   Tab,
   TabList,
@@ -135,6 +137,77 @@ const badgeColor = (status?: string) => {
   if (value.includes('leave')) return 'warning'
   return 'primary'
 }
+
+const LeadershipProfileSkeleton = () => (
+  <Stack spacing={4} py={2}>
+    <HStack spacing={4} align="center">
+      <SkeletonCircle size="64px" />
+      <Stack spacing={2} flex="1" minW={0}>
+        <Skeleton height="18px" width="45%" borderRadius="md" />
+        <Skeleton height="14px" width="30%" borderRadius="md" />
+        <HStack spacing={2}>
+          <Skeleton height="22px" width="72px" borderRadius="full" />
+          <Skeleton height="22px" width="88px" borderRadius="full" />
+        </HStack>
+      </Stack>
+    </HStack>
+    <SkeletonText noOfLines={3} spacing={3} skeletonHeight="12px" />
+    <Skeleton height="14px" width="55%" borderRadius="md" />
+  </Stack>
+)
+
+const MentorWorkspaceSkeleton = () => (
+  <Stack spacing={4} py={1}>
+    <Box
+      borderWidth="1px"
+      borderColor="rgba(53, 14, 111, 0.16)"
+      borderRadius="xl"
+      p={{ base: 4, md: 5 }}
+    >
+      <Skeleton height="14px" width="120px" mb={3} borderRadius="md" />
+      <Skeleton height="22px" width="55%" mb={4} borderRadius="md" />
+      <Skeleton height="120px" borderRadius="lg" mb={3} />
+      <HStack justify="space-between">
+        <Skeleton height="12px" width="64px" borderRadius="md" />
+        <Skeleton height="36px" width="110px" borderRadius="md" />
+      </HStack>
+    </Box>
+    <Box
+      borderWidth="1px"
+      borderColor="rgba(53, 14, 111, 0.16)"
+      borderRadius="xl"
+      p={4}
+    >
+      <Skeleton height="16px" width="140px" mb={3} borderRadius="md" />
+      <SkeletonText noOfLines={2} spacing={2} skeletonHeight="12px" mb={4} />
+      <Stack spacing={3}>
+        {[1, 2].map((i) => (
+          <Box key={i} p={3} borderWidth="1px" borderColor="gray.100" borderRadius="lg">
+            <HStack justify="space-between" mb={2}>
+              <Skeleton height="16px" width="40%" borderRadius="md" />
+              <Skeleton height="22px" width="72px" borderRadius="full" />
+            </HStack>
+            <Skeleton height="12px" width="60%" borderRadius="md" />
+          </Box>
+        ))}
+      </Stack>
+    </Box>
+  </Stack>
+)
+
+const SessionsListSkeleton = () => (
+  <Stack spacing={3}>
+    {[1, 2].map((i) => (
+      <Box key={i} p={3} borderWidth="1px" borderColor="gray.100" borderRadius="lg" bg="gray.50">
+        <HStack justify="space-between" mb={2}>
+          <Skeleton height="16px" width="45%" borderRadius="md" />
+          <Skeleton height="22px" width="80px" borderRadius="full" />
+        </HStack>
+        <Skeleton height="12px" width="70%" borderRadius="md" />
+      </Box>
+    ))}
+  </Stack>
+)
 
 export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
@@ -749,21 +822,20 @@ export const LeadershipCouncilPage: React.FC = () => {
                         Transformation Partner
                       </Text>
                       <Heading size="md" color="#27062e" letterSpacing="-0.01em">
-                        {partnerProfile
-                          ? displayNameForProfile(partnerProfile)
-                          : pendingPartnerEmail
-                            ? pendingPartnerEmail
-                            : 'No partner assigned'}
+                        {partnerLoading ? (
+                          <Skeleton height="28px" width="200px" borderRadius="md" display="inline-block" />
+                        ) : partnerProfile ? (
+                          displayNameForProfile(partnerProfile)
+                        ) : pendingPartnerEmail ? (
+                          pendingPartnerEmail
+                        ) : (
+                          'No partner assigned'
+                        )}
                       </Heading>
                     </Stack>
                   </CardHeader>
                   <CardBody>
-                    {partnerLoading && (
-                      <Flex direction="column" align="center" gap={3} p={6}>
-                        <Spinner color="#350e6f" />
-                        <Text color="gray.600">Loading transformation partner...</Text>
-                      </Flex>
-                    )}
+                    {partnerLoading && <LeadershipProfileSkeleton />}
                     {!partnerLoading && partnerProfile && (
                       <Stack spacing={4}>
                         <HStack justify="space-between" align="center" spacing={4} flexWrap="wrap">
@@ -896,14 +968,19 @@ export const LeadershipCouncilPage: React.FC = () => {
                           Coach
                         </Text>
                         <Heading size="md" color="#27062e" letterSpacing="-0.01em" noOfLines={1}>
-                          {ambassadorProfile
-                            ? displayNameForProfile(ambassadorProfile)
-                            : pendingAmbassadorEmail
-                              ? pendingAmbassadorEmail
-                              : 'No coach assigned'}
+                          {assignmentsLoading ? (
+                            <Skeleton height="26px" width="180px" borderRadius="md" />
+                          ) : ambassadorProfile ? (
+                            displayNameForProfile(ambassadorProfile)
+                          ) : pendingAmbassadorEmail ? (
+                            pendingAmbassadorEmail
+                          ) : (
+                            'No coach assigned'
+                          )}
                         </Heading>
-                        {(ambassadorProfile?.availabilityStatus ||
-                          (!ambassadorProfile && pendingAmbassadorEmail)) && (
+                        {!assignmentsLoading &&
+                          (ambassadorProfile?.availabilityStatus ||
+                            (!ambassadorProfile && pendingAmbassadorEmail)) && (
                           <Badge
                             colorScheme={
                               ambassadorProfile?.availabilityStatus
@@ -916,25 +993,24 @@ export const LeadershipCouncilPage: React.FC = () => {
                           </Badge>
                         )}
                       </HStack>
-                      {ambassadorProfile && (
-                        <Avatar
-                          size="lg"
-                          name={displayNameForProfile(ambassadorProfile)}
-                          src={ambassadorProfile.avatarUrl}
-                          bg="#350e6f"
-                        />
+                      {assignmentsLoading ? (
+                        <SkeletonCircle size="64px" flexShrink={0} />
+                      ) : (
+                        ambassadorProfile && (
+                          <Avatar
+                            size="lg"
+                            name={displayNameForProfile(ambassadorProfile)}
+                            src={ambassadorProfile.avatarUrl}
+                            bg="#350e6f"
+                          />
+                        )
                       )}
                     </HStack>
                   </CardHeader>
                   <CardBody>
-                    {assignmentsLoading && (
-                      <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="gray.200" rounded="xl">
-                        <Spinner size="sm" />
-                        <Text color="gray.600" fontSize="sm">Loading coach…</Text>
-                      </Flex>
-                    )}
+                    {assignmentsLoading && <LeadershipProfileSkeleton />}
 
-                    {ambassadorError && (
+                    {!assignmentsLoading && ambassadorError && (
                       <Alert status="warning" rounded="lg" mb={4}>
                         <AlertIcon />
                         <Box>
@@ -1042,30 +1118,34 @@ export const LeadershipCouncilPage: React.FC = () => {
                           {isSamePerson ? 'Mentor & Coach' : 'Mentor'}
                         </Text>
                         <Heading size="sm" color="#27062e" letterSpacing="-0.01em" noOfLines={1}>
-                          {mentorProfile
-                            ? displayNameForProfile(mentorProfile)
-                            : pendingMentorEmail
-                              ? pendingMentorEmail
-                              : 'No mentor assigned'}
+                          {assignmentsLoading ? (
+                            <Skeleton height="22px" width="160px" borderRadius="md" />
+                          ) : mentorProfile ? (
+                            displayNameForProfile(mentorProfile)
+                          ) : pendingMentorEmail ? (
+                            pendingMentorEmail
+                          ) : (
+                            'No mentor assigned'
+                          )}
                         </Heading>
-                        {mentorProfile?.availabilityStatus && (
+                        {!assignmentsLoading && mentorProfile?.availabilityStatus && (
                           <Badge colorScheme={badgeColor(mentorProfile.availabilityStatus)} variant="subtle">
                             {mentorProfile.availabilityStatus}
                           </Badge>
                         )}
-                        {!mentorProfile && pendingMentorEmail && (
+                        {!assignmentsLoading && !mentorProfile && pendingMentorEmail && (
                           <Badge colorScheme="orange" variant="subtle">
                             Pending signup
                           </Badge>
                         )}
-                        {mentorSourceLabel && (
+                        {!assignmentsLoading && mentorSourceLabel && (
                           <Badge colorScheme="purple" variant="subtle">
                             {mentorSourceLabel}
                           </Badge>
                         )}
                       </HStack>
 
-                      {mentorProfile && profile?.id && (
+                      {!assignmentsLoading && mentorProfile && profile?.id && (
                         <HStack spacing={2} flexWrap="wrap" flexShrink={0}>
                           <Tooltip
                             label={scheduleDisabledReason || 'Send a request to your mentor'}
@@ -1118,14 +1198,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                     </Flex>
                   </CardHeader>
                   <CardBody pt={1} px={{ base: 4, md: 5 }} pb={4}>
-                    {assignmentsLoading && (
-                      <Flex direction="column" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="xl">
-                        <Spinner />
-                        <Text color="text.secondary">Loading your mentor assignment...</Text>
-                      </Flex>
-                    )}
+                    {assignmentsLoading && <MentorWorkspaceSkeleton />}
 
-                    {mentorError && (
+                    {!assignmentsLoading && mentorError && (
                       <Alert status="error" rounded="lg" mb={4}>
                         <AlertIcon />
                         <Box>
@@ -1217,22 +1292,9 @@ export const LeadershipCouncilPage: React.FC = () => {
                             After a session is confirmed, use Add to Google or Add to Outlook / Apple so it lands in your real calendar with a reminder.
                           </Text>
 
-                          {sessionsLoading && (
-                            <Flex
-                              align="center"
-                              gap={3}
-                              p={4}
-                              border="1px dashed"
-                              borderColor="border.subtle"
-                              rounded="lg"
-                              bg="surface.default"
-                            >
-                              <Spinner />
-                              <Text>Checking for sessions...</Text>
-                            </Flex>
-                          )}
+                          {sessionsLoading && <SessionsListSkeleton />}
 
-                          {sessionsError && (
+                          {!sessionsLoading && sessionsError && (
                             <Alert status="warning" colorScheme="warning" rounded="lg" mb={3}>
                               <AlertIcon />
                               <Box>

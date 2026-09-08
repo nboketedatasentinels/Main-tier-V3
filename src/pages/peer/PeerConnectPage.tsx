@@ -1249,33 +1249,10 @@ export const PeerConnectPage: React.FC = () => {
         </Stack>
       </Box>
 
-      {tabIndex === 1 ? (
-        <Box
-          bg="black"
-          borderRadius="xl"
-          overflow="hidden"
-          boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-          sx={{ marginTop: '0.35rem !important', marginBottom: '0 !important' }}
-        >
-          <Box
-            as="video"
-            controls
-            preload="metadata"
-            playsInline
-            src="/media/peer-to-peer.mp4"
-            w="100%"
-            display="block"
-            bg="black"
-            sx={{ aspectRatio: '16 / 3', objectFit: 'contain' }}
-          />
-        </Box>
-      ) : null}
-
       <Box
         id="peer-tracks"
         sx={{
           scrollMarginTop: '8px',
-          ...(tabIndex === 1 ? { marginTop: '0.25rem !important' } : {}),
         }}
       >
       <Tabs variant="unstyled" index={tabIndex} onChange={setTabIndex}>
@@ -1588,8 +1565,17 @@ export const PeerConnectPage: React.FC = () => {
           </TabPanel>
 
           <TabPanel px={0} py={0} id="peer-sessions" scrollMarginTop="80px">
-            <Stack spacing={3}>
+            <Box
+              display="flex"
+              flexDirection={{ base: 'column', md: 'row' }}
+              alignItems="stretch"
+              gap={4}
+              w="100%"
+            >
               <Box
+                flex={{ base: 'none', md: '1 1 0%' }}
+                minW={0}
+                w={{ base: '100%', md: 'auto' }}
                 bg="white"
                 borderRadius="2xl"
                 border="1px solid"
@@ -1740,7 +1726,7 @@ export const PeerConnectPage: React.FC = () => {
                         </HStack>
                       </Center>
                     ) : availablePeers.length ? (
-                      <Flex direction="row" flexWrap="wrap" gap={3} align="stretch">
+                      <Box display="flex" flexDirection="row" flexWrap="wrap" gap={3} w="full">
                         {availablePeers.map((peer) => (
                           <HStack
                             key={peer.id}
@@ -1750,9 +1736,9 @@ export const PeerConnectPage: React.FC = () => {
                             border="1px solid"
                             borderColor="gray.100"
                             bg="gray.50"
-                            minW={{ base: '100%', sm: '240px' }}
-                            maxW={{ base: '100%', sm: '320px' }}
-                            flex={{ base: '1 1 100%', sm: '1 1 240px' }}
+                            flex="1 1 220px"
+                            minW="220px"
+                            maxW={{ base: '100%', md: 'calc(50% - 6px)' }}
                           >
                             <Avatar
                               name={peer.name}
@@ -1762,7 +1748,7 @@ export const PeerConnectPage: React.FC = () => {
                               color="white"
                               flexShrink={0}
                             />
-                            <Stack spacing={0} minW={0}>
+                            <Stack spacing={0} minW={0} flex="1">
                               <Text fontWeight="semibold" color="brand.dark" noOfLines={1}>
                                 {peer.name}
                               </Text>
@@ -1772,7 +1758,7 @@ export const PeerConnectPage: React.FC = () => {
                             </Stack>
                           </HStack>
                         ))}
-                      </Flex>
+                      </Box>
                     ) : (
                       <Text fontSize="sm" color="gray.500">
                         No peers found in your organisation yet. Invite teammates so you can organise
@@ -1783,6 +1769,34 @@ export const PeerConnectPage: React.FC = () => {
                 </Stack>
               </Box>
 
+              <Box
+                flex={{ base: 'none', md: '0 0 360px' }}
+                w={{ base: '100%', md: '360px' }}
+                maxW={{ base: '100%', md: '360px' }}
+                flexShrink={0}
+                bg="black"
+                borderRadius="2xl"
+                overflow="hidden"
+                boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+                alignSelf="stretch"
+              >
+                <Box
+                  as="video"
+                  controls
+                  preload="metadata"
+                  playsInline
+                  src="/media/peer-to-peer.mp4"
+                  w="100%"
+                  h={{ base: 'auto', md: '100%' }}
+                  minH={{ base: '200px', md: '280px' }}
+                  display="block"
+                  bg="black"
+                  objectFit="cover"
+                />
+              </Box>
+            </Box>
+
+            <Stack spacing={3} mt={4}>
               <Box
                 bg="white"
                 borderRadius="2xl"

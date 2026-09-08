@@ -12,7 +12,7 @@ import {
   HStack,
   Heading,
   Icon,
-  Spinner,
+  Skeleton,
   Stack,
   Text,
   useToast,
@@ -331,10 +331,26 @@ export const LearnerAmbassadorBookings: React.FC<LearnerAmbassadorBookingsProps>
           </Alert>
         )}
         {loading && (
-          <Flex align="center" gap={3} p={4} border="1px dashed" borderColor="border.subtle" rounded="lg">
-            <Spinner size="sm" />
-            <Text color="text.secondary">Loading sessions...</Text>
-          </Flex>
+          <Stack spacing={3}>
+            {[1, 2, 3].map((i) => (
+              <Box
+                key={i}
+                p={4}
+                borderWidth="1px"
+                borderColor="border.subtle"
+                borderRadius="lg"
+                bg="surface.default"
+              >
+                <HStack justify="space-between" mb={2} flexWrap="wrap" spacing={3}>
+                  <Stack spacing={2} flex="1" minW="160px">
+                    <Skeleton height="16px" width="55%" borderRadius="md" />
+                    <Skeleton height="12px" width="40%" borderRadius="md" />
+                  </Stack>
+                  <Skeleton height="32px" width="96px" borderRadius="md" />
+                </HStack>
+              </Box>
+            ))}
+          </Stack>
         )}
         {error && (
           <Alert status="warning" rounded="lg">

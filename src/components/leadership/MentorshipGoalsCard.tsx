@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { Box, Button, Flex, HStack, Stack, Text, Textarea, useToast } from '@chakra-ui/react'
+import { Box, Button, Flex, HStack, Skeleton, Stack, Text, Textarea, useToast } from '@chakra-ui/react'
 import { ChevronLeft, ChevronRight, Pencil, Save } from 'lucide-react'
 import {
   MENTORSHIP_GOALS_MAX_LENGTH,
@@ -80,6 +80,30 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
   const lastStep = step >= prompts.length - 1
   const canAdvance = Boolean((answers[step] || '').trim())
   const hasSavedAnswers = Boolean(goals.trim()) && !editing
+
+  if (loading || liftLoading || !ready) {
+    return (
+      <Box
+        borderWidth="1px"
+        borderStyle="solid"
+        borderColor={primary ? 'rgba(53, 14, 111, 0.32)' : cardBorder}
+        borderRadius="xl"
+        bg="white"
+        px={{ base: 4, md: 6 }}
+        py={{ base: 4, md: 5 }}
+        boxShadow={primary ? '0 8px 24px rgba(53, 14, 111, 0.1)' : '0 1px 3px rgba(0,0,0,0.03)'}
+      >
+        <Skeleton height="12px" width="110px" mb={3} borderRadius="md" />
+        <Skeleton height="22px" width="55%" mb={4} borderRadius="md" />
+        <Skeleton height="14px" width="70%" mb={2} borderRadius="md" />
+        <Skeleton height={primary ? '120px' : '88px'} borderRadius="lg" mb={4} />
+        <Flex justify="space-between">
+          <Skeleton height="12px" width="48px" borderRadius="md" />
+          <Skeleton height="36px" width="110px" borderRadius="md" />
+        </Flex>
+      </Box>
+    )
+  }
 
   const handleSave = async () => {
     if (!dirty || tooLong || saving) return
