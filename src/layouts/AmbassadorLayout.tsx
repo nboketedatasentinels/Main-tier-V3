@@ -41,6 +41,8 @@ interface AmbassadorLayoutProps {
   avatarUrl?: string
   navSections?: NavigationSection[]
   subtitle?: string
+  /** Renders left of notifications / profile menu (e.g. coachee search). */
+  headerLeading?: React.ReactNode
 }
 
 const SidebarNav = ({
@@ -116,6 +118,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   avatarUrl,
   navSections,
   subtitle = 'Grow the ecosystem and track your impact',
+  headerLeading,
 }) => {
   const { signOut, signingOut, profile, profileLoading, profileStatus } = useAuth()
   const toast = useToast()
@@ -270,7 +273,12 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
             </VStack>
           </HStack>
 
-          <HStack spacing={3} align="center">
+          <HStack spacing={3} align="center" flex="1" minW={0} justify="flex-end">
+            {headerLeading ? (
+              <Box flex="1" minW={0} maxW={{ base: '100%', md: '420px' }} mr="auto">
+                {headerLeading}
+              </Box>
+            ) : null}
             <NotificationDropdown />
             <Menu>
               <MenuButton

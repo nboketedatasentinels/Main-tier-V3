@@ -36,6 +36,8 @@ interface MentorDashboardLayoutProps {
   mentorRoleLabel?: string
   avatarUrl?: string
   navSections?: NavigationSection[]
+  /** Renders left of notifications / avatar (e.g. mentee search). */
+  headerLeading?: React.ReactNode
 }
 
 const SidebarNav = ({
@@ -90,6 +92,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
   mentorRoleLabel = 'Mentor',
   avatarUrl,
   navSections,
+  headerLeading,
 }) => {
   const { signOut, signingOut, profile, profileLoading, profileStatus } = useAuth()
   const toast = useToast()
@@ -261,11 +264,22 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         >
           <Stack spacing={6} maxW="1600px" mx="auto">
             {!isMobile && (
-              <Flex justify="flex-end" align="center" gap={3}>
-                <NotificationDropdown />
-                <Avatar size="sm" name={mentorName} src={avatarUrl} />
+              <Flex justify="space-between" align="center" gap={3} minW={0}>
+                <Box flex="1" minW={0} maxW={{ md: '420px', lg: '480px' }}>
+                  {headerLeading}
+                </Box>
+                <HStack spacing={3} flexShrink={0}>
+                  <NotificationDropdown />
+                  <Avatar size="sm" name={mentorName} src={avatarUrl} />
+                </HStack>
               </Flex>
             )}
+
+            {isMobile && headerLeading ? (
+              <Box w="full" minW={0}>
+                {headerLeading}
+              </Box>
+            ) : null}
 
             {children}
           </Stack>

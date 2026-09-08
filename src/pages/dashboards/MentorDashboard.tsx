@@ -220,6 +220,36 @@ export const MentorDashboard: React.FC = () => {
       mentorName={profile ? getDisplayName(profile) : 'Mentor'}
       mentorRoleLabel="Mentor"
       navSections={navSections}
+      headerLeading={
+        activeSection === 'mentees' ? (
+          <HStack spacing={2} w="full" minW={0}>
+            <InputGroup flex="1" minW={0}>
+              <InputLeftElement pointerEvents="none">
+                <Search size={16} color="#9CA3AF" />
+              </InputLeftElement>
+              <Input
+                placeholder="Search mentees…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                bg="white"
+                borderColor="gray.200"
+                borderRadius="md"
+              />
+            </InputGroup>
+            <Button
+              leftIcon={<RefreshCw size={14} />}
+              size="sm"
+              variant="outline"
+              borderColor="gray.300"
+              onClick={() => void loadMentees()}
+              isLoading={loading}
+              flexShrink={0}
+            >
+              Refresh
+            </Button>
+          </HStack>
+        ) : undefined
+      }
     >
       <Box minH="100%" bg="white" mx={{ base: -4, md: -6 }} px={{ base: 4, md: 6 }} py={6}>
         {activeSection === 'overview' ? (
@@ -340,19 +370,6 @@ export const MentorDashboard: React.FC = () => {
 
         {activeSection === 'mentees' ? (
           <Stack spacing={3} id="mentor-mentees" scrollMarginTop="16px">
-            <Flex justify="flex-end">
-              <Button
-                leftIcon={<RefreshCw size={14} />}
-                size="sm"
-                variant="outline"
-                borderColor="gray.300"
-                onClick={() => void loadMentees()}
-                isLoading={loading}
-              >
-                Refresh
-              </Button>
-            </Flex>
-
             {error ? (
               <Alert status="error" borderRadius="lg">
                 <AlertIcon />
@@ -367,33 +384,18 @@ export const MentorDashboard: React.FC = () => {
               maxW="100%"
               minW={0}
             >
-              <Stack spacing={3}>
-                <InputGroup>
-                  <InputLeftElement pointerEvents="none">
-                    <Search size={16} color="#9CA3AF" />
-                  </InputLeftElement>
-                  <Input
-                    placeholder="Search mentees…"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    bg="white"
-                    borderColor="gray.200"
-                    borderRadius="md"
-                  />
-                </InputGroup>
-                <LearnerPointsRanking
-                  learners={filtered}
-                  selectedId={selected?.id}
-                  sticky
-                  limit={5}
-                  expandable
-                  title="Points ranking"
-                  onSelect={(id) => {
-                    setSelectedId(id)
-                    setSessionPrepOpen(false)
-                  }}
-                />
-              </Stack>
+              <LearnerPointsRanking
+                learners={filtered}
+                selectedId={selected?.id}
+                sticky
+                limit={5}
+                expandable
+                title="Points ranking"
+                onSelect={(id) => {
+                  setSelectedId(id)
+                  setSessionPrepOpen(false)
+                }}
+              />
               <Box minW={0}>
                 {loading ? (
                   <Skeleton height="280px" borderRadius="xl" />
