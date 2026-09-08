@@ -43,7 +43,7 @@ interface PartnerLayoutProps {
   navSections?: NavigationSection[]
   activeItem?: string
   onNavigate?: (key: string) => void
-  /** Hide the default "Welcome back" header + org filter strip. */
+  /** Skip desktop org controls (page supplies its own filters); keep mobile menu. */
   hideWelcomeHeader?: boolean
 }
 
