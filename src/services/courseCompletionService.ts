@@ -1,39 +1,18 @@
-import {
-  Timestamp,
-  Unsubscribe,
-  collection,
-  doc,
-  getDoc,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  setDoc,
-  where,
-} from 'firebase/firestore'
-import { db } from '@/services/firebase'
+import { supabase } from '@/services/supabase'
 import { getActivityDefinitionById, type ActivityDef, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints } from '@/services/pointsService'
 import { upsertChecklistActivity } from '@/services/checklistService'
-import { createInAppNotification } from '@/services/notificationService'
+import { notifySupabaseUser } from '@/services/notificationService'
 import { logAdminAction } from '@/services/superAdminService'
-import { removeUndefinedFields } from '@/utils/firestore'
+import { isJourneyType } from '@/utils/journeyType'
 
 /**
- * Partner-verified course completions are stored as documents in the existing
- * `approvals` collection (which already has rules permitting partner writes).
- * We discriminate them with `approvalType === 'course_completion'`.
+ * Partner-verified course completions live in Supabase `course_completions`
+ * (migrated off Firestore `approvals` so Supabase-only auth can approve).
  *
  * Doc id: `${learnerId}__course__${courseId}` - deterministic for idempotency.
  */
 
-export const APPROVALS_COLLECTION = 'approvals'
-
-// Course-approval reads/writes still target Firestore (the `approvals` collection
-// and Firestore pointsLedger), which is denied under Supabase-only auth. Until
-// this feature is migrated to Supabase, writes are gated off and the partner-side
-// listener is a no-op. Explicit `: boolean` so the guarded code stays reachable
-// for the type checker. Flip to true (and restore the listener) after migration.
-const COURSE_APPROVAL_WRITES_ENABLED: boolean = false
 export const COURSE_COMPLETION_APPROVAL_TYPE = 'course_completion'
 export const COURSE_LIFT_ACTIVITY_ID = 'lift_module'
 
@@ -56,6 +35,8 @@ export interface CourseCompletionRecord {
   revokedBy?: string | null
 }
 
+type Raw = Record<string, unknown>
+
 const buildCompletionDocId = (userId: string, courseId: string) =>
   `${userId}__course__${sanitizeIdSegment(courseId)}`
 
@@ -68,40 +49,29 @@ const sanitizeClaimRefSegment = (value: string) =>
 const toDate = (value: unknown): Date | null => {
   if (!value) return null
   if (value instanceof Date) return value
-  if (value instanceof Timestamp) return value.toDate()
-  if (typeof (value as { toDate?: () => Date })?.toDate === 'function') {
-    return (value as { toDate: () => Date }).toDate()
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return Number.isNaN(d.getTime()) ? null : d
   }
   return null
 }
 
-/**
- * Maps an approvals doc to a CourseCompletionRecord. Returns null if the doc
- * is not a course completion (i.e., its approvalType is something else).
- */
-const mapApprovalToCompletion = (
-  id: string,
-  data: Record<string, unknown>,
-): CourseCompletionRecord | null => {
-  if (data.approvalType !== COURSE_COMPLETION_APPROVAL_TYPE) return null
-  const source = (data.source as Record<string, unknown> | undefined) ?? {}
-  return {
-    id,
-    userId: String(data.userId ?? ''),
-    courseId: String(source.courseId ?? ''),
-    courseTitle: String(source.courseTitle ?? data.title ?? ''),
-    courseSlug: (source.courseSlug as string | null | undefined) ?? null,
-    organizationId: (data.organizationId as string | null | undefined) ?? null,
-    status: ((data.status as string) === 'approved' ? 'approved' : 'revoked') as CourseCompletionStatus,
-    points: typeof data.points === 'number' ? data.points : 0,
-    weekNumber: typeof source.weekNumber === 'number' ? (source.weekNumber as number) : 1,
-    approvedBy: String(source.partnerId ?? data.reviewedBy ?? ''),
-    approvedByName: (source.partnerName as string | null | undefined) ?? null,
-    approvedAt: toDate(data.reviewedAt) ?? toDate(data.createdAt),
-    revokedAt: null,
-    revokedBy: null,
-  }
-}
+const mapRow = (row: Raw): CourseCompletionRecord => ({
+  id: String(row.id ?? ''),
+  userId: String(row.user_id ?? ''),
+  courseId: String(row.course_id ?? ''),
+  courseTitle: String(row.course_title ?? ''),
+  courseSlug: (row.course_slug as string | null | undefined) ?? null,
+  organizationId: row.organization_id != null ? String(row.organization_id) : null,
+  status: row.status === 'revoked' ? 'revoked' : 'approved',
+  points: typeof row.points === 'number' ? row.points : 0,
+  weekNumber: typeof row.week_number === 'number' ? row.week_number : 1,
+  approvedBy: row.approved_by != null ? String(row.approved_by) : '',
+  approvedByName: (row.approved_by_name as string | null | undefined) ?? null,
+  approvedAt: toDate(row.approved_at),
+  revokedAt: toDate(row.revoked_at),
+  revokedBy: row.revoked_by != null ? String(row.revoked_by) : null,
+})
 
 export interface MarkCourseCompletedParams {
   partnerId: string
@@ -140,54 +110,52 @@ export const markCourseCompleted = async (
   if (!course?.id) throw new Error('Course id is required')
   if (!course?.title) throw new Error('Course title is required')
 
-  // Course-completion approvals (and their point award) still write to Firestore
-  // (`approvals` collection + Firestore pointsLedger), which is denied under
-  // Supabase-only auth. Until this feature is migrated to Supabase, fail fast
-  // with a clear, user-safe message instead of surfacing a raw FirebaseError.
-  if (!COURSE_APPROVAL_WRITES_ENABLED) {
-    throw new Error(
-      'Course approvals are being migrated to the new system and are temporarily unavailable.',
-    )
-  }
-
   const completionDocId = buildCompletionDocId(learnerId, course.id)
-  const completionRef = doc(db, APPROVALS_COLLECTION, completionDocId)
-  const existing = await getDoc(completionRef)
-  if (existing.exists()) {
-    const existingData = existing.data()
-    if (
-      existingData.approvalType === COURSE_COMPLETION_APPROVAL_TYPE &&
-      existingData.status === 'approved'
-    ) {
-      const mapped = mapApprovalToCompletion(existing.id, existingData)
-      if (mapped) {
-        return {
-          alreadyCompleted: true,
-          pointsAwarded: 0,
-          completion: mapped,
-        }
-      }
+
+  const { data: existingRow, error: existingError } = await supabase
+    .from('course_completions')
+    .select('*')
+    .eq('id', completionDocId)
+    .maybeSingle()
+  if (existingError) throw new Error(existingError.message)
+
+  if (existingRow && (existingRow as Raw).status === 'approved') {
+    return {
+      alreadyCompleted: true,
+      pointsAwarded: 0,
+      completion: mapRow(existingRow as Raw),
     }
   }
 
-  const learnerProfileSnap = await getDoc(doc(db, 'profiles', learnerId))
-  if (!learnerProfileSnap.exists()) {
-    throw new Error('Learner profile not found')
-  }
-  const profile = learnerProfileSnap.data() as Record<string, unknown>
-  const journeyType = (learnerJourneyType ||
-    (profile.journeyType as JourneyType | undefined) ||
-    '6W') as JourneyType
+  const { data: profileRow, error: profileError } = await supabase
+    .from('profiles')
+    .select('id, journey_type, current_week, organization_id, company_id, data')
+    .eq('id', learnerId)
+    .maybeSingle()
+  if (profileError) throw new Error(profileError.message)
+  if (!profileRow) throw new Error('Learner profile not found')
+
+  const nested = (profileRow.data as Record<string, unknown> | null) ?? {}
+  const rawJourney =
+    (profileRow.journey_type as string | null) ||
+    (nested.journeyType as string | null) ||
+    learnerJourneyType ||
+    null
+  const journeyType = (isJourneyType(rawJourney) ? rawJourney : '6W') as JourneyType
   const resolvedWeek =
     params.weekNumber && params.weekNumber > 0
       ? params.weekNumber
-      : typeof profile.currentWeek === 'number' && profile.currentWeek > 0
-        ? (profile.currentWeek as number)
-        : 1
+      : typeof profileRow.current_week === 'number' && profileRow.current_week > 0
+        ? profileRow.current_week
+        : typeof nested.currentWeek === 'number' && (nested.currentWeek as number) > 0
+          ? (nested.currentWeek as number)
+          : 1
   const resolvedOrganizationId =
     organizationId ||
-    (profile.organizationId as string | null | undefined) ||
-    (profile.companyId as string | null | undefined) ||
+    (profileRow.organization_id as string | null) ||
+    (profileRow.company_id as string | null) ||
+    (nested.organizationId as string | null) ||
+    (nested.companyId as string | null) ||
     null
 
   const activity = getActivityDefinitionById({
@@ -199,9 +167,8 @@ export const markCourseCompleted = async (
   }
 
   // Partners control timing of course approvals (they wait until certificates
-  // arrive, sometimes batched). The auto-derived per-window cap on lift_module
-  // would block batch approvals in a single window, so we widen it to the
-  // journey-level total cap. maxTotal still enforces the real journey limit.
+  // arrive, sometimes batched). Widen per-window cap to journey total so a
+  // batch in one window is not blocked; maxTotal still enforces the real limit.
   const journeyCap = activity.activityPolicy?.maxTotal ?? activity.maxPerMonth ?? 1
   const partnerApprovalActivity: ActivityDef = {
     ...activity,
@@ -217,15 +184,26 @@ export const markCourseCompleted = async (
 
   const claimRef = `course_${sanitizeClaimRefSegment(course.id)}`
 
+  let pointsAwarded = activity.points
   try {
-    await awardChecklistPoints({
+    const award = await awardChecklistPoints({
       uid: learnerId,
       journeyType,
       weekNumber: resolvedWeek,
       activity: partnerApprovalActivity,
-      source: 'partner_course_completion',
+      source: 'partner_issued',
       claimRef,
     })
+    if (!award.awarded) {
+      if (award.reason === 'already_awarded') {
+        pointsAwarded = 0
+      } else {
+        throw new Error(
+          award.message ||
+            `Could not award points for this course (${award.reason || 'rejected'}).`,
+        )
+      }
+    }
     await upsertChecklistActivity({
       userId: learnerId,
       weekNumber: resolvedWeek,
@@ -251,53 +229,47 @@ export const markCourseCompleted = async (
     throw error
   }
 
-  // Schema chosen to satisfy the existing /approvals create rule:
-  //   isPartnerOrAdmin() &&
-  //   type == 'partner_issued' && status == 'approved' &&
-  //   source is map && source.partnerId == request.auth.uid
-  const approvalPayload = removeUndefinedFields({
-    userId: learnerId,
-    organizationId: resolvedOrganizationId,
-    type: 'partner_issued' as const,
-    approvalType: COURSE_COMPLETION_APPROVAL_TYPE,
-    title: course.title,
-    summary: `Course completion: ${course.title}`,
+  const nowIso = new Date().toISOString()
+  const payload = {
+    id: completionDocId,
+    user_id: learnerId,
+    organization_id: resolvedOrganizationId,
+    course_id: course.id,
+    course_title: course.title,
+    course_slug: course.slug ?? null,
+    status: 'approved',
     points: activity.points,
-    status: 'approved' as const,
-    source: {
-      partnerId,
-      partnerName: partnerName ?? null,
-      courseId: course.id,
-      courseSlug: course.slug ?? null,
-      courseTitle: course.title,
-      weekNumber: resolvedWeek,
-      claimRef,
-      completedAt: new Date().toISOString(),
-    },
-    createdAt: serverTimestamp(),
-    reviewedAt: serverTimestamp(),
-    reviewedBy: partnerId,
-    rejectionReason: null,
-    searchText: `${course.title.toLowerCase()} ${learnerId.toLowerCase()} course_completion`,
-  })
+    week_number: resolvedWeek,
+    claim_ref: claimRef,
+    approved_by: partnerId,
+    approved_by_name: partnerName ?? null,
+    approved_at: nowIso,
+    revoked_at: null,
+    revoked_by: null,
+    updated_at: nowIso,
+  }
 
-  await setDoc(completionRef, approvalPayload, { merge: true })
+  const { data: saved, error: saveError } = await supabase
+    .from('course_completions')
+    .upsert(payload, { onConflict: 'id' })
+    .select('*')
+    .maybeSingle()
+  if (saveError) throw new Error(saveError.message)
 
-  // Fire-and-forget side effects so the partner's UI returns immediately.
-  // The listener picks up the approval doc; these write to other collections.
-  void createInAppNotification({
+  void notifySupabaseUser({
     userId: learnerId,
     type: 'achievement',
     title: 'Course completion approved',
     message: `Your partner approved "${course.title}" and ${activity.points.toLocaleString()} points were added.`,
     relatedId: course.id,
-    metadata: {
+    category: 'important_updates',
+    data: {
       courseId: course.id,
       courseTitle: course.title,
       points: activity.points,
       actionUrl: '/app/weekly-glance',
     },
-  }).catch(error => {
+  }).catch((error) => {
     console.error('[CourseCompletion] Failed to send learner notification', error)
   })
 
@@ -311,74 +283,126 @@ export const markCourseCompleted = async (
       points: activity.points,
       organizationId: resolvedOrganizationId,
     },
-  }).catch(error => {
+  }).catch((error) => {
     console.error('[CourseCompletion] Failed to log admin action', error)
   })
 
-  const completion: CourseCompletionRecord = {
-    id: completionDocId,
-    userId: learnerId,
-    courseId: course.id,
-    courseTitle: course.title,
-    courseSlug: course.slug ?? null,
-    organizationId: resolvedOrganizationId,
-    status: 'approved',
-    points: activity.points,
-    weekNumber: resolvedWeek,
-    approvedBy: partnerId,
-    approvedByName: partnerName ?? null,
-    approvedAt: new Date(),
-    revokedAt: null,
-    revokedBy: null,
-  }
+  const completion = saved
+    ? mapRow(saved as Raw)
+    : {
+        id: completionDocId,
+        userId: learnerId,
+        courseId: course.id,
+        courseTitle: course.title,
+        courseSlug: course.slug ?? null,
+        organizationId: resolvedOrganizationId,
+        status: 'approved' as const,
+        points: activity.points,
+        weekNumber: resolvedWeek,
+        approvedBy: partnerId,
+        approvedByName: partnerName ?? null,
+        approvedAt: new Date(),
+        revokedAt: null,
+        revokedBy: null,
+      }
+
   return {
     alreadyCompleted: false,
-    pointsAwarded: activity.points,
+    pointsAwarded,
     completion,
   }
 }
 
 /**
- * Subscribes to course completion records (filtered approvals docs) for a
- * single learner. Listeners pull all approvals for that user and filter
- * client-side for course completions - avoids needing a composite index.
+ * Subscribes to course completion records for a single learner.
  */
 export const listenToUserCourseCompletions = (
   userId: string,
   onData: (records: CourseCompletionRecord[]) => void,
   onError?: (error: Error) => void,
-): Unsubscribe => {
-  const q = query(collection(db, APPROVALS_COLLECTION), where('userId', '==', userId))
-  return onSnapshot(
-    q,
-    snapshot => {
-      const records = snapshot.docs
-        .map(snap => mapApprovalToCompletion(snap.id, snap.data()))
-        .filter((r): r is CourseCompletionRecord => r !== null)
-      onData(records)
-    },
-    error => {
-      console.error('[CourseCompletion] Listener error', error)
-      onError?.(error as Error)
-    },
-  )
+): (() => void) => {
+  if (!userId) {
+    onData([])
+    return () => {}
+  }
+
+  let active = true
+  const load = async () => {
+    const { data, error } = await supabase
+      .from('course_completions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('approved_at', { ascending: false })
+    if (!active) return
+    if (error) {
+      onError?.(new Error(error.message))
+      return
+    }
+    onData(((data ?? []) as Raw[]).map(mapRow))
+  }
+
+  void load()
+  const channel = supabase
+    .channel(`course_completions_user_${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'course_completions',
+        filter: `user_id=eq.${userId}`,
+      },
+      () => void load(),
+    )
+    .subscribe()
+
+  return () => {
+    active = false
+    void supabase.removeChannel(channel)
+  }
 }
 
 /**
- * Subscribes to course completion records for a list of learners.
- * Used by the partner UI.
+ * Subscribes to course completion records for a list of learners (partner UI).
  */
 export const listenToCourseCompletionsForLearners = (
-  _learnerIds: string[],
+  learnerIds: string[],
   onData: (records: CourseCompletionRecord[]) => void,
-  _onError?: (error: Error) => void,
+  onError?: (error: Error) => void,
 ): (() => void) => {
-  // TEMPORARILY DISABLED pending the Supabase migration of course approvals.
-  // Completions live in the Firestore `approvals` collection, denied under
-  // Supabase-only auth, so the old `onSnapshot(approvals)` flooded the console
-  // with "Missing or insufficient permissions" whenever a learner was selected.
-  // Return no records instead of churning a dead listener (mirrors the
-  // programme-submissions no-op).
-  onData([])
-  return () => {}
+  const ids = (learnerIds ?? []).filter(Boolean)
+  if (ids.length === 0) {
+    onData([])
+    return () => {}
+  }
+
+  let active = true
+  const load = async () => {
+    const { data, error } = await supabase
+      .from('course_completions')
+      .select('*')
+      .in('user_id', ids)
+      .order('approved_at', { ascending: false })
+    if (!active) return
+    if (error) {
+      onError?.(new Error(error.message))
+      return
+    }
+    onData(((data ?? []) as Raw[]).map(mapRow))
+  }
+
+  void load()
+  const channel = supabase
+    .channel(`course_completions_learners_${ids.slice(0, 3).join('_')}_${ids.length}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'course_completions' },
+      () => void load(),
+    )
+    .subscribe()
+
+  return () => {
+    active = false
+    void supabase.removeChannel(channel)
+  }
 }
