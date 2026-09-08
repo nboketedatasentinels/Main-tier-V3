@@ -19,7 +19,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { LogOut, Menu, ScrollText } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { MentorGuidelinesModal } from '@/components/mentor/MentorGuidelinesModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -163,18 +163,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
 
           <SidebarNav sections={sections} activeItem={activeItem} onNavigate={onNavigate} />
 
-          <Flex mt="auto" pt={4} borderTop="1px solid" borderColor="brand.border" direction="column" gap={1}>
-            <Button
-              variant="ghost"
-              leftIcon={<Icon as={ScrollText} />}
-              justifyContent="flex-start"
-              color="brand.text"
-              onClick={() => onNavigate?.('guidelines')}
-              w="full"
-              fontSize="sm"
-            >
-              Guidelines
-            </Button>
+          <Flex mt="auto" pt={4} borderTop="1px solid" borderColor="brand.border">
             <Button
               variant="ghost"
               leftIcon={<Icon as={LogOut} />}
@@ -213,19 +202,6 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
                   onNavigate?.(key)
                 }}
               />
-              <Button
-                variant="ghost"
-                leftIcon={<Icon as={ScrollText} />}
-                justifyContent="flex-start"
-                color="brand.text"
-                onClick={() => {
-                  drawer.onClose()
-                  onNavigate?.('guidelines')
-                }}
-                w="full"
-              >
-                Guidelines
-              </Button>
               <Button
                 variant="ghost"
                 leftIcon={<Icon as={LogOut} />}

@@ -24,7 +24,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { Menu as MenuIcon, Medal, ScrollText, X } from 'lucide-react'
+import { Menu as MenuIcon, Medal, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
@@ -121,13 +121,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   const toast = useToast()
   const sections = useMemo(() => navSections || buildAmbassadorNavItems(), [navSections])
   const primaryNavItems = useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
-  const accountItems = useMemo(
-    (): NavigationItem[] => [
-      { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
-      ...buildCommonAccountItems(),
-    ],
-    [],
-  )
+  const accountItems = useMemo(() => buildCommonAccountItems(), [])
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
   const [showGuidelinesModal, setShowGuidelinesModal] = useState(false)
