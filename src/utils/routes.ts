@@ -82,7 +82,7 @@ export const getLandingPathForRole = (
       return '/mentor/dashboard';
     }
     case UserRole.AMBASSADOR:
-      return '/ambassador/dashboard';
+      return '/coach/dashboard';
     default:
       // Continue to Priority 3 for other roles
       break;

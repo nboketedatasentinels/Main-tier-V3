@@ -25,7 +25,7 @@ describe('getLandingPathForRole', () => {
 
   it('should return the coach dashboard for AMBASSADOR role', () => {
     const path = getLandingPathForRole(UserRole.AMBASSADOR);
-    expect(path).toBe('/ambassador/dashboard');
+    expect(path).toBe('/coach/dashboard');
   });
 
   it('should return free dashboard for a user who has not completed onboarding', () => {

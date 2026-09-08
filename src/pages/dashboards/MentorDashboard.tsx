@@ -356,7 +356,10 @@ export const MentorDashboard: React.FC = () => {
                     sticky={false}
                     title="Top points"
                     seeMoreLabel="Full ranking"
-                    onSeeMore={() => scrollTo('mentees')}
+                    onSeeMore={() => {
+                      scrollTo('mentees')
+                      rankingModal.onOpen()
+                    }}
                     onSelect={(id) => {
                       setSelectedId(id)
                       scrollTo('mentees')

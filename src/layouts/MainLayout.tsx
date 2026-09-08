@@ -145,6 +145,7 @@ export const MainLayout: React.FC = () => {
     () =>
       location.pathname.startsWith('/app/') ||
       location.pathname.startsWith('/mentor/') ||
+      location.pathname.startsWith('/coach/') ||
       location.pathname.startsWith('/ambassador/'),
     [location.pathname],
   )

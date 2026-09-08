@@ -285,6 +285,10 @@ export const AppRoutes = () => {
         {/* Legacy Super Admin redirect */}
         <Route path="/super-admin/*" element={<Navigate to="/admin/dashboard" replace />} />
 
+        {/* Legacy ambassador paths → coach */}
+        <Route path="/ambassador/*" element={<Navigate to="/coach/dashboard" replace />} />
+        <Route path="/ambassador" element={<Navigate to="/coach/dashboard" replace />} />
+
         {/* Protected main app routes */}
         <Route
           path="/app/*"

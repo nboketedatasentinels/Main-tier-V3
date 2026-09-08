@@ -396,7 +396,10 @@ export const AmbassadorDashboard: React.FC = () => {
                     sticky={false}
                     title="Top points"
                     seeMoreLabel="Full ranking"
-                    onSeeMore={() => scrollTo('coachees')}
+                    onSeeMore={() => {
+                      scrollTo('coachees')
+                      rankingModal.onOpen()
+                    }}
                     onSelect={(id) => {
                       setSelectedId(id)
                       scrollTo('coachees')

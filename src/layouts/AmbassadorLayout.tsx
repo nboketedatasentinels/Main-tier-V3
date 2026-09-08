@@ -24,7 +24,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { Menu as MenuIcon, Medal, X } from 'lucide-react'
+import { Menu as MenuIcon, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
@@ -117,9 +117,10 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   ambassadorName = 'Coach',
   avatarUrl,
   navSections,
-  subtitle = 'Grow the ecosystem and track your impact',
+  subtitle: _subtitle = 'Grow the ecosystem and track your impact',
   headerLeading,
 }) => {
+  void _subtitle
   const { signOut, signingOut, profile, profileLoading, profileStatus } = useAuth()
   const toast = useToast()
   const sections = useMemo(() => navSections || buildAmbassadorNavItems(), [navSections])
@@ -239,70 +240,36 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
       </Drawer>
 
       <Flex flex="1" direction="column" minW={0} h={APP_VIEWPORT_HEIGHT} overflow="hidden" minH={0}>
-        <Flex
-          px={{ base: 4, md: 6, lg: 10 }}
-          py={4}
-          align="center"
-          justify="space-between"
-          borderBottom="1px solid"
-          borderColor="brand.border"
-          bg="white"
-          position="sticky"
-          top={0}
-          zIndex={10}
-        >
-          <HStack spacing={3} align="center">
-            {isMobile && (
+        {isMobile && (
+          <Flex
+            px={4}
+            py={3}
+            align="center"
+            justify="space-between"
+            borderBottom="1px solid"
+            borderColor="brand.border"
+            bg="white"
+            position="sticky"
+            top={0}
+            zIndex={10}
+            gap={2}
+          >
+            <HStack spacing={3} align="center" minW={0}>
               <IconButton
                 aria-label="Open navigation"
                 icon={<Icon as={MenuIcon} />}
                 variant="ghost"
                 onClick={drawer.onOpen}
               />
-            )}
-            <VStack align="flex-start" spacing={0}>
-              <HStack spacing={2}>
-                <Medal size={18} />
-                <Text fontWeight="bold" color="brand.text">
-                  Coach Hub
-                </Text>
-              </HStack>
-              <Text fontSize="sm" color="brand.subtleText">
-                {subtitle}
+              <Text fontWeight="bold" noOfLines={1}>
+                Coach Hub
               </Text>
-            </VStack>
-          </HStack>
-
-          <HStack spacing={3} align="center" flex="1" minW={0} justify="flex-end">
-            {headerLeading ? (
-              <Box minW={0} maxW={{ base: '100%', md: '360px', lg: '420px' }} w={{ base: 'full', md: '360px' }}>
-                {headerLeading}
-              </Box>
-            ) : null}
-            <NotificationDropdown />
-            <Menu>
-              <MenuButton
-                as={Button}
-                leftIcon={<Avatar size="sm" name={ambassadorName} src={avatarUrl} />}
-                variant="outline"
-                size="sm"
-                px={{ base: 2, md: 3 }}
-              >
-                <Text display={{ base: 'none', md: 'block' }} noOfLines={1} maxW="180px">
-                  {ambassadorName}
-                </Text>
-              </MenuButton>
-              <MenuList>
-                {accountItems.map((item) => (
-                  <MenuItem key={item.key} icon={item.icon ? <Icon as={item.icon} /> : undefined} onClick={() => handleAccountNavigate(item.key)}>
-                    {item.label}
-                  </MenuItem>
-                ))}
-                <MenuItem onClick={handleLogout} isDisabled={signingOut}>Logout</MenuItem>
-              </MenuList>
-            </Menu>
-          </HStack>
-        </Flex>
+            </HStack>
+            <HStack spacing={2} flexShrink={0}>
+              <NotificationDropdown />
+            </HStack>
+          </Flex>
+        )}
 
         <Box
           px={{ base: 4, md: 6, lg: 10 }}
@@ -312,7 +279,53 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           overflowY="auto"
           data-coach-main-scroll
         >
-          <Stack spacing={6} maxW="1400px" mx="auto">
+          <Stack spacing={6} maxW="1600px" mx="auto">
+            {!isMobile && (
+              <Flex justify="flex-end" align="center" gap={3} minW={0} w="full">
+                {headerLeading ? (
+                  <Box minW={0} w={{ base: 'full', md: '320px' }} maxW="420px" flexShrink={1}>
+                    {headerLeading}
+                  </Box>
+                ) : null}
+                <HStack spacing={3} flexShrink={0}>
+                  <NotificationDropdown />
+                  <Menu>
+                    <MenuButton
+                      as={Button}
+                      leftIcon={<Avatar size="sm" name={ambassadorName} src={avatarUrl} />}
+                      variant="outline"
+                      size="sm"
+                      px={{ base: 2, md: 3 }}
+                    >
+                      <Text display={{ base: 'none', md: 'block' }} noOfLines={1} maxW="180px">
+                        {ambassadorName}
+                      </Text>
+                    </MenuButton>
+                    <MenuList>
+                      {accountItems.map((item) => (
+                        <MenuItem
+                          key={item.key}
+                          icon={item.icon ? <Icon as={item.icon} /> : undefined}
+                          onClick={() => handleAccountNavigate(item.key)}
+                        >
+                          {item.label}
+                        </MenuItem>
+                      ))}
+                      <MenuItem onClick={handleLogout} isDisabled={signingOut}>
+                        Logout
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                </HStack>
+              </Flex>
+            )}
+
+            {isMobile && headerLeading ? (
+              <Box w="full" minW={0}>
+                {headerLeading}
+              </Box>
+            ) : null}
+
             {children}
           </Stack>
         </Box>

@@ -119,8 +119,8 @@ export const getLandingPathForRole = (
 
   // Priority 5: Coach
   if (normalizedRole === 'ambassador') {
-    console.log('🔷 Coach detected → /ambassador/dashboard')
-    return '/ambassador/dashboard'
+    console.log('🔷 Coach detected → /coach/dashboard')
+    return '/coach/dashboard'
   }
 
   // Priority 5b: Verifier (impact log email approvers who have an account)
