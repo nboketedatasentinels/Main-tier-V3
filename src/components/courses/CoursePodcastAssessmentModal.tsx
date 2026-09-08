@@ -16,12 +16,15 @@ import {
   Textarea,
 } from '@chakra-ui/react'
 import type { CoursePodcastEpisodeFilled } from '@/types/coursePodcast'
+import { LearnerAiExplainPanel } from './LearnerAiExplainPanel'
+import { useAuth } from '@/hooks/useAuth'
 
 const MIN_ANSWER_CHARS = 30
 
 interface CoursePodcastAssessmentModalProps {
   isOpen: boolean
   episode: CoursePodcastEpisodeFilled | null
+  packId?: string | null
   isSubmitting: boolean
   saveSucceeded?: boolean
   onClose: () => void
@@ -35,11 +38,13 @@ interface CoursePodcastAssessmentModalProps {
 export function CoursePodcastAssessmentModal({
   isOpen,
   episode,
+  packId = null,
   isSubmitting,
   saveSucceeded = false,
   onClose,
   onSubmit,
 }: CoursePodcastAssessmentModalProps) {
+  const { user } = useAuth()
   const questions = episode?.questions ?? []
   const [answers, setAnswers] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'result'>('quiz')
@@ -201,6 +206,14 @@ export function CoursePodcastAssessmentModal({
                   ))}
                 </Stack>
               </Box>
+
+              {saveSucceeded && user?.uid && packId && episode?.slot ? (
+                <LearnerAiExplainPanel
+                  uid={user.uid}
+                  packId={packId}
+                  slot={episode.slot}
+                />
+              ) : null}
             </Stack>
           )}
         </ModalBody>

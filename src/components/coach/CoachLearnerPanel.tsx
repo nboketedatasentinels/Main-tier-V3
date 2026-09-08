@@ -32,6 +32,7 @@ import {
   resolvePurchasedCoachSessions,
 } from '@/utils/purchasedCoachSessions'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
+import { LiftProfileStrip } from '@/components/leadership/LiftProfileStrip'
 import type { UserProfile } from '@/types'
 
 const PLUM = '#27062e'
@@ -347,6 +348,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
             </Text>
           </Box>
         </SimpleGrid>
+        <LiftProfileStrip learnerId={learner.id} />
       </Box>
 
       {/* AI notes */}

@@ -15,6 +15,7 @@ import {
   buildStrengthsWeaknessesWriteUp,
 } from '@/services/mentorCoachingInsights'
 import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
+import { LiftProfileStrip } from '@/components/leadership/LiftProfileStrip'
 import { getDisplayName } from '@/utils/displayName'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
 import type { UserProfile } from '@/types'
@@ -106,6 +107,7 @@ export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
             </Text>
           </Box>
         </SimpleGrid>
+        <LiftProfileStrip learnerId={learner.id} />
       </Box>
 
       <Box

@@ -95,6 +95,7 @@ const TYPE_META: Record<
   capstone: { label: 'Capstone', icon: Award, color: '#350e6f', bg: '#f4f0fb' },
   case_study: { label: 'Case Study', icon: BookMarked, color: '#8a6310', bg: '#fdf6e3' },
   practical: { label: 'Practical', icon: Wrench, color: '#c4400a', bg: '#fdece1' },
+  course_podcast: { label: 'Course podcast', icon: FileText, color: '#0f6c2e', bg: '#e8f5ee' },
 }
 
 const STATUS_META: Record<
@@ -396,6 +397,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                   <option value="capstone">Capstone</option>
                   <option value="case_study">Case Study</option>
                   <option value="practical">Practical</option>
+                  <option value="course_podcast">Course podcast</option>
                 </Select>
               </FormControl>
               <FormControl maxW={{ base: 'full', md: '180px' }}>
@@ -656,9 +658,16 @@ const HitlBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ sub
   }
   if (decision === 'pending') {
     return (
-      <Badge colorScheme="orange" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
-        Awaiting human
-      </Badge>
+      <Stack spacing={0.5}>
+        <Badge colorScheme="orange" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+          Awaiting human
+        </Badge>
+        {submission.learnerDisputedAt ? (
+          <Text fontSize="2xs" color="orange.700">
+            Learner disputed
+          </Text>
+        ) : null}
+      </Stack>
     )
   }
   const label =

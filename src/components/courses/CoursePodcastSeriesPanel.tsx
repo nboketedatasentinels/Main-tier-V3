@@ -30,6 +30,7 @@ import {
   recordAssessmentAttempt,
 } from '@/services/podcastProgressService'
 import { awardChecklistPoints } from '@/services/pointsService'
+import { upsertCoursePodcastSubmission } from '@/services/programmeComponentSubmissionService'
 import {
   listPlayableEpisodes,
   loadCoursePodcastPackForCatalogueCourse,
@@ -166,7 +167,7 @@ export function CoursePodcastSeriesPanel({
       const wasAlreadyPaid = Boolean(prev.pointsAwardedAt)
       const shouldAwardPoints = passed && !wasAlreadyPaid
 
-      // Persist written answers for later AI/partner review (Nono compliance).
+      // Persist written answers for AI/partner review (Nono compliance).
       const existingAnswers = profile?.coursePodcastAnswers ?? {}
       await updateProfile({
         coursePodcastAnswers: {
@@ -180,6 +181,22 @@ export function CoursePodcastSeriesPanel({
           },
         },
       })
+
+      try {
+        await upsertCoursePodcastSubmission({
+          uid,
+          organizationId: profile?.organizationId || profile?.companyId || null,
+          packId: ref.packId,
+          slot: quizEpisode.slot,
+          episodeTitle: quizEpisode.episode_title || quizEpisode.slot,
+          whatWillBeAssessed: quizEpisode.what_will_be_assessed || '',
+          questions: (quizEpisode.questions || []).map((q) => q.question),
+          answers,
+          catalogueCourseId,
+        })
+      } catch (aiErr) {
+        console.warn('[CoursePodcastSeriesPanel] AI submission upsert failed (non-fatal)', aiErr)
+      }
 
       const next = await recordAssessmentAttempt(
         uid,
@@ -441,6 +458,7 @@ export function CoursePodcastSeriesPanel({
       <CoursePodcastAssessmentModal
         isOpen={quizEpisode !== null}
         episode={quizEpisode}
+        packId={ref.packId}
         isSubmitting={Boolean(quizEpisode && submittingId === episodeProgressId(ref.packId, quizEpisode.slot))}
         saveSucceeded={lastSaveOk}
         onClose={() => {

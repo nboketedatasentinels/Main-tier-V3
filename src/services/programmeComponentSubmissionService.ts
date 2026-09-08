@@ -3,7 +3,7 @@ import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConf
 import { awardChecklistPoints } from './pointsService'
 import { createInAppNotification } from './notificationService'
 
-export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical'
+export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical' | 'course_podcast'
 
 // Pillar components are one-off, journey-long deliverables (not week-bound), so
 // we attribute the award to a fixed week. This keeps the ledger doc id stable
@@ -75,6 +75,9 @@ export interface ProgrammeComponentSubmission {
   /** Partner confirmed they read What good looks like before deciding. */
   criteriaAcknowledged: boolean
   criteriaAcknowledgedAt: Date | null
+  /** Learner disputed AI estimate (no partner yet / explain-itself path). */
+  learnerDisputedAt: Date | null
+  learnerDisputeNote: string | null
 }
 
 /**
@@ -177,6 +180,8 @@ const mapRow = (
     reviewDurationMs: toFiniteNumber(row.review_duration_ms),
     criteriaAcknowledged: row.criteria_acknowledged === true,
     criteriaAcknowledgedAt: toDate(row.criteria_acknowledged_at),
+    learnerDisputedAt: toDate(row.learner_disputed_at),
+    learnerDisputeNote: (row.learner_dispute_note as string) ?? null,
   }
 }
 
@@ -509,3 +514,103 @@ export async function approveSubmissionAndAward(params: {
     pointsEligible: true,
   }
 }
+
+export type CoursePodcastSubmissionInput = {
+  uid: string
+  organizationId?: string | null
+  packId: string
+  slot: string
+  episodeTitle: string
+  whatWillBeAssessed: string
+  questions: string[]
+  answers: string[]
+  catalogueCourseId?: string | null
+}
+
+/** Stable component_id for course podcast written assessments (webhook → grade-submission). */
+export const coursePodcastComponentId = (packId: string, slot: string): string =>
+  `course-podcast-${packId}-${slot}`
+
+/**
+ * Upsert a course-podcast written assessment into programme_component_submissions
+ * so Gemini grades it and partners can accept/edit/reject like other artefacts.
+ */
+export async function upsertCoursePodcastSubmission(
+  input: CoursePodcastSubmissionInput,
+): Promise<string> {
+  const componentId = coursePodcastComponentId(input.packId, input.slot)
+  const answers: Record<string, string> = {
+    'What good looks like': input.whatWillBeAssessed.trim(),
+  }
+  input.questions.forEach((q, i) => {
+    const key = `Q${i + 1}: ${q.trim() || `Question ${i + 1}`}`
+    answers[key] = (input.answers[i] || '').trim()
+  })
+  const answerCount = Object.values(answers).filter((v) => v.length > 0).length
+  const nowIso = new Date().toISOString()
+
+  const payload = {
+    user_id: input.uid,
+    organization_id: input.organizationId ?? null,
+    component_id: componentId,
+    component_type: 'course_podcast' as const,
+    component_title: input.episodeTitle || `${input.packId} · ${input.slot}`,
+    pillar: null,
+    part_id: input.slot,
+    part_title: input.slot,
+    answers,
+    answer_count: answerCount,
+    status: 'submitted',
+    submitted_at: nowIso,
+    last_updated_at: nowIso,
+    source_page: input.catalogueCourseId
+      ? `/app/courses/${input.catalogueCourseId}`
+      : null,
+  }
+
+  const { data, error } = await supabase
+    .from('programme_component_submissions')
+    .upsert(payload, { onConflict: 'user_id,component_id' })
+    .select('id')
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return (data?.id as string) || componentId
+}
+
+/**
+ * Learner disputes an AI estimate when no partner has decided yet — forces human review.
+ */
+export async function disputeAiGrade(params: {
+  submissionId: string
+  note?: string | null
+}): Promise<void> {
+  const nowIso = new Date().toISOString()
+  const note = (params.note || '').trim()
+  const { error } = await supabase
+    .from('programme_component_submissions')
+    .update({
+      status: 'needs_revision',
+      learner_disputed_at: nowIso,
+      learner_dispute_note: note || null,
+      last_updated_at: nowIso,
+    })
+    .eq('id', params.submissionId)
+  if (error) throw new Error(error.message)
+}
+
+export async function getSubmissionByComponentId(params: {
+  uid: string
+  componentId: string
+}): Promise<ProgrammeComponentSubmission | null> {
+  const { data, error } = await supabase
+    .from('programme_component_submissions')
+    .select('*')
+    .eq('user_id', params.uid)
+    .eq('component_id', params.componentId)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!data) return null
+  return mapRow(data as Raw, new Map())
+}
+

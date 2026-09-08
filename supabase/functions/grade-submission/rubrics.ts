@@ -29,5 +29,18 @@ export const RUBRICS: Record<string, string> = {
  */
 export function rubricForComponent(componentId: string | null | undefined): string | null {
   if (!componentId) return null
-  return RUBRICS[componentId] ?? null
+  if (RUBRICS[componentId]) return RUBRICS[componentId]
+  // Course podcast written assessments share a generic advisory rubric.
+  if (componentId.startsWith('course-podcast-')) {
+    return [
+      'You are grading a Transformation Leader course-podcast written assessment.',
+      'The submission includes "What good looks like" plus the learner answers.',
+      'Score 0-100. Pass if the answers substantively address the questions with concrete workplace examples.',
+      'Fail if answers are generic, empty, or ignore the standard.',
+      'Write feedbackForPartner and feedback that EXPLAINS WHY the score was given,',
+      'citing the standard and specific gaps or strengths — a human may disagree and must understand your reasoning.',
+      'Return JSON: { score, feedback, pass }.',
+    ].join(' ')
+  }
+  return null
 }
