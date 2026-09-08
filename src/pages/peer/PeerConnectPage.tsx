@@ -1573,10 +1573,9 @@ export const PeerConnectPage: React.FC = () => {
               w="100%"
             >
               <Box
-                flex={{ base: 'none', md: '0 0 360px' }}
-                w={{ base: '100%', md: '360px' }}
-                maxW={{ base: '100%', md: '360px' }}
-                flexShrink={0}
+                flex={{ base: 'none', md: '1 1 0%' }}
+                minW={0}
+                w={{ base: '100%', md: '50%' }}
                 bg="black"
                 borderRadius="2xl"
                 overflow="hidden"
@@ -1601,7 +1600,7 @@ export const PeerConnectPage: React.FC = () => {
               <Box
                 flex={{ base: 'none', md: '1 1 0%' }}
                 minW={0}
-                w={{ base: '100%', md: 'auto' }}
+                w={{ base: '100%', md: '50%' }}
                 bg="white"
                 borderRadius="2xl"
                 border="1px solid"
