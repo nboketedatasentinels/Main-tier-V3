@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   Box,
+  Flex,
   SimpleGrid,
   Stack,
   Text,
@@ -22,6 +23,8 @@ const personalityLabel = (type?: string | null): string | null => {
 type MentorLearnerPanelProps = {
   learner: UserProfile
   mentorId?: string | null
+  /** Top-right action (e.g. Points ranking button). */
+  headerAction?: React.ReactNode
 }
 
 /**
@@ -31,24 +34,38 @@ type MentorLearnerPanelProps = {
 export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
   learner,
   mentorId,
+  headerAction,
 }) => {
   const values = (learner.coreValues || []).filter(Boolean)
   const ageRange = (learner as { ageRange?: string | null }).ageRange
 
   return (
-    <Stack spacing={4} minW={0} maxW="100%" overflow="hidden">
-      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden" minW={0}>
-        <Box px={5} py={4} borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
-          <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
-            MENTEE PROFILE
-          </Text>
-          <Text mt={1} fontSize="lg" fontWeight="700" color={PLUM}>
-            {getDisplayName(learner)}
-          </Text>
-          <Text fontSize="sm" color="gray.600">
-            {[learner.companyName, learner.email].filter(Boolean).join(' · ')}
-          </Text>
-        </Box>
+    <Stack spacing={4} minW={0} maxW="100%" overflow="hidden" w="full">
+      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden" minW={0} w="full">
+        <Flex
+          px={5}
+          py={4}
+          borderBottom="1px solid"
+          borderColor="gray.100"
+          bg="gray.50"
+          align="flex-start"
+          justify="space-between"
+          gap={3}
+          flexWrap="wrap"
+        >
+          <Box minW={0} flex="1">
+            <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
+              MENTEE PROFILE
+            </Text>
+            <Text mt={1} fontSize="lg" fontWeight="700" color={PLUM}>
+              {getDisplayName(learner)}
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              {[learner.companyName, learner.email].filter(Boolean).join(' · ')}
+            </Text>
+          </Box>
+          {headerAction ? <Box flexShrink={0}>{headerAction}</Box> : null}
+        </Flex>
         <SimpleGrid columns={{ base: 1, md: 3 }} spacing={0}>
           <Box px={5} py={4} borderBottom={{ base: '1px solid', md: 'none' }} borderColor="gray.100">
             <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.08em">

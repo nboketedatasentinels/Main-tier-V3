@@ -7,6 +7,8 @@ interface LiftCapabilityRadarProps {
   chosenPillar?: PillarKey | null
   gapPillar?: PillarKey | null
   showScores?: boolean
+  /** stack = radar above list (default); split = radar left, list right on md+ */
+  layout?: 'stack' | 'split'
 }
 
 /** Map score 0-100 onto radar radius from center. */
@@ -28,6 +30,7 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
   chosenPillar,
   gapPillar,
   showScores = false,
+  layout = 'stack',
 }) => {
   const hasScores = Boolean(pillars)
 
@@ -49,8 +52,16 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
   const gapPt = gap ? shape.pts[['L', 'I', 'F', 'T'].indexOf(gap)] : null
 
   return (
-    <Box maxW="100%" minW={0} overflow="hidden">
-      <Box as="svg" className="radar" viewBox="0 0 240 200" w="100%" maxW="280px" h="auto" role="img" aria-label="LIFT capability shape">
+    <Box
+      maxW="100%"
+      minW={0}
+      overflow="hidden"
+      w="full"
+      display={layout === 'split' ? { base: 'block', md: 'flex' } : 'block'}
+      alignItems={layout === 'split' ? { md: 'flex-start' } : undefined}
+      gap={layout === 'split' ? { md: 6 } : undefined}
+    >
+      <Box as="svg" className="radar" viewBox="0 0 240 200" w="100%" maxW={layout === 'split' ? { base: '280px', md: '320px' } : '280px'} h="auto" flexShrink={0} role="img" aria-label="LIFT capability shape">
         {[0.25, 0.5, 0.75, 1].map((scale) => {
           const pts = (['L', 'I', 'F', 'T'] as PillarKey[])
             .map((k) => pointFor(k, scale * 100, shape.cx, shape.cy, shape.maxR))
@@ -140,7 +151,15 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
           No LIFT Index on file yet. The radar stays empty until they complete the assessment.
         </Text>
       ) : (
-        <List spacing={1.5} mt={2} styleType="none" ml={0} maxW="100%" minW={0}>
+        <List
+          spacing={1.5}
+          mt={layout === 'split' ? { base: 2, md: 0 } : 2}
+          styleType="none"
+          ml={0}
+          maxW="100%"
+          minW={0}
+          flex="1"
+        >
           {PILLARS.map((p) => (
             <ListItem
               key={p.key}

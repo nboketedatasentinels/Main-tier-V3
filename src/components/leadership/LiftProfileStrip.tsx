@@ -13,8 +13,7 @@ type LiftProfileStripProps = {
 
 /**
  * Mentor/coach profile header: LIFT archetype + index up front (Nana: don't bury it).
- * Same radar + pillar list as learner Session Prep, constrained so long copy can't
- * force horizontal page scroll.
+ * Uses full profile width; radar + pillar scores share the row on larger screens.
  */
 export const LiftProfileStrip: React.FC<LiftProfileStripProps> = ({
   learnerId,
@@ -25,7 +24,7 @@ export const LiftProfileStrip: React.FC<LiftProfileStripProps> = ({
 
   if (loading) {
     return (
-      <Box px={5} py={3} borderTop="1px solid" borderColor="gray.100" bg="white" minW={0} overflow="hidden">
+      <Box px={5} py={3} borderTop="1px solid" borderColor="gray.100" bg="white" minW={0} overflow="hidden" w="full">
         <Skeleton height="18px" width="40%" mb={2} />
         <Skeleton height="72px" borderRadius="md" />
       </Box>
@@ -35,7 +34,7 @@ export const LiftProfileStrip: React.FC<LiftProfileStripProps> = ({
   const completed = Boolean(archetype || liftIndex != null || pillars)
 
   return (
-    <Box px={5} py={4} borderTop="1px solid" borderColor="gray.100" bg="white" minW={0} overflow="hidden">
+    <Box px={5} py={4} borderTop="1px solid" borderColor="gray.100" bg="white" minW={0} overflow="hidden" w="full">
       <HStack justify="space-between" align="flex-start" flexWrap="wrap" gap={3} mb={showRadar ? 3 : 0} minW={0}>
         <Stack spacing={1} minW={0} flex={1}>
           <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.08em">
@@ -67,11 +66,12 @@ export const LiftProfileStrip: React.FC<LiftProfileStripProps> = ({
         </Stack>
       </HStack>
       {showRadar && completed ? (
-        <Box maxW={{ base: '100%', sm: '320px' }} w="100%" minW={0}>
+        <Box w="full" minW={0}>
           <LiftCapabilityRadar
             pillars={pillars}
             gapPillar={developmentEdge}
             showScores
+            layout="split"
           />
         </Box>
       ) : null}

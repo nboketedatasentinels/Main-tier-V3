@@ -6,16 +6,22 @@ import {
   Button,
   Collapse,
   Flex,
-  Grid,
   HStack,
   Icon,
   Input,
   InputGroup,
   InputLeftElement,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalHeader,
+  ModalOverlay,
   SimpleGrid,
   Skeleton,
   Stack,
   Text,
+  useDisclosure,
 } from '@chakra-ui/react'
 import {
   ArrowRight,
@@ -24,6 +30,7 @@ import {
   ChevronUp,
   RefreshCw,
   Search,
+  Trophy,
   Users,
 } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -96,6 +103,7 @@ export const AmbassadorDashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState<SectionKey>('overview')
   const [coachees, setCoachees] = useState<UserProfile[]>([])
   const [sessionPrepOpen, setSessionPrepOpen] = useState(false)
+  const rankingModal = useDisclosure()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -409,90 +417,116 @@ export const AmbassadorDashboard: React.FC = () => {
               </Alert>
             ) : null}
 
-            <Grid
-              templateColumns={{ base: '1fr', xl: '280px minmax(0, 1fr)' }}
-              gap={5}
-              alignItems="start"
-              maxW="100%"
-              minW={0}
-            >
-              <LearnerPointsRanking
-                learners={filtered}
-                selectedId={selected?.id}
-                sticky
-                limit={5}
-                expandable
-                title="Points ranking"
-                onSelect={(id) => {
-                  setSelectedId(id)
-                  setSessionPrepOpen(false)
-                }}
-              />
-              <Box minW={0}>
-                {loading ? (
-                  <Skeleton height="280px" borderRadius="xl" />
-                ) : filtered.length === 0 ? (
-                  <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                    <Text color="gray.600" fontSize="sm" lineHeight="1.7">
-                      No coachees yet. Coaching only shows when an organisation has an Ambassador /
-                      Coach assigned and learners are linked to you. Ask the Transformation Partner to
-                      confirm org coach assignment.
-                    </Text>
-                  </Box>
-                ) : selected ? (
-                  <Stack spacing={3} minW={0}>
-                    <CoachLearnerPanel
-                      learner={selected}
-                      orgPurchasedCoachSessions={orgPurchasedSessions}
-                      courseTitles={orgCourseTitles}
-                      attendedSessionCount={attendedCount}
-                    />
-                    <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+            <Box minW={0} w="full">
+              {loading ? (
+                <Skeleton height="280px" borderRadius="xl" />
+              ) : filtered.length === 0 ? (
+                <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                  <Text color="gray.600" fontSize="sm" lineHeight="1.7">
+                    No coachees yet. Coaching only shows when an organisation has an Ambassador /
+                    Coach assigned and learners are linked to you. Ask the Transformation Partner to
+                    confirm org coach assignment.
+                  </Text>
+                </Box>
+              ) : selected ? (
+                <Stack spacing={3} minW={0} w="full">
+                  <CoachLearnerPanel
+                    learner={selected}
+                    orgPurchasedCoachSessions={orgPurchasedSessions}
+                    courseTitles={orgCourseTitles}
+                    attendedSessionCount={attendedCount}
+                    headerAction={
                       <Button
-                        variant="ghost"
-                        w="full"
-                        justifyContent="space-between"
-                        borderRadius={0}
-                        h="auto"
-                        py={3}
-                        px={4}
-                        rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
-                        onClick={() => setSessionPrepOpen((v) => !v)}
+                        size="sm"
+                        variant="outline"
+                        borderColor="gray.300"
+                        color="#350e6f"
+                        leftIcon={<Icon as={Trophy} boxSize={3.5} />}
+                        onClick={rankingModal.onOpen}
                       >
-                        <Text fontSize="sm" fontWeight="600" color="gray.800">
-                          Session prep
-                        </Text>
+                        Points ranking
                       </Button>
-                      <Collapse in={sessionPrepOpen} animateOpacity>
-                        <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
-                          <LearnerSessionPrep
-                            audience="coach"
-                            learner={selected}
-                            purchasedCoachSessions={purchasedForSelected}
-                            sessionNumber={sessionNumberForSelected}
-                            windowStatus={null}
-                            courseTitles={orgCourseTitles}
-                            hideLiftSection
-                          />
-                        </Box>
-                      </Collapse>
-                    </Box>
-                  </Stack>
-                ) : (
-                  <Box
-                    p={6}
-                    bg="white"
-                    borderRadius="xl"
-                    border="1px dashed"
-                    borderColor="gray.200"
-                  >
-                    <Text fontSize="sm" color="gray.600">
-                      Select a coachee from the ranking to open their profile.
-                    </Text>
+                    }
+                  />
+                  <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+                    <Button
+                      variant="ghost"
+                      w="full"
+                      justifyContent="space-between"
+                      borderRadius={0}
+                      h="auto"
+                      py={3}
+                      px={4}
+                      rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
+                      onClick={() => setSessionPrepOpen((v) => !v)}
+                    >
+                      <Text fontSize="sm" fontWeight="600" color="gray.800">
+                        Session prep
+                      </Text>
+                    </Button>
+                    <Collapse in={sessionPrepOpen} animateOpacity>
+                      <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
+                        <LearnerSessionPrep
+                          audience="coach"
+                          learner={selected}
+                          purchasedCoachSessions={purchasedForSelected}
+                          sessionNumber={sessionNumberForSelected}
+                          windowStatus={null}
+                          courseTitles={orgCourseTitles}
+                          hideLiftSection
+                        />
+                      </Box>
+                    </Collapse>
                   </Box>
-                )}
-              </Box>
-            </Grid>
+                </Stack>
+              ) : (
+                <Box
+                  p={6}
+                  bg="white"
+                  borderRadius="xl"
+                  border="1px dashed"
+                  borderColor="gray.200"
+                >
+                  <Text fontSize="sm" color="gray.600">
+                    Open Points ranking to pick a coachee, or wait for the roster to load.
+                  </Text>
+                  <Button
+                    mt={3}
+                    size="sm"
+                    variant="outline"
+                    borderColor="gray.300"
+                    leftIcon={<Icon as={Trophy} boxSize={3.5} />}
+                    onClick={rankingModal.onOpen}
+                  >
+                    Points ranking
+                  </Button>
+                </Box>
+              )}
+            </Box>
+
+            <Modal isOpen={rankingModal.isOpen} onClose={rankingModal.onClose} size="lg" isCentered scrollBehavior="inside">
+              <ModalOverlay bg="blackAlpha.400" />
+              <ModalContent mx={4} borderRadius="xl">
+                <ModalHeader pb={2} fontSize="md">
+                  Points ranking
+                </ModalHeader>
+                <ModalCloseButton />
+                <ModalBody pb={5} pt={0}>
+                  <LearnerPointsRanking
+                    learners={filtered}
+                    selectedId={selected?.id}
+                    sticky={false}
+                    bare
+                    expandable
+                    onSelect={(id) => {
+                      setSelectedId(id)
+                      setSessionPrepOpen(false)
+                      rankingModal.onClose()
+                    }}
+                  />
+                </ModalBody>
+              </ModalContent>
+            </Modal>
           </Stack>
         ) : null}
 

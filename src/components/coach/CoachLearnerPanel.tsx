@@ -51,6 +51,8 @@ type CoachLearnerPanelProps = {
   courseTitles?: string[] | null
   /** Attended coach sessions for this learner (quota progress). */
   attendedSessionCount?: number
+  /** Top-right action (e.g. Points ranking button). */
+  headerAction?: React.ReactNode
 }
 
 export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
@@ -59,6 +61,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
   allowGoalEdit = true,
   courseTitles,
   attendedSessionCount = 0,
+  headerAction,
 }) => {
   const { profile, updateProfile } = useAuth()
   const toast = useToast()
@@ -207,7 +210,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
   const ageRange = (learner as { ageRange?: string | null }).ageRange
 
   return (
-    <Stack spacing={5} minW={0} maxW="100%" overflow="hidden">
+    <Stack spacing={5} minW={0} maxW="100%" overflow="hidden" w="full">
       {/* Profile strip */}
       <Box
         border="1px solid"
@@ -216,18 +219,32 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
         bg="white"
         overflow="hidden"
         minW={0}
+        w="full"
       >
-        <Box px={5} py={4} borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
-          <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
-            COACHEE PROFILE
-          </Text>
-          <Text mt={1} fontSize="lg" fontWeight="700" color={PLUM}>
-            {getDisplayName(learner)}
-          </Text>
-          <Text fontSize="sm" color="gray.600">
-            {[learner.companyName, learner.email].filter(Boolean).join(' · ')}
-          </Text>
-        </Box>
+        <Flex
+          px={5}
+          py={4}
+          borderBottom="1px solid"
+          borderColor="gray.100"
+          bg="gray.50"
+          align="flex-start"
+          justify="space-between"
+          gap={3}
+          flexWrap="wrap"
+        >
+          <Box minW={0} flex="1">
+            <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
+              COACHEE PROFILE
+            </Text>
+            <Text mt={1} fontSize="lg" fontWeight="700" color={PLUM}>
+              {getDisplayName(learner)}
+            </Text>
+            <Text fontSize="sm" color="gray.600">
+              {[learner.companyName, learner.email].filter(Boolean).join(' · ')}
+            </Text>
+          </Box>
+          {headerAction ? <Box flexShrink={0}>{headerAction}</Box> : null}
+        </Flex>
         <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} spacing={0} borderTop="1px solid" borderColor="gray.100">
           <Box px={5} py={4} borderBottom={{ base: '1px solid', md: 'none' }} borderColor="gray.100">
             <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.08em">

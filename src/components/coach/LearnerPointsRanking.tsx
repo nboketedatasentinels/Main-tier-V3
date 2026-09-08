@@ -21,13 +21,16 @@ type LearnerPointsRankingProps = {
   /** Called when the user wants the full ranking (e.g. jump to mentees tab). Ignored if expandable. */
   onSeeMore?: () => void
   seeMoreLabel?: string
+  /** Drop outer card chrome (for use inside a modal). */
+  bare?: boolean
 }
 
 const formatPoints = (n: number) =>
   Number.isFinite(n) ? Math.round(n).toLocaleString() : '0'
 
 /**
- * Roster ranked by totalPoints (highest first). Used beside coach/mentor profile panels.
+ * Roster ranked by totalPoints (highest first). Used beside coach/mentor profile panels
+ * or inside a modal (set bare to drop the outer card chrome).
  */
 export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
   learners,
@@ -39,6 +42,7 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
   expandable = false,
   onSeeMore,
   seeMoreLabel = 'See more',
+  bare = false,
 }) => {
   const [expanded, setExpanded] = useState(false)
   const ranked = useMemo(
@@ -59,29 +63,39 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
 
   return (
     <Box
-      bg="white"
-      borderRadius="xl"
-      border="1px solid"
-      borderColor="gray.200"
-      p={4}
+      bg={bare ? 'transparent' : 'white'}
+      borderRadius={bare ? undefined : 'xl'}
+      border={bare ? 'none' : '1px solid'}
+      borderColor={bare ? undefined : 'gray.200'}
+      p={bare ? 0 : 4}
       h="fit-content"
-      position={sticky ? { lg: 'sticky' } : undefined}
-      top={sticky ? { lg: '96px' } : undefined}
+      w="full"
+      position={!bare && sticky ? { lg: 'sticky' } : undefined}
+      top={!bare && sticky ? { lg: '96px' } : undefined}
     >
-      <Text
-        fontSize="xs"
-        fontWeight="semibold"
-        letterSpacing="0.12em"
-        textTransform="uppercase"
-        color="gray.500"
-        mb={3}
-      >
-        {title}
-      </Text>
-      <Text fontSize="xs" color="gray.500" mb={4} lineHeight="1.5">
-        Highest total points first
-        {ranked.length > 0 ? ` · ${ranked.length} learners` : ''}
-      </Text>
+      {!bare ? (
+        <>
+          <Text
+            fontSize="xs"
+            fontWeight="semibold"
+            letterSpacing="0.12em"
+            textTransform="uppercase"
+            color="gray.500"
+            mb={3}
+          >
+            {title}
+          </Text>
+          <Text fontSize="xs" color="gray.500" mb={4} lineHeight="1.5">
+            Highest total points first
+            {ranked.length > 0 ? ` · ${ranked.length} learners` : ''}
+          </Text>
+        </>
+      ) : (
+        <Text fontSize="xs" color="gray.500" mb={4} lineHeight="1.5">
+          Highest total points first
+          {ranked.length > 0 ? ` · ${ranked.length} learners` : ''}
+        </Text>
+      )}
 
       {ranked.length === 0 ? (
         <Text fontSize="sm" color="gray.500">
