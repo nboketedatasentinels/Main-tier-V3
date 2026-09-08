@@ -520,9 +520,10 @@ export const WeeklyGlancePage = () => {
 
       toast({
         title: 'Test started',
-        description: 'Come back in 1 hour to select your results.',
+        description:
+          'Finish the external test. In 1 hour, come back here and SELECT your results — they do not populate automatically.',
         status: 'success',
-        duration: 5000,
+        duration: 7000,
         isClosable: true,
       })
     },
@@ -544,17 +545,23 @@ export const WeeklyGlancePage = () => {
 
   const personalityResultHelper = useMemo(() => {
     if (personalityUnlock.status === 'waiting') {
-      return `Wait until ${formatRemainingWait(personalityUnlock.remainingMs)} to select your results`
+      return `Wait ${formatRemainingWait(personalityUnlock.remainingMs)} — then select here (does not auto-fill)`
+    }
+    if (personalityUnlock.status === 'unlocked' && !profile?.personalityType) {
+      return 'Unlocked — select your type now so mentors can see it'
     }
     return 'Select the type you got'
-  }, [personalityUnlock])
+  }, [personalityUnlock, profile?.personalityType])
 
   const valuesResultHelper = useMemo(() => {
     if (valuesUnlock.status === 'waiting') {
-      return `Wait until ${formatRemainingWait(valuesUnlock.remainingMs)} to select your results`
+      return `Wait ${formatRemainingWait(valuesUnlock.remainingMs)} — then select here (does not auto-fill)`
+    }
+    if (valuesUnlock.status === 'unlocked' && (profile?.coreValues?.length ?? 0) === 0) {
+      return 'Unlocked — select your 5 values now so mentors can see them'
     }
     return 'Select the 5 values you got'
-  }, [valuesUnlock])
+  }, [valuesUnlock, profile?.coreValues?.length])
 
   const showLockedAttempt = useCallback(
     (kind: 'personality' | 'values') => {
@@ -1031,7 +1038,8 @@ export const WeeklyGlancePage = () => {
                       Complete your personality profile
                     </Heading>
                     <Text fontSize="sm" color="gray.600" mt={0.5}>
-                      Complete each test below. After 1 hour you can select your results.
+                      Complete each external test, wait 1 hour, then select your results here. They
+                      never auto-fill — selecting is what shows them to your mentor and coach.
                     </Text>
                   </Stack>
                 </HStack>

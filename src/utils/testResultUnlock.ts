@@ -46,10 +46,10 @@ export const buildTestUnlockMessage = (
   testLabel: string,
 ): string => {
   if (state.status === 'not_started') {
-    return `Finish completing your ${testLabel} first. Click the complete button for this test, then wait 1 hour to select your results.`
+    return `Open and finish your ${testLabel} first. Results do not auto-fill — after 1 hour you must come back here and select what you got.`
   }
   if (state.status === 'waiting') {
-    return `Finish completing your ${testLabel} first, then wait ${formatRemainingWait(state.remainingMs)} to select your results.`
+    return `Wait ${formatRemainingWait(state.remainingMs)}, then select your ${testLabel} results here. Nothing populates automatically.`
   }
-  return ''
+  return `Unlocked — select your ${testLabel} results now so your mentor and coach can see them.`
 }

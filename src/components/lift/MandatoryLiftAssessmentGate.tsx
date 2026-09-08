@@ -29,7 +29,7 @@ import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
 type GateStatus = 'idle' | 'checking' | 'needs' | 'submitting' | 'result' | 'done'
 
 /**
- * Blocks 3M/6M/9M learners until they complete the one-time LIFT assessment.
+ * Blocks every learner (free or paid, any journey) until they complete the one-time LIFT assessment.
  * Also silently attaches any pre-signup funnel answers when present.
  */
 export const MandatoryLiftAssessmentGate: React.FC = () => {

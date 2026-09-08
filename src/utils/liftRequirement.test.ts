@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { requiresMandatoryLiftAssessment } from '@/utils/liftRequirement'
 
 describe('requiresMandatoryLiftAssessment', () => {
-  it('requires LIFT for learners on 3M/6M/9M', () => {
+  it('requires LIFT for learners on every journey (including 4W/6W and free)', () => {
     expect(
       requiresMandatoryLiftAssessment({ role: 'paid_member', journeyType: '3M' }),
     ).toBe(true)
@@ -10,15 +10,16 @@ describe('requiresMandatoryLiftAssessment', () => {
       requiresMandatoryLiftAssessment({ role: 'free_user', journeyType: '6M' }),
     ).toBe(true)
     expect(requiresMandatoryLiftAssessment({ role: 'user', journeyType: '9M' })).toBe(true)
-  })
-
-  it('does not require LIFT on 4W/6W', () => {
     expect(
       requiresMandatoryLiftAssessment({ role: 'paid_member', journeyType: '4W' }),
-    ).toBe(false)
+    ).toBe(true)
     expect(
       requiresMandatoryLiftAssessment({ role: 'paid_member', journeyType: '6W' }),
-    ).toBe(false)
+    ).toBe(true)
+    expect(
+      requiresMandatoryLiftAssessment({ role: 'free_user', journeyType: '6W' }),
+    ).toBe(true)
+    expect(requiresMandatoryLiftAssessment({ role: 'free_user', journeyType: null })).toBe(true)
   })
 
   it('never requires LIFT for staff roles', () => {

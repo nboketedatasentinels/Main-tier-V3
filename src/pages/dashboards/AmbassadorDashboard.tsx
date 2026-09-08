@@ -20,7 +20,6 @@ import {
 import {
   ArrowRight,
   CalendarClock,
-  ClipboardCheck,
   RefreshCw,
   Search,
   Users,
@@ -208,16 +207,16 @@ export const AmbassadorDashboard: React.FC = () => {
 
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
-    const el = document.getElementById(`coach-${key}`)
-    if (!el) return
-    const scroller = el.closest('[data-coach-main-scroll]') as HTMLElement | null
-    if (scroller) {
-      const top =
-        el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 12
-      scroller.scrollTo({ top, behavior: 'smooth' })
-      return
-    }
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Section panels swap in place — scroll the coach main pane to top.
+    window.setTimeout(() => {
+      const scroller = document.querySelector('[data-coach-main-scroll]') as HTMLElement | null
+      if (scroller) {
+        scroller.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+      const el = document.getElementById(`coach-${key}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 0)
   }
 
   useEffect(() => {
@@ -260,280 +259,292 @@ export const AmbassadorDashboard: React.FC = () => {
       subtitle="Coach workspace"
     >
       <Box minH="100%" bg="white" mx={{ base: -4, md: -6 }} px={{ base: 4, md: 6 }} py={6}>
-        <Box
-          id="coach-overview"
-          mb={8}
-          borderRadius="xl"
-          border="1px solid"
-          borderColor="gray.200"
-          bg="white"
-          px={{ base: 5, md: 8 }}
-          py={{ base: 6, md: 8 }}
-        >
-          <Flex justify="space-between" align="flex-start" gap={6} flexWrap="wrap">
-            <Box maxW="640px">
-              <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" color="gray.500">
-                COACH WORKSPACE
-              </Text>
-              <Text
-                mt={2}
-                fontSize={{ base: '2xl', md: '3xl' }}
-                fontWeight="700"
-                letterSpacing="-0.03em"
-                lineHeight="1.15"
-                color="gray.900"
-              >
-                Coach with discipline, not advice by default.
-              </Text>
-              <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
-                Same profile depth as mentors - values, personality, age band, and AI notes - plus the
-                coaching goal, your learning plan, and session count from what the company purchased.
-                Only learners assigned to you (or your organisation) appear here.
-              </Text>
-              <HStack mt={6} spacing={3} flexWrap="wrap">
-                <Button
-                  rightIcon={<ArrowRight size={16} />}
-                  bg="#350e6f"
-                  color="white"
-                  _hover={{ bg: '#27062e' }}
-                  borderRadius="md"
-                  onClick={() => scrollTo('coachees')}
-                >
-                  Open coachees
-                </Button>
-                <PreCourseSurveyButton
-                  kind="post"
-                  label="Post-course assessments"
-                  onClick={() => scrollTo('assessments')}
-                />
-                <Button
-                  variant="outline"
-                  borderColor="gray.300"
-                  color="gray.800"
-                  bg="white"
-                  _hover={{ bg: 'gray.50' }}
-                  borderRadius="md"
-                  leftIcon={<CalendarClock size={16} />}
-                  onClick={() => scrollTo('schedule')}
-                >
-                  Meeting schedule
-                </Button>
-                <Button
-                  variant="outline"
-                  borderColor="gray.300"
-                  onClick={() => navigate('/coach/guidelines')}
-                >
-                  Coach guidelines
-                </Button>
-              </HStack>
+        {activeSection === 'overview' ? (
+          <Stack spacing={6} id="coach-overview">
+            <Box
+              borderRadius="xl"
+              border="1px solid"
+              borderColor="gray.200"
+              bg="white"
+              px={{ base: 5, md: 8 }}
+              py={{ base: 6, md: 8 }}
+            >
+              <Flex justify="space-between" align="flex-start" gap={6} flexWrap="wrap">
+                <Box maxW="640px">
+                  <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" color="gray.500">
+                    COACH WORKSPACE
+                  </Text>
+                  <Text
+                    mt={2}
+                    fontSize={{ base: '2xl', md: '3xl' }}
+                    fontWeight="700"
+                    letterSpacing="-0.03em"
+                    lineHeight="1.15"
+                    color="gray.900"
+                  >
+                    Coach with discipline, not advice by default.
+                  </Text>
+                  <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
+                    Overview stays short on purpose. Open My coachees for ranking, profiles, and Session
+                    Prep — without scrolling forever on one page.
+                  </Text>
+                  <HStack mt={6} spacing={3} flexWrap="wrap">
+                    <Button
+                      rightIcon={<ArrowRight size={16} />}
+                      bg="#350e6f"
+                      color="white"
+                      _hover={{ bg: '#27062e' }}
+                      borderRadius="md"
+                      onClick={() => scrollTo('coachees')}
+                    >
+                      Open coachees
+                    </Button>
+                    <Button
+                      variant="outline"
+                      borderColor="gray.300"
+                      color="gray.800"
+                      bg="white"
+                      _hover={{ bg: 'gray.50' }}
+                      borderRadius="md"
+                      leftIcon={<CalendarClock size={16} />}
+                      onClick={() => scrollTo('schedule')}
+                    >
+                      Meetings
+                    </Button>
+                    <PreCourseSurveyButton
+                      kind="post"
+                      label="Assessments"
+                      onClick={() => scrollTo('assessments')}
+                    />
+                    <Button
+                      variant="outline"
+                      borderColor="gray.300"
+                      onClick={() => navigate('/coach/guidelines')}
+                    >
+                      Coach guidelines
+                    </Button>
+                  </HStack>
+                </Box>
+                <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '260px' }} maxW={{ md: '280px' }}>
+                  <Box
+                    as="button"
+                    textAlign="left"
+                    bg="gray.50"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    borderRadius="lg"
+                    px={4}
+                    py={3}
+                    cursor="pointer"
+                    _hover={{ bg: 'gray.100', borderColor: 'gray.300' }}
+                    onClick={() => scrollTo('coachees')}
+                  >
+                    <HStack spacing={3}>
+                      <Icon as={Users} color="gray.600" />
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">
+                          Coachees
+                        </Text>
+                        <Text fontWeight="700" fontSize="lg" color="gray.900">
+                          {coachees.length}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  </Box>
+                  <LearnerPointsRanking
+                    learners={coachees}
+                    selectedId={selected?.id}
+                    limit={5}
+                    sticky={false}
+                    title="Top points"
+                    seeMoreLabel="Full ranking"
+                    onSeeMore={() => scrollTo('coachees')}
+                    onSelect={(id) => {
+                      setSelectedId(id)
+                      scrollTo('coachees')
+                    }}
+                  />
+                </SimpleGrid>
+              </Flex>
             </Box>
-            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '260px' }} maxW={{ md: '280px' }}>
-              <Box
-                as="button"
-                textAlign="left"
-                bg="gray.50"
-                border="1px solid"
-                borderColor="gray.200"
-                borderRadius="lg"
-                px={4}
-                py={3}
-                onClick={() => scrollTo('coachees')}
-                _hover={{ bg: 'gray.100' }}
-              >
-                <HStack spacing={3}>
-                  <Icon as={Users} color="gray.600" />
-                  <Box>
-                    <Text fontSize="xs" color="gray.500">
-                      Coachees
-                    </Text>
-                    <Text fontWeight="700" fontSize="lg" color="gray.900">
-                      {coachees.length}
-                    </Text>
-                  </Box>
-                </HStack>
-              </Box>
-              <Box
-                as="button"
-                textAlign="left"
-                bg="gray.50"
-                border="1px solid"
-                borderColor="gray.200"
-                borderRadius="lg"
-                px={4}
-                py={3}
-                onClick={() => scrollTo('assessments')}
-                _hover={{ bg: 'gray.100' }}
-              >
-                <HStack spacing={3}>
-                  <Icon as={ClipboardCheck} color="gray.600" />
-                  <Box>
-                    <Text fontSize="xs" color="gray.500">
-                      Post assessments
-                    </Text>
-                    <Text fontWeight="700" fontSize="lg" color="gray.900">
-                      End of course
-                    </Text>
-                  </Box>
-                </HStack>
-              </Box>
-              <LearnerPointsRanking
-                learners={coachees}
-                selectedId={selected?.id}
-                onSelect={(id) => {
-                  setSelectedId(id)
-                  setActiveSection('coachees')
-                  scrollTo('coachees')
-                }}
-                title="Points ranking"
-                sticky={false}
-              />
-            </SimpleGrid>
-          </Flex>
-        </Box>
+          </Stack>
+        ) : null}
 
-        <Stack spacing={10}>
-          <SectionShell
-            id="coach-coachees"
-            eyebrow="Directory"
-            title="Who you coach"
-            subtitle="Learners appear when your organisation has an Ambassador Coach assigned and you are linked to them. Open a profile for goals, learning plan, and Session Prep."
-            action={
-              <Button
-                leftIcon={<RefreshCw size={14} />}
-                size="sm"
-                variant="outline"
-                borderColor="gray.300"
-                onClick={() => void loadCoachees()}
-                isLoading={loading}
-              >
-                Refresh
-              </Button>
-            }
-          >
-            {error ? (
-              <Alert status="error" borderRadius="lg" mb={4}>
-                <AlertIcon />
-                {error}
-              </Alert>
-            ) : null}
+        {activeSection === 'coachees' ? (
+          <Stack spacing={6} id="coach-coachees">
+            <SectionShell
+              id="coach-coachees-header"
+              eyebrow="Directory"
+              title="Who you coach"
+              subtitle="Ranking, roster, and coachee detail — including values, personality, goals, learning plan, and Session Prep."
+              action={
+                <Button
+                  leftIcon={<RefreshCw size={14} />}
+                  size="sm"
+                  variant="outline"
+                  borderColor="gray.300"
+                  onClick={() => void loadCoachees()}
+                  isLoading={loading}
+                >
+                  Refresh
+                </Button>
+              }
+            >
+              {error ? (
+                <Alert status="error" borderRadius="lg" mb={4}>
+                  <AlertIcon />
+                  {error}
+                </Alert>
+              ) : null}
 
-            <InputGroup maxW="420px" mb={5}>
-              <InputLeftElement pointerEvents="none">
-                <Search size={16} color="#9CA3AF" />
-              </InputLeftElement>
-              <Input
-                placeholder="Search coachees…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                bg="white"
-                borderColor="gray.200"
-                borderRadius="md"
-              />
-            </InputGroup>
-
-            {loading ? (
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                <Skeleton height="220px" borderRadius="xl" />
-                <Skeleton height="220px" borderRadius="xl" />
-              </SimpleGrid>
-            ) : filtered.length === 0 ? (
-              <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                <Text color="gray.600" fontSize="sm" lineHeight="1.7">
-                  No coachees yet. Coaching only shows when an organisation has an Ambassador /
-                  Coach assigned and learners are linked to you. Ask the Transformation Partner to
-                  confirm org coach assignment.
-                </Text>
-              </Box>
-            ) : (
               <Grid
-                templateColumns={{ base: '1fr', lg: '280px 1fr' }}
+                templateColumns={{ base: '1fr', xl: '280px 1fr' }}
                 gap={5}
                 alignItems="start"
+                mb={5}
               >
-                <Stack spacing={2}>
-                  {filtered.map((c) => {
-                    const active = selected?.id === c.id
-                    return (
-                      <Button
-                        key={c.id}
-                        onClick={() => {
-                          setSelectedId(c.id)
-                          setActiveSection('coachees')
-                        }}
-                        justifyContent="flex-start"
-                        h="auto"
-                        py={3}
-                        px={3}
-                        borderRadius="lg"
-                        bg={active ? 'gray.50' : 'white'}
-                        color="gray.800"
-                        border="1px solid"
-                        borderColor={active ? '#350e6f' : 'gray.200'}
-                        boxShadow={active ? 'inset 3px 0 0 #350e6f' : 'none'}
-                        _hover={{ bg: 'gray.50', borderColor: active ? '#350e6f' : 'gray.300' }}
-                        textAlign="left"
-                      >
-                        <HStack spacing={3} align="center" w="full">
-                          <Avatar name={getDisplayName(c)} size="sm" bg="gray.100" color="gray.700" />
-                          <Box minW={0}>
-                            <Text fontWeight="600" fontSize="sm" noOfLines={1} color="gray.900">
-                              {getDisplayName(c)}
-                            </Text>
-                            <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                              {personalityLabel(c.personalityType) || 'Personality pending'}
-                            </Text>
-                          </Box>
-                        </HStack>
-                      </Button>
-                    )
-                  })}
-                </Stack>
-
-                {selected ? (
-                  <Stack spacing={6} minW={0}>
-                    <CoachLearnerPanel
-                      learner={selected}
-                      orgPurchasedCoachSessions={orgPurchasedSessions}
-                      courseTitles={orgCourseTitles}
-                      attendedSessionCount={attendedCount}
+                <LearnerPointsRanking
+                  learners={coachees}
+                  selectedId={selected?.id}
+                  sticky
+                  title="Points ranking"
+                  onSelect={(id) => setSelectedId(id)}
+                />
+                <Box>
+                  <InputGroup maxW="420px" mb={4}>
+                    <InputLeftElement pointerEvents="none">
+                      <Search size={16} color="#9CA3AF" />
+                    </InputLeftElement>
+                    <Input
+                      placeholder="Search coachees…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      bg="white"
+                      borderColor="gray.200"
+                      borderRadius="md"
                     />
-                    <Box>
-                      <Text
-                        fontSize="xs"
-                        fontWeight="semibold"
-                        letterSpacing="0.12em"
-                        textTransform="uppercase"
-                        color="gray.500"
-                        mb={3}
-                      >
-                        Session Prep
-                      </Text>
-                      <LearnerSessionPrep
-                        audience="coach"
-                        learner={selected}
-                        purchasedCoachSessions={purchasedForSelected}
-                        sessionNumber={sessionNumberForSelected}
-                        windowStatus={null}
-                        courseTitles={orgCourseTitles}
-                      />
-                    </Box>
-                  </Stack>
-                ) : (
-                  <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                    <Text fontSize="sm" color="gray.600">
-                      Select a coachee to open their profile.
-                    </Text>
-                  </Box>
-                )}
-              </Grid>
-            )}
-          </SectionShell>
+                  </InputGroup>
 
+                  {loading ? (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <Skeleton height="180px" borderRadius="xl" />
+                      <Skeleton height="180px" borderRadius="xl" />
+                    </SimpleGrid>
+                  ) : filtered.length === 0 ? (
+                    <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                      <Text color="gray.600" fontSize="sm" lineHeight="1.7">
+                        No coachees yet. Coaching only shows when an organisation has an Ambassador /
+                        Coach assigned and learners are linked to you. Ask the Transformation Partner to
+                        confirm org coach assignment.
+                      </Text>
+                    </Box>
+                  ) : (
+                    <Grid
+                      templateColumns={{ base: '1fr', lg: '240px 1fr' }}
+                      gap={5}
+                      alignItems="start"
+                    >
+                      <Stack spacing={2}>
+                        {filtered.map((c) => {
+                          const active = selected?.id === c.id
+                          const valuesCount = (c.coreValues || []).filter(Boolean).length
+                          return (
+                            <Button
+                              key={c.id}
+                              onClick={() => setSelectedId(c.id)}
+                              justifyContent="flex-start"
+                              h="auto"
+                              py={3}
+                              px={3}
+                              borderRadius="lg"
+                              bg={active ? 'gray.50' : 'white'}
+                              color="gray.800"
+                              border="1px solid"
+                              borderColor={active ? '#350e6f' : 'gray.200'}
+                              boxShadow={active ? 'inset 3px 0 0 #350e6f' : 'none'}
+                              _hover={{ bg: 'gray.50', borderColor: active ? '#350e6f' : 'gray.300' }}
+                              textAlign="left"
+                            >
+                              <HStack spacing={3} align="center" w="full">
+                                <Avatar
+                                  name={getDisplayName(c)}
+                                  size="sm"
+                                  bg="gray.100"
+                                  color="gray.700"
+                                />
+                                <Box minW={0}>
+                                  <Text fontWeight="600" fontSize="sm" noOfLines={1} color="gray.900">
+                                    {getDisplayName(c)}
+                                  </Text>
+                                  <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                                    {personalityLabel(c.personalityType) || 'Personality pending'}
+                                    {' · '}
+                                    {valuesCount === 5
+                                      ? 'Values set'
+                                      : valuesCount > 0
+                                        ? `${valuesCount}/5 values`
+                                        : 'Values not set'}
+                                  </Text>
+                                </Box>
+                              </HStack>
+                            </Button>
+                          )
+                        })}
+                      </Stack>
+                      {selected ? (
+                        <Stack spacing={5} minW={0}>
+                          <CoachLearnerPanel
+                            learner={selected}
+                            orgPurchasedCoachSessions={orgPurchasedSessions}
+                            courseTitles={orgCourseTitles}
+                            attendedSessionCount={attendedCount}
+                          />
+                          <LearnerSessionPrep
+                            audience="coach"
+                            learner={selected}
+                            purchasedCoachSessions={purchasedForSelected}
+                            sessionNumber={sessionNumberForSelected}
+                            windowStatus={null}
+                            courseTitles={orgCourseTitles}
+                          />
+                        </Stack>
+                      ) : (
+                        <Box
+                          p={6}
+                          bg="white"
+                          borderRadius="xl"
+                          border="1px dashed"
+                          borderColor="gray.200"
+                        >
+                          <Text fontSize="sm" color="gray.600">
+                            Select a coachee to open their profile.
+                          </Text>
+                        </Box>
+                      )}
+                    </Grid>
+                  )}
+                </Box>
+              </Grid>
+            </SectionShell>
+          </Stack>
+        ) : null}
+
+        {activeSection === 'schedule' ? (
           <SectionShell
             id="coach-schedule"
             eyebrow="Sessions"
             title="Coaching slots"
-            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Coach Session points - only when they showed up (within 48 hours for Journey clients)."
+            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Coach Session points - only when they showed up (within 48 hours for Journey clients). Session points ledger stays under Meetings → Session points."
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                borderColor="gray.300"
+                onClick={() => navigate('/coach/session-points')}
+              >
+                Session points
+              </Button>
+            }
           >
             {profile?.id ? (
               <AmbassadorSessionsPanel
@@ -554,7 +565,9 @@ export const AmbassadorDashboard: React.FC = () => {
               <Skeleton height="200px" borderRadius="xl" />
             )}
           </SectionShell>
+        ) : null}
 
+        {activeSection === 'assessments' ? (
           <SectionShell
             id="coach-assessments"
             eyebrow="End of course"
@@ -566,7 +579,13 @@ export const AmbassadorDashboard: React.FC = () => {
             }
           >
             {profile?.id && assessmentLearners.length > 0 ? (
-              <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
+              <Box
+                bg="white"
+                borderRadius="xl"
+                border="1px solid"
+                borderColor="gray.200"
+                p={{ base: 4, md: 6 }}
+              >
                 <RateLearnerCourseAssessment
                   respondentId={profile.id}
                   raterRole="coach"
@@ -583,7 +602,7 @@ export const AmbassadorDashboard: React.FC = () => {
               </Box>
             )}
           </SectionShell>
-        </Stack>
+        ) : null}
       </Box>
     </AmbassadorLayout>
   )

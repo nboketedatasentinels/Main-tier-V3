@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Box, Flex, HStack, Stack, Text } from '@chakra-ui/react'
+import { Box, Button, Flex, HStack, Stack, Text } from '@chakra-ui/react'
 import { getDisplayName } from '@/utils/displayName'
 import type { UserProfile } from '@/types'
 
@@ -11,6 +11,11 @@ type LearnerPointsRankingProps = {
   title?: string
   /** When false, the card does not stick while scrolling (e.g. overview stack). */
   sticky?: boolean
+  /** Cap visible rows (rest behind See more). */
+  limit?: number
+  /** Called when the user wants the full ranking (e.g. jump to mentees tab). */
+  onSeeMore?: () => void
+  seeMoreLabel?: string
 }
 
 const formatPoints = (n: number) =>
@@ -25,14 +30,23 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
   onSelect,
   title = 'Points ranking',
   sticky = true,
+  limit,
+  onSeeMore,
+  seeMoreLabel = 'See more',
 }) => {
   const ranked = useMemo(
     () =>
       [...learners].sort(
-        (a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0) || getDisplayName(a).localeCompare(getDisplayName(b)),
+        (a, b) =>
+          (b.totalPoints ?? 0) - (a.totalPoints ?? 0) ||
+          getDisplayName(a).localeCompare(getDisplayName(b)),
       ),
     [learners],
   )
+
+  const visible =
+    typeof limit === 'number' && limit > 0 ? ranked.slice(0, limit) : ranked
+  const hiddenCount = Math.max(0, ranked.length - visible.length)
 
   return (
     <Box
@@ -57,6 +71,7 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
       </Text>
       <Text fontSize="xs" color="gray.500" mb={4} lineHeight="1.5">
         Highest total points first
+        {ranked.length > 0 ? ` · ${ranked.length} learners` : ''}
       </Text>
 
       {ranked.length === 0 ? (
@@ -64,8 +79,16 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
           No learners to rank yet.
         </Text>
       ) : (
-        <Stack spacing={1.5} maxH={{ base: '320px', lg: 'calc(100vh - 180px)' }} overflowY="auto">
-          {ranked.map((learner, index) => {
+        <Stack
+          spacing={1.5}
+          maxH={
+            typeof limit === 'number'
+              ? undefined
+              : { base: '320px', lg: 'calc(100vh - 180px)' }
+          }
+          overflowY={typeof limit === 'number' ? 'visible' : 'auto'}
+        >
+          {visible.map((learner, index) => {
             const id = learner.id ?? ''
             const active = Boolean(id && selectedId === id)
             const points = learner.totalPoints ?? 0
@@ -137,6 +160,12 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
           })}
         </Stack>
       )}
+
+      {hiddenCount > 0 && onSeeMore ? (
+        <Button mt={3} size="sm" variant="ghost" color="#350e6f" w="full" onClick={onSeeMore}>
+          {seeMoreLabel} ({hiddenCount} more)
+        </Button>
+      ) : null}
     </Box>
   )
 }

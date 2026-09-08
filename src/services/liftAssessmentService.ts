@@ -78,8 +78,8 @@ export const hasCompletedLiftAssessment = async (uid: string): Promise<boolean> 
 }
 
 /**
- * Throws when a 3M+ learner tries to use mentor/coach flows without LIFT.
- * Soft no-op when LIFT is not required for their role/journey.
+ * Throws when a learner tries to use mentor/coach flows without LIFT.
+ * Soft no-op when LIFT is not required for their role (staff).
  */
 export const assertMandatoryLiftComplete = async (learnerId: string): Promise<void> => {
   if (!learnerId) return

@@ -19,7 +19,6 @@ import {
 } from '@chakra-ui/react'
 import {
   CalendarClock,
-  ClipboardCheck,
   Lightbulb,
   Search,
   Users,
@@ -163,17 +162,16 @@ export const MentorDashboard: React.FC = () => {
 
   const scrollTo = (key: SectionKey) => {
     setActiveSection(key)
-    const el = document.getElementById(`mentor-${key}`)
-    if (!el) return
-    // Layout scrolls inside an overflow container, not the window.
-    const scroller = el.closest('[data-mentor-main-scroll]') as HTMLElement | null
-    if (scroller) {
-      const top =
-        el.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 12
-      scroller.scrollTo({ top, behavior: 'smooth' })
-      return
-    }
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    // Section panels swap in place — scroll the mentor main pane to top.
+    window.setTimeout(() => {
+      const scroller = document.querySelector('[data-mentor-main-scroll]') as HTMLElement | null
+      if (scroller) {
+        scroller.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
+      const el = document.getElementById(`mentor-${key}`)
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 0)
   }
 
   const openMeetingSchedule = () => {
@@ -228,261 +226,290 @@ export const MentorDashboard: React.FC = () => {
       navSections={navSections}
     >
       <Box minH="100%" bg="white" mx={{ base: -4, md: -6 }} px={{ base: 4, md: 6 }} py={6}>
-        {/* Header */}
-        <Box
-          id="mentor-overview"
-          mb={8}
-          borderRadius="xl"
-          border="1px solid"
-          borderColor="gray.200"
-          bg="white"
-          px={{ base: 5, md: 8 }}
-          py={{ base: 6, md: 8 }}
-        >
-          <Flex justify="space-between" align="flex-start" gap={6} flexWrap="wrap">
-            <Box maxW="640px">
-              <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" color="gray.500">
-                MENTOR WORKSPACE
-              </Text>
-              <Text
-                mt={2}
-                fontSize={{ base: '2xl', md: '3xl' }}
-                fontWeight="700"
-                letterSpacing="-0.03em"
-                lineHeight="1.15"
-                color="gray.900"
-              >
-                Guide your mentees with clarity.
-              </Text>
-              <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
-                Partner-grade view of who you mentor: values, personality, meeting flow, coaching tips,
-                and pre/post course assessments for your organisation&apos;s programme. Learners only
-                ever see their own side.
-              </Text>
-              <HStack mt={6} spacing={3} flexWrap="wrap">
-                <Button
-                  rightIcon={<ArrowRight size={16} />}
-                  bg="#350e6f"
-                  color="white"
-                  _hover={{ bg: '#27062e' }}
-                  borderRadius="md"
-                  onClick={() => scrollTo('mentees')}
-                >
-                  Open mentees
-                </Button>
-                <PreCourseSurveyButton
-                  kind="post"
-                  label="Post-course assessments"
-                  onClick={() => scrollTo('assessments')}
-                />
-                <Button
-                  variant="outline"
-                  borderColor="gray.300"
-                  color="gray.800"
-                  bg="white"
-                  _hover={{ bg: 'gray.50' }}
-                  borderRadius="md"
-                  leftIcon={<CalendarClock size={16} />}
-                  onClick={openMeetingSchedule}
-                >
-                  Meeting schedule
-                </Button>
-              </HStack>
-            </Box>
-            <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '260px' }} maxW={{ md: '280px' }}>
-              {(
-                [
-                  {
-                    label: 'Mentees',
-                    value: mentees.length,
-                    icon: Users,
-                    section: 'mentees' as SectionKey,
-                  },
-                  {
-                    label: 'Post assessments',
-                    value: 'End of course',
-                    icon: ClipboardCheck,
-                    section: 'assessments' as SectionKey,
-                  },
-                ] as const
-              ).map((stat) => (
-                <Box
-                  key={stat.label}
-                  as="button"
-                  textAlign="left"
-                  bg="gray.50"
-                  border="1px solid"
-                  borderColor="gray.200"
-                  borderRadius="lg"
-                  px={4}
-                  py={3}
-                  cursor="pointer"
-                  _hover={{ bg: 'gray.100', borderColor: 'gray.300' }}
-                  onClick={() => scrollTo(stat.section)}
-                >
-                  <HStack spacing={3}>
-                    <Icon as={stat.icon} color="gray.600" />
-                    <Box>
-                      <Text fontSize="xs" color="gray.500">
-                        {stat.label}
-                      </Text>
-                      <Text fontWeight="700" fontSize="lg" color="gray.900">
-                        {stat.value}
-                      </Text>
-                    </Box>
+        {activeSection === 'overview' ? (
+          <Stack spacing={6} id="mentor-overview">
+            <Box
+              borderRadius="xl"
+              border="1px solid"
+              borderColor="gray.200"
+              bg="white"
+              px={{ base: 5, md: 8 }}
+              py={{ base: 6, md: 8 }}
+            >
+              <Flex justify="space-between" align="flex-start" gap={6} flexWrap="wrap">
+                <Box maxW="640px">
+                  <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.12em" color="gray.500">
+                    MENTOR WORKSPACE
+                  </Text>
+                  <Text
+                    mt={2}
+                    fontSize={{ base: '2xl', md: '3xl' }}
+                    fontWeight="700"
+                    letterSpacing="-0.03em"
+                    lineHeight="1.15"
+                    color="gray.900"
+                  >
+                    Guide your mentees with clarity.
+                  </Text>
+                  <Text mt={3} color="gray.600" fontSize="sm" lineHeight="1.7">
+                    Overview stays short on purpose. Open My mentees for ranking, profiles, and Session
+                    Prep — without scrolling forever on one page.
+                  </Text>
+                  <HStack mt={6} spacing={3} flexWrap="wrap">
+                    <Button
+                      rightIcon={<ArrowRight size={16} />}
+                      bg="#350e6f"
+                      color="white"
+                      _hover={{ bg: '#27062e' }}
+                      borderRadius="md"
+                      onClick={() => scrollTo('mentees')}
+                    >
+                      Open mentees
+                    </Button>
+                    <Button
+                      variant="outline"
+                      borderColor="gray.300"
+                      color="gray.800"
+                      bg="white"
+                      _hover={{ bg: 'gray.50' }}
+                      borderRadius="md"
+                      leftIcon={<CalendarClock size={16} />}
+                      onClick={openMeetingSchedule}
+                    >
+                      Meetings
+                    </Button>
+                    <PreCourseSurveyButton
+                      kind="post"
+                      label="Assessments"
+                      onClick={() => scrollTo('assessments')}
+                    />
                   </HStack>
                 </Box>
-              ))}
-              <LearnerPointsRanking
-                learners={mentees}
-                selectedId={selected?.id}
-                onSelect={(id) => {
-                  setSelectedId(id)
-                  setActiveSection('mentees')
-                  scrollTo('mentees')
-                }}
-                title="Points ranking"
-                sticky={false}
-              />
-            </SimpleGrid>
-          </Flex>
-        </Box>
+                <SimpleGrid columns={1} spacing={3} minW={{ base: '100%', md: '260px' }} maxW={{ md: '280px' }}>
+                  <Box
+                    as="button"
+                    textAlign="left"
+                    bg="gray.50"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    borderRadius="lg"
+                    px={4}
+                    py={3}
+                    cursor="pointer"
+                    _hover={{ bg: 'gray.100', borderColor: 'gray.300' }}
+                    onClick={() => scrollTo('mentees')}
+                  >
+                    <HStack spacing={3}>
+                      <Icon as={Users} color="gray.600" />
+                      <Box>
+                        <Text fontSize="xs" color="gray.500">
+                          Mentees
+                        </Text>
+                        <Text fontWeight="700" fontSize="lg" color="gray.900">
+                          {mentees.length}
+                        </Text>
+                      </Box>
+                    </HStack>
+                  </Box>
+                  <LearnerPointsRanking
+                    learners={mentees}
+                    selectedId={selected?.id}
+                    limit={5}
+                    sticky={false}
+                    title="Top points"
+                    seeMoreLabel="Full ranking"
+                    onSeeMore={() => scrollTo('mentees')}
+                    onSelect={(id) => {
+                      setSelectedId(id)
+                      scrollTo('mentees')
+                    }}
+                  />
+                </SimpleGrid>
+              </Flex>
+            </Box>
 
-        <Stack spacing={10}>
-          <Box p={5} borderRadius="xl" bg="white" border="1px solid" borderColor="gray.200">
-            <HStack spacing={2} mb={2}>
-              <Icon as={Lightbulb} color="gray.600" />
-              <Text fontWeight="600" color="gray.900" fontSize="sm">
-                Mentoring tip
-              </Text>
-            </HStack>
-            <Text fontSize="sm" color="gray.600" lineHeight="1.65">
-              {tipOfDay}
-            </Text>
-          </Box>
-
-          <SectionShell
-            id="mentor-mentees"
-            eyebrow="Directory"
-            title="Who you mentor"
-            subtitle="Only learners in your organisation (and explicit mentor assignments). Open a profile for Session Prep."
-            action={
-              <Button
-                leftIcon={<RefreshCw size={14} />}
-                size="sm"
-                variant="outline"
-                borderColor="gray.300"
-                onClick={() => void loadMentees()}
-                isLoading={loading}
-              >
-                Refresh
-              </Button>
-            }
-          >
-            {error ? (
-              <Alert status="error" borderRadius="lg" mb={4}>
-                <AlertIcon />
-                {error}
-              </Alert>
-            ) : null}
-
-            <InputGroup maxW="420px" mb={5}>
-              <InputLeftElement pointerEvents="none">
-                <Search size={16} color="#9CA3AF" />
-              </InputLeftElement>
-              <Input
-                placeholder="Search mentees…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                bg="white"
-                borderColor="gray.200"
-                borderRadius="md"
-              />
-            </InputGroup>
-
-            {loading ? (
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                <Skeleton height="180px" borderRadius="xl" />
-                <Skeleton height="180px" borderRadius="xl" />
-              </SimpleGrid>
-            ) : filtered.length === 0 ? (
-              <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                <Text color="gray.600" fontSize="sm">
-                  No mentees assigned yet. Learners in your organisation appear here automatically
-                  once you are linked to that organisation. Explicit mentor assignments also show
-                  up here.
+            <Box p={5} borderRadius="xl" bg="white" border="1px solid" borderColor="gray.200">
+              <HStack spacing={2} mb={2}>
+                <Icon as={Lightbulb} color="gray.600" />
+                <Text fontWeight="600" color="gray.900" fontSize="sm">
+                  Mentoring tip
                 </Text>
-              </Box>
-            ) : (
+              </HStack>
+              <Text fontSize="sm" color="gray.600" lineHeight="1.65">
+                {tipOfDay}
+              </Text>
+            </Box>
+          </Stack>
+        ) : null}
+
+        {activeSection === 'mentees' ? (
+          <Stack spacing={6} id="mentor-mentees">
+            <SectionShell
+              id="mentor-mentees-header"
+              eyebrow="Directory"
+              title="Who you mentor"
+              subtitle="Ranking, roster, and mentee detail — including values, personality, age, and LIFT when they have completed them."
+              action={
+                <Button
+                  leftIcon={<RefreshCw size={14} />}
+                  size="sm"
+                  variant="outline"
+                  borderColor="gray.300"
+                  onClick={() => void loadMentees()}
+                  isLoading={loading}
+                >
+                  Refresh
+                </Button>
+              }
+            >
+              {error ? (
+                <Alert status="error" borderRadius="lg" mb={4}>
+                  <AlertIcon />
+                  {error}
+                </Alert>
+              ) : null}
+
               <Grid
-                templateColumns={{ base: '1fr', lg: '280px 1fr' }}
+                templateColumns={{ base: '1fr', xl: '280px 1fr' }}
                 gap={5}
                 alignItems="start"
+                mb={5}
               >
-                <Stack spacing={2}>
-                  {filtered.map((m) => {
-                    const active = selected?.id === m.id
-                    return (
-                      <Button
-                        key={m.id}
-                        onClick={() => {
-                          setSelectedId(m.id)
-                          setActiveSection('mentees')
-                        }}
-                        justifyContent="flex-start"
-                        h="auto"
-                        py={3}
-                        px={3}
-                        borderRadius="lg"
-                        bg={active ? 'gray.50' : 'white'}
-                        color="gray.800"
-                        border="1px solid"
-                        borderColor={active ? '#350e6f' : 'gray.200'}
-                        boxShadow={active ? 'inset 3px 0 0 #350e6f' : 'none'}
-                        _hover={{ bg: 'gray.50', borderColor: active ? '#350e6f' : 'gray.300' }}
-                        textAlign="left"
-                      >
-                        <HStack spacing={3} align="center" w="full">
-                          <Avatar name={getDisplayName(m)} size="sm" bg="gray.100" color="gray.700" />
-                          <Box minW={0}>
-                            <Text fontWeight="600" fontSize="sm" noOfLines={1} color="gray.900">
-                              {getDisplayName(m)}
-                            </Text>
-                            <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                              {personalityLabel(m.personalityType) || 'Personality pending'}
-                            </Text>
-                          </Box>
-                        </HStack>
-                      </Button>
-                    )
-                  })}
-                </Stack>
-                {selected ? (
-                  <Stack spacing={5} minW={0}>
-                    <MentorLearnerPanel learner={selected} mentorId={profile?.id} />
-                    <LearnerSessionPrep
-                      audience="mentor"
-                      learner={selected}
-                      courseTitles={orgCourseTitles}
-                      windowStatus={null}
+                <LearnerPointsRanking
+                  learners={mentees}
+                  selectedId={selected?.id}
+                  sticky
+                  title="Points ranking"
+                  onSelect={(id) => setSelectedId(id)}
+                />
+                <Box>
+                  <InputGroup maxW="420px" mb={4}>
+                    <InputLeftElement pointerEvents="none">
+                      <Search size={16} color="#9CA3AF" />
+                    </InputLeftElement>
+                    <Input
+                      placeholder="Search mentees…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      bg="white"
+                      borderColor="gray.200"
+                      borderRadius="md"
                     />
-                  </Stack>
-                ) : (
-                  <Box p={6} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                    <Text fontSize="sm" color="gray.600">
-                      Select a mentee to open their profile.
-                    </Text>
-                  </Box>
-                )}
-              </Grid>
-            )}
-          </SectionShell>
+                  </InputGroup>
 
+                  {loading ? (
+                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                      <Skeleton height="180px" borderRadius="xl" />
+                      <Skeleton height="180px" borderRadius="xl" />
+                    </SimpleGrid>
+                  ) : filtered.length === 0 ? (
+                    <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                      <Text color="gray.600" fontSize="sm">
+                        No mentees assigned yet. Learners in your organisation appear here automatically
+                        once you are linked to that organisation. Explicit mentor assignments also show
+                        up here.
+                      </Text>
+                    </Box>
+                  ) : (
+                    <Grid
+                      templateColumns={{ base: '1fr', lg: '240px 1fr' }}
+                      gap={5}
+                      alignItems="start"
+                    >
+                      <Stack spacing={2}>
+                        {filtered.map((m) => {
+                          const active = selected?.id === m.id
+                          const valuesCount = (m.coreValues || []).filter(Boolean).length
+                          return (
+                            <Button
+                              key={m.id}
+                              onClick={() => setSelectedId(m.id)}
+                              justifyContent="flex-start"
+                              h="auto"
+                              py={3}
+                              px={3}
+                              borderRadius="lg"
+                              bg={active ? 'gray.50' : 'white'}
+                              color="gray.800"
+                              border="1px solid"
+                              borderColor={active ? '#350e6f' : 'gray.200'}
+                              boxShadow={active ? 'inset 3px 0 0 #350e6f' : 'none'}
+                              _hover={{ bg: 'gray.50', borderColor: active ? '#350e6f' : 'gray.300' }}
+                              textAlign="left"
+                            >
+                              <HStack spacing={3} align="center" w="full">
+                                <Avatar
+                                  name={getDisplayName(m)}
+                                  size="sm"
+                                  bg="gray.100"
+                                  color="gray.700"
+                                />
+                                <Box minW={0}>
+                                  <Text fontWeight="600" fontSize="sm" noOfLines={1} color="gray.900">
+                                    {getDisplayName(m)}
+                                  </Text>
+                                  <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                                    {personalityLabel(m.personalityType) || 'Personality pending'}
+                                    {' · '}
+                                    {valuesCount === 5
+                                      ? 'Values set'
+                                      : valuesCount > 0
+                                        ? `${valuesCount}/5 values`
+                                        : 'Values not set'}
+                                  </Text>
+                                </Box>
+                              </HStack>
+                            </Button>
+                          )
+                        })}
+                      </Stack>
+                      {selected ? (
+                        <Stack spacing={5} minW={0}>
+                          <MentorLearnerPanel learner={selected} mentorId={profile?.id} />
+                          <LearnerSessionPrep
+                            audience="mentor"
+                            learner={selected}
+                            courseTitles={orgCourseTitles}
+                            windowStatus={null}
+                          />
+                        </Stack>
+                      ) : (
+                        <Box
+                          p={6}
+                          bg="white"
+                          borderRadius="xl"
+                          border="1px dashed"
+                          borderColor="gray.200"
+                        >
+                          <Text fontSize="sm" color="gray.600">
+                            Select a mentee to open their profile.
+                          </Text>
+                        </Box>
+                      )}
+                    </Grid>
+                  )}
+                </Box>
+              </Grid>
+            </SectionShell>
+          </Stack>
+        ) : null}
+
+        {activeSection === 'schedule' ? (
           <SectionShell
             id="mentor-schedule"
             eyebrow="Meetings"
             title="Meeting schedule"
-            subtitle="Learner requests appear here. Accept to confirm, then mark attendance complete to issue +2,000 mentor meetup points - only if they attended."
+            subtitle="Learner requests appear here. Accept to confirm, then mark attendance to issue mentor meetup points. Session points ledger stays under Meetings → Session points."
+            action={
+              <Button
+                size="sm"
+                variant="outline"
+                borderColor="gray.300"
+                onClick={() => navigate('/mentor/session-points')}
+              >
+                Session points
+              </Button>
+            }
           >
             {profile?.id ? (
               <MentorSessionsPanel
@@ -496,7 +523,9 @@ export const MentorDashboard: React.FC = () => {
               <Skeleton height="200px" borderRadius="xl" />
             )}
           </SectionShell>
+        ) : null}
 
+        {activeSection === 'assessments' ? (
           <SectionShell
             id="mentor-assessments"
             eyebrow="End of course"
@@ -508,7 +537,13 @@ export const MentorDashboard: React.FC = () => {
             }
           >
             {profile?.id && assessmentLearners.length > 0 ? (
-              <Box bg="white" borderRadius="xl" border="1px solid" borderColor="gray.200" p={{ base: 4, md: 6 }}>
+              <Box
+                bg="white"
+                borderRadius="xl"
+                border="1px solid"
+                borderColor="gray.200"
+                p={{ base: 4, md: 6 }}
+              >
                 <RateLearnerCourseAssessment
                   respondentId={profile.id}
                   raterRole="mentor"
@@ -525,7 +560,7 @@ export const MentorDashboard: React.FC = () => {
               </Box>
             )}
           </SectionShell>
-        </Stack>
+        ) : null}
       </Box>
     </MentorDashboardLayout>
   )

@@ -1,6 +1,5 @@
 import {
   Archive,
-  Award,
   BookOpen,
   Building2,
   CalendarClock,
@@ -58,10 +57,9 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'coachees', label: 'My coachees', icon: Users },
-      { key: 'schedule', label: 'Meeting schedule', icon: CalendarClock },
-      { key: 'session-points', label: 'Session points', icon: Award },
-      { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
-      { key: 'guidelines', label: 'Coach guidelines', icon: ScrollText },
+      { key: 'schedule', label: 'Meetings', icon: CalendarClock },
+      { key: 'assessments', label: 'Assessments', icon: ClipboardCheck },
+      { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
     ],
   },
 ]
@@ -93,10 +91,9 @@ export const buildMentorNavItems = (): NavigationSection[] => [
     items: [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'mentees', label: 'My mentees', icon: Users },
-      { key: 'schedule', label: 'Meeting schedule', icon: CalendarClock },
-      { key: 'session-points', label: 'Session points', icon: Award },
-      { key: 'assessments', label: 'Post assessments', icon: ClipboardCheck },
-      { key: 'guidelines', label: 'Mentor guidelines', icon: ScrollText },
+      { key: 'schedule', label: 'Meetings', icon: CalendarClock },
+      { key: 'assessments', label: 'Assessments', icon: ClipboardCheck },
+      { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
     ],
   },
 ]
