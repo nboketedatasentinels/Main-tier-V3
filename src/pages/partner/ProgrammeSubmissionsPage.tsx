@@ -243,6 +243,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
   return (
     <PartnerLayout
       activeItem="programme-submissions"
+      hideWelcomeHeader
       organizations={orgOptions.map((o) => ({ id: o.id, code: o.code, name: o.name }))}
       selectedOrg={selectedOrgId || 'all'}
       onSelectOrg={(v) => setSelectedOrgId(v === 'all' ? '' : v)}
