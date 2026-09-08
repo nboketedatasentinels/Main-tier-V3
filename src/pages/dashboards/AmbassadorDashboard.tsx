@@ -367,133 +367,126 @@ export const AmbassadorDashboard: React.FC = () => {
         ) : null}
 
         {activeSection === 'coachees' ? (
-          <Stack spacing={6} id="coach-coachees">
-            <SectionShell
-              id="coach-coachees-header"
-              eyebrow="Directory"
-              title="Who you coach"
-              subtitle="Pick someone from the ranking to open their profile, LIFT, and session prep."
-              action={
-                <Button
-                  leftIcon={<RefreshCw size={14} />}
-                  size="sm"
-                  variant="outline"
-                  borderColor="gray.300"
-                  onClick={() => void loadCoachees()}
-                  isLoading={loading}
-                >
-                  Refresh
-                </Button>
-              }
-            >
-              {error ? (
-                <Alert status="error" borderRadius="lg" mb={4}>
-                  <AlertIcon />
-                  {error}
-                </Alert>
-              ) : null}
-
-              <Grid
-                templateColumns={{ base: '1fr', xl: '280px minmax(0, 1fr)' }}
-                gap={5}
-                alignItems="start"
-                mb={5}
-                maxW="100%"
-                minW={0}
+          <Stack spacing={3} id="coach-coachees" scrollMarginTop="16px">
+            <Flex justify="flex-end">
+              <Button
+                leftIcon={<RefreshCw size={14} />}
+                size="sm"
+                variant="outline"
+                borderColor="gray.300"
+                onClick={() => void loadCoachees()}
+                isLoading={loading}
               >
-                <Stack spacing={3}>
-                  <InputGroup>
-                    <InputLeftElement pointerEvents="none">
-                      <Search size={16} color="#9CA3AF" />
-                    </InputLeftElement>
-                    <Input
-                      placeholder="Search coachees…"
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      bg="white"
-                      borderColor="gray.200"
-                      borderRadius="md"
-                    />
-                  </InputGroup>
-                  <LearnerPointsRanking
-                    learners={filtered}
-                    selectedId={selected?.id}
-                    sticky
-                    limit={5}
-                    expandable
-                    title="Points ranking"
-                    onSelect={(id) => {
-                      setSelectedId(id)
-                      setSessionPrepOpen(false)
-                    }}
+                Refresh
+              </Button>
+            </Flex>
+
+            {error ? (
+              <Alert status="error" borderRadius="lg">
+                <AlertIcon />
+                {error}
+              </Alert>
+            ) : null}
+
+            <Grid
+              templateColumns={{ base: '1fr', xl: '280px minmax(0, 1fr)' }}
+              gap={5}
+              alignItems="start"
+              maxW="100%"
+              minW={0}
+            >
+              <Stack spacing={3}>
+                <InputGroup>
+                  <InputLeftElement pointerEvents="none">
+                    <Search size={16} color="#9CA3AF" />
+                  </InputLeftElement>
+                  <Input
+                    placeholder="Search coachees…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    bg="white"
+                    borderColor="gray.200"
+                    borderRadius="md"
                   />
-                </Stack>
-                <Box>
-                  {loading ? (
-                    <Skeleton height="280px" borderRadius="xl" />
-                  ) : filtered.length === 0 ? (
-                    <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
-                      <Text color="gray.600" fontSize="sm" lineHeight="1.7">
-                        No coachees yet. Coaching only shows when an organisation has an Ambassador /
-                        Coach assigned and learners are linked to you. Ask the Transformation Partner to
-                        confirm org coach assignment.
-                      </Text>
+                </InputGroup>
+                <LearnerPointsRanking
+                  learners={filtered}
+                  selectedId={selected?.id}
+                  sticky
+                  limit={5}
+                  expandable
+                  title="Points ranking"
+                  onSelect={(id) => {
+                    setSelectedId(id)
+                    setSessionPrepOpen(false)
+                  }}
+                />
+              </Stack>
+              <Box minW={0}>
+                {loading ? (
+                  <Skeleton height="280px" borderRadius="xl" />
+                ) : filtered.length === 0 ? (
+                  <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
+                    <Text color="gray.600" fontSize="sm" lineHeight="1.7">
+                      No coachees yet. Coaching only shows when an organisation has an Ambassador /
+                      Coach assigned and learners are linked to you. Ask the Transformation Partner to
+                      confirm org coach assignment.
+                    </Text>
+                  </Box>
+                ) : selected ? (
+                  <Stack spacing={3} minW={0}>
+                    <CoachLearnerPanel
+                      learner={selected}
+                      orgPurchasedCoachSessions={orgPurchasedSessions}
+                      courseTitles={orgCourseTitles}
+                      attendedSessionCount={attendedCount}
+                    />
+                    <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+                      <Button
+                        variant="ghost"
+                        w="full"
+                        justifyContent="space-between"
+                        borderRadius={0}
+                        h="auto"
+                        py={3}
+                        px={4}
+                        rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
+                        onClick={() => setSessionPrepOpen((v) => !v)}
+                      >
+                        <Text fontSize="sm" fontWeight="600" color="gray.800">
+                          Session prep
+                        </Text>
+                      </Button>
+                      <Collapse in={sessionPrepOpen} animateOpacity>
+                        <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
+                          <LearnerSessionPrep
+                            audience="coach"
+                            learner={selected}
+                            purchasedCoachSessions={purchasedForSelected}
+                            sessionNumber={sessionNumberForSelected}
+                            windowStatus={null}
+                            courseTitles={orgCourseTitles}
+                            hideLiftSection
+                          />
+                        </Box>
+                      </Collapse>
                     </Box>
-                  ) : selected ? (
-                    <Stack spacing={3} minW={0}>
-                      <CoachLearnerPanel
-                        learner={selected}
-                        orgPurchasedCoachSessions={orgPurchasedSessions}
-                        courseTitles={orgCourseTitles}
-                        attendedSessionCount={attendedCount}
-                      />
-                      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
-                        <Button
-                          variant="ghost"
-                          w="full"
-                          justifyContent="space-between"
-                          borderRadius={0}
-                          h="auto"
-                          py={3}
-                          px={4}
-                          rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
-                          onClick={() => setSessionPrepOpen((v) => !v)}
-                        >
-                          <Text fontSize="sm" fontWeight="600" color="gray.800">
-                            Session prep
-                          </Text>
-                        </Button>
-                        <Collapse in={sessionPrepOpen} animateOpacity>
-                          <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
-                            <LearnerSessionPrep
-                              audience="coach"
-                              learner={selected}
-                              purchasedCoachSessions={purchasedForSelected}
-                              sessionNumber={sessionNumberForSelected}
-                              windowStatus={null}
-                              courseTitles={orgCourseTitles}
-                              hideLiftSection
-                            />
-                          </Box>
-                        </Collapse>
-                      </Box>
-                    </Stack>
-                  ) : (
-                    <Box
-                      p={6}
-                      bg="white"
-                      borderRadius="xl"
-                      border="1px dashed"
-                      borderColor="gray.200"
-                    >
-                      <Text fontSize="sm" color="gray.600">
-                        Select a coachee from the ranking to open their profile.
-                      </Text>
-                    </Box>
-                  )}
-                </Box>
-              </Grid>
-            </SectionShell>
+                  </Stack>
+                ) : (
+                  <Box
+                    p={6}
+                    bg="white"
+                    borderRadius="xl"
+                    border="1px dashed"
+                    borderColor="gray.200"
+                  >
+                    <Text fontSize="sm" color="gray.600">
+                      Select a coachee from the ranking to open their profile.
+                    </Text>
+                  </Box>
+                )}
+              </Box>
+            </Grid>
           </Stack>
         ) : null}
 
