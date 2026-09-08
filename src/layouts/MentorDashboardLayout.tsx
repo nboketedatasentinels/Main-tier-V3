@@ -19,7 +19,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { CalendarClock, LogOut, Menu } from 'lucide-react'
+import { LogOut, Menu, ScrollText } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { MentorGuidelinesModal } from '@/components/mentor/MentorGuidelinesModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -163,7 +163,18 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
 
           <SidebarNav sections={sections} activeItem={activeItem} onNavigate={onNavigate} />
 
-          <Flex mt="auto" pt={4} borderTop="1px solid" borderColor="brand.border">
+          <Flex mt="auto" pt={4} borderTop="1px solid" borderColor="brand.border" direction="column" gap={1}>
+            <Button
+              variant="ghost"
+              leftIcon={<Icon as={ScrollText} />}
+              justifyContent="flex-start"
+              color="brand.text"
+              onClick={() => onNavigate?.('guidelines')}
+              w="full"
+              fontSize="sm"
+            >
+              Guidelines
+            </Button>
             <Button
               variant="ghost"
               leftIcon={<Icon as={LogOut} />}
@@ -202,6 +213,19 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
                   onNavigate?.(key)
                 }}
               />
+              <Button
+                variant="ghost"
+                leftIcon={<Icon as={ScrollText} />}
+                justifyContent="flex-start"
+                color="brand.text"
+                onClick={() => {
+                  drawer.onClose()
+                  onNavigate?.('guidelines')
+                }}
+                w="full"
+              >
+                Guidelines
+              </Button>
               <Button
                 variant="ghost"
                 leftIcon={<Icon as={LogOut} />}
@@ -246,22 +270,6 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
               </Text>
             </HStack>
             <HStack spacing={2} flexShrink={0}>
-              <Button
-                size="sm"
-                variant="outline"
-                borderColor="gray.300"
-                color="gray.800"
-                bg="white"
-                _hover={{ bg: 'gray.50' }}
-                leftIcon={<Icon as={CalendarClock} boxSize={4} />}
-                onClick={() => onNavigate?.('schedule')}
-                aria-label="Meeting schedule"
-                px={{ base: 2, sm: 3 }}
-              >
-                <Text as="span" display={{ base: 'none', sm: 'inline' }}>
-                  Meeting schedule
-                </Text>
-              </Button>
               <NotificationDropdown />
             </HStack>
           </Flex>
@@ -276,32 +284,12 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
           data-mentor-main-scroll
         >
           <Stack spacing={6} maxW="1600px" mx="auto">
-            <Flex justify="space-between" align="center" gap={3} flexWrap="wrap">
-              <Box>
-                <Text fontSize="2xl" fontWeight="bold" color="brand.text">
-                  Mentor Dashboard
-                </Text>
-                <Text color="brand.subtleText">Tools for mentorship management and learner support.</Text>
-              </Box>
-              {!isMobile && (
-                <HStack spacing={3}>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    borderColor="gray.300"
-                    color="gray.800"
-                    bg="white"
-                    _hover={{ bg: 'gray.50' }}
-                    leftIcon={<Icon as={CalendarClock} boxSize={4} />}
-                    onClick={() => onNavigate?.('schedule')}
-                  >
-                    Meeting schedule
-                  </Button>
-                  <NotificationDropdown />
-                  <Avatar size="sm" name={mentorName} src={avatarUrl} />
-                </HStack>
-              )}
-            </Flex>
+            {!isMobile && (
+              <Flex justify="flex-end" align="center" gap={3}>
+                <NotificationDropdown />
+                <Avatar size="sm" name={mentorName} src={avatarUrl} />
+              </Flex>
+            )}
 
             {children}
           </Stack>

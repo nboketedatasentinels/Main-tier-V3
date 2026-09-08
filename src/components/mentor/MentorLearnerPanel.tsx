@@ -11,7 +11,6 @@ import {
 import { Sparkles } from 'lucide-react'
 import {
   buildAiInference,
-  buildMentoringSessionPlan,
   buildStrengthsWeaknessesWriteUp,
 } from '@/services/mentorCoachingInsights'
 import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
@@ -35,8 +34,8 @@ type MentorLearnerPanelProps = {
 }
 
 /**
- * Mentor mentee profile surface - parity with coach: values, age, personality,
- * AI-labeled notes, strengths/weaknesses, optional goal, suggested session topics.
+ * Mentor mentee profile surface - values, age, personality, LIFT, AI notes, goals.
+ * Session topics live under Session prep (collapsed) to avoid a long duplicate stack.
  */
 export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
   learner,
@@ -56,13 +55,12 @@ export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
 
   const aiNotes = useMemo(() => buildAiInference(insightInput), [insightInput])
   const strengths = useMemo(() => buildStrengthsWeaknessesWriteUp(insightInput), [insightInput])
-  const sessionPlan = useMemo(() => buildMentoringSessionPlan(insightInput), [insightInput])
 
   const values = (learner.coreValues || []).filter(Boolean)
   const ageRange = (learner as { ageRange?: string | null }).ageRange
 
   return (
-    <Stack spacing={5}>
+    <Stack spacing={4}>
       <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
         <Box px={5} py={4} borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
           <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
@@ -148,33 +146,6 @@ export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
         mentorId={mentorId}
         audience="mentor"
       />
-
-      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" px={5} py={4}>
-        <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500" mb={3}>
-          SUGGESTED SESSION TOPICS · {sessionPlan.journeyLabel}
-        </Text>
-        <Stack spacing={3}>
-          {sessionPlan.sessions.map((s) => (
-            <Box key={s.index} p={3} borderRadius="lg" bg="gray.50" borderWidth="1px" borderColor="gray.100">
-              <Text fontSize="sm" fontWeight="700" color={PLUM}>
-                Session {s.index}: {s.title}
-              </Text>
-              <Text mt={1} fontSize="sm" color="gray.600" lineHeight="1.55">
-                {s.focus}
-              </Text>
-              {s.suggestedTopics?.length ? (
-                <VStack align="stretch" mt={2} spacing={1}>
-                  {s.suggestedTopics.slice(0, 3).map((p) => (
-                    <Text key={p.slice(0, 32)} fontSize="xs" color="gray.500">
-                      · {p}
-                    </Text>
-                  ))}
-                </VStack>
-              ) : null}
-            </Box>
-          ))}
-        </Stack>
-      </Box>
     </Stack>
   )
 }

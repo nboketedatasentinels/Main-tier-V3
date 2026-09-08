@@ -10,7 +10,6 @@ import {
   LayoutDashboard,
   MessageSquare,
   LockKeyhole,
-  ScrollText,
   Settings,
   Users,
   UserSquare2,
@@ -58,8 +57,6 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'coachees', label: 'My coachees', icon: Users },
       { key: 'schedule', label: 'Meetings', icon: CalendarClock },
-      { key: 'assessments', label: 'Assessments', icon: ClipboardCheck },
-      { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
     ],
   },
 ]
@@ -92,8 +89,6 @@ export const buildMentorNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'mentees', label: 'My mentees', icon: Users },
       { key: 'schedule', label: 'Meetings', icon: CalendarClock },
-      { key: 'assessments', label: 'Assessments', icon: ClipboardCheck },
-      { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
     ],
   },
 ]

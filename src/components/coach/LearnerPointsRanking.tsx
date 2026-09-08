@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Box, Button, Flex, HStack, Stack, Text } from '@chakra-ui/react'
 import { getDisplayName } from '@/utils/displayName'
 import type { UserProfile } from '@/types'
@@ -13,7 +13,12 @@ type LearnerPointsRankingProps = {
   sticky?: boolean
   /** Cap visible rows (rest behind See more). */
   limit?: number
-  /** Called when the user wants the full ranking (e.g. jump to mentees tab). */
+  /**
+   * When true with `limit`, See more expands the list in place (Show less collapses).
+   * Prefer this on My mentees/coachees so 5–8 people don't explode the column.
+   */
+  expandable?: boolean
+  /** Called when the user wants the full ranking (e.g. jump to mentees tab). Ignored if expandable. */
   onSeeMore?: () => void
   seeMoreLabel?: string
 }
@@ -31,9 +36,11 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
   title = 'Points ranking',
   sticky = true,
   limit,
+  expandable = false,
   onSeeMore,
   seeMoreLabel = 'See more',
 }) => {
+  const [expanded, setExpanded] = useState(false)
   const ranked = useMemo(
     () =>
       [...learners].sort(
@@ -44,9 +51,11 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
     [learners],
   )
 
-  const visible =
-    typeof limit === 'number' && limit > 0 ? ranked.slice(0, limit) : ranked
-  const hiddenCount = Math.max(0, ranked.length - visible.length)
+  const cap = typeof limit === 'number' && limit > 0 ? limit : null
+  const useCap = Boolean(cap) && !(expandable && expanded)
+  const visible = useCap ? ranked.slice(0, cap!) : ranked
+  const hiddenCount = useCap ? Math.max(0, ranked.length - visible.length) : 0
+  const canCollapse = expandable && expanded && Boolean(cap) && ranked.length > cap!
 
   return (
     <Box
@@ -82,11 +91,11 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
         <Stack
           spacing={1.5}
           maxH={
-            typeof limit === 'number'
+            useCap
               ? undefined
               : { base: '320px', lg: 'calc(100vh - 180px)' }
           }
-          overflowY={typeof limit === 'number' ? 'visible' : 'auto'}
+          overflowY={useCap ? 'visible' : 'auto'}
         >
           {visible.map((learner, index) => {
             const id = learner.id ?? ''
@@ -161,9 +170,34 @@ export const LearnerPointsRanking: React.FC<LearnerPointsRankingProps> = ({
         </Stack>
       )}
 
-      {hiddenCount > 0 && onSeeMore ? (
-        <Button mt={3} size="sm" variant="ghost" color="#350e6f" w="full" onClick={onSeeMore}>
+      {hiddenCount > 0 ? (
+        <Button
+          mt={3}
+          size="sm"
+          variant="ghost"
+          color="#350e6f"
+          w="full"
+          onClick={() => {
+            if (expandable) {
+              setExpanded(true)
+              return
+            }
+            onSeeMore?.()
+          }}
+        >
           {seeMoreLabel} ({hiddenCount} more)
+        </Button>
+      ) : null}
+      {canCollapse ? (
+        <Button
+          mt={hiddenCount > 0 ? 1 : 3}
+          size="sm"
+          variant="ghost"
+          color="gray.600"
+          w="full"
+          onClick={() => setExpanded(false)}
+        >
+          Show less
         </Button>
       ) : null}
     </Box>

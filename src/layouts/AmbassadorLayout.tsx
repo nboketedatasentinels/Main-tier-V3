@@ -24,12 +24,12 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { CalendarClock, Menu as MenuIcon, Medal, TrendingUp, X } from 'lucide-react'
+import { Menu as MenuIcon, Medal, ScrollText, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
-import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 import { useAuth } from '@/hooks/useAuth'
+import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 
 const APP_VIEWPORT_HEIGHT = { base: '100dvh', md: '100vh' } as const
 
@@ -121,7 +121,13 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
   const toast = useToast()
   const sections = useMemo(() => navSections || buildAmbassadorNavItems(), [navSections])
   const primaryNavItems = useMemo(() => sections.flatMap(section => section.items).slice(0, 4), [sections])
-  const accountItems = useMemo(() => buildCommonAccountItems(), [])
+  const accountItems = useMemo(
+    (): NavigationItem[] => [
+      { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
+      ...buildCommonAccountItems(),
+    ],
+    [],
+  )
   const drawer = useDisclosure()
   const isMobile = useBreakpointValue({ base: true, lg: false })
   const [showGuidelinesModal, setShowGuidelinesModal] = useState(false)
@@ -204,16 +210,6 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
         gap={6}
       >
         {navContent}
-        <Button
-          variant="ghost"
-          justifyContent="flex-start"
-          leftIcon={<Icon as={TrendingUp} />}
-          color="brand.text"
-          onClick={() => onNavigate?.('analytics')}
-          mt="auto"
-        >
-          Performance
-        </Button>
       </Box>
 
       <Drawer isOpen={drawer.isOpen} placement="left" onClose={drawer.onClose} size="xs">
@@ -281,21 +277,6 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
           </HStack>
 
           <HStack spacing={3} align="center">
-            <Button
-              size="sm"
-              variant="outline"
-              borderColor="gray.300"
-              color="gray.800"
-              bg="white"
-              _hover={{ bg: 'gray.50' }}
-              leftIcon={<Icon as={CalendarClock} boxSize={4} />}
-              onClick={() => onNavigate?.('schedule')}
-              aria-label="Meeting schedule"
-            >
-              <Text as="span" display={{ base: 'none', sm: 'inline' }}>
-                Meeting schedule
-              </Text>
-            </Button>
             <NotificationDropdown />
             <Menu>
               <MenuButton

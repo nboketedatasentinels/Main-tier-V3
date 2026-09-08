@@ -30,6 +30,8 @@ interface LearnerSessionPrepProps {
   onPrimary?: () => void
   onSecondary?: () => void
   primaryLoading?: boolean
+  /** Skip LIFT radar when already shown on the profile strip above. */
+  hideLiftSection?: boolean
 }
 
 type EnrichedLearnerFields = {
@@ -85,6 +87,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
   onPrimary,
   onSecondary,
   primaryLoading,
+  hideLiftSection = false,
 }) => {
   const learnerId = learner.id ?? null
   const { pillars, developmentEdge, archetype, assessedAt, loading: liftLoading } = useSessionPrepLift(learnerId)
@@ -376,6 +379,7 @@ export const LearnerSessionPrep: React.FC<LearnerSessionPrepProps> = ({
       onPrimary={onPrimary}
       onSecondary={onSecondary}
       primaryLoading={primaryLoading}
+      hideLiftSection={hideLiftSection}
     />
   )
 }

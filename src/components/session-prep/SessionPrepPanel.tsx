@@ -25,6 +25,8 @@ export interface SessionPrepPanelProps {
   onPrimary?: () => void
   onSecondary?: () => void
   primaryLoading?: boolean
+  /** When true, skip LIFT radar (already shown on mentor/coach profile strip). */
+  hideLiftSection?: boolean
 }
 
 const MonoLabel: React.FC<{ children: React.ReactNode; color?: string }> = ({
@@ -54,6 +56,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
   onPrimary,
   onSecondary,
   primaryLoading,
+  hideLiftSection = false,
 }) => {
   const model = useMemo(() => buildSessionPrepModel(input), [input])
   const isLeader = model.audience === 'leader'
@@ -181,6 +184,7 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
               ) : null}
             </Box>
 
+            {!hideLiftSection ? (
             <Box>
               <MonoLabel>{isLeader ? 'Where you were in week 1' : 'Capability shape'}</MonoLabel>
               {model.liftAssessedLabel ? (
@@ -228,6 +232,15 @@ export const SessionPrepPanel: React.FC<SessionPrepPanelProps> = ({
                 </Text>
               ) : null}
             </Box>
+            ) : model.totalPointsLabel ? (
+              <Text fontSize="12.5px" color="gray.600" fontWeight="600">
+                Journey points · {model.totalPointsLabel} · LIFT is on the profile above
+              </Text>
+            ) : (
+              <Text fontSize="12px" color="gray.500">
+                LIFT summary is on the profile above
+              </Text>
+            )}
 
             {!isLeader && model.tendencies.length > 0 ? (
               <Box>

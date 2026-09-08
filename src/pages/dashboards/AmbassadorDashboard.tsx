@@ -5,6 +5,7 @@ import {
   Avatar,
   Box,
   Button,
+  Collapse,
   Flex,
   Grid,
   HStack,
@@ -20,6 +21,8 @@ import {
 import {
   ArrowRight,
   CalendarClock,
+  ChevronDown,
+  ChevronUp,
   RefreshCw,
   Search,
   Users,
@@ -100,6 +103,7 @@ export const AmbassadorDashboard: React.FC = () => {
   const location = useLocation()
   const [activeSection, setActiveSection] = useState<SectionKey>('overview')
   const [coachees, setCoachees] = useState<UserProfile[]>([])
+  const [sessionPrepOpen, setSessionPrepOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
@@ -376,7 +380,7 @@ export const AmbassadorDashboard: React.FC = () => {
               id="coach-coachees-header"
               eyebrow="Directory"
               title="Who you coach"
-              subtitle="Ranking, roster, and coachee detail — including values, personality, goals, learning plan, and Session Prep."
+              subtitle="Select a coachee for ranking, profile (values, personality, LIFT), and optional session prep."
               action={
                 <Button
                   leftIcon={<RefreshCw size={14} />}
@@ -407,8 +411,13 @@ export const AmbassadorDashboard: React.FC = () => {
                   learners={coachees}
                   selectedId={selected?.id}
                   sticky
+                  limit={5}
+                  expandable
                   title="Points ranking"
-                  onSelect={(id) => setSelectedId(id)}
+                  onSelect={(id) => {
+                    setSelectedId(id)
+                    setSessionPrepOpen(false)
+                  }}
                 />
                 <Box>
                   <InputGroup maxW="420px" mb={4}>
@@ -451,7 +460,10 @@ export const AmbassadorDashboard: React.FC = () => {
                           return (
                             <Button
                               key={c.id}
-                              onClick={() => setSelectedId(c.id)}
+                              onClick={() => {
+                                setSelectedId(c.id)
+                                setSessionPrepOpen(false)
+                              }}
                               justifyContent="flex-start"
                               h="auto"
                               py={3}
@@ -492,21 +504,43 @@ export const AmbassadorDashboard: React.FC = () => {
                         })}
                       </Stack>
                       {selected ? (
-                        <Stack spacing={5} minW={0}>
+                        <Stack spacing={3} minW={0}>
                           <CoachLearnerPanel
                             learner={selected}
                             orgPurchasedCoachSessions={orgPurchasedSessions}
                             courseTitles={orgCourseTitles}
                             attendedSessionCount={attendedCount}
                           />
-                          <LearnerSessionPrep
-                            audience="coach"
-                            learner={selected}
-                            purchasedCoachSessions={purchasedForSelected}
-                            sessionNumber={sessionNumberForSelected}
-                            windowStatus={null}
-                            courseTitles={orgCourseTitles}
-                          />
+                          <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+                            <Button
+                              variant="ghost"
+                              w="full"
+                              justifyContent="space-between"
+                              borderRadius={0}
+                              h="auto"
+                              py={3}
+                              px={4}
+                              rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
+                              onClick={() => setSessionPrepOpen((v) => !v)}
+                            >
+                              <Text fontSize="sm" fontWeight="600" color="gray.800">
+                                Session prep
+                              </Text>
+                            </Button>
+                            <Collapse in={sessionPrepOpen} animateOpacity>
+                              <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
+                                <LearnerSessionPrep
+                                  audience="coach"
+                                  learner={selected}
+                                  purchasedCoachSessions={purchasedForSelected}
+                                  sessionNumber={sessionNumberForSelected}
+                                  windowStatus={null}
+                                  courseTitles={orgCourseTitles}
+                                  hideLiftSection
+                                />
+                              </Box>
+                            </Collapse>
+                          </Box>
                         </Stack>
                       ) : (
                         <Box
