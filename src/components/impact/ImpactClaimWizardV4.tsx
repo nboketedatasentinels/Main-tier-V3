@@ -533,8 +533,6 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
     if (draft.step === 2 && !draft.preset) return 'Choose what you are measuring.'
     if (draft.step === 2 && !draft.name.trim()) return 'Give it a short name so you recognise it later.'
     if (draft.step === 3 && !nn(draft.before)) return 'Enter the before number.'
-    if (draft.step === 3 && !draft.locked)
-      return 'Tick the box to lock the before number. Locking is what makes it believable later.'
     if (draft.step === 4 && !draft.goalDir)
       return 'Choose whether your goal was to increase or decrease from the baseline.'
     if (draft.step === 5 && !nn(draft.after)) return 'Enter the after number.'
@@ -547,6 +545,11 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
     const g = guard()
     if (g) {
       toast({ status: 'warning', title: g })
+      return
+    }
+    // Leaving Before locks the baseline automatically (no separate lock checkbox).
+    if (draft.step === 3) {
+      patch({ locked: true, step: Math.min(6, draft.step + 1) })
       return
     }
     patch({ step: Math.min(6, draft.step + 1) })
@@ -1041,30 +1044,14 @@ export const ImpactClaimWizardV4: React.FC<Props> = ({
                 Taken from a system or record before the change
               </Text>
             </Checkbox>
-            <Checkbox
-              size="sm"
-              isChecked={draft.locked}
-              onChange={(e) => patch({ locked: e.target.checked })}
-              colorScheme="primary"
-              alignItems="flex-start"
-            >
-              <Text fontSize="sm" color="black" lineHeight="1.4">
-                Lock this before number
-                <HelpBtn k="lock" onOpen={setHelpKey} />
-              </Text>
-            </Checkbox>
           </Stack>
 
           <Text fontSize="xs" color="text.muted">
             {!draft.lockedBefore || m < 3
-              ? 'Marked as an estimate until it comes from a locked system record covering at least 3 months.'
+              ? 'Marked as an estimate until it comes from a system record covering at least 3 months.'
               : m >= 12
-                ? draft.locked
-                  ? 'Strong baseline - 12 months from a system, locked.'
-                  : 'Strong period - lock the number to finish this step.'
-                : draft.locked
-                  ? 'Solid baseline - locked, under 12 months so seasonality is noted.'
-                  : 'Lock the number to finish this step.'}
+                ? 'Strong baseline - 12 months from a system.'
+                : 'Solid baseline - under 12 months so seasonality is noted.'}
           </Text>
         </Stack>
       )}
