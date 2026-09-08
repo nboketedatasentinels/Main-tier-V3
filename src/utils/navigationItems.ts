@@ -1,5 +1,6 @@
 import {
   Archive,
+  Award,
   BookOpen,
   Building2,
   CalendarClock,
@@ -58,6 +59,7 @@ export const buildAmbassadorNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'coachees', label: 'My coachees', icon: Users },
       { key: 'schedule', label: 'Meetings', icon: CalendarClock },
+      { key: 'session-points', label: 'Attendance marks', icon: Award },
       { key: 'assessments', label: 'Assessments', icon: ClipboardCheck },
       { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
     ],
@@ -92,6 +94,7 @@ export const buildMentorNavItems = (): NavigationSection[] => [
       { key: 'overview', label: 'Overview', icon: LayoutDashboard },
       { key: 'mentees', label: 'My mentees', icon: Users },
       { key: 'schedule', label: 'Meetings', icon: CalendarClock },
+      { key: 'session-points', label: 'Attendance marks', icon: Award },
       { key: 'assessments', label: 'Assessments', icon: ClipboardCheck },
       { key: 'guidelines', label: 'Guidelines', icon: ScrollText },
     ],

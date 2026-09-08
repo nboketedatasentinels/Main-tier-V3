@@ -91,14 +91,14 @@ export const CoachSessionPointsPage: React.FC = () => {
       ambassadorName={`${profile?.firstName || 'Coach'} ${profile?.lastName || ''}`.trim()}
       avatarUrl={profile?.avatarUrl || profile?.photoURL}
       onNavigate={onNavigate}
-      subtitle="Session points"
+      subtitle="Attendance marks"
     >
       <Stack spacing={5}>
         <Box>
-          <Heading size="md">Assign session points</Heading>
-          <Text mt={1} fontSize="sm" color="text.secondary">
-            Confirm coach session attendance and award +2,000 points. Caps follow the learner&apos;s
-            journey and purchased coaching sessions.
+          <Heading size="md">Attendance marks</Heading>
+          <Text mt={1} fontSize="sm" color="text.secondary" maxW="720px">
+            Confirm who showed up for coaching sessions and award +2,000 marks. Caps follow the
+            learner&apos;s journey and purchased coaching sessions.
           </Text>
         </Box>
 

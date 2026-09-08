@@ -10,19 +10,18 @@ import {
   Flex,
   Heading,
   HStack,
-  Select,
+  Icon,
+  SimpleGrid,
   Spinner,
   Stack,
   Text,
   useToast,
 } from '@chakra-ui/react'
-import { Award } from 'lucide-react'
+import { Award, CalendarCheck2, Users } from 'lucide-react'
 import { getDisplayName } from '@/utils/displayName'
-import { useLearnerMentorshipSessions, useMentorMentorshipSessions } from '@/hooks/useMentorshipSessions'
+import { useMentorMentorshipSessions } from '@/hooks/useMentorshipSessions'
 import {
-  groupBookingsByStatus,
   subscribeToAmbassadorBookings,
-  subscribeToLearnerBookings,
   type CoachBooking,
 } from '@/services/ambassadorSessionService'
 import {
@@ -39,6 +38,9 @@ import {
 } from '@/services/sessionPointsService'
 import type { UserProfile } from '@/types'
 
+const PLUM = '#350e6f'
+const PLUM_DEEP = '#27062e'
+
 interface SessionPointsPanelProps {
   role: SessionPointsRole
   actorId: string
@@ -47,6 +49,12 @@ interface SessionPointsPanelProps {
   orgPurchasedCoachSessions?: number | null
 }
 
+type FilterMode = 'needs_marks' | 'by_learner'
+
+/**
+ * Inbox-style attendance → marks flow for mentors and coaches.
+ * Default: every meeting that still needs a +2,000 award, across all learners.
+ */
 export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
   role,
   actorId,
@@ -54,23 +62,17 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
   orgPurchasedCoachSessions = null,
 }) => {
   const toast = useToast()
-  const [selectedId, setSelectedId] = useState(learners[0]?.id ?? '')
-  const [quota, setQuota] = useState<SessionPointsQuota | null>(null)
+  const [filter, setFilter] = useState<FilterMode>('needs_marks')
+  const [learnerFilter, setLearnerFilter] = useState<string | null>(null)
+  const [quotas, setQuotas] = useState<Record<string, SessionPointsQuota>>({})
   const [quotaLoading, setQuotaLoading] = useState(false)
   const [awardingId, setAwardingId] = useState<string | null>(null)
   const [coachBookings, setCoachBookings] = useState<CoachBooking[]>([])
   const [coachLoading, setCoachLoading] = useState(role === 'coach')
 
-  useEffect(() => {
-    if (!selectedId && learners[0]?.id) setSelectedId(learners[0].id)
-  }, [learners, selectedId])
-
-  const selected = learners.find((l) => l.id === selectedId) ?? learners[0] ?? null
-
-  const { sessions: mentorSessionsForActor, loading: mentorActorLoading } =
-    useMentorMentorshipSessions(role === 'mentor' ? actorId : null)
-  const { sessions: mentorSessionsForLearner, loading: mentorLearnerLoading } =
-    useLearnerMentorshipSessions(role === 'mentor' ? selectedId || null : null)
+  const { sessions: mentorSessions, loading: mentorLoading } = useMentorMentorshipSessions(
+    role === 'mentor' ? actorId : null,
+  )
 
   useEffect(() => {
     if (role !== 'coach' || !actorId) {
@@ -79,20 +81,6 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
       return
     }
     setCoachLoading(true)
-    // Prefer bookings for the selected learner when known; otherwise all coach bookings.
-    if (selectedId) {
-      return subscribeToLearnerBookings(
-        selectedId,
-        (rows) => {
-          setCoachBookings(rows.filter((b) => b.ambassadorId === actorId))
-          setCoachLoading(false)
-        },
-        () => {
-          setCoachBookings([])
-          setCoachLoading(false)
-        },
-      )
-    }
     return subscribeToAmbassadorBookings(
       actorId,
       (rows) => {
@@ -104,55 +92,68 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
         setCoachLoading(false)
       },
     )
-  }, [role, actorId, selectedId])
+  }, [role, actorId])
 
-  const pending: PendingSessionAward[] = useMemo(() => {
-    if (role === 'mentor') {
-      const sessions = mentorSessionsForLearner.length
-        ? mentorSessionsForLearner
-        : mentorSessionsForActor.filter((s) => s.learnerId === selectedId)
-      return listPendingMentorAwards(sessions).filter((s) => s.learnerId === selectedId)
+  const allPending: PendingSessionAward[] = useMemo(() => {
+    if (role === 'mentor') return listPendingMentorAwards(mentorSessions)
+    return listPendingCoachAwards(coachBookings)
+  }, [role, mentorSessions, coachBookings])
+
+  const visiblePending = useMemo(() => {
+    if (filter === 'by_learner' && learnerFilter) {
+      return allPending.filter((p) => p.learnerId === learnerFilter)
     }
-    return listPendingCoachAwards(coachBookings).filter((b) => b.learnerId === selectedId)
-  }, [
-    role,
-    selectedId,
-    mentorSessionsForLearner,
-    mentorSessionsForActor,
-    coachBookings,
-  ])
+    return allPending
+  }, [allPending, filter, learnerFilter])
 
-  const refreshQuota = async (learnerId: string) => {
+  const pendingByLearner = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const item of allPending) {
+      map.set(item.learnerId, (map.get(item.learnerId) ?? 0) + 1)
+    }
+    return map
+  }, [allPending])
+
+  const refreshQuotas = async (learnerIds: string[]) => {
+    const unique = [...new Set(learnerIds.filter(Boolean))]
+    if (!unique.length) {
+      setQuotas({})
+      return
+    }
     setQuotaLoading(true)
     try {
-      const learner = learners.find((l) => l.id === learnerId)
-      const next = await getSessionPointsQuota({
-        role,
-        learnerId,
-        actorId,
-        purchasedCoachSessions:
-          role === 'coach'
-            ? (learner as { purchasedCoachSessions?: number } | undefined)?.purchasedCoachSessions ??
-              orgPurchasedCoachSessions
-            : null,
-      })
-      setQuota(next)
+      const entries = await Promise.all(
+        unique.map(async (learnerId) => {
+          const learner = learners.find((l) => l.id === learnerId)
+          const quota = await getSessionPointsQuota({
+            role,
+            learnerId,
+            actorId,
+            purchasedCoachSessions:
+              role === 'coach'
+                ? (learner as { purchasedCoachSessions?: number } | undefined)
+                    ?.purchasedCoachSessions ?? orgPurchasedCoachSessions
+                : null,
+          })
+          return [learnerId, quota] as const
+        }),
+      )
+      setQuotas(Object.fromEntries(entries))
     } catch (err) {
       console.error('[SessionPointsPanel] quota failed', err)
-      setQuota(null)
     } finally {
       setQuotaLoading(false)
     }
   }
 
   useEffect(() => {
-    if (!selectedId) {
-      setQuota(null)
-      return
-    }
-    void refreshQuota(selectedId)
+    const ids =
+      filter === 'by_learner' && learnerFilter
+        ? [learnerFilter]
+        : allPending.map((p) => p.learnerId)
+    void refreshQuotas(ids.length ? ids : learners.map((l) => l.id).slice(0, 8))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId, role, actorId, orgPurchasedCoachSessions])
+  }, [allPending, filter, learnerFilter, role, actorId, orgPurchasedCoachSessions, learners])
 
   const handleAward = async (item: PendingSessionAward) => {
     const key = item.kind === 'mentor' ? item.sessionId : item.bookingId
@@ -172,8 +173,8 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
       if (result.pointsAwarded) {
         toast({
           status: 'success',
-          title: `+${result.pointsAmount.toLocaleString()} points awarded`,
-          description: `${item.learnerName} received ${quota?.activityTitle ?? 'session'} points.`,
+          title: `+${result.pointsAmount.toLocaleString()} marks awarded`,
+          description: `${item.learnerName} got credit for attending.`,
         })
       } else {
         toast({
@@ -181,14 +182,14 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
           title: 'Attendance saved',
           description:
             result.message ||
-            'Points were not issued. Check the remaining award limit for this journey.',
+            'Marks were not issued. Check the remaining award limit for this journey.',
         })
       }
-      await refreshQuota(item.learnerId)
+      await refreshQuotas([item.learnerId])
     } catch (err) {
       toast({
         status: 'error',
-        title: 'Could not award points',
+        title: 'Could not award marks',
         description: err instanceof Error ? err.message : 'Please try again.',
       })
     } finally {
@@ -197,20 +198,19 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
   }
 
   const loading =
-    quotaLoading ||
-    (role === 'mentor' && (mentorActorLoading || mentorLearnerLoading)) ||
-    (role === 'coach' && coachLoading)
+    quotaLoading || (role === 'mentor' && mentorLoading) || (role === 'coach' && coachLoading)
+
+  const roleLabel = role === 'mentor' ? 'mentee' : 'coachee'
+  const meetingLabel = role === 'mentor' ? 'meet-up' : 'coaching session'
 
   if (!learners.length) {
     return (
-      <Alert status="info" rounded="lg">
+      <Alert status="info" rounded="xl" border="1px solid" borderColor="blue.100">
         <AlertIcon />
         <Box>
-          <AlertTitle>No learners assigned</AlertTitle>
+          <AlertTitle>No {roleLabel}s assigned yet</AlertTitle>
           <AlertDescription>
-            {role === 'mentor'
-              ? 'Assign mentees first, then award Mentor Meet Up points here after sessions.'
-              : 'Assign coachees first, then award Coach Session points here after attendance.'}
+            Once learners are linked to you, meetings they attend will show up here for marks.
           </AlertDescription>
         </Box>
       </Alert>
@@ -218,156 +218,221 @@ export const SessionPointsPanel: React.FC<SessionPointsPanelProps> = ({
   }
 
   return (
-    <Stack spacing={5}>
-      <Box
-        p={5}
-        border="1px solid"
-        borderColor="border.subtle"
-        rounded="lg"
-        bg="surface.default"
-      >
-        <Heading size="sm" mb={1}>
-          Session points
-        </Heading>
-        <Text fontSize="sm" color="text.secondary" mb={4}>
-          Award{' '}
-          <Text as="span" fontWeight="semibold">
-            +2,000
-          </Text>{' '}
-          points per attended {role === 'mentor' ? 'mentor meet-up' : 'coach session'}. Limits follow
-          the learner&apos;s journey
-          {role === 'coach' ? ' and purchased coaching sessions' : ''}.
-        </Text>
-
-        <Text fontSize="sm" fontWeight="semibold" mb={2}>
-          Learner
-        </Text>
-        <Select
-          value={selectedId}
-          onChange={(e) => setSelectedId(e.target.value)}
-          maxW="420px"
-          bg="white"
-        >
-          {learners.map((l) => (
-            <option key={l.id} value={l.id}>
-              {getDisplayName(l)}
-            </option>
-          ))}
-        </Select>
-
-        <Box mt={4} p={4} bg="gray.50" rounded="md" border="1px solid" borderColor="gray.200">
-          {quotaLoading || !quota ? (
-            <HStack>
-              <Spinner size="sm" />
-              <Text fontSize="sm" color="text.secondary">
-                Loading award limit…
+    <Stack spacing={6}>
+      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={3}>
+        {[
+          {
+            step: '1',
+            title: 'They show up',
+            body: `A booked ${meetingLabel} appears here when it still needs marks.`,
+            icon: Users,
+          },
+          {
+            step: '2',
+            title: 'You confirm',
+            body: 'One tap: confirm attendance only when they actually attended.',
+            icon: CalendarCheck2,
+          },
+          {
+            step: '3',
+            title: 'Marks land',
+            body: '+2,000 journey points, within their programme limit.',
+            icon: Award,
+          },
+        ].map((card) => (
+          <Box
+            key={card.step}
+            p={4}
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="xl"
+            bg="white"
+          >
+            <HStack spacing={3} mb={2}>
+              <Flex
+                w={8}
+                h={8}
+                borderRadius="full"
+                align="center"
+                justify="center"
+                bg="rgba(53,14,111,0.08)"
+                color={PLUM}
+                fontWeight="700"
+                fontSize="sm"
+              >
+                {card.step}
+              </Flex>
+              <Icon as={card.icon} color={PLUM} boxSize={4} />
+              <Text fontWeight="700" color="gray.900" fontSize="sm">
+                {card.title}
               </Text>
             </HStack>
-          ) : (
-            <Stack spacing={2}>
-              <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                <Text fontWeight="semibold">{quota.activityTitle}</Text>
-                <Badge colorScheme={quota.remaining > 0 ? 'green' : 'gray'}>
-                  {quota.remaining} remaining
-                </Badge>
-              </HStack>
-              <Text fontSize="sm" color="text.secondary">
-                {describeQuota(quota)}
-              </Text>
-              {quota.journeyType ? (
-                <Text fontSize="xs" color="text.muted">
-                  Journey: {quota.journeyType} · +{quota.pointsEach.toLocaleString()} pts each
-                </Text>
-              ) : null}
-            </Stack>
-          )}
-        </Box>
-      </Box>
+            <Text fontSize="sm" color="gray.600" lineHeight="1.55">
+              {card.body}
+            </Text>
+          </Box>
+        ))}
+      </SimpleGrid>
 
-      <Box
-        p={5}
-        border="1px solid"
-        borderColor="border.subtle"
-        rounded="lg"
-        bg="surface.default"
-      >
-        <Flex justify="space-between" align="center" mb={3} gap={3} flexWrap="wrap">
-          <Heading size="sm">Sessions awaiting points</Heading>
+      <Flex gap={2} flexWrap="wrap" align="center">
+        <Button
+          size="sm"
+          variant={filter === 'needs_marks' ? 'solid' : 'outline'}
+          bg={filter === 'needs_marks' ? PLUM : 'white'}
+          color={filter === 'needs_marks' ? 'white' : 'gray.700'}
+          borderColor="gray.300"
+          _hover={{ bg: filter === 'needs_marks' ? PLUM_DEEP : 'gray.50' }}
+          onClick={() => {
+            setFilter('needs_marks')
+            setLearnerFilter(null)
+          }}
+          rightIcon={
+            <Badge
+              ml={1}
+              colorScheme={filter === 'needs_marks' ? 'blackAlpha' : 'purple'}
+              borderRadius="full"
+            >
+              {allPending.length}
+            </Badge>
+          }
+        >
+          Needs marks
+        </Button>
+        {learners.map((l) => {
+          const count = pendingByLearner.get(l.id) ?? 0
+          const active = filter === 'by_learner' && learnerFilter === l.id
+          return (
+            <Button
+              key={l.id}
+              size="sm"
+              variant={active ? 'solid' : 'outline'}
+              bg={active ? PLUM : 'white'}
+              color={active ? 'white' : 'gray.700'}
+              borderColor="gray.300"
+              _hover={{ bg: active ? PLUM_DEEP : 'gray.50' }}
+              onClick={() => {
+                setFilter('by_learner')
+                setLearnerFilter(l.id)
+              }}
+            >
+              {getDisplayName(l)}
+              {count > 0 ? (
+                <Badge ml={2} colorScheme={active ? 'blackAlpha' : 'orange'} borderRadius="full">
+                  {count}
+                </Badge>
+              ) : null}
+            </Button>
+          )
+        })}
+      </Flex>
+
+      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+        <Flex
+          px={5}
+          py={4}
+          borderBottom="1px solid"
+          borderColor="gray.100"
+          justify="space-between"
+          align="center"
+          gap={3}
+          flexWrap="wrap"
+          bg="gray.50"
+        >
+          <Box>
+            <Heading size="sm" color="gray.900">
+              {filter === 'needs_marks'
+                ? 'Meetings waiting for marks'
+                : `Marks for ${
+                    learners.find((l) => l.id === learnerFilter)
+                      ? getDisplayName(learners.find((l) => l.id === learnerFilter)!)
+                      : 'learner'
+                  }`}
+            </Heading>
+            <Text mt={1} fontSize="sm" color="gray.600">
+              Confirm only sessions that happened. No-shows stay unmarked.
+            </Text>
+          </Box>
           {loading ? <Spinner size="sm" /> : null}
         </Flex>
 
-        {!loading && pending.length === 0 ? (
-          <Alert status="success" rounded="lg" variant="subtle">
-            <AlertIcon />
-            <Box>
-              <AlertTitle>Nothing pending</AlertTitle>
-              <AlertDescription>
-                {selected
-                  ? `No ${role === 'mentor' ? 'meet-ups' : 'bookings'} for ${getDisplayName(selected)} need points right now.`
-                  : 'Select a learner to review pending awards.'}
-              </AlertDescription>
-            </Box>
-          </Alert>
-        ) : null}
+        <Box px={5} py={4}>
+          {!loading && visiblePending.length === 0 ? (
+            <Alert status="success" rounded="lg" variant="subtle">
+              <AlertIcon />
+              <Box>
+                <AlertTitle>You&apos;re caught up</AlertTitle>
+                <AlertDescription>
+                  No meetings need marks right now. When someone attends, they&apos;ll appear here.
+                </AlertDescription>
+              </Box>
+            </Alert>
+          ) : null}
 
-        <Stack spacing={3}>
-          {pending.map((item) => {
-            const key = item.kind === 'mentor' ? item.sessionId : item.bookingId
-            const canAward = (quota?.remaining ?? 0) > 0
-            return (
-              <Flex
-                key={key}
-                p={4}
-                border="1px solid"
-                borderColor="border.subtle"
-                rounded="lg"
-                direction={{ base: 'column', md: 'row' }}
-                align={{ base: 'stretch', md: 'center' }}
-                gap={3}
-                justify="space-between"
-              >
-                <Box minW={0}>
-                  <HStack spacing={2} mb={1} flexWrap="wrap">
-                    <Text fontWeight="bold">{item.learnerName}</Text>
-                    <Badge>{item.status}</Badge>
-                  </HStack>
-                  <Text fontSize="sm" color="text.primary">
-                    {item.topic}
-                  </Text>
-                  <Text fontSize="sm" color="text.muted">
-                    {formatSessionWhen(item.when)}
-                  </Text>
-                </Box>
-                <Button
-                  leftIcon={<Award size={16} />}
-                  colorScheme="purple"
-                  bg="#350e6f"
-                  _hover={{ bg: '#27062e' }}
-                  onClick={() => void handleAward(item)}
-                  isLoading={awardingId === key}
-                  isDisabled={!canAward || Boolean(awardingId)}
+          <Stack spacing={3}>
+            {visiblePending.map((item) => {
+              const key = item.kind === 'mentor' ? item.sessionId : item.bookingId
+              const quota = quotas[item.learnerId]
+              const canAward = (quota?.remaining ?? 0) > 0
+              const points = quota?.pointsEach ?? 2000
+              return (
+                <Flex
+                  key={key}
+                  p={4}
+                  border="1px solid"
+                  borderColor="gray.200"
+                  borderRadius="lg"
+                  direction={{ base: 'column', md: 'row' }}
+                  align={{ base: 'stretch', md: 'center' }}
+                  gap={4}
+                  justify="space-between"
+                  bg="white"
                 >
-                  {canAward
-                    ? `Confirm attendance · +${(quota?.pointsEach ?? 2000).toLocaleString()}`
-                    : 'Limit reached'}
-                </Button>
-              </Flex>
-            )
-          })}
-        </Stack>
-
-        {role === 'coach' && selectedId ? (
-          <Text mt={4} fontSize="xs" color="text.muted">
-            Booked:{' '}
-            {groupBookingsByStatus(coachBookings.filter((b) => b.learnerId === selectedId)).booked
-              .length}{' '}
-            · Attended:{' '}
-            {
-              groupBookingsByStatus(coachBookings.filter((b) => b.learnerId === selectedId))
-                .attended.length
-            }
-          </Text>
-        ) : null}
+                  <Box minW={0} flex="1">
+                    <HStack spacing={2} mb={1} flexWrap="wrap">
+                      <Text fontWeight="700" color="gray.900">
+                        {item.learnerName}
+                      </Text>
+                      <Badge
+                        colorScheme={item.status === 'scheduled' || item.status === 'booked' ? 'blue' : 'green'}
+                        textTransform="none"
+                      >
+                        {item.status === 'scheduled' || item.status === 'booked'
+                          ? 'Booked'
+                          : 'Attended · marks pending'}
+                      </Badge>
+                    </HStack>
+                    <Text fontSize="sm" color="gray.800" noOfLines={2}>
+                      {item.topic}
+                    </Text>
+                    <Text fontSize="sm" color="gray.500" mt={0.5}>
+                      {formatSessionWhen(item.when)}
+                    </Text>
+                    {quota ? (
+                      <Text fontSize="xs" color="gray.500" mt={2}>
+                        {describeQuota(quota)}
+                      </Text>
+                    ) : null}
+                  </Box>
+                  <Button
+                    leftIcon={<Award size={16} />}
+                    bg={PLUM}
+                    color="white"
+                    _hover={{ bg: PLUM_DEEP }}
+                    onClick={() => void handleAward(item)}
+                    isLoading={awardingId === key}
+                    isDisabled={!canAward || Boolean(awardingId)}
+                    flexShrink={0}
+                    size="md"
+                  >
+                    {canAward
+                      ? `They attended · +${points.toLocaleString()}`
+                      : 'Limit reached'}
+                  </Button>
+                </Flex>
+              )
+            })}
+          </Stack>
+        </Box>
       </Box>
     </Stack>
   )

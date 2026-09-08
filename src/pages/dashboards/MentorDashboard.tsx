@@ -506,7 +506,7 @@ export const MentorDashboard: React.FC = () => {
             id="mentor-schedule"
             eyebrow="Meetings"
             title="Meeting schedule"
-            subtitle="Learner requests appear here. Accept to confirm, then mark attendance to issue mentor meetup points. Session points ledger stays under Meetings → Session points."
+            subtitle="Learner requests appear here. Accept to confirm. Award attendance marks from Attendance marks in the sidebar."
             action={
               <Button
                 size="sm"
@@ -514,7 +514,7 @@ export const MentorDashboard: React.FC = () => {
                 borderColor="gray.300"
                 onClick={() => navigate('/mentor/session-points')}
               >
-                Session points
+                Attendance marks
               </Button>
             }
           >

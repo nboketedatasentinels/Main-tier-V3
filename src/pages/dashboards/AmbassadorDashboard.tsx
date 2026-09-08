@@ -538,7 +538,7 @@ export const AmbassadorDashboard: React.FC = () => {
             id="coach-schedule"
             eyebrow="Sessions"
             title="Coaching slots"
-            subtitle="Publish availability. Learners book against what their organisation purchased. Mark Attended to issue +2,000 Coach Session points - only when they showed up (within 48 hours for Journey clients). Session points ledger stays under Meetings → Session points."
+            subtitle="Publish availability. Learners book against what their organisation purchased. Award attendance marks from Attendance marks in the sidebar."
             action={
               <Button
                 size="sm"
@@ -546,7 +546,7 @@ export const AmbassadorDashboard: React.FC = () => {
                 borderColor="gray.300"
                 onClick={() => navigate('/coach/session-points')}
               >
-                Session points
+                Attendance marks
               </Button>
             }
           >

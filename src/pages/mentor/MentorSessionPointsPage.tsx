@@ -59,10 +59,10 @@ export const MentorSessionPointsPage: React.FC = () => {
     >
       <Stack spacing={5}>
         <Box>
-          <Heading size="md">Assign session points</Heading>
-          <Text mt={1} fontSize="sm" color="text.secondary">
-            Confirm mentor meet-ups and award +2,000 points within each learner&apos;s journey
-            limit (3 on 3M, 6 on 6M, 9 on 9M).
+          <Heading size="md">Attendance marks</Heading>
+          <Text mt={1} fontSize="sm" color="text.secondary" maxW="720px">
+            Confirm who showed up for mentor meet-ups and award +2,000 marks. Journey limits apply
+            (3 on 3-Month, 6 on 6-Month, 9 on 9-Month).
           </Text>
         </Box>
 
