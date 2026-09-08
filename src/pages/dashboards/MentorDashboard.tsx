@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   AlertIcon,
-  Avatar,
   Box,
   Button,
   Collapse,
@@ -43,7 +42,6 @@ import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCou
 import { fetchAssignedMenteesForMentor } from '@/services/learnerAssignmentService'
 import { mentoringTipsLibrary } from '@/services/mentorCoachingInsights'
 import { getCatalogueCourseById } from '@/config/courseCatalogue'
-import { PERSONALITY_TYPES } from '@/config/personality-data'
 import { getDisplayName } from '@/utils/displayName'
 import { buildMentorNavItems } from '@/utils/navigationItems'
 import {
@@ -53,12 +51,6 @@ import {
 import type { UserProfile } from '@/types'
 
 type SectionKey = MentorDashboardSection
-
-const personalityLabel = (type?: string | null): string | null => {
-  if (!type) return null
-  const hit = PERSONALITY_TYPES.find((p) => p.type === type)
-  return hit ? `${hit.type} · ${hit.name}` : type
-}
 
 const SectionShell: React.FC<{
   id: string
@@ -352,7 +344,7 @@ export const MentorDashboard: React.FC = () => {
               id="mentor-mentees-header"
               eyebrow="Directory"
               title="Who you mentor"
-              subtitle="Select a mentee for ranking, profile (values, personality, LIFT), and optional session prep."
+              subtitle="Pick someone from the ranking to open their profile, LIFT, and session prep."
               action={
                 <Button
                   leftIcon={<RefreshCw size={14} />}
@@ -379,20 +371,8 @@ export const MentorDashboard: React.FC = () => {
                 alignItems="start"
                 mb={5}
               >
-                <LearnerPointsRanking
-                  learners={mentees}
-                  selectedId={selected?.id}
-                  sticky
-                  limit={5}
-                  expandable
-                  title="Points ranking"
-                  onSelect={(id) => {
-                    setSelectedId(id)
-                    setSessionPrepOpen(false)
-                  }}
-                />
-                <Box>
-                  <InputGroup maxW="420px" mb={4}>
+                <Stack spacing={3}>
+                  <InputGroup>
                     <InputLeftElement pointerEvents="none">
                       <Search size={16} color="#9CA3AF" />
                     </InputLeftElement>
@@ -405,12 +385,22 @@ export const MentorDashboard: React.FC = () => {
                       borderRadius="md"
                     />
                   </InputGroup>
-
+                  <LearnerPointsRanking
+                    learners={filtered}
+                    selectedId={selected?.id}
+                    sticky
+                    limit={5}
+                    expandable
+                    title="Points ranking"
+                    onSelect={(id) => {
+                      setSelectedId(id)
+                      setSessionPrepOpen(false)
+                    }}
+                  />
+                </Stack>
+                <Box>
                   {loading ? (
-                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
-                      <Skeleton height="180px" borderRadius="xl" />
-                      <Skeleton height="180px" borderRadius="xl" />
-                    </SimpleGrid>
+                    <Skeleton height="280px" borderRadius="xl" />
                   ) : filtered.length === 0 ? (
                     <Box p={8} bg="white" borderRadius="xl" border="1px dashed" borderColor="gray.200">
                       <Text color="gray.600" fontSize="sm">
@@ -419,108 +409,50 @@ export const MentorDashboard: React.FC = () => {
                         up here.
                       </Text>
                     </Box>
-                  ) : (
-                    <Grid
-                      templateColumns={{ base: '1fr', lg: '240px 1fr' }}
-                      gap={5}
-                      alignItems="start"
-                    >
-                      <Stack spacing={2}>
-                        {filtered.map((m) => {
-                          const active = selected?.id === m.id
-                          const valuesCount = (m.coreValues || []).filter(Boolean).length
-                          return (
-                            <Button
-                              key={m.id}
-                              onClick={() => {
-                                setSelectedId(m.id)
-                                setSessionPrepOpen(false)
-                              }}
-                              justifyContent="flex-start"
-                              h="auto"
-                              py={3}
-                              px={3}
-                              borderRadius="lg"
-                              bg={active ? 'gray.50' : 'white'}
-                              color="gray.800"
-                              border="1px solid"
-                              borderColor={active ? '#350e6f' : 'gray.200'}
-                              boxShadow={active ? 'inset 3px 0 0 #350e6f' : 'none'}
-                              _hover={{ bg: 'gray.50', borderColor: active ? '#350e6f' : 'gray.300' }}
-                              textAlign="left"
-                            >
-                              <HStack spacing={3} align="center" w="full">
-                                <Avatar
-                                  name={getDisplayName(m)}
-                                  size="sm"
-                                  bg="gray.100"
-                                  color="gray.700"
-                                />
-                                <Box minW={0}>
-                                  <Text fontWeight="600" fontSize="sm" noOfLines={1} color="gray.900">
-                                    {getDisplayName(m)}
-                                  </Text>
-                                  <Text fontSize="xs" color="gray.500" noOfLines={1}>
-                                    {personalityLabel(m.personalityType) || 'Personality pending'}
-                                    {' · '}
-                                    {valuesCount === 5
-                                      ? 'Values set'
-                                      : valuesCount > 0
-                                        ? `${valuesCount}/5 values`
-                                        : 'Values not set'}
-                                  </Text>
-                                </Box>
-                              </HStack>
-                            </Button>
-                          )
-                        })}
-                      </Stack>
-                      {selected ? (
-                        <Stack spacing={3} minW={0}>
-                          <MentorLearnerPanel learner={selected} mentorId={profile?.id} />
-                          <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
-                            <Button
-                              variant="ghost"
-                              w="full"
-                              justifyContent="space-between"
-                              borderRadius={0}
-                              h="auto"
-                              py={3}
-                              px={4}
-                              rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
-                              onClick={() => setSessionPrepOpen((v) => !v)}
-                            >
-                              <Text fontSize="sm" fontWeight="600" color="gray.800">
-                                Session prep
-                              </Text>
-                            </Button>
-                            <Collapse in={sessionPrepOpen} animateOpacity>
-                              <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
-                                <LearnerSessionPrep
-                                  audience="mentor"
-                                  learner={selected}
-                                  courseTitles={orgCourseTitles}
-                                  windowStatus={null}
-                                  hideLiftSection
-                                />
-                              </Box>
-                            </Collapse>
-                          </Box>
-                        </Stack>
-                      ) : (
-                        <Box
-                          p={6}
-                          bg="white"
-                          borderRadius="xl"
-                          border="1px dashed"
-                          borderColor="gray.200"
+                  ) : selected ? (
+                    <Stack spacing={3} minW={0}>
+                      <MentorLearnerPanel learner={selected} mentorId={profile?.id} />
+                      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+                        <Button
+                          variant="ghost"
+                          w="full"
+                          justifyContent="space-between"
+                          borderRadius={0}
+                          h="auto"
+                          py={3}
+                          px={4}
+                          rightIcon={<Icon as={sessionPrepOpen ? ChevronUp : ChevronDown} boxSize={4} />}
+                          onClick={() => setSessionPrepOpen((v) => !v)}
                         >
-                          <Text fontSize="sm" color="gray.600">
-                            Select a mentee to open their profile.
+                          <Text fontSize="sm" fontWeight="600" color="gray.800">
+                            Session prep
                           </Text>
-                        </Box>
-                      )}
-                    </Grid>
+                        </Button>
+                        <Collapse in={sessionPrepOpen} animateOpacity>
+                          <Box px={3} pb={4} borderTop="1px solid" borderColor="gray.100">
+                            <LearnerSessionPrep
+                              audience="mentor"
+                              learner={selected}
+                              courseTitles={orgCourseTitles}
+                              windowStatus={null}
+                              hideLiftSection
+                            />
+                          </Box>
+                        </Collapse>
+                      </Box>
+                    </Stack>
+                  ) : (
+                    <Box
+                      p={6}
+                      bg="white"
+                      borderRadius="xl"
+                      border="1px dashed"
+                      borderColor="gray.200"
+                    >
+                      <Text fontSize="sm" color="gray.600">
+                        Select a mentee from the ranking to open their profile.
+                      </Text>
+                    </Box>
                   )}
                 </Box>
               </Grid>
