@@ -79,7 +79,7 @@ export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
               PERSONALITY
             </Text>
             <Text mt={1} fontSize="sm" fontWeight="600" color={PLUM}>
-              {personalityLabel(learner.personalityType) || 'Pending'}
+              {personalityLabel(learner.personalityType) || 'Not set yet'}
             </Text>
           </Box>
           <Box
