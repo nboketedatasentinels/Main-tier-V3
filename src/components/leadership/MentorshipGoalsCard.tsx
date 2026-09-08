@@ -136,18 +136,27 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       px={{ base: 4, md: 6 }}
       py={{ base: 4, md: 5 }}
       boxShadow={primary ? '0 8px 24px rgba(53, 14, 111, 0.1)' : '0 1px 3px rgba(0,0,0,0.03)'}
+      maxW="100%"
+      minW={0}
+      overflow="hidden"
     >
-      <Flex justify="space-between" align="flex-start" gap={3} mb={2}>
-        <Box>
+      <Flex justify="space-between" align="flex-start" gap={3} mb={2} minW={0}>
+        <Box minW={0} flex={1}>
           <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500" textTransform="uppercase">
             {audience === 'coach' ? 'Coaching goal' : 'Mentorship goal'}
           </Text>
-          <Text mt={1} fontSize={primary ? 'lg' : 'md'} fontWeight="700" color="#27062e">
+          <Text
+            mt={1}
+            fontSize={primary ? 'lg' : 'md'}
+            fontWeight="700"
+            color="#27062e"
+            wordBreak="break-word"
+          >
             {archetype ? `${archetype} · session prep` : "I'm trying to achieve…"}
           </Text>
         </Box>
         {!hasSavedAnswers ? (
-          <HStack spacing={1.5} pt={1}>
+          <HStack spacing={1.5} pt={1} flexShrink={0}>
             {prompts.map((_, i) => (
               <Box
                 key={i}
@@ -162,16 +171,24 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       </Flex>
 
       {hasSavedAnswers ? (
-        <Stack spacing={0}>
+        <Stack spacing={0} minW={0}>
           {prompts.map((p, i) => {
             const text = (answers[i] || '').trim()
             if (!text) return null
             return (
-              <Box key={p.label} borderTop="1px solid" borderColor="rgba(53, 14, 111, 0.12)" py={3}>
+              <Box key={p.label} borderTop="1px solid" borderColor="rgba(53, 14, 111, 0.12)" py={3} minW={0}>
                 <Text fontSize="10px" fontWeight="bold" letterSpacing="0.08em" textTransform="uppercase" color="gray.500">
                   {p.label}
                 </Text>
-                <Text fontSize="sm" color="#27062e" mt={1} whiteSpace="pre-wrap" lineHeight="1.55">
+                <Text
+                  fontSize="sm"
+                  color="#27062e"
+                  mt={1}
+                  whiteSpace="pre-wrap"
+                  overflowWrap="anywhere"
+                  wordBreak="break-word"
+                  lineHeight="1.55"
+                >
                   {text}
                 </Text>
               </Box>
@@ -196,11 +213,19 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
       ) : (
         <>
           {prompt && (
-            <Box>
+            <Box minW={0}>
               <Text fontSize="xs" fontWeight="bold" color="gray.500" letterSpacing="0.06em" textTransform="uppercase">
                 {step + 1}/{prompts.length} · {prompt.label}
               </Text>
-              <Text fontSize={primary ? 'md' : 'sm'} color="gray.800" mt={1} mb={3} fontWeight="medium" lineHeight="1.45">
+              <Text
+                fontSize={primary ? 'md' : 'sm'}
+                color="gray.800"
+                mt={1}
+                mb={3}
+                fontWeight="medium"
+                lineHeight="1.45"
+                wordBreak="break-word"
+              >
                 {prompt.question}
               </Text>
               <Textarea
@@ -216,6 +241,8 @@ export const MentorshipGoalsCard: React.FC<MentorshipGoalsCardProps> = ({
                 fontSize="md"
                 isDisabled={loading || liftLoading}
                 autoFocus={primary}
+                whiteSpace="pre-wrap"
+                sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                 _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
               />
             </Box>

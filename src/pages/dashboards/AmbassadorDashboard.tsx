@@ -372,7 +372,7 @@ export const AmbassadorDashboard: React.FC = () => {
               id="coach-coachees-header"
               eyebrow="Directory"
               title="Who you coach"
-              subtitle="Select a coachee for ranking, profile (values, personality, LIFT), and optional session prep."
+              subtitle="Pick someone from the ranking to open their profile, LIFT, and session prep."
               action={
                 <Button
                   leftIcon={<RefreshCw size={14} />}
@@ -394,10 +394,12 @@ export const AmbassadorDashboard: React.FC = () => {
               ) : null}
 
               <Grid
-                templateColumns={{ base: '1fr', xl: '280px 1fr' }}
+                templateColumns={{ base: '1fr', xl: '280px minmax(0, 1fr)' }}
                 gap={5}
                 alignItems="start"
                 mb={5}
+                maxW="100%"
+                minW={0}
               >
                 <Stack spacing={3}>
                   <InputGroup>

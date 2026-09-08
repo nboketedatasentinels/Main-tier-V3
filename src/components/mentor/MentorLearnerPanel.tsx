@@ -60,8 +60,8 @@ export const MentorLearnerPanel: React.FC<MentorLearnerPanelProps> = ({
   const ageRange = (learner as { ageRange?: string | null }).ageRange
 
   return (
-    <Stack spacing={4}>
-      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden">
+    <Stack spacing={4} minW={0} maxW="100%" overflow="hidden">
+      <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" overflow="hidden" minW={0}>
         <Box px={5} py={4} borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
           <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
             MENTEE PROFILE

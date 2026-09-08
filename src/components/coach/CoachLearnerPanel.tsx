@@ -16,10 +16,6 @@ import {
 } from '@chakra-ui/react'
 import { Save, Sparkles } from 'lucide-react'
 import {
-  MENTORSHIP_GOALS_MAX_LENGTH,
-  useMentorshipGoals,
-} from '@/hooks/useMentorshipGoals'
-import {
   buildAiInference,
   buildCoachingSessionPlan,
   buildStrengthsWeaknessesWriteUp,
@@ -32,6 +28,7 @@ import {
   resolvePurchasedCoachSessions,
 } from '@/utils/purchasedCoachSessions'
 import { PERSONALITY_TYPES } from '@/config/personality-data'
+import { MentorshipGoalsCard } from '@/components/leadership/MentorshipGoalsCard'
 import { LiftProfileStrip } from '@/components/leadership/LiftProfileStrip'
 import type { UserProfile } from '@/types'
 
@@ -83,27 +80,6 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
       (learner as { purchasedCoachSessions?: unknown }).purchasedCoachSessions,
     orgPurchased: orgPurchasedCoachSessions,
   })
-
-  const {
-    goals,
-    loading: goalsLoading,
-    saving: goalsSaving,
-    save: saveGoals,
-  } = useMentorshipGoals(learnerId, coachId)
-
-  const [goalsDraft, setGoalsDraft] = useState('')
-  const [goalsReady, setGoalsReady] = useState(false)
-
-  useEffect(() => {
-    if (!goalsLoading && !goalsReady) {
-      setGoalsDraft(goals)
-      setGoalsReady(true)
-    }
-  }, [goals, goalsLoading, goalsReady])
-
-  useEffect(() => {
-    setGoalsReady(false)
-  }, [learnerId])
 
   const insightInput = useMemo(
     () => ({
@@ -197,28 +173,6 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
     }
   }
 
-  const goalsDirty = goalsReady && goalsDraft.trim() !== goals.trim()
-  const goalsTooLong = goalsDraft.length > MENTORSHIP_GOALS_MAX_LENGTH
-
-  const handleSaveGoals = async () => {
-    if (!goalsDirty || goalsTooLong || goalsSaving) return
-    try {
-      await saveGoals(goalsDraft)
-      toast({
-        title: 'Goal saved',
-        description: 'Learner notified. Also visible in Session Prep and Leadership Council.',
-        status: 'success',
-        duration: 3200,
-      })
-    } catch (err) {
-      toast({
-        title: 'Could not save goal',
-        description: err instanceof Error ? err.message : 'Try again.',
-        status: 'error',
-      })
-    }
-  }
-
   const handleSavePlan = async () => {
     if (!coachId || !learnerId) return
     setPlanSaving(true)
@@ -261,7 +215,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
   const ageRange = (learner as { ageRange?: string | null }).ageRange
 
   return (
-    <Stack spacing={5}>
+    <Stack spacing={5} minW={0} maxW="100%" overflow="hidden">
       {/* Profile strip */}
       <Box
         border="1px solid"
@@ -269,6 +223,7 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
         borderRadius="xl"
         bg="white"
         overflow="hidden"
+        minW={0}
       >
         <Box px={5} py={4} borderBottom="1px solid" borderColor="gray.100" bg="gray.50">
           <Text fontSize="xs" fontWeight="semibold" letterSpacing="0.1em" color="gray.500">
@@ -385,45 +340,9 @@ export const CoachLearnerPanel: React.FC<CoachLearnerPanelProps> = ({
         ) : null}
       </Box>
 
-      {/* Goals */}
-      {allowGoalEdit ? (
-        <Box border="1px solid" borderColor="gray.200" borderRadius="xl" bg="white" px={5} py={4}>
-          <Text fontSize="xs" fontWeight="bold" letterSpacing="0.08em" color="gray.500">
-            COACHING GOAL
-          </Text>
-          <Text mt={1} fontSize="md" fontWeight="700" color={PLUM}>
-            I&apos;m trying to achieve…
-          </Text>
-          <Text mt={1} fontSize="sm" color="gray.600" mb={3}>
-            Capture the outcome in their words. Re-contract when it moves.
-          </Text>
-          <Textarea
-            value={goalsDraft}
-            onChange={(e) => setGoalsDraft(e.target.value)}
-            minH="100px"
-            placeholder="e.g. Hold a direct conversation with my head of data without backing down."
-            borderColor="gray.300"
-            isDisabled={goalsLoading}
-            _focus={{ borderColor: '#350e6f', boxShadow: '0 0 0 1px #350e6f' }}
-          />
-          <Flex mt={3} justify="space-between" align="center" gap={3} flexWrap="wrap">
-            <Text fontSize="xs" color={goalsTooLong ? 'red.500' : 'gray.500'}>
-              {goalsDraft.length}/{MENTORSHIP_GOALS_MAX_LENGTH}
-            </Text>
-            <Button
-              size="sm"
-              leftIcon={<Save size={14} />}
-              bg="#350e6f"
-              color="white"
-              _hover={{ bg: '#27062e' }}
-              onClick={() => void handleSaveGoals()}
-              isDisabled={!goalsDirty || goalsTooLong}
-              isLoading={goalsSaving}
-            >
-              Save goal
-            </Button>
-          </Flex>
-        </Box>
+      {/* Goals — same MentorshipGoalsCard as learner / mentor (wraps after save). */}
+      {allowGoalEdit && learnerId ? (
+        <MentorshipGoalsCard learnerId={learnerId} mentorId={coachId} audience="coach" />
       ) : null}
 
       {/* Learning plan */}

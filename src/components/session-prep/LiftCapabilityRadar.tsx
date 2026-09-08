@@ -49,8 +49,8 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
   const gapPt = gap ? shape.pts[['L', 'I', 'F', 'T'].indexOf(gap)] : null
 
   return (
-    <Box>
-      <Box as="svg" className="radar" viewBox="0 0 240 200" w="100%" h="auto" role="img" aria-label="LIFT capability shape">
+    <Box maxW="100%" minW={0} overflow="hidden">
+      <Box as="svg" className="radar" viewBox="0 0 240 200" w="100%" maxW="280px" h="auto" role="img" aria-label="LIFT capability shape">
         {[0.25, 0.5, 0.75, 1].map((scale) => {
           const pts = (['L', 'I', 'F', 'T'] as PillarKey[])
             .map((k) => pointFor(k, scale * 100, shape.cx, shape.cy, shape.maxR))
@@ -140,16 +140,24 @@ export const LiftCapabilityRadar: React.FC<LiftCapabilityRadarProps> = ({
           No LIFT Index on file yet. The radar stays empty until they complete the assessment.
         </Text>
       ) : (
-        <List spacing={1.5} mt={2} styleType="none" ml={0}>
+        <List spacing={1.5} mt={2} styleType="none" ml={0} maxW="100%" minW={0}>
           {PILLARS.map((p) => (
-            <ListItem key={p.key} display="flex" gap={2} alignItems="baseline" fontSize="12px" color="#6B6579">
-              <Text as="b" fontFamily="mono" fontSize="11px" color="#2D2A3E" w="14px">
+            <ListItem
+              key={p.key}
+              display="flex"
+              gap={2}
+              alignItems="baseline"
+              fontSize="12px"
+              color="#6B6579"
+              minW={0}
+            >
+              <Text as="b" fontFamily="mono" fontSize="11px" color="#2D2A3E" w="14px" flexShrink={0}>
                 {p.key}
               </Text>
-              <Text flex="1">
+              <Text flex="1" minW={0} overflowWrap="anywhere" wordBreak="break-word">
                 {p.name}
                 {showScores ? (
-                  <Text as="span" ml={2} fontFamily="mono" fontSize="11px" color="#2D2A3E">
+                  <Text as="span" ml={2} fontFamily="mono" fontSize="11px" color="#2D2A3E" whiteSpace="nowrap">
                     {Math.round(pillars![p.key])}
                   </Text>
                 ) : null}

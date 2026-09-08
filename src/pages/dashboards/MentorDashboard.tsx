@@ -366,10 +366,12 @@ export const MentorDashboard: React.FC = () => {
               ) : null}
 
               <Grid
-                templateColumns={{ base: '1fr', xl: '280px 1fr' }}
+                templateColumns={{ base: '1fr', xl: '280px minmax(0, 1fr)' }}
                 gap={5}
                 alignItems="start"
                 mb={5}
+                maxW="100%"
+                minW={0}
               >
                 <Stack spacing={3}>
                   <InputGroup>
