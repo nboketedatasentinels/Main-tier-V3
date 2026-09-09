@@ -86,7 +86,7 @@ const APPROVAL_LABEL: Record<string, string> = {
   partner_approved: 'Partner approves',
   partner_issued: 'Partner issues',
   mentor_issued: 'Mentor issues',
-  ambassador_issued: 'Ambassador issues',
+  ambassador_issued: 'Coach issues',
 }
 
 const ordinalLabel = (n: number) => {

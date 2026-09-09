@@ -105,6 +105,7 @@ import {
   wouldCreateSinglePillarCourseSet,
 } from '@/config/courseCatalogue'
 import { resolveJourneyType } from '@/utils/journeyType'
+import { formatRoleLabel } from '@/utils/role'
 
 interface CreateOrganizationModalProps {
   isOpen: boolean
@@ -138,7 +139,7 @@ const inviteRoleOptions: InviteDraft['role'][] = ['user', 'partner', 'mentor', '
 
 const formatInviteRoleLabel = (role: InviteDraft['role']) => {
   if (role === 'user') return 'User'
-  return role.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase())
+  return formatRoleLabel(role)
 }
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const commonEmailDomains = ['gmail.com', 'outlook.com', 'hotmail.com', 'yahoo.com', 'icloud.com']
