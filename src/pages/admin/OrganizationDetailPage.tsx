@@ -61,6 +61,14 @@ import {
   followUpIssuesFromRisk,
   pendingInviteFollowUpRisk,
 } from '@/utils/adminFollowUpRisk'
+import { formatRoleLabel } from '@/utils/role'
+
+/** Org Users table: map ambassador → Coach; keep plain "user" invites as User. */
+const formatOrgUserRole = (role?: string | null) => {
+  const raw = (role || 'user').trim().toLowerCase()
+  if (raw === 'user') return 'User'
+  return formatRoleLabel(role || 'user')
+}
 
 const formatDate = (value?: string) => {
   if (!value) return 'Not available'
@@ -773,8 +781,8 @@ export const OrganizationDetailPage: React.FC = () => {
                                   </Text>
                                 ) : null}
                               </Stack>
-                              <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
-                                {(invite.role || 'user').replace('_', ' ')}
+                              <Badge colorScheme="blue" variant="subtle" textTransform="none">
+                                {formatOrgUserRole(invite.role)}
                               </Badge>
                               <Badge colorScheme="yellow" variant="subtle">
                                 Pending invite
@@ -835,8 +843,8 @@ export const OrganizationDetailPage: React.FC = () => {
                               </Text>
                             </HStack>
                             <Text color="brand.text">{userRow.email || 'No email'}</Text>
-                            <Badge colorScheme="blue" variant="subtle" textTransform="capitalize">
-                              {userRow.role.replace('_', ' ')}
+                            <Badge colorScheme="blue" variant="subtle" textTransform="none">
+                              {formatOrgUserRole(userRow.role)}
                             </Badge>
                             <Badge
                               colorScheme={risk.atRisk ? 'orange' : 'green'}
