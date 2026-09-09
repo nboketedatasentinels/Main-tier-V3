@@ -500,9 +500,17 @@ interface JourneyActivityEntry {
 const JOURNEY_ACTIVITY_CONFIG: Partial<Record<JourneyType, JourneyActivityEntry[]>> = {
   "4W": [
     // Free-user intro checklist (no org). Product sheet / docs/points-system.md:
-    // watch 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
+    // podcast 3x1000 + webinar 3000 + impact 2x1000 + lift 3000 + book 1500 +
     // shameless 1500 + ai tool 1000 = 15,000 / pass 9,000.
-    { activityId: "watch_podcast", totalFrequency: 3 },
+    // Podcasts use the same 3-Month journey course packs (T4L-C**) as paid 3M.
+    {
+      activityId: "podcast_workbook",
+      totalFrequency: 3,
+      pointsOverride: 1000,
+      titleOverride: "Podcast",
+      approvalOverride: "auto",
+      requiresApprovalOverride: false,
+    },
     {
       activityId: "webinar_workbook",
       totalFrequency: 1,
@@ -998,7 +1006,8 @@ export function getPointsPerCourse(journeyType?: JourneyType | null): number | n
 // ─── Activity Resolution ────────────────────────────────────────────────────
 
 const ACTIVITY_ID_ALIASES: Record<string, ActivityId> = {
-  podcast: "watch_podcast",
+  podcast: "podcast_workbook",
+  watch_podcast: "podcast_workbook",
   webinar: "webinar_workbook",
   recognition_over_recall: "lift_module",
   von_restorff_effect: "lift_module",

@@ -32,6 +32,11 @@ import { useUserPillar } from '@/hooks/useUserPillar'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
 import { resolvePillarForMonth, isProgrammePassFailMonth } from '@/utils/monthCoursePillar'
+import { isFreeUser } from '@/utils/membership'
+import {
+  FREE_USER_3M_MONTHLY_ASSIGNMENTS,
+  resolveFreeUserCatalogueCourseId,
+} from '@/config/freeUserJourneyCourses'
 import type { Pillar } from '@/types/pillar'
 
 /** Checklist activity ids that mirror the Capstone / Case Study / Practical cards. */
@@ -200,6 +205,7 @@ export const ActivityList = ({
     null
   const { program } = useOrganizationProgramCourses(organizationId)
   const { pillar } = useUserPillar()
+  const freeNonOrgLearner = Boolean(isFreeUser(profile) && !organizationId)
   // Free practitioners (Starter Kit) see the same Capstone / Case Study /
   // Practical cards under Week 1 as on My Courses - not as scattered rows.
   const showProgrammeCardsUnderWeek1 = pillar === 'starter_kit'
@@ -210,9 +216,29 @@ export const ActivityList = ({
   const periodNoun = useMonths ? 'month' : 'week'
   const currentPeriod = useMonths ? weekToMonth(currentWeek) : currentWeek
 
+  const resolveCatalogueCourseId = (monthOrNull: number | null, weekFallback: number): string | null => {
+    if (monthOrNull != null) {
+      const fromOrg = program?.monthlyAssignments?.[String(monthOrNull)]?.trim() || null
+      if (fromOrg) return fromOrg
+      if (freeNonOrgLearner) {
+        return (
+          FREE_USER_3M_MONTHLY_ASSIGNMENTS[String(Math.min(3, Math.max(1, monthOrNull)))] ||
+          resolveFreeUserCatalogueCourseId(monthOrNull, { treatAsMonth: true })
+        )
+      }
+      return null
+    }
+    // Week-based free intro (4W): still serve 3M journey podcast packs.
+    if (freeNonOrgLearner) return resolveFreeUserCatalogueCourseId(weekFallback)
+    return null
+  }
+
   const pillarForMonth = (month: number): Pillar | null =>
-    resolvePillarForMonth(month, program?.monthlyAssignments) ??
-    (useMonths ? null : pillar)
+    resolvePillarForMonth(
+      month,
+      program?.monthlyAssignments ??
+        (freeNonOrgLearner ? FREE_USER_3M_MONTHLY_ASSIGNMENTS : null),
+    ) ?? (useMonths ? null : pillar)
 
   const visibleActivities = useMemo(() => getVisibleActivities(activities), [activities])
 
@@ -963,10 +989,10 @@ export const ActivityList = ({
                           : useMonths
                             ? weekToMonth(weekOverride)
                             : null
-                      const rowCatalogueCourseId =
-                        rowMonth != null
-                          ? program?.monthlyAssignments?.[String(rowMonth)]?.trim() || null
-                          : null
+                      const rowCatalogueCourseId = resolveCatalogueCourseId(
+                        rowMonth,
+                        weekOverride,
+                      )
                       return (
                         <ActivityRow
                           key={rowKey}

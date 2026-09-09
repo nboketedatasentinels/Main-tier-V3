@@ -706,7 +706,7 @@ export const ActivityRow = ({
               </HStack>
             )}
 
-            {activity.id === 'podcast_workbook' &&
+            {(activity.id === 'podcast_workbook' || activity.id === 'watch_podcast') &&
               (catalogueCourseId ? (
                 <CoursePodcastSeriesPanel
                   activity={activity}
@@ -729,7 +729,9 @@ export const ActivityRow = ({
               />
             )}
 
-            {activity.id !== 'podcast_workbook' && !isProgrammeComponent && (
+            {activity.id !== 'podcast_workbook' &&
+              activity.id !== 'watch_podcast' &&
+              !isProgrammeComponent && (
               <Flex
                 direction={{ base: 'column', sm: 'row' }}
                 gap={2}

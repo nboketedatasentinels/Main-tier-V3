@@ -15,7 +15,7 @@
     "completionThresholdPct": 60,
     "timelineDisplay": "duration",
     "activityIds": [
-      "watch_podcast",
+      "podcast_workbook",
       "webinar_workbook",
       "impact_log",
       "lift_module",

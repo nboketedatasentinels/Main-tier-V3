@@ -40,8 +40,8 @@ describe('pointsConfig module activities', () => {
     expect(JOURNEY_META['4W'].maxPossiblePoints).toBe(15000)
     expect(byId.has('peer_to_peer')).toBe(false)
 
-    expect(byId.get('watch_podcast')?.points).toBe(1000)
-    expect(byId.get('watch_podcast')?.activityPolicy?.maxTotal).toBe(3)
+    expect(byId.get('podcast_workbook')?.points).toBe(1000)
+    expect(byId.get('podcast_workbook')?.activityPolicy?.maxTotal).toBe(3)
 
     expect(byId.get('impact_log')?.points).toBe(1000)
     expect(byId.get('impact_log')?.activityPolicy?.maxTotal).toBe(2)
@@ -73,7 +73,7 @@ describe('pointsConfig module activities', () => {
     expect(byId.get('practical')?.points).toBe(0)
     expect(byId.get('practical')?.activityPolicy?.maxTotal).toBe(6)
 
-    expect(crossById.get('watch_podcast')).toMatchObject({ frequency: 3, pointsEach: 1000, maxPoints: 3000 })
+    expect(crossById.get('podcast_workbook')).toMatchObject({ frequency: 3, pointsEach: 1000, maxPoints: 3000 })
     expect(crossById.get('webinar_workbook')).toMatchObject({ frequency: 1, pointsEach: 3000, maxPoints: 3000 })
     expect(crossById.get('impact_log')).toMatchObject({ frequency: 2, pointsEach: 1000, maxPoints: 2000 })
     expect(crossById.get('lift_module')).toMatchObject({ frequency: 1, pointsEach: 3000, maxPoints: 3000 })
