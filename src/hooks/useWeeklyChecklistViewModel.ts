@@ -149,6 +149,14 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     href: 'https://www.linkedin.com/feed/',
     external: true,
   },
+  mentor_meetup: {
+    label: 'Open mentor sessions',
+    href: '/app/leadership-council?tab=mentor#upcoming-sessions',
+  },
+  ambassador_session: {
+    label: 'Open coach sessions',
+    href: '/app/leadership-council?tab=coach#available-coaching-sessions',
+  },
   watch_podcast: {
     label: 'Open Podcasts',
     href: '/app/shameless-tuesday',

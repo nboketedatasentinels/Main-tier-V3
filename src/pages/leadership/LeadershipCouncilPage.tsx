@@ -61,6 +61,7 @@ import {
   UserCircle2,
 } from 'lucide-react'
 import { format, formatDistanceToNow, isValid, parseISO } from 'date-fns'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationLeadership } from '@/hooks/useOrganizationLeadership'
 import { useMentorshipGoals } from '@/hooks/useMentorshipGoals'
@@ -209,9 +210,24 @@ const SessionsListSkeleton = () => (
   </Stack>
 )
 
+const leadershipTabFromParam = (raw: string | null, leadershipEligible: boolean): number => {
+  const key = (raw || '').trim().toLowerCase()
+  if (key === 'coach' || key === 'ambassador') return leadershipEligible ? 1 : 0
+  if (key === 'mentor') return leadershipEligible ? 2 : 0
+  if (key === 'partner' || key === 'transformation-partner') return 0
+  return leadershipEligible ? 2 : 0
+}
+
+const leadershipTabToParam = (index: number): string => {
+  if (index === 1) return 'coach'
+  if (index === 2) return 'mentor'
+  return 'partner'
+}
+
 export const LeadershipCouncilPage: React.FC = () => {
   const { profile, user } = useAuth()
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const {
     profiles,
@@ -294,6 +310,29 @@ export const LeadershipCouncilPage: React.FC = () => {
   const journeyLockReason = !isLeadershipEligible
     ? 'Mentor and Coach unlock on 3-month, 6-month, and 9-month journeys.'
     : null
+  const [tabIndex, setTabIndex] = useState(() =>
+    leadershipTabFromParam(searchParams.get('tab'), isLeadershipEligible),
+  )
+
+  useEffect(() => {
+    setTabIndex(leadershipTabFromParam(searchParams.get('tab'), isLeadershipEligible))
+  }, [searchParams, isLeadershipEligible])
+
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, '')
+    if (!hash) return
+    const t = window.setTimeout(() => {
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 250)
+    return () => window.clearTimeout(t)
+  }, [tabIndex, searchParams])
+
+  const handleTabChange = (index: number) => {
+    setTabIndex(index)
+    const next = new URLSearchParams(searchParams)
+    next.set('tab', leadershipTabToParam(index))
+    setSearchParams(next, { replace: true })
+  }
   const currentJourneyLabel = profile?.journeyType ? getJourneyLabel(profile.journeyType) : null
   const mentorSourceLabel =
     assignmentSources.mentor === 'user'
@@ -713,7 +752,8 @@ export const LeadershipCouncilPage: React.FC = () => {
             variant="unstyled"
             colorScheme="primary"
             isLazy
-            defaultIndex={isLeadershipEligible ? 2 : 0}
+            index={tabIndex}
+            onChange={handleTabChange}
           >
             <TabList
               border="1px solid"
@@ -1075,18 +1115,20 @@ export const LeadershipCouncilPage: React.FC = () => {
                     {profile?.id && ambassadorProfile && (
                       <>
                         <Divider my={5} />
-                        <LearnerAmbassadorBookings
-                          learnerId={profile.id}
-                          learnerName={displayNameForProfile(profile)}
-                          companyId={profile.companyId ?? null}
-                          bookingLockedReason={
-                            liftRequired && liftCompleted === false
-                              ? 'Complete your LIFT assessment first to book coaching sessions.'
-                              : liftRequired && liftCompleted === null
-                                ? 'Checking your LIFT assessment…'
-                                : null
-                          }
-                        />
+                        <Box id="available-coaching-sessions" scrollMarginTop="96px">
+                          <LearnerAmbassadorBookings
+                            learnerId={profile.id}
+                            learnerName={displayNameForProfile(profile)}
+                            companyId={profile.companyId ?? null}
+                            bookingLockedReason={
+                              liftRequired && liftCompleted === false
+                                ? 'Complete your LIFT assessment first to book coaching sessions.'
+                                : liftRequired && liftCompleted === null
+                                  ? 'Checking your LIFT assessment…'
+                                  : null
+                            }
+                          />
+                        </Box>
                       </>
                     )}
                   </CardBody>
@@ -1273,6 +1315,8 @@ export const LeadershipCouncilPage: React.FC = () => {
                         </Collapse>
 
                         <Box
+                          id="upcoming-sessions"
+                          scrollMarginTop="96px"
                           p={4}
                           borderWidth="1px"
                           borderStyle="solid"

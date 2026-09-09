@@ -472,6 +472,15 @@ export const ActivityRow = ({
       navigate('/app/weekly-glance#assigned-courses')
       return
     }
+    // Mentor / coach sessions: go to Leadership Council where meeting links live.
+    if (activity.id === 'mentor_meetup' || activity.id === 'ambassador_session') {
+      navigate(
+        activity.id === 'mentor_meetup'
+          ? '/app/leadership-council?tab=mentor#upcoming-sessions'
+          : '/app/leadership-council?tab=coach#available-coaching-sessions',
+      )
+      return
+    }
     // Partner/mentor/coach assign marks after attendance - no learner upload.
     if (isAssignedByLeadership) {
       if (isPartnerIssued && activity.issuedByPartner && !isExternalAiToolSubmission) {
@@ -518,6 +527,20 @@ export const ActivityRow = ({
           : '/app/weekly-glance#personality-profile-card',
         external: false,
         needsTestsToast: !bothTestsCompleted,
+      }
+    }
+    if (activity.id === 'mentor_meetup') {
+      return {
+        href: '/app/leadership-council?tab=mentor#upcoming-sessions',
+        external: false,
+        needsTestsToast: false,
+      }
+    }
+    if (activity.id === 'ambassador_session') {
+      return {
+        href: '/app/leadership-council?tab=coach#available-coaching-sessions',
+        external: false,
+        needsTestsToast: false,
       }
     }
     const link = activity.quickActionLink
