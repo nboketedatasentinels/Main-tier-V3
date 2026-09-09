@@ -113,24 +113,45 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     external: true,
   },
   peer_matching: {
-    label: 'Find Peer Match',
+    label: 'Open Peer Match',
     href: '/app/peer-connect',
   },
   peer_to_peer: {
-    label: 'Open Practical',
-    href: '/app/courses',
+    label: 'Open Peer Connect',
+    href: '/app/peer-connect',
+  },
+  practical: {
+    label: 'Open Peer Connect',
+    href: '/app/peer-connect',
   },
   challenger: {
-    label: 'Challenge a Friend',
-    href: '/app/leaderboard?tab=challenges',
+    label: 'Open Challenges',
+    href: '/app/leadership-board?tab=challenges',
   },
   webinar_workbook: {
-    label: 'Attend webinar',
+    label: 'Open Events',
+    href: '/app/events',
+  },
+  weekly_session: {
+    label: 'Open Events',
     href: '/app/events',
   },
   impact_log: {
     label: 'Open Impact Log',
     href: '/app/impact',
+  },
+  lift_module: {
+    label: 'Open LIFT course',
+    href: '/app/weekly-glance#assigned-courses',
+  },
+  linkedin: {
+    label: 'Open LinkedIn',
+    href: 'https://www.linkedin.com/feed/',
+    external: true,
+  },
+  watch_podcast: {
+    label: 'Open Podcasts',
+    href: '/app/shameless-tuesday',
   },
 }
 

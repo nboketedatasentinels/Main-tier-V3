@@ -494,6 +494,65 @@ export const ActivityRow = ({
   const canExpand = !isFullyComplete
   const showDetails = Boolean(isExpanded && canExpand)
 
+  /** Activities with a real destination page - row click goes there instead of only expanding. */
+  const rowDestination = (() => {
+    if (activity.id === 'podcast_workbook' || activity.id === 'watch_podcast') {
+      // Keep expand so the episode player stays on the checklist.
+      return null
+    }
+    if (isProgrammeComponent && programmeComponentType) {
+      // Capstone / case study / practical parts stay inline.
+      return null
+    }
+    if (activity.id === 'lift_module') {
+      const bothTestsCompleted = Boolean(
+        profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
+      )
+      return {
+        href: bothTestsCompleted
+          ? '/app/weekly-glance#assigned-courses'
+          : '/app/weekly-glance#personality-profile-card',
+        external: false,
+        needsTestsToast: !bothTestsCompleted,
+      }
+    }
+    const link = activity.quickActionLink
+    if (link?.href) {
+      return { href: link.href, external: Boolean(link.external), needsTestsToast: false }
+    }
+    if (activity.id === 'impact_log') {
+      return { href: '/app/impact', external: false, needsTestsToast: false }
+    }
+    if (isPeerWorkActivity) {
+      return { href: '/app/peer-connect', external: false, needsTestsToast: false }
+    }
+    return null
+  })()
+
+  const handleRowClick = () => {
+    if (isFullyComplete) return
+    if (rowDestination) {
+      if (rowDestination.needsTestsToast) {
+        toast({
+          status: 'info',
+          title: 'Complete your tests first',
+          description:
+            'Finish your personality test and values test before you take the LIFT course. We will take you there now.',
+          duration: 8000,
+          isClosable: true,
+        })
+      }
+      if (rowDestination.external) {
+        window.open(rowDestination.href, '_blank', 'noopener,noreferrer')
+        return
+      }
+      navigate(rowDestination.href)
+      return
+    }
+    if (!canExpand) return
+    onToggleExpand()
+  }
+
   return (
     <Box
       id={`activity-${activity.id}`}
@@ -502,7 +561,7 @@ export const ActivityRow = ({
       bg={
         isFullyComplete ? 'gray.50' : showDetails ? 'gray.50' : 'transparent'
       }
-      _hover={canExpand ? { bg: 'gray.50' } : undefined}
+      _hover={canExpand || rowDestination ? { bg: 'gray.50' } : undefined}
       transition="background-color 0.12s"
       opacity={isFullyComplete ? 0.55 : 1}
       pointerEvents={isFullyComplete ? 'none' : 'auto'}
@@ -510,18 +569,20 @@ export const ActivityRow = ({
       <Box
         as="button"
         type="button"
-        onClick={() => {
-          if (!canExpand) return
-          onToggleExpand()
-        }}
+        onClick={handleRowClick}
         w="100%"
         textAlign="left"
         px={{ base: 3, md: 4 }}
         py={3}
-        cursor={canExpand ? 'pointer' : 'default'}
-        aria-disabled={!canExpand}
+        cursor={canExpand || rowDestination ? 'pointer' : 'default'}
+        aria-disabled={!canExpand && !rowDestination}
+        aria-label={
+          rowDestination
+            ? `${activity.title} - open related page`
+            : `${activity.title} - ${showDetails ? 'collapse' : 'expand'} details`
+        }
         _focusVisible={
-          canExpand
+          canExpand || rowDestination
             ? { outline: '2px solid', outlineColor: '#350e6f', outlineOffset: '-2px' }
             : { outline: 'none' }
         }
