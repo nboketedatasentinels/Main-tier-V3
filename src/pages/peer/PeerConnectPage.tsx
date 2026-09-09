@@ -299,6 +299,12 @@ export const PeerConnectPage: React.FC = () => {
     searchParams.get('tab') === 'sessions' || searchParams.get('tab') === 'practical' ? 1 : 0
   const [tabIndex, setTabIndex] = useState(initialTabIndex)
 
+  useEffect(() => {
+    const next =
+      searchParams.get('tab') === 'sessions' || searchParams.get('tab') === 'practical' ? 1 : 0
+    setTabIndex(next)
+  }, [searchParams])
+
   const [availablePeers, setAvailablePeers] = useState<PeerProfile[]>([])
   const [weeklyMatch, setWeeklyMatch] = useState<WeeklyMatch | null>(null)
   const [pendingInvites, setPendingInvites] = useState<Invitation[]>([])

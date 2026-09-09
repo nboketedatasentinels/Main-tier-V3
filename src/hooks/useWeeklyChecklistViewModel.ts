@@ -117,12 +117,12 @@ const ACTIVITY_QUICK_LINKS: Partial<Record<ActivityId, ActivityQuickActionLink>>
     href: '/app/peer-connect',
   },
   peer_to_peer: {
-    label: 'Open Peer Connect',
-    href: '/app/peer-connect',
+    label: 'Open Practical session',
+    href: '/app/peer-connect?tab=practical',
   },
   practical: {
-    label: 'Open Peer Connect',
-    href: '/app/peer-connect',
+    label: 'Open Practical session',
+    href: '/app/peer-connect?tab=practical',
   },
   challenger: {
     label: 'Open Challenges',

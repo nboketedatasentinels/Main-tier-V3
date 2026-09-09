@@ -443,7 +443,11 @@ export const ActivityRow = ({
     }
     // Peer activities: navigate only - never self-claim points from this row.
     if (isPeerWorkActivity) {
-      const href = activity.quickActionLink?.href || '/app/peer-connect'
+      const href =
+        activity.quickActionLink?.href ||
+        (activity.id === 'peer_to_peer'
+          ? '/app/peer-connect?tab=practical'
+          : '/app/peer-connect')
       navigate(href)
       return
     }
@@ -524,7 +528,14 @@ export const ActivityRow = ({
       return { href: '/app/impact', external: false, needsTestsToast: false }
     }
     if (isPeerWorkActivity) {
-      return { href: '/app/peer-connect', external: false, needsTestsToast: false }
+      return {
+        href:
+          activity.id === 'peer_to_peer'
+            ? '/app/peer-connect?tab=practical'
+            : '/app/peer-connect',
+        external: false,
+        needsTestsToast: false,
+      }
     }
     return null
   })()
@@ -829,7 +840,7 @@ export const ActivityRow = ({
                         e.stopPropagation()
                         navigate(
                           activity.id === 'peer_to_peer'
-                            ? '/app/peer-connect?tab=sessions'
+                            ? '/app/peer-connect?tab=practical'
                             : '/app/peer-connect',
                         )
                       }}
