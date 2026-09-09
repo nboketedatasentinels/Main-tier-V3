@@ -540,21 +540,31 @@ export const ActivityList = ({
       todoPointsTotal += activity.points ?? 0
     })
 
-    // Deduplicate within the same kind only so a completed claim can sit beside
-    // the next actionable occurrence in the same week.
-    const kindRank: Record<WeekRowKind, number> = { done: 3, pending: 2, todo: 1 }
+    // One row per activity per week in the To-do list.
+    // A completed claim (1/3) must not sit beside the next claim as a second
+    // identical "Podcast" line - prefer the actionable todo / pending row.
+    const kindRank: Record<WeekRowKind, number> = { todo: 1, pending: 2, done: 3 }
     todoByWeek.forEach((rows, week) => {
       const best = new Map<string, TodoRow>()
       rows.forEach((row) => {
-        const key = `${row.activity.id}::${row.weekOverride}::${row.occurrence ?? ''}::${row.rowKind ?? 'todo'}`
+        const key = `${row.activity.id}::${row.weekOverride}`
         const prev = best.get(key)
+        if (!prev) {
+          best.set(key, row)
+          return
+        }
         const rank = kindRank[row.rowKind ?? 'todo']
-        if (!prev || rank > kindRank[prev.rowKind ?? 'todo']) {
+        const prevRank = kindRank[prev.rowKind ?? 'todo']
+        if (rank < prevRank) {
+          best.set(key, row)
+          return
+        }
+        if (rank > prevRank) return
+        // Same kind: keep a single next claim (lowest occurrence number).
+        if ((row.occurrenceNumber ?? 0) < (prev.occurrenceNumber ?? 0)) {
           best.set(key, row)
         }
       })
-      // Stable order: open work first, then in-review, then completed
-      // (completed stays visible with strikethrough at the bottom of the week).
       const next = Array.from(best.values()).sort((a, b) => {
         const rankDiff = kindRank[a.rowKind ?? 'todo'] - kindRank[b.rowKind ?? 'todo']
         if (rankDiff !== 0) return rankDiff
