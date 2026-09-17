@@ -126,6 +126,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
       organizations: 'Orgs',
       users: 'Users',
       approvals: 'Approvals',
+      'programme-submissions': 'HITL',
       reports: 'Reports',
     }),
     [],

@@ -276,6 +276,7 @@ export const AppRoutes = () => {
           <Route path="partner-assignment" element={<PartnerAssignmentPage />} />
           <Route path="learner-assignments" element={<LearnerAssignmentsPage />} />
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
+          <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
           <Route path="lift-assessments" element={<LiftAssessmentsAdminPage />} />
           <Route path="organizations" element={<OrganizationsAdminPage />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />

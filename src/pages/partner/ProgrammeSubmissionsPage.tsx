@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import {
   Alert,
   AlertDescription,
@@ -58,10 +58,12 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import PartnerLayout from '@/layouts/PartnerLayout'
+import { SuperAdminLayout } from '@/layouts/SuperAdminLayout'
 import { useAuth } from '@/hooks/useAuth'
 import { usePartnerOrganizations } from '@/hooks/partner/usePartnerOrganizations'
 import { usePartnerSelectedOrg } from '@/hooks/partner/usePartnerSelectedOrg'
 import { handlePartnerSidebarNavigate } from '@/utils/partnerSidebarNavigation'
+import { handleAdminSidebarNavigate } from '@/utils/adminSidebarNavigation'
 import {
   subscribeToSubmissionsByOrgIds,
   updateSubmissionReview,
@@ -136,13 +138,18 @@ const formatDate = (date: Date | null): string => {
 const ProgrammeSubmissionsPage: React.FC = () => {
   const toast = useToast()
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const location = useLocation()
+  const { profile, isSuperAdmin } = useAuth()
+  const isAdminPortal = location.pathname.startsWith('/admin')
   const { organizations, loading: orgsLoading } = usePartnerOrganizations()
   const drawer = useDisclosure()
 
   const handleNavigate = useCallback(
-    (key: string) => handlePartnerSidebarNavigate(navigate, key, 'programme-submissions'),
-    [navigate],
+    (key: string) =>
+      isAdminPortal
+        ? handleAdminSidebarNavigate(navigate, key, 'programme-submissions')
+        : handlePartnerSidebarNavigate(navigate, key, 'programme-submissions'),
+    [navigate, isAdminPortal],
   )
 
   const orgOptions = useMemo(
@@ -240,15 +247,8 @@ const ProgrammeSubmissionsPage: React.FC = () => {
     setSelectedId(null)
   }
 
-  return (
-    <PartnerLayout
-      activeItem="programme-submissions"
-      hideWelcomeHeader
-      organizations={orgOptions.map((o) => ({ id: o.id, code: o.code, name: o.name }))}
-      selectedOrg={selectedOrgId || 'all'}
-      onSelectOrg={(v) => setSelectedOrgId(v === 'all' ? '' : v)}
-      onNavigate={handleNavigate}
-    >
+  const content = (
+    <>
       <Stack spacing={6}>
         <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} flexWrap="wrap">
           <Box>
@@ -259,9 +259,9 @@ const ProgrammeSubmissionsPage: React.FC = () => {
               </Heading>
             </HStack>
             <Text color="gray.600" fontSize="sm">
-              Capstone, case study, and practical work from learners in your organisations.
-              Gemini pre-grades each submission. You must accept, edit, or reject that estimate —
-              AI never awards points alone.
+              {isAdminPortal
+                ? 'Monitor and export HITL evidence across organisations. Gemini pre-grades each submission; accept, edit, or reject remains required — AI never awards points alone.'
+                : 'Capstone, case study, and practical work from learners in your organisations. Gemini pre-grades each submission. You must accept, edit, or reject that estimate — AI never awards points alone.'}
             </Text>
           </Box>
           {orgOptions.length > 0 && submissions.length > 0 && (
@@ -278,13 +278,35 @@ const ProgrammeSubmissionsPage: React.FC = () => {
           )}
         </Flex>
 
+        {isAdminPortal && orgOptions.length > 0 && (
+          <FormControl maxW={{ base: 'full', md: '320px' }}>
+            <FormLabel fontSize="xs" color="gray.500" mb={1}>
+              Organisation
+            </FormLabel>
+            <Select
+              size="sm"
+              value={selectedOrgId || 'all'}
+              onChange={(e) => setSelectedOrgId(e.target.value === 'all' ? '' : e.target.value)}
+            >
+              <option value="all">All organisations ({orgOptions.length})</option>
+              {orgOptions.map((org) => (
+                <option key={org.id} value={org.id}>
+                  {org.name}
+                </option>
+              ))}
+            </Select>
+          </FormControl>
+        )}
+
         {!orgOptions.length && !orgsLoading && (
           <Alert status="info" rounded="lg">
             <AlertIcon />
             <Box>
               <AlertTitle>No organisations yet</AlertTitle>
               <AlertDescription>
-                Ask a super admin to assign you to an organisation before you can review programme submissions.
+                {isAdminPortal || isSuperAdmin
+                  ? 'No active organisations are available to load programme submissions.'
+                  : 'Ask a super admin to assign you to an organisation before you can review programme submissions.'}
               </AlertDescription>
             </Box>
           </Alert>
@@ -556,9 +578,35 @@ const ProgrammeSubmissionsPage: React.FC = () => {
         onClose={closeDrawer}
         submission={selectedSubmission}
         reviewerId={profile?.id ?? null}
-        reviewerName={getDisplayName(profile, 'Partner')}
+        reviewerName={getDisplayName(profile, isAdminPortal ? 'Super Admin' : 'Partner')}
         onSaved={(toastInput) => toast(toastInput)}
       />
+    </>
+  )
+
+  if (isAdminPortal) {
+    return (
+      <SuperAdminLayout
+        activeItem="programme-submissions"
+        onNavigate={handleNavigate}
+        adminName={getDisplayName(profile, 'Super Admin')}
+        subtitle="HITL monitoring and evidence export"
+      >
+        {content}
+      </SuperAdminLayout>
+    )
+  }
+
+  return (
+    <PartnerLayout
+      activeItem="programme-submissions"
+      hideWelcomeHeader
+      organizations={orgOptions.map((o) => ({ id: o.id, code: o.code, name: o.name }))}
+      selectedOrg={selectedOrgId || 'all'}
+      onSelectOrg={(v) => setSelectedOrgId(v === 'all' ? '' : v)}
+      onNavigate={handleNavigate}
+    >
+      {content}
     </PartnerLayout>
   )
 }

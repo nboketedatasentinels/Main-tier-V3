@@ -46,6 +46,12 @@ export const buildSuperAdminNavItems = (): NavigationSection[] => [
       { key: 'users', label: 'User Management', icon: Users },
       { key: 'messaging', label: 'Messaging', icon: MessageSquare },
       { key: 'approvals', label: 'Approval Center', icon: ClipboardCheck },
+      {
+        key: 'programme-submissions',
+        label: 'Programme Submissions',
+        icon: ClipboardList,
+        description: 'HITL review, monitoring export, and AI vs human evidence',
+      },
       { key: 'feedback', label: 'Feedback Inbox', icon: Inbox },
       { key: 'archived-organizations', label: 'Organization Archive', icon: Archive },
     ],

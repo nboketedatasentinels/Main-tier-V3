@@ -371,6 +371,40 @@ export const SuperAdminDashboard: React.FC = () => {
   }, [riskAggregate])
 
   const handleNavigate = (key: string) => {
+    if (key === 'programme-submissions') {
+      navigate('/admin/programme-submissions')
+      return
+    }
+    if (key === 'course-approvals') {
+      navigate('/admin/course-approvals')
+      return
+    }
+    if (key === 'learner-assignments') {
+      navigate('/admin/learner-assignments')
+      return
+    }
+    if (key === 'partner-assignment') {
+      navigate('/admin/partner-assignment')
+      return
+    }
+    if (key === 'lift-assessments') {
+      navigate('/admin/lift-assessments')
+      return
+    }
+    if (key === 'organizations') {
+      // Stay on dashboard org management tab (primary admin orgs UX)
+      const nextPage = DASHBOARD_TABS.has(key) ? key : 'overview'
+      setActivePage(nextPage)
+      navigate(
+        {
+          pathname: location.pathname,
+          search: buildDashboardSearchForNavigation(location.search, nextPage),
+        },
+        { replace: false },
+      )
+      return
+    }
+
     const nextPage = DASHBOARD_TABS.has(key) ? key : 'overview'
     setActivePage(nextPage)
 
