@@ -1,0 +1,4 @@
+submission_id,organization_id,component_id,component_type,status,ai_status,ai_score,ai_model,human_decision,human_decision_at,human_score,final_score,score_delta_human_minus_ai,criteria_acknowledged,criteria_acknowledged_at,review_opened_at,review_duration_ms,reviewer_name,reviewed_at,learner_disputed_at
+4edc4199-0b24-41bd-81d3-8082acf1147d,c9a905d1-5439-4746-bd0b-960e0d49a09e,innovation-case-study-1,case_study,submitted,completed,92.0,gemini-3-flash-preview,,,,,,False,,,,,,
+e339599d-fb58-4b8f-b353-cfd442524331,c9a905d1-5439-4746-bd0b-960e0d49a09e,innovation-capstone,capstone,approved,completed,0.0,gemini-3-flash-preview,,,100.0,,100.0,False,,,,Nono,2026-08-26T11:52:13.383+00:00,
+398549a7-5c53-4a58-b526-9accbf7651e9,c9a905d1-5439-4746-bd0b-960e0d49a09e,innovation-capstone,capstone,in_review,completed,65.0,gemini-3-flash-preview,,,100.0,,35.0,False,,,,Nono,2026-08-24T15:52:03.222+00:00,
