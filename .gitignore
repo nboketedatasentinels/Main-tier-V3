@@ -64,3 +64,4 @@ google-credentials*.json
 *.pem
 *.p12
 *.key
+__pycache__/
