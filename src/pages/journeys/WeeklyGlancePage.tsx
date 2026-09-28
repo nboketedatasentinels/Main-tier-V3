@@ -4,13 +4,6 @@ import {
   Flex,
   Heading,
   HStack,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
   SimpleGrid,
   Skeleton,
   Stack,
@@ -54,6 +47,10 @@ import { useCourseOpenGate } from '@/hooks/useCourseOpenGate'
 import { useUserCourseCompletions } from '@/hooks/useUserCourseCompletions'
 import { canAccessCourse } from '@/utils/membership'
 import { BuildVillageModal } from '@/components/modals/BuildVillageModal'
+import {
+  CourseTestsRequiredModal,
+  type CourseTestStepStatus,
+} from '@/components/modals/CourseTestsRequiredModal'
 import { useAuth } from '@/hooks/useAuth'
 import { TransformationTier, type UserProfile } from '@/types'
 import { getOrganizationJourney } from '@/services/supabaseOrgService'
@@ -585,15 +582,20 @@ export const WeeklyGlancePage = () => {
     profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
   )
 
+  const testStepStatus = (done: boolean): CourseTestStepStatus => (done ? 'done' : 'not_started')
+
   // LIFT checklist CTA (and deep links) land here with a hash.
   useEffect(() => {
     const hash = location.hash.replace(/^#/, '')
     if (!hash) return
+    if (hash === 'personality-profile-card' && !bothTestsCompleted) {
+      openPersonalityPrompt()
+    }
     const timer = window.setTimeout(() => {
       document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }, 350)
     return () => window.clearTimeout(timer)
-  }, [location.hash, assignedLoading, bothTestsCompleted])
+  }, [location.hash, assignedLoading, bothTestsCompleted, openPersonalityPrompt])
 
   // Checklist stays hidden until the learner has entered both test results on
   // this page (type + all 5 values). Same gate as the result slots below.
@@ -1356,81 +1358,22 @@ export const WeeklyGlancePage = () => {
         error={villageError}
       />
 
-      {/* Personality profile gate - shown when a course is clicked too early. */}
-      <Modal isOpen={isPersonalityPromptOpen} onClose={closePersonalityPrompt} isCentered size="md">
-        <ModalOverlay bg="blackAlpha.600" backdropFilter="blur(4px)" />
-        <ModalContent borderRadius="xl" overflow="hidden">
-          <Box h="4px" bg="brand.primary" />
-          <ModalHeader pb={2}>
-            <HStack spacing={3} align="center">
-              <Flex
-                w={10}
-                h={10}
-                bg="#350e6f"
-                borderRadius="xl"
-                align="center"
-                justify="center"
-                boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
-                flexShrink={0}
-              >
-                <Box as={Fingerprint} w={5} h={5} color="white" />
-              </Flex>
-              <Stack spacing={0}>
-                <Text
-                  fontSize="xs"
-                  fontWeight="semibold"
-                  textTransform="uppercase"
-                  letterSpacing="wide"
-                  color="orange.600"
-                >
-                  One step first
-                </Text>
-                <Heading size="sm" color="gray.900">
-                  Complete your personality profile
-                </Heading>
-              </Stack>
-            </HStack>
-          </ModalHeader>
-          <ModalCloseButton />
-          <ModalBody pb={2}>
-            <Stack spacing={3}>
-              <Text fontSize="sm" color="gray.600">
-                Your 16Personalities type and your five Personal Values shape how the
-                programme is tailored to you, so they need to be on file before you start
-                a course.
-              </Text>
-              {pendingCourse && (
-                <Box bg="gray.50" borderWidth="1px" borderColor="gray.200" borderRadius="lg" px={3} py={2}>
-                  <Text fontSize="xs" color="gray.500">
-                    Waiting for you
-                  </Text>
-                  <Text fontSize="sm" fontWeight="semibold" color="gray.800">
-                    {pendingCourse.title}
-                  </Text>
-                </Box>
-              )}
-              <Text fontSize="sm" color="gray.600">
-                It takes a couple of minutes - finish it and we&apos;ll bring you straight
-                back to this course.
-              </Text>
-            </Stack>
-          </ModalBody>
-          <ModalFooter gap={2}>
-            <Button variant="ghost" onClick={closePersonalityPrompt}>
-              Not now
-            </Button>
-            <Button
-              bg="brand.primary"
-              color="white"
-              _hover={{ bg: 'brand.dark' }}
-              rightIcon={<Box as={ArrowUpRight} w={4} h={4} />}
-              onClick={focusPersonalityCard}
-            >
-              Complete it now
-            </Button>
-          </ModalFooter>
-        </ModalContent>
-      </Modal>
+      <CourseTestsRequiredModal
+        isOpen={isPersonalityPromptOpen}
+        onClose={closePersonalityPrompt}
+        courseTitle={pendingCourse?.title}
+        personalityStatus={testStepStatus(Boolean(profile?.hasCompletedPersonalityTest))}
+        valuesStatus={testStepStatus(Boolean(profile?.hasCompletedValuesTest))}
+        onStartPersonality={() => void handleOpenExternalTest('personality')}
+        onStartValues={() => void handleOpenExternalTest('values')}
+        onPickPersonality={focusPersonalityCard}
+        onPickValues={focusPersonalityCard}
+        onProceed={() => {
+          const course = pendingCourse
+          closePersonalityPrompt()
+          if (course?.link) requestOpenCourse(course.link, course.title)
+        }}
+      />
 
       {surveyModal}
     </Box>

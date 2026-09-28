@@ -1,9 +1,13 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { CourseTestsRequiredModal } from '@/components/modals/CourseTestsRequiredModal'
 import { findNativeCourseAssessment } from '@/config/nativeCourseAssessments'
 import { hasCompletedSelfCourseAssessment } from '@/services/courseAssessmentService'
 import { buildCourseAssessmentPath } from '@/utils/courseAssessmentPaths'
+
+const PERSONALITY_TEST_URL = 'https://www.16personalities.com/free-personality-test'
+const VALUES_TEST_URL = 'https://personalvalu.es/'
 
 interface UseCourseOpenGateResult {
   /**
@@ -23,17 +27,42 @@ interface UseCourseOpenGateResult {
 }
 
 export function useCourseOpenGate(): UseCourseOpenGateResult {
-  const { profile } = useAuth()
+  const { profile, updateProfile } = useAuth()
   const navigate = useNavigate()
   const uid = profile?.id ?? null
+  const [blockedCourse, setBlockedCourse] = useState<{ title: string; url: string } | null>(null)
+  const testsDone = Boolean(
+    profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
+  )
 
   const openInNewTab = (url: string) => {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
+  const startRequiredTest = useCallback(
+    async (kind: 'personality' | 'values') => {
+      openInNewTab(kind === 'personality' ? PERSONALITY_TEST_URL : VALUES_TEST_URL)
+      if (!profile?.id) return
+      const field = kind === 'personality' ? 'personalityTestStartedAt' : 'valuesTestStartedAt'
+      if (profile[field]) return
+      await updateProfile({ [field]: new Date().toISOString() })
+    },
+    [profile, updateProfile],
+  )
+
+  const goPickResults = useCallback(() => {
+    setBlockedCourse(null)
+    navigate('/app/weekly-glance#personality-profile-card')
+  }, [navigate])
+
   const requestOpenCourse = useCallback(
     async (url: string, courseTitle?: string) => {
       if (!url) return
+      if (!testsDone) {
+        setBlockedCourse({ title: courseTitle?.trim() || 'This course', url })
+        return
+      }
+      setBlockedCourse(null)
       const title = courseTitle?.trim() || null
       const definition = findNativeCourseAssessment(title, 'pre', 'self')
 
@@ -79,7 +108,7 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
         )
       }
     },
-    [uid, navigate],
+    [uid, navigate, testsDone],
   )
 
   const requestPostAssessment = useCallback(
@@ -123,7 +152,25 @@ export function useCourseOpenGate(): UseCourseOpenGateResult {
     requestPostAssessment: (courseTitle) => {
       void requestPostAssessment(courseTitle)
     },
-    surveyModal: null,
+    surveyModal: (
+      <CourseTestsRequiredModal
+        isOpen={blockedCourse !== null}
+        onClose={() => setBlockedCourse(null)}
+        courseTitle={blockedCourse?.title}
+        personalityStatus={profile?.hasCompletedPersonalityTest ? 'done' : 'not_started'}
+        valuesStatus={profile?.hasCompletedValuesTest ? 'done' : 'not_started'}
+        onStartPersonality={() => void startRequiredTest('personality')}
+        onStartValues={() => void startRequiredTest('values')}
+        onPickPersonality={goPickResults}
+        onPickValues={goPickResults}
+        onProceed={() => {
+          const course = blockedCourse
+          if (!course) return
+          setBlockedCourse(null)
+          void requestOpenCourse(course.url, course.title)
+        }}
+      />
+    ),
     surveyCompleted: false,
   }
 }

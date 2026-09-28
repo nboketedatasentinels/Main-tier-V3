@@ -458,14 +458,6 @@ export const ActivityRow = ({
         profile?.hasCompletedPersonalityTest && profile?.hasCompletedValuesTest,
       )
       if (!bothTestsCompleted) {
-        toast({
-          status: 'info',
-          title: 'Complete your tests first',
-          description:
-            'Finish your personality test and values test before you take the LIFT course. We will take you there now.',
-          duration: 8000,
-          isClosable: true,
-        })
         navigate('/app/weekly-glance#personality-profile-card')
         return
       }
@@ -526,29 +518,26 @@ export const ActivityRow = ({
           ? '/app/weekly-glance#assigned-courses'
           : '/app/weekly-glance#personality-profile-card',
         external: false,
-        needsTestsToast: !bothTestsCompleted,
       }
     }
     if (activity.id === 'mentor_meetup') {
       return {
         href: '/app/leadership-council?tab=mentor#upcoming-sessions',
         external: false,
-        needsTestsToast: false,
       }
     }
     if (activity.id === 'ambassador_session') {
       return {
         href: '/app/leadership-council?tab=coach#available-coaching-sessions',
         external: false,
-        needsTestsToast: false,
       }
     }
     const link = activity.quickActionLink
     if (link?.href) {
-      return { href: link.href, external: Boolean(link.external), needsTestsToast: false }
+      return { href: link.href, external: Boolean(link.external) }
     }
     if (activity.id === 'impact_log') {
-      return { href: '/app/impact', external: false, needsTestsToast: false }
+      return { href: '/app/impact', external: false }
     }
     if (isPeerWorkActivity) {
       return {
@@ -557,7 +546,6 @@ export const ActivityRow = ({
             ? '/app/peer-connect?tab=practical'
             : '/app/peer-connect',
         external: false,
-        needsTestsToast: false,
       }
     }
     return null
@@ -566,16 +554,6 @@ export const ActivityRow = ({
   const handleRowClick = () => {
     if (isFullyComplete) return
     if (rowDestination) {
-      if (rowDestination.needsTestsToast) {
-        toast({
-          status: 'info',
-          title: 'Complete your tests first',
-          description:
-            'Finish your personality test and values test before you take the LIFT course. We will take you there now.',
-          duration: 8000,
-          isClosable: true,
-        })
-      }
       if (rowDestination.external) {
         window.open(rowDestination.href, '_blank', 'noopener,noreferrer')
         return
