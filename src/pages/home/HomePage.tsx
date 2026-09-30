@@ -86,7 +86,7 @@ export const HomePage: React.FC = () => {
               <Link
                 to={startHref}
                 data-cta="hero_start"
-                className="inline-flex rounded-full bg-[#27062e] px-6 py-3 text-base font-bold text-[#f9db59] shadow-md transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
+                className="inline-flex rounded-full bg-[#27062e] px-6 py-3 text-base font-bold !text-white shadow-md transition hover:bg-[#3a0d44] hover:!text-white focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
               >
                 Start free
               </Link>
