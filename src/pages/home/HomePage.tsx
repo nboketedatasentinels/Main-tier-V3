@@ -93,7 +93,7 @@ export const HomePage: React.FC = () => {
               <Link
                 to="/assessment"
                 data-cta="hero_assessment"
-                className="inline-flex rounded-full bg-[#eab130] px-6 py-3 text-base font-bold text-[#27062e] shadow-md transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-[#27062e] focus:ring-offset-2"
+                className="inline-flex rounded-full bg-[#eab130] px-6 py-3 text-base font-bold !text-[#27062e] !no-underline shadow-md transition hover:bg-[#f9db59] hover:!text-[#27062e] hover:!no-underline focus:outline-none focus:ring-2 focus:ring-[#27062e] focus:ring-offset-2"
               >
                 Take the assessment first
               </Link>
