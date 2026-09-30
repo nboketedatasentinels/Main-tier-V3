@@ -11,7 +11,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { format } from 'date-fns'
 import { motion, useReducedMotion } from 'framer-motion'
@@ -23,19 +23,16 @@ import type { JourneyType } from '@/config/pointsConfig'
 import {
   ArrowUpRight,
   Calendar,
-  CheckCircle2,
   Clock,
-  Fingerprint,
   Star,
   TrendingUp,
-  Upload,
   Users,
   type LucideIcon,
 } from 'lucide-react'
 
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
-import { AssignedCoursesCarousel } from '@/components/journeys/weeklyGlance/AssignedCoursesCarousel'
+import { JourneyCoursesPanel } from '@/components/journeys/weeklyGlance/JourneyCoursesPanel'
 import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
 import {
   PRE_COURSE_SURVEY_SECTION_ID,
@@ -58,16 +55,7 @@ import { updateUserVillageId } from '@/services/userProfileService'
 import { checkVillageNameExists, createVillage } from '@/services/villageService'
 import { getJourneyTiming } from '@/utils/weekCalculations'
 import { JOURNEY_META } from '@/config/pointsConfig'
-import { CORE_VALUES, PERSONALITY_TYPES } from '@/config/personality-data'
-import {
-  TestResultPicker,
-  type ResultOption,
-} from '@/components/personality/TestResultPicker'
-import {
-  buildTestUnlockMessage,
-  formatRemainingWait,
-  getTestUnlockState,
-} from '@/utils/testResultUnlock'
+import { formatRemainingWait, getTestUnlockState } from '@/utils/testResultUnlock'
 
 const MotionBox = motion(Box)
 
@@ -221,102 +209,6 @@ const KpiTile = ({ label, value, sub, icon, theme }: KpiTileProps) => {
   )
 }
 
-interface ResultSelectSlotProps {
-  label: string
-  /** True once the learner has recorded their result for this test. */
-  hasResult: boolean
-  /** Unlock state driven by when they opened the external test. */
-  unlockStatus: 'not_started' | 'waiting' | 'unlocked'
-  /** CTA shown before the learner has started this test. */
-  completeButtonLabel: string
-  onCompleteTest: () => void
-  /** Shown while the 1-hour cooldown is still running. */
-  waitMessage: string
-  /** Shown once results can be selected. */
-  selectHelper: string
-  /** Dropdown listing every possible outcome of this test. */
-  resultPicker: ReactNode
-}
-
-const ResultSelectSlot = ({
-  label,
-  hasResult,
-  unlockStatus,
-  completeButtonLabel,
-  onCompleteTest,
-  waitMessage,
-  selectHelper,
-  resultPicker,
-}: ResultSelectSlotProps) => {
-  const hasProof = hasResult
-  // Button first; after click the slot becomes an input (still locked until 1h).
-  const showResultInput = hasProof || unlockStatus === 'waiting' || unlockStatus === 'unlocked'
-
-  return (
-    <Box
-      borderWidth="1px"
-      borderStyle="dashed"
-      borderColor={hasProof ? 'green.300' : unlockStatus === 'waiting' ? 'orange.200' : 'gray.300'}
-      bg={hasProof ? 'green.50' : unlockStatus === 'waiting' ? 'orange.50' : 'gray.50'}
-      borderRadius="md"
-      p={2}
-    >
-      <Stack spacing={1.5}>
-        <HStack spacing={2} align="center">
-          <Flex
-            w={6}
-            h={6}
-            borderRadius="sm"
-            bg={hasProof ? 'green.100' : unlockStatus === 'waiting' ? 'orange.100' : 'white'}
-            borderWidth="1px"
-            borderColor={hasProof ? 'green.300' : unlockStatus === 'waiting' ? 'orange.200' : 'gray.200'}
-            align="center"
-            justify="center"
-            flexShrink={0}
-          >
-            <Box
-              as={hasProof ? CheckCircle2 : unlockStatus === 'waiting' ? Clock : Upload}
-              w={3}
-              h={3}
-              color={hasProof ? 'green.600' : unlockStatus === 'waiting' ? 'orange.500' : 'gray.500'}
-            />
-          </Flex>
-          <Stack spacing={0} flex={1} minW={0}>
-            <Text fontSize="xs" fontWeight="semibold" color="gray.800" noOfLines={1}>
-              {label}
-            </Text>
-            <Text fontSize="2xs" color={unlockStatus === 'waiting' ? 'orange.700' : 'gray.500'} noOfLines={2}>
-              {hasProof
-                ? 'Saved - change below'
-                : unlockStatus === 'waiting'
-                  ? waitMessage
-                  : unlockStatus === 'unlocked'
-                    ? selectHelper
-                    : 'Click below to start the test - results unlock after 1 hour'}
-            </Text>
-          </Stack>
-        </HStack>
-
-        {showResultInput ? (
-          resultPicker
-        ) : (
-          <Button
-            size="xs"
-            bg="brand.primary"
-            color="white"
-            _hover={{ bg: 'brand.dark' }}
-            rightIcon={<Box as={ArrowUpRight} w={3} h={3} />}
-            onClick={onCompleteTest}
-            w="full"
-          >
-            {completeButtonLabel}
-          </Button>
-        )}
-      </Stack>
-    </Box>
-  )
-}
-
 export const WeeklyGlancePage = () => {
   const navigate = useNavigate()
   const location = useLocation()
@@ -351,8 +243,6 @@ export const WeeklyGlancePage = () => {
   // Course a learner tried to open before finishing their personality profile,
   // so we can offer it back to them the moment they finish.
   const [pendingCourse, setPendingCourse] = useState<AssignedCourse | null>(null)
-  const [highlightPersonality, setHighlightPersonality] = useState(false)
-  const highlightTimer = useRef<number>()
   const {
     isOpen: isPersonalityPromptOpen,
     onOpen: openPersonalityPrompt,
@@ -367,112 +257,6 @@ export const WeeklyGlancePage = () => {
 
   const [orgCohortStartDate, setOrgCohortStartDate] = useState<string | null>(null)
   const [orgJourneyType, setOrgJourneyType] = useState<JourneyType | null>(null)
-
-  const [savingResult, setSavingResult] = useState<'personality' | 'values' | null>(null)
-  const [proofError, setProofError] = useState<string | null>(null)
-  // Tick so "wait X minutes" helpers stay accurate while the page is open.
-  const [nowTick, setNowTick] = useState(() => Date.now())
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 30_000)
-    return () => window.clearInterval(id)
-  }, [])
-
-  // Every possible outcome of each test, so learners select what they got.
-  const personalityOptions = useMemo<ResultOption[]>(
-    () =>
-      PERSONALITY_TYPES.map((pt) => ({
-        value: pt.type,
-        label: `${pt.type} - ${pt.name}`,
-        group: pt.group,
-      })),
-    [],
-  )
-  const valuesOptions = useMemo<ResultOption[]>(
-    () => CORE_VALUES.map((value) => ({ value, label: value })),
-    [],
-  )
-
-  /**
-   * Persist a picked test result. Writes the same profile fields the
-   * "Complete now" modal uses (personalityType / coreValues), so the card and
-   * the modal always show the same answer.
-   */
-  const handleResultSelect = useCallback(
-    async (kind: 'personality' | 'values', next: string[]) => {
-      if (!profile?.id) {
-        setProofError('You need to be signed in to save your result.')
-        return
-      }
-
-      const startedAt =
-        kind === 'personality' ? profile.personalityTestStartedAt : profile.valuesTestStartedAt
-      const alreadySaved =
-        kind === 'personality'
-          ? Boolean(profile.personalityType)
-          : (profile.coreValues?.length ?? 0) > 0
-      const unlock = getTestUnlockState(startedAt, Date.now())
-      if (!alreadySaved && unlock.status !== 'unlocked') {
-        const label = kind === 'personality' ? '16Personalities test' : 'Personal Values test'
-        const message = buildTestUnlockMessage(unlock, label)
-        setProofError(message)
-        toast({
-          title: 'Finish your test first',
-          description: message,
-          status: 'info',
-          duration: 6000,
-          isClosable: true,
-        })
-        return
-      }
-
-      setProofError(null)
-      setSavingResult(kind)
-      // The completion flags used to be set when a results link was saved. The
-      // link inputs are gone, so selecting a result is now what marks the test
-      // done - these flags gate the MainLayout prompt, the profile modal and
-      // partner reporting. Values needs all 5 before it counts as complete.
-      const updates: Partial<UserProfile> =
-        kind === 'personality'
-          ? {
-              personalityType: next[0] ?? '',
-              hasCompletedPersonalityTest: Boolean(next[0]),
-            }
-          : {
-              coreValues: next,
-              hasCompletedValuesTest: next.length === 5,
-            }
-      const { error: saveErr } = await updateProfile(updates)
-      if (saveErr) {
-        console.error('[WeeklyGlance] result select save failed', saveErr)
-        setProofError('Could not save your result. Please try again.')
-        setSavingResult(null)
-        return
-      }
-
-      // Tell the org's transformation partner, exactly as saving a results link
-      // used to. A direct insert is blocked by RLS (notifications_insert
-      // requires is_partner_or_admin), so this SECURITY DEFINER RPC resolves the
-      // partner and writes server-side. Only fires once the test is actually
-      // complete, so picking values one at a time sends a single notification.
-      const isComplete = kind === 'personality' ? Boolean(next[0]) : next.length === 5
-      if (isComplete) {
-        void supabase
-          .rpc('notify_partner_test_result', { p_kind: kind, p_results_url: next.join(', ') })
-          .then(({ error }) => {
-            if (error) console.warn('[WeeklyGlance] partner notification failed (non-fatal)', error)
-          })
-        toast({
-          title: 'Result saved',
-          description: 'Your partner has been notified of your results.',
-          status: 'success',
-          duration: 3500,
-        })
-      }
-      setSavingResult(null)
-    },
-    [profile, toast, updateProfile],
-  )
 
   /**
    * Open the external assessment and stamp the start time (once) so result
@@ -518,63 +302,13 @@ export const WeeklyGlancePage = () => {
       toast({
         title: 'Test started',
         description:
-          'Finish the external test. In 1 hour, come back here and SELECT your results — they do not populate automatically.',
+          'Finish the external test. In 1 hour, open your profile and select your results. They do not fill in on their own.',
         status: 'success',
         duration: 7000,
         isClosable: true,
       })
     },
     [profile, toast, updateProfile],
-  )
-
-  const personalityUnlock = useMemo(
-    () => getTestUnlockState(profile?.personalityTestStartedAt, nowTick),
-    [nowTick, profile?.personalityTestStartedAt],
-  )
-  const valuesUnlock = useMemo(
-    () => getTestUnlockState(profile?.valuesTestStartedAt, nowTick),
-    [nowTick, profile?.valuesTestStartedAt],
-  )
-  const personalityResultLocked =
-    !profile?.personalityType && personalityUnlock.status !== 'unlocked'
-  const valuesResultLocked =
-    (profile?.coreValues?.length ?? 0) === 0 && valuesUnlock.status !== 'unlocked'
-
-  const personalityResultHelper = useMemo(() => {
-    if (personalityUnlock.status === 'waiting') {
-      return `Wait ${formatRemainingWait(personalityUnlock.remainingMs)} — then select here (does not auto-fill)`
-    }
-    if (personalityUnlock.status === 'unlocked' && !profile?.personalityType) {
-      return 'Unlocked — select your type now so mentors can see it'
-    }
-    return 'Select the type you got'
-  }, [personalityUnlock, profile?.personalityType])
-
-  const valuesResultHelper = useMemo(() => {
-    if (valuesUnlock.status === 'waiting') {
-      return `Wait ${formatRemainingWait(valuesUnlock.remainingMs)} — then select here (does not auto-fill)`
-    }
-    if (valuesUnlock.status === 'unlocked' && (profile?.coreValues?.length ?? 0) === 0) {
-      return 'Unlocked — select your 5 values now so mentors can see them'
-    }
-    return 'Select the 5 values you got'
-  }, [valuesUnlock, profile?.coreValues?.length])
-
-  const showLockedAttempt = useCallback(
-    (kind: 'personality' | 'values') => {
-      const unlock = kind === 'personality' ? personalityUnlock : valuesUnlock
-      const label = kind === 'personality' ? '16Personalities test' : 'Personal Values test'
-      const message = buildTestUnlockMessage(unlock, label)
-      setProofError(message)
-      toast({
-        title: 'Finish your test first',
-        description: message,
-        status: 'info',
-        duration: 6000,
-        isClosable: true,
-      })
-    },
-    [personalityUnlock, toast, valuesUnlock],
   )
 
   // Both assessments done - used to unlock course access gated on this profile.
@@ -588,8 +322,12 @@ export const WeeklyGlancePage = () => {
   useEffect(() => {
     const hash = location.hash.replace(/^#/, '')
     if (!hash) return
-    if (hash === 'personality-profile-card' && !bothTestsCompleted) {
-      openPersonalityPrompt()
+    if (hash === 'personality-profile-card') {
+      if (!bothTestsCompleted) openPersonalityPrompt()
+      const timer = window.setTimeout(() => {
+        document.getElementById('assigned-courses')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 350)
+      return () => window.clearTimeout(timer)
     }
     const timer = window.setTimeout(() => {
       document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -703,11 +441,6 @@ export const WeeklyGlancePage = () => {
     [totalEarned, passMark, daysElapsed, totalWeeks, effectiveJourneyType, currentWeek],
   )
 
-  // Courses sit beside the video; keep the column out of the layout entirely
-  // when the learner has no programme courses to show.
-  const showAssignedCourses =
-    (assignedLoading && hasCourseOrganization) || assignedCourses.length > 0
-
   const courseSurveyKind = useMemo(
     () =>
       resolveCourseSurveyKind({
@@ -718,25 +451,15 @@ export const WeeklyGlancePage = () => {
     [journeyTiming?.journeyStart, profile?.journeyStartDate, totalWeeks, currentWeek],
   )
 
-  /** Scroll the personality card into view and flash a ring around it. */
-  const focusPersonalityCard = useCallback(() => {
+  /** Result picking lives on the profile now that this page shows courses. */
+  const openProfileForResults = useCallback(() => {
     closePersonalityPrompt()
-    window.requestAnimationFrame(() => {
-      document
-        .getElementById('personality-profile-card')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    })
-    setHighlightPersonality(true)
-    window.clearTimeout(highlightTimer.current)
-    highlightTimer.current = window.setTimeout(() => setHighlightPersonality(false), 2600)
-  }, [closePersonalityPrompt])
-
-  useEffect(() => () => window.clearTimeout(highlightTimer.current), [])
+    navigate('/app/profile')
+  }, [closePersonalityPrompt, navigate])
 
   /**
-   * Card click. Courses open only once the personality profile is done - the
-   * results shape the course experience - so an unfinished profile is bounced
-   * to the card at the top of this page rather than to another route.
+   * Card click. A course whose date has not arrived stays closed. Courses that
+   * are open still wait for the personality and values tests.
    */
   const handleCourseCardClick = useCallback(
     (course: AssignedCourse) => {
@@ -788,7 +511,6 @@ export const WeeklyGlancePage = () => {
     if (!pendingCourse || !bothTestsCompleted) return
     const course = pendingCourse
     setPendingCourse(null)
-    setHighlightPersonality(false)
     toast({
       status: 'success',
       duration: 12000,
@@ -830,13 +552,6 @@ export const WeeklyGlancePage = () => {
   }, [bothTestsCompleted, pendingCourse, requestOpenCourse, toast])
 
   const shouldShowBuildVillageCard = canCreateVillage(profile)
-
-  const personalityIncomplete = useMemo(() => {
-    if (data.loading.profile) return false
-    const hasPersonalityType = Boolean(profile?.hasCompletedPersonalityTest) && Boolean(data.personality?.personalityType)
-    const hasCoreValues = Boolean(profile?.hasCompletedValuesTest) && (data.personality?.coreValues?.length ?? 0) > 0
-    return !hasPersonalityType || !hasCoreValues
-  }, [data.loading.profile, data.personality, profile?.hasCompletedPersonalityTest, profile?.hasCompletedValuesTest])
 
   const firstName = useMemo(() => {
     const name = profile?.firstName ?? profile?.fullName ?? profile?.email ?? ''
@@ -987,130 +702,13 @@ export const WeeklyGlancePage = () => {
           )}
         </Flex>
 
-        {personalityIncomplete && (
-          <Box
-            id="personality-profile-card"
-            bg="white"
-            p={5}
-            borderRadius="xl"
-            // Flashes a ring when a course click sends the learner up here.
-            boxShadow={
-              highlightPersonality
-                ? '0 0 0 3px rgba(53, 14, 111, 0.45), 0 12px 30px rgba(53, 14, 111, 0.18)'
-                : '0 2px 8px rgba(0,0,0,0.04)'
-            }
-            transition="box-shadow 0.35s ease"
-            position="relative"
-            overflow="hidden"
-            borderLeftWidth="4px"
-            borderLeftColor="brand.primary"
-          >
-            <Box position="absolute" top={0} right={0} w="60px" h="60px" bg="purple.50" borderRadius="0 0 0 100%" />
-            <Stack spacing={4} position="relative" zIndex={1}>
-              <Flex
-                justify="space-between"
-                align={{ base: 'flex-start', md: 'center' }}
-                direction={{ base: 'column', md: 'row' }}
-                gap={4}
-              >
-                <HStack spacing={3} align="center">
-                  <Flex
-                    w={10}
-                    h={10}
-                    bg="#350e6f"
-                    borderRadius="xl"
-                    align="center"
-                    justify="center"
-                    boxShadow="0 4px 12px rgba(53, 14, 111, 0.3)"
-                    flexShrink={0}
-                  >
-                    <Box as={Fingerprint} w={5} h={5} color="white" />
-                  </Flex>
-                  <Stack spacing={0}>
-                    <Text
-                      fontSize="xs"
-                      fontWeight="semibold"
-                      textTransform="uppercase"
-                      letterSpacing="wide"
-                      color="orange.600"
-                    >
-                      Action required
-                    </Text>
-                    <Heading size="sm" color="gray.900">
-                      Complete your personality profile
-                    </Heading>
-                    <Text fontSize="sm" color="gray.600" mt={0.5}>
-                      Complete each external test, wait 1 hour, then select your results here. They
-                      never auto-fill — selecting is what shows them to your mentor and coach.
-                    </Text>
-                  </Stack>
-                </HStack>
-              </Flex>
+        <JourneyCoursesPanel
+          courses={assignedCourses}
+          loading={assignedLoading && hasCourseOrganization}
+          completionsByKey={completionsByKey}
+          onCourseClick={handleCourseCardClick}
+        />
 
-              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
-                <ResultSelectSlot
-                  label="16Personalities result"
-                  hasResult={Boolean(profile?.personalityType)}
-                  unlockStatus={
-                    profile?.personalityType ? 'unlocked' : personalityUnlock.status
-                  }
-                  completeButtonLabel="Complete personality test"
-                  onCompleteTest={() => void handleOpenExternalTest('personality')}
-                  waitMessage={personalityResultHelper}
-                  selectHelper="Select the type you got"
-                  resultPicker={
-                    <TestResultPicker
-                      mode="single"
-                      options={personalityOptions}
-                      selected={profile?.personalityType ? [profile.personalityType] : []}
-                      onChange={(next) => void handleResultSelect('personality', next)}
-                      placeholder={
-                        personalityResultLocked
-                          ? personalityResultHelper
-                          : 'Select your type'
-                      }
-                      isSaving={savingResult === 'personality'}
-                      isLocked={personalityResultLocked}
-                      onLockedAttempt={() => showLockedAttempt('personality')}
-                    />
-                  }
-                />
-                <ResultSelectSlot
-                  label="Personal Values result"
-                  hasResult={(profile?.coreValues?.length ?? 0) === 5}
-                  unlockStatus={
-                    (profile?.coreValues?.length ?? 0) > 0 ? 'unlocked' : valuesUnlock.status
-                  }
-                  completeButtonLabel="Complete the values test"
-                  onCompleteTest={() => void handleOpenExternalTest('values')}
-                  waitMessage={valuesResultHelper}
-                  selectHelper="Select the 5 values you got"
-                  resultPicker={
-                    <TestResultPicker
-                      mode="multi"
-                      maxSelections={5}
-                      options={valuesOptions}
-                      selected={profile?.coreValues ?? []}
-                      onChange={(next) => void handleResultSelect('values', next)}
-                      placeholder={
-                        valuesResultLocked ? valuesResultHelper : 'Select your values'
-                      }
-                      isSaving={savingResult === 'values'}
-                      isLocked={valuesResultLocked}
-                      onLockedAttempt={() => showLockedAttempt('values')}
-                    />
-                  }
-                />
-              </SimpleGrid>
-
-              {proofError && (
-                <Text fontSize="xs" color="red.500">
-                  {proofError}
-                </Text>
-              )}
-            </Stack>
-          </Box>
-        )}
 
         {/* Journey progress - thin bar sitting above the KPI tiles */}
         <Stack spacing={2}>
@@ -1189,36 +787,7 @@ export const WeeklyGlancePage = () => {
           </Skeleton>
         </SimpleGrid>
 
-        {/* Rules of Engagement (~2/3) flex-left; assigned courses (~1/3) flex-right. */}
-        <Flex
-          direction={{ base: 'column', md: 'row' }}
-          align="stretch"
-          gap={{ base: 6, md: 6 }}
-          w="full"
-        >
-          <Box flex={{ base: 'none', md: showAssignedCourses ? '2 1 0%' : '1 1 auto' }} minW={0} w="full">
-            <RulesOfEngagementVideo showCopy={false} />
-          </Box>
-
-          {showAssignedCourses && (
-            <Stack
-              id="assigned-courses"
-              scrollMarginTop="96px"
-              flex={{ base: 'none', md: '1 1 0%' }}
-              minW={0}
-              w="full"
-              spacing={4}
-            >
-              <AssignedCoursesCarousel
-                courses={assignedCourses}
-                loading={assignedLoading}
-                completionsByKey={completionsByKey}
-                profile={profile}
-                onCourseClick={handleCourseCardClick}
-              />
-            </Stack>
-          )}
-        </Flex>
+        <RulesOfEngagementVideo showCopy={false} />
 
         {profile?.id && hasCourseOrganization ? (
           <Box
@@ -1366,8 +935,8 @@ export const WeeklyGlancePage = () => {
         valuesStatus={testStepStatus(Boolean(profile?.hasCompletedValuesTest))}
         onStartPersonality={() => void handleOpenExternalTest('personality')}
         onStartValues={() => void handleOpenExternalTest('values')}
-        onPickPersonality={focusPersonalityCard}
-        onPickValues={focusPersonalityCard}
+        onPickPersonality={openProfileForResults}
+        onPickValues={openProfileForResults}
         onProceed={() => {
           const course = pendingCourse
           closePersonalityPrompt()
