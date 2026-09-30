@@ -53,7 +53,7 @@ export const HomePage: React.FC = () => {
           <Link
             to={accountHref}
             data-cta="bar_login"
-            className="rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-white"
+            className="rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold !text-[#27062e] !no-underline shadow-sm transition hover:bg-[#f9db59] hover:!text-[#27062e] hover:!no-underline focus:outline-none focus:ring-2 focus:ring-white"
           >
             {accountLabel}
           </Link>
@@ -82,7 +82,7 @@ export const HomePage: React.FC = () => {
               <Link
                 to={startHref}
                 data-cta="hero_start"
-                className="inline-flex rounded-full bg-[#27062e] px-6 py-3 text-base font-bold !text-white shadow-md transition hover:bg-[#3a0d44] hover:!text-white focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
+                className="inline-flex rounded-full bg-[#27062e] px-6 py-3 text-base font-bold !text-white !no-underline shadow-md transition hover:bg-[#3a0d44] hover:!text-white hover:!no-underline focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
               >
                 Start free
               </Link>
@@ -190,7 +190,7 @@ export const HomePage: React.FC = () => {
             <a
               href={ENTERPRISE_URL}
               data-cta="team_enterprise"
-              className="inline-flex justify-center rounded-full bg-[#27062e] px-6 py-3 text-base font-bold !text-white shadow-md transition hover:bg-[#3a0d44] hover:!text-white focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
+              className="inline-flex justify-center rounded-full bg-[#27062e] px-6 py-3 text-base font-bold !text-white !no-underline shadow-md transition hover:bg-[#3a0d44] hover:!text-white hover:!no-underline focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
             >
               Explore team options
             </a>
@@ -208,7 +208,7 @@ export const HomePage: React.FC = () => {
             <Link
               to={startHref}
               data-cta="closing_start"
-              className="mt-8 inline-flex rounded-full bg-[#eab130] px-6 py-3 text-base font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2D2A3E]"
+              className="mt-8 inline-flex rounded-full bg-[#eab130] px-6 py-3 text-base font-bold !text-[#27062e] !no-underline shadow-sm transition hover:bg-[#f9db59] hover:!text-[#27062e] hover:!no-underline focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2D2A3E]"
             >
               Start free
             </Link>
@@ -230,7 +230,7 @@ export const HomePage: React.FC = () => {
         <Link
           to={startHref}
           data-cta="sticky_start"
-          className="whitespace-nowrap rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59]"
+          className="whitespace-nowrap rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold !text-[#27062e] !no-underline shadow-sm transition hover:bg-[#f9db59] hover:!text-[#27062e] hover:!no-underline"
         >
           Start free
         </Link>

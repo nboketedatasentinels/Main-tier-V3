@@ -378,3 +378,22 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.8);
 }
+
+/* Pill links and buttons must not pick up the anchor underline. */
+button,
+.chakra-button,
+a[class*='rounded-full'] {
+  text-decoration: none !important;
+}
+
+button:hover,
+button:focus,
+button:focus-visible,
+.chakra-button:hover,
+.chakra-button:focus,
+.chakra-button:focus-visible,
+a[class*='rounded-full']:hover,
+a[class*='rounded-full']:focus,
+a[class*='rounded-full']:focus-visible {
+  text-decoration: none !important;
+}

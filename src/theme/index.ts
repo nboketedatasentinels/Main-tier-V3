@@ -598,7 +598,7 @@ const styles = {
     // (`<Button as={RouterLink}>` / `as="a"`) carry the .chakra-button class and
     // must keep their own color on hover - otherwise white button text turns
     // brand.dark and becomes invisible against the dark purple background.
-    'a:not(.chakra-button)': {
+    'a:not(.chakra-button):not([class*="rounded-full"])': {
       color: 'brand.primary',
       _hover: {
         color: 'brand.dark',
