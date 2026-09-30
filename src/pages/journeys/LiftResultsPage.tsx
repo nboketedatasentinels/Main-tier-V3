@@ -57,7 +57,7 @@ export const LiftResultsPage: React.FC = () => {
   }
 
   return (
-    <Box maxW="3xl" mx="auto">
+    <Box w="full">
       <VStack align="stretch" spacing={4}>
         <Heading size="lg" color="brand.deepPlum">
           Your LIFT Results
