@@ -41,18 +41,14 @@ export const HomePage: React.FC = () => {
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           <Link
             to="/"
-            className="flex items-center gap-3 rounded-md focus:outline-none focus:ring-2 focus:ring-[#eab130]"
+            className="inline-flex items-center rounded-md !no-underline focus:outline-none focus:ring-2 focus:ring-[#eab130]"
             aria-label="Transformation Leader home"
           >
-            <img src="/t4.png" alt="" className="h-10 w-10 rounded-full object-cover" />
-            <span className="flex flex-col text-left leading-none">
-              <span className="font-heading text-base font-extrabold tracking-wide text-[#eab130] sm:text-lg">
-                TRANSFORMATION <span className="text-[#f9db59]">LEADER</span>
-              </span>
-              <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#eab130]/70">
-                Positive Impact · Sustainable Change
-              </span>
-            </span>
+            <img
+              src="/t4l-logo-on-dark.png"
+              alt="Transformation Leader. Positive impact. Sustainable change."
+              className="h-11 w-auto sm:h-12"
+            />
           </Link>
           <Link
             to={accountHref}
