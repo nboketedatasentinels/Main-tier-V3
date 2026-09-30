@@ -2,7 +2,6 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 
-const WEBSITE_URL = 'https://www.t4leader.com'
 const ENTERPRISE_URL = 'https://www.t4leader.com/enterprise-digital-transformation-training'
 const TERMS_URL = 'https://www.t4leader.com/terms-of-use'
 const PRIVACY_URL = 'https://www.t4leader.com/privacy-statement'
@@ -12,6 +11,8 @@ const steps = [
   { n: '2', label: 'Log every improvement' },
   { n: '3', label: 'Show the value' },
 ]
+
+const serif = { fontFamily: 'Georgia, "Times New Roman", Times, serif' }
 
 const howItWorks = [
   {
@@ -32,23 +33,31 @@ export const HomePage: React.FC = () => {
   const { user } = useAuth()
   const startHref = user ? '/app' : '/signup'
   const accountHref = user ? '/app' : '/login'
-  const accountLabel = user ? 'Dashboard' : 'Log in'
+  const accountLabel = user ? 'Dashboard' : 'Sign in'
 
   return (
-    <div className="min-h-screen bg-white pb-24 text-[#2D2A3E] md:pb-0">
-      <header className="w-full border-b border-[#E5E2DE] bg-white">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <a href={WEBSITE_URL} aria-label="Transformation Leader home">
-            <img
-              src="/t4l-logo-2024.png"
-              alt="Transformation Leader. Positive impact. Sustainable change."
-              className="h-10 w-auto sm:h-12"
-            />
-          </a>
+    <div className="min-h-screen bg-white pb-24 text-[#1a1326] md:pb-0">
+      <header className="w-full bg-[#27062e]">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
+          <Link
+            to="/"
+            className="flex items-center gap-3 rounded-md focus:outline-none focus:ring-2 focus:ring-[#eab130]"
+            aria-label="Transformation Leader home"
+          >
+            <img src="/t4.png" alt="" className="h-10 w-10 rounded-full object-cover" />
+            <span className="flex flex-col text-left leading-none">
+              <span className="font-heading text-base font-extrabold tracking-wide text-[#eab130] sm:text-lg">
+                TRANSFORMATION <span className="text-[#f9db59]">LEADER</span>
+              </span>
+              <span className="mt-1 text-[9px] font-semibold uppercase tracking-[0.25em] text-[#eab130]/70">
+                Positive Impact · Sustainable Change
+              </span>
+            </span>
+          </Link>
           <Link
             to={accountHref}
             data-cta="bar_login"
-            className="text-sm font-semibold text-[#8A6708] underline decoration-[#eab130] underline-offset-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#eab130]"
+            className="rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-white"
           >
             {accountLabel}
           </Link>
@@ -58,15 +67,16 @@ export const HomePage: React.FC = () => {
       <main>
         <section className="px-6 py-16 text-center sm:py-24" aria-labelledby="hero-title">
           <div className="mx-auto max-w-4xl">
-            <p className="mb-7 inline-block rounded-full bg-[#FDF8EF] px-5 py-2 text-sm font-semibold text-[#8A6708]">
+            <p className="mb-8 inline-block rounded-full bg-[#fbf2d8] px-5 py-2 text-sm font-semibold text-[#9c6f15]">
               Free to join
             </p>
             <h1
               id="hero-title"
-              className="font-heading text-4xl font-semibold leading-[1.12] text-[#2D2A3E] sm:text-5xl md:text-6xl"
+              style={serif}
+              className="text-4xl font-semibold leading-[1.1] tracking-tight text-[#1a1326] sm:text-5xl md:text-6xl"
             >
               Track what your transformation work is{' '}
-              <em className="text-[#eab130] not-italic">actually worth.</em>
+              <em className="text-[#e0a008] not-italic">actually worth.</em>
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[#6B6560] sm:text-xl">
               Take the 4-minute LIFT assessment, log every improvement you make, and export a record
@@ -76,7 +86,7 @@ export const HomePage: React.FC = () => {
               <Link
                 to={startHref}
                 data-cta="hero_start"
-                className="inline-flex rounded-full bg-[#27062e] px-8 py-4 text-base font-semibold text-white transition hover:bg-[#3a0d44] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#eab130] focus-visible:ring-offset-2"
+                className="inline-flex rounded-full bg-[#27062e] px-6 py-3 text-base font-bold text-white shadow-md transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
               >
                 Start free
               </Link>
@@ -116,13 +126,13 @@ export const HomePage: React.FC = () => {
 
         <section className="bg-[#F5F3F0] px-6 py-16 sm:py-20" aria-labelledby="how-title">
           <div className="mx-auto max-w-6xl">
-            <h2 id="how-title" className="font-heading text-3xl font-semibold sm:text-4xl">
+            <h2 id="how-title" style={serif} className="text-3xl font-semibold text-[#1a1326] sm:text-4xl">
               From first assessment to proof of value
             </h2>
             <div className="mt-9 grid gap-6 md:grid-cols-3">
               {howItWorks.map((item) => (
                 <article key={item.title} className="rounded-2xl border border-[#E5E2DE] bg-white p-7">
-                  <h3 className="font-heading text-2xl font-semibold">{item.title}</h3>
+                  <h3 style={serif} className="text-2xl font-semibold text-[#1a1326]">{item.title}</h3>
                   <p className="mt-3 text-[#6B6560]">{item.body}</p>
                 </article>
               ))}
@@ -133,7 +143,7 @@ export const HomePage: React.FC = () => {
         <section className="px-6 py-16 sm:py-20" aria-labelledby="ex-title">
           <div className="mx-auto grid max-w-6xl items-center gap-10 md:grid-cols-2 md:gap-14">
             <div>
-              <h2 id="ex-title" className="font-heading text-3xl font-semibold sm:text-4xl">
+              <h2 id="ex-title" style={serif} className="text-3xl font-semibold text-[#1a1326] sm:text-4xl">
                 Most transformation work goes unrecorded.
               </h2>
               <p className="mt-4 text-lg text-[#6B6560]">
@@ -148,19 +158,19 @@ export const HomePage: React.FC = () => {
               <dl className="space-y-4">
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-[#eab130]">Problem</dt>
-                  <dd className="font-heading text-xl">Weekly status report took a full day to compile by hand</dd>
+                  <dd style={serif} className="text-xl">Weekly status report took a full day to compile by hand</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-[#eab130]">What changed</dt>
-                  <dd className="font-heading text-xl">Automated the data pull and drafted the summary with AI</dd>
+                  <dd style={serif} className="text-xl">Automated the data pull and drafted the summary with AI</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-[#eab130]">Measured effect</dt>
-                  <dd className="font-heading text-xl">Compile time down from 8 hours to 1</dd>
+                  <dd style={serif} className="text-xl">Compile time down from 8 hours to 1</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-semibold uppercase tracking-wider text-[#eab130]">Period</dt>
-                  <dd className="font-heading text-xl">Tracked over 6 weeks</dd>
+                  <dd style={serif} className="text-xl">Tracked over 6 weeks</dd>
                 </div>
               </dl>
               <figcaption className="mt-5 text-xs text-[#A09DA8]">
@@ -173,8 +183,8 @@ export const HomePage: React.FC = () => {
         <section className="bg-[#FDF8EF] px-6 py-16 sm:py-20" aria-labelledby="team-title">
           <div className="mx-auto grid max-w-6xl items-center gap-8 md:grid-cols-[1.5fr_auto]">
             <div>
-              <h2 id="team-title" className="font-heading text-3xl font-semibold sm:text-4xl">
-                Leading a team? <em className="text-[#8A6708] not-italic">Bring them with you.</em>
+              <h2 id="team-title" style={serif} className="text-3xl font-semibold text-[#1a1326] sm:text-4xl">
+                Leading a team? <em className="text-[#e0a008] not-italic">Bring them with you.</em>
               </h2>
               <p className="mt-4 max-w-xl text-lg text-[#6B6560]">
                 When your whole team logs its improvements, you get one view of what the transformation
@@ -184,7 +194,7 @@ export const HomePage: React.FC = () => {
             <a
               href={ENTERPRISE_URL}
               data-cta="team_enterprise"
-              className="inline-flex justify-center rounded-full border-2 border-[#eab130] bg-[#eab130] px-8 py-4 text-base font-semibold text-[#27062e] transition hover:bg-[#f9db59] hover:border-[#f9db59] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#27062e] focus-visible:ring-offset-2"
+              className="inline-flex justify-center rounded-full bg-[#27062e] px-6 py-3 text-base font-bold text-white shadow-md transition hover:bg-[#3a0d44] focus:outline-none focus:ring-2 focus:ring-[#eab130] focus:ring-offset-2"
             >
               Explore team options
             </a>
@@ -193,7 +203,7 @@ export const HomePage: React.FC = () => {
 
         <section className="bg-[#2D2A3E] px-6 py-16 text-center text-white sm:py-20" aria-labelledby="close-title">
           <div className="mx-auto max-w-2xl">
-            <h2 id="close-title" className="font-heading text-4xl font-semibold sm:text-5xl">
+            <h2 id="close-title" style={serif} className="text-4xl font-semibold sm:text-5xl">
               Start with four minutes.
             </h2>
             <p className="mx-auto mt-4 text-lg text-[#A09DA8]">
@@ -202,7 +212,7 @@ export const HomePage: React.FC = () => {
             <Link
               to={startHref}
               data-cta="closing_start"
-              className="mt-8 inline-flex rounded-full border-2 border-[#eab130] bg-[#eab130] px-8 py-4 text-base font-semibold text-[#27062e] transition hover:bg-[#f9db59] hover:border-[#f9db59] focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#2D2A3E]"
+              className="mt-8 inline-flex rounded-full bg-[#eab130] px-6 py-3 text-base font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59] focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-[#2D2A3E]"
             >
               Start free
             </Link>
@@ -224,7 +234,7 @@ export const HomePage: React.FC = () => {
         <Link
           to={startHref}
           data-cta="sticky_start"
-          className="whitespace-nowrap rounded-full bg-[#eab130] px-5 py-3 text-sm font-semibold text-[#27062e]"
+          className="whitespace-nowrap rounded-full bg-[#eab130] px-6 py-2.5 text-sm font-bold text-[#27062e] shadow-sm transition hover:bg-[#f9db59]"
         >
           Start free
         </Link>
