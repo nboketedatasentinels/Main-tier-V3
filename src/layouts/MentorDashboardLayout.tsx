@@ -20,6 +20,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { LogOut, Menu } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useAuth } from '@/hooks/useAuth'
 import { MentorGuidelinesModal } from '@/components/mentor/MentorGuidelinesModal'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
@@ -150,6 +151,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         overflowY="auto"
       >
         <Flex direction="column" h="full" p={4} gap={4}>
+          <BrandLogo />
           <HStack spacing={3} align="center">
             <Avatar size="sm" name={mentorName} src={avatarUrl} />
             <Box>
@@ -188,6 +190,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
         <DrawerContent>
           <DrawerBody p={4}>
             <VStack spacing={4} align="stretch">
+              <BrandLogo />
               <HStack spacing={3} align="center">
                 <Avatar size="sm" name={mentorName} src={avatarUrl} />
                 <Box>
@@ -244,9 +247,7 @@ export const MentorDashboardLayout: React.FC<MentorDashboardLayoutProps> = ({
                 variant="ghost"
                 onClick={drawer.onOpen}
               />
-              <Text fontWeight="bold" noOfLines={1}>
-                Mentor Dashboard
-              </Text>
+              <BrandLogo h="32px" />
             </HStack>
             <HStack spacing={2} flexShrink={0}>
               <NotificationDropdown />

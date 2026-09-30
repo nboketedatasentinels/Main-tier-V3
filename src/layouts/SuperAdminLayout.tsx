@@ -21,6 +21,7 @@ import {
   useToast,
 } from '@chakra-ui/react'
 import { LogOut, Menu as MenuIcon, Shield, X } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { useAuth } from '@/hooks/useAuth'
 import { buildSuperAdminNavItems, NavigationSection } from '@/utils/navigationItems'
@@ -149,6 +150,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
 
   const navContent = (
     <VStack spacing={6} align="stretch">
+      <BrandLogo />
       <HStack spacing={3} align="center">
         <Avatar size="sm" name={adminName} src={avatarUrl} />
         <Box>
@@ -199,6 +201,7 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
         <DrawerContent>
           <DrawerBody p={5}>
             <VStack align="stretch" spacing={6}>
+              <BrandLogo />
               <HStack justify="space-between" align="center">
                 <Text fontWeight="bold">Navigation</Text>
                 <IconButton aria-label="Close" icon={<Icon as={X} />} variant="ghost" onClick={drawer.onClose} />
@@ -241,17 +244,21 @@ export const SuperAdminLayout: React.FC<SuperAdminLayoutProps> = ({
                 onClick={drawer.onOpen}
               />
             )}
-            <VStack align="flex-start" spacing={0} minW={0}>
-              <HStack spacing={2}>
-                <Shield size={18} />
-                <Text fontWeight="bold" color="brand.text" noOfLines={1} fontSize={{ base: 'sm', sm: 'md' }}>
-                  Super Admin Console
+            {isMobile ? (
+              <BrandLogo h="32px" />
+            ) : (
+              <VStack align="flex-start" spacing={0} minW={0}>
+                <HStack spacing={2}>
+                  <Shield size={18} />
+                  <Text fontWeight="bold" color="brand.text" noOfLines={1} fontSize={{ base: 'sm', sm: 'md' }}>
+                    Super Admin Console
+                  </Text>
+                </HStack>
+                <Text fontSize="xs" color="brand.subtleText" display={{ base: 'none', sm: 'block' }} noOfLines={1}>
+                  {subtitle}
                 </Text>
-              </HStack>
-              <Text fontSize="xs" color="brand.subtleText" display={{ base: 'none', sm: 'block' }} noOfLines={1}>
-                {subtitle}
-              </Text>
-            </VStack>
+              </VStack>
+            )}
           </HStack>
 
           <HStack spacing={3} align="center" w={{ base: 'full', sm: 'auto' }} justify={{ base: 'space-between', sm: 'flex-end' }}>

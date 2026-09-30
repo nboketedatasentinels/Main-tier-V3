@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { RouteTransition } from '@/components/RouteTransition'
 import {
   Box,
@@ -517,35 +518,9 @@ export const MainLayout: React.FC = () => {
       >
         <VStack align="stretch" h="full" spacing={0}>
           {/* Logo Header */}
-          <HStack
-            spacing={3}
-            align="center"
-            px={4}
-            py={5}
-            borderBottom="1px solid"
-            borderColor="gray.100"
-          >
-            <Box
-              boxSize="40px"
-              borderRadius="xl"
-              bgGradient="linear(to-br, purple.600, purple.800)"
-              display="grid"
-              placeItems="center"
-              boxShadow="md"
-            >
-              <Text fontWeight="bold" fontSize="sm" color="white" fontFamily="heading">
-                T4L
-              </Text>
-            </Box>
-            <Box>
-              <Text fontSize="sm" fontWeight="semibold" color="gray.800" fontFamily="heading">
-                Transformation Leader
-              </Text>
-              <Text fontSize="xs" color="gray.500" fontFamily="body">
-                Leadership Journey
-              </Text>
-            </Box>
-          </HStack>
+          <Box px={4} py={4} borderBottom="1px solid" borderColor="gray.100">
+            <BrandLogo />
+          </Box>
 
           {/* Navigation */}
           <Box flex="1" px={3} py={4} overflowY="auto">
@@ -614,7 +589,7 @@ export const MainLayout: React.FC = () => {
               aria-label="Open menu"
               onClick={onOpen}
             />
-            <Text fontWeight="bold">T4</Text>
+            <BrandLogo h="32px" />
           </HStack>
 
           <InputGroup
@@ -848,6 +823,7 @@ export const MainLayout: React.FC = () => {
           <DrawerCloseButton color="whiteAlpha.900" />
           <DrawerBody pt={10} pb={6} display="flex" flexDirection="column">
             <VStack align="stretch" spacing={6} flex="1">
+              <BrandLogo variant="dark" />
               <HStack spacing={3} align="center">
                 <Avatar size="sm" name={profile?.fullName} src={profile?.avatarUrl} bg="whiteAlpha.200" />
                 <Box>

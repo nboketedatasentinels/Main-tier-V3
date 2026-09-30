@@ -22,7 +22,8 @@ import {
   useToast,
   useDisclosure,
 } from '@chakra-ui/react'
-import { LogOut, Menu, RefreshCw, Sparkles } from 'lucide-react'
+import { LogOut, Menu, RefreshCw } from 'lucide-react'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { useAuth } from '@/hooks/useAuth'
@@ -317,19 +318,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         overflowY="auto"
       >
         <VStack align="stretch" spacing={4} h="full">
-          <HStack spacing={2}>
-            <Box p={1.5} borderRadius="md" bg="brand.accent" border="1px solid" borderColor="brand.border">
-              <Sparkles size={16} />
-            </Box>
-            <VStack align="flex-start" spacing={0}>
-              <Text fontWeight="bold" color="brand.text" fontSize="sm">
-                Partner
-              </Text>
-              <Text fontSize="2xs" color="brand.subtleText">
-                Organization oversight
-              </Text>
-            </VStack>
-          </HStack>
+          <BrandLogo />
 
           <Divider />
 
@@ -348,6 +337,7 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
           <DrawerHeader>Navigation</DrawerHeader>
           <DrawerBody>
             <Stack spacing={6}>
+              <BrandLogo />
               {profileSection}
               {renderNav()}
               <Button
@@ -378,12 +368,15 @@ export const PartnerLayout: React.FC<PartnerLayoutProps> = ({
         <Box flex={1} overflowY="auto" sx={{ '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}>
           {/* Org / notification controls only — page titles live in each partner page. */}
           <Flex
-            justify="flex-end"
+            justify={{ base: 'space-between', md: 'flex-end' }}
             align="center"
             mb={hideWelcomeHeader ? 4 : 6}
             gap={3}
             wrap="wrap"
           >
+            <Box display={{ base: 'block', md: 'none' }} flexShrink={0}>
+              <BrandLogo h="32px" />
+            </Box>
             {hideWelcomeHeader ? (
               <HStack spacing={3} display={{ base: 'flex', md: 'none' }}>
                 <NotificationDropdown />

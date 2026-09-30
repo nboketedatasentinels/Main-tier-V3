@@ -28,6 +28,7 @@ import { Menu as MenuIcon, X } from 'lucide-react'
 import { NotificationDropdown } from '@/components/notifications/NotificationDropdown'
 import { ProgrammePushPopup } from '@/components/notifications/ProgrammePushPopup'
 import { CoachGuidelinesModal } from '@/components/coach/CoachGuidelinesModal'
+import { BrandLogo } from '@/components/brand/BrandLogo'
 import { useAuth } from '@/hooks/useAuth'
 import { buildAmbassadorNavItems, buildCommonAccountItems, NavigationItem, NavigationSection } from '@/utils/navigationItems'
 
@@ -172,6 +173,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
 
   const navContent = (
     <VStack spacing={6} align="stretch">
+      <BrandLogo />
       <HStack spacing={3} align="center">
         <Avatar size="sm" name={ambassadorName} src={avatarUrl} />
         <Box>
@@ -215,6 +217,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
         <DrawerContent>
           <DrawerBody p={5}>
             <VStack align="stretch" spacing={6}>
+              <BrandLogo />
               <HStack justify="space-between" align="center">
                 <Text fontWeight="bold">Navigation</Text>
                 <IconButton aria-label="Close" icon={<Icon as={X} />} variant="ghost" onClick={drawer.onClose} />
@@ -261,9 +264,7 @@ export const AmbassadorLayout: React.FC<AmbassadorLayoutProps> = ({
                 variant="ghost"
                 onClick={drawer.onOpen}
               />
-              <Text fontWeight="bold" noOfLines={1}>
-                Coach Hub
-              </Text>
+              <BrandLogo h="32px" />
             </HStack>
             <HStack spacing={2} flexShrink={0}>
               <NotificationDropdown />
