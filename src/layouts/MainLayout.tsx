@@ -43,7 +43,7 @@ import {
   Trophy,
   LogOut,
   CalendarDays,
-  Sparkles,
+  BarChart2,
   Headphones,
   MessageCircle,
   MessageSquare,
@@ -274,7 +274,7 @@ export const MainLayout: React.FC = () => {
         label: 'MY JOURNEY',
         items: [
           { label: 'Dashboard', path: '/app/weekly-glance', icon: CalendarDays, isPrimary: true },
-          { label: 'LIFT Assessment', path: '/app/lift-results', icon: Sparkles },
+          { label: 'LIFT Assessment', path: '/app/lift-results', icon: BarChart2 },
           { label: 'Weekly Checklist', path: '/app/weekly-checklist', icon: ClipboardList, isPrimary: true },
           { label: 'Leadership Board', path: '/app/leadership-board', icon: Trophy },
           { label: 'Impact Log', path: '/app/impact', icon: Target },
