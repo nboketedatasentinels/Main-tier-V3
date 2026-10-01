@@ -17,7 +17,7 @@ import nodemailer from "npm:nodemailer@6.9.16";
 // Transport: same SMTP mailbox as welcome / impact verification mail.
 // ---------------------------------------------------------------------------
 
-const FUNCTION_VERSION = "2026-08-24-lift-results";
+const FUNCTION_VERSION = "2026-10-01-lift-results-out-of-100";
 const APP_NAME = "Transformation Leader";
 const PLUM = "#27062e";
 const GOLD = "#eab130";
@@ -276,7 +276,7 @@ async function loadFromAssessment(userId: string, authEmail: string): Promise<Li
 }
 
 function edgeLabel(key: string | null): string {
-  if (!key) return "-";
+  if (!key) return "None. All four pillars are 70 or above, so there is no single weak area.";
   return PILLAR_LABEL[key] || key;
 }
 
@@ -293,10 +293,9 @@ function buildHtml(snapshot: LiftSnapshot, audience: "learner" | "employer"): st
   const pillarRows = (["L", "I", "F", "T"] as const)
     .map((key) => {
       const score = snapshot.pillars[key];
-      const pct = Math.max(0, Math.min(100, Math.round((score / 16) * 100)));
       return `<tr>
         <td style="padding:10px 0;border-bottom:1px solid ${HAIR};color:${INK};font-size:14px;font-weight:600">${escapeHtml(PILLAR_LABEL[key])}</td>
-        <td style="padding:10px 0;border-bottom:1px solid ${HAIR};text-align:right;color:${PLUM};font-size:14px;font-weight:700;white-space:nowrap">${score} / 16 · ${pct}%</td>
+        <td style="padding:10px 0;border-bottom:1px solid ${HAIR};text-align:right;color:${PLUM};font-size:14px;font-weight:700;white-space:nowrap">${score} / 100</td>
       </tr>`;
     })
     .join("");
@@ -315,7 +314,7 @@ function buildHtml(snapshot: LiftSnapshot, audience: "learner" | "employer"): st
       ${intro}
       <div style="background:${WASH};border:1px solid ${HAIR};border-radius:10px;padding:16px 18px;margin:0 0 20px">
         <div style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:${MUTE};font-weight:700">LIFT Index</div>
-        <div style="font-size:36px;font-weight:800;color:${PLUM};line-height:1.1;margin-top:4px">${snapshot.liftIndex}<span style="font-size:16px;font-weight:600;color:${MUTE}"> / 64</span></div>
+        <div style="font-size:36px;font-weight:800;color:${PLUM};line-height:1.1;margin-top:4px">${snapshot.liftIndex}<span style="font-size:16px;font-weight:600;color:${MUTE}"> / 100</span></div>
         <div style="margin-top:8px;color:${BODY};font-size:14px">Growth edge: <strong style="color:${INK}">${escapeHtml(edgeLabel(snapshot.developmentEdge))}</strong></div>
       </div>
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 20px">${pillarRows}</table>
@@ -336,13 +335,13 @@ function buildText(snapshot: LiftSnapshot, audience: "learner" | "employer"): st
       : `Hi ${snapshot.recipientName},`,
     "",
     `Archetype: ${snapshot.archetype}`,
-    `LIFT Index: ${snapshot.liftIndex} / 64`,
+    `LIFT Index: ${snapshot.liftIndex} / 100`,
     `Growth edge: ${edgeLabel(snapshot.developmentEdge)}`,
     "",
-    `L - ${PILLAR_LABEL.L}: ${snapshot.pillars.L}/16`,
-    `I - ${PILLAR_LABEL.I}: ${snapshot.pillars.I}/16`,
-    `F - ${PILLAR_LABEL.F}: ${snapshot.pillars.F}/16`,
-    `T - ${PILLAR_LABEL.T}: ${snapshot.pillars.T}/16`,
+    `L - ${PILLAR_LABEL.L}: ${snapshot.pillars.L}/100`,
+    `I - ${PILLAR_LABEL.I}: ${snapshot.pillars.I}/100`,
+    `F - ${PILLAR_LABEL.F}: ${snapshot.pillars.F}/100`,
+    `T - ${PILLAR_LABEL.T}: ${snapshot.pillars.T}/100`,
     "",
     "Retake the LIFT Index in 90 days to see how your pattern shifts.",
     `${APP_NAME} · https://app.t4leader.com`,
