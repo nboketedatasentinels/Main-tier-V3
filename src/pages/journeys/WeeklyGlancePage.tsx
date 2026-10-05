@@ -33,6 +33,7 @@ import {
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { JourneyCoursesPanel } from '@/components/journeys/weeklyGlance/JourneyCoursesPanel'
+import { LiftDashboardEmail } from '@/components/journeys/weeklyGlance/LiftDashboardEmail'
 import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
 import {
   PRE_COURSE_SURVEY_SECTION_ID,
@@ -660,6 +661,8 @@ export const WeeklyGlancePage = () => {
     navigate('/app/weekly-checklist')
   }, [navigate])
 
+  const showCourseColumn = assignedCourses.length > 0 || (assignedLoading && hasCourseOrganization)
+
   return (
     <Box bg="gray.50" minH="100%" p={{ base: 4, md: 8 }} pt={{ base: 4, md: 6 }}>
       <Stack spacing={8} maxW="1400px" mx="auto">
@@ -702,12 +705,21 @@ export const WeeklyGlancePage = () => {
           )}
         </Flex>
 
-        <JourneyCoursesPanel
-          courses={assignedCourses}
-          loading={assignedLoading && hasCourseOrganization}
-          completionsByKey={completionsByKey}
-          onCourseClick={handleCourseCardClick}
-        />
+        <SimpleGrid
+          columns={{ base: 1, lg: showCourseColumn ? 3 : 1 }}
+          spacing={4}
+          alignItems="start"
+        >
+          <Box gridColumn={{ lg: showCourseColumn ? 'span 2' : 'auto' }}>
+            <LiftDashboardEmail />
+          </Box>
+          <JourneyCoursesPanel
+            courses={assignedCourses}
+            loading={assignedLoading && hasCourseOrganization}
+            completionsByKey={completionsByKey}
+            onCourseClick={handleCourseCardClick}
+          />
+        </SimpleGrid>
 
 
         {/* Journey progress - thin bar sitting above the KPI tiles */}

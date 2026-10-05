@@ -1,6 +1,7 @@
-import { Box, Flex, SimpleGrid, Skeleton, Stack, Text } from '@chakra-ui/react'
+import { useEffect, useState } from 'react'
+import { Box, Flex, IconButton, Skeleton, Stack, Text } from '@chakra-ui/react'
 import { format } from 'date-fns'
-import { BookOpen, Check, Lock, type LucideIcon } from 'lucide-react'
+import { BookOpen, Check, ChevronLeft, ChevronRight, Lock, type LucideIcon } from 'lucide-react'
 import type { AssignedCourse } from '@/hooks/useAssignedCourses'
 import { resolveCourseCompletion } from '@/hooks/useUserCourseCompletions'
 import type { CourseCompletionRecord } from '@/services/courseCompletionService'
@@ -74,114 +75,155 @@ export const JourneyCoursesPanel = ({
   completionsByKey,
   onCourseClick,
 }: JourneyCoursesPanelProps) => {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setIndex((prev) => {
+      if (courses.length === 0) return 0
+      return Math.min(prev, courses.length - 1)
+    })
+  }, [courses.length])
+
   if (loading && courses.length === 0) {
     return (
-      <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={4}>
+      <Stack spacing={3}>
+        <Text
+          fontSize="xs"
+          fontWeight="semibold"
+          textTransform="uppercase"
+          letterSpacing="wide"
+          color="gray.500"
+        >
+          Your courses
+        </Text>
         <Skeleton h="168px" rounded="xl" />
-        <Skeleton h="168px" rounded="xl" />
-        <Skeleton h="168px" rounded="xl" />
-      </SimpleGrid>
+      </Stack>
     )
   }
 
   if (courses.length === 0) return null
 
+  const course = courses[index]
+  if (!course) return null
+
+  const done = Boolean(resolveCourseCompletion(completionsByKey, course))
+  const locked = course.availability === 'locked' && !done
+  const tone = done ? doneTone : locked ? lockedTone : openTone
+  const status = statusCopy(course, done)
+  const showControls = courses.length > 1
+
   return (
     <Stack id="assigned-courses" scrollMarginTop="96px" spacing={3}>
-      <Text
-        fontSize="xs"
-        fontWeight="semibold"
-        textTransform="uppercase"
-        letterSpacing="wide"
-        color="gray.500"
-      >
-        Your courses
-      </Text>
-      <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={4}>
-        {courses.map((course) => {
-          const done = Boolean(resolveCourseCompletion(completionsByKey, course))
-          const locked = course.availability === 'locked' && !done
-          const tone = done ? doneTone : locked ? lockedTone : openTone
-          const status = statusCopy(course, done)
-
-          return (
-            <Box
-              key={`${course.periodLabel}-${course.id}`}
-              as="button"
-              type="button"
-              textAlign="left"
-              w="full"
-              p={5}
-              bg="white"
-              borderRadius="xl"
-              border="1px solid"
-              borderColor="gray.100"
-              boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-              cursor="pointer"
-              position="relative"
-              overflow="hidden"
-              transition="all 0.3s ease"
-              onClick={() => onCourseClick(course)}
-              aria-label={`${course.title}. ${course.periodLabel}. ${status}`}
-              _hover={
-                tone.muted
-                  ? undefined
-                  : {
-                      transform: 'translateY(-2px)',
-                      boxShadow: tone.hoverShadow,
-                      borderColor: tone.hoverBorder,
-                    }
+      <Flex align="center" justify="space-between" gap={2}>
+        <Text
+          fontSize="xs"
+          fontWeight="semibold"
+          textTransform="uppercase"
+          letterSpacing="wide"
+          color="gray.500"
+        >
+          Your courses
+        </Text>
+        {showControls ? (
+          <Flex align="center" gap={1}>
+            <Text fontSize="xs" color="gray.400" mr={1}>
+              {index + 1} / {courses.length}
+            </Text>
+            <IconButton
+              aria-label="Previous course"
+              icon={<ChevronLeft size={16} />}
+              size="xs"
+              variant="ghost"
+              color="#350e6f"
+              isDisabled={index === 0}
+              onClick={() => setIndex((current) => Math.max(0, current - 1))}
+            />
+            <IconButton
+              aria-label="Next course"
+              icon={<ChevronRight size={16} />}
+              size="xs"
+              variant="ghost"
+              color="#350e6f"
+              isDisabled={index >= courses.length - 1}
+              onClick={() => setIndex((current) => Math.min(courses.length - 1, current + 1))}
+            />
+          </Flex>
+        ) : null}
+      </Flex>
+      <Box
+        as="button"
+        type="button"
+        textAlign="left"
+        w="full"
+        h="full"
+        p={5}
+        bg="white"
+        borderRadius="xl"
+        border="1px solid"
+        borderColor="gray.100"
+        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+        cursor="pointer"
+        position="relative"
+        overflow="hidden"
+        transition="all 0.3s ease"
+        onClick={() => onCourseClick(course)}
+        aria-label={`${course.title}. ${course.periodLabel}. ${status}`}
+        _hover={
+          tone.muted
+            ? undefined
+            : {
+                transform: 'translateY(-2px)',
+                boxShadow: tone.hoverShadow,
+                borderColor: tone.hoverBorder,
               }
-              _focusVisible={{ outline: '2px solid #350e6f', outlineOffset: '2px' }}
-            >
-              <Box
-                position="absolute"
-                top={0}
-                right={0}
-                w="60px"
-                h="60px"
-                bg={tone.ornamentBg}
-                borderRadius="0 0 0 100%"
-              />
-              <Flex
-                w={10}
-                h={10}
-                bg={tone.iconBg}
-                borderRadius="xl"
-                align="center"
-                justify="center"
-                mb={3}
-                boxShadow={tone.iconShadow}
-              >
-                <Box as={tone.icon} w={5} h={5} color="white" />
-              </Flex>
-              <Text
-                fontSize="xs"
-                color={tone.muted ? 'gray.400' : 'gray.500'}
-                fontWeight="semibold"
-                textTransform="uppercase"
-                letterSpacing="wide"
-                mb={1}
-              >
-                {course.periodLabel}
-              </Text>
-              <Text
-                fontWeight="bold"
-                fontSize="xl"
-                color={tone.titleColor}
-                lineHeight="1.2"
-                letterSpacing="-0.02em"
-                noOfLines={2}
-              >
-                {course.title}
-              </Text>
-              <Text fontSize="xs" color={tone.muted ? 'gray.400' : 'gray.500'} mt={1}>
-                {status}
-              </Text>
-            </Box>
-          )
-        })}
-      </SimpleGrid>
+        }
+        _focusVisible={{ outline: '2px solid #350e6f', outlineOffset: '2px' }}
+      >
+        <Box
+          position="absolute"
+          top={0}
+          right={0}
+          w="60px"
+          h="60px"
+          bg={tone.ornamentBg}
+          borderRadius="0 0 0 100%"
+        />
+        <Flex
+          w={10}
+          h={10}
+          bg={tone.iconBg}
+          borderRadius="xl"
+          align="center"
+          justify="center"
+          mb={3}
+          boxShadow={tone.iconShadow}
+        >
+          <Box as={tone.icon} w={5} h={5} color="white" />
+        </Flex>
+        <Text
+          fontSize="xs"
+          color={tone.muted ? 'gray.400' : 'gray.500'}
+          fontWeight="semibold"
+          textTransform="uppercase"
+          letterSpacing="wide"
+          mb={1}
+        >
+          {course.periodLabel}
+        </Text>
+        <Text
+          fontWeight="bold"
+          fontSize="xl"
+          color={tone.titleColor}
+          lineHeight="1.2"
+          letterSpacing="-0.02em"
+          noOfLines={3}
+        >
+          {course.title}
+        </Text>
+        <Text fontSize="xs" color={tone.muted ? 'gray.400' : 'gray.500'} mt={1}>
+          {status}
+        </Text>
+      </Box>
     </Stack>
   )
 }
