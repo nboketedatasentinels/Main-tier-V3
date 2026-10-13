@@ -476,7 +476,7 @@ export const WeeklyGlancePage = () => {
         return
       }
 
-      if (!canAccessCourse(profile, course.title, course.id)) {
+      if (!canAccessCourse(profile, course.title, course.id, course.orgAccessType)) {
         navigate('/upgrade')
         return
       }

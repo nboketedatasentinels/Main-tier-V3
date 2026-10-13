@@ -7,6 +7,7 @@ export const PARTNER_SIDEBAR_ROUTES: Record<string, string> = {
   'course-approvals': '/partner/course-approvals',
   'programme-submissions': '/partner/programme-submissions',
   'course-surveys': '/partner/course-surveys',
+  'course-library': '/partner/course-library',
   overview: '/partner/dashboard',
 }
 

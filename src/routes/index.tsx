@@ -90,6 +90,7 @@ const LearnerAssignmentsPage = lazy(() => import('@/pages/partner/LearnerAssignm
 const CourseApprovalsPage = lazy(() => import('@/pages/partner/CourseApprovalsPage'))
 const ProgrammeSubmissionsPage = lazy(() => import('@/pages/partner/ProgrammeSubmissionsPage'))
 const CourseSurveysPage = lazy(() => import('@/pages/partner/CourseSurveysPage'))
+const CourseLibraryPage = lazy(() => import('@/pages/partner/CourseLibraryPage'))
 const LiftResultsPage = lazy(() => import('@/pages/journeys/LiftResultsPage'))
 const LiftAssessmentsAdminPage = lazy(() => import('@/pages/super-admin/LiftAssessmentsAdminPage'))
 const OrganizationsAdminPage = lazy(() => import('@/pages/super-admin/OrganizationsAdminPage'))
@@ -256,6 +257,7 @@ export const AppRoutes = () => {
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
           <Route path="course-surveys" element={<CourseSurveysPage />} />
+          <Route path="course-library" element={<CourseLibraryPage />} />
           <Route path="notifications" element={<Navigate to="/partner/dashboard" replace />} />
           <Route index element={<Navigate to="/partner/dashboard" replace />} />
         </Route>
@@ -278,6 +280,7 @@ export const AppRoutes = () => {
           <Route path="course-approvals" element={<CourseApprovalsPage />} />
           <Route path="programme-submissions" element={<ProgrammeSubmissionsPage />} />
           <Route path="lift-assessments" element={<LiftAssessmentsAdminPage />} />
+          <Route path="course-library" element={<CourseLibraryPage />} />
           <Route path="organizations" element={<OrganizationsAdminPage />} />
           <Route path="notifications" element={<AdminNotificationsPage />} />
           <Route index element={<Navigate to="/admin/dashboard" replace />} />

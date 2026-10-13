@@ -797,6 +797,7 @@ const mapOrganization = (row: Record<string, unknown>): OrganizationRecord => {
           ? Number(settings.purchasedCoachSessions) || null
           : null,
     programEnd: typeof settings.programEnd === 'string' ? settings.programEnd.slice(0, 10) : undefined,
+    courseTemplate: settings.courseTemplate === 'custom' ? 'custom' : 't4l',
   }
 }
 

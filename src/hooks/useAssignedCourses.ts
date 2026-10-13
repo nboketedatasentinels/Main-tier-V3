@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { addDays } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import { useOrganizationProgramCourses } from '@/hooks/useOrganizationProgramCourses'
@@ -18,6 +18,13 @@ import { getPointsPerCourse } from '@/config/pointsConfig'
 import type { CourseAvailability } from '@/components/courses/AssignedCourseCard'
 import type { UserProfile } from '@/types'
 import { isFreeUser } from '@/utils/membership'
+import { getCatalogueCourseAccess, type CourseAccessInfo, type CourseAccessType } from '@/utils/courseAccess'
+import {
+  getOrganizationCourseAccess,
+  getOrganizationCoursesByAssignmentIds,
+  isOrganizationCourseAssignmentId,
+  resolveOrganizationCourseLink,
+} from '@/services/organizationCourseService'
 
 /** Complementary course shown beside Rules of Engagement for free (non-org) learners. */
 const FREE_USER_COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
@@ -37,7 +44,16 @@ export interface AssignedCourse {
   dateRange?: string
   unlockDate: Date | null
   availability: CourseAvailability
+  /** Free / paid label for the course card. */
+  access: CourseAccessInfo
+  /** Set for organisation library courses; free ones open for every member. */
+  orgAccessType?: CourseAccessType
 }
+
+type ResolvedCourse = Pick<
+  AssignedCourse,
+  'id' | 'title' | 'description' | 'link' | 'estimatedMinutes' | 'difficulty' | 'access' | 'orgAccessType'
+>
 
 const resolveOrganizationId = (profile: UserProfile | null): string | null => {
   if (!profile) return null
@@ -71,8 +87,9 @@ const getWeekAvailability = (
   return 'current'
 }
 
-/** Course details from the in-repo catalog (courseMappings.ts). */
-const buildCourse = (courseId: string) => {
+/** Course details from the org library (when resolved) or the in-repo catalog (courseMappings.ts). */
+const buildCourse = (courseId: string, orgCourses?: Map<string, ResolvedCourse>): ResolvedCourse | null => {
+  if (isOrganizationCourseAssignmentId(courseId)) return orgCourses?.get(courseId) ?? null
   const title = resolveCourseTitleFromMapping(courseId)
   const details = getCourseDetailsFromMapping(title)
   if (!details) return null
@@ -84,6 +101,7 @@ const buildCourse = (courseId: string) => {
     link: details.link,
     estimatedMinutes: metadata?.estimatedMinutes,
     difficulty: metadata?.difficulty,
+    access: getCatalogueCourseAccess(title, details.slug),
   }
 }
 
@@ -118,6 +136,49 @@ export const useAssignedCourses = () => {
   const organizationId = useMemo(() => resolveOrganizationId(profile ?? null), [profile])
   const { program, loading } = useOrganizationProgramCourses(organizationId)
   const freeTier = useMemo(() => isFreeUser(profile ?? null), [profile])
+  const [orgCourses, setOrgCourses] = useState<Map<string, ResolvedCourse>>(() => new Map())
+  const [orgCoursesLoading, setOrgCoursesLoading] = useState(false)
+
+  // The organisation's own library courses (custom course template).
+  useEffect(() => {
+    const ids = (program?.courseAssignments ?? []).filter(isOrganizationCourseAssignmentId)
+    if (!ids.length) {
+      setOrgCourses(new Map())
+      setOrgCoursesLoading(false)
+      return
+    }
+    let cancelled = false
+    setOrgCoursesLoading(true)
+    void getOrganizationCoursesByAssignmentIds(ids)
+      .then(async (rows) => {
+        const resolved = new Map<string, ResolvedCourse>()
+        await Promise.all(
+          Array.from(rows.entries()).map(async ([assignmentId, course]) => {
+            resolved.set(assignmentId, {
+              id: assignmentId,
+              title: course.title,
+              description: course.description || 'Course from your organization.',
+              link: (await resolveOrganizationCourseLink(course)) ?? undefined,
+              estimatedMinutes: course.estimatedMinutes ?? undefined,
+              difficulty: course.difficulty,
+              access: getOrganizationCourseAccess(course),
+              orgAccessType: course.accessType,
+            })
+          }),
+        )
+        if (!cancelled) setOrgCourses(resolved)
+      })
+      .catch((error) => {
+        console.warn('[useAssignedCourses] organization course read failed', error)
+        if (!cancelled) setOrgCourses(new Map())
+      })
+      .finally(() => {
+        if (!cancelled) setOrgCoursesLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [program])
 
   const courses = useMemo<AssignedCourse[]>(() => {
     // Free learners without an organisation still need a course card beside
@@ -138,7 +199,7 @@ export const useAssignedCourses = () => {
       return monthly
         .map((courseId, index) => {
           if (!courseId) return null
-          const course = buildCourse(courseId)
+          const course = buildCourse(courseId, orgCourses)
           if (!course) return null
           const range = cohortStartDate ? getMonthDateRange(cohortStartDate, index) : null
           return {
@@ -178,7 +239,7 @@ export const useAssignedCourses = () => {
     return display
       .map((courseId, index) => {
         if (!courseId) return null
-        const course = buildCourse(courseId)
+        const course = buildCourse(courseId, orgCourses)
         if (!course) return null
 
         const startWeekIndex = index * weeksPerBlock
@@ -204,11 +265,11 @@ export const useAssignedCourses = () => {
         }
       })
       .filter(Boolean) as AssignedCourse[]
-  }, [program, organizationId, freeTier])
+  }, [program, organizationId, freeTier, orgCourses])
 
   return {
     courses,
-    loading: freeTier && !organizationId ? false : loading,
+    loading: freeTier && !organizationId ? false : loading || orgCoursesLoading,
     hasProgram: Boolean(program) || (freeTier && !organizationId && courses.length > 0),
     hasOrganization: Boolean(organizationId),
   }

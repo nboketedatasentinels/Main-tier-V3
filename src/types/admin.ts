@@ -126,6 +126,8 @@ export interface OrganizationRecord {
   hasAmbassador?: boolean
   /** Default purchased Transformation Coaching sessions for this org (1-20). */
   purchasedCoachSessions?: number | null
+  /** 't4l' = catalogue / pillar plan; 'custom' = any course incl. the org's own library. */
+  courseTemplate?: 't4l' | 'custom'
   capacityLastAlertThreshold?: 75 | 90 | 95 | 100 | null
 }
 

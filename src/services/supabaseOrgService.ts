@@ -280,7 +280,14 @@ export interface OrgWriteExtras {
   purchasedCoachSessions?: number | null
   /** Program end date (YYYY-MM-DD), derived from start + duration. */
   programEnd?: string | null
+  /**
+   * 't4l' = T4L catalogue / pillar plan; 'custom' = the admin fills every slot
+   * from any course, including the organisation's own library.
+   */
+  courseTemplate?: CourseTemplate | null
 }
+
+export type CourseTemplate = 't4l' | 'custom'
 
 const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   village: e.village ?? null,
@@ -296,6 +303,8 @@ const buildSettings = (e: OrgWriteExtras): Record<string, unknown> => ({
   monthlyCourseAssignments: e.monthlyCourseAssignments ?? null,
   courseAssignments: e.courseAssignments ?? null,
   courseAssignmentStructure: e.courseAssignmentStructure ?? null,
+  // Only written when supplied so a partial update keeps the stored template.
+  ...(e.courseTemplate !== undefined ? { courseTemplate: e.courseTemplate } : {}),
   ...(e.purchasedCoachSessions !== undefined
     ? {
         purchasedCoachSessions:
@@ -459,6 +468,7 @@ export interface OrgProgramRaw {
   courseAssignmentStructure: 'monthly' | 'array' | null
   pillar: string | null
   purchasedCoachSessions?: number | null
+  courseTemplate: CourseTemplate
 }
 
 export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramRaw | null> => {
@@ -490,6 +500,7 @@ export const getOrganizationProgram = async (orgId: string): Promise<OrgProgramR
     courseAssignmentStructure:
       structure === 'monthly' || structure === 'array' ? structure : null,
     pillar: (settings.pillar as string) ?? null,
+    courseTemplate: settings.courseTemplate === 'custom' ? 'custom' : 't4l',
     purchasedCoachSessions:
       typeof settings.purchasedCoachSessions === 'number'
         ? settings.purchasedCoachSessions
@@ -585,6 +596,7 @@ export const updateOrganization = async (id: string, patch: UpdateOrgInput): Pro
         : typeof existingSettings.programEnd === 'string'
           ? existingSettings.programEnd
           : null,
+    courseTemplate: patch.courseTemplate,
   }
   updates.settings = { ...existingSettings, ...buildSettings(nextExtras) }
 

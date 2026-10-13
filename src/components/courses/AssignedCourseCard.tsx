@@ -14,6 +14,8 @@ import {
 import { Link as RouterLink } from 'react-router-dom'
 import { ArrowUpRight, Award, BookOpen, CheckCircle2, Lock, Sparkles, type LucideIcon } from 'lucide-react'
 import type { CourseCompletionRecord } from '@/services/courseCompletionService'
+import type { CourseAccessInfo } from '@/utils/courseAccess'
+import { CourseAccessBadge } from '@/components/courses/CourseAccessBadge'
 
 export type CourseAvailability = 'current' | 'past' | 'locked' | 'completed'
 
@@ -141,6 +143,8 @@ export interface AssignedCourseCardProps {
   completion?: CourseCompletionRecord
   /** Membership/tier access to this specific course. */
   hasAccess: boolean
+  /** Free / paid (with price) label shown under the title. */
+  access?: CourseAccessInfo
   preAssessmentDone?: boolean
   postAssessmentDone?: boolean
   /** Course details are still resolving. */
@@ -191,6 +195,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
   points,
   completion,
   hasAccess,
+  access,
   preAssessmentDone = false,
   postAssessmentDone = false,
   isLoading = false,
@@ -381,6 +386,7 @@ export const AssignedCourseCard: React.FC<AssignedCourseCardProps> = ({
               {course?.description ||
                 `Your ${periodNoun === 'week' ? 'weekly' : 'monthly'} course assignment.`}
             </Text>
+            {hasCourse && access && <CourseAccessBadge access={access} included={hasAccess} />}
           </Stack>
 
           {/* Compact: date on the left, points chip on the right, one row. */}

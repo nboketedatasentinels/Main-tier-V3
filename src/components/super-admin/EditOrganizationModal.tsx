@@ -41,11 +41,18 @@ import {
   Thead,
   Tooltip,
   Tr,
+  useDisclosure,
   useToast,
 } from '@chakra-ui/react'
 import { ClusterProgressionGuide } from '@/components/super-admin/ClusterProgressionGuide'
 import { InfoIcon } from '@chakra-ui/icons'
-import { ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
+import { BookOpen, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react'
+import { useOrganizationCourses } from '@/hooks/useOrganizationCourses'
+import {
+  isOrganizationCourseAssignmentId,
+  toOrganizationCourseOption,
+} from '@/services/organizationCourseService'
+import { OrganizationCourseLibrary } from '@/components/courses/OrganizationCourseLibrary'
 import { CourseOption, OrganizationRecord, ProgramDurationOption } from '@/types/admin'
 import { determineClusterFromTeamSize, fetchAvailableCourses } from '@/services/organizationService'
 import {
@@ -186,6 +193,16 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   const [editMemberRole, setEditMemberRole] = useState<OrgMemberEditableRole>('user')
   const [editMemberSaving, setEditMemberSaving] = useState(false)
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null)
+  const courseLibrary = useDisclosure()
+  const {
+    courses: libraryCourses,
+    loading: libraryLoading,
+    reload: reloadLibrary,
+  } = useOrganizationCourses(isOpen ? organization?.id : null)
+  const libraryCourseOptions = useMemo(() => libraryCourses.map(toOrganizationCourseOption), [libraryCourses])
+  // Custom template: the admin fills every slot from any course (incl. the
+  // org's own library) - no pillar plan or pillar-mix rule.
+  const isCustomTemplate = form.courseTemplate === 'custom'
 
   const courseLimit = useMemo(() => {
     const duration = Number(form.programDuration)
@@ -236,8 +253,11 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
     [monthlyAssignments, courseLimit],
   )
   const singlePillarCourseSet = useMemo(
-    () => (isMonthlyJourney ? evaluateSinglePillarCourseSet(monthlyAssignments) : { blocked: false }),
-    [isMonthlyJourney, monthlyAssignments],
+    () =>
+      isMonthlyJourney && !isCustomTemplate
+        ? evaluateSinglePillarCourseSet(monthlyAssignments)
+        : { blocked: false },
+    [isMonthlyJourney, isCustomTemplate, monthlyAssignments],
   )
 
   const sortedCourses = useMemo(() => {
@@ -248,12 +268,13 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   }, [courses, isMonthlyJourney])
   const courseTitleById = useMemo(() => {
     const map = new Map<string, string>()
+    libraryCourseOptions.forEach((course) => map.set(course.id, course.title))
     sortedCourses.forEach((course) => map.set(course.id, course.title))
     courses.forEach((course) => {
       if (!map.has(course.id)) map.set(course.id, course.title)
     })
     return map
-  }, [courses, sortedCourses])
+  }, [courses, sortedCourses, libraryCourseOptions])
   const clusterDisplayName = useMemo(() => getClusterDisplayName(form.cluster), [form.cluster])
   const clusterShortName = useMemo(() => getClusterShortName(form.cluster), [form.cluster])
   const clusterTier = useMemo(() => getClusterTierByName(form.cluster), [form.cluster])
@@ -428,7 +449,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
   }
 
   const handleMonthlyAssignmentChange = (monthKey: string, courseId: string) => {
-    if (isMonthlyJourney && courseId) {
+    if (isMonthlyJourney && !isCustomTemplate && courseId) {
       const check = wouldCreateSinglePillarCourseSet({
         assignments: monthlyAssignments,
         monthKey,
@@ -625,7 +646,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       if (!form.programDuration) throw new Error('Program duration is required')
 
       let assignmentsToSave = { ...monthlyAssignments }
-      if (form.programDuration === 1.5 && form.pillar) {
+      if (form.programDuration === 1.5 && form.pillar && !isCustomTemplate) {
         const plan = PILLAR_COURSE_PLAN[form.pillar as Pillar]
         assignmentsToSave = {
           '1': plan[0].courseId,
@@ -635,17 +656,17 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
       const missingMonths = Array.from({ length: courseLimit }, (_, index) => index + 1).filter(
         (month) => !assignmentsToSave[String(month)],
       )
-      if (form.programDuration === 1.5 && missingMonths.length && !form.pillar) {
+      if (form.programDuration === 1.5 && missingMonths.length && !form.pillar && !isCustomTemplate) {
         throw new Error('This 6-week organization needs a pillar (or existing course assignments) before saving')
       }
       if (missingMonths.length) {
         throw new Error(
-          form.programDuration === 1.5
+          form.programDuration === 1.5 && !isCustomTemplate
             ? 'Select a pillar so both 6-week courses are assigned'
             : `Assign a course for every month (${missingMonths.length} still empty)`,
         )
       }
-      if (form.programDuration !== 1.5) {
+      if (form.programDuration !== 1.5 && !isCustomTemplate) {
         const pillarMix = evaluateSinglePillarCourseSet(assignmentsToSave)
         if (pillarMix.blocked) {
           throw new Error(
@@ -731,6 +752,7 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
         monthlyCourseAssignments: assignmentsToSave,
         courseAssignments: orderedCourseAssignments,
         courseAssignmentStructure: 'monthly',
+        courseTemplate: isCustomTemplate ? 'custom' : 't4l',
         description: form.description ?? null,
         purchasedCoachSessions:
           typeof form.purchasedCoachSessions === 'number' && form.purchasedCoachSessions > 0
@@ -1075,10 +1097,52 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                   {assignmentSectionLabel}
                 </Text>
                 <Text fontSize="sm" color="gray.600" mb={3}>
-                  {isMonthlyJourney
-                    ? `Assign exactly ${courseLimit} courses (1 per month). Learners only see these courses, in this order: Course 1 first, Course 2 second, and so on. At least two pillars must be represented - all courses cannot be from the same pillar.`
-                    : '6-week courses come from the organization pillar (when set) and are saved to the organization. Window 1 is shown first to learners.'}
+                  {isCustomTemplate
+                    ? `Custom template: pick any course for each of the ${courseLimit} ${assignmentUnitPlural}, including this organization's own courses. Learners see them in this order.`
+                    : isMonthlyJourney
+                      ? `Assign exactly ${courseLimit} courses (1 per month). Learners only see these courses, in this order: Course 1 first, Course 2 second, and so on. At least two pillars must be represented - all courses cannot be from the same pillar.`
+                      : '6-week courses come from the organization pillar (when set) and are saved to the organization. Window 1 is shown first to learners.'}
                 </Text>
+                <Box borderWidth="1px" borderRadius="lg" p={3} mb={3} bg="purple.50" borderColor="purple.100">
+                  <Flex
+                    gap={3}
+                    direction={{ base: 'column', md: 'row' }}
+                    align={{ base: 'stretch', md: 'flex-end' }}
+                  >
+                    <FormControl flex="1">
+                      <FormLabel fontSize="sm" mb={1}>
+                        Course template
+                      </FormLabel>
+                      <Select
+                        bg="white"
+                        value={isCustomTemplate ? 'custom' : 't4l'}
+                        onChange={(e) =>
+                          updateField('courseTemplate', e.target.value === 'custom' ? 'custom' : 't4l')
+                        }
+                      >
+                        <option value="t4l">T4L catalogue (pillar plan)</option>
+                        <option value="custom">Custom - use any course, including our own</option>
+                      </Select>
+                    </FormControl>
+                    <Button
+                      leftIcon={<BookOpen size={16} />}
+                      variant="outline"
+                      colorScheme="purple"
+                      bg="white"
+                      onClick={courseLibrary.onOpen}
+                      isDisabled={!organization?.id}
+                    >
+                      Course library ({libraryLoading ? '…' : libraryCourses.length})
+                    </Button>
+                  </Flex>
+                  <Text fontSize="xs" color="gray.600" mt={2}>
+                    {isCustomTemplate
+                      ? libraryCourses.length
+                        ? "This organization's courses are listed first in each dropdown."
+                        : 'Add courses to the library, then pick them below.'
+                      : 'Switch to Custom to assign this organization’s own courses.'}
+                  </Text>
+                </Box>
                 {courseLimit === 0 ? (
                   <Text fontSize="sm" color="gray.600">
                     Select a program duration to enable {assignmentUnit} assignments.
@@ -1138,14 +1202,37 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
                           onChange={(e) => handleMonthlyAssignmentChange(monthKey, e.target.value)}
                           bg="white"
                         >
-                          {(sortedCourses.length
-                            ? sortedCourses
-                            : getMonthlyJourneyCourseOptions()
-                          ).map((course) => (
-                            <option key={course.id} value={course.id}>
-                              {course.title}
-                            </option>
-                          ))}
+                          {isCustomTemplate && libraryCourseOptions.length > 0 && (
+                            <optgroup label="This organization's courses">
+                              {libraryCourseOptions.map((course) => (
+                                <option key={course.id} value={course.id}>
+                                  {course.title}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          <optgroup label="T4L catalogue">
+                            {(sortedCourses.length
+                              ? sortedCourses
+                              : getMonthlyJourneyCourseOptions()
+                            ).map((course) => (
+                              <option key={course.id} value={course.id}>
+                                {course.title}
+                              </option>
+                            ))}
+                          </optgroup>
+                          {/* Keep an assigned library course visible even if archived or template switched. */}
+                          {isOrganizationCourseAssignmentId(assignedCourse) &&
+                            !courseTitleById.has(assignedCourse) && (
+                              <option value={assignedCourse}>Archived organization course</option>
+                            )}
+                          {assignedCourse &&
+                            !isCustomTemplate &&
+                            libraryCourseOptions.some((course) => course.id === assignedCourse) && (
+                              <option value={assignedCourse}>
+                                {courseTitleById.get(assignedCourse)} (organization course)
+                              </option>
+                            )}
                         </Select>
                         {isEmpty && (
                           <Text fontSize="xs" color="red.500" mt={2}>
@@ -1434,6 +1521,26 @@ export const EditOrganizationModal: React.FC<EditOrganizationModalProps> = ({
               Save user
             </Button>
           </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      <Modal
+        isOpen={courseLibrary.isOpen}
+        onClose={() => {
+          courseLibrary.onClose()
+          reloadLibrary()
+        }}
+        size="5xl"
+        scrollBehavior="inside"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalCloseButton />
+          <ModalBody py={6}>
+            {organization?.id ? (
+              <OrganizationCourseLibrary organizationId={organization.id} organizationName={form.name} />
+            ) : null}
+          </ModalBody>
         </ModalContent>
       </Modal>
     </>

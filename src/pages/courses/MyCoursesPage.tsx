@@ -26,6 +26,13 @@ import type { CourseCompletionRecord } from '@/services/courseCompletionService'
 import { getCourseDocument, getCourseDocuments } from '@/services/courseService'
 import { FIRESTORE_READS_AVAILABLE } from '@/utils/firestoreMigration'
 import { canAccessCourse, isFreeUser } from '@/utils/membership'
+import { getCatalogueCourseAccess, type CourseAccessInfo, type CourseAccessType } from '@/utils/courseAccess'
+import {
+  getOrganizationCourseAccess,
+  getOrganizationCoursesByAssignmentIds,
+  isOrganizationCourseAssignmentId,
+  resolveOrganizationCourseLink,
+} from '@/services/organizationCourseService'
 import {
   COURSE_DETAILS_MAPPING,
   getCourseDetailsFromMapping,
@@ -79,6 +86,10 @@ interface NormalizedCourse {
   estimatedMinutes?: number
   difficulty?: CourseDifficulty
   image?: string
+  /** Free / paid label for the course card. */
+  access?: CourseAccessInfo
+  /** Set for organisation library courses; free ones open for every member. */
+  orgAccessType?: CourseAccessType
 }
 
 const COMPLEMENTARY_COURSE_ID = 'transformational-leadership'
@@ -765,6 +776,30 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
           }
         })
 
+        // The organisation's own library courses (custom course template).
+        const orgCourseIds = orderedCourseIds.filter(isOrganizationCourseAssignmentId)
+        if (orgCourseIds.length) {
+          // Non-fatal: catalogue courses still render if the library read fails.
+          const orgCourses = await getOrganizationCoursesByAssignmentIds(orgCourseIds).catch((readError) => {
+            console.warn('[MyCourses] organization course read failed', readError)
+            return new Map()
+          })
+          await Promise.all(
+            Array.from(orgCourses.entries()).map(async ([assignmentId, orgCourse]) => {
+              nextCourseMap[assignmentId] = {
+                id: assignmentId,
+                title: orgCourse.title,
+                description: orgCourse.description || 'Course from your organization.',
+                link: (await resolveOrganizationCourseLink(orgCourse)) ?? undefined,
+                estimatedMinutes: orgCourse.estimatedMinutes ?? undefined,
+                difficulty: orgCourse.difficulty,
+                access: getOrganizationCourseAccess(orgCourse),
+                orgAccessType: orgCourse.accessType,
+              }
+            }),
+          )
+        }
+
         if (isActive) {
           setCourseMap(nextCourseMap)
         }
@@ -1203,8 +1238,18 @@ const OrganizationCoursesPage: React.FC<{ userId?: string | null; profile: UserP
                     completion={completion}
                     hasAccess={
                       entry.course
-                        ? canAccessCourse(profile, entry.course.title, entry.course.id)
+                        ? canAccessCourse(
+                            profile,
+                            entry.course.title,
+                            entry.course.id,
+                            entry.course.orgAccessType,
+                          )
                         : false
+                    }
+                    access={
+                      entry.course
+                        ? entry.course.access ?? getCatalogueCourseAccess(entry.course.title, entry.course.id)
+                        : undefined
                     }
                     preAssessmentDone={
                       entry.course

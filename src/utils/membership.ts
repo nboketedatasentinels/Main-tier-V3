@@ -84,9 +84,12 @@ export const isFreeImpactLogLimitReached = (
 export const canAccessCourse = (
   profile: MembershipProfile,
   courseTitle?: string | null,
-  courseId?: string | null
+  courseId?: string | null,
+  /** Organisation library courses marked free are open to every member. */
+  accessType?: 'free' | 'paid',
 ): boolean => {
   if (!courseTitle && !courseId) return false
+  if (accessType === 'free') return true
   if (isComplementaryCourse(courseTitle, courseId)) return true
   if (!profile) return false
   if (!isFreeUser(profile)) return true
