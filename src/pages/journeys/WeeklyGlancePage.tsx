@@ -33,7 +33,6 @@ import {
 import { useWeeklyGlanceData } from '@/hooks/useWeeklyGlanceData'
 import { RulesOfEngagementVideo } from '@/components/courses/RulesOfEngagementVideo'
 import { JourneyCoursesPanel } from '@/components/journeys/weeklyGlance/JourneyCoursesPanel'
-import { LiftDashboardEmail } from '@/components/journeys/weeklyGlance/LiftDashboardEmail'
 import { SelfCourseAssessment } from '@/components/assessments/SelfCourseAssessment'
 import {
   PRE_COURSE_SURVEY_SECTION_ID,
@@ -146,6 +145,7 @@ const KpiTile = ({ label, value, sub, icon, theme }: KpiTileProps) => {
   const styles = kpiThemes[theme]
   return (
     <Box
+      h="full"
       p={5}
       bg="white"
       borderRadius="xl"
@@ -661,7 +661,7 @@ export const WeeklyGlancePage = () => {
     navigate('/app/weekly-checklist')
   }, [navigate])
 
-  const showCourseColumn = assignedCourses.length > 0 || (assignedLoading && hasCourseOrganization)
+  const showCourseTile = assignedCourses.length > 0 || (assignedLoading && hasCourseOrganization)
 
   return (
     <Box bg="gray.50" minH="100%" p={{ base: 4, md: 8 }} pt={{ base: 4, md: 6 }}>
@@ -704,22 +704,6 @@ export const WeeklyGlancePage = () => {
             </Button>
           )}
         </Flex>
-
-        <SimpleGrid
-          columns={{ base: 1, lg: showCourseColumn ? 3 : 1 }}
-          spacing={4}
-          alignItems="start"
-        >
-          <Box gridColumn={{ lg: showCourseColumn ? 'span 2' : 'auto' }}>
-            <LiftDashboardEmail />
-          </Box>
-          <JourneyCoursesPanel
-            courses={assignedCourses}
-            loading={assignedLoading && hasCourseOrganization}
-            completionsByKey={completionsByKey}
-            onCourseClick={handleCourseCardClick}
-          />
-        </SimpleGrid>
 
 
         {/* Journey progress - thin bar sitting above the KPI tiles */}
@@ -767,8 +751,8 @@ export const WeeklyGlancePage = () => {
         </Stack>
 
         {/* KPI Strip */}
-        <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} spacing={4}>
-          <Skeleton isLoaded={!data.loading.ledger} rounded="xl">
+        <SimpleGrid columns={{ base: 1, sm: 2, lg: showCourseTile ? 4 : 3 }} spacing={4}>
+          <Skeleton isLoaded={!data.loading.ledger} rounded="xl" h="full">
             <KpiTile
               label="Points earned"
               value={totalEarned.toLocaleString()}
@@ -788,7 +772,7 @@ export const WeeklyGlancePage = () => {
             icon={Clock}
             theme={pending.count > 0 ? 'yellow' : 'orange'}
           />
-          <Skeleton isLoaded={!data.loading.points} rounded="xl">
+          <Skeleton isLoaded={!data.loading.points} rounded="xl" h="full">
             <KpiTile
               label="Pace"
               value={pace.label}
@@ -797,6 +781,13 @@ export const WeeklyGlancePage = () => {
               theme={toneToTheme(pace.tone)}
             />
           </Skeleton>
+          <JourneyCoursesPanel
+            courses={assignedCourses}
+            loading={assignedLoading && hasCourseOrganization}
+            completionsByKey={completionsByKey}
+            onCourseClick={handleCourseCardClick}
+            fallbackDueDate={journeyTiming?.cycleEnd ?? null}
+          />
         </SimpleGrid>
 
         <RulesOfEngagementVideo showCopy={false} />

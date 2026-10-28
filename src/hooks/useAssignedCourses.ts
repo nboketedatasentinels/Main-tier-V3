@@ -43,6 +43,8 @@ export interface AssignedCourse {
   periodNoun: 'week' | 'month'
   dateRange?: string
   unlockDate: Date | null
+  /** Exclusive end of the course block; the last day to finish is the day before. */
+  dueDate: Date | null
   availability: CourseAvailability
   /** Free / paid label for the course card. */
   access: CourseAccessInfo
@@ -116,6 +118,7 @@ const buildFreeUserCourse = (): AssignedCourse | null => {
     periodNoun: 'week',
     dateRange: undefined,
     unlockDate: null,
+    dueDate: null,
     availability: 'current',
   }
 }
@@ -209,6 +212,7 @@ export const useAssignedCourses = () => {
             periodNoun: 'month' as const,
             dateRange: range ? formatRange(range.startDate, range.endDate) : undefined,
             unlockDate: range ? range.startDate : null,
+            dueDate: range ? range.endDate : null,
             availability: getMonthAvailabilityStatus({
               cohortStartDate,
               currentDate: now,
@@ -261,6 +265,7 @@ export const useAssignedCourses = () => {
           periodNoun: 'week' as const,
           dateRange: startDate && endDate ? formatRange(startDate, endDate) : undefined,
           unlockDate: startDate,
+          dueDate: endDate,
           availability: getWeekAvailability(cohortStartDate, now, startWeekIndex, blockWeeks),
         }
       })

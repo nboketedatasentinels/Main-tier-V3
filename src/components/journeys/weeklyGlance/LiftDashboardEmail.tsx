@@ -1,9 +1,7 @@
-import { useEffect, useState } from 'react'
-import { Box, Button, Flex, Skeleton, Text } from '@chakra-ui/react'
-import { Link as RouterLink } from 'react-router-dom'
+import { Box, Flex, Text } from '@chakra-ui/react'
 import { PILLARS, type PillarKey } from '@/config/liftAssessment'
 import { useAuth } from '@/hooks/useAuth'
-import { getOwnLiftAssessment, type LiftAssessmentRow } from '@/services/liftAssessmentService'
+import type { LiftAssessmentRow } from '@/services/liftAssessmentService'
 
 const PLUM = '#27062e'
 const GOLD = '#eab130'
@@ -19,41 +17,15 @@ const edgeLabel = (key: PillarKey | null) => {
 }
 
 /**
- * The LIFT result email, shown on the member dashboard in place of the wide course row.
+ * The LIFT result email, shown at the top of the LIFT results page.
  */
-export const LiftDashboardEmail = () => {
-  const { user, profile } = useAuth()
-  const [row, setRow] = useState<LiftAssessmentRow | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let active = true
-    if (!user?.uid) {
-      setLoading(false)
-      return
-    }
-    setLoading(true)
-    getOwnLiftAssessment(user.uid)
-      .then((data) => {
-        if (active) setRow(data)
-      })
-      .catch((error) => console.error('[LiftDashboardEmail] load failed', error))
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [user?.uid])
+export const LiftDashboardEmail = ({ row }: { row: LiftAssessmentRow | null }) => {
+  const { profile } = useAuth()
 
   const firstName =
     profile?.firstName?.trim() ||
     profile?.fullName?.trim().split(' ')[0] ||
     'there'
-
-  if (loading) {
-    return <Skeleton h="280px" rounded="xl" />
-  }
 
   return (
     <Box
@@ -119,7 +91,7 @@ export const LiftDashboardEmail = () => {
                 </Text>
               </Text>
             </Box>
-            <Box mb={4}>
+            <Box>
               {PILLARS.map((pillar) => (
                 <Flex
                   key={pillar.key}
@@ -141,23 +113,10 @@ export const LiftDashboardEmail = () => {
             </Box>
           </>
         ) : (
-          <Text color={BODY} fontSize="sm" lineHeight="1.55" mb={4}>
+          <Text color={BODY} fontSize="sm" lineHeight="1.55">
             Your LIFT Index result will show here once the assessment is complete.
           </Text>
         )}
-        <Button
-          as={RouterLink}
-          to="/app/lift-results"
-          bg={PLUM}
-          color="white"
-          fontWeight="bold"
-          fontSize="sm"
-          px={4}
-          borderRadius="lg"
-          _hover={{ bg: '#3a0a42' }}
-        >
-          Open your results
-        </Button>
       </Box>
     </Box>
   )

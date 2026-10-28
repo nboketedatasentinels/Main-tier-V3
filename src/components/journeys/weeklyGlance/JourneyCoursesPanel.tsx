@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
-import { Box, Flex, IconButton, Skeleton, Stack, Text } from '@chakra-ui/react'
-import { format } from 'date-fns'
-import { BookOpen, Check, ChevronLeft, ChevronRight, Lock, type LucideIcon } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Box, Button, Flex, IconButton, Skeleton, Text } from '@chakra-ui/react'
+import { differenceInCalendarDays, format, subDays } from 'date-fns'
+import { ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight, Lock, type LucideIcon } from 'lucide-react'
 import type { AssignedCourse } from '@/hooks/useAssignedCourses'
 import { resolveCourseCompletion } from '@/hooks/useUserCourseCompletions'
 import type { CourseCompletionRecord } from '@/services/courseCompletionService'
@@ -11,6 +11,8 @@ type JourneyCoursesPanelProps = {
   loading?: boolean
   completionsByKey: Map<string, CourseCompletionRecord>
   onCourseClick: (course: AssignedCourse) => void
+  /** Deadline for courses without their own block dates (e.g. the free complementary course). */
+  fallbackDueDate?: Date | null
 }
 
 type CardTone = {
@@ -65,8 +67,22 @@ const statusCopy = (course: AssignedCourse, done: boolean) => {
   return 'Not open yet'
 }
 
+/** Red deadline copy for a course the learner still has to finish. */
+const deadlineCopy = (dueDate: Date | null) => {
+  if (!dueDate) return { headline: 'Complete it now', detail: null }
+  const lastDay = subDays(dueDate, 1)
+  const daysLeft = differenceInCalendarDays(lastDay, new Date())
+  if (daysLeft < 0) return { headline: 'Overdue', detail: `Was due ${format(lastDay, 'MMM d')}` }
+  if (daysLeft === 0) return { headline: 'Due today', detail: format(lastDay, 'MMM d') }
+  return {
+    headline: `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`,
+    detail: `Due ${format(lastDay, 'EEE, MMM d')}`,
+  }
+}
+
 /**
- * Journey courses drawn as the same white tiles as the points, pending, and pace cards.
+ * The learner's journey course as a tile in the KPI strip. An open course the learner
+ * has not finished is flagged as required, with a red deadline and a call to action.
  * Courses whose date has not arrived stay gray.
  */
 export const JourneyCoursesPanel = ({
@@ -74,31 +90,28 @@ export const JourneyCoursesPanel = ({
   loading = false,
   completionsByKey,
   onCourseClick,
+  fallbackDueDate = null,
 }: JourneyCoursesPanelProps) => {
   const [index, setIndex] = useState(0)
 
+  // Open on the first course the learner still owes (overdue or open now), so paid
+  // members in a later month land on the course that needs doing, not Month 1.
+  const focusIndex = useMemo(() => {
+    const owed = courses.findIndex(
+      (course) =>
+        course.availability !== 'locked' && !resolveCourseCompletion(completionsByKey, course)
+    )
+    if (owed >= 0) return owed
+    const current = courses.findIndex((course) => course.availability === 'current')
+    return current >= 0 ? current : 0
+  }, [courses, completionsByKey])
+
   useEffect(() => {
-    setIndex((prev) => {
-      if (courses.length === 0) return 0
-      return Math.min(prev, courses.length - 1)
-    })
-  }, [courses.length])
+    setIndex(focusIndex)
+  }, [focusIndex])
 
   if (loading && courses.length === 0) {
-    return (
-      <Stack spacing={3}>
-        <Text
-          fontSize="xs"
-          fontWeight="semibold"
-          textTransform="uppercase"
-          letterSpacing="wide"
-          color="gray.500"
-        >
-          Your courses
-        </Text>
-        <Skeleton h="168px" rounded="xl" />
-      </Stack>
-    )
+    return <Skeleton h="full" minH="168px" rounded="xl" />
   }
 
   if (courses.length === 0) return null
@@ -108,25 +121,60 @@ export const JourneyCoursesPanel = ({
 
   const done = Boolean(resolveCourseCompletion(completionsByKey, course))
   const locked = course.availability === 'locked' && !done
+  const urgent = !done && !locked
   const tone = done ? doneTone : locked ? lockedTone : openTone
   const status = statusCopy(course, done)
+  const deadline = urgent ? deadlineCopy(course.dueDate ?? fallbackDueDate) : null
   const showControls = courses.length > 1
 
   return (
-    <Stack id="assigned-courses" scrollMarginTop="96px" spacing={3}>
-      <Flex align="center" justify="space-between" gap={2}>
-        <Text
-          fontSize="xs"
-          fontWeight="semibold"
-          textTransform="uppercase"
-          letterSpacing="wide"
-          color="gray.500"
+    <Box
+      id="assigned-courses"
+      scrollMarginTop="96px"
+      h="full"
+      p={5}
+      bg="white"
+      borderRadius="xl"
+      border="1px solid"
+      borderColor={urgent ? 'red.200' : 'gray.100'}
+      boxShadow="0 2px 8px rgba(0,0,0,0.04)"
+      position="relative"
+      overflow="hidden"
+      transition="all 0.3s ease"
+      _hover={
+        tone.muted
+          ? undefined
+          : {
+              transform: 'translateY(-2px)',
+              boxShadow: tone.hoverShadow,
+              borderColor: urgent ? 'red.300' : tone.hoverBorder,
+            }
+      }
+    >
+      <Box
+        position="absolute"
+        top={0}
+        right={0}
+        w="60px"
+        h="60px"
+        bg={urgent ? 'red.50' : tone.ornamentBg}
+        borderRadius="0 0 0 100%"
+      />
+      <Flex align="flex-start" justify="space-between" mb={3} position="relative">
+        <Flex
+          w={10}
+          h={10}
+          bg={tone.iconBg}
+          borderRadius="xl"
+          align="center"
+          justify="center"
+          boxShadow={tone.iconShadow}
         >
-          Your courses
-        </Text>
+          <Box as={tone.icon} w={5} h={5} color="white" />
+        </Flex>
         {showControls ? (
-          <Flex align="center" gap={1}>
-            <Text fontSize="xs" color="gray.400" mr={1}>
+          <Flex align="center" gap={0.5}>
+            <Text fontSize="xs" color="gray.500" mr={1}>
               {index + 1} / {courses.length}
             </Text>
             <IconButton
@@ -150,80 +198,80 @@ export const JourneyCoursesPanel = ({
           </Flex>
         ) : null}
       </Flex>
-      <Box
-        as="button"
-        type="button"
-        textAlign="left"
-        w="full"
-        h="full"
-        p={5}
-        bg="white"
-        borderRadius="xl"
-        border="1px solid"
-        borderColor="gray.100"
-        boxShadow="0 2px 8px rgba(0,0,0,0.04)"
-        cursor="pointer"
-        position="relative"
-        overflow="hidden"
-        transition="all 0.3s ease"
-        onClick={() => onCourseClick(course)}
-        aria-label={`${course.title}. ${course.periodLabel}. ${status}`}
-        _hover={
-          tone.muted
-            ? undefined
-            : {
-                transform: 'translateY(-2px)',
-                boxShadow: tone.hoverShadow,
-                borderColor: tone.hoverBorder,
-              }
-        }
-        _focusVisible={{ outline: '2px solid #350e6f', outlineOffset: '2px' }}
+      <Text
+        fontSize="xs"
+        color={tone.muted ? 'gray.400' : 'gray.500'}
+        fontWeight="semibold"
+        textTransform="uppercase"
+        letterSpacing="wide"
+        mb={1}
       >
-        <Box
-          position="absolute"
-          top={0}
-          right={0}
-          w="60px"
-          h="60px"
-          bg={tone.ornamentBg}
-          borderRadius="0 0 0 100%"
-        />
-        <Flex
-          w={10}
-          h={10}
-          bg={tone.iconBg}
-          borderRadius="xl"
-          align="center"
-          justify="center"
-          mb={3}
-          boxShadow={tone.iconShadow}
-        >
-          <Box as={tone.icon} w={5} h={5} color="white" />
-        </Flex>
-        <Text
-          fontSize="xs"
-          color={tone.muted ? 'gray.400' : 'gray.500'}
-          fontWeight="semibold"
-          textTransform="uppercase"
-          letterSpacing="wide"
-          mb={1}
-        >
-          {course.periodLabel}
+        {urgent ? (
+          <>
+            <Text as="span" color="red.600" fontWeight="bold">
+              Required
+            </Text>{' '}
+            · {course.periodLabel}
+          </>
+        ) : (
+          `Your course · ${course.periodLabel}`
+        )}
+      </Text>
+      <Text
+        fontWeight="bold"
+        fontSize="xl"
+        color={tone.titleColor}
+        lineHeight="1.2"
+        letterSpacing="-0.02em"
+        noOfLines={2}
+      >
+        {course.title}
+      </Text>
+      {deadline ? (
+        <Text fontSize="sm" color="gray.600" mt={1.5}>
+          <Text as="span" color="red.600" fontWeight="bold">
+            {deadline.headline}
+          </Text>
+          {deadline.detail ? ` · ${deadline.detail}` : null}
         </Text>
-        <Text
-          fontWeight="bold"
-          fontSize="xl"
-          color={tone.titleColor}
-          lineHeight="1.2"
-          letterSpacing="-0.02em"
-          noOfLines={3}
-        >
-          {course.title}
-        </Text>
+      ) : (
         <Text fontSize="xs" color={tone.muted ? 'gray.400' : 'gray.500'} mt={1}>
           {status}
         </Text>
-      </Box>
-    </Stack>
+      )}
+      {urgent ? (
+        <>
+          <Text fontSize="xs" color="gray.600" mt={1}>
+            You <Text as="span" color="red.600" fontWeight="bold">must complete</Text> this course
+            to stay on track.
+          </Text>
+          <Button
+            mt={3}
+            size="sm"
+            w="full"
+            bg="red.600"
+            color="white"
+            _hover={{ bg: 'red.700' }}
+            rightIcon={<ArrowRight size={14} />}
+            onClick={() => onCourseClick(course)}
+          >
+            Complete it now
+          </Button>
+        </>
+      ) : (
+        <Button
+          mt={3}
+          size="sm"
+          variant="ghost"
+          color={tone.muted ? 'gray.500' : '#350e6f'}
+          px={0}
+          rightIcon={<ArrowRight size={14} />}
+          onClick={() => onCourseClick(course)}
+          aria-label={`${course.title}. ${course.periodLabel}. ${status}`}
+        >
+          {done ? 'Review course' : 'View course'}
+        </Button>
+      )}
+    </Box>
   )
 }

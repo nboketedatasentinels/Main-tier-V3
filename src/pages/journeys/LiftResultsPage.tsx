@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
-import { Box, Center, Heading, Spinner, Text, VStack } from '@chakra-ui/react'
+import { Box, Center, Heading, Spinner, VStack } from '@chakra-ui/react'
 import { useAuth } from '@/hooks/useAuth'
 import { LiftResultView } from '@/components/lift/LiftResultView'
+import { LiftDashboardEmail } from '@/components/journeys/weeklyGlance/LiftDashboardEmail'
 import { getOwnLiftAssessment, type LiftAssessmentRow } from '@/services/liftAssessmentService'
 import { OFFERS, type Offer } from '@/config/liftAssessment'
 
@@ -45,13 +46,8 @@ export const LiftResultsPage: React.FC = () => {
 
   if (!row) {
     return (
-      <Box maxW="2xl" mx="auto" py={10} textAlign="center">
-        <Heading size="md" color="brand.deepPlum">
-          No LIFT results yet
-        </Heading>
-        <Text mt={2} color="gray.500">
-          You have not completed the LIFT assessment.
-        </Text>
+      <Box maxW="2xl" mx="auto" py={10}>
+        <LiftDashboardEmail row={null} />
       </Box>
     )
   }
@@ -62,6 +58,7 @@ export const LiftResultsPage: React.FC = () => {
         <Heading size="lg" color="brand.deepPlum">
           Your LIFT Results
         </Heading>
+        <LiftDashboardEmail row={row} />
         <LiftResultView
           pillars={row.pillars}
           liftIndex={row.liftIndex}
