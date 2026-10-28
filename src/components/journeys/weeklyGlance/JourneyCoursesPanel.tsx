@@ -11,7 +11,7 @@ type JourneyCoursesPanelProps = {
   loading?: boolean
   completionsByKey: Map<string, CourseCompletionRecord>
   onCourseClick: (course: AssignedCourse) => void
-  /** Deadline for courses without their own block dates (e.g. the free complementary course). */
+  /** Deadline for courses without their own block dates, e.g. the free course, due by the end of the journey. */
   fallbackDueDate?: Date | null
 }
 
@@ -67,9 +67,9 @@ const statusCopy = (course: AssignedCourse, done: boolean) => {
   return 'Not open yet'
 }
 
-/** Red deadline copy for a course the learner still has to finish. */
+/** Red deadline copy for a course the learner has not finished yet. */
 const deadlineCopy = (dueDate: Date | null) => {
-  if (!dueDate) return { headline: 'Complete it now', detail: null }
+  if (!dueDate) return { headline: 'Start today', detail: null }
   const lastDay = subDays(dueDate, 1)
   const daysLeft = differenceInCalendarDays(lastDay, new Date())
   if (daysLeft < 0) return { headline: 'Overdue', detail: `Was due ${format(lastDay, 'MMM d')}` }
@@ -82,7 +82,7 @@ const deadlineCopy = (dueDate: Date | null) => {
 
 /**
  * The learner's journey course as a tile in the KPI strip. An open course the learner
- * has not finished is flagged as required, with a red deadline and a call to action.
+ * has not finished gets a red deadline, a reason to finish it, and a call to action.
  * Courses whose date has not arrived stay gray.
  */
 export const JourneyCoursesPanel = ({
@@ -209,7 +209,7 @@ export const JourneyCoursesPanel = ({
         {urgent ? (
           <>
             <Text as="span" color="red.600" fontWeight="bold">
-              Required
+              Your next step
             </Text>{' '}
             · {course.periodLabel}
           </>
@@ -242,8 +242,11 @@ export const JourneyCoursesPanel = ({
       {urgent ? (
         <>
           <Text fontSize="xs" color="gray.600" mt={1}>
-            You <Text as="span" color="red.600" fontWeight="bold">must complete</Text> this course
-            to stay on track.
+            Finish it to{' '}
+            <Text as="span" color="red.600" fontWeight="bold">
+              lead change with confidence
+            </Text>{' '}
+            and move closer to your pass mark.
           </Text>
           <Button
             mt={3}
@@ -255,7 +258,7 @@ export const JourneyCoursesPanel = ({
             rightIcon={<ArrowRight size={14} />}
             onClick={() => onCourseClick(course)}
           >
-            Complete it now
+            Start learning
           </Button>
         </>
       ) : (
