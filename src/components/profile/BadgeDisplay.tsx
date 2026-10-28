@@ -4,7 +4,8 @@ import { Box, Text, Button, Spinner, VStack, HStack, Center, Icon, Image } from 
 import { Award, ChevronRight } from 'lucide-react';
 
 const BadgeDisplay = () => {
-  const { userBadges, loading, error } = useUserBadges();
+  // A failed load is logged by useUserBadges; members just see the empty state.
+  const { userBadges, loading } = useUserBadges();
   const navigate = useNavigate();
 
   if (loading) {
@@ -12,14 +13,6 @@ const BadgeDisplay = () => {
       <Center py={4}>
         <Spinner size="sm" color="brand.primary" />
       </Center>
-    );
-  }
-
-  if (error) {
-    return (
-      <Text fontSize="sm" color="red.500">
-        Error loading badges. Please try again later.
-      </Text>
     );
   }
 
