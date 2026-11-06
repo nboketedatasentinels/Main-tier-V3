@@ -61,6 +61,7 @@ import { isFreeUser as isFreeTierUser } from '@/utils/membership'
 import { UpgradePromptModal } from '@/components/UpgradePromptModal'
 import PointsNotificationListener from '@/components/PointsNotificationListener'
 import { MandatoryAnnouncementGate } from '@/components/announcements/MandatoryAnnouncementGate'
+import { AiGradingConsentGate } from '@/components/consent/AiGradingConsentGate'
 import { NewAnnouncementPopup } from '@/components/announcements/NewAnnouncementPopup'
 import { MandatoryLiftAssessmentGate } from '@/components/lift/MandatoryLiftAssessmentGate'
 
@@ -905,6 +906,8 @@ export const MainLayout: React.FC = () => {
       <PointsNotificationListener />
 
       <MandatoryAnnouncementGate />
+
+      <AiGradingConsentGate />
 
       <MandatoryLiftAssessmentGate />
 

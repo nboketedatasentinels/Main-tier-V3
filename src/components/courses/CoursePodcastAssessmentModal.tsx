@@ -47,7 +47,8 @@ export function CoursePodcastAssessmentModal({
   onClose,
   onSubmit,
 }: CoursePodcastAssessmentModalProps) {
-  const { user } = useAuth()
+  const { user, profile } = useAuth()
+  const agreedAtSignIn = profile?.aiGradingConsent?.decision === 'agreed'
   const questions = episode?.questions ?? []
   const [answers, setAnswers] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'result'>('quiz')
@@ -59,8 +60,8 @@ export function CoursePodcastAssessmentModal({
     setAnswers(questions.map(() => ''))
     setPhase('quiz')
     setSaveFailed(false)
-    setAiConsent(false)
-  }, [isOpen, episode?.slot, questions.length])
+    setAiConsent(agreedAtSignIn)
+  }, [isOpen, episode?.slot, questions.length, agreedAtSignIn])
 
   const allValid = useMemo(
     () =>

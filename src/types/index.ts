@@ -130,6 +130,11 @@ export interface UserProfile {
     }
   >
   /**
+   * Learner's answer to the AI-assisted grading notice shown at first sign-in
+   * (Google Gemini pre-grades; a partner makes the final decision).
+   */
+  aiGradingConsent?: { decision: 'agreed' | 'declined'; at: string }
+  /**
    * Written answers for native course-podcast assessments (keyed by
    * `{packId}-{slot}`, e.g. T4L-C01-anchor). Used until AI grading ships.
    */

@@ -576,6 +576,9 @@ function mountAiConsent() {
   const cb = document.createElement('input')
   cb.type = 'checkbox'
   cb.id = '__t4l_ai_consent_cb'
+  cb.addEventListener('change', () => {
+    cb.dataset.touched = '1'
+  })
   cb.style.cssText = 'margin-top:3px;width:16px;height:16px;accent-color:#350e6f'
   label.appendChild(cb)
   const span = document.createElement('span')
@@ -583,11 +586,29 @@ function mountAiConsent() {
   label.appendChild(span)
   box.appendChild(label)
 
+  void prefillConsentFromProfile(cb)
+
   const bar = document.getElementById('__t4l_bottom_actions')
   const content = document.querySelector('.content')
   if (bar && bar.parentNode) bar.parentNode.insertBefore(box, bar)
   else if (content && content.parentNode) content.parentNode.insertBefore(box, content.nextSibling)
   else document.body.appendChild(box)
+}
+
+/** Pre-tick when the learner agreed in the first sign-in notice (profiles.data.aiGradingConsent). */
+async function prefillConsentFromProfile(cb) {
+  if (!config) return
+  try {
+    const auth = await getAccessToken()
+    const uid = auth?.user?.id
+    if (!auth?.token || !uid) return
+    const res = await sbFetch(`/rest/v1/profiles?id=eq.${uid}&select=data`, auth.token)
+    if (!res.ok) return
+    const decision = (await res.json())?.[0]?.data?.aiGradingConsent?.decision
+    if (decision === 'agreed' && !cb.dataset.touched) cb.checked = true
+  } catch {
+    // non-fatal: learner can still tick the box.
+  }
 }
 
 // Defer so page-specific modules that wrap submit* run first.
