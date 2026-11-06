@@ -845,18 +845,14 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const step1Ref = React.useRef<HTMLDivElement | null>(null)
   const step2Ref = React.useRef<HTMLDivElement | null>(null)
   const lockNotice = useDisclosure()
-  const { onOpen: openLockNotice, onClose: closeLockNotice } = lockNotice
+  const { onClose: closeLockNotice } = lockNotice
 
-  // Explain the HITL steps up front so partners are not left facing locked score fields.
-  const needsHitlDecision = submission?.aiGrade?.status === 'completed' && !submission?.aiDecision
+  // The HITL notice opens only when the partner tries to set Pass/Fail or a score
+  // before finishing the review steps, so they can read the submission undisturbed.
   const submissionId = submission?.id
   useEffect(() => {
-    if (!isOpen || !submissionId) {
-      closeLockNotice()
-      return
-    }
-    if (needsHitlDecision) openLockNotice()
-  }, [isOpen, submissionId, needsHitlDecision, openLockNotice, closeLockNotice])
+    closeLockNotice()
+  }, [isOpen, submissionId, closeLockNotice])
 
   useEffect(() => {
     if (!submission || !isOpen) return
@@ -1628,7 +1624,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     )}
                   </HStack>
                 )}
-                <FormControl>
+                <FormControl position="relative">
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
                     Status
                   </FormLabel>
@@ -1636,7 +1632,13 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     size="sm"
                     bg="white"
                     value={status}
-                    onChange={e => setStatus(e.target.value as ProgrammeSubmissionStatus)}
+                    onChange={e => {
+                      if (scoresLocked) {
+                        lockNotice.onOpen()
+                        return
+                      }
+                      setStatus(e.target.value as ProgrammeSubmissionStatus)
+                    }}
                   >
                     {STATUS_OPTIONS.map(s => (
                       <option key={s} value={s}>
@@ -1648,6 +1650,25 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       </option>
                     ))}
                   </Select>
+                  {scoresLocked && (
+                    <Box
+                      as="button"
+                      type="button"
+                      position="absolute"
+                      left={0}
+                      right={0}
+                      bottom={0}
+                      h="32px"
+                      cursor="pointer"
+                      bg="transparent"
+                      aria-label={
+                        passFailMode
+                          ? 'Choose Pass or Fail. Shows the review steps to finish first.'
+                          : 'Choose a status. Shows the review steps to finish first.'
+                      }
+                      onClick={lockNotice.onOpen}
+                    />
+                  )}
                 </FormControl>
                 <Box position="relative">
                   <Stack spacing={4}>
@@ -1806,7 +1827,9 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           <ModalHeader color={PLUM} fontSize="lg" pr={10}>
             <HStack spacing={2}>
               <Icon as={Lock} boxSize={5} color={ROYAL} />
-              <Text>Before you enter the grade</Text>
+              <Text>
+                {passFailMode ? 'Before you mark Pass or Fail' : 'Before you enter the grade'}
+              </Text>
             </HStack>
           </ModalHeader>
           <ModalCloseButton />
