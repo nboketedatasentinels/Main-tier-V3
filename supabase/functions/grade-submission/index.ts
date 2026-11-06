@@ -16,14 +16,15 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { rubricForComponent } from "./rubrics.ts";
-
-const MODEL = "gemini-3-flash-preview";
+import { assemble, callGemini, MODEL } from "./gemini.ts";
 
 interface SubmissionRow {
   id: string;
   component_id: string | null;
   answers: Record<string, string> | null;
   ai_grade: { answers_hash?: string } | null;
+  /** Set when the learner agreed to AI-assisted grading (migration 0105). */
+  ai_consent_at?: string | null;
 }
 
 interface WebhookPayload {
@@ -36,55 +37,6 @@ async function sha256(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function assemble(answers: Record<string, string>): string {
-  return Object.entries(answers)
-    .filter(([, v]) => typeof v === "string" && v.trim().length > 0)
-    .map(([k, v]) => `${k}: ${v.trim()}`)
-    .join("\n\n");
-}
-
-async function callGemini(rubric: string, submission: string) {
-  const key = Deno.env.get("GEMINI_API_KEY");
-  if (!key) throw new Error("GEMINI_API_KEY not set");
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
-  const body = {
-    systemInstruction: { parts: [{ text: rubric }] },
-    contents: [{ role: "user", parts: [{ text: submission }] }],
-    generationConfig: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: "OBJECT",
-        required: ["response"],
-        properties: {
-          response: {
-            type: "OBJECT",
-            required: ["score", "feedback", "pass"],
-            properties: {
-              score: { type: "NUMBER" },
-              feedback: { type: "STRING" },
-              pass: { type: "BOOLEAN" },
-            },
-          },
-        },
-      },
-    },
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("Empty Gemini response");
-  const parsed = JSON.parse(text);
-  const r = parsed.response ?? parsed;
-  return { score: Number(r.score), feedback: String(r.feedback ?? ""), pass: Boolean(r.pass) };
-}
-
 Deno.serve(async (req) => {
   let payload: WebhookPayload;
   try {
@@ -95,6 +47,9 @@ Deno.serve(async (req) => {
 
   const row = payload.record;
   if (!row) return new Response("no record", { status: 200 });
+
+  // Never send answers to Gemini without the learner's consent.
+  if (!row.ai_consent_at) return new Response("no AI consent", { status: 200 });
 
   const rubric = rubricForComponent(row.component_id);
   if (!rubric) return new Response("no rubric for component", { status: 200 });
@@ -114,7 +69,9 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const result = await callGemini(rubric, submission);
+    const key = Deno.env.get("GEMINI_API_KEY");
+    if (!key) throw new Error("GEMINI_API_KEY not set");
+    const result = await callGemini(key, rubric, submission);
     await supabase
       .from("programme_component_submissions")
       .update({
