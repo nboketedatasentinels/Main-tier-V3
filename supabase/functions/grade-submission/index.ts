@@ -7,7 +7,9 @@
 //
 // ADVISORY ONLY: never changes status and never awards points.
 //
-// Secrets (set with `supabase secrets set`): GEMINI_API_KEY.
+// Secrets (set with `supabase secrets set`): GEMINI_API_KEY, GRADE_WEBHOOK_SECRET.
+// The webhook must send header `x-webhook-secret: <GRADE_WEBHOOK_SECRET>`;
+// any other caller is rejected (the function runs with verify_jwt = false).
 // SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are provided by the runtime.
 //
 // Deploy: supabase functions deploy grade-submission
@@ -37,7 +39,24 @@ async function sha256(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Constant-time string compare, so the secret can't be guessed by timing. */
+function safeEqual(a: string, b: string): boolean {
+  const x = new TextEncoder().encode(a);
+  const y = new TextEncoder().encode(b);
+  if (x.length !== y.length) return false;
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
+  // Only the database webhook may call this function.
+  const expected = Deno.env.get("GRADE_WEBHOOK_SECRET");
+  const given = req.headers.get("x-webhook-secret") ?? "";
+  if (!expected || !safeEqual(given, expected)) {
+    return new Response("unauthorized", { status: 401 });
+  }
+
   let payload: WebhookPayload;
   try {
     payload = await req.json();
@@ -45,8 +64,22 @@ Deno.serve(async (req) => {
     return new Response("bad request", { status: 400 });
   }
 
-  const row = payload.record;
-  if (!row) return new Response("no record", { status: 200 });
+  const recordId = payload.record?.id;
+  if (!recordId) return new Response("no record", { status: 200 });
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+
+  // Read the submission from the database instead of trusting the request body.
+  const { data: row, error: readError } = await supabase
+    .from("programme_component_submissions")
+    .select("id, component_id, answers, ai_grade, ai_consent_at")
+    .eq("id", recordId)
+    .maybeSingle<SubmissionRow>();
+  if (readError) return new Response(`read failed: ${readError.message}`, { status: 500 });
+  if (!row) return new Response("no such submission", { status: 200 });
 
   // Never send answers to Gemini without the learner's consent.
   if (!row.ai_consent_at) return new Response("no AI consent", { status: 200 });
@@ -62,11 +95,6 @@ Deno.serve(async (req) => {
   if (row.ai_grade?.answers_hash === answersHash) {
     return new Response("already graded this version", { status: 200 });
   }
-
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
 
   try {
     const key = Deno.env.get("GEMINI_API_KEY");

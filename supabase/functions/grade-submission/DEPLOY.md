@@ -76,10 +76,13 @@ Dashboard -> Database -> Webhooks -> Create a new hook:
 - **Type:** Supabase Edge Functions -> `grade-submission`
   (or HTTP Request -> POST to the function URL above)
 - **HTTP headers:** `Content-Type: application/json`
+  - **Required:** `x-webhook-secret: <GRADE_WEBHOOK_SECRET>` (the same value set with
+    `supabase secrets set GRADE_WEBHOOK_SECRET=...`). Calls without it get 401.
+    Set the secret and this header BEFORE deploying the function, or grading stops.
   - If you deployed WITHOUT `--no-verify-jwt`, also add:
     `Authorization: Bearer <YOUR_PROJECT_ANON_KEY>`
 - **Payload:** leave default. Supabase sends `{ type, table, record, old_record, schema }`;
-  the function reads `record`.
+  the function takes only `record.id` and re-reads the row from the database.
 
 Creating a webhook auto-enables the required `pg_net` extension.
 
