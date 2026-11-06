@@ -538,4 +538,72 @@ try {
   // sessionStorage unavailable; non-fatal.
 }
 
+/**
+ * Show the partner's Pass / Fail result (and feedback) at the top of the page
+ * once this deliverable has been reviewed.
+ */
+async function showReviewResult() {
+  if (!config || !META.componentId) return
+  try {
+    const auth = await getAccessToken()
+    const uid = auth?.user?.id
+    if (!auth?.token || !uid) return
+    const res = await sbFetch(
+      `/rest/v1/programme_component_submissions?user_id=eq.${uid}&component_id=eq.${encodeURIComponent(META.componentId)}&select=status,partner_notes,reviewer_name,reviewed_at`,
+      auth.token,
+    )
+    if (!res.ok) return
+    const row = (await res.json())?.[0]
+    if (!row || (row.status !== 'approved' && row.status !== 'needs_revision')) return
+    if (document.getElementById('__t4l_review_result')) return
+
+    const passed = row.status === 'approved'
+    const box = document.createElement('div')
+    box.id = '__t4l_review_result'
+    box.setAttribute('role', 'status')
+    box.style.cssText = [
+      'max-width:880px',
+      'margin:16px auto',
+      'padding:16px 20px',
+      'background:#fff',
+      'color:#000',
+      'border:1.5px solid #000',
+      'border-radius:12px',
+      "font-family:'DM Sans',system-ui,sans-serif",
+      'font-size:14px',
+      'line-height:1.5',
+    ].join(';')
+
+    const title = document.createElement('p')
+    title.style.cssText = 'margin:0 0 4px;font-weight:700;font-size:16px'
+    title.textContent = passed ? 'Result: Pass' : 'Result: Fail – revise and resubmit'
+    box.appendChild(title)
+
+    if (row.reviewer_name) {
+      const by = document.createElement('p')
+      by.style.cssText = 'margin:0 0 8px;font-size:12px'
+      by.textContent = `Reviewed by ${row.reviewer_name}`
+      box.appendChild(by)
+    }
+    if (row.partner_notes) {
+      const fb = document.createElement('p')
+      fb.style.cssText = 'margin:0;white-space:pre-wrap'
+      fb.textContent = `Feedback: ${row.partner_notes}`
+      box.appendChild(fb)
+    }
+
+    const content = document.querySelector('.content')
+    if (content && content.parentNode) content.parentNode.insertBefore(box, content)
+    else document.body.insertBefore(box, document.body.firstChild)
+  } catch {
+    // non-fatal: the result also appears in the app and the notification bell.
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => void showReviewResult())
+} else {
+  void showReviewResult()
+}
+
 void APP_BASE

@@ -1,7 +1,6 @@
 import { supabase } from './supabase'
 import { getActivityDefinitionById, type JourneyType } from '@/config/pointsConfig'
 import { awardChecklistPoints } from './pointsService'
-import { createInAppNotification } from './notificationService'
 
 export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical' | 'course_podcast'
 
@@ -11,11 +10,7 @@ export type ProgrammeComponentType = 'capstone' | 'case_study' | 'practical' | '
 // idempotent. See docs/points-system.md.
 const PILLAR_AWARD_WEEK = 1
 
-export type ProgrammeSubmissionStatus =
-  | 'submitted'
-  | 'in_review'
-  | 'approved'
-  | 'needs_revision'
+export type ProgrammeSubmissionStatus = 'submitted' | 'in_review' | 'approved' | 'needs_revision'
 
 /** Partner decision on the AI advisory grade (human-in-the-loop). */
 export type ProgrammeAiDecision = 'accept' | 'edit' | 'reject'
@@ -110,15 +105,13 @@ export function mapAiGrade(raw: unknown): ProgrammeAiGrade | null {
   const status = typeof g.status === 'string' ? g.status : 'pending'
   const score = toFiniteNumber(g.score)
   const aiScore50 =
-    toFiniteNumber(g.ai_score_50) ??
-    (score != null ? Math.min(50, Math.round(score / 2)) : null)
+    toFiniteNumber(g.ai_score_50) ?? (score != null ? Math.min(50, Math.round(score / 2)) : null)
   return {
     status,
     score,
     aiScore50,
     feedback: typeof g.feedback === 'string' ? g.feedback : null,
-    feedbackForPartner:
-      typeof g.feedback_for_partner === 'string' ? g.feedback_for_partner : null,
+    feedbackForPartner: typeof g.feedback_for_partner === 'string' ? g.feedback_for_partner : null,
     pass: typeof g.pass === 'boolean' ? g.pass : null,
     model: typeof g.model === 'string' ? g.model : null,
     gradedAt: typeof g.graded_at === 'string' ? g.graded_at : null,
@@ -140,7 +133,7 @@ export function getAiBankAScore(ai: ProgrammeAiGrade | null | undefined): number
 
 const mapRow = (
   row: Raw,
-  nameByUid: Map<string, { email: string | null; fullName: string | null }>,
+  nameByUid: Map<string, { email: string | null; fullName: string | null }>
 ): ProgrammeComponentSubmission => {
   const uid = String(row.user_id ?? '')
   const who = nameByUid.get(uid)
@@ -198,7 +191,7 @@ let pcsChannelSeq = 0
 export function subscribeToSubmissionsByOrgIds(
   organizationIds: string[],
   onUpdate: (rows: ProgrammeComponentSubmission[]) => void,
-  onError?: (err: Error) => void,
+  onError?: (err: Error) => void
 ): () => void {
   const orgIds = (organizationIds ?? []).filter(Boolean)
   if (orgIds.length === 0) {
@@ -221,22 +214,22 @@ export function subscribeToSubmissionsByOrgIds(
       return
     }
     const list = (rows ?? []) as Raw[]
-    const uids = Array.from(new Set(list.map((r) => String(r.user_id)).filter(Boolean)))
+    const uids = Array.from(new Set(list.map(r => String(r.user_id)).filter(Boolean)))
     const nameByUid = new Map<string, { email: string | null; fullName: string | null }>()
     if (uids.length) {
       const { data: profs } = await supabase
         .from('profiles')
         .select('id, email, full_name')
         .in('id', uids)
-      ;(profs ?? []).forEach((p) =>
+      ;(profs ?? []).forEach(p =>
         nameByUid.set(String(p.id), {
           email: (p.email as string) ?? null,
           fullName: (p.full_name as string) ?? null,
-        }),
+        })
       )
     }
     if (!active) return
-    onUpdate(list.map((r) => mapRow(r, nameByUid)))
+    onUpdate(list.map(r => mapRow(r, nameByUid)))
   }
 
   void load()
@@ -246,7 +239,7 @@ export function subscribeToSubmissionsByOrgIds(
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'programme_component_submissions' },
-      () => void load(),
+      () => void load()
     )
     .subscribe()
 
@@ -261,7 +254,7 @@ export function subscribeToSubmissionsByOrgIds(
  * Used by Session Prep so prep reflects real work instead of static tips.
  */
 export async function listSubmissionsForLearner(
-  userId: string,
+  userId: string
 ): Promise<ProgrammeComponentSubmission[]> {
   const uid = (userId || '').trim()
   if (!uid) return []
@@ -276,7 +269,7 @@ export async function listSubmissionsForLearner(
   if (error) throw new Error(error.message)
   const list = (rows ?? []) as Raw[]
   const nameByUid = new Map<string, { email: string | null; fullName: string | null }>()
-  return list.map((row) => mapRow(row, nameByUid))
+  return list.map(row => mapRow(row, nameByUid))
 }
 
 export interface ReviewUpdate {
@@ -299,7 +292,7 @@ export interface ReviewUpdate {
 
 export async function updateSubmissionReview(
   submissionId: string,
-  update: ReviewUpdate,
+  update: ReviewUpdate
 ): Promise<void> {
   const nowIso = new Date().toISOString()
   const patch: Record<string, unknown> = {
@@ -322,9 +315,7 @@ export async function updateSubmissionReview(
     patch.ai_decision_at = update.aiDecision ? nowIso : null
   }
   if (update.reviewOpenedAt !== undefined) {
-    patch.review_opened_at = update.reviewOpenedAt
-      ? update.reviewOpenedAt.toISOString()
-      : null
+    patch.review_opened_at = update.reviewOpenedAt ? update.reviewOpenedAt.toISOString() : null
   }
   if (update.reviewDurationMs !== undefined) {
     patch.review_duration_ms = update.reviewDurationMs
@@ -350,7 +341,7 @@ export async function updateSubmissionReview(
  */
 export function getComponentPoints(
   componentType: ProgrammeComponentType | null,
-  journeyType: JourneyType = '6W',
+  journeyType: JourneyType = '6W'
 ): number {
   if (!componentType) return 0
   return (
@@ -419,7 +410,7 @@ export async function approveSubmissionAndAward(params: {
     .eq('id', submission.uid)
     .maybeSingle()
   const journeyType = ((profileRow?.journey_type as string) ||
-    ((profileRow?.data as { journeyType?: string } | null)?.journeyType) ||
+    (profileRow?.data as { journeyType?: string } | null)?.journeyType ||
     '6W') as JourneyType
 
   const activity =
@@ -466,46 +457,8 @@ export async function approveSubmissionAndAward(params: {
     ...reviewFields,
   })
 
-  // Notify the learner: points when earned, otherwise a Pass mark (3M/6M/9M).
-  if (awardResult.awarded) {
-    try {
-      if (activity.points > 0) {
-        await createInAppNotification({
-          userId: submission.uid,
-          type: 'approval',
-          title: `🎉 +${activity.points.toLocaleString()} points awarded`,
-          message: `Your partner approved "${submission.componentTitle || activity.title}" and awarded you ${activity.points.toLocaleString()} points.`,
-          metadata: {
-            priority: 'push',
-            activityId: activity.id,
-            componentId: submission.componentId,
-            points: activity.points,
-            source: 'partner_issued',
-          },
-          relatedId: activity.id,
-        })
-      } else {
-        await createInAppNotification({
-          userId: submission.uid,
-          type: 'approval',
-          title: 'Passed',
-          message: `Your partner marked "${submission.componentTitle || activity.title}" as Pass.`,
-          metadata: {
-            priority: 'push',
-            activityId: activity.id,
-            componentId: submission.componentId,
-            points: 0,
-            outcome: 'pass',
-            source: 'partner_issued',
-          },
-          relatedId: activity.id,
-        })
-      }
-    } catch (notifyErr) {
-      // Non-fatal: points + review already wrote successfully.
-      console.warn('[programmeComponentSubmissionService] learner notify failed', notifyErr)
-    }
-  }
+  // Learner + super-admin notifications are written by the DB trigger
+  // pcs_notify_review_outcome (migration 0104) for both Pass and Fail.
 
   return {
     awarded: awardResult.awarded,
@@ -536,7 +489,7 @@ export const coursePodcastComponentId = (packId: string, slot: string): string =
  * so Gemini grades it and partners can accept/edit/reject like other artefacts.
  */
 export async function upsertCoursePodcastSubmission(
-  input: CoursePodcastSubmissionInput,
+  input: CoursePodcastSubmissionInput
 ): Promise<string> {
   const componentId = coursePodcastComponentId(input.packId, input.slot)
   const answers: Record<string, string> = {
@@ -546,7 +499,7 @@ export async function upsertCoursePodcastSubmission(
     const key = `Q${i + 1}: ${q.trim() || `Question ${i + 1}`}`
     answers[key] = (input.answers[i] || '').trim()
   })
-  const answerCount = Object.values(answers).filter((v) => v.length > 0).length
+  const answerCount = Object.values(answers).filter(v => v.length > 0).length
   const nowIso = new Date().toISOString()
 
   const payload = {
@@ -563,9 +516,7 @@ export async function upsertCoursePodcastSubmission(
     status: 'submitted',
     submitted_at: nowIso,
     last_updated_at: nowIso,
-    source_page: input.catalogueCourseId
-      ? `/app/courses/${input.catalogueCourseId}`
-      : null,
+    source_page: input.catalogueCourseId ? `/app/courses/${input.catalogueCourseId}` : null,
   }
 
   const { data, error } = await supabase
@@ -613,4 +564,3 @@ export async function getSubmissionByComponentId(params: {
   if (!data) return null
   return mapRow(data as Raw, new Map())
 }
-

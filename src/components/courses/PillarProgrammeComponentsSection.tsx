@@ -30,6 +30,81 @@ import {
   type ProgrammeComponentType,
 } from '@/config/pillarProgrammeComponents'
 import { PILLAR_METADATA, type Pillar } from '@/types/pillar'
+import { useAuth } from '@/hooks/useAuth'
+import {
+  listSubmissionsForLearner,
+  type ProgrammeComponentSubmission,
+} from '@/services/programmeComponentSubmissionService'
+
+type SubmissionsById = Map<string, ProgrammeComponentSubmission>
+
+/** Learner's own submissions keyed by component id, so cards can show Pass / Fail. */
+const useMySubmissionsById = (): SubmissionsById => {
+  const { user } = useAuth()
+  const uid = user?.uid ?? null
+  const [byId, setById] = useState<SubmissionsById>(new Map())
+  useEffect(() => {
+    if (!uid) {
+      setById(new Map())
+      return
+    }
+    let cancelled = false
+    listSubmissionsForLearner(uid)
+      .then(rows => {
+        if (cancelled) return
+        setById(new Map(rows.map(r => [r.componentId, r])))
+      })
+      .catch(() => {
+        if (!cancelled) setById(new Map())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [uid])
+  return byId
+}
+
+const RESULT_LABEL: Record<string, string> = {
+  submitted: 'Submitted',
+  in_review: 'In review',
+  approved: 'Passed',
+  needs_revision: 'Failed – revise',
+}
+
+/** Black-and-white result line + partner feedback under a deliverable. */
+const SubmissionResult: React.FC<{ submission?: ProgrammeComponentSubmission }> = ({
+  submission,
+}) => {
+  if (!submission) return null
+  const label = RESULT_LABEL[submission.status]
+  if (!label) return null
+  const reviewed = submission.status === 'approved' || submission.status === 'needs_revision'
+  return (
+    <Stack spacing={1} mt={2}>
+      <Badge
+        alignSelf="flex-start"
+        bg={submission.status === 'approved' ? 'black' : 'white'}
+        color={submission.status === 'approved' ? 'white' : 'black'}
+        border="1px solid black"
+        textTransform="none"
+        fontSize="2xs"
+        px={2}
+        py={0.5}
+        borderRadius="full"
+      >
+        {label}
+      </Badge>
+      {reviewed && submission.partnerNotes ? (
+        <Text fontSize="xs" color="black" lineHeight="1.5" whiteSpace="pre-wrap">
+          <Text as="span" fontWeight="semibold">
+            Feedback:{' '}
+          </Text>
+          {submission.partnerNotes}
+        </Text>
+      ) : null}
+    </Stack>
+  )
+}
 
 interface Props {
   pillar: Pillar | null
@@ -49,6 +124,7 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({
 }) => {
   const location = useLocation()
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const submissionsById = useMySubmissionsById()
 
   useEffect(() => {
     if (cardsOnly) return
@@ -69,15 +145,26 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({
 
   const cards = (
     <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} alignItems="start">
-      {entries.map((entry) => (
-        <ProgrammeComponentCard key={entry.id} entry={entry} passFailMark={passFailMark} />
+      {entries.map(entry => (
+        <ProgrammeComponentCard
+          key={entry.id}
+          entry={entry}
+          passFailMark={passFailMark}
+          submissionsById={submissionsById}
+        />
       ))}
     </SimpleGrid>
   )
 
   if (cardsOnly) {
     return (
-      <Box px={{ base: 3, md: 4 }} py={4} bg="white" borderBottom="1px solid" borderColor="gray.100">
+      <Box
+        px={{ base: 3, md: 4 }}
+        py={4}
+        bg="white"
+        borderBottom="1px solid"
+        borderColor="gray.100"
+      >
         {passFailMark && (
           <HStack spacing={2} mb={3} flexWrap="wrap">
             <Badge
@@ -137,12 +224,7 @@ export const PillarProgrammeComponentsSection: React.FC<Props> = ({
               Required to complete the programme
             </Text>
           </HStack>
-          <Heading
-            size="lg"
-            color="#27062e"
-            letterSpacing="-0.02em"
-            fontWeight="bold"
-          >
+          <Heading size="lg" color="#27062e" letterSpacing="-0.02em" fontWeight="bold">
             Programme components
           </Heading>
           <Text color="gray.700" fontSize="sm" maxW="2xl" lineHeight="1.65">
@@ -198,7 +280,10 @@ const TYPE_VISUALS: Record<ProgrammeComponentType, TypeVisual> = {
   },
 }
 
-const STATUS_BADGE: Record<ProgrammeComponentEntry['status'], { label: string; bg: string; color: string }> = {
+const STATUS_BADGE: Record<
+  ProgrammeComponentEntry['status'],
+  { label: string; bg: string; color: string }
+> = {
   available: { label: 'Available', bg: 'gray.100', color: 'gray.700' },
   coming_soon: { label: 'Coming soon', bg: 'gray.100', color: 'gray.600' },
   locked: { label: 'Locked', bg: 'orange.50', color: 'orange.700' },
@@ -213,7 +298,8 @@ const PART_BUTTON_BG_HOVER = '#27062e'
 const ProgrammeComponentCard: React.FC<{
   entry: ProgrammeComponentEntry
   passFailMark?: boolean
-}> = ({ entry, passFailMark = false }) => {
+  submissionsById: SubmissionsById
+}> = ({ entry, passFailMark = false, submissionsById }) => {
   const location = useLocation()
   const visual = TYPE_VISUALS[entry.type]
   const status = STATUS_BADGE[entry.status]
@@ -268,7 +354,7 @@ const ProgrammeComponentCard: React.FC<{
           spacing={4}
           as={isExpandable ? 'button' : undefined}
           type={isExpandable ? 'button' : undefined}
-          onClick={isExpandable ? () => setIsExpanded((prev) => !prev) : undefined}
+          onClick={isExpandable ? () => setIsExpanded(prev => !prev) : undefined}
           textAlign={isExpandable ? 'left' : undefined}
           w={isExpandable ? 'full' : undefined}
           cursor={isExpandable ? 'pointer' : undefined}
@@ -349,6 +435,7 @@ const ProgrammeComponentCard: React.FC<{
                 </Text>
               )
             )}
+            {!hasParts && <SubmissionResult submission={submissionsById.get(entry.id)} />}
           </Stack>
         </Stack>
 
@@ -365,7 +452,7 @@ const ProgrammeComponentCard: React.FC<{
               fontWeight="semibold"
               letterSpacing="0.01em"
               alignSelf="flex-start"
-              onClick={() => setIsExpanded((prev) => !prev)}
+              onClick={() => setIsExpanded(prev => !prev)}
               aria-expanded={isExpanded}
               aria-controls={`pillar-component-parts-${entry.type}`}
             >
@@ -374,7 +461,7 @@ const ProgrammeComponentCard: React.FC<{
 
             <Collapse in={isExpanded} animateOpacity>
               <Stack spacing={2} id={`pillar-component-parts-${entry.type}`}>
-                {entry.parts!.map((part) => (
+                {entry.parts!.map(part => (
                   <Box
                     key={part.id}
                     p={3}
@@ -402,6 +489,7 @@ const ProgrammeComponentCard: React.FC<{
                             {part.description}
                           </Text>
                         )}
+                        <SubmissionResult submission={submissionsById.get(part.id)} />
                       </Stack>
 
                       <Button
@@ -448,7 +536,9 @@ const ProgrammeComponentCard: React.FC<{
             letterSpacing="0.01em"
             alignSelf="flex-start"
           >
-            {isDisabled ? status.label : `Begin ${PROGRAMME_COMPONENT_LABEL[entry.type].toLowerCase()}`}
+            {isDisabled
+              ? status.label
+              : `Begin ${PROGRAMME_COMPONENT_LABEL[entry.type].toLowerCase()}`}
           </Button>
         )}
       </Stack>
