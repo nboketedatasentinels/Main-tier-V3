@@ -292,6 +292,13 @@ async function submit() {
     return
   }
 
+  if (!hasAiConsent()) {
+    const box = document.getElementById('__t4l_ai_consent')
+    if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    showBanner('error', 'Please tick "I agree" in the AI grading notice before submitting.')
+    return
+  }
+
   const confirmMessage = readMeta('programme-submit-confirm')
   if (confirmMessage && !window.confirm(confirmMessage.replace(/&#10;/g, '\n'))) {
     return
@@ -350,23 +357,31 @@ async function submit() {
     last_updated_at: new Date().toISOString(),
     ...(isResubmission ? { resubmitted_at: new Date().toISOString() } : {}),
     source_page: typeof window !== 'undefined' ? window.location.pathname : null,
+    ai_consent_at: new Date().toISOString(),
   }
 
   try {
     // Upsert on (user_id, component_id): first submit inserts, resubmit updates
     // in place (submitted_at is preserved because we don't send it).
-    const res = await sbFetch(
-      `/rest/v1/programme_component_submissions?on_conflict=user_id,component_id`,
-      auth.token,
-      {
+    const upsert = (body) =>
+      sbFetch(`/rest/v1/programme_component_submissions?on_conflict=user_id,component_id`, auth.token, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Prefer: 'resolution=merge-duplicates,return=minimal',
         },
-        body: JSON.stringify(payload),
-      },
-    )
+        body: JSON.stringify(body),
+      })
+    let res = await upsert(payload)
+    if (!res.ok && res.status === 400) {
+      // Column not migrated yet (0105) - save the work rather than block the learner.
+      const detail = await res.clone().text().catch(() => '')
+      if (detail.includes('ai_consent_at')) {
+        const { ai_consent_at: _omit, ...withoutConsent } = payload
+        void _omit
+        res = await upsert(withoutConsent)
+      }
+    }
 
     if (!res.ok) {
       const detail = await res.text().catch(() => '')
@@ -509,9 +524,78 @@ function mountBottomActions() {
   }
 }
 
+/** AI grading notice + consent tick. Submit is blocked until it is ticked. */
+function hasAiConsent() {
+  const cb = document.getElementById('__t4l_ai_consent_cb')
+  // No box mounted (unexpected page shape) - don't silently send without consent.
+  return Boolean(cb && cb.checked)
+}
+
+function mountAiConsent() {
+  if (document.getElementById('__t4l_ai_consent')) return
+  const box = document.createElement('div')
+  box.id = '__t4l_ai_consent'
+  box.setAttribute('role', 'region')
+  box.setAttribute('aria-label', 'AI grading notice')
+  box.style.cssText = [
+    'max-width:880px',
+    'margin:8px auto',
+    'padding:16px 20px',
+    'background:#fff',
+    'color:#000',
+    'border:1.5px solid #000',
+    'border-radius:12px',
+    "font-family:'DM Sans',system-ui,sans-serif",
+    'font-size:13px',
+    'line-height:1.5',
+  ].join(';')
+
+  const h = document.createElement('p')
+  h.style.cssText = 'margin:0 0 6px;font-weight:700;font-size:15px'
+  h.textContent = 'AI-assisted grading'
+  box.appendChild(h)
+
+  const items = [
+    'Google Gemini (an AI tool) reads your written answers and suggests a score and feedback.',
+    'Your partner reviews it and makes the final Pass / Fail decision. AI never grades you alone.',
+    'Only your answers are sent. Not your name, email or organisation.',
+    'Your account is stored in the EU (Germany). Gemini may process answers in other countries, including the US.',
+    "Please don't include other people's personal details in your answers.",
+  ]
+  const ul = document.createElement('ul')
+  ul.style.cssText = 'margin:0 0 10px;padding-left:18px'
+  items.forEach((t) => {
+    const li = document.createElement('li')
+    li.textContent = t
+    ul.appendChild(li)
+  })
+  box.appendChild(ul)
+
+  const label = document.createElement('label')
+  label.style.cssText = 'display:flex;gap:8px;align-items:flex-start;font-weight:600;cursor:pointer'
+  const cb = document.createElement('input')
+  cb.type = 'checkbox'
+  cb.id = '__t4l_ai_consent_cb'
+  cb.style.cssText = 'margin-top:3px;width:16px;height:16px;accent-color:#350e6f'
+  label.appendChild(cb)
+  const span = document.createElement('span')
+  span.textContent = 'I agree that Gemini may assess my answers, with my partner making the final decision.'
+  label.appendChild(span)
+  box.appendChild(label)
+
+  const bar = document.getElementById('__t4l_bottom_actions')
+  const content = document.querySelector('.content')
+  if (bar && bar.parentNode) bar.parentNode.insertBefore(box, bar)
+  else if (content && content.parentNode) content.parentNode.insertBefore(box, content.nextSibling)
+  else document.body.appendChild(box)
+}
+
 // Defer so page-specific modules that wrap submit* run first.
 const scheduleBottomActions = () => {
-  window.setTimeout(mountBottomActions, 0)
+  window.setTimeout(() => {
+    mountBottomActions()
+    mountAiConsent()
+  }, 0)
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', scheduleBottomActions)

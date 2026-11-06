@@ -480,6 +480,10 @@ export type CoursePodcastSubmissionInput = {
   catalogueCourseId?: string | null
 }
 
+/** PostgREST error when migration 0105 (ai_consent_at) is not applied yet. */
+const isMissingConsentColumn = (message: string | undefined): boolean =>
+  Boolean(message && message.includes('ai_consent_at'))
+
 /** Stable component_id for course podcast written assessments (webhook → grade-submission). */
 export const coursePodcastComponentId = (packId: string, slot: string): string =>
   `course-podcast-${packId}-${slot}`
@@ -517,13 +521,23 @@ export async function upsertCoursePodcastSubmission(
     submitted_at: nowIso,
     last_updated_at: nowIso,
     source_page: input.catalogueCourseId ? `/app/courses/${input.catalogueCourseId}` : null,
+    // Callers only reach here after the learner agreed in the AI grading notice.
+    ai_consent_at: nowIso,
   }
 
-  const { data, error } = await supabase
-    .from('programme_component_submissions')
-    .upsert(payload, { onConflict: 'user_id,component_id' })
-    .select('id')
-    .maybeSingle()
+  const save = (body: Record<string, unknown>) =>
+    supabase
+      .from('programme_component_submissions')
+      .upsert(body, { onConflict: 'user_id,component_id' })
+      .select('id')
+      .maybeSingle()
+
+  let { data, error } = await save(payload)
+  if (error && isMissingConsentColumn(error.message)) {
+    const { ai_consent_at: _omit, ...withoutConsent } = payload
+    void _omit
+    ;({ data, error } = await save(withoutConsent))
+  }
 
   if (error) throw new Error(error.message)
   return (data?.id as string) || componentId

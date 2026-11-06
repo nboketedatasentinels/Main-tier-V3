@@ -1,23 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  Badge,
-  Box,
-  Button,
-  Flex,
-  HStack,
-  Icon,
-  Stack,
-  Text,
-  useToast,
-} from '@chakra-ui/react'
-import {
-  CheckCircle2,
-  ClipboardCheck,
-  ExternalLink,
-  Lock,
-  Play,
-  RotateCcw,
-} from 'lucide-react'
+import { Badge, Box, Button, Flex, HStack, Icon, Stack, Text, useToast } from '@chakra-ui/react'
+import { CheckCircle2, ClipboardCheck, ExternalLink, Lock, Play, RotateCcw } from 'lucide-react'
 import { getCatalogueCourseById } from '@/config/courseCatalogue'
 import { getCoursePodcastPackByCatalogueId } from '@/config/coursePodcastCatalogue'
 import { useAuth } from '@/hooks/useAuth'
@@ -88,20 +71,20 @@ export function CoursePodcastSeriesPanel({
     setRef(null)
 
     void loadCoursePodcastPackForCatalogueCourse(catalogueCourseId)
-      .then((loaded) => {
+      .then(loaded => {
         if (cancelled) return
         if (!loaded) {
           setPackError(
             packRef?.status === 'hold'
               ? packRef.note || 'Podcast pack for this course is on hold.'
-              : 'No podcast pack is mapped to this course yet.',
+              : 'No podcast pack is mapped to this course yet.'
           )
           return
         }
         setMeta(loaded.meta)
         setRef(loaded.ref)
       })
-      .catch((err) => {
+      .catch(err => {
         if (cancelled) return
         setPackError(err instanceof Error ? err.message : 'Could not load course podcasts.')
       })
@@ -125,7 +108,7 @@ export function CoursePodcastSeriesPanel({
     return 'not_watched'
   }
 
-  const passedCount = episodes.filter((e) => getStage(e) === 'passed').length
+  const passedCount = episodes.filter(e => getStage(e) === 'passed').length
 
   const handleWatch = async (episode: CoursePodcastEpisodeFilled) => {
     if (!uid || !ref) return
@@ -153,10 +136,12 @@ export function CoursePodcastSeriesPanel({
     answers,
     score,
     passed,
+    aiConsent,
   }: {
     answers: string[]
     score: number
     passed: boolean
+    aiConsent: boolean
   }): Promise<boolean> => {
     if (!uid || !ref || !quizEpisode) return false
     const podcastId = episodeProgressId(ref.packId, quizEpisode.slot)
@@ -182,21 +167,23 @@ export function CoursePodcastSeriesPanel({
         },
       })
 
-      try {
-        await upsertCoursePodcastSubmission({
-          uid,
-          organizationId: profile?.organizationId || profile?.companyId || null,
-          packId: ref.packId,
-          slot: quizEpisode.slot,
-          episodeTitle: quizEpisode.episode_title || quizEpisode.slot,
-          whatWillBeAssessed: quizEpisode.what_will_be_assessed || '',
-          questions: (quizEpisode.questions || []).map((q) => q.question),
-          answers,
-          catalogueCourseId,
-        })
-      } catch (aiErr) {
-        console.warn('[CoursePodcastSeriesPanel] AI submission upsert failed (non-fatal)', aiErr)
-      }
+      // Only send answers to Gemini when the learner agreed in the notice.
+      if (aiConsent)
+        try {
+          await upsertCoursePodcastSubmission({
+            uid,
+            organizationId: profile?.organizationId || profile?.companyId || null,
+            packId: ref.packId,
+            slot: quizEpisode.slot,
+            episodeTitle: quizEpisode.episode_title || quizEpisode.slot,
+            whatWillBeAssessed: quizEpisode.what_will_be_assessed || '',
+            questions: (quizEpisode.questions || []).map(q => q.question),
+            answers,
+            catalogueCourseId,
+          })
+        } catch (aiErr) {
+          console.warn('[CoursePodcastSeriesPanel] AI submission upsert failed (non-fatal)', aiErr)
+        }
 
       const next = await recordAssessmentAttempt(
         uid,
@@ -205,7 +192,7 @@ export function CoursePodcastSeriesPanel({
         passed,
         shouldAwardPoints,
         prev.bestScore,
-        prev.attempts,
+        prev.attempts
       )
       patchProgress(podcastId, next)
       setLastSaveOk(true)
@@ -319,7 +306,7 @@ export function CoursePodcastSeriesPanel({
       </Flex>
 
       <Stack spacing={2}>
-        {episodes.map((episode) => {
+        {episodes.map(episode => {
           const podcastId = episodeProgressId(ref.packId, episode.slot)
           const stage = getStage(episode)
           const isWatchBusy = watchingId === podcastId
@@ -459,7 +446,9 @@ export function CoursePodcastSeriesPanel({
         isOpen={quizEpisode !== null}
         episode={quizEpisode}
         packId={ref.packId}
-        isSubmitting={Boolean(quizEpisode && submittingId === episodeProgressId(ref.packId, quizEpisode.slot))}
+        isSubmitting={Boolean(
+          quizEpisode && submittingId === episodeProgressId(ref.packId, quizEpisode.slot)
+        )}
         saveSucceeded={lastSaveOk}
         onClose={() => {
           setQuizEpisode(null)

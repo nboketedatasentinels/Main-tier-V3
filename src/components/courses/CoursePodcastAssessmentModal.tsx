@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   Box,
   Button,
+  Checkbox,
   FormControl,
   FormLabel,
   Modal,
@@ -32,6 +33,8 @@ interface CoursePodcastAssessmentModalProps {
     answers: string[]
     score: number
     passed: boolean
+    /** Learner agreed that Gemini may assess the answers (partner decides). */
+    aiConsent: boolean
   }) => Promise<boolean> | boolean | void
 }
 
@@ -49,28 +52,37 @@ export function CoursePodcastAssessmentModal({
   const [answers, setAnswers] = useState<string[]>([])
   const [phase, setPhase] = useState<'quiz' | 'result'>('quiz')
   const [saveFailed, setSaveFailed] = useState(false)
+  const [aiConsent, setAiConsent] = useState(false)
 
   useEffect(() => {
     if (!isOpen || !episode) return
     setAnswers(questions.map(() => ''))
     setPhase('quiz')
     setSaveFailed(false)
+    setAiConsent(false)
   }, [isOpen, episode?.slot, questions.length])
 
   const allValid = useMemo(
-    () => answers.length === questions.length && answers.every((a) => a.trim().length >= MIN_ANSWER_CHARS),
-    [answers, questions.length],
+    () =>
+      answers.length === questions.length &&
+      answers.every(a => a.trim().length >= MIN_ANSWER_CHARS),
+    [answers, questions.length]
   )
 
   if (!episode) return null
 
   const handleSubmit = async () => {
     if (!allValid) return
-    const score = answers.filter((a) => a.trim().length >= MIN_ANSWER_CHARS).length
+    const score = answers.filter(a => a.trim().length >= MIN_ANSWER_CHARS).length
     const passed = score === questions.length
     setPhase('result')
     setSaveFailed(false)
-    const ok = await onSubmit({ answers: answers.map((a) => a.trim()), score, passed })
+    const ok = await onSubmit({
+      answers: answers.map(a => a.trim()),
+      score,
+      passed,
+      aiConsent,
+    })
     if (ok === false) setSaveFailed(true)
   }
 
@@ -79,7 +91,13 @@ export function CoursePodcastAssessmentModal({
       <ModalOverlay />
       <ModalContent>
         <ModalHeader pr={12}>
-          <Text fontSize="sm" color="gray.500" fontWeight="semibold" textTransform="uppercase" letterSpacing="0.08em">
+          <Text
+            fontSize="sm"
+            color="gray.500"
+            fontWeight="semibold"
+            textTransform="uppercase"
+            letterSpacing="0.08em"
+          >
             {episode.slot} · assessment
           </Text>
           <Text mt={1} fontSize="lg" fontWeight="700" color="#27062e">
@@ -99,7 +117,13 @@ export function CoursePodcastAssessmentModal({
                 borderLeftColor="#350e6f"
                 rounded="md"
               >
-                <Text fontSize="xs" fontWeight="bold" color="#350e6f" letterSpacing="0.08em" textTransform="uppercase">
+                <Text
+                  fontSize="xs"
+                  fontWeight="bold"
+                  color="#350e6f"
+                  letterSpacing="0.08em"
+                  textTransform="uppercase"
+                >
                   What will be assessed
                 </Text>
                 <Text mt={2} fontSize="sm" color="gray.700" lineHeight="1.6">
@@ -117,7 +141,7 @@ export function CoursePodcastAssessmentModal({
                   </FormLabel>
                   <Textarea
                     value={answers[index] ?? ''}
-                    onChange={(e) => {
+                    onChange={e => {
                       const next = [...answers]
                       next[index] = e.target.value
                       setAnswers(next)
@@ -132,6 +156,34 @@ export function CoursePodcastAssessmentModal({
                   </Text>
                 </FormControl>
               ))}
+
+              <Box p={4} bg="white" border="1px solid" borderColor="black" rounded="md">
+                <Text fontSize="sm" fontWeight="bold" color="black" mb={1}>
+                  AI-assisted grading
+                </Text>
+                <Text fontSize="xs" color="black" lineHeight="1.6" mb={3}>
+                  Google Gemini (an AI tool) can read your answers and suggest feedback. Your
+                  partner reviews it and makes the final decision. Only your answers are sent, not
+                  your name, email or organisation. Your account is stored in the EU (Germany);
+                  Gemini may process answers in other countries, including the US. Please don&apos;t
+                  include other people&apos;s personal details.
+                </Text>
+                <Checkbox
+                  colorScheme="purple"
+                  alignItems="flex-start"
+                  isChecked={aiConsent}
+                  onChange={e => setAiConsent(e.target.checked)}
+                >
+                  <Text fontSize="sm" color="black" fontWeight="600">
+                    I agree that Gemini may assess my answers, with my partner making the final
+                    decision.
+                  </Text>
+                </Checkbox>
+                <Text fontSize="xs" color="black" mt={2}>
+                  Optional. If you don&apos;t tick it, your answers still count but are not sent to
+                  Gemini.
+                </Text>
+              </Box>
             </Stack>
           ) : (
             <Stack spacing={4}>
@@ -208,11 +260,7 @@ export function CoursePodcastAssessmentModal({
               </Box>
 
               {saveSucceeded && user?.uid && packId && episode?.slot ? (
-                <LearnerAiExplainPanel
-                  uid={user.uid}
-                  packId={packId}
-                  slot={episode.slot}
-                />
+                <LearnerAiExplainPanel uid={user.uid} packId={packId} slot={episode.slot} />
               ) : null}
             </Stack>
           )}
