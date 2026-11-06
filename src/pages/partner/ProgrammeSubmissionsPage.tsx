@@ -25,7 +25,6 @@ import {
   Heading,
   Icon,
   Input,
-  ListItem,
   Modal,
   ModalBody,
   ModalCloseButton,
@@ -35,7 +34,6 @@ import {
   ModalOverlay,
   NumberInput,
   NumberInputField,
-  OrderedList,
   Radio,
   RadioGroup,
   Select,
@@ -63,7 +61,6 @@ import {
   Download,
   ExternalLink,
   FileText,
-  Lock,
   Search,
   Wrench,
   type LucideIcon,
@@ -977,23 +974,15 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const lockNextStep: 1 | 2 = criteriaAcknowledged ? 2 : 1
 
   const criteriaAckCheckbox = (
-    <Box
-      p={3}
-      rounded="md"
-      border="2px solid"
-      borderColor={criteriaAcknowledged ? 'green.300' : 'orange.300'}
-      bg={criteriaAcknowledged ? 'green.50' : 'orange.50'}
-    >
+    <Box p={3} rounded="md" border="1px solid" borderColor="black" bg="white">
       <Checkbox
         alignItems="flex-start"
         colorScheme="purple"
-        size="lg"
         isChecked={criteriaAcknowledged}
         onChange={e => handleCriteriaAck(e.target.checked)}
       >
-        <Text fontSize="sm" color="gray.800" lineHeight="1.45" fontWeight="semibold">
-          I compared this learner&apos;s answers to What good looks like before deciding on the AI
-          estimate.
+        <Text fontSize="sm" color="black">
+          I compared the answers to What good looks like.
         </Text>
       </Checkbox>
     </Box>
@@ -1539,35 +1528,17 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                   3. Your review
                 </Text>
                 {scoresLocked && (
-                  <Alert status="warning" rounded="md" py={2} variant="left-accent">
-                    <AlertIcon />
-                    <Box flex="1">
-                      <AlertDescription fontSize="sm">
-                        {criteriaAcknowledged
-                          ? 'The score fields unlock once you answer "Do you accept what the AI scored?" in step 2.'
-                          : 'The score fields are locked until you tick "I compared this learner\'s answers…" at the end of step 1, then answer "Do you accept what the AI scored?" in step 2.'}
-                      </AlertDescription>
-                      <Button
-                        size="xs"
-                        variant="link"
-                        colorScheme="orange"
-                        mt={1}
-                        onClick={lockNotice.onOpen}
-                      >
-                        Why is this locked?
-                      </Button>
-                    </Box>
-                  </Alert>
-                )}
-                {scoresLocked && (
-                  <Box p={3} bg="white" border="1px solid" borderColor="#e6dbef" rounded="md">
+                  <Box p={3} bg="white" border="1px solid" borderColor="gray.300" rounded="md">
+                    <Text fontSize="sm" color="black" mb={2}>
+                      Unlock grading:
+                    </Text>
                     {!criteriaAcknowledged ? (
                       criteriaAckCheckbox
                     ) : (
                       <Stack spacing={2}>
-                        <Text fontSize="sm" fontWeight="semibold" color={PLUM}>
-                          Do you accept what the AI scored?
-                          {aiOverall != null ? ` (AI suggested ${aiOverall}/100)` : ''}
+                        <Text fontSize="sm" fontWeight="semibold" color="black">
+                          Accept the AI score?
+                          {aiOverall != null ? ` (AI: ${aiOverall}/100)` : ''}
                         </Text>
                         {aiDecisionRadios}
                       </Stack>
@@ -1821,86 +1792,40 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         </DrawerFooter>
       </DrawerContent>
 
-      <Modal isOpen={lockNotice.isOpen} onClose={lockNotice.onClose} isCentered size="md">
+      <Modal isOpen={lockNotice.isOpen} onClose={lockNotice.onClose} isCentered size="sm">
         <ModalOverlay />
-        <ModalContent mx={4}>
-          <ModalHeader color={PLUM} fontSize="lg" pr={10}>
-            <HStack spacing={2}>
-              <Icon as={Lock} boxSize={5} color={ROYAL} />
-              <Text>
-                {passFailMode ? 'Before you mark Pass or Fail' : 'Before you enter the grade'}
-              </Text>
-            </HStack>
+        <ModalContent mx={4} bg="white" color="black">
+          <ModalHeader fontSize="md" color="black" pr={10}>
+            Finish your review first
           </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <Text fontSize="sm" color="gray.700" mb={3}>
-              Gemini has pre-graded this submission. To keep a human in charge of every grade, the
-              score fields stay locked until you do two things:
-            </Text>
-            <OrderedList spacing={3} fontSize="sm" color="gray.800" pl={1}>
-              <ListItem>
-                <HStack spacing={2} align="flex-start">
-                  <Text flex="1">
-                    <Text as="span" fontWeight="semibold">
-                      Step 1 · What good looks like:
-                    </Text>{' '}
-                    read the criteria and tick &ldquo;I compared this learner&apos;s
-                    answers…&rdquo;. The AI score stays hidden until then.
-                  </Text>
-                  {criteriaAcknowledged && (
-                    <Icon as={CheckCircle2} boxSize={4} color="green.500" mt="2px" />
-                  )}
-                </HStack>
-              </ListItem>
-              <ListItem>
-                <HStack spacing={2} align="flex-start">
-                  <Text flex="1">
-                    <Text as="span" fontWeight="semibold">
-                      Step 2 · Do you accept what the AI scored?
-                    </Text>{' '}
-                    &ldquo;Yes, with changes&rdquo; and &ldquo;No, reject&rdquo; are available right
-                    away. Plain &ldquo;Yes, accept&rdquo; only unlocks after you have spent{' '}
-                    {ACCEPT_MIN_DWELL_SEC} seconds on the review, so nobody rubber-stamps the AI.
-                  </Text>
-                  {aiDecision && <Icon as={CheckCircle2} boxSize={4} color="green.500" mt="2px" />}
-                </HStack>
-              </ListItem>
-              <ListItem>
-                <Text>
-                  <Text as="span" fontWeight="semibold">
-                    Step 3 · Your review:
-                  </Text>{' '}
-                  the final score and your Bank B judgment unlock here.
-                </Text>
-              </ListItem>
-            </OrderedList>
-            {aiCompleted && !criteriaAcknowledged && (
-              <Box mt={4}>
-                <Text fontSize="xs" color="gray.600" mb={2}>
-                  Already compared the answers to the criteria? Confirm here:
-                </Text>
-                {criteriaAckCheckbox}
-              </Box>
-            )}
-            {aiCompleted && !acceptDwellReady && (
-              <Alert status="info" rounded="md" mt={4} py={2}>
-                <AlertIcon />
-                <AlertDescription fontSize="sm">
-                  Accept unlocks in {acceptWaitSec}s.
-                </AlertDescription>
-              </Alert>
-            )}
+            <Stack spacing={3} fontSize="sm" color="black">
+              <HStack justify="space-between">
+                <Text>1. Tick &ldquo;I compared the answers&rdquo;</Text>
+                {criteriaAcknowledged && <Icon as={CheckCircle2} boxSize={4} color="black" />}
+              </HStack>
+              <HStack justify="space-between">
+                <Text>2. Accept, edit or reject the AI score</Text>
+                {aiDecision && <Icon as={CheckCircle2} boxSize={4} color="black" />}
+              </HStack>
+              <Text fontSize="xs">
+                {aiCompleted && !acceptDwellReady
+                  ? `Accept opens in ${acceptWaitSec}s.`
+                  : `Accept opens after ${ACCEPT_MIN_DWELL_SEC}s.`}
+              </Text>
+              {aiCompleted && !criteriaAcknowledged && criteriaAckCheckbox}
+            </Stack>
           </ModalBody>
-          <ModalFooter gap={3}>
-            <Button variant="outline" onClick={lockNotice.onClose}>
-              Got it
+          <ModalFooter>
+            <Button
+              bg={ROYAL}
+              color="white"
+              _hover={{ bg: PLUM }}
+              onClick={scoresLocked ? goToLockedStep : lockNotice.onClose}
+            >
+              {scoresLocked ? `Go to step ${lockNextStep}` : 'OK'}
             </Button>
-            {scoresLocked && (
-              <Button bg={ROYAL} color="white" _hover={{ bg: PLUM }} onClick={goToLockedStep}>
-                Take me to step {lockNextStep}
-              </Button>
-            )}
           </ModalFooter>
         </ModalContent>
       </Modal>
