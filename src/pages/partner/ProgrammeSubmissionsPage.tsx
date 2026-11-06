@@ -25,8 +25,17 @@ import {
   Heading,
   Icon,
   Input,
+  ListItem,
+  Modal,
+  ModalBody,
+  ModalCloseButton,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  ModalOverlay,
   NumberInput,
   NumberInputField,
+  OrderedList,
   Radio,
   RadioGroup,
   Select,
@@ -47,12 +56,14 @@ import {
 import {
   Award,
   BookMarked,
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
   ClipboardList,
   Download,
   ExternalLink,
   FileText,
+  Lock,
   Search,
   Wrench,
   type LucideIcon,
@@ -79,10 +90,17 @@ import { fetchWhatGoodLooksLike } from '@/services/programmeWhatGoodLooksLike'
 import { getDisplayName } from '@/utils/displayName'
 import { isJourneyType, isMonthBasedJourney } from '@/utils/journeyType'
 import {
+  HITL_OVERRIDE_JUSTIFICATION_MIN_CHARS,
+  HITL_SCORE_DELTA_MAX,
+  HITL_SCORE_DELTA_WARN,
+  absScoreDelta,
+  classifyScoreDelta,
   computeProgrammeAiHitlStats,
   downloadProgrammeAiHitlCsv,
   formatDwell,
+  getAiOverallScore,
   getHitlDecision,
+  validatePartnerScoreOverride,
 } from '@/utils/programmeAiHitl'
 import type { JourneyType } from '@/config/pointsConfig'
 import { supabase } from '@/services/supabase'
@@ -100,10 +118,7 @@ const TYPE_META: Record<
   course_podcast: { label: 'Course podcast', icon: FileText, color: '#0f6c2e', bg: '#e8f5ee' },
 }
 
-const STATUS_META: Record<
-  ProgrammeSubmissionStatus,
-  { label: string; colorScheme: string }
-> = {
+const STATUS_META: Record<ProgrammeSubmissionStatus, { label: string; colorScheme: string }> = {
   submitted: { label: 'New', colorScheme: 'purple' },
   in_review: { label: 'In review', colorScheme: 'blue' },
   approved: { label: 'Approved', colorScheme: 'green' },
@@ -121,15 +136,14 @@ const formatAnswerKey = (key: string): string =>
   key
     .replace(/^section_\d+_/, '')
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\b\w/g, c => c.toUpperCase())
 
 const formatDate = (date: Date | null): string => {
   if (!date) return '-'
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffH = diffMs / (1000 * 60 * 60)
-  if (diffH < 24)
-    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  if (diffH < 24) return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   if (diffH < 24 * 7)
     return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
@@ -149,15 +163,15 @@ const ProgrammeSubmissionsPage: React.FC = () => {
       isAdminPortal
         ? handleAdminSidebarNavigate(navigate, key, 'programme-submissions')
         : handlePartnerSidebarNavigate(navigate, key, 'programme-submissions'),
-    [navigate, isAdminPortal],
+    [navigate, isAdminPortal]
   )
 
   const orgOptions = useMemo(
     () =>
       organizations
-        .filter((o) => Boolean(o.id))
-        .map((o) => ({ id: o.id!, code: o.code, name: o.name })),
-    [organizations],
+        .filter(o => Boolean(o.id))
+        .map(o => ({ id: o.id!, code: o.code, name: o.name })),
+    [organizations]
   )
 
   const { selectedOrg: selectedOrgId, setSelectedOrg: setSelectedOrgId } = usePartnerSelectedOrg()
@@ -169,7 +183,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
 
   const visibleOrgIds = useMemo(() => {
     if (selectedOrgId && selectedOrgId !== 'all') return [selectedOrgId]
-    return orgOptions.map((o) => o.id)
+    return orgOptions.map(o => o.id)
   }, [selectedOrgId, orgOptions])
 
   const [submissions, setSubmissions] = useState<ProgrammeComponentSubmission[]>([])
@@ -187,18 +201,18 @@ const ProgrammeSubmissionsPage: React.FC = () => {
     setLoading(true)
     const unsubscribe = subscribeToSubmissionsByOrgIds(
       visibleOrgIds,
-      (rows) => {
+      rows => {
         setSubmissions(rows)
         setLoading(false)
       },
-      () => setLoading(false),
+      () => setLoading(false)
     )
     return () => unsubscribe()
   }, [visibleOrgIds])
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase()
-    return submissions.filter((row) => {
+    return submissions.filter(row => {
       if (typeFilter !== 'all' && row.componentType !== typeFilter) return false
       if (statusFilter !== 'all' && row.status !== statusFilter) return false
       if (!term) return true
@@ -223,7 +237,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
       approved: 0,
       needs_revision: 0,
     }
-    submissions.forEach((s) => {
+    submissions.forEach(s => {
       next[s.status] = (next[s.status] ?? 0) + 1
     })
     return next
@@ -233,8 +247,8 @@ const ProgrammeSubmissionsPage: React.FC = () => {
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selectedSubmission = useMemo(
-    () => submissions.find((s) => s.id === selectedId) ?? null,
-    [submissions, selectedId],
+    () => submissions.find(s => s.id === selectedId) ?? null,
+    [submissions, selectedId]
   )
 
   const openSubmission = (row: ProgrammeComponentSubmission) => {
@@ -250,7 +264,12 @@ const ProgrammeSubmissionsPage: React.FC = () => {
   const content = (
     <>
       <Stack spacing={6}>
-        <Flex justify="space-between" align={{ base: 'flex-start', md: 'center' }} gap={4} flexWrap="wrap">
+        <Flex
+          justify="space-between"
+          align={{ base: 'flex-start', md: 'center' }}
+          gap={4}
+          flexWrap="wrap"
+        >
           <Box>
             <HStack spacing={2} mb={1}>
               <Icon as={ClipboardList} color={ROYAL} boxSize={5} />
@@ -260,8 +279,8 @@ const ProgrammeSubmissionsPage: React.FC = () => {
             </HStack>
             <Text color="gray.600" fontSize="sm">
               {isAdminPortal
-                ? 'Monitor and export HITL evidence across organisations. Gemini pre-grades each submission; accept, edit, or reject remains required — AI never awards points alone.'
-                : 'Capstone, case study, and practical work from learners in your organisations. Gemini pre-grades each submission. You must accept, edit, or reject that estimate — AI never awards points alone.'}
+                ? 'Monitor and export HITL evidence across organisations. Gemini pre-grades each submission; accept, edit, or reject remains required — AI never awards points alone. Large overrides need a written reason; risk flags appear when AI fails or review patterns look off.'
+                : 'Capstone, case study, and practical work from learners in organisations you are assigned to. Gemini pre-grades each submission. You must accept, edit, or reject that estimate — AI never awards points alone. Large score changes vs AI require a short written justification.'}
             </Text>
           </Box>
           {orgOptions.length > 0 && submissions.length > 0 && (
@@ -286,10 +305,10 @@ const ProgrammeSubmissionsPage: React.FC = () => {
             <Select
               size="sm"
               value={selectedOrgId || 'all'}
-              onChange={(e) => setSelectedOrgId(e.target.value === 'all' ? '' : e.target.value)}
+              onChange={e => setSelectedOrgId(e.target.value === 'all' ? '' : e.target.value)}
             >
               <option value="all">All organisations ({orgOptions.length})</option>
-              {orgOptions.map((org) => (
+              {orgOptions.map(org => (
                 <option key={org.id} value={org.id}>
                   {org.name}
                 </option>
@@ -322,7 +341,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
           </SimpleGrid>
         )}
 
-        {orgOptions.length > 0 && hitlStats.aiCompleted > 0 && (
+        {orgOptions.length > 0 && (hitlStats.aiCompleted > 0 || hitlStats.aiErrors > 0) && (
           <Box
             bg="white"
             border="1px solid"
@@ -336,12 +355,12 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                   Human-in-the-loop evidence
                 </Text>
                 <Text fontSize="xs" color="gray.500" mt={0.5}>
-                  Proof partners are reviewing AI estimates — not rubber-stamping. Export the CSV for
-                  model-drift analysis.
+                  Proof partners are reviewing AI estimates — not rubber-stamping. Export the CSV
+                  for model-drift analysis.
                 </Text>
               </Box>
             </Flex>
-            <SimpleGrid columns={{ base: 2, md: 4, lg: 7 }} spacing={3}>
+            <SimpleGrid columns={{ base: 2, md: 4, lg: 8 }} spacing={3}>
               <StatTile label="AI graded" value={hitlStats.aiCompleted} color="gray.700" />
               <StatTile label="Awaiting human" value={hitlStats.awaitingHuman} color="#9a3412" />
               <StatTile label="Accepted" value={hitlStats.accepted} color="#0f6c2e" />
@@ -351,6 +370,11 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                 label="Criteria checked"
                 value={hitlStats.criteriaAcknowledged}
                 color={ROYAL}
+              />
+              <StatTile
+                label="AI errors"
+                value={hitlStats.aiErrors}
+                color={hitlStats.aiErrors > 0 ? '#9a3412' : 'gray.700'}
               />
               <Box
                 bg="gray.50"
@@ -369,9 +393,29 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                 <Text fontSize="2xs" color="gray.500" mt={1}>
                   {hitlStats.dwellSamples} timed · Δ score avg{' '}
                   {hitlStats.avgAbsScoreDelta != null ? hitlStats.avgAbsScoreDelta : '—'}
+                  {hitlStats.largeDeltaCount > 0 ? ` · ${hitlStats.largeDeltaCount} large Δ` : ''}
                 </Text>
               </Box>
             </SimpleGrid>
+            {hitlStats.flags.length > 0 && (
+              <Stack spacing={2} mt={4}>
+                {hitlStats.flags.map(flag => (
+                  <Alert
+                    key={flag.id}
+                    status={flag.severity === 'escalate' ? 'error' : 'warning'}
+                    rounded="md"
+                    variant="left-accent"
+                    py={2}
+                  >
+                    <AlertIcon />
+                    <Box>
+                      <AlertTitle fontSize="sm">{flag.title}</AlertTitle>
+                      <AlertDescription fontSize="xs">{flag.detail}</AlertDescription>
+                    </Box>
+                  </Alert>
+                ))}
+              </Stack>
+            )}
           </Box>
         )}
 
@@ -402,7 +446,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                     variant="unstyled"
                     placeholder="Learner name, email, component..."
                     value={search}
-                    onChange={(e) => setSearch(e.target.value)}
+                    onChange={e => setSearch(e.target.value)}
                     size="sm"
                   />
                 </HStack>
@@ -414,7 +458,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                 <Select
                   size="sm"
                   value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value as typeof typeFilter)}
+                  onChange={e => setTypeFilter(e.target.value as typeof typeFilter)}
                 >
                   <option value="all">All types</option>
                   <option value="capstone">Capstone</option>
@@ -430,7 +474,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                 <Select
                   size="sm"
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                  onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
                 >
                   <option value="all">All statuses</option>
                   <option value="submitted">New</option>
@@ -471,7 +515,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                     </Tr>
                   </Thead>
                   <Tbody>
-                    {filtered.map((row) => {
+                    {filtered.map(row => {
                       const typeMeta = row.componentType ? TYPE_META[row.componentType] : null
                       const statusMeta = STATUS_META[row.status]
                       return (
@@ -554,7 +598,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
                               borderColor="gray.300"
                               color={ROYAL}
                               _hover={{ bg: 'gray.50', borderColor: ROYAL }}
-                              onClick={(e) => {
+                              onClick={e => {
                                 e.stopPropagation()
                                 openSubmission(row)
                               }}
@@ -579,7 +623,7 @@ const ProgrammeSubmissionsPage: React.FC = () => {
         submission={selectedSubmission}
         reviewerId={profile?.id ?? null}
         reviewerName={getDisplayName(profile, isAdminPortal ? 'Super Admin' : 'Partner')}
-        onSaved={(toastInput) => toast(toastInput)}
+        onSaved={toastInput => toast(toastInput)}
       />
     </>
   )
@@ -601,9 +645,9 @@ const ProgrammeSubmissionsPage: React.FC = () => {
     <PartnerLayout
       activeItem="programme-submissions"
       hideWelcomeHeader
-      organizations={orgOptions.map((o) => ({ id: o.id, code: o.code, name: o.name }))}
+      organizations={orgOptions.map(o => ({ id: o.id, code: o.code, name: o.name }))}
       selectedOrg={selectedOrgId || 'all'}
-      onSelectOrg={(v) => setSelectedOrgId(v === 'all' ? '' : v)}
+      onSelectOrg={v => setSelectedOrgId(v === 'all' ? '' : v)}
       onNavigate={handleNavigate}
     >
       {content}
@@ -626,7 +670,13 @@ const StatTile: React.FC<StatTileProps> = ({ label, value, color }) => (
     p={4}
     boxShadow="0 1px 2px rgba(0,0,0,0.03)"
   >
-    <Text fontSize="2xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
+    <Text
+      fontSize="2xs"
+      fontWeight="semibold"
+      color="gray.500"
+      textTransform="uppercase"
+      letterSpacing="0.04em"
+    >
       {label}
     </Text>
     <Text fontSize="2xl" fontWeight="bold" color={color}>
@@ -667,7 +717,7 @@ const AiGradeBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ 
   if (display == null) {
     return (
       <Text fontSize="xs" color="gray.400">
- - 
+        -
       </Text>
     )
   }
@@ -708,7 +758,13 @@ const HitlBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ sub
   if (decision === 'pending') {
     return (
       <Stack spacing={0.5}>
-        <Badge colorScheme="orange" variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
+        <Badge
+          colorScheme="orange"
+          variant="subtle"
+          fontSize="2xs"
+          textTransform="none"
+          rounded="md"
+        >
           Awaiting human
         </Badge>
         {submission.learnerDisputedAt ? (
@@ -719,9 +775,13 @@ const HitlBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ sub
       </Stack>
     )
   }
-  const label =
-    decision === 'accept' ? 'Accepted' : decision === 'edit' ? 'Edited' : 'Rejected'
+  const label = decision === 'accept' ? 'Accepted' : decision === 'edit' ? 'Edited' : 'Rejected'
   const scheme = decision === 'accept' ? 'green' : decision === 'edit' ? 'blue' : 'red'
+  const delta = absScoreDelta(
+    submission.finalScore ?? submission.score,
+    getAiOverallScore(submission)
+  )
+  const deltaBand = classifyScoreDelta(delta)
   return (
     <Stack spacing={0.5}>
       <Badge colorScheme={scheme} variant="subtle" fontSize="2xs" textTransform="none" rounded="md">
@@ -731,6 +791,18 @@ const HitlBadge: React.FC<{ submission: ProgrammeComponentSubmission }> = ({ sub
         {formatDwell(submission.reviewDurationMs)}
         {submission.criteriaAcknowledged ? ' · criteria ✓' : ''}
       </Text>
+      {deltaBand !== 'ok' && delta != null ? (
+        <Badge
+          colorScheme={deltaBand === 'block' ? 'red' : 'orange'}
+          variant="subtle"
+          fontSize="2xs"
+          textTransform="none"
+          rounded="md"
+          w="fit-content"
+        >
+          Δ {delta} pts
+        </Badge>
+      ) : null}
     </Stack>
   )
 }
@@ -770,6 +842,21 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const [criteriaAcknowledgedAt, setCriteriaAcknowledgedAt] = useState<Date | null>(null)
   const [dwellSec, setDwellSec] = useState(0)
   const reviewOpenedAtRef = React.useRef<Date | null>(null)
+  const step1Ref = React.useRef<HTMLDivElement | null>(null)
+  const step2Ref = React.useRef<HTMLDivElement | null>(null)
+  const lockNotice = useDisclosure()
+  const { onOpen: openLockNotice, onClose: closeLockNotice } = lockNotice
+
+  // Explain the HITL steps up front so partners are not left facing locked score fields.
+  const needsHitlDecision = submission?.aiGrade?.status === 'completed' && !submission?.aiDecision
+  const submissionId = submission?.id
+  useEffect(() => {
+    if (!isOpen || !submissionId) {
+      closeLockNotice()
+      return
+    }
+    if (needsHitlDecision) openLockNotice()
+  }, [isOpen, submissionId, needsHitlDecision, openLockNotice, closeLockNotice])
 
   useEffect(() => {
     if (!submission || !isOpen) return
@@ -794,7 +881,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
       (submission.aiDecision === 'accept' || submission.aiDecision === 'edit' ? aiScore : null)
     setScore(initialScore !== null ? String(initialScore) : '')
     setPartnerBankB(
-      submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : '',
+      submission.partnerScore50 != null ? String(Math.round(submission.partnerScore50)) : ''
     )
   }, [submission, isOpen])
 
@@ -845,7 +932,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
       sourcePage: submission.sourcePage,
       componentId: submission.componentId,
     })
-      .then((result) => {
+      .then(result => {
         if (cancelled) return
         setCriteriaTitle(result.title)
         setCriteriaItems(result.items)
@@ -865,8 +952,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const componentPoints = getComponentPoints(submission.componentType, journeyForPoints)
   // 3M / 6M / 9M programme components are graded Pass/Fail (0 checklist points).
   const passFailMode =
-    (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) ||
-    componentPoints === 0
+    (learnerJourneyType != null && isMonthBasedJourney(learnerJourneyType)) || componentPoints === 0
   const ai = submission.aiGrade
   const aiCompleted = ai?.status === 'completed'
   const aiBankA = getAiBankAScore(ai)
@@ -876,13 +962,30 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
       : aiBankA != null
         ? aiBankA * 2
         : null
-  const aiFeedback =
-    (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
+  const aiFeedback = (ai?.feedbackForPartner || ai?.feedback || '').trim() || null
   const alreadyHadDecision = Boolean(submission.aiDecision)
   const acceptDwellReady = alreadyHadDecision || dwellSec >= ACCEPT_MIN_DWELL_SEC
   const acceptWaitSec = Math.max(0, ACCEPT_MIN_DWELL_SEC - dwellSec)
   const canDecideOnAi = !aiCompleted || criteriaAcknowledged
   const canAcceptAi = canDecideOnAi && acceptDwellReady
+  const liveHumanScore = (() => {
+    const n = Number(score)
+    return Number.isFinite(n) ? Math.round(n) : null
+  })()
+  const liveDelta =
+    aiCompleted && (aiDecision === 'edit' || aiDecision === 'reject')
+      ? absScoreDelta(liveHumanScore, aiOverall)
+      : null
+  const liveDeltaBand = classifyScoreDelta(liveDelta)
+  const scoresLocked = aiCompleted && !aiDecision
+  const lockNextStep: 1 | 2 = criteriaAcknowledged ? 2 : 1
+
+  const goToLockedStep = () => {
+    lockNotice.onClose()
+    const target = lockNextStep === 1 ? step1Ref.current : step2Ref.current
+    if (lockNextStep === 1) setCriteriaOpen(true)
+    window.setTimeout(() => target?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
 
   const applyAiScoreToFields = () => {
     if (aiOverall != null) setScore(String(aiOverall))
@@ -967,6 +1070,36 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
         return
       }
     }
+    if (aiCompleted && (aiDecision === 'edit' || aiDecision === 'reject') && aiOverall != null) {
+      const n = Number(score)
+      const humanScore = Number.isFinite(n) ? Math.round(n) : null
+      const overrideCheck = validatePartnerScoreOverride({
+        aiScore: aiOverall,
+        humanScore,
+        decision: aiDecision,
+        partnerNotes: notes,
+      })
+      if (!overrideCheck.ok) {
+        onSaved({
+          status: 'warning',
+          title: overrideCheck.title,
+          description: overrideCheck.description,
+        })
+        return
+      }
+    }
+    if (aiCompleted && aiDecision === 'accept' && aiOverall != null) {
+      const n = Number(score)
+      if (Number.isFinite(n) && Math.abs(Math.round(n) - aiOverall) > 1) {
+        onSaved({
+          status: 'warning',
+          title: 'Use “with changes” to adjust the score',
+          description:
+            'Accept keeps the AI estimate. Choose “Yes, with changes” if your judgment differs.',
+        })
+        return
+      }
+    }
 
     setSaving(true)
     try {
@@ -992,15 +1125,14 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
 
       const cleanNotes = notes.trim() === '' ? null : notes.trim()
       const openedAt = reviewOpenedAtRef.current
-      const durationMs =
-        openedAt != null ? Math.max(0, Date.now() - openedAt.getTime()) : null
+      const durationMs = openedAt != null ? Math.max(0, Date.now() - openedAt.getTime()) : null
       const hitl = {
         aiDecision: aiCompleted ? (aiDecision as ProgrammeAiDecision) : null,
         reviewOpenedAt: openedAt,
         reviewDurationMs: durationMs,
         criteriaAcknowledged: aiCompleted ? criteriaAcknowledged : undefined,
         criteriaAcknowledgedAt: aiCompleted
-          ? criteriaAcknowledgedAt ?? (criteriaAcknowledged ? new Date() : null)
+          ? (criteriaAcknowledgedAt ?? (criteriaAcknowledged ? new Date() : null))
           : undefined,
       }
 
@@ -1085,7 +1217,13 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                   <Icon as={typeMeta.icon} boxSize={4} />
                 </Box>
               )}
-              <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="0.04em"
+              >
                 {typeMeta?.label ?? 'Submission'}
               </Text>
             </HStack>
@@ -1134,7 +1272,13 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
             )}
 
             <Stack spacing={2}>
-              <Text fontSize="xs" fontWeight="semibold" color="gray.500" textTransform="uppercase" letterSpacing="0.04em">
+              <Text
+                fontSize="xs"
+                fontWeight="semibold"
+                color="gray.500"
+                textTransform="uppercase"
+                letterSpacing="0.04em"
+              >
                 Learner answers ({submission.answerCount})
               </Text>
               {Object.entries(submission.answers).length === 0 ? (
@@ -1156,7 +1300,11 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         {formatAnswerKey(key)}
                       </Text>
                       <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
-                        {value || <Text as="span" color="gray.400">(empty)</Text>}
+                        {value || (
+                          <Text as="span" color="gray.400">
+                            (empty)
+                          </Text>
+                        )}
                       </Text>
                     </Box>
                   ))}
@@ -1165,6 +1313,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
             </Stack>
 
             <Box
+              ref={step1Ref}
               p={4}
               bg="white"
               border="1px solid"
@@ -1179,7 +1328,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 px={0}
                 onClick={() => {
                   if (aiCompleted && !criteriaAcknowledged) return
-                  setCriteriaOpen((v) => !v)
+                  setCriteriaOpen(v => !v)
                 }}
                 rightIcon={<Icon as={criteriaOpen ? ChevronUp : ChevronDown} boxSize={4} />}
                 isDisabled={aiCompleted && !criteriaAcknowledged}
@@ -1210,8 +1359,14 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         </Text>
                       ) : null}
                       <Stack as="ul" spacing={2} pl={4} m={0} style={{ listStyle: 'disc' }}>
-                        {criteriaItems.map((item) => (
-                          <Text as="li" key={item.slice(0, 48)} fontSize="sm" color="gray.700" lineHeight="1.5">
+                        {criteriaItems.map(item => (
+                          <Text
+                            as="li"
+                            key={item.slice(0, 48)}
+                            fontSize="sm"
+                            color="gray.700"
+                            lineHeight="1.5"
+                          >
                             {item}
                           </Text>
                         ))}
@@ -1224,11 +1379,11 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       alignItems="flex-start"
                       colorScheme="purple"
                       isChecked={criteriaAcknowledged}
-                      onChange={(e) => handleCriteriaAck(e.target.checked)}
+                      onChange={e => handleCriteriaAck(e.target.checked)}
                     >
                       <Text fontSize="sm" color="gray.800" lineHeight="1.45">
-                        I compared this learner&apos;s answers to What good looks like before deciding
-                        on the AI estimate.
+                        I compared this learner&apos;s answers to What good looks like before
+                        deciding on the AI estimate.
                       </Text>
                     </Checkbox>
                   )}
@@ -1237,6 +1392,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
             </Box>
 
             <Box
+              ref={step2Ref}
               p={4}
               bg="white"
               border="1px solid"
@@ -1266,8 +1422,8 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 </Flex>
                 {!ai && (
                   <Text fontSize="sm" color="gray.600">
-                    Waiting for Gemini to grade this submission. Refresh in a few seconds if it stays
-                    empty.
+                    Waiting for Gemini to grade this submission. Refresh in a few seconds if it
+                    stays empty.
                   </Text>
                 )}
                 {ai?.status === 'error' && (
@@ -1323,7 +1479,12 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                         <Text fontSize="xs" fontWeight="semibold" color="gray.500" mb={1}>
                           AI feedback
                         </Text>
-                        <Text fontSize="sm" color="gray.800" whiteSpace="pre-wrap" lineHeight="1.55">
+                        <Text
+                          fontSize="sm"
+                          color="gray.800"
+                          whiteSpace="pre-wrap"
+                          lineHeight="1.55"
+                        >
                           {aiFeedback}
                         </Text>
                       </Box>
@@ -1335,7 +1496,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       </FormLabel>
                       <RadioGroup
                         value={aiDecision}
-                        onChange={(v) => handleAiDecisionChange(v as ProgrammeAiDecision)}
+                        onChange={v => handleAiDecisionChange(v as ProgrammeAiDecision)}
                       >
                         <Stack spacing={2}>
                           <Radio value="accept" colorScheme="purple" isDisabled={!canAcceptAi}>
@@ -1356,7 +1517,8 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       </RadioGroup>
                       <FormHelperText>
                         AI never awards points alone. Accept is delayed on purpose so you judge the
-                        work first — your choice and review time are saved as human-in-the-loop proof.
+                        work first — your choice and review time are saved as human-in-the-loop
+                        proof.
                       </FormHelperText>
                     </FormControl>
                   </>
@@ -1364,17 +1526,32 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
               </Stack>
             </Box>
 
-            <Box
-              p={4}
-              bg="#f9f5fb"
-              border="1px solid"
-              borderColor="#e6dbef"
-              rounded="lg"
-            >
+            <Box p={4} bg="#f9f5fb" border="1px solid" borderColor="#e6dbef" rounded="lg">
               <Stack spacing={4}>
                 <Text fontSize="sm" fontWeight="bold" color={PLUM}>
                   3. Your review
                 </Text>
+                {scoresLocked && (
+                  <Alert status="warning" rounded="md" py={2} variant="left-accent">
+                    <AlertIcon />
+                    <Box flex="1">
+                      <AlertDescription fontSize="sm">
+                        {criteriaAcknowledged
+                          ? 'The score fields unlock once you answer "Do you accept what the AI scored?" in step 2.'
+                          : 'The score fields are locked until you tick "I compared this learner\'s answers…" at the end of step 1, then answer "Do you accept what the AI scored?" in step 2.'}
+                      </AlertDescription>
+                      <Button
+                        size="xs"
+                        variant="link"
+                        colorScheme="orange"
+                        mt={1}
+                        onClick={lockNotice.onOpen}
+                      >
+                        Why is this locked?
+                      </Button>
+                    </Box>
+                  </Alert>
+                )}
                 {submission.componentType && (
                   <HStack
                     spacing={2}
@@ -1433,9 +1610,9 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     size="sm"
                     bg="white"
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as ProgrammeSubmissionStatus)}
+                    onChange={e => setStatus(e.target.value as ProgrammeSubmissionStatus)}
                   >
-                    {STATUS_OPTIONS.map((s) => (
+                    {STATUS_OPTIONS.map(s => (
                       <option key={s} value={s}>
                         {passFailMode && s === 'approved'
                           ? 'Pass (Approved)'
@@ -1446,82 +1623,134 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                     ))}
                   </Select>
                 </FormControl>
-                <FormControl>
-                  <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                    {passFailMode ? 'Score note (0-100)' : 'Final score (0-100)'}
-                    {aiDecision === 'edit' || aiDecision === 'reject' ? ' *' : ''}
-                  </FormLabel>
-                  <NumberInput
-                    size="sm"
-                    min={0}
-                    max={100}
-                    value={score}
-                    onChange={(v) => setScore(v)}
-                    bg="white"
-                    isDisabled={aiCompleted && !aiDecision}
-                  >
-                    <NumberInputField
-                      placeholder={
-                        aiDecision === 'edit' && aiOverall != null
-                          ? `AI suggested ${aiOverall} — enter your score`
-                          : aiDecision === 'reject'
-                            ? 'Your score (AI rejected)'
-                            : '-'
-                      }
+                <Box position="relative">
+                  <Stack spacing={4}>
+                    <FormControl>
+                      <FormLabel fontSize="xs" color="gray.600" mb={1}>
+                        {passFailMode ? 'Score note (0-100)' : 'Final score (0-100)'}
+                        {aiDecision === 'edit' || aiDecision === 'reject' ? ' *' : ''}
+                      </FormLabel>
+                      <NumberInput
+                        size="sm"
+                        min={0}
+                        max={100}
+                        value={score}
+                        onChange={v => setScore(v)}
+                        bg="white"
+                        isDisabled={aiCompleted && !aiDecision}
+                      >
+                        <NumberInputField
+                          placeholder={
+                            aiDecision === 'edit' && aiOverall != null
+                              ? `AI suggested ${aiOverall} — enter your score`
+                              : aiDecision === 'reject'
+                                ? 'Your score (AI rejected)'
+                                : '-'
+                          }
+                        />
+                      </NumberInput>
+                      {aiDecision === 'accept' && aiOverall != null ? (
+                        <FormHelperText>
+                          Using AI estimate {aiOverall}/100 unless you change Bank B.
+                        </FormHelperText>
+                      ) : null}
+                      {liveDelta != null && liveDeltaBand !== 'ok' ? (
+                        <Alert
+                          status={liveDeltaBand === 'block' ? 'error' : 'warning'}
+                          rounded="md"
+                          mt={2}
+                          py={2}
+                          variant="left-accent"
+                        >
+                          <AlertIcon />
+                          <AlertDescription fontSize="xs">
+                            {liveDeltaBand === 'block' ? (
+                              <>
+                                Score differs from AI by {liveDelta} points (max without notes:{' '}
+                                {HITL_SCORE_DELTA_MAX}). Add at least{' '}
+                                {HITL_OVERRIDE_JUSTIFICATION_MIN_CHARS} characters explaining why
+                                before saving.
+                              </>
+                            ) : (
+                              <>
+                                Large change vs AI ({liveDelta} pts; watch from{' '}
+                                {HITL_SCORE_DELTA_WARN}). Double-check against What good looks like
+                                to reduce bias.
+                              </>
+                            )}
+                          </AlertDescription>
+                        </Alert>
+                      ) : null}
+                    </FormControl>
+                    {aiBankA != null && aiDecision !== 'reject' && (
+                      <FormControl>
+                        <FormLabel fontSize="xs" color="gray.600" mb={1}>
+                          Your Bank B judgment (0-50)
+                        </FormLabel>
+                        <NumberInput
+                          size="sm"
+                          min={0}
+                          max={50}
+                          value={partnerBankB}
+                          onChange={v => {
+                            setPartnerBankB(v)
+                            const n = Number(v)
+                            if (Number.isFinite(n)) {
+                              setScore(String(Math.max(0, Math.min(100, aiBankA + Math.round(n)))))
+                            }
+                          }}
+                          bg="white"
+                          isDisabled={aiCompleted && !aiDecision}
+                        >
+                          <NumberInputField placeholder={`AI Bank A is ${aiBankA}/50`} />
+                        </NumberInput>
+                        <Text fontSize="xs" color="gray.500" mt={1}>
+                          Final = AI Bank A ({aiBankA}) + your Bank B. This is your judgment layer.
+                        </Text>
+                      </FormControl>
+                    )}
+                  </Stack>
+                  {scoresLocked && (
+                    <Box
+                      as="button"
+                      type="button"
+                      position="absolute"
+                      inset={0}
+                      cursor="pointer"
+                      bg="transparent"
+                      aria-label="Score fields are locked. Show what to do to unlock them."
+                      onClick={lockNotice.onOpen}
                     />
-                  </NumberInput>
-                  {aiDecision === 'accept' && aiOverall != null ? (
-                    <FormHelperText>Using AI estimate {aiOverall}/100 unless you change Bank B.</FormHelperText>
-                  ) : null}
-                </FormControl>
-                {aiBankA != null && aiDecision !== 'reject' && (
-                  <FormControl>
-                    <FormLabel fontSize="xs" color="gray.600" mb={1}>
-                      Your Bank B judgment (0-50)
-                    </FormLabel>
-                    <NumberInput
-                      size="sm"
-                      min={0}
-                      max={50}
-                      value={partnerBankB}
-                      onChange={(v) => {
-                        setPartnerBankB(v)
-                        const n = Number(v)
-                        if (Number.isFinite(n)) {
-                          setScore(String(Math.max(0, Math.min(100, aiBankA + Math.round(n)))))
-                        }
-                      }}
-                      bg="white"
-                      isDisabled={aiCompleted && !aiDecision}
-                    >
-                      <NumberInputField placeholder={`AI Bank A is ${aiBankA}/50`} />
-                    </NumberInput>
-                    <Text fontSize="xs" color="gray.500" mt={1}>
-                      Final = AI Bank A ({aiBankA}) + your Bank B. This is your judgment layer.
-                    </Text>
-                  </FormControl>
-                )}
+                  )}
+                </Box>
                 {aiDecision === 'reject' ? (
                   <Text fontSize="xs" color="orange.700">
                     You rejected the AI estimate. Final score is yours alone — Bank A is not added.
                   </Text>
                 ) : null}
-                <FormControl>
+                <FormControl isRequired={liveDeltaBand === 'block'}>
                   <FormLabel fontSize="xs" color="gray.600" mb={1}>
                     Feedback for the learner
+                    {liveDeltaBand === 'block' ? ' (required for large override)' : ''}
                   </FormLabel>
                   <Textarea
                     size="sm"
                     bg="white"
                     minH="120px"
-                    placeholder="What was strong, what to refine, and the one thing to change before resubmitting..."
+                    borderColor={liveDeltaBand === 'block' ? 'red.300' : undefined}
+                    placeholder={
+                      liveDeltaBand === 'block'
+                        ? `Explain why your score differs from AI by ${liveDelta} points (min ${HITL_OVERRIDE_JUSTIFICATION_MIN_CHARS} characters)...`
+                        : 'What was strong, what to refine, and the one thing to change before resubmitting...'
+                    }
                     value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
+                    onChange={e => setNotes(e.target.value)}
                   />
                 </FormControl>
                 {submission.reviewedAt && submission.reviewerName && (
                   <Text fontSize="xs" color="gray.500">
-                    Last reviewed by {submission.reviewerName} on {formatDate(submission.reviewedAt)}
+                    Last reviewed by {submission.reviewerName} on{' '}
+                    {formatDate(submission.reviewedAt)}
                   </Text>
                 )}
               </Stack>
@@ -1544,6 +1773,80 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
           </Button>
         </DrawerFooter>
       </DrawerContent>
+
+      <Modal isOpen={lockNotice.isOpen} onClose={lockNotice.onClose} isCentered size="md">
+        <ModalOverlay />
+        <ModalContent mx={4}>
+          <ModalHeader color={PLUM} fontSize="lg" pr={10}>
+            <HStack spacing={2}>
+              <Icon as={Lock} boxSize={5} color={ROYAL} />
+              <Text>Before you enter the grade</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text fontSize="sm" color="gray.700" mb={3}>
+              Gemini has pre-graded this submission. To keep a human in charge of every grade, the
+              score fields stay locked until you do two things:
+            </Text>
+            <OrderedList spacing={3} fontSize="sm" color="gray.800" pl={1}>
+              <ListItem>
+                <HStack spacing={2} align="flex-start">
+                  <Text flex="1">
+                    <Text as="span" fontWeight="semibold">
+                      Step 1 · What good looks like:
+                    </Text>{' '}
+                    read the criteria and tick &ldquo;I compared this learner&apos;s
+                    answers…&rdquo;. The AI score stays hidden until then.
+                  </Text>
+                  {criteriaAcknowledged && (
+                    <Icon as={CheckCircle2} boxSize={4} color="green.500" mt="2px" />
+                  )}
+                </HStack>
+              </ListItem>
+              <ListItem>
+                <HStack spacing={2} align="flex-start">
+                  <Text flex="1">
+                    <Text as="span" fontWeight="semibold">
+                      Step 2 · Do you accept what the AI scored?
+                    </Text>{' '}
+                    &ldquo;Yes, with changes&rdquo; and &ldquo;No, reject&rdquo; are available right
+                    away. Plain &ldquo;Yes, accept&rdquo; only unlocks after you have spent{' '}
+                    {ACCEPT_MIN_DWELL_SEC} seconds on the review, so nobody rubber-stamps the AI.
+                  </Text>
+                  {aiDecision && <Icon as={CheckCircle2} boxSize={4} color="green.500" mt="2px" />}
+                </HStack>
+              </ListItem>
+              <ListItem>
+                <Text>
+                  <Text as="span" fontWeight="semibold">
+                    Step 3 · Your review:
+                  </Text>{' '}
+                  the final score and your Bank B judgment unlock here.
+                </Text>
+              </ListItem>
+            </OrderedList>
+            {aiCompleted && !acceptDwellReady && (
+              <Alert status="info" rounded="md" mt={4} py={2}>
+                <AlertIcon />
+                <AlertDescription fontSize="sm">
+                  Accept unlocks in {acceptWaitSec}s.
+                </AlertDescription>
+              </Alert>
+            )}
+          </ModalBody>
+          <ModalFooter gap={3}>
+            <Button variant="outline" onClick={lockNotice.onClose}>
+              Got it
+            </Button>
+            {scoresLocked && (
+              <Button bg={ROYAL} color="white" _hover={{ bg: PLUM }} onClick={goToLockedStep}>
+                Take me to step {lockNextStep}
+              </Button>
+            )}
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Drawer>
   )
 }
