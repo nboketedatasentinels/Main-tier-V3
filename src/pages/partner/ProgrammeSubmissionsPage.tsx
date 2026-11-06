@@ -980,6 +980,50 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
   const scoresLocked = aiCompleted && !aiDecision
   const lockNextStep: 1 | 2 = criteriaAcknowledged ? 2 : 1
 
+  const criteriaAckCheckbox = (
+    <Box
+      p={3}
+      rounded="md"
+      border="2px solid"
+      borderColor={criteriaAcknowledged ? 'green.300' : 'orange.300'}
+      bg={criteriaAcknowledged ? 'green.50' : 'orange.50'}
+    >
+      <Checkbox
+        alignItems="flex-start"
+        colorScheme="purple"
+        size="lg"
+        isChecked={criteriaAcknowledged}
+        onChange={e => handleCriteriaAck(e.target.checked)}
+      >
+        <Text fontSize="sm" color="gray.800" lineHeight="1.45" fontWeight="semibold">
+          I compared this learner&apos;s answers to What good looks like before deciding on the AI
+          estimate.
+        </Text>
+      </Checkbox>
+    </Box>
+  )
+
+  const aiDecisionRadios = (
+    <RadioGroup value={aiDecision} onChange={v => handleAiDecisionChange(v as ProgrammeAiDecision)}>
+      <Stack spacing={2}>
+        <Radio value="accept" colorScheme="purple" isDisabled={!canAcceptAi}>
+          Yes — accept the AI estimate
+          {!canAcceptAi && acceptWaitSec > 0 ? (
+            <Text as="span" fontSize="xs" color="gray.500" ml={1}>
+              (available in {acceptWaitSec}s)
+            </Text>
+          ) : null}
+        </Radio>
+        <Radio value="edit" colorScheme="purple" isDisabled={!canDecideOnAi}>
+          Yes, with changes — I will adjust the score
+        </Radio>
+        <Radio value="reject" colorScheme="purple" isDisabled={!canDecideOnAi}>
+          No — reject the AI estimate; I will score myself
+        </Radio>
+      </Stack>
+    </RadioGroup>
+  )
+
   const goToLockedStep = () => {
     lockNotice.onClose()
     const target = lockNextStep === 1 ? step1Ref.current : step2Ref.current
@@ -1373,22 +1417,9 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       </Stack>
                     </Stack>
                   )}
-                  {aiCompleted && (
-                    <Checkbox
-                      mt={4}
-                      alignItems="flex-start"
-                      colorScheme="purple"
-                      isChecked={criteriaAcknowledged}
-                      onChange={e => handleCriteriaAck(e.target.checked)}
-                    >
-                      <Text fontSize="sm" color="gray.800" lineHeight="1.45">
-                        I compared this learner&apos;s answers to What good looks like before
-                        deciding on the AI estimate.
-                      </Text>
-                    </Checkbox>
-                  )}
                 </Box>
               </Collapse>
+              {aiCompleted && <Box mt={4}>{criteriaAckCheckbox}</Box>}
             </Box>
 
             <Box
@@ -1494,27 +1525,7 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       <FormLabel fontSize="xs" color="gray.600" mb={2}>
                         Do you accept what the AI scored?
                       </FormLabel>
-                      <RadioGroup
-                        value={aiDecision}
-                        onChange={v => handleAiDecisionChange(v as ProgrammeAiDecision)}
-                      >
-                        <Stack spacing={2}>
-                          <Radio value="accept" colorScheme="purple" isDisabled={!canAcceptAi}>
-                            Yes — accept the AI estimate
-                            {!canAcceptAi && acceptWaitSec > 0 ? (
-                              <Text as="span" fontSize="xs" color="gray.500" ml={1}>
-                                (available in {acceptWaitSec}s)
-                              </Text>
-                            ) : null}
-                          </Radio>
-                          <Radio value="edit" colorScheme="purple" isDisabled={!canDecideOnAi}>
-                            Yes, with changes — I will adjust the score
-                          </Radio>
-                          <Radio value="reject" colorScheme="purple" isDisabled={!canDecideOnAi}>
-                            No — reject the AI estimate; I will score myself
-                          </Radio>
-                        </Stack>
-                      </RadioGroup>
+                      {aiDecisionRadios}
                       <FormHelperText>
                         AI never awards points alone. Accept is delayed on purpose so you judge the
                         work first — your choice and review time are saved as human-in-the-loop
@@ -1551,6 +1562,21 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                       </Button>
                     </Box>
                   </Alert>
+                )}
+                {scoresLocked && (
+                  <Box p={3} bg="white" border="1px solid" borderColor="#e6dbef" rounded="md">
+                    {!criteriaAcknowledged ? (
+                      criteriaAckCheckbox
+                    ) : (
+                      <Stack spacing={2}>
+                        <Text fontSize="sm" fontWeight="semibold" color={PLUM}>
+                          Do you accept what the AI scored?
+                          {aiOverall != null ? ` (AI suggested ${aiOverall}/100)` : ''}
+                        </Text>
+                        {aiDecisionRadios}
+                      </Stack>
+                    )}
+                  </Box>
                 )}
                 {submission.componentType && (
                   <HStack
@@ -1826,6 +1852,14 @@ const SubmissionReviewDrawer: React.FC<DrawerProps> = ({
                 </Text>
               </ListItem>
             </OrderedList>
+            {aiCompleted && !criteriaAcknowledged && (
+              <Box mt={4}>
+                <Text fontSize="xs" color="gray.600" mb={2}>
+                  Already compared the answers to the criteria? Confirm here:
+                </Text>
+                {criteriaAckCheckbox}
+              </Box>
+            )}
             {aiCompleted && !acceptDwellReady && (
               <Alert status="info" rounded="md" mt={4} py={2}>
                 <AlertIcon />
